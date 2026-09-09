@@ -682,4 +682,129 @@ internal static class DocxFontRenderingTests
         TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "CFF rendering must report the substitution.");
     }
 
+    public static void DocxCffFallbackCandidateSkipsWithDiagnostic()
+    {
+        string fontsDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met.");
+        }
+
+        byte[] arialBytes = File.ReadAllBytes(arial);
+        if (OpenTypeFont.Load(arialBytes).MapCodePoint(0x1F600) != 0)
+        {
+            TestAssert.Skip("Environmental precondition not met.");
+        }
+
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffSymbol");
+        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
+        var resolver = new CffCandidateFontResolver(arialBytes, cffBytes, fallbackBytes);
+        var run = new DocxTextRun("A\U0001F600", 12d, null, false, false, false, null, "Arial")
+        {
+            Fonts = new DocxRunFonts("Arial", null, null, null, null, null, null, null)
+        };
+        DocxDocument document = DocxTests.CreateFontPlanDocument(
+            run,
+            new DocxFontCatalog([], DocxThemeFonts.Empty));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        IReadOnlyList<PdfPage> pages = new DocxRenderer(
+                resolver,
+                OoxPdfDocxMarkupMode.Final,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None);
+
+        TestAssert.Equal(1, pages.Count);
+        PdfPage page = pages[0];
+        TestAssert.True(
+            page.Fonts.All(font => !font.Font.BaseFontName.Contains(
+                "CffSymbol",
+                StringComparison.Ordinal)),
+            "CFF candidate must not be embedded.");
+        TestAssert.True(
+            DocxTests.CountPdfTextShows(page.Content) >= 2,
+            "Fallback-covered text must be painted.");
+        OoxPdfDiagnostic warning = TestAssert.NotNull(
+            diagnostics.SingleOrDefault(
+                diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"));
+        TestAssert.Contains("CffSymbol", warning.Message);
+    }
+
+
+    public static void DocxCffOnlyResolverRendersWithoutThrowing()
+    {
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffOnly");
+        var resolver = new CffOnlyFontResolver(cffBytes);
+        var run = new DocxTextRun("Hello", 12d, null, false, false, false, null, "Anything")
+        {
+            Fonts = new DocxRunFonts("Anything", null, null, null, null, null, null, null)
+        };
+        DocxDocument document = DocxTests.CreateFontPlanDocument(
+            run,
+            new DocxFontCatalog([], DocxThemeFonts.Empty));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        IReadOnlyList<PdfPage> pages = new DocxRenderer(
+                resolver,
+                OoxPdfDocxMarkupMode.Final,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None);
+
+        TestAssert.Equal(1, pages.Count);
+        TestAssert.True(
+            diagnostics.Any(
+                diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"),
+            "CFF-only rendering must report the substitution.");
+    }
+
+    internal sealed class CffCandidateFontResolver(
+        byte[] arialBytes,
+        byte[] cffBytes,
+        byte[] fallbackBytes) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            bool cff = request.FamilyName.Equals(
+                "Symbol",
+                StringComparison.OrdinalIgnoreCase);
+            bool arial = request.FamilyName.Equals(
+                "Arial",
+                StringComparison.OrdinalIgnoreCase);
+            byte[] bytes = cff ? cffBytes : arial ? arialBytes : fallbackBytes;
+            string stableId = cff ? "cff-test" : arial ? "arial-test" : "tt-test";
+            string family = cff ? "CffSymbol" : arial ? "Arial" : "FallbackFamily";
+            var source = new MemoryFontProgramSource(stableId, bytes);
+            return new FontFaceResolution(
+                request.FamilyName,
+                family,
+                new FontStyleKey(
+                    request.Bold,
+                    request.Italic,
+                    request.Bold ? 700 : 400,
+                    0,
+                    false),
+                source,
+                IsFallback: false);
+        }
+    }
+
+    internal sealed class CffOnlyFontResolver(byte[] cffBytes) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            var source = new MemoryFontProgramSource("cff-only-test", cffBytes);
+            return new FontFaceResolution(
+                request.FamilyName,
+                "CffOnly",
+                new FontStyleKey(
+                    request.Bold,
+                    request.Italic,
+                    request.Bold ? 700 : 400,
+                    0,
+                    false),
+                source,
+                IsFallback: false);
+        }
+    }
 }

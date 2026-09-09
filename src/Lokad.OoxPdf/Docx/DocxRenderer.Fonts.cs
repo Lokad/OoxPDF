@@ -20,10 +20,11 @@ internal sealed partial class DocxRenderer
         var resources = new List<PdfFontResource>();
         var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
-        plan = SubstituteUnembeddableFonts(plan, fontCache, diagnosticSink, cancellationToken);
+        var reportedUnembeddableFaces = new HashSet<(string StableId, int FaceIndex)>();
+        plan = SubstituteUnembeddableFonts(plan, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
         PrepareResolvedRunFontResources(plan, resources, runResources, fontCache, cancellationToken);
-        DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache, cancellationToken);
-        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(plan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, cancellationToken);
+        DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
+        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(plan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
         IDocxTextMeasurer? measurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
             ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache)
             : null;
@@ -39,10 +40,10 @@ internal sealed partial class DocxRenderer
         DocxFontPlan plan,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<(string StableId, int FaceIndex)> reported,
         CancellationToken cancellationToken)
     {
         List<DocxResolvedRunTypeface>? remapped = null;
-        var reported = new HashSet<(string StableId, int FaceIndex)>();
         for (int i = 0; i < plan.Runs.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -68,23 +69,37 @@ internal sealed partial class DocxRenderer
                 }
             }
 
-            if (reported.Add((resolution.Source.StableId, resolution.FontFaceIndex)))
-            {
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                    "FONT_UNSUPPORTED_OUTLINES",
-                    OoxPdfSeverity.Warning,
-                    "Font '" + resolution.FamilyName + "' has no embeddable TrueType outlines (CFF/OpenType-CFF) and was substituted with the document fallback typeface.",
-                    PartName: null,
-                    SlideIndex: null,
-                    PageIndex: null,
-                    Feature: resolution.FamilyName,
-                    Fallback: "Document fallback typeface"));
-            }
+            ReportUnembeddableFace(resolution, "substituted with the document fallback typeface", "Document fallback typeface", diagnosticSink, reported);
 
             remapped.Add(run with { Resolution = null });
         }
 
         return remapped is null ? plan : new DocxFontPlan(remapped);
+    }
+
+    // Reports an unembeddable (CFF/OpenType-CFF) face once per conversion.
+    // Callers describe what took its place.
+    private static void ReportUnembeddableFace(
+        FontFaceResolution resolution,
+        string action,
+        string fallback,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<(string StableId, int FaceIndex)> reported)
+    {
+        if (!reported.Add((resolution.Source.StableId, resolution.FontFaceIndex)))
+        {
+            return;
+        }
+
+        diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+            "FONT_UNSUPPORTED_OUTLINES",
+            OoxPdfSeverity.Warning,
+            "Font '" + resolution.FamilyName + "' has no embeddable TrueType outlines (CFF/OpenType-CFF) and was " + action + ".",
+            PartName: null,
+            SlideIndex: null,
+            PageIndex: null,
+            Feature: resolution.FamilyName,
+            Fallback: fallback));
     }
 
     private sealed class ScaledDocxTextMeasurer(IDocxTextMeasurer inner, double textScale, double lineMetricScale) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
@@ -168,12 +183,20 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<(string StableId, int FaceIndex)> reported,
         CancellationToken cancellationToken)
     {
         FontFaceResolution resolution = ResolveDocumentBaseFont(plan, fontResolver, fontCache, cancellationToken);
         OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
         if (font is null)
         {
+            return null;
+        }
+
+        if (!font.HasTrueTypeOutlines)
+        {
+            ReportUnembeddableFace(resolution, "skipped as the document fallback typeface", "Missing-font path", diagnosticSink, reported);
             return null;
         }
 
@@ -211,6 +234,8 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<(string StableId, int FaceIndex)> reported,
         CancellationToken cancellationToken)
     {
         var chains = new Dictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>>();
@@ -252,6 +277,12 @@ internal sealed partial class DocxRenderer
                 OpenTypeFont? candidateFont = fonts.Count == 0 ? primaryFont : LoadFont(candidate, fontCache, cancellationToken);
                 if (candidateFont is null || fonts.Contains(candidateFont))
                 {
+                    continue;
+                }
+
+                if (fonts.Count != 0 && !candidateFont.HasTrueTypeOutlines)
+                {
+                    ReportUnembeddableFace(candidate, "skipped for per-character fallback", "Next covering typeface", diagnosticSink, reported);
                     continue;
                 }
 

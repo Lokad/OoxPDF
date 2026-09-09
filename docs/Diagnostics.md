@@ -72,7 +72,9 @@ Approximation warnings:
 
 These warnings are document-scoped. Duplicate occurrences of the same unsupported feature in one document are aggregated into one warning.
 
-## CLI Behavior
+## Fonts
+
+- `FONT_UNSUPPORTED_OUTLINES`: a CFF/OpenType-CFF typeface was detected and not embedded (native CFF embedding is unsupported). DOCX substitutes the document fallback typeface for primary runs, skips CFF per-character fallback candidates, and degrades CFF-only fallbacks to the missing-font path; PPTX regroups uses through its per-glyph fallback. One warning per typeface per conversion.
 
 The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
 

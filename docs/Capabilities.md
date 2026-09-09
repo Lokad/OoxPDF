@@ -99,6 +99,7 @@ Partial or approximated:
 
 - PDF metadata is intentionally minimal in deterministic mode.
 - Embedded TrueType fonts are subset to the glyphs, metrics, and Unicode map entries used by the rendered document (see CHANGELOG 0.1.1); whole-font embedding is no longer the default.
+- CFF/OpenType-CFF outlines are never embedded; affected runs fall back to an embeddable typeface with a `FONT_UNSUPPORTED_OUTLINES` warning (see Diagnostics).
 
 Unsupported or ignored:
 
