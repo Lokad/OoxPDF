@@ -158,6 +158,15 @@ if ($manifest.expected.minForegroundColorHistogramCorrelation -ne $null) {
     }
 }
 
+if ($manifest.expected.minForegroundRecall -ne $null) {
+    $minForegroundRecall = [double]$manifest.expected.minForegroundRecall
+    $exceeded = @($metrics | Where-Object { $_.ForegroundRecall -eq $null -or [double]$_.ForegroundRecall -lt $minForegroundRecall })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property ForegroundRecall | Select-Object -First 1
+        throw "Foreground recall gate failed. Page $($worst.Page) was $($worst.ForegroundRecall), minimum is $minForegroundRecall."
+    }
+}
+
 if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
     $textInspectRoot = Join-Path $comparisonDir "pdf-text"
     $referenceTextInspect = Join-Path $textInspectRoot "reference"
