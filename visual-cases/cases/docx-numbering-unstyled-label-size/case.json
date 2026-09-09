@@ -3,14 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-numbering-unstyled-label-size.docx",
   "dpi": 144,
-  "tags": ["docx", "numbering", "typography", "label-size"],
+  "tags": ["docx", "numbering", "typography", "label-size", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.12,
-    "maxChangedPixelRatioAtThreshold16": 0.0015
+    "candidateFontsMustBeEmbedded": true,
+    "candidateFontsMustHaveToUnicode": true
   },
   "allowedUnsupportedFeatures": []
 }

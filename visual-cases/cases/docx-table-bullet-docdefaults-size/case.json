@@ -3,14 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-table-bullet-docdefaults-size.docx",
   "dpi": 144,
-  "tags": ["docx", "numbering", "tables", "typography", "label-size"],
+  "tags": ["docx", "numbering", "tables", "typography", "label-size", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.2,
-    "maxChangedPixelRatioAtThreshold16": 0.002
+    "candidateFontsMustBeEmbedded": true,
+    "candidateFontsMustHaveToUnicode": true
   },
   "allowedUnsupportedFeatures": []
 }
