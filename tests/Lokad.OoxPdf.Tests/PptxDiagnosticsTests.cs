@@ -306,7 +306,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutMedia, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutMedia, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", ids);
@@ -357,7 +357,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutSmartArt, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutSmartArt, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", ids);
@@ -408,7 +408,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutDynamicFeatures, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutDynamicFeatures, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id));
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", ids);
@@ -463,7 +463,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", diagnostics.Select(d => d.Id)));
     }
@@ -555,7 +555,7 @@ internal static class PptxDiagnosticsTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", diagnostics.Select(d => d.Id)));
     }

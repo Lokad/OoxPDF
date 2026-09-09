@@ -38,6 +38,7 @@ internal sealed partial class PptxRenderer
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxTheme theme = scene.Theme;
         var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
+        var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
         for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -50,7 +51,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
+            EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts);
             var graphics = new PdfGraphicsBuilder();
             PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken);
 

@@ -544,7 +544,7 @@ internal static class PptxCompositionTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sceneSink = sceneDiagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGraphicFrame, "/ppt/slides/slide1.xml", 1, sceneSink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGraphicFrame, "/ppt/slides/slide1.xml", 1, sceneSink, new HashSet<string>(StringComparer.Ordinal)]);
         TestAssert.Contains("PPTX_UNSUPPORTED_GRAPHIC_FRAME", string.Join("|", sceneDiagnostics.Select(d => d.Id)));
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);

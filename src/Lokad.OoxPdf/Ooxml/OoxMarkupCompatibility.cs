@@ -1,5 +1,7 @@
 using System.Xml.Linq;
 
+using Lokad.OoxPdf.Diagnostics;
+
 namespace Lokad.OoxPdf.Ooxml;
 
 // ISO 29500 Markup Compatibility subset (O02): exactly one AlternateContent
@@ -49,6 +51,38 @@ internal static class OoxMarkupCompatibility
         }
 
         return false;
+    }
+
+    // O02: one must-understand warning per part per document. Slides warn with
+    // their slide index; shared master/layout parts warn once no matter how many
+    // slides use them; DOCX story parts warn without one. Repeat loads of the
+    // same part stay quiet through the gate.
+    public static void WarnMustUnderstandOnce(
+        XDocument? document,
+        string? partName,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<string>? warnedParts,
+        int? slideIndex = null)
+    {
+        if (diagnosticSink is null || warnedParts is null || !HasUnrecognizedMustUnderstand(document))
+        {
+            return;
+        }
+
+        if (!warnedParts.Add(partName ?? ""))
+        {
+            return;
+        }
+
+        diagnosticSink(new OoxPdfDiagnostic(
+            "OOXML_MUST_UNDERSTAND",
+            OoxPdfSeverity.Warning,
+            "Content marked must-understand uses unsupported namespaces and was ignored.",
+            partName,
+            SlideIndex: slideIndex,
+            PageIndex: null,
+            Feature: "must-understand",
+            Fallback: "Ignored"));
     }
 
     public static void ResolveAlternateContent(XDocument? document)

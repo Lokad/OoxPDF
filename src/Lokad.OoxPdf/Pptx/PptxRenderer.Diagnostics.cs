@@ -8,7 +8,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void EmitUnsupportedFeatureDiagnostics(PptxSceneSlide sceneSlide, XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink)
+    private static void EmitUnsupportedFeatureDiagnostics(PptxSceneSlide sceneSlide, XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
     {
         if (diagnosticSink is null)
         {
@@ -59,17 +59,16 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TRANSITION", "transition");
         }
 
-        if (OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(slideXml))
+        OoxMarkupCompatibility.WarnMustUnderstandOnce(slideXml, partName, diagnosticSink, warnedParts, slideIndex);
+
+        if (sceneSlide.MasterXml is not null)
         {
-            diagnosticSink(new OoxPdfDiagnostic(
-                "OOXML_MUST_UNDERSTAND",
-                OoxPdfSeverity.Warning,
-                "Content marked must-understand uses unsupported namespaces and was ignored.",
-                partName,
-                PageIndex: null,
-                SlideIndex: slideIndex,
-                Feature: "must-understand",
-                Fallback: "Ignored"));
+            OoxMarkupCompatibility.WarnMustUnderstandOnce(sceneSlide.MasterXml, sceneSlide.MasterPartName ?? partName, diagnosticSink, warnedParts, slideIndex);
+        }
+
+        if (sceneSlide.LayoutXml is not null)
+        {
+            OoxMarkupCompatibility.WarnMustUnderstandOnce(sceneSlide.LayoutXml, sceneSlide.LayoutPartName ?? partName, diagnosticSink, warnedParts, slideIndex);
         }
 
         if (sceneSlide.HasTiming ||

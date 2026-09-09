@@ -2260,7 +2260,7 @@ internal static class PptxChartRenderingTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutEffects, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutEffects, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart style effect references should be diagnostic-covered from scene-owned effect-reference provenance.");
     }
@@ -2316,7 +2316,7 @@ internal static class PptxChartRenderingTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGradients, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGradients, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Unsupported chart shape-style gradients should be diagnostic-covered from scene-owned gradient provenance.");
     }
@@ -2368,7 +2368,7 @@ internal static class PptxChartRenderingTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutPictureFills, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutPictureFills, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_PICTURE_FILL"), "Unsupported chart shape-style picture fills should be diagnostic-covered from scene-owned picture-fill provenance.");
     }
@@ -2410,7 +2410,7 @@ internal static class PptxChartRenderingTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_ORIENTATION"), "Unsupported chart text orientation should be diagnostic-covered from scene-owned text-body provenance.");
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported chart text overflow should be diagnostic-covered from scene-owned text-body provenance.");
@@ -2454,7 +2454,7 @@ internal static class PptxChartRenderingTests
             "EmitUnsupportedFeatureDiagnostics",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
         Action<OoxPdfDiagnostic> sink = diagnostics.Add;
-        emitDiagnostics.Invoke(null, [new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0], slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink]);
+        emitDiagnostics.Invoke(null, [new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0], slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink, new HashSet<string>(StringComparer.Ordinal)]);
 
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Chart legend/data-label ellipsis defaults should not warn unless an overflowing chart text-frame surface is unsupported.");
     }
