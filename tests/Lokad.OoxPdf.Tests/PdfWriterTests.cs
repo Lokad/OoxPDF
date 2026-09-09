@@ -320,6 +320,52 @@ internal static class PdfWriterTests
         TestAssert.Contains("/C1 [0 0 1]", pdf);
     }
 
+    public static void WritesSubsetBaseFontWithSixLetterTagAndPlus()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
+        var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
+
+        string pdf = WritePdfText(new[] { page });
+
+        TestAssert.True(embedded.BaseFontName.Length >= 8, "Expected subset BaseFont name to carry a tag prefix.");
+        TestAssert.True(embedded.BaseFontName[6] == '+', "Expected six-letter tag followed by plus, got: " + embedded.BaseFontName);
+        for (int i = 0; i < 6; i++)
+        {
+            TestAssert.True(embedded.BaseFontName[i] >= 'A' && embedded.BaseFontName[i] <= 'Z', "Expected uppercase tag letters, got: " + embedded.BaseFontName);
+        }
+
+        TestAssert.Contains("/BaseFont /" + embedded.BaseFontName, pdf);
+        TestAssert.Contains("/FontName /" + embedded.BaseFontName, pdf);
+    }
+
+    public static void WritesDistinctSubsetBaseFontsForDifferentCodepointSets()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
+        PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
+        var firstPage = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", first)]);
+        var secondPage = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", second)]);
+
+        string pdf = WritePdfText(new[] { firstPage, secondPage });
+
+        TestAssert.True(first.BaseFontName != second.BaseFontName, "Differing subsets must have distinct BaseFont names.");
+        TestAssert.Contains("/BaseFont /" + first.BaseFontName, pdf);
+        TestAssert.Contains("/BaseFont /" + second.BaseFontName, pdf);
+    }
+
     public static void WritesFontFile2WithDecodedLength()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -338,6 +384,35 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Length1 " + embedded.FontProgramBytes.Length.ToString(System.Globalization.CultureInfo.InvariantCulture), pdf);
     }
 
+    public static void WritesCMapBatchesWithinOneHundredMappings()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        int[] codePoints = Enumerable.Range(0x20, 300).ToArray();
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codePoints, CancellationToken.None);
+        var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
+
+        string pdf = WritePdfText(new[] { page });
+        string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+        TestAssert.True(embedded.UnicodeByCid.Count > 100, "Expected large probe to exceed one CMap block.");
+        foreach (string line in cmap.Split('\n'))
+        {
+            string trimmed = line.Trim();
+            if (trimmed.EndsWith("beginbfchar", StringComparison.Ordinal))
+            {
+                string countText = trimmed.Substring(0, trimmed.Length - "beginbfchar".Length).Trim();
+                int count = int.Parse(countText, System.Globalization.CultureInfo.InvariantCulture);
+                TestAssert.True(count >= 1 && count <= 100, "Each bfchar block must hold 1..100 mappings.");
+            }
+        }
+
+        TestAssert.Contains("beginbfchar", pdf);
+    }
     public static void RejectsNonFinitePdfNumbers()
     {
         TestAssert.Throws<ArgumentOutOfRangeException>(() => PdfDocumentWriter.FormatNumber(double.NaN));

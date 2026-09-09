@@ -6,6 +6,22 @@ internal readonly record struct FontCoverageSpan(int FontIndex, int Start, int L
 
 internal static class FontCoverageFallback
 {
+    // True when every rune maps in the primary face, so callers can skip
+    // loading fallback candidates without changing split outcomes (G04).
+    public static bool IsFullyCovered(string text, OpenTypeFont primary, CancellationToken cancellationToken)
+    {
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (primary.MapCodePoint(rune.Value) == 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public static IReadOnlyList<FontCoverageSpan> SplitByCoverage(string text, IReadOnlyList<OpenTypeFont?> candidates, CancellationToken cancellationToken)
     {
         var spans = new List<FontCoverageSpan>();

@@ -171,7 +171,7 @@ internal sealed partial class DocxRenderer
 
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, effectiveGeometryMode, CancellationToken.None);
@@ -180,7 +180,7 @@ internal sealed partial class DocxRenderer
 
     internal IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> InspectMarkupBalloons(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
@@ -212,7 +212,7 @@ internal sealed partial class DocxRenderer
 
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, CancellationToken.None);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
@@ -859,7 +859,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, cancellationToken);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink, cancellationToken);
 
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), cancellationToken);
         markupContext = WithFirstPinYOffset(markupContext, document, layout);

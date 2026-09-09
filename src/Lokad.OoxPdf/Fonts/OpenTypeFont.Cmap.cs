@@ -74,6 +74,10 @@ internal sealed partial class OpenTypeFont
         public static CmapFormat12 Read(byte[] bytes, int offset)
         {
             uint count = U32(bytes, offset + 12);
+            if (count > 100_000)
+            {
+                throw new InvalidDataException("Cmap format 12 declares too many groups.");
+            }
             var groups = new CmapGroup[count];
             int groupOffset = offset + 16;
             for (int i = 0; i < groups.Length; i++)

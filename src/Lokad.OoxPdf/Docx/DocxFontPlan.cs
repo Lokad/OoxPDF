@@ -183,16 +183,17 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
     private readonly FontFaceResolution? fallbackResolution;
     private readonly CancellationToken cancellationToken;
-    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts = new();
+    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts;
     private readonly IFontResolver? fontResolver;
     private readonly Dictionary<(string StableId, int FaceIndex, string? PrimaryFamily, bool Bold, bool Italic), IReadOnlyList<OpenTypeFont?>> candidateChains = new();
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken, IFontResolver? fontResolver = null)
+    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken, IFontResolver? fontResolver = null, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>? sharedFonts = null)
     {
         runs = plan.Runs;
         this.fallbackResolution = fallbackResolution;
         this.cancellationToken = cancellationToken;
         this.fontResolver = fontResolver;
+        fonts = sharedFonts ?? new();
     }
 
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
@@ -208,6 +209,13 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         if (font is null || font.UnitsPerEm == 0)
         {
             return 0d;
+        }
+
+        // Primary-covered text measures identically without the split; skipping
+        // candidate loads leaves measurement unchanged (G04).
+        if (FontCoverageFallback.IsFullyCovered(text, font, cancellationToken))
+        {
+            return MeasureSingleFontText(run, text, fontSize, font);
         }
 
         IReadOnlyList<OpenTypeFont?> candidates = ResolveCandidateFonts(run, resolved, resolution, font);

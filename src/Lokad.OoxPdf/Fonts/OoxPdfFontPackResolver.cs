@@ -6,6 +6,8 @@ namespace Lokad.OoxPdf.Fonts;
 public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    internal const long MaxManifestBytes = 1024L * 1024L;
+    internal const long MaxFontFileBytes = 64L * 1024L * 1024L;
     private readonly FontPackFileSource fileSource;
     private readonly IReadOnlyList<FontPackFace> faces;
     private readonly IReadOnlyList<string> fallbackFamilies;
@@ -48,6 +50,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             httpClient,
             manifestUri,
             "font pack manifest",
+            MaxManifestBytes,
             cancellationToken).ConfigureAwait(false);
         FontPackManifest manifest = DeserializeManifest();
         ValidatedManifest validated = ValidateManifest(packId, manifest);
@@ -164,6 +167,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         HttpClient httpClient,
         Uri uri,
         string description,
+        long maxBytes,
         CancellationToken cancellationToken)
     {
         try
@@ -179,7 +183,15 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
                     $"Unable to download {description} from '{uri}'. HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
             }
 
-            return await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            if (response.Content.Headers.ContentLength is long declared && declared > maxBytes)
+            {
+                throw new OoxPdfFontPackException(
+                    OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
+                    $"Unable to download {description} from \u0027{uri}\u0027: declared size {declared} bytes exceeds the limit of {maxBytes} bytes.");
+            }
+
+            using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            return await CopyCappedAsync(content, maxBytes, description, uri.ToString(), cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -350,6 +362,30 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             unescaped.Contains('\\', StringComparison.Ordinal);
     }
 
+    internal static async Task<byte[]> CopyCappedAsync(Stream source, long maxBytes, string description, string uri, CancellationToken cancellationToken)
+    {
+        byte[] buffer = new byte[81920];
+        using var destination = new MemoryStream();
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                return destination.ToArray();
+            }
+
+            if (checked(destination.Length + read) > maxBytes)
+            {
+                throw new OoxPdfFontPackException(
+                    OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
+                    "Unable to download " + description + " from " + uri + ": response exceeds the limit.");
+            }
+
+            destination.Write(buffer, 0, read);
+        }
+    }
+
     private static long ValidateByteSize(long? byteSize, string relativePath)
     {
         if (byteSize is null or < 0)
@@ -411,6 +447,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
                 httpClient,
                 new Uri(packRootUri, file.RelativePath),
                 "font file '" + file.RelativePath + "'",
+                Math.Min(file.ByteSize, MaxFontFileBytes),
                 ct).ConfigureAwait(false);
 
             ValidateFontBytes(file, bytes);

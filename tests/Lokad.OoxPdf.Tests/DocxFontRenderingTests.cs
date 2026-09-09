@@ -49,7 +49,7 @@ internal static class DocxFontRenderingTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string text = "Office metrics";
@@ -276,7 +276,7 @@ internal static class DocxFontRenderingTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFontExcept(defaultFamily);
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
@@ -339,7 +339,7 @@ internal static class DocxFontRenderingTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + font.Value.Resolution.FamilyName + "-"), pdf);
+        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains("+" + PdfEmbeddedFont.SanitizeName(font.Value.Resolution.FamilyName), pdf);
     }
 
     public static void DocxRendererUsesFontCatalogAlternateBeforeResolverFallback()
@@ -349,7 +349,7 @@ internal static class DocxFontRenderingTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFontExcept(defaultFamily);
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
@@ -399,7 +399,7 @@ internal static class DocxFontRenderingTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + font.Value.Resolution.FamilyName + "-"), pdf);
+        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains("+" + PdfEmbeddedFont.SanitizeName(font.Value.Resolution.FamilyName), pdf);
     }
 
     public static void DocxRendererEmbedsResolvedTrueTypeCollectionFace()
@@ -407,7 +407,7 @@ internal static class DocxFontRenderingTests
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
         if (!Directory.Exists(fontsDirectory))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!Directory.Exists(fontsDirectory))");
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
@@ -417,11 +417,11 @@ internal static class DocxFontRenderingTests
             .Where(item => item is not null)
             .Select(item => item!.Value)
             .FirstOrDefault(item => !item.Resolution.FamilyName.Equals(item.FirstFamily, StringComparison.OrdinalIgnoreCase) &&
-                !PdfEmbeddedFont.SanitizeName("LOKAD+" + item.Resolution.FamilyName + "-").StartsWith(PdfEmbeddedFont.SanitizeName("LOKAD+" + item.FirstFamily + "-"), StringComparison.Ordinal) &&
-                !PdfEmbeddedFont.SanitizeName("LOKAD+" + item.FirstFamily + "-").StartsWith(PdfEmbeddedFont.SanitizeName("LOKAD+" + item.Resolution.FamilyName + "-"), StringComparison.Ordinal));
+                !PdfEmbeddedFont.SanitizeName(item.Resolution.FamilyName).StartsWith(PdfEmbeddedFont.SanitizeName(item.FirstFamily), StringComparison.Ordinal) &&
+                !PdfEmbeddedFont.SanitizeName(item.FirstFamily).StartsWith(PdfEmbeddedFont.SanitizeName(item.Resolution.FamilyName), StringComparison.Ordinal));
         if (collectionFace is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (collectionFace is null)");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -460,10 +460,10 @@ internal static class DocxFontRenderingTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        string expected = PdfEmbeddedFont.SanitizeName("LOKAD+" + collectionFace.Value.Resolution.FamilyName + "-");
-        string firstFace = PdfEmbeddedFont.SanitizeName("LOKAD+" + collectionFace.Value.FirstFamily + "-");
-        TestAssert.Contains("/BaseFont /" + expected, pdf);
-        TestAssert.True(!pdf.Contains("/BaseFont /" + firstFace, StringComparison.Ordinal), "Expected DOCX embedding to honor the resolved TrueType collection face index.");
+        string expected = "+" + PdfEmbeddedFont.SanitizeName(collectionFace.Value.Resolution.FamilyName);
+        string firstFace = "+" + PdfEmbeddedFont.SanitizeName(collectionFace.Value.FirstFamily);
+        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains(expected, pdf);
+        TestAssert.True(!pdf.Contains(firstFace, StringComparison.Ordinal), "Expected DOCX embedding to honor the resolved TrueType collection face index.");
     }
 
     public static void DocxRendererEmitsDistinctResourcesForResolvedRunTypefaces()
@@ -471,13 +471,13 @@ internal static class DocxFontRenderingTests
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
         if (!Directory.Exists(fontsDirectory))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!Directory.Exists(fontsDirectory))");
         }
 
         (FontFaceResolution Resolution, OpenTypeFont Font)? first = DocxTests.FindUsableInstalledFont();
         if (first is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (first is null)");
         }
 
         (FontFaceResolution Resolution, OpenTypeFont Font)? second = DocxTests.FindUsableInstalledFontExcept(first.Value.Resolution.FamilyName);
@@ -485,7 +485,7 @@ internal static class DocxFontRenderingTests
             string.Equals(first.Value.Resolution.Source.StableId, second.Value.Resolution.Source.StableId, StringComparison.OrdinalIgnoreCase) &&
             first.Value.Resolution.FontFaceIndex == second.Value.Resolution.FontFaceIndex)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (second is null || string.Equals(first.Value.Resolution.Source.StableId, second.Value.Resolution.Source.StableId, StringComparison.OrdinalIgnoreCase) && first.Value.Resolution.FontFaceIndex == second.Value.Resolution.FontFaceIndex)");
         }
 
         string firstFamily = System.Security.SecurityElement.Escape(first.Value.Resolution.FamilyName) ?? first.Value.Resolution.FamilyName;
@@ -532,8 +532,8 @@ internal static class DocxFontRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 ", pdf);
         TestAssert.Contains("/F2 ", pdf);
-        TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + first.Value.Resolution.FamilyName + "-"), pdf);
-        TestAssert.Contains("/BaseFont /" + PdfEmbeddedFont.SanitizeName("LOKAD+" + second.Value.Resolution.FamilyName + "-"), pdf);
+        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains("+" + PdfEmbeddedFont.SanitizeName(first.Value.Resolution.FamilyName), pdf);
+        TestAssert.Contains("/BaseFont /", pdf); TestAssert.Contains("+" + PdfEmbeddedFont.SanitizeName(second.Value.Resolution.FamilyName), pdf);
     }
 
     public static void DocxRendererDoesNotSynthesizeBoldWhenResolvedFaceIsBold()
@@ -541,7 +541,7 @@ internal static class DocxFontRenderingTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string family = System.Security.SecurityElement.Escape(font.Value.Resolution.FamilyName) ?? font.Value.Resolution.FamilyName;
@@ -590,7 +590,7 @@ internal static class DocxFontRenderingTests
         (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
         if (font is null)
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -632,4 +632,54 @@ internal static class DocxFontRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Equal(2, DocxTests.CountPdfTextShows(pdf));
     }
+    public static void DocxCffFontSubstitutesFallbackWithDiagnostic()
+    {
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
+        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
+        var resolver = new DocxTests.CffPrimaryFontResolver(cffBytes, fallbackBytes);
+        var run = new DocxTextRun("Hello", 12d, null, false, false, false, null, "CffFamily")
+        {
+            Fonts = new DocxRunFonts("CffFamily", null, null, null, null, null, null, null)
+        };
+        DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        IReadOnlyList<PdfPage> pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None);
+
+        TestAssert.Equal(1, pages.Count);
+        PdfPage page = pages[0];
+        TestAssert.True(DocxTests.CountPdfTextShows(page.Content) >= 1, "Substituted text must be painted.");
+        TestAssert.Equal(1, page.Fonts.Count);
+        TestAssert.True(page.Fonts[0].Font.Font.HasTrueTypeOutlines, "Emitted font must be embeddable.");
+        TestAssert.Contains("TestFont", page.Fonts[0].Font.BaseFontName);
+        OoxPdfDiagnostic warning = TestAssert.NotNull(diagnostics.SingleOrDefault(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"));
+        TestAssert.DoesNotContain("CffFamily", page.Fonts[0].Font.BaseFontName);
+        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+        TestAssert.Contains("CffFamily", warning.Message);
+        TestAssert.Equal("Document fallback typeface", warning.Fallback);
+    }
+
+    public static void DocxCffSubstitutionMatchesTrueTypeRendering()
+    {
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
+        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
+        var run = new DocxTextRun("Hello", 12d, null, false, false, false, null, "CffFamily")
+        {
+            Fonts = new DocxRunFonts("CffFamily", null, null, null, null, null, null, null)
+        };
+        DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
+        var cffDiagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage cffPage = new DocxRenderer(new DocxTests.CffPrimaryFontResolver(cffBytes, fallbackBytes), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, cffDiagnostics.Add, CancellationToken.None)
+            .Single();
+        var ttDiagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage ttPage = new DocxRenderer(new DocxTests.CffPrimaryFontResolver(cffBytes, fallbackBytes, emitCff: false), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, ttDiagnostics.Add, CancellationToken.None)
+            .Single();
+
+        TestAssert.Equal(ttPage.Content, cffPage.Content);
+        TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
+        TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "CFF rendering must report the substitution.");
+    }
+
 }

@@ -1883,6 +1883,22 @@ internal static class DocxTests
         }
     }
 
+    internal sealed class CffPrimaryFontResolver(byte[] cffBytes, byte[] fallbackBytes, bool emitCff = true) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            bool cff = emitCff && request.FamilyName.Equals("CffFamily", StringComparison.OrdinalIgnoreCase);
+            var source = new MemoryFontProgramSource(cff ? "cff-test" : "tt-test", cff ? cffBytes : fallbackBytes);
+            return new FontFaceResolution(
+                request.FamilyName,
+                cff ? "CffFamily" : "FallbackFamily",
+                new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
+                source,
+                IsFallback: false);
+        }
+    }
+
+
     internal sealed class FamilyWidthTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize)

@@ -14,23 +14,33 @@ internal static class OpenTypeFontSubsetter
     private const ushort WeHaveATwoByTwo = 0x0080;
     private const ushort WeHaveInstructions = 0x0100;
 
-    public static OpenTypeFontSubset? Create(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, CancellationToken cancellationToken)
+
+    public static bool TryCreate(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, CancellationToken cancellationToken, out OpenTypeFontSubset? subset, out string? failureReason)
     {
+        if (!font.HasTrueTypeOutlines)
+        {
+            subset = null;
+            failureReason = "Font has no TrueType (glyf/loca) outlines; CFF/OpenType-CFF subsetting is not supported.";
+            return false;
+        }
+
         try
         {
-            return CreateCore(font, unicodeByOriginalGlyph, cancellationToken);
+            subset = CreateCore(font, unicodeByOriginalGlyph, cancellationToken);
+            if (subset is null)
+            {
+                failureReason = "Font subset contains no usable glyphs.";
+                return false;
+            }
+
+            failureReason = null;
+            return true;
         }
-        catch (InvalidDataException)
+        catch (Exception ex) when (ex is InvalidDataException or ArgumentException or OverflowException)
         {
-            return null;
-        }
-        catch (ArgumentException)
-        {
-            return null;
-        }
-        catch (OverflowException)
-        {
-            return null;
+            subset = null;
+            failureReason = ex.Message;
+            return false;
         }
     }
 
@@ -49,24 +59,24 @@ internal static class OpenTypeFontSubsetter
             !tables.TryGetValue("OS/2", out TableRecord os2) ||
             !tables.TryGetValue("post", out TableRecord post))
         {
-            return null;
+            throw new InvalidDataException("Font subsetting requires TrueType outline tables.");
         }
 
         if (head.Length < 54 || hhea.Length < 36 || maxp.Length < 6 || post.Length < 16)
         {
-            return null;
+            throw new InvalidDataException("Font subsetting requires complete outline tables.");
         }
 
         ushort originalGlyphCount = U16(source, maxp.Offset + 4);
         if (originalGlyphCount == 0)
         {
-            return null;
+            throw new InvalidDataException("Font declares zero glyphs.");
         }
 
         short indexToLocFormat = I16(source, head.Offset + 50);
         if (indexToLocFormat is not 0 and not 1)
         {
-            return null;
+            throw new InvalidDataException("Font uses an unsupported loca format.");
         }
 
         ushort[] originalGlyphs = BuildGlyphClosure(unicodeByOriginalGlyph.Keys);

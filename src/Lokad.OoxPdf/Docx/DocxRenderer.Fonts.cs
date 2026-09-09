@@ -13,20 +13,78 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken)
+    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver, cancellationToken);
         var resources = new List<PdfFontResource>();
         var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
+        plan = SubstituteUnembeddableFonts(plan, fontCache, diagnosticSink, cancellationToken);
         PrepareResolvedRunFontResources(plan, resources, runResources, fontCache, cancellationToken);
         DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache, cancellationToken);
         IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(plan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, cancellationToken);
         IDocxTextMeasurer? measurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
-            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver)
+            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache)
             : null;
         return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains);
+    }
+
+    // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines, so the
+    // PDF subsetter cannot embed them. Remap those runs to unresolved before any
+    // measurement or emission so both paths share the document fallback face (F03:
+    // measured and emitted glyphs use the same face) and report each substituted
+    // typeface once through the diagnostic sink.
+    private static DocxFontPlan SubstituteUnembeddableFonts(
+        DocxFontPlan plan,
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        List<DocxResolvedRunTypeface>? remapped = null;
+        var reported = new HashSet<(string StableId, int FaceIndex)>();
+        for (int i = 0; i < plan.Runs.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxResolvedRunTypeface run = plan.Runs[i];
+            if (run.Resolution is not { } resolution ||
+                LoadFont(resolution, fontCache, cancellationToken) is not { } font ||
+                font.HasTrueTypeOutlines)
+            {
+                if (remapped is not null)
+                {
+                    remapped.Add(run);
+                }
+
+                continue;
+            }
+
+            if (remapped is null)
+            {
+                remapped = new List<DocxResolvedRunTypeface>(plan.Runs.Count);
+                for (int j = 0; j < i; j++)
+                {
+                    remapped.Add(plan.Runs[j]);
+                }
+            }
+
+            if (reported.Add((resolution.Source.StableId, resolution.FontFaceIndex)))
+            {
+                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                    "FONT_UNSUPPORTED_OUTLINES",
+                    OoxPdfSeverity.Warning,
+                    "Font '" + resolution.FamilyName + "' has no embeddable TrueType outlines (CFF/OpenType-CFF) and was substituted with the document fallback typeface.",
+                    PartName: null,
+                    SlideIndex: null,
+                    PageIndex: null,
+                    Feature: resolution.FamilyName,
+                    Fallback: "Document fallback typeface"));
+            }
+
+            remapped.Add(run with { Resolution = null });
+        }
+
+        return remapped is null ? plan : new DocxFontPlan(remapped);
     }
 
     private sealed class ScaledDocxTextMeasurer(IDocxTextMeasurer inner, double textScale, double lineMetricScale) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
@@ -175,6 +233,13 @@ internal sealed partial class DocxRenderer
 
             OpenTypeFont? primaryFont = LoadFont(primaryResource.Resolution, fontCache, cancellationToken);
             if (primaryFont is null)
+            {
+                continue;
+            }
+
+            // Primary-covered runs need no fallback candidates; skipping their
+            // program loads leaves split outcomes unchanged (G04).
+            if (FontCoverageFallback.IsFullyCovered(resolved.Run.Text, primaryFont, cancellationToken))
             {
                 continue;
             }

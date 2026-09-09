@@ -26,10 +26,12 @@ internal sealed partial class OpenTypeFont
         PostMetrics post,
         CmapFormat? cmap,
         ushort[] advances,
-        IReadOnlyDictionary<uint, short> kerningPairs)
+        IReadOnlyDictionary<uint, short> kerningPairs,
+        string scalerTag)
     {
         this.bytes = bytes;
         this.tables = tables;
+        ScalerTag = scalerTag;
         FamilyName = familyName;
         UnitsPerEm = unitsPerEm;
         Bounds = bounds;
@@ -40,6 +42,12 @@ internal sealed partial class OpenTypeFont
         this.advances = advances;
         this.kerningPairs = kerningPairs;
     }
+
+    public string ScalerTag { get; }
+
+    public bool HasTrueTypeOutlines => tables.ContainsKey("glyf") && tables.ContainsKey("loca");
+
+    public bool HasCffOutlines => tables.ContainsKey("CFF ") || tables.ContainsKey("CFF2");
 
     public string FamilyName { get; }
 
@@ -85,31 +93,31 @@ internal sealed partial class OpenTypeFont
 
         if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
         {
-            bytes = ExtractCollectionFont(bytes);
+            bytes = ExtractCollectionFont(bytes, fontIndex);
         }
         else if (fontIndex != 0)
         {
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
-        ushort numTables = U16(bytes, 4);
-        var tables = new Dictionary<string, TableRecord>(StringComparer.Ordinal);
-        int offset = 12;
-        for (int i = 0; i < numTables; i++)
+        string scalerTag = ReadScalerTag(bytes);
+        try
         {
-            string tag = Encoding.ASCII.GetString(bytes, offset, 4);
-            uint tableOffset = U32(bytes, offset + 8);
-            uint length = U32(bytes, offset + 12);
-            if (tableOffset + length > bytes.Length)
-            {
-                throw new InvalidDataException($"Font table '{tag}' exceeds file length.");
-            }
-
-            tables[tag] = new TableRecord((int)tableOffset, (int)length);
-            offset += 16;
-        }
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4), "font");
+        RequireMinimumLength(tables, "head", 54);
+        RequireMinimumLength(tables, "hhea", 36);
+        RequireMinimumLength(tables, "maxp", 6);
+        RequireMinimumLength(tables, "name", 6);
+        RequireMinimumLength(tables, "OS/2", 78);
+        RequireMinimumLength(tables, "post", 16);
+        RequireMinimumLength(tables, "cmap", 4);
+        RequireHmtxLength(bytes, tables);
 
         ushort unitsPerEm = ReadUnitsPerEm(bytes, tables);
+        if (unitsPerEm == 0)
+        {
+            throw new InvalidDataException("Font has zero units-per-em.");
+        }
         FontBounds bounds = ReadBounds(bytes, tables);
         ushort glyphCount = ReadGlyphCount(bytes, tables);
         string familyName = ReadFamilyName(bytes, tables);
@@ -118,9 +126,20 @@ internal sealed partial class OpenTypeFont
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables);
-        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs);
+        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs, scalerTag);
 
-        byte[] ExtractCollectionFont(byte[] bytes)
+        }
+        catch (InvalidDataException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
+        {
+            throw new InvalidDataException("Font file is malformed: " + ex.Message, ex);
+        }
+    }
+
+    private static byte[] ExtractCollectionFont(byte[] bytes, int fontIndex)
         {
             if (bytes.Length < 16)
             {
@@ -128,6 +147,10 @@ internal sealed partial class OpenTypeFont
             }
 
             uint fontCount = U32(bytes, 8);
+            if (fontCount > 256)
+            {
+                throw new InvalidDataException("TrueType collection declares too many faces.");
+            }
             if (fontIndex < 0 || fontIndex >= fontCount)
             {
                 throw new InvalidDataException("TrueType collection font index is out of range.");
@@ -141,49 +164,50 @@ internal sealed partial class OpenTypeFont
 
             ushort collectionTableCount = U16(bytes, (int)fontOffset + 4);
             int directoryLength = 12 + collectionTableCount * 16;
-            if (fontOffset + directoryLength > bytes.Length)
+            if ((ulong)fontOffset + (ulong)(uint)directoryLength > (ulong)bytes.Length)
             {
                 throw new InvalidDataException("TrueType collection table directory is invalid.");
             }
 
-            var records = new CollectionTableRecord[collectionTableCount];
-            int directoryOffset = (int)fontOffset + 12;
+            // Validate and dedupe through the shared directory reader, then keep
+            // directory order for the byte-exact rebuild below.
+            Dictionary<string, TableRecord> faceTables = ReadTableDirectory(bytes, (int)fontOffset + 12, collectionTableCount, "collection face");
+            var records = new TableRecord[collectionTableCount];
             for (int i = 0; i < collectionTableCount; i++)
             {
-                int recordOffset = directoryOffset + i * 16;
-                uint tableOffset = U32(bytes, recordOffset + 8);
-                uint tableLength = U32(bytes, recordOffset + 12);
-                if (tableOffset + tableLength > bytes.Length)
-                {
-                    throw new InvalidDataException("TrueType collection table exceeds file length.");
-                }
-
-                records[i] = new CollectionTableRecord(tableOffset, tableLength);
+                int recordOffset = (int)fontOffset + 12 + i * 16;
+                string tag = Encoding.ASCII.GetString(bytes, recordOffset, 4);
+                records[i] = faceTables[tag];
             }
 
-            int outputLength = directoryLength;
-            foreach (CollectionTableRecord record in records)
+            long outputLength = directoryLength;
+            foreach (TableRecord record in records)
             {
-                outputLength = Align4(outputLength);
-                outputLength += (int)record.Length;
+                outputLength = (outputLength + 3L) & ~3L;
+                outputLength = checked(outputLength + record.Length);
             }
 
-            var output = new byte[Align4(outputLength)];
+            // Extraction only repackages source bytes plus alignment padding, so a
+            // larger claim implies overlapping or hostile table extents.
+            if (outputLength > (long)bytes.Length + 3L * collectionTableCount + 4L)
+            {
+                throw new InvalidDataException("TrueType collection face exceeds file length.");
+            }
+
+            var output = new byte[Align4((int)outputLength)];
             Array.Copy(bytes, (int)fontOffset, output, 0, directoryLength);
 
             int writeOffset = directoryLength;
             for (int i = 0; i < records.Length; i++)
             {
-                CollectionTableRecord record = records[i];
+                TableRecord record = records[i];
                 writeOffset = Align4(writeOffset);
-                Array.Copy(bytes, (int)record.Offset, output, writeOffset, (int)record.Length);
+                Array.Copy(bytes, record.Offset, output, writeOffset, record.Length);
                 W32(output, 12 + i * 16 + 8, (uint)writeOffset);
-                writeOffset += (int)record.Length;
+                writeOffset += record.Length;
             }
-
             return output;
         }
-    }
 
     public static int GetCollectionFontCount(byte[] bytes)
     {
@@ -584,6 +608,65 @@ internal sealed partial class OpenTypeFont
         return true;
     }
 
+    private static string ReadScalerTag(byte[] bytes)
+    {
+        string tag = Encoding.ASCII.GetString(bytes, 0, 4);
+        if (tag is "\0\u0001\0\0" or "OTTO" or "true" or "typ1")
+        {
+            return tag;
+        }
+
+        throw new InvalidDataException("Font has an unrecognized sfnt version.");
+    }
+
+    private static Dictionary<string, TableRecord> ReadTableDirectory(byte[] bytes, int directoryOffset, ushort tableCount, string what)
+    {
+        if ((long)directoryOffset + (long)tableCount * 16L > bytes.Length)
+        {
+            throw new InvalidDataException("Font table directory exceeds file length.");
+        }
+
+        var tables = new Dictionary<string, TableRecord>(StringComparer.Ordinal);
+        for (int i = 0; i < tableCount; i++)
+        {
+            int record = directoryOffset + i * 16;
+            string tag = Encoding.ASCII.GetString(bytes, record, 4);
+            uint tableOffset = U32(bytes, record + 8);
+            uint length = U32(bytes, record + 12);
+            if ((ulong)tableOffset + length > (ulong)bytes.Length)
+            {
+                throw new InvalidDataException("Font table exceeds file length.");
+            }
+
+            if (!tables.TryAdd(tag, new TableRecord((int)tableOffset, (int)length)))
+            {
+                throw new InvalidDataException("Font table directory contains a duplicate tag.");
+            }
+        }
+
+        return tables;
+    }
+
+    private static void RequireMinimumLength(Dictionary<string, TableRecord> tables, string tag, int minimum)
+    {
+        TableRecord table = Required(tables, tag);
+        if (table.Length < minimum)
+        {
+            throw new InvalidDataException("Font table is truncated.");
+        }
+    }
+
+    private static void RequireHmtxLength(byte[] bytes, Dictionary<string, TableRecord> tables)
+    {
+        TableRecord hhea = Required(tables, "hhea");
+        TableRecord hmtx = Required(tables, "hmtx");
+        ushort numberOfHMetrics = U16(bytes, hhea.Offset + 34);
+        if ((long)hmtx.Length < (long)numberOfHMetrics * 4L)
+        {
+            throw new InvalidDataException("Font horizontal metrics table is truncated.");
+        }
+    }
+
     private static ushort ReadUnitsPerEm(byte[] bytes, Dictionary<string, TableRecord> tables)
     {
         TableRecord head = Required(tables, "head");
@@ -744,7 +827,6 @@ internal sealed partial class OpenTypeFont
 
     private readonly record struct TableRecord(int Offset, int Length);
 
-    private readonly record struct CollectionTableRecord(uint Offset, uint Length);
 
     internal readonly record struct Os2Metrics(
         ushort Version,
