@@ -140,20 +140,24 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
     $changed16Values = @($metrics | Where-Object { $_.ChangedPixelRatioAtThreshold16 -ne $null } | ForEach-Object { [double]$_.ChangedPixelRatioAtThreshold16 })
     $ssimValues = @($metrics | Where-Object { $_.StructuralSimilarity -ne $null } | ForEach-Object { [double]$_.StructuralSimilarity })
     $histValues = @($metrics | Where-Object { $_.ForegroundColorHistogramCorrelation -ne $null } | ForEach-Object { [double]$_.ForegroundColorHistogramCorrelation })
+    $recallValues = @($metrics | Where-Object { $_.ForegroundRecall -ne $null } | ForEach-Object { [double]$_.ForegroundRecall })
     $dimensionMismatchCount = @($metrics | Where-Object { $_.DimensionsMatch -ne $true }).Count
     $minStructuralSimilarity = if ($ssimValues.Count -eq 0) { $null } else { ($ssimValues | Measure-Object -Minimum).Minimum }
     $minForegroundColorHistogramCorrelation = if ($histValues.Count -eq 0) { $null } else { ($histValues | Measure-Object -Minimum).Minimum }
+    $minForegroundRecall = if ($recallValues.Count -eq 0) { $null } else { ($recallValues | Measure-Object -Minimum).Minimum }
     $support = $caseManifest.support
     $familySupport = $familyManifest.support
     $requiredStructuralSimilarity = Get-ManifestDouble $support "minStructuralSimilarity" (Get-ManifestDouble $familySupport "minStructuralSimilarity" 0.995)
     $requiredColorHistogram = Get-ManifestDouble $support "minForegroundColorHistogramCorrelation" (Get-ManifestDouble $familySupport "minForegroundColorHistogramCorrelation" 0.98)
+    $requiredForegroundRecall = Get-ManifestDouble $support "minForegroundRecall" (Get-ManifestDouble $familySupport "minForegroundRecall" $null)
     $status = if (-not $passed) {
         "unsupported"
     }
     elseif ($minStructuralSimilarity -eq $null -or
         $minForegroundColorHistogramCorrelation -eq $null -or
         $minStructuralSimilarity -lt $requiredStructuralSimilarity -or
-        $minForegroundColorHistogramCorrelation -lt $requiredColorHistogram) {
+        $minForegroundColorHistogramCorrelation -lt $requiredColorHistogram -or
+        ($requiredForegroundRecall -ne $null -and ($minForegroundRecall -eq $null -or $minForegroundRecall -lt $requiredForegroundRecall))) {
         "needs-review"
     }
     else {
@@ -185,8 +189,10 @@ function New-ReportRow($case, [bool]$passed, [string]$errorMessage, [string]$exp
         diagnosticIds = @($diagnostics | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ";"
         minStructuralSimilarity = $minStructuralSimilarity
         minForegroundColorHistogramCorrelation = $minForegroundColorHistogramCorrelation
+        minForegroundRecall = $minForegroundRecall
         requiredStructuralSimilarity = $requiredStructuralSimilarity
         requiredForegroundColorHistogramCorrelation = $requiredColorHistogram
+        requiredForegroundRecall = $requiredForegroundRecall
         maxMeanAbsoluteError = if ($maeValues.Count -eq 0) { $null } else { ($maeValues | Measure-Object -Maximum).Maximum }
         maxChangedPixelRatioAtThreshold16 = if ($changed16Values.Count -eq 0) { $null } else { ($changed16Values | Measure-Object -Maximum).Maximum }
         error = $errorMessage
@@ -330,8 +336,10 @@ if ($UpdateCatalog) {
             lastRunPath = $row.runPath
             minStructuralSimilarity = $row.minStructuralSimilarity
             minForegroundColorHistogramCorrelation = $row.minForegroundColorHistogramCorrelation
+            minForegroundRecall = $row.minForegroundRecall
             requiredStructuralSimilarity = $row.requiredStructuralSimilarity
             requiredForegroundColorHistogramCorrelation = $row.requiredForegroundColorHistogramCorrelation
+            requiredForegroundRecall = $row.requiredForegroundRecall
             maxMeanAbsoluteError = $row.maxMeanAbsoluteError
             maxChangedPixelRatioAtThreshold16 = $row.maxChangedPixelRatioAtThreshold16
         }
