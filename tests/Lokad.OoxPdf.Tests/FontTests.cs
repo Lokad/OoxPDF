@@ -868,6 +868,34 @@ internal static class FontTests
         TestAssert.Equal(1, handler.Requests.Count(path => path == "ooxpdf-fonts/test-pack/files/aptos.ttf"));
     }
 
+    public static void FontPackResolverSharesProgramSourcesAcrossResolutions()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest(
+            "test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
+        OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out StubHttpMessageHandler handler, responseDelay: TimeSpan.FromMilliseconds(50));
+
+        FontFaceResolution first = resolver.Resolve(new FontRequest("Aptos"));
+        FontFaceResolution second = resolver.Resolve(new FontRequest("Aptos"));
+
+        TestAssert.Equal(first.Source.StableId, second.Source.StableId);
+
+        IFontProgramSource[] programSources = [first.Source, second.Source];
+        Task<ReadOnlyMemory<byte>>[] reads = programSources
+            .SelectMany(source => Enumerable.Range(0, 8)
+                .Select(_ => source.GetBytesAsync(CancellationToken.None).AsTask()))
+            .ToArray();
+        Task.WaitAll(reads);
+
+        foreach (Task<ReadOnlyMemory<byte>> read in reads)
+        {
+            TestAssert.True(read.Result.Span.SequenceEqual(fontBytes), "Repeated resolutions must observe the same downloaded bytes.");
+        }
+
+        TestAssert.Equal(2, handler.TotalRequests);
+        TestAssert.Equal(1, handler.Requests.Count(path => path == "ooxpdf-fonts/test-pack/files/aptos.ttf"));
+    }
+
     public static void FontPackResolverRejectsHashMismatch()
     {
         byte[] expectedFontBytes = [1, 2, 3, 4];

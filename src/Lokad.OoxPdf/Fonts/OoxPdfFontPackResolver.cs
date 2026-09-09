@@ -420,9 +420,21 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
     private sealed class FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient)
     {
+        private readonly object sync = new();
+        private readonly Dictionary<string, IFontProgramSource> sources = new(StringComparer.Ordinal);
+
         public IFontProgramSource Create(FontPackFile file)
         {
-            return new OoxPdfFontPackProgramSource(packId, packRootUri, httpClient, file);
+            lock (sync)
+            {
+                if (!sources.TryGetValue(file.RelativePath, out IFontProgramSource? source))
+                {
+                    source = new OoxPdfFontPackProgramSource(packId, packRootUri, httpClient, file);
+                    sources[file.RelativePath] = source;
+                }
+
+                return source;
+            }
         }
     }
 
