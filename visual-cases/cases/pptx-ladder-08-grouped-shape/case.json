@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-grouped-shape.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "groups", "shapes"],
+  "tags": ["pptx", "ladder", "groups", "shapes", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.001,
+    "minForegroundRecall": 0.98,
     "maxChangedPixelRatioAtThreshold16": 0
   },
   "allowedUnsupportedFeatures": []
