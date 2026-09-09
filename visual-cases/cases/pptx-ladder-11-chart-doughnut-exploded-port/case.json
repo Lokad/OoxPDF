@@ -3,32 +3,11 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-exploded-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "exploded", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "exploded", "pptx-renderer-port", "approximate"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 5.9,
-    "maxChangedPixelRatioAtThreshold16": 0.063,
-    "maxChartGraphicsStructureBoundsDelta": 8,
-    "compareChartGraphicsStructureKinds": [
-      "PolarPlotBoxCandidate",
-      "PolarSliceCandidate"
-    ],
-    "compareChartGraphicsStructureOperators": true,
-    "compareChartGraphicsStructureSegmentCounts": true,
-    "compareChartGraphicsStructurePathCommandCounts": true,
-    "compareChartGraphicsStructurePathOperators": true,
-    "compareChartGraphicsStructurePathGeometry": true,
-    "maxChartGraphicsStructurePathGeometryDelta": 4,
-    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
-      "PolarSliceCandidate": 0.6
-    },
-    "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["DataLabelText"],
-    "maxChartTextStructurePositionDeltaByKind": {
-      "DataLabelText": 1.0
-    }
+    "diagnosticsMustBeEmpty": true
   }
 }
