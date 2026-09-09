@@ -1,6 +1,9 @@
 # Adversarial checks for ComparePdfTextOperations (T05): reordered runs must
 # match robustly while split, duplicated, deleted, or moved runs fail loudly
-# with reported (not invented) deltas. No Office/COM or reference cache needed.
+# with reported (not invented) deltas. Repeated identical rows at distinct
+# positions must neither dedup-match nor cascade: deleting/duplicating one
+# reports exactly one missing, and a near-neighbor substitution reports its
+# real delta. No Office/COM or reference cache needed.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -48,6 +51,16 @@ Invoke-Case "deleted" @($a, $b, $c) @($a, $c) 1 1
 Invoke-Case "duplicated" @($a, $b) @($a, $b, (New-Op 30 20 "Beta")) 1 1
 Invoke-Case "split" @((New-Op 10 20 "Hello")) @((New-Op 10 20 "Hel"), (New-Op 25 20 "lo")) 1 1
 Invoke-Case "moved" @($a) @((New-Op 10.5 20 "Alpha")) 1 0
+$r1 = New-Op 10 100 "Row"
+$r2 = New-Op 10 200 "Row"
+Invoke-Case "repeat-identical" @($r1, $r2) @($r1, $r2) 0 0
+Invoke-Case "repeat-deleted" @($r1, $r2) @($r1) 1 1
+Invoke-Case "repeat-duplicated" @($r1, $r2) @($r1, $r2, (New-Op 10 200 "Row")) 1 1
+$mixA1 = New-Op 10 100 "A"
+$mixB = New-Op 10 200 "B"
+$mixA2 = New-Op 10 300 "A"
+Invoke-Case "repeat-interleaved-deleted" @($mixA1, $mixB, $mixA2) @($mixA1, $mixA2) 1 1
+Invoke-Case "repeat-neighbor-substituted" @($mixA1, $mixB) @($mixA1, (New-Op 10 205 "C")) 1 0
 $mEff = New-Op 10 20 "Shifted" 110 120
 $mCand = New-Op 110 120 "Shifted" 110 120
 Invoke-Case "matrix-raw" @($mEff) @($mCand) 1 0
@@ -57,4 +70,4 @@ Invoke-Case "matrix-fallback" @((New-Op 10 20 "Plain")) @((New-Op 10 20 "Plain")
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Text comparison adversarial checks passed (9 cases)."
+Write-Host "Text comparison adversarial checks passed (14 cases)."
