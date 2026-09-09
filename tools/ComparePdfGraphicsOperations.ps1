@@ -90,7 +90,7 @@ function OperationSourceOperator($op) {
 . (Join-Path $PSScriptRoot "CompareMath.ps1")
 function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
-function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 function HasValue($value) { return $null -ne $value -and [string]$value -ne "" }
 function ColorValues($value) {
     $text = [string]$value

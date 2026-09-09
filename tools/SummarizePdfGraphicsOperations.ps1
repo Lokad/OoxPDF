@@ -35,13 +35,7 @@ function OperationSourceOperator($Operation) {
     return ""
 }
 
-function IntValue($Value) {
-    if ($null -eq $Value) {
-        return 0
-    }
-
-    return [int]$Value
-}
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 function Round-Bounds([double] $Value) {
     if ($BoundsPrecision -le 0d) {

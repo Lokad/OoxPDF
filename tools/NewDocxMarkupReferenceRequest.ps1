@@ -112,15 +112,7 @@ function Get-CaseCacheVariant($CaseInfo) {
     "docxMarkup={0};docxMarkupGeometry={1}" -f $docxMarkup, $docxMarkupGeometry
 }
 
-function ConvertTo-RepoPath([string] $Path) {
-    $fullPath = [System.IO.Path]::GetFullPath($Path)
-    $fullRoot = [System.IO.Path]::GetFullPath($repoRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    if ($fullPath.StartsWith($fullRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
-        return $fullPath.Substring($fullRoot.Length + 1).Replace([System.IO.Path]::DirectorySeparatorChar, "/")
-    }
-
-    return $fullPath
-}
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 function New-ReferenceRequestItem($CaseInfo, [int] $DpiValue) {
     $inputFull = Get-CaseInputPath $CaseInfo

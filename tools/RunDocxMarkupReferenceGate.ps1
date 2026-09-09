@@ -117,15 +117,7 @@ function Get-JsonPropertyValue($Object, [string] $Name) {
 }
 
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
-function ConvertTo-RepoPath([string] $Path) {
-    $fullPath = [System.IO.Path]::GetFullPath($Path)
-    $fullRoot = [System.IO.Path]::GetFullPath($repoRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-    if ($fullPath.StartsWith($fullRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
-        return $fullPath.Substring($fullRoot.Length + 1).Replace([System.IO.Path]::DirectorySeparatorChar, "/")
-    }
-
-    return $fullPath
-}
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 
 function Get-CaseInputPath($CaseInfo) {

@@ -9,22 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Expand-PathList([string[]] $Values) {
-    $expanded = New-Object System.Collections.Generic.List[string]
-    foreach ($value in $Values) {
-        if ([string]::IsNullOrWhiteSpace($value)) {
-            continue
-        }
-
-        foreach ($part in ($value -split "[,;]")) {
-            if (-not [string]::IsNullOrWhiteSpace($part)) {
-                $expanded.Add($part.Trim())
-            }
-        }
-    }
-
-    return ,$expanded.ToArray()
-}
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 
 function Read-Json($Path) {
     return Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $Path).Path | ConvertFrom-Json

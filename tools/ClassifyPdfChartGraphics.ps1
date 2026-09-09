@@ -29,7 +29,7 @@ function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
 function TextX($op) { if ($op.EffectiveX -ne $null) { return [double]$op.EffectiveX } return [double]$op.X }
 function TextY($op) { if ($op.EffectiveY -ne $null) { return [double]$op.EffectiveY } return [double]$op.Y }
 function Round([double]$value) { return [Math]::Round($value, 6) }
-function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
+. (Join-Path $PSScriptRoot "PathHelpers.ps1")
 function Is-ReasonableAxisPairBounds([double]$minX, [double]$minY, [double]$maxX, [double]$maxY) {
     return ($maxX - $minX) -ge 40d -and ($maxY - $minY) -ge 40d
 }
