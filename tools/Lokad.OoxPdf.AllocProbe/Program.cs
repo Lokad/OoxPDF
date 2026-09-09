@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -16,7 +17,7 @@ using Lokad.OoxPdf.Pptx;
 // emission/write) and corpus generation stay open for later slices.
 if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal)))
 {
-    Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] <input...> | --self-test");
+    Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] <input...> | --self-test | --font-breadth <n,...> --out <report.json>");
     Console.WriteLine("  Measures one cold plus N warm conversions per input and writes a JSON report.");
     Console.WriteLine("  Allocation scope is the calling thread; see report/allocationScope.");
     return 2;
@@ -25,6 +26,11 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
 if (args.Any(arg => string.Equals(arg, "--self-test", StringComparison.Ordinal)))
 {
     return RunSelfTest();
+}
+
+if (ReadOption("--font-breadth") is string breadthSpec)
+{
+    return RunFontBreadth(breadthSpec, ReadOption("--font-file"), ReadOption("--out"));
 }
 
 string? reportPath = ReadOption("--out");
@@ -420,4 +426,183 @@ static byte[] BuildZip(IReadOnlyDictionary<string, string> entries)
     }
 
     return stream.ToArray();
+}
+
+// Font-breadth probe (F04 slice 6): N distinct file-backed fonts force N
+// full font loads per conversion. Reports calling-thread allocated bytes
+// and post-GC retained bytes per breadth, plus retained bytes across
+// repeat conversions sharing one resolver (retention must stay flat).
+static int RunFontBreadth(string spec, string? fontFile, string? reportPath)
+{
+    if (reportPath is null)
+    {
+        Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --font-breadth <n,...> [--font-file <ttf>] --out <report.json>");
+        return 2;
+    }
+    int[] breadths;
+    try
+    {
+        breadths = spec.Split(',').Select(part => int.Parse(part.Trim(), System.Globalization.CultureInfo.InvariantCulture)).Distinct().OrderBy(n => n).ToArray();
+    }
+    catch (Exception ex) when (ex is FormatException or OverflowException)
+    {
+        Console.Error.WriteLine($"Cannot parse --font-breadth '{spec}': expected comma-separated integers.");
+        return 2;
+    }
+    if (breadths.Length == 0 || breadths.Any(n => n < 1))
+    {
+        Console.Error.WriteLine($"Cannot parse --font-breadth '{spec}': expected positive integers.");
+        return 2;
+    }
+    fontFile ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+    if (!File.Exists(fontFile))
+    {
+        Console.Error.WriteLine($"Font source is missing: '{fontFile}'. Pass --font-file <embeddable-truetype>.");
+        return 1;
+    }
+    byte[] fontBytes = File.ReadAllBytes(fontFile);
+    string stageDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".", "breadth-fonts");
+    Directory.CreateDirectory(stageDir);
+    var rows = new List<object>();
+    foreach (int breadth in breadths)
+    {
+        (long allocated, long retained, int outputBytes, string sha, int pages) = MeasureBreadthRow(breadth, fontBytes, stageDir);
+        rows.Add(new { breadth, allocatedBytes = allocated, retainedBytes = retained, outputBytes, outputSha256 = sha, pageCount = pages });
+        Console.WriteLine($"breadth {breadth}: allocated={allocated} retained={retained} output={outputBytes} pages={pages}");
+    }
+    for (int repeat = 0; repeat < 2; repeat++)
+    {
+        (long reAllocated, long reRetained, int reOutput, string reSha, int rePages) = MeasureBreadthRow(breadths.Max(), fontBytes, stageDir);
+        rows.Add(new { breadth = breadths.Max(), allocatedBytes = reAllocated, retainedBytes = reRetained, outputBytes = reOutput, outputSha256 = reSha, pageCount = rePages });
+        Console.WriteLine($"fresh-resolver repeat {repeat}: allocated={reAllocated} retained={reRetained}");
+    }
+    object repeats = MeasureBreadthRepeats(breadths.Max(), fontBytes, stageDir);
+    rows.Add(repeats);
+    var report = new
+    {
+        tool = "Lokad.OoxPdf.AllocProbe",
+        mode = "font-breadth",
+        createdAtUtc = DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+        framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+        serverGc = System.Runtime.GCSettings.IsServerGC,
+        allocationScope = "calling-thread (GC.GetAllocatedBytesForCurrentThread)",
+        fontFile,
+        fontBytes = fontBytes.Length,
+        rows = rows.ToArray(),
+    };
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
+    File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine($"Wrote {reportPath} ({rows.Count} rows).");
+    return 0;
+}
+
+// NoInlining lets the per-row resolver die before the retained read, so
+// residue measures what conversions leave behind, not live sources.
+[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+static (long Allocated, long Retained, int OutputBytes, string Sha, int Pages) MeasureBreadthRow(int breadth, byte[] fontBytes, string stageDir)
+{
+    string[] copies = WriteBreadthCopies(breadth, fontBytes, stageDir);
+    byte[] docx = BuildBreadthDocx(breadth);
+    var options = new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = new BreadthResolver(copies) };
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    GC.Collect();
+    long startAllocated = GC.GetAllocatedBytesForCurrentThread();
+    byte[] output = ConvertBreadthDocx(docx, options);
+    long allocated = GC.GetAllocatedBytesForCurrentThread() - startAllocated;
+    options = null!;
+    long retained = RetainedAfterFullGc();
+    return (allocated, retained, output.Length, Convert.ToHexString(SHA256.HashData(output)).ToLowerInvariant(), ReadPageCount(output));
+}
+
+static object MeasureBreadthRepeats(int breadth, byte[] fontBytes, string stageDir)
+{
+    string[] copies = WriteBreadthCopies(breadth, fontBytes, stageDir);
+    byte[] docx = BuildBreadthDocx(breadth);
+    var resolver = new BreadthResolver(copies);
+    var allocated = new List<long>();
+    var retained = new List<long>();
+    for (int i = 0; i < 3; i++)
+    {
+        var options = new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver };
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long startAllocated = GC.GetAllocatedBytesForCurrentThread();
+        ConvertBreadthDocx(docx, options);
+        allocated.Add(GC.GetAllocatedBytesForCurrentThread() - startAllocated);
+        retained.Add(RetainedAfterFullGc());
+    }
+    return new { mode = "shared-resolver-repeats", breadth, conversions = 3, allocatedBytes = allocated.ToArray(), retainedBytes = retained.ToArray() };
+}
+
+static long RetainedAfterFullGc()
+{
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    GC.Collect();
+    return GC.GetTotalMemory(forceFullCollection: false);
+}
+
+static byte[] ConvertBreadthDocx(byte[] docx, OoxPdfOptions options)
+{
+    using var input = new MemoryStream(docx, writable: false);
+    using var output = new MemoryStream();
+    OoxPdfConverter.Convert(input, output, options);
+    return output.ToArray();
+}
+
+static string[] WriteBreadthCopies(int breadth, byte[] fontBytes, string stageDir)
+{
+    var copies = new string[breadth];
+    for (int i = 0; i < breadth; i++)
+    {
+        string path = Path.Combine(stageDir, $"breadth-{breadth}-{i}.ttf");
+        File.WriteAllBytes(path, fontBytes);
+        copies[i] = path;
+    }
+    return copies;
+}
+
+static byte[] BuildBreadthDocx(int breadth)
+{
+    var body = new StringBuilder();
+    body.Append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>");
+    for (int i = 0; i < breadth; i++)
+    {
+        body.Append("<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Breadth" + i + "\" w:hAnsi=\"Breadth" + i + "\"/></w:rPr><w:t xml:space=\"preserve\">Breadth paragraph " + i + " 0123456789</w:t></w:r></w:p>");
+    }
+    body.Append("<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></w:body></w:document>");
+    return BuildZip(new Dictionary<string, string>
+    {
+        ["[Content_Types].xml"] = """
+            <?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
+            """,
+        ["_rels/.rels"] = """
+            <?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+            """,
+        ["word/document.xml"] = body.ToString(),
+    });
+}
+
+// One file-backed program source per breadth family: distinct StableIds
+// force distinct font loads, so breadth N converts through N parsed fonts.
+sealed class BreadthResolver : IFontResolver
+{
+    private readonly IFontProgramSource[] sources;
+    public BreadthResolver(IReadOnlyList<string> paths)
+    {
+        sources = paths.Select(path => (IFontProgramSource)new FileFontProgramSource(path)).ToArray();
+    }
+    public FontFaceResolution Resolve(FontRequest request)
+    {
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (request.FamilyName.Equals("Breadth" + i, StringComparison.OrdinalIgnoreCase))
+            {
+                return new FontFaceResolution(request.FamilyName, "Breadth" + i, new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[i], IsFallback: false);
+            }
+        }
+        return new FontFaceResolution(request.FamilyName, "Breadth0", new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[0], IsFallback: true);
+    }
 }
