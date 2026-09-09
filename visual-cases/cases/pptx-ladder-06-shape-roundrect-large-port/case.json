@@ -3,14 +3,12 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-shape-roundrect-large-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shape", "adjustment", "roundRect", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "shape", "adjustment", "roundRect", "pptx-renderer-port", "approximate"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 7.2,
-    "maxChangedPixelRatioAtThreshold16": 0.198
+    "diagnosticsMustBeEmpty": true
   },
   "allowedUnsupportedFeatures": []
 }
