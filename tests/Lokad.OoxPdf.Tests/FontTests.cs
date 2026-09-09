@@ -896,6 +896,57 @@ internal static class FontTests
         TestAssert.Equal(1, handler.Requests.Count(path => path == "ooxpdf-fonts/test-pack/files/aptos.ttf"));
     }
 
+    public static void FontPackResolverRetriesTransientFontDownloadFailures()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest(
+            "test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
+        var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["ooxpdf-fonts/test-pack/manifest.json"] = manifest,
+            ["ooxpdf-fonts/test-pack/files/aptos.ttf"] = fontBytes
+        };
+        var handler = new FlakyFontPackHandler(responses, "ooxpdf-fonts/test-pack/files/aptos.ttf", failuresBeforeSuccess: 2);
+        var httpClient = new HttpClient(handler);
+        OoxPdfFontPackResolver resolver = OoxPdfFontPackResolver.CreateHttpAsync(
+            "test-pack",
+            new Uri("https://example.test/ooxpdf-fonts"),
+            httpClient,
+            CancellationToken.None).GetAwaiter().GetResult();
+
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
+        ReadOnlyMemory<byte> loaded = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+
+        TestAssert.True(loaded.Span.SequenceEqual(fontBytes), "Retried download must return the validated font bytes.");
+        TestAssert.Equal(3, handler.FlakyAttempts);
+    }
+
+    public static void FontPackResolverFailsAfterRepeatedTransientFailures()
+    {
+        byte[] fontBytes = [1, 2, 3, 4];
+        byte[] manifest = BuildFontPackManifest(
+            "test-pack", "files/aptos.ttf", fontBytes, "Aptos", "Aptos", "Aptos");
+        var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["ooxpdf-fonts/test-pack/manifest.json"] = manifest,
+            ["ooxpdf-fonts/test-pack/files/aptos.ttf"] = fontBytes
+        };
+        var handler = new FlakyFontPackHandler(responses, "ooxpdf-fonts/test-pack/files/aptos.ttf", failuresBeforeSuccess: int.MaxValue);
+        var httpClient = new HttpClient(handler);
+        OoxPdfFontPackResolver resolver = OoxPdfFontPackResolver.CreateHttpAsync(
+            "test-pack",
+            new Uri("https://example.test/ooxpdf-fonts"),
+            httpClient,
+            CancellationToken.None).GetAwaiter().GetResult();
+
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
+        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(
+            () => resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult());
+
+        TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed, ex.DiagnosticId);
+        TestAssert.Equal(3, handler.FlakyAttempts);
+    }
+
     public static void FontPackResolverRejectsHashMismatch()
     {
         byte[] expectedFontBytes = [1, 2, 3, 4];
@@ -1324,6 +1375,41 @@ internal static class FontTests
             {
                     Content = new ByteArrayContent(bytes)
                 };
+        }
+    }
+
+    private sealed class FlakyFontPackHandler(
+        IReadOnlyDictionary<string, byte[]> responses,
+        string flakyPath,
+        int failuresBeforeSuccess) : HttpMessageHandler
+    {
+        public int FlakyAttempts;
+        private readonly object attemptLock = new();
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string path = request.RequestUri?.AbsolutePath.TrimStart('/') ?? "";
+            if (path == flakyPath)
+            {
+                lock (attemptLock)
+                {
+                    FlakyAttempts++;
+                    if (FlakyAttempts <= failuresBeforeSuccess)
+                    {
+                        throw new HttpRequestException("Simulated transient font pack failure.");
+                    }
+                }
+            }
+
+            if (!responses.TryGetValue(path, out byte[]? bytes))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(bytes)
+            });
         }
     }
 

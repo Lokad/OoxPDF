@@ -170,44 +170,70 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         long maxBytes,
         CancellationToken cancellationToken)
     {
-        try
+        // Transient transport failures retry immediately and bounded.
+        // Server answers (status, declared size, over-cap bodies) fail fast;
+        // cancellation always throws.
+        const int maxAttempts = 3;
+        for (int attempt = 1; ; attempt++)
         {
-            using HttpResponseMessage response = await httpClient.GetAsync(
-                uri,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            try
+            {
+                return await DownloadBytesSingleAttemptAsync(httpClient, uri, description, maxBytes, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OoxPdfFontPackException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (IsTransientDownloadFailure(ex) && attempt < maxAttempts)
+            {
+                continue;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
             {
                 throw new OoxPdfFontPackException(
                     OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
-                    $"Unable to download {description} from '{uri}'. HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+                    $"Unable to download {description} from '{uri}'.",
+                    ex);
             }
+        }
+    }
 
-            if (response.Content.Headers.ContentLength is long declared && declared > maxBytes)
-            {
-                throw new OoxPdfFontPackException(
-                    OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
-                    $"Unable to download {description} from \u0027{uri}\u0027: declared size {declared} bytes exceeds the limit of {maxBytes} bytes.");
-            }
-
-            using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            return await CopyCappedAsync(content, maxBytes, description, uri.ToString(), cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OoxPdfFontPackException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+    private static async Task<byte[]> DownloadBytesSingleAttemptAsync(
+        HttpClient httpClient,
+        Uri uri,
+        string description,
+        long maxBytes,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await httpClient.GetAsync(
+            uri,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
         {
             throw new OoxPdfFontPackException(
                 OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
-                $"Unable to download {description} from '{uri}'.",
-                ex);
+                $"Unable to download {description} from '{uri}'. HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
         }
+
+        if (response.Content.Headers.ContentLength is long declared && declared > maxBytes)
+        {
+            throw new OoxPdfFontPackException(
+                OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
+                $"Unable to download {description} from \u0027{uri}\u0027: declared size {declared} bytes exceeds the limit of {maxBytes} bytes.");
+        }
+
+        using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        return await CopyCappedAsync(content, maxBytes, description, uri.ToString(), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool IsTransientDownloadFailure(Exception ex)
+    {
+        return ex is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException;
     }
 
     private static ValidatedManifest ValidateManifest(string packId, FontPackManifest manifest)
