@@ -130,6 +130,7 @@ static PageMetric MeasurePage(int page, string? referenceFile, string? candidate
         ChangedPixelRatioAtThreshold32: pixelMetric?.ChangedPixelRatioAtThreshold32,
         StructuralSimilarity: pixelMetric?.StructuralSimilarity,
         ForegroundColorHistogramCorrelation: pixelMetric?.ForegroundColorHistogramCorrelation,
+        ForegroundRecall: pixelMetric?.ForegroundRecall,
         DimensionsMatch: dimensionsMatch);
 }
 
@@ -154,6 +155,7 @@ static PixelMetric MeasurePixelsInRegion(PngImage reference, PngImage candidate,
     int[] candidateHistogram = new int[96];
     int referenceForeground = 0;
     int candidateForeground = 0;
+    int foregroundOverlap = 0;
 
     for (int y = 0; y < height; y++)
     {
@@ -189,6 +191,11 @@ static PixelMetric MeasurePixelsInRegion(PngImage reference, PngImage candidate,
                 candidateForeground++;
             }
 
+            if (referenceLuma < 245d && candidateLuma < 245d)
+            {
+                foregroundOverlap++;
+            }
+
             for (int channel = 0; channel < 4; channel++)
             {
                 int delta = Math.Abs(reference.Rgba[referenceOffset + channel] - candidate.Rgba[candidateOffset + channel]);
@@ -210,13 +217,15 @@ static PixelMetric MeasurePixelsInRegion(PngImage reference, PngImage candidate,
     }
 
     double sampleCount = pixelCount * 4d;
+    double? foregroundRecall = referenceForeground == 0 ? null : foregroundOverlap / (double)referenceForeground;
     return new PixelMetric(
         absoluteError / sampleCount,
         Math.Sqrt(squaredError / sampleCount),
         changed16 / (double)pixelCount,
         changed32 / (double)pixelCount,
         ComputeStructuralSimilarity(pixelCount, referenceLumaSum, candidateLumaSum, referenceLumaSquaredSum, candidateLumaSquaredSum, lumaProductSum),
-        ComputeHistogramCorrelation(referenceHistogram, candidateHistogram, referenceForeground, candidateForeground, pixelCount));
+        ComputeHistogramCorrelation(referenceHistogram, candidateHistogram, referenceForeground, candidateForeground, pixelCount),
+        foregroundRecall);
 }
 
 static IEnumerable<RegionMetric> MeasureRegions(IReadOnlyList<RegionSpec> specs, string[] referenceFiles, string[] candidateFiles)
@@ -265,6 +274,7 @@ static IEnumerable<RegionMetric> MeasureRegions(IReadOnlyList<RegionSpec> specs,
             metric.ChangedPixelRatioAtThreshold32,
             metric.StructuralSimilarity,
             metric.ForegroundColorHistogramCorrelation,
+            metric.ForegroundRecall,
             dimensionsMatch);
     }
 }

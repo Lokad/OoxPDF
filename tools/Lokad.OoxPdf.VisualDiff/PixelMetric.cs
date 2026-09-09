@@ -6,4 +6,5 @@ internal sealed record PixelMetric(
     double ChangedPixelRatioAtThreshold16,
     double ChangedPixelRatioAtThreshold32,
     double StructuralSimilarity,
-    double ForegroundColorHistogramCorrelation);
+    double ForegroundColorHistogramCorrelation,
+    double? ForegroundRecall);

@@ -14,4 +14,5 @@ internal sealed record RegionMetric(
     double? ChangedPixelRatioAtThreshold32,
     double? StructuralSimilarity,
     double? ForegroundColorHistogramCorrelation,
+    double? ForegroundRecall,
     bool DimensionsMatch);
