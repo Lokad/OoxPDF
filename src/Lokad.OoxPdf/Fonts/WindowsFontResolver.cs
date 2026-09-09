@@ -91,6 +91,18 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         }
     }
 
+    /// <summary>
+    /// Drops every shared discovery snapshot, so resolvers created afterwards
+    /// rediscover installed fonts. Existing instances keep their snapshot.
+    /// </summary>
+    public static void InvalidateDiscoveryCaches()
+    {
+        lock (CacheLock)
+        {
+            DiscoveryCaches.Clear();
+        }
+    }
+
     public FontFaceResolution Resolve(FontRequest request)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);

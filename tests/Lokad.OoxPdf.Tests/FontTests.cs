@@ -947,6 +947,36 @@ internal static class FontTests
         TestAssert.Equal(3, handler.FlakyAttempts);
     }
 
+    public static void WindowsFontResolverInvalidationRefreshesDiscovery()
+    {
+        string fontsDirectory = Path.Combine(Path.GetTempPath(), "ooxpdf-invalidate-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(fontsDirectory);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(fontsDirectory, "a.ttf"), TestFontBuilder.CreateCffKindFont("InvalidateA"));
+
+            var before = new WindowsFontResolver(fontsDirectory);
+            TestAssert.Equal(1, before.GetDiscoveredFonts().Count);
+
+            File.WriteAllBytes(Path.Combine(fontsDirectory, "b.ttf"), TestFontBuilder.CreateCffKindFont("InvalidateB"));
+
+            var stale = new WindowsFontResolver(fontsDirectory);
+            TestAssert.Equal(1, stale.GetDiscoveredFonts().Count);
+
+            WindowsFontResolver.InvalidateDiscoveryCaches();
+
+            var refreshed = new WindowsFontResolver(fontsDirectory);
+            TestAssert.Equal(2, refreshed.GetDiscoveredFonts().Count);
+            TestAssert.True(refreshed.GetDiscoveredFonts().Any(f => f.FamilyName.Equals("InvalidateB", StringComparison.OrdinalIgnoreCase)), "Expected rediscovery to pick up fonts installed after the snapshot.");
+            TestAssert.Equal(1, before.GetDiscoveredFonts().Count);
+        }
+        finally
+        {
+            WindowsFontResolver.InvalidateDiscoveryCaches();
+            Directory.Delete(fontsDirectory, recursive: true);
+        }
+    }
+
     public static void FontPackResolverRejectsHashMismatch()
     {
         byte[] expectedFontBytes = [1, 2, 3, 4];
