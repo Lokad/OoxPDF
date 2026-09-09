@@ -165,6 +165,7 @@ internal sealed partial class PptxRenderer
             TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,
             hasHyperlinkClick,
             ReadHyperlinkClickId(runProperties),
+            ReadHyperlinkClickAction(runProperties),
             bold,
             italic,
             underline,
@@ -238,6 +239,13 @@ internal sealed partial class PptxRenderer
         return (string?)runProperties
             ?.Element(DrawingNamespace + "hlinkClick")
             ?.Attribute(RelationshipsNamespace + "id");
+    }
+
+    private static string? ReadHyperlinkClickAction(XElement? runProperties)
+    {
+        return (string?)runProperties
+            ?.Element(DrawingNamespace + "hlinkClick")
+            ?.Attribute("action");
     }
 
     private static PptxThemeTypefaceResolution ReadRunTypeface(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme)

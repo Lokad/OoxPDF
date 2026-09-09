@@ -349,6 +349,20 @@ internal sealed partial class PptxSceneBuilder
         return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
 
+    private static string? ReadChartHyperlinkClickId(XElement? runProperties)
+    {
+        return (string?)runProperties
+            ?.Element(DrawingNamespace + "hlinkClick")
+            ?.Attribute(RelationshipsNamespace + "id");
+    }
+
+    private static string? ReadChartHyperlinkClickAction(XElement? runProperties)
+    {
+        return (string?)runProperties
+            ?.Element(DrawingNamespace + "hlinkClick")
+            ?.Attribute("action");
+    }
+
     internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme)
     {
         return ReadChartTextRuns(text, theme, PptxColorMap.Default);
@@ -377,7 +391,8 @@ internal sealed partial class PptxSceneBuilder
                 continue;
             }
 
-            runs.Add(new PptxSceneChartTextRun(runText, ReadChartTextRunStyle(run.Element(DrawingNamespace + "rPr"), theme, colorMap)));
+            XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+            runs.Add(new PptxSceneChartTextRun(runText, ReadChartTextRunStyle(runProperties, theme, colorMap), HyperlinkClickId: ReadChartHyperlinkClickId(runProperties), HyperlinkClickAction: ReadChartHyperlinkClickAction(runProperties)));
         }
 
         return runs;

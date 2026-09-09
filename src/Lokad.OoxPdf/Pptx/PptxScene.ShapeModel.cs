@@ -25,6 +25,7 @@ internal sealed record PptxSceneSlide(
     bool HasTransition,
     bool HasTiming,
     bool HasOleObject,
+    bool ShowMasterShapes,
     IReadOnlyList<PptxSceneNode> MasterNodes,
     IReadOnlyList<PptxSceneNode> LayoutNodes,
     IReadOnlyList<PptxSceneNode> SlideNodes);

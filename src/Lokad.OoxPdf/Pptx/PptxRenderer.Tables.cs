@@ -411,7 +411,7 @@ internal sealed partial class PptxRenderer
                 return 0d;
             }
 
-            PptxTextFrameModel frame = BuildTextFrameModel(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
+            PptxTextFrameModel frame = BuildTextFrameModel(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
             double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties);
             if (textHeight <= PptxTextMetricRules.TextStateTolerance)
             {

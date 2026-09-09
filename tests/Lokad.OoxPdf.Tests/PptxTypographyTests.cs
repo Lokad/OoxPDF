@@ -98,7 +98,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -134,7 +134,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -173,7 +173,7 @@ internal static class PptxTypographyTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -213,7 +213,7 @@ internal static class PptxTypographyTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -253,7 +253,7 @@ internal static class PptxTypographyTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -293,7 +293,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -330,7 +330,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -367,7 +367,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -406,7 +406,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -459,7 +459,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -506,7 +506,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -563,7 +563,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -668,7 +668,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -742,7 +742,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -806,7 +806,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -846,7 +846,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -895,7 +895,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -944,7 +944,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -990,7 +990,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1319,7 +1319,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -2033,7 +2033,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -2068,7 +2068,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -2104,7 +2104,7 @@ internal static class PptxTypographyTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -2134,4 +2134,163 @@ internal static class PptxTypographyTests
         TestAssert.True(pdf.Contains(" TJ", StringComparison.Ordinal) || pdf.Contains("> Tj", StringComparison.Ordinal), "Expected body text to be drawn as PDF text.");
         PptxTests.AssertDoesNotContainTextMatrixAtX(pdf, 216d, "Standalone a:tab elements should not move following text.");
     }
+    public static void PptxCffFontSubstitutesFallbackWithDiagnostic()
+    {
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
+        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
+        string input = WriteCffProbePackage();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(
+            input,
+            output,
+            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes), DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(DocxTests.CountPdfTextShows(pdf) >= 1, "Substituted text must be painted.");
+        TestAssert.DoesNotContain("CffFamily", pdf);
+        TestAssert.Contains("TestFont", pdf);
+        OoxPdfDiagnostic warning = TestAssert.NotNull(diagnostics.SingleOrDefault(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"));
+        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+        TestAssert.Contains("CffFamily", warning.Message);
+        TestAssert.Equal("Per-glyph fallback typeface", warning.Fallback);
+    }
+
+    public static void PptxCffSubstitutionMatchesTrueTypeRendering()
+    {
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
+        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
+        string input = WriteCffProbePackage();
+        string cffOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var cffDiagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(
+            input,
+            cffOutput,
+            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes), DiagnosticSink = cffDiagnostics.Add });
+        string ttOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var ttDiagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(
+            input,
+            ttOutput,
+            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, emitCff: false), DiagnosticSink = ttDiagnostics.Add });
+
+        TestAssert.Equal(File.ReadAllText(ttOutput, Encoding.ASCII), File.ReadAllText(cffOutput, Encoding.ASCII));
+        TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
+        TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "CFF rendering must report the substitution.");
+    }
+
+    public static void PptxChartCffTextSubstitutesFallbackWithDiagnostic()
+    {
+        byte[] cffBytes = TestFontBuilder.CreateCffKindFont("CffFamily");
+        byte[] fallbackBytes = TestFontBuilder.CreateTestFont();
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/charts/chart1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="CffFamily"/></a:rPr><a:t>Sales</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:bubbleChart>
+                  <c:dLbls><c:showVal val="0"/><c:showBubbleSize val="1"/><c:dLblPos val="t"/><c:numFmt formatCode="0"/></c:dLbls>
+                  <c:ser>
+                    <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                    <c:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></c:spPr>
+                    <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:xVal>
+                    <c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:yVal>
+                    <c:bubbleSize><c:numLit><c:formatCode>0</c:formatCode><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:bubbleSize>
+                  </c:ser>
+                </c:bubbleChart></c:plotArea></c:chart></c:chartSpace>
+                """
+        });
+        string cffOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var cffDiagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(
+            input,
+            cffOutput,
+            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, matchAllFamilies: true), DiagnosticSink = cffDiagnostics.Add });
+        string ttOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var ttDiagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(
+            input,
+            ttOutput,
+            new OoxPdfOptions { FontResolver = new CffFallbackPptxResolver(cffBytes, fallbackBytes, emitCff: false), DiagnosticSink = ttDiagnostics.Add });
+
+        string cffPdf = File.ReadAllText(cffOutput, Encoding.ASCII);
+        TestAssert.True(DocxTests.CountPdfTextShows(cffPdf) >= 1, "Substituted chart text must be painted.");
+        TestAssert.DoesNotContain("CffFamily", cffPdf);
+        TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "Chart CFF rendering must report the substitution.");
+        TestAssert.Equal(File.ReadAllText(ttOutput, Encoding.ASCII), cffPdf);
+        TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
+    }
+
+    private static string WriteCffProbePackage()
+    {
+        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:noFill/>
+                        </p:spPr>
+                        <p:txBody>
+                          <a:bodyPr/>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr lang="en-US" sz="2400"><a:latin typeface="CffFamily"/></a:rPr><a:t>Hello</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+    }
+
+    private sealed class CffFallbackPptxResolver(byte[] cffBytes, byte[] fallbackBytes, bool emitCff = true, string[]? cffFamilies = null, bool matchAllFamilies = false) : IFontResolver, IFontCatalog
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            bool cff = emitCff && (matchAllFamilies ? !request.FamilyName.Equals("FallbackFamily", StringComparison.OrdinalIgnoreCase) : (cffFamilies ?? ["CffFamily"]).Contains(request.FamilyName, StringComparer.OrdinalIgnoreCase));
+            return new FontFaceResolution(
+                request.FamilyName,
+                cff ? "CffFamily" : "FallbackFamily",
+                new FontStyleKey(request.Bold, request.Italic, request.Bold ? 700 : 400, 0, false),
+                new MemoryFontProgramSource(cff ? "cff-test" : "tt-test", cff ? cffBytes : fallbackBytes),
+                IsFallback: false);
+        }
+
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
+        {
+            return [Resolve(new FontRequest("FallbackFamily", false, false))];
+        }
+    }
+
 }

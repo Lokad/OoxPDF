@@ -44,6 +44,10 @@ internal sealed partial class PptxSceneBuilder
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
         IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
         cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyDictionary<string, OoxRelationship> chartRelationships = chartPart is null
+            ? new Dictionary<string, OoxRelationship>(StringComparer.Ordinal)
+            : package.GetRelationships(chartPart.Name, cancellationToken).ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart);
         return new PptxSceneChart(
             relationshipId,
@@ -66,7 +70,8 @@ internal sealed partial class PptxSceneBuilder
             ReadChartShapeStyle(chartXml?
                 .Descendants(ChartNamespace + "plotArea")
                 .FirstOrDefault()
-                ?.Element(ChartNamespace + "spPr"), theme, colorMap));
+                ?.Element(ChartNamespace + "spPr"), theme, colorMap),
+            chartRelationships);
     }
 
     internal static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)

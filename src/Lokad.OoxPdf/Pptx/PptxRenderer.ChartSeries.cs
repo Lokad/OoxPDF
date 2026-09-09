@@ -16,13 +16,15 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         PptxSceneNode node,
-        GroupTransform transform)
+        GroupTransform transform,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        RenderChartFrame(context, graphics, fonts, bounds, node.Chart);
+        RenderChartFrame(context, graphics, fonts, bounds, node.Chart, linkAnnotations, reportedHyperlinkIds);
     }
 
     private static void RenderChartFrame(
@@ -30,7 +32,9 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         ShapeBounds? bounds,
-        PptxSceneChart? chart)
+        PptxSceneChart? chart,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds)
     {
         RenderChartFrame(
             context,
@@ -40,7 +44,9 @@ internal sealed partial class PptxRenderer
             chart?.TargetPartName,
             chart?.ChartXml,
             chart?.PaletteColors,
-            chart);
+            chart,
+            linkAnnotations,
+            reportedHyperlinkIds);
     }
 
     private static void RenderChartFrame(
@@ -51,7 +57,9 @@ internal sealed partial class PptxRenderer
         string? targetPartName,
         XDocument? chartXml,
         IReadOnlyList<RgbColor>? chartPalette,
-        PptxSceneChart? sceneChart)
+        PptxSceneChart? sceneChart,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
         string? chartPartName = targetPartName;
@@ -74,22 +82,24 @@ internal sealed partial class PptxRenderer
         context.CancellationToken.ThrowIfCancellationRequested();
 
         PptxColorMap chartColorMap = sceneChart?.ColorMap ?? context.SlideColorMap;
-        if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver))
+        if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
-            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
-            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
+            EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
+            RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
+            RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
             return;
         }
 
         if (chartWorkbook is not null && sceneChart is null)
         {
             HydrateChartReferenceCaches(chartWorkbook, resolvedChartXml);
-            if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, workbook: null, fonts, context.FontResolver))
+            if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, workbook: null, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
             {
                 EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
-                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
-                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
+                EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
+                RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
+                RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
                 return;
             }
         }

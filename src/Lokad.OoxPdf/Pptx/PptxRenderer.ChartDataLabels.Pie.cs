@@ -11,17 +11,17 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver)
+    private static void RenderPieDataLabels(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (!labelOptions.HasVisibleContent || slices.Count == 0)
         {
-            return [];
+            return;
         }
 
         double total = slices.Sum(slice => slice.Value);
         if (total <= 0d)
         {
-            return [];
+            return;
         }
 
         ChartPlotBox plotBox = layout.PlotBox;
@@ -29,6 +29,7 @@ internal sealed partial class PptxRenderer
         double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieDataLabelRadiusRatio);
         double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(slices.Count);
+        List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         double angle = -90d;
         foreach (ChartIndexedPieSlice slice in slices)
         {
@@ -82,8 +83,8 @@ internal sealed partial class PptxRenderer
             }
             angle += sweep;
         }
-
-        return RenderTextRuns(runs, graphics, "CP", fontResolver);
+        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
 
         IReadOnlyList<string> FormatPieDataLabelParts(double value, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, ChartDataLabelOptions options)
         {
@@ -135,7 +136,7 @@ internal sealed partial class PptxRenderer
 
             if (parts.Count <= 1 || options.CustomTextRuns.Count > 0 || !ShouldSplitPolarDataLabelParts())
             {
-                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
+                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver, labelLinks);
                 return;
             }
 
@@ -146,7 +147,7 @@ internal sealed partial class PptxRenderer
                 .ToArray();
             if (labelRuns.Length <= 1)
             {
-                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
+                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver, labelLinks);
                 return;
             }
 

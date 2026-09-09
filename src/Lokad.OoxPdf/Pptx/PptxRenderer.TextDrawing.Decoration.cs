@@ -110,6 +110,14 @@ internal sealed partial class PptxRenderer
 
     private static void ApplyTextTransform(PdfGraphicsBuilder graphics, TextRun run)
     {
+        (double a, double b, double c, double d, double e, double f) = TextTransformMatrix(run);
+        graphics.Transform(a, b, c, d, e, f);
+    }
+
+    // Affine matrix matching ApplyTextTransform, reused so link areas cover the
+    // same transformed glyph positions the emitter paints (S08).
+    private static (double A, double B, double C, double D, double E, double F) TextTransformMatrix(TextRun run)
+    {
         double radians = -run.RotationDegrees * Math.PI / 180d;
         double sx = run.FlipHorizontal ? -1d : 1d;
         double sy = run.FlipVertical ? -1d : 1d;
@@ -121,6 +129,6 @@ internal sealed partial class PptxRenderer
         double d = cos * sy;
         double e = run.RotationCenterX - a * run.RotationCenterX - c * run.RotationCenterY;
         double f = run.RotationCenterY - b * run.RotationCenterX - d * run.RotationCenterY;
-        graphics.Transform(a, b, c, d, e, f);
+        return (a, b, c, d, e, f);
     }
 }

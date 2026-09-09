@@ -119,7 +119,7 @@ internal static class PptxDiagnosticsTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -182,7 +182,7 @@ internal static class PptxDiagnosticsTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -792,5 +792,49 @@ internal static class PptxDiagnosticsTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Unsupported custom geometry should be diagnostic-covered from scene-owned geometry provenance.");
+    }
+
+    public static void PptxChartNumberFormatFallbackIsDiagnosedOncePerChart()
+    {
+        IReadOnlyList<OoxPdfDiagnostic> diagnostics = PptxTests.ConvertSingleChartAndCollectDiagnostics("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:grouping val="standard"/>
+                <c:dLbls><c:numFmt formatCode="[Blue]0%" sourceLinked="0"/><c:showVal val="1"/></c:dLbls>
+                <c:ser>
+                  <c:cat><c:strLit><c:ptCount val="2"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+                <c:axId val="10"/><c:axId val="20"/>
+              </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:numFmt formatCode="General" sourceLinked="1"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:numFmt formatCode="[Red]0.0" sourceLinked="0"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        OoxPdfDiagnostic[] numberFormat = diagnostics.Where(d => d.Id == "PPTX_UNSUPPORTED_CHART_NUMBER_FORMAT").ToArray();
+        TestAssert.Equal(1, numberFormat.Length);
+        TestAssert.Contains("colors", numberFormat[0].Message);
+        TestAssert.True(!numberFormat[0].Message.Contains("[Red]") && !numberFormat[0].Message.Contains("[Blue]"), "Format codes must not leak into diagnostics.");
+    }
+
+    public static void PptxChartNumberFormatWithoutFallbackGapsStaysQuiet()
+    {
+        IReadOnlyList<OoxPdfDiagnostic> diagnostics = PptxTests.ConvertSingleChartAndCollectDiagnostics("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:grouping val="standard"/>
+                <c:ser>
+                  <c:cat><c:strLit><c:ptCount val="2"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+                <c:axId val="10"/><c:axId val="20"/>
+              </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:numFmt formatCode="0.0" sourceLinked="0"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART_NUMBER_FORMAT"), "Supported number formats should not warn.");
     }
 }

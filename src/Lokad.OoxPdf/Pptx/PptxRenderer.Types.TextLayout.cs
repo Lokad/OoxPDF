@@ -250,7 +250,6 @@ internal sealed partial class PptxRenderer
     {
         private readonly PresentationFontResolver resolver;
         private readonly CancellationToken cancellationToken;
-        private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FontFaceResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
@@ -444,15 +443,18 @@ internal sealed partial class PptxRenderer
                 return null;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(CultureInfo.InvariantCulture);
-            if (fonts.TryGetValue(key, out OpenTypeFont? cached))
+            // Share the owning resolver's program cache so per-frame estimators
+            // do not reload already-loaded faces (G04).
+            OpenTypeFont? cached = resolver.GetOrLoadOpenTypeFont(resolution, cancellationToken);
+            if (cached is not null && !cached.HasTrueTypeOutlines)
             {
-                return cached;
+                // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines,
+                // so the PDF subsetter cannot embed them. Treat them as unavailable here
+                // so measurement and per-glyph fallback share the embeddable faces that
+                // emission uses (F03: measured and emitted glyphs use the same face).
+                cached = null;
             }
 
-            cached = FontProgramLoader.Load(resolution, cancellationToken);
-            fonts[key] = cached;
             return cached;
         }
     }

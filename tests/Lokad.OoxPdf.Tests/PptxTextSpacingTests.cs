@@ -21,7 +21,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string slideXml = """
@@ -59,7 +59,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string slideXml = """
@@ -303,7 +303,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -338,7 +338,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -582,7 +582,7 @@ internal static class PptxTextSpacingTests
         string wingdings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "wingding.ttf");
         if (!File.Exists(wingdings))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(wingdings))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -643,7 +643,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -696,7 +696,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -746,7 +746,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -783,7 +783,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -819,7 +819,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -872,7 +872,7 @@ internal static class PptxTextSpacingTests
         if (!File.Exists(Path.Combine(fonts, "arial.ttf")) ||
             !File.Exists(Path.Combine(fonts, "times.ttf")))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: missing Arial or Times.");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -946,7 +946,7 @@ internal static class PptxTextSpacingTests
         if (!File.Exists(Path.Combine(fonts, "arial.ttf")) ||
             !File.Exists(Path.Combine(fonts, "simsun.ttc")))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: missing Arial or SimSun.");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1001,7 +1001,7 @@ internal static class PptxTextSpacingTests
         if (!File.Exists(Path.Combine(fonts, "arial.ttf")) ||
             !File.Exists(Path.Combine(fonts, "arialbd.ttf")))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: missing Arial or Arial Bold.");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1039,7 +1039,7 @@ internal static class PptxTextSpacingTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1076,7 +1076,7 @@ internal static class PptxTextSpacingTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string input = Path.Combine(
@@ -1106,7 +1106,7 @@ internal static class PptxTextSpacingTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string highlighted = PptxTests.RenderSyntheticMathSpacingProbe(highlightMiddleRun: true);
@@ -1121,7 +1121,7 @@ internal static class PptxTextSpacingTests
         string times = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "times.ttf");
         if (!File.Exists(times))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(times))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1294,7 +1294,7 @@ internal static class PptxTextSpacingTests
         string times = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "times.ttf");
         if (!File.Exists(times))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(times))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1331,7 +1331,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1374,7 +1374,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1414,7 +1414,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1451,7 +1451,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1487,7 +1487,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1529,7 +1529,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1564,7 +1564,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1617,7 +1617,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1653,7 +1653,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1692,7 +1692,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1739,7 +1739,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1820,7 +1820,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1870,7 +1870,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1906,7 +1906,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1949,7 +1949,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1987,7 +1987,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -2023,7 +2023,7 @@ internal static class PptxTextSpacingTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

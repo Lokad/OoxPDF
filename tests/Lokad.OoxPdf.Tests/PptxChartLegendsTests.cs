@@ -224,6 +224,105 @@ internal static class PptxChartLegendsTests
         TestAssert.True(decorationPathCount >= 2, "Expected chart-style dataLabel role underline and strike to emit filled decoration paths through the common text renderer.");
     }
 
+    public static void PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart>
+                    <c:plotArea>
+                      <c:lineChart>
+                        <c:ser>
+                          <c:cat><c:strLit><c:pt idx="0"><c:v>Alpha</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt></c:strLit></c:cat>
+                          <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>8</c:v></c:pt></c:numLit></c:val>
+                        </c:ser>
+                        <c:axId val="10"/>
+                        <c:axId val="20"/>
+                      </c:lineChart>
+                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Category Axis</a:t></a:r></a:p></c:rich></c:tx></c:title><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx>
+                      <c:valAx>
+                        <c:axId val="20"/>
+                        <c:axPos val="l"/>
+                        <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Value Axis</a:t></a:r></a:p></c:rich></c:tx></c:title>
+                        <c:scaling><c:min val="0"/><c:max val="10"/></c:scaling>
+                        <c:majorUnit val="5"/>
+                        <c:tickLblPos val="nextTo"/>
+                        <c:crossAx val="10"/>
+                      </c:valAx>
+                    </c:plotArea>
+                  </c:chart>
+                </c:chartSpace>
+                """),
+            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          id="80">
+                  <cs:categoryAxis>
+                    <cs:defRPr sz="1300" u="sng" strike="sngStrike">
+                      <a:solidFill><a:srgbClr val="AA5500"/></a:solidFill>
+                      <a:latin typeface="Arial"/>
+                    </cs:defRPr>
+                  </cs:categoryAxis>
+                  <cs:valueAxis>
+                    <cs:defRPr sz="1400" u="sng" strike="sngStrike">
+                      <a:solidFill><a:srgbClr val="0055AA"/></a:solidFill>
+                      <a:latin typeface="Arial"/>
+                    </cs:defRPr>
+                  </cs:valueAxis>
+                </cs:style>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.667 0.333 0 rg", pdf);
+        TestAssert.Contains("0 0.333 0.667 rg", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"/CCA[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive category tick labels when c:catAx has no direct txPr.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CVA[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive value tick labels when c:valAx has no direct txPr.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive default category axis-title rendering.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive default value axis-title rendering.");
+        int categoryDecorationPathCount = PptxTests.CountFilledDecorationPaths(pdf, @"0\.667 0\.333 0");
+        int valueDecorationPathCount = PptxTests.CountFilledDecorationPaths(pdf, @"0 0\.333 0\.667");
+        TestAssert.True(categoryDecorationPathCount >= 2, "Expected chart-style categoryAxis role underline and strike to emit filled decoration paths.");
+        TestAssert.True(valueDecorationPathCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration paths.");
+    }
+
     public static void PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
@@ -1265,20 +1364,20 @@ internal static class PptxChartLegendsTests
             "FormatChartDataLabelValue",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             binder: null,
-            types: [typeof(double), numberFormatType, typeof(string)],
+            types: [typeof(double), numberFormatType, typeof(string), typeof(bool)],
             modifiers: null) ?? throw new InvalidOperationException("Expected typed data-label formatter.");
-        string typedFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty]) ?? string.Empty;
+        string typedFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty, false]) ?? string.Empty;
         TestAssert.Equal("1,234.50", typedFormatted);
         System.Reflection.MethodInfo formatDataLabelValueWithSourceFormat = typeof(PptxRenderer).GetMethod(
             "FormatChartDataLabelValue",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             binder: null,
-            types: [typeof(double), numberFormatType, typeof(string), typeof(string)],
+            types: [typeof(double), numberFormatType, typeof(string), typeof(string), typeof(bool)],
             modifiers: null) ?? throw new InvalidOperationException("Expected source-format data-label formatter.");
         object emptyNumberFormat = Activator.CreateInstance(numberFormatType, [false, string.Empty, null, string.Empty]) ?? throw new InvalidOperationException("Expected empty number format.");
-        string sourceFormatted = (string?)formatDataLabelValueWithSourceFormat.Invoke(null, [1234.5d, emptyNumberFormat, string.Empty, "#,##0.0"]) ?? string.Empty;
+        string sourceFormatted = (string?)formatDataLabelValueWithSourceFormat.Invoke(null, [1234.5d, emptyNumberFormat, string.Empty, "#,##0.0", false]) ?? string.Empty;
         TestAssert.Equal("1,234.5", sourceFormatted);
-        string explicitFormatWins = (string?)formatDataLabelValueWithSourceFormat.Invoke(null, [1234.5d, typedNumberFormat, string.Empty, "0"]) ?? string.Empty;
+        string explicitFormatWins = (string?)formatDataLabelValueWithSourceFormat.Invoke(null, [1234.5d, typedNumberFormat, string.Empty, "0", false]) ?? string.Empty;
         TestAssert.Equal("1,234.50", explicitFormatWins);
 
         object sourceLinkedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "0", true, "1"]) ?? throw new InvalidOperationException("Expected source-linked number format.");
@@ -1286,14 +1385,14 @@ internal static class PptxChartLegendsTests
             "ResolveSourceLinkedChartNumberFormatCode",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             binder: null,
-            types: [numberFormatType, typeof(string), typeof(bool?), typeof(bool)],
+            types: [numberFormatType, typeof(string), typeof(bool?)],
             modifiers: null) ?? throw new InvalidOperationException("Expected source-linked format resolver.");
-        string linkedFormat = (string?)resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "#,##0.0", true, false]) ?? string.Empty;
+        string linkedFormat = (string?)resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "#,##0.0", true]) ?? string.Empty;
         TestAssert.Equal("#,##0.0", linkedFormat);
-        object? ignoredUnlinkedFormat = resolveSourceLinkedFormat.Invoke(null, [typedNumberFormat, "#,##0.0", true, false]);
+        object? ignoredUnlinkedFormat = resolveSourceLinkedFormat.Invoke(null, [typedNumberFormat, "#,##0.0", true]);
         TestAssert.True(ignoredUnlinkedFormat is null, "Expected workbook number format to be ignored when the chart format is not source-linked.");
-        object? ignoredDateFormat = resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "m/d/yy", true, true]);
-        TestAssert.True(ignoredDateFormat is null, "Expected workbook date-like formats to stay out of numeric chart label formatting until date serial rendering is explicit.");
+        string linkedDateFormat = (string?)resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "m/d/yy", true]) ?? string.Empty;
+        TestAssert.Equal("m/d/yy", linkedDateFormat);
     }
 
     public static void PptxScenePreservesChartTitleAndLegendBooleanTokens()

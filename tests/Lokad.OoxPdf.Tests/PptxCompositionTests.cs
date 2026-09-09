@@ -129,6 +129,79 @@ internal static class PptxCompositionTests
             "Malformed SVG picture rendering should emit a node-level diagnostic.");
     }
 
+    public static void PptxGroupHyperlinkSurvivesFailingChildRollback()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="svg" ContentType="image/svg+xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
+                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/group" TargetMode="External"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
+                  <p:cSld><p:spTree><p:grpSp>
+                    <p:nvGrpSpPr><p:cNvPr id="10" name="Group"><a:hlinkClick r:id="rIdLink"/></p:cNvPr><p:nvPr/></p:nvGrpSpPr>
+                    <p:grpSpPr><a:xfrm><a:off x="914400" y="457200"/><a:ext cx="3657600" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="4572000" cy="2286000"/></a:xfrm></p:grpSpPr>
+                    <p:sp>
+                      <p:nvSpPr><p:cNvPr id="11" name="GroupedSibling"/><p:nvPr/></p:nvSpPr>
+                      <p:spPr>
+                        <a:xfrm><a:off x="914400" y="457200"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                        <a:prstGeom prst="rect"/>
+                        <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+                      </p:spPr>
+                    </p:sp>
+                    <p:pic>
+                      <p:nvPicPr><p:cNvPr id="12" name="Malformed SVG"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+                      <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
+                      <p:spPr><a:xfrm><a:off x="2743200" y="457200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    </p:pic>
+                  </p:grpSp></p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+                  <defs>
+                    <linearGradient id="g" x1="bad">
+                      <stop offset="0" stop-color="#FF0000"/>
+                    </linearGradient>
+                  </defs>
+                  <path fill="url(#g)" d="M 0 0 L 10 0 L 10 10 L 0 10 Z"/>
+                </svg>
+                """)
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        IReadOnlyList<PdfPage> pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None);
+
+        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
+        TestAssert.Equal("https://example.invalid/group", annotation.Uri);
+        TestAssert.True(
+            diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED" && d.Feature == "Picture"),
+            "Malformed SVG picture rendering should emit a node-level diagnostic.");
+    }
+
     public static void PptxSyntheticSlideShapesRenderAbovePictures()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
@@ -318,7 +391,7 @@ internal static class PptxCompositionTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -363,7 +436,7 @@ internal static class PptxCompositionTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -416,7 +489,7 @@ internal static class PptxCompositionTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

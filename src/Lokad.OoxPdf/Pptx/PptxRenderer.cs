@@ -63,18 +63,24 @@ internal sealed partial class PptxRenderer
             }
             cancellationToken.ThrowIfCancellationRequested();
             var orderedImages = new List<PdfImageResource>();
+            var linkAnnotations = new List<PdfLinkAnnotation>();
+            var reportedHyperlinkIds = new HashSet<string>(StringComparer.Ordinal);
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;
             IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context);
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
             cancellationToken.ThrowIfCancellationRequested();
-            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken: cancellationToken);
-            RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.MasterPartName, context.MasterColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
-            RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.LayoutPartName, context.LayoutColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
-            RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlidePartName, context.SlideColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken);
+            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink);
+            // Hidden master shapes stay unpainted when the slide opts out (S01).
+            if (context.SceneSlide.ShowMasterShapes)
+            {
+                RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.MasterPartName, context.MasterColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
+            }
+            RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
+            RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken);
+            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations));
 
-            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray()));
         }
 
         return pages;

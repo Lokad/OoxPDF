@@ -13,6 +13,8 @@ internal sealed partial class PptxRenderer
 {
     private sealed partial class ChartWorkbookData
     {
+        internal const long MaxChartRangeCells = 100_000;
+
         private void AddRangeAreaCells(
             List<ChartWorkbookRangeCell> values,
             ChartWorkbookRangeResolution resolution,
@@ -32,6 +34,10 @@ internal sealed partial class PptxRenderer
             int maxRow = Math.Max(firstRow, lastRow);
             int rangeRowCount = maxRow - minRow + 1;
             int rangeColumnCount = maxColumn - minColumn + 1;
+            if ((long)rangeRowCount * rangeColumnCount > MaxChartRangeCells)
+            {
+                throw new InvalidDataException("Chart data range exceeds the maximum supported cell count.");
+            }
             ChartWorkbookTable sourceTable = default;
             bool hasSourceTable = !string.IsNullOrWhiteSpace(resolution.TableName) &&
                 tables.TryGetValue(resolution.TableName, out sourceTable);
@@ -682,18 +688,24 @@ internal sealed partial class PptxRenderer
             row = 0;
             string normalized = reference.Replace("$", string.Empty, StringComparison.Ordinal).Trim();
             int index = 0;
+            int letters = 0;
             while (index < normalized.Length && char.IsAsciiLetter(normalized[index]))
             {
-                column = (column * 26) + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
+                column = column * 26 + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
                 index++;
+                letters++;
+                if (letters > 3)
+                {
+                    return false;
+                }
             }
 
-            if (column <= 0 || index == normalized.Length)
+            if (letters == 0 || letters > 3 || column <= 0 || column > 16384 || index == normalized.Length)
             {
                 return false;
             }
 
-            return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row > 0;
+            return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row >= 1 && row <= 1048576;
         }
 
         private static string ToCellReference(int column, int row)

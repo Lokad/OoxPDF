@@ -75,6 +75,11 @@ internal sealed partial class PptxRenderer
 
         bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
         {
+            if (PreservesHyperlinkTextOperationBoundary(left, right))
+            {
+                return false;
+            }
+
             if (left.SourceRun is not null &&
                 right.SourceRun is not null &&
                 !ReferenceEquals(left.SourceRun, right.SourceRun) &&
@@ -122,6 +127,13 @@ internal sealed partial class PptxRenderer
     private static bool PreservesHighlightTextOperationBoundaries(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
     {
         return left.SourceAlignment != TextAlignment.Left || right.SourceAlignment != TextAlignment.Left;
+    }
+
+    // Spans on opposite sides of a hyperlink boundary must stay separate text
+    // operations so each emitted span carries exactly one link identity (S08).
+    private static bool PreservesHyperlinkTextOperationBoundary(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
+    {
+        return !string.Equals(left.SourceRun?.Style.HyperlinkClickId, right.SourceRun?.Style.HyperlinkClickId, StringComparison.Ordinal);
     }
 
     private static bool PreservesSourceRunTextOperationBoundary(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
@@ -179,7 +191,7 @@ internal sealed partial class PptxRenderer
         var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
         foreach (PptxPositionedTextSpan span in textSpans)
         {
-            if (coalesced.Count > 0 && CanCoalesceUnderlineRun(coalesced[^1].Run, span.Run))
+            if (coalesced.Count > 0 && !PreservesHyperlinkTextOperationBoundary(coalesced[^1], span) && CanCoalesceUnderlineRun(coalesced[^1].Run, span.Run))
             {
                 PptxPositionedTextSpan previous = coalesced[^1];
                 TextRun mergedRun = previous.Run with

@@ -23,7 +23,10 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
         PresentationFontResolver fontResolver,
-        bool plotVisibleOnly)
+        bool plotVisibleOnly,
+        PptxRenderContext context,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds)
     {
         IReadOnlyList<XElement> barCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         XElement? barChart = barCharts.FirstOrDefault();
@@ -113,7 +116,7 @@ internal sealed partial class PptxRenderer
                         extraValueExtents,
                         valueAxisLabelsVisible: false,
                         manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied);
-                    fonts.AddRange(RenderBarDataLabels(
+                    RenderBarDataLabels(
                         theme,
                         colorMap,
                         graphics,
@@ -128,7 +131,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook, plotVisibleOnly),
-                        ReadSceneOrXmlChartSeriesNameRecords(extraBarPlot, extraBarChart, workbook), fontResolver));
+                        ReadSceneOrXmlChartSeriesNameRecords(extraBarPlot, extraBarChart, workbook), fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
                     seriesOffset += extraSeriesCount;
                     barChartIndex++;
                 }
@@ -178,7 +181,7 @@ internal sealed partial class PptxRenderer
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,
                         lineValueExtents);
-                    fonts.AddRange(RenderLineDataLabels(
+                    RenderLineDataLabels(
                         theme,
                         colorMap,
                         graphics,
@@ -191,7 +194,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
                         ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook, plotVisibleOnly),
-                        ReadSceneOrXmlChartSeriesNameRecords(linePlot, comboLineChart, workbook), fontResolver));
+                        ReadSceneOrXmlChartSeriesNameRecords(linePlot, comboLineChart, workbook), fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
                     lineChartIndex++;
                 }
 
@@ -201,7 +204,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), categoryLabelsTopSide: ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultTopSide: false), fontResolver: fontResolver));
+                    RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), categoryLabelsTopSide: ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultTopSide: false), fontResolver: fontResolver, chartFonts: fonts);
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -218,7 +221,7 @@ internal sealed partial class PptxRenderer
                             defaultSecondaryRightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide)) > 0;
                     if (valueAxisLabelsVisible)
                     {
-                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied, useTextSizedWidth: sameSideSecondaryValueAxis, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver));
+                        RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied, useTextSizedWidth: sameSideSecondaryValueAxis, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts);
                     }
 
                     if (!horizontalBars)
@@ -227,21 +230,21 @@ internal sealed partial class PptxRenderer
                         {
                             bool secondaryValueAxisRightSide = ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide);
                             int sideSlot = GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
-                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0, manualPlotLayoutApplied: false, defaultNumberFormat: null, fontResolver: fontResolver));
+                            RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0, manualPlotLayoutApplied: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts);
                         }
                         else
                         {
-                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeriesVectors, barOptions.Grouping), fontResolver));
+                            RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeriesVectors, barOptions.Grouping), fontResolver, chartFonts: fonts);
                         }
                     }
                 }
                 else if (!horizontalBars && secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide), axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver));
+                    RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide), axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts);
                 }
-                fonts.AddRange(RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver));
-                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default));
-                fonts.AddRange(RenderBarDataLabels(
+                RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
+                RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts);
+                RenderBarDataLabels(
                     theme,
                     colorMap,
                     graphics,
@@ -256,7 +259,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme, colorMap),
                     ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly),
-                    ReadSceneOrXmlChartSeriesNameRecords(barPlot, barChart, workbook), fontResolver));
+                    ReadSceneOrXmlChartSeriesNameRecords(barPlot, barChart, workbook), fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
                 return true;
             }
         }

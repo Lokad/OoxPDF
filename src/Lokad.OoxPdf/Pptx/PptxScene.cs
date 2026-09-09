@@ -210,6 +210,7 @@ internal sealed partial class PptxSceneBuilder
 {
     private const double MinimumStrokeWidth = 0.1d;
     private const double SceneEffectTolerance = 0.001d;
+    private const string HyperlinkRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink";
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
     private const string ChartExternalDataPackageRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
@@ -247,6 +248,7 @@ internal sealed partial class PptxSceneBuilder
                     false,
                     false,
                     false,
+                    true,
                     [],
                     [],
                     []));
@@ -288,6 +290,7 @@ internal sealed partial class PptxSceneBuilder
                 HasSlideTransition(slideXml),
                 HasSlideTiming(slideXml),
                 HasSlideOleObject(slideXml),
+                ReadShowMasterShapes(slideXml),
                 masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken),
                 layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken),
                 ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
@@ -303,6 +306,12 @@ internal sealed partial class PptxSceneBuilder
         bool HasSlideTiming(XDocument slideXml)
         {
             return slideXml.Descendants(PresentationNamespace + "timing").Any();
+        }
+
+        // Unprefixed p:sld flag verified against PowerPoint-saved output: absent means show.
+        bool ReadShowMasterShapes(XDocument slideXml)
+        {
+            return !OoxBoolean.IsOff((string?)slideXml.Root?.Attribute("showMasterSp"));
         }
 
         bool HasSlideTransition(XDocument slideXml)
@@ -341,8 +350,10 @@ internal sealed partial class PptxSceneBuilder
     private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(OoxPackage package, string sourcePartName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        // External hyperlink targets are retained so shape-level hlinkClick entries can resolve;
+        // all other external relationships stay excluded from resource resolution.
         return package.GetRelationships(sourcePartName, cancellationToken)
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .Where(r => (!r.IsExternal && r.ResolvedTarget is not null) || (r.IsExternal && r.Type.Equals(HyperlinkRelationshipType, StringComparison.Ordinal)))
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
     }
 

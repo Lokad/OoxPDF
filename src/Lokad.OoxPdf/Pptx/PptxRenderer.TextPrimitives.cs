@@ -526,10 +526,12 @@ internal sealed partial class PptxRenderer
     private static double EstimateTextHeight(
         IReadOnlyList<PptxTextParagraphModel> paragraphs,
         double textWidth,
-        PptxTextBodyProperties bodyProperties)
+        PptxTextBodyProperties bodyProperties,
+        PresentationFontResolver? fontResolver = null,
+        CancellationToken cancellationToken = default)
     {
         double height = 0d;
-        var advanceEstimator = new TextAdvanceEstimator(null, CancellationToken.None);
+        var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
         bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
         bool useWindowsFontBoxForDefaultLineSpacing = !IsTableCellVerticalAnchorSource(bodyProperties.VerticalAnchorSource);

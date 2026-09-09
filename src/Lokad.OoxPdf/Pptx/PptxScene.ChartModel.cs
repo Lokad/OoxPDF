@@ -23,7 +23,8 @@ internal sealed record PptxSceneChart(
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartManualLayout PlotAreaLayout,
     PptxSceneChartShapeStyle ChartAreaStyle,
-    PptxSceneChartShapeStyle PlotAreaStyle);
+    PptxSceneChartShapeStyle PlotAreaStyle,
+    IReadOnlyDictionary<string, OoxRelationship>? Relationships = null);
 
 internal readonly record struct PptxSceneChartExternalData(
     bool IsDefined,
@@ -261,7 +262,9 @@ internal readonly record struct PptxSceneChartLeaderLines(
 
 internal sealed record PptxSceneChartTextRun(
     string Text,
-    PptxSceneChartTextStyleOverride TextStyle);
+    PptxSceneChartTextStyleOverride TextStyle,
+    string? HyperlinkClickId = null,
+    string? HyperlinkClickAction = null);
 
 internal enum PptxSceneChartDataLabelPosition
 {

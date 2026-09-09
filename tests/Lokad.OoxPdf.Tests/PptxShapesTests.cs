@@ -1358,7 +1358,7 @@ internal static class PptxShapesTests
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1408,7 +1408,7 @@ internal static class PptxShapesTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

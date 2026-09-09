@@ -79,7 +79,7 @@ internal sealed partial class PptxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         var frames = new List<PptxTextFrameLayout>();
-        IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources);
+        IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken);
         foreach (PptxTextFrameModel frameModel in frameModels)
         {
             cancellationToken.ThrowIfCancellationRequested();

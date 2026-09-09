@@ -197,11 +197,11 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement)
+    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (!layout.Visible || entries.Count == 0)
         {
-            return [];
+            return;
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
@@ -300,7 +300,7 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
         }
 
-        return RenderTextRuns(runs, graphics, "CL", fontResolver);
+        RenderChartTextRuns(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink);
     }
 
     private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement)

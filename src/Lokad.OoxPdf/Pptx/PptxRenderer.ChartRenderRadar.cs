@@ -143,7 +143,7 @@ internal sealed partial class PptxRenderer
         return Math.PI / 2d - index * Math.PI * 2d / pointCount;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderRadarCategoryLabels(
+    private static void RenderRadarCategoryLabels(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
@@ -152,12 +152,14 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxis? sceneAxis,
         XElement? categoryAxis,
         ChartIndexedTextVector labelVector,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        List<PdfFontResource> chartFonts,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         IReadOnlyList<ChartIndexedTextPoint?> labels = labelVector.DensePoints();
         if (labels.Count == 0)
         {
-            return [];
+            return;
         }
 
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
@@ -177,7 +179,7 @@ internal sealed partial class PptxRenderer
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
         }
 
-        return RenderTextRuns(runs, graphics, "RCA", fontResolver);
+        RenderChartTextRuns(runs, graphics, chartFonts, "RCA", fontResolver, diagnosticSink);
     }
 
     private static ChartRadarLabelFrame ResolveRadarCategoryLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, int index, int pointCount)
@@ -217,7 +219,7 @@ internal sealed partial class PptxRenderer
         return anchorY + labelHeight * baselineFactor;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderRadarValueAxisLabels(
+    private static void RenderRadarValueAxisLabels(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
@@ -227,7 +229,9 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxis? sceneAxis,
         ChartValueExtents extents,
         ChartAxisUnits axisUnits,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        List<PdfFontResource> chartFonts,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         ChartPlotBox plotBox = layout.PlotBox;
@@ -241,7 +245,7 @@ internal sealed partial class PptxRenderer
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
         }
 
-        return RenderTextRuns(runs, graphics, "RVA", fontResolver);
+        RenderChartTextRuns(runs, graphics, chartFonts, "RVA", fontResolver, diagnosticSink);
     }
 
     private static ChartRadarLabelFrame ResolveRadarValueAxisLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, double ratio)

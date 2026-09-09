@@ -255,7 +255,7 @@ internal sealed partial class PptxRenderer
         return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment);
     }
 
-    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver)
+    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks)
     {
         ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
         if (options.CustomTextRuns.Count == 0)
@@ -264,7 +264,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver);
+        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver, labelLinks);
     }
 
     private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
@@ -281,7 +281,7 @@ internal sealed partial class PptxRenderer
         return new ChartLayoutBox(left, top, Math.Max(1d, right - left), Math.Max(1d, bottom - top));
     }
 
-    private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver)
+    private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? links = null)
     {
         if (richTextRuns.Count == 0)
         {
@@ -295,7 +295,7 @@ internal sealed partial class PptxRenderer
             .Select(run =>
             {
                 ChartTextStyle runStyle = style.Merge(run.TextStyle);
-                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, textMeasurer.Measure(run.Text, runStyle)));
+                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, textMeasurer.Measure(run.Text, runStyle)), HyperlinkClickId: run.HyperlinkClickId, HyperlinkClickAction: run.HyperlinkClickAction);
             })
             .Where(run => run.Width > 0d)
             .ToArray();
@@ -316,7 +316,12 @@ internal sealed partial class PptxRenderer
         foreach (ChartTextRunLayout run in richRuns)
         {
             double runWidth = Math.Max(0.1d, run.Width);
-            runs.Add(CreateChartTextRun(run.Text, cursor, y, runWidth, height, clipX, clipY, clipWidth, clipHeight, run.Style, TextAlignment.Left) with { PreventCoalesce = true });
+            TextRun richRun = CreateChartTextRun(run.Text, cursor, y, runWidth, height, clipX, clipY, clipWidth, clipHeight, run.Style, TextAlignment.Left) with { PreventCoalesce = true };
+            runs.Add(richRun);
+            if (links is not null && (!string.IsNullOrEmpty(run.HyperlinkClickId) || !string.IsNullOrEmpty(run.HyperlinkClickAction)))
+            {
+                links.Add(new ChartTextRunLink(richRun, run.HyperlinkClickId, run.HyperlinkClickAction));
+            }
             cursor += runWidth;
         }
     }
@@ -434,7 +439,7 @@ internal sealed partial class PptxRenderer
     {
         PptxSceneChartDataLabels labels = PptxSceneBuilder.ReadChartDataLabels(chartElement, theme, colorMap);
         return labels.IsDefined
-            ? ToChartDataLabelOptions(sceneChart: null, labels)
+            ? ToChartDataLabelOptions(sceneChart: null, labels, chartElement)
             : ChartDataLabelOptions.None;
     }
 
@@ -464,7 +469,8 @@ internal sealed partial class PptxRenderer
                 ToChartShapeStyle(plot.DataLabels.ShapeStyle),
                 ToChartDataLabelFlagOptions(plot.DataLabels),
                 ToChartDataLabelOverrides(plot.DataLabels.Overrides),
-                plot.DataLabels.IsDefined);
+                plot.DataLabels.IsDefined,
+                Date1904: sceneChart?.Options.Date1904 == true || ResolveChartSpaceDate1904(chartElement));
     }
 
     private static IReadOnlyList<ChartDataLabelOptions> ReadSceneOrXmlSeriesDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
@@ -472,7 +478,7 @@ internal sealed partial class PptxRenderer
         if (plot is not null)
         {
             return plot.Series
-                .Select(series => ToChartDataLabelOptions(sceneChart, series.DataLabels))
+                .Select(series => ToChartDataLabelOptions(sceneChart, series.DataLabels, chartElement))
                 .ToArray();
         }
 
@@ -482,7 +488,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels)
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels, XElement? chartElement = null)
     {
         return new ChartDataLabelOptions(
             labels.ShowValue == true,
@@ -506,7 +512,8 @@ internal sealed partial class PptxRenderer
             ToChartShapeStyle(labels.ShapeStyle),
             ToChartDataLabelFlagOptions(labels),
             ToChartDataLabelOverrides(labels.Overrides),
-            labels.IsDefined);
+            labels.IsDefined,
+            Date1904: sceneChart?.Options.Date1904 == true || ResolveChartSpaceDate1904(chartElement));
     }
 
     private static ChartTextStyleOverride ToChartDataLabelTextStyleOverride(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels)
@@ -576,7 +583,7 @@ internal sealed partial class PptxRenderer
     {
         return runs.Count == 0
             ? []
-            : runs.Select(run => new ChartTextRunOverride(run.Text, ToChartTextStyleOverride(run.TextStyle))).ToArray();
+            : runs.Select(run => new ChartTextRunOverride(run.Text, ToChartTextStyleOverride(run.TextStyle), HyperlinkClickId: run.HyperlinkClickId, HyperlinkClickAction: run.HyperlinkClickAction)).ToArray();
     }
 
     private static IReadOnlyDictionary<string, ChartBooleanOption> ToChartDataLabelFlagOptions(PptxSceneChartDataLabels labels)
@@ -690,7 +697,7 @@ internal sealed partial class PptxRenderer
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options)
     {
-        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat);
+        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode: null, date1904: options.Date1904);
     }
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options, ChartIndexedNumberPoint? sourcePoint)
@@ -702,29 +709,29 @@ internal sealed partial class PptxRenderer
     {
         if (ResolveSourceLinkedChartNumberFormatCode(options.NumberFormatInfo, sourcePoint) is { } sourceFormat)
         {
-            return FormatChartNumber(value, sourceFormat);
+            return FormatChartNumber(value, sourceFormat, options.Date1904);
         }
 
-        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode);
+        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode, options.Date1904);
     }
 
-    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat)
+    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, bool date1904 = false)
     {
-        return FormatChartDataLabelValue(value, numberFormat, legacyNumberFormat, sourceFormatCode: null);
+        return FormatChartDataLabelValue(value, numberFormat, legacyNumberFormat, sourceFormatCode: null, date1904: date1904);
     }
 
-    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, string? sourceFormatCode)
+    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, string? sourceFormatCode, bool date1904 = false)
     {
         if (IsRenderableChartNumberFormat(numberFormat))
         {
-            return FormatChartNumber(value, numberFormat.FormatCode);
+            return FormatChartNumber(value, numberFormat.FormatCode, date1904);
         }
 
         return !string.IsNullOrWhiteSpace(legacyNumberFormat) &&
             !string.Equals(legacyNumberFormat, "General", StringComparison.OrdinalIgnoreCase)
-            ? FormatChartNumber(value, legacyNumberFormat)
+            ? FormatChartNumber(value, legacyNumberFormat, date1904)
             : IsRenderableChartFormatCode(sourceFormatCode)
-                ? FormatChartNumber(value, sourceFormatCode)
+                ? FormatChartNumber(value, sourceFormatCode!, date1904)
             : FormatChartAxisLabel(value, null);
     }
 
@@ -739,19 +746,18 @@ internal sealed partial class PptxRenderer
         return ResolveSourceLinkedChartNumberFormatCode(
             numberFormat,
             cell.StyleNumberFormatCode,
-            cell.StyleAppliesNumberFormat,
-            cell.StyleNumberFormatIsDateLike);
+            cell.StyleAppliesNumberFormat);
     }
 
     private static string? ResolveSourceLinkedChartNumberFormatCode(
         ChartNumberFormat numberFormat,
         string? workbookFormatCode,
-        bool? workbookAppliesNumberFormat,
-        bool workbookFormatIsDateLike)
+        bool? workbookAppliesNumberFormat)
     {
+        // Date-like workbook codes flow through since date serial rendering is explicit
+        // (S04); the shared formatter renders them with the chart date system.
         if (numberFormat.SourceLinked != true ||
             workbookAppliesNumberFormat == false ||
-            workbookFormatIsDateLike ||
             !IsRenderableChartFormatCode(workbookFormatCode))
         {
             return null;

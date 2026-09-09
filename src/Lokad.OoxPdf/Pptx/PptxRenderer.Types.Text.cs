@@ -207,6 +207,7 @@ internal sealed partial class PptxRenderer
         RgbColor? Highlight,
         bool HasHyperlinkClick,
         string? HyperlinkClickId,
+        string? HyperlinkClickAction,
         bool Bold,
         bool Italic,
         bool Underline,

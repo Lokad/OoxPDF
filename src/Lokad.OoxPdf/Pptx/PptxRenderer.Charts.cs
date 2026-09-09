@@ -24,53 +24,56 @@ internal sealed partial class PptxRenderer
     private const double ChartFilledSeriesInheritedStrokeWidth = 0.75d;
     private const double ChartMarkerInheritedStrokeWidth = 0.75d;
 
-    private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver)
+    private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver,
+        PptxRenderContext context,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds)
     {
         bool plotVisibleOnly = ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, chartXml);
         if (TryRenderBarChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderLineChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderAreaChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderScatterChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderBubbleChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderRadarChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderPieChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }
 
         if (TryRenderDoughnutChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
         {
             return true;
         }

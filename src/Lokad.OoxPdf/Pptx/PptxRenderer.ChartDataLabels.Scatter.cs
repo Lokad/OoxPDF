@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PdfFontResource> RenderScatterDataLabels(
+    private static void RenderScatterDataLabels(
         PptxTheme theme,
         PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
@@ -24,16 +24,23 @@ internal sealed partial class PptxRenderer
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        List<PdfFontResource> chartFonts,
+        PptxRenderContext context,
+        IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
-            return [];
+            return;
         }
 
         double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).DefaultIfEmpty().Max(point => point.Size));
         var textMeasurer = new ChartTextMeasurer(fontResolver);
         var runs = new List<TextRun>();
+        List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
             foreach (ScatterPoint point in series[seriesIndex].Points)
@@ -99,12 +106,13 @@ internal sealed partial class PptxRenderer
                         plotBox,
                         style,
                         alignment,
-                        fontResolver);
+                        fontResolver, labelLinks);
                 }
             }
         }
 
-        return RenderTextRuns(runs, graphics, "CSD", fontResolver);
+        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CSD", fontResolver, diagnosticSink);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
 
         double GetFillDataLabelLegendKeyWidth(double fontSize)
         {

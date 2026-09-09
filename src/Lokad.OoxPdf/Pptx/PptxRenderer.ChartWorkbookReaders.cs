@@ -53,6 +53,10 @@ internal sealed partial class PptxRenderer
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
             .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
         ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml, workbookRelationships);
+        if (workbookSheets.Length > MaxWorkbookSheets)
+        {
+            throw new InvalidDataException("Chart workbook declares more sheets than the maximum supported count.");
+        }
         ChartWorkbookDefinedName[] definedNameRecords = ReadWorkbookDefinedNameRecords(workbookXml, workbookSheets);
         IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(definedNameRecords);
         ChartWorkbookCalculationProperties calculation = ReadWorkbookCalculationProperties(workbookXml);
@@ -132,6 +136,10 @@ internal sealed partial class PptxRenderer
         foreach (XElement item in document.Descendants(SpreadsheetNamespace + "si"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (sharedStrings.Count >= MaxWorkbookSharedStrings)
+            {
+                throw new InvalidDataException("Chart workbook declares more shared strings than the maximum supported count.");
+            }
             sharedStrings.Add(ReadWorkbookSharedString(item));
         }
 
@@ -188,6 +196,11 @@ internal sealed partial class PptxRenderer
             string sheetName = localSheetId is { } index && index >= 0 && index < workbookSheets.Count
                 ? workbookSheets[index].Name
                 : string.Empty;
+            if (definedNames.Count >= MaxWorkbookDefinedNames)
+            {
+                throw new InvalidDataException("Chart workbook declares more defined names than the maximum supported count.");
+            }
+
             definedNames.Add(new ChartWorkbookDefinedName(name.Trim(), formula, localSheetId, sheetName));
         }
 
@@ -232,6 +245,11 @@ internal sealed partial class PptxRenderer
                 int.TryParse(idAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) &&
                 id >= 0)
             {
+                if (!customNumberFormats.ContainsKey(id) && customNumberFormats.Count >= MaxWorkbookStyleRecords)
+                {
+                    throw new InvalidDataException("Chart workbook declares more number formats than the maximum supported count.");
+                }
+
                 customNumberFormats[id] = (string?)numberFormat.Attribute("formatCode") ?? string.Empty;
             }
         }
@@ -240,6 +258,11 @@ internal sealed partial class PptxRenderer
         foreach (XElement format in document.Root?.Element(SpreadsheetNamespace + "cellXfs")?.Elements(SpreadsheetNamespace + "xf") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (cellFormats.Count >= MaxWorkbookStyleRecords)
+            {
+                throw new InvalidDataException("Chart workbook declares more cell formats than the maximum supported count.");
+            }
+
             int? numberFormatId = ReadSpreadsheetIntegerAttribute(format, "numFmtId");
             bool? applyNumberFormat = format.Attribute("applyNumberFormat") is { } applyAttribute
                 ? IsOoxmlTrue(applyAttribute.Value)
@@ -332,6 +355,28 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // Spreadsheet grid bounds (columns A..XFD, rows 1..1048576). Hidden markers
+    // outside the grid can never be observed through resolved range cells, whose
+    // references are grid-bounded by TryParseCellReference.
+    private const int MaxSpreadsheetColumn = 16384;
+    private const int MaxSpreadsheetRow = 1048576;
+
+    // Total hidden-column insertions examined across all <col> runs in one
+    // worksheet. The grid holds at most MaxSpreadsheetColumn distinct columns,
+    // so genuine files stay far below this budget; anything beyond signals a
+    // hostile repetition of wide runs. Mirrors MaxChartRangeCells.
+    private const long MaxHiddenColumnExpansions = 100_000;
+
+    // Count budgets for embedded-workbook expansion. Chart data ranges are
+    // already capped at MaxChartRangeCells cells, so genuine chart workbooks
+    // stay far below these counts; anything beyond signals a hostile payload
+    // smuggled in through an embedded spreadsheet.
+    private const long MaxWorkbookSharedStrings = 100_000;
+    private const long MaxWorksheetCells = 100_000;
+    private const int MaxWorkbookSheets = 1_024;
+    private const long MaxWorkbookDefinedNames = 100_000;
+    private const long MaxWorkbookStyleRecords = 100_000;
+
     private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken)
     {
         using Stream stream = worksheetPart.OpenRead();
@@ -343,26 +388,52 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (IsOoxmlTrue((string?)row.Attribute("hidden")) &&
-                ReadSpreadsheetIntegerAttribute(row, "r") is { } rowIndex)
+                ReadSpreadsheetIntegerAttribute(row, "r") is { } rowIndex &&
+                rowIndex >= 1 &&
+                rowIndex <= MaxSpreadsheetRow)
             {
                 hiddenRows.Add(rowIndex);
             }
         }
 
+        long hiddenColumnExpansions = 0;
         foreach (XElement column in document.Descendants(SpreadsheetNamespace + "col"))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (hiddenColumns.Count >= MaxSpreadsheetColumn)
+            {
+                break;
+            }
+
             if (!IsOoxmlTrue((string?)column.Attribute("hidden")) ||
                 ReadSpreadsheetIntegerAttribute(column, "min") is not { } minColumn ||
-                ReadSpreadsheetIntegerAttribute(column, "max") is not { } maxColumn)
+                ReadSpreadsheetIntegerAttribute(column, "max") is not { } maxColumn ||
+                minColumn > maxColumn)
             {
                 continue;
             }
 
-            for (int columnIndex = minColumn; columnIndex <= maxColumn; columnIndex++)
+            int firstHiddenColumn = Math.Max(minColumn, 1);
+            int lastHiddenColumn = Math.Min(maxColumn, MaxSpreadsheetColumn);
+            if (firstHiddenColumn > lastHiddenColumn)
+            {
+                continue;
+            }
+
+            for (int columnIndex = firstHiddenColumn; columnIndex <= lastHiddenColumn; columnIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (hiddenColumns.Count >= MaxSpreadsheetColumn)
+                {
+                    break;
+                }
+
                 hiddenColumns.Add(columnIndex);
+                hiddenColumnExpansions++;
+                if (hiddenColumnExpansions > MaxHiddenColumnExpansions)
+                {
+                    throw new InvalidDataException("Chart workbook hides more columns than the maximum supported count.");
+                }
             }
         }
 
@@ -412,6 +483,11 @@ internal sealed partial class PptxRenderer
                     sharedStringHasPhoneticText = sharedString.HasPhoneticText;
                     sharedStringPreserveSpace = sharedString.PreserveSpace;
                 }
+            }
+
+            if (!cells.ContainsKey(reference) && cells.Count >= MaxWorksheetCells)
+            {
+                throw new InvalidDataException("Chart worksheet declares more cells than the maximum supported count.");
             }
 
             cells[reference] = new ChartWorkbookCell(

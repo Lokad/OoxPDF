@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
@@ -33,7 +34,7 @@ internal sealed partial class PptxRenderer
         }
 
         return ReadSceneTableTextFrames(context)
-            .Select(tableFrame => BuildTextFrameModel(tableFrame, document, context.Theme, context.SlideNumber, context.InheritedXml))
+            .Select(tableFrame => BuildTextFrameModel(tableFrame, document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken))
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -190,7 +191,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFrameModels(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources);
+        return BuildTextFrameModels(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
     }
 
     private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
@@ -200,12 +201,14 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        PresentationFontResolver? fontResolver = null,
+        CancellationToken cancellationToken = default)
     {
         var frames = new List<PptxTextFrameModel>();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
         {
-            PptxTextFrameModel? frame = BuildTextFrameModel(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources);
+            PptxTextFrameModel? frame = BuildTextFrameModel(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken);
             if (frame is not null)
             {
                 frames.Add(frame);
@@ -222,7 +225,9 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        PresentationFontResolver? fontResolver = null,
+        CancellationToken cancellationToken = default)
     {
         if (!includePlaceholders && IsPlaceholder(shape))
         {
@@ -333,8 +338,8 @@ internal sealed partial class PptxRenderer
             shapeFontColor, default);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)),
             _ => 0d
         };
 
@@ -421,7 +426,9 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         int slideNumber,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        PresentationFontResolver? fontResolver = null,
+        CancellationToken cancellationToken = default)
     {
         XElement textBody = tableFrame.TextBody;
         PptxTextBodyProperties baseBodyProperties = ReadTextBodyProperties(textBody, inheritedTextBody: null);
@@ -514,8 +521,8 @@ internal sealed partial class PptxRenderer
             tableFrame.TextStyle);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)),
             _ => 0d
         };
 

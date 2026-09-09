@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PdfFontResource> RenderBarDataLabels(
+    private static void RenderBarDataLabels(
         PptxTheme theme,
         PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
@@ -27,7 +27,13 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        List<PdfFontResource> chartFonts,
+        PptxRenderContext context,
+        IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
         bool valueAxisReversed = valueAxisOptions.Reversed;
@@ -36,19 +42,20 @@ internal sealed partial class PptxRenderer
         bool varyColors = barOptions.VaryColors.Value;
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
-            return [];
+            return;
         }
 
         IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> densePointSeries = DensifyChartPointSeries(series);
         if (densePointSeries.Count == 0)
         {
-            return [];
+            return;
         }
 
         int categoryCount = Math.Max(1, densePointSeries.Max(values => values.Count));
         double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
+        List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         bool stacked = IsStackedChartGrouping(grouping);
         bool percentStacked = IsPercentStackedChartGrouping(grouping);
         if (horizontalBars)
@@ -112,7 +119,7 @@ internal sealed partial class PptxRenderer
 
                         if (!string.IsNullOrEmpty(label))
                         {
-                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left, fontResolver);
+                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left, fontResolver, labelLinks);
                         }
                     }
                 }
@@ -184,13 +191,14 @@ internal sealed partial class PptxRenderer
 
                         if (!string.IsNullOrEmpty(label))
                         {
-                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver);
+                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver, labelLinks);
                         }
                     }
                 }
             }
         }
 
-        return RenderTextRuns(runs, graphics, "CBD", fontResolver);
+        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CBD", fontResolver, diagnosticSink);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
     }
 }

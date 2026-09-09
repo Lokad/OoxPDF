@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PdfFontResource> RenderLineDataLabels(
+    private static void RenderLineDataLabels(
         PptxTheme theme,
         PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
@@ -25,17 +25,23 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        List<PdfFontResource> chartFonts,
+        PptxRenderContext context,
+        IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
-            return [];
+            return;
         }
 
         IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> densePointSeries = DensifyChartPointSeries(series);
         if (densePointSeries.Count == 0)
         {
-            return [];
+            return;
         }
 
         int pointCount = Math.Max(1, densePointSeries.Max(values => values.Count));
@@ -44,6 +50,7 @@ internal sealed partial class PptxRenderer
             plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
         var textMeasurer = new ChartTextMeasurer(fontResolver);
         var runs = new List<TextRun>();
+        List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
         {
             IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
@@ -108,13 +115,14 @@ internal sealed partial class PptxRenderer
                             plotBox,
                             style,
                             alignment,
-                            fontResolver);
+                            fontResolver, labelLinks);
                     }
                 }
             }
         }
 
-        return RenderTextRuns(runs, graphics, "CLD", fontResolver);
+        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CLD", fontResolver, diagnosticSink);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
 
         double GetStrokeMarkerDataLabelLegendKeyWidth(double fontSize, ChartMarkerStyle marker)
         {

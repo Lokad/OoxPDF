@@ -363,7 +363,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
-        PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
+        PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
         PptxTextFrameLayout layout = BuildTextFrameLayout(frameModel, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
         return FlattenTextLayoutToSpans(new PptxTextLayoutModel([layout]), context.FontResolver);
     }

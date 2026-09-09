@@ -2,28 +2,186 @@ using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PdfFontResource> RenderTextRuns(
-        IReadOnlyList<TextRun> textRuns,
+    // Chart text parts render through separate calls whose resources merge into
+
+    // one page-level list, so per-call numbering would collide (duplicate /Font
+    // keys, last wins). Callers pass that shared list for page-unique sequencing;
+    // the appended slice is already in the list, so callers must not re-add it.
+    private static RenderedFonts RenderChartTextRuns(
+        List<TextRun> runs,
         PdfGraphicsBuilder graphics,
+        List<PdfFontResource> chartFonts,
         string resourcePrefix,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        if (textRuns.Count == 0)
+        if (runs.Count == 0)
         {
-            return [];
+            return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
+        }
+        runs = SplitRunsByResolvedTypeface(runs, fontResolver ?? new PresentationFontResolver(null), diagnosticSink, CancellationToken.None);
+
+        RenderedFonts renderedFonts = CreateRenderedFonts(runs, fontResolver ?? new PresentationFontResolver(null), resourcePrefix, CancellationToken.None, diagnosticSink, chartFonts);
+        DrawTextRunsWithFonts(runs, graphics, renderedFonts.Fonts);
+        chartFonts.AddRange(renderedFonts.Resources);
+        return renderedFonts;
+    }
+
+    // Legacy runs address embedded fonts by requested family, but CFF substitution
+    // embeds fallback faces under fallback keys: without rewriting, substituted runs
+    // would miss the lookup and vanish. Rewrite CFF-family runs through the same
+    // per-glyph fallback the estimator measured with (F03). Families resolving to
+    // embeddable-or-missing fonts keep legacy behavior exactly (missing fonts stay
+    // invisible, as before).
+    private static List<TextRun> SplitRunsByResolvedTypeface(
+        IReadOnlyList<TextRun> runs,
+        PresentationFontResolver fontResolver,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        var rewritten = new List<TextRun>(runs.Count);
+        var verdicts = new Dictionary<string, OpenTypeFont?>(StringComparer.OrdinalIgnoreCase);
+        var reported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        TextAdvanceEstimator? estimator = null;
+        foreach (TextRun run in runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
+            string familyKey = FontKey(requestedFamily, run.Bold, run.Italic);
+            if (!verdicts.TryGetValue(familyKey, out OpenTypeFont? primary))
+            {
+                primary = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(requestedFamily, run.Bold, run.Italic), cancellationToken)?.Font;
+                verdicts[familyKey] = primary;
+            }
+
+            if (primary is null || primary.HasTrueTypeOutlines)
+            {
+                rewritten.Add(run);
+                continue;
+            }
+
+            estimator ??= new TextAdvanceEstimator(fontResolver, cancellationToken);
+            List<(string Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken);
+            if (segments.Count == 1)
+            {
+                rewritten.Add(run with { FontFamily = segments[0].Typeface });
+            }
+            else
+            {
+                double cursorX = run.X;
+                foreach ((string typeface, string text) in segments)
+                {
+                    double width = estimator.Measure(text, run.FontSize, typeface, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+                    rewritten.Add(run with
+                    {
+                        Text = text,
+                        X = cursorX,
+                        Width = width,
+                        FontFamily = typeface,
+                        Alignment = TextAlignment.Left,
+                        PreventCoalesce = true
+                    });
+                    cursorX += width;
+                }
+            }
+
+            if (reported.Add(familyKey))
+            {
+                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                    "FONT_UNSUPPORTED_OUTLINES",
+                    OoxPdfSeverity.Warning,
+                    "Font '" + requestedFamily + "' has no embeddable TrueType outlines (CFF/OpenType-CFF); affected runs were substituted with fallback typefaces.",
+                    PartName: null,
+                    SlideIndex: null,
+                    PageIndex: null,
+                    Feature: requestedFamily,
+                    Fallback: "Per-glyph fallback typeface"));
+            }
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, fontResolver ?? new PresentationFontResolver(null), resourcePrefix, CancellationToken.None);
-        DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
-        return renderedFonts.Resources;
+        return rewritten;
+    }
+
+    private static List<(string Typeface, string Text)> SplitRunByFallbackTypeface(TextRun run, TextAdvanceEstimator estimator, CancellationToken cancellationToken)
+    {
+        var segments = new List<(string Typeface, string Text)>();
+        string? segmentTypeface = null;
+        var segmentText = new StringBuilder();
+        void FlushSegment()
+        {
+            if (segmentText.Length != 0 && segmentTypeface is not null)
+            {
+                segments.Add((segmentTypeface, segmentText.ToString()));
+                segmentText.Clear();
+            }
+        }
+
+        foreach (Rune rune in run.Text.EnumerateRunes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string? typeface = estimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value)?.Typeface;
+            if (typeface is null)
+            {
+                continue;
+            }
+
+            if (segmentTypeface is not null && !typeface.Equals(segmentTypeface, StringComparison.OrdinalIgnoreCase))
+            {
+                FlushSegment();
+                segmentTypeface = null;
+            }
+
+            segmentTypeface = typeface;
+            segmentText.Append(char.ConvertFromUtf32(rune.Value));
+        }
+
+        FlushSegment();
+        return segments;
+    }
+
+    // Counts page-level names of the form prefix + digits so chart text parts
+    // that render through separate calls share one numbering sequence per page.
+    private static int CountPrefixedResourceNames(List<PdfFontResource>? nameScope, string prefix)
+    {
+        if (nameScope is null)
+        {
+            return 0;
+        }
+
+        string sanitizedPrefix = PdfEmbeddedFont.SanitizeName(prefix);
+        int count = 0;
+        foreach (PdfFontResource resource in nameScope)
+        {
+            string name = PdfEmbeddedFont.SanitizeName(resource.ResourceName);
+            if (name.Length > sanitizedPrefix.Length &&
+                name.StartsWith(sanitizedPrefix, StringComparison.Ordinal))
+            {
+                bool digitsOnly = true;
+                for (int i = sanitizedPrefix.Length; i < name.Length; i++)
+                {
+                    if (!char.IsAsciiDigit(name[i]))
+                    {
+                        digitsOnly = false;
+                        break;
+                    }
+                }
+
+                if (digitsOnly)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderPositionedTextSpans(
@@ -71,7 +229,8 @@ internal sealed partial class PptxRenderer
         return CreateRenderedFonts(uses, fontResolver, resourcePrefix, cancellationToken);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken)
+
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null)
     {
         if (textRuns.Count == 0)
         {
@@ -86,15 +245,17 @@ internal sealed partial class PptxRenderer
                 run.Bold,
                 run.Italic,
                 run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
-            .ToArray(), fontResolver, resourcePrefix, cancellationToken);
+            .ToArray(), fontResolver, resourcePrefix, cancellationToken, diagnosticSink, nameScope);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null)
     {
         if (uses.Count == 0)
         {
             return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
         }
+
+        uses = SubstituteUnembeddableFontUses(uses, fontResolver, diagnosticSink, cancellationToken);
 
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
         var resources = new List<PdfFontResource>();
@@ -107,16 +268,86 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
-
             FontFaceResolution resolution = resolved.Value.Resolution;
             OpenTypeFont font = resolved.Value.Font;
-            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(use => use.CodePoints), cancellationToken);
-            string resourceName = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
+            if (!font.HasTrueTypeOutlines)
+            {
+                continue;
+            }
+
+            PdfEmbeddedFont embedded = fontResolver.GetOrCreateSubset(resolution, font, group.SelectMany(use => use.CodePoints).ToArray(), cancellationToken);
+            string resourceName = resourcePrefix + (CountPrefixedResourceNames(nameScope, resourcePrefix) + resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, resolution, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));
         }
 
         return new RenderedFonts(fonts, resources);
+    }
+
+    // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines, so the
+    // PDF subsetter cannot embed them. Rewrite affected uses to the fallback faces
+    // the measurement estimator resolves for the same code points, so measured and
+    // emitted glyphs use the same face (F03); report each substituted group once.
+    private static IReadOnlyList<TextFontUse> SubstituteUnembeddableFontUses(
+        IReadOnlyList<TextFontUse> uses,
+        PresentationFontResolver fontResolver,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        var groupFonts = new Dictionary<string, OpenTypeFont?>(StringComparer.OrdinalIgnoreCase);
+        bool needsSubstitution = false;
+        foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            TextFontUse first = group.First();
+            OpenTypeFont? font = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken)?.Font;
+            groupFonts[group.Key] = font;
+            if (font is not null && !font.HasTrueTypeOutlines)
+            {
+                needsSubstitution = true;
+            }
+        }
+
+        if (!needsSubstitution)
+        {
+            return uses;
+        }
+
+        var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
+        var reported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var substituted = new List<TextFontUse>(uses.Count);
+        foreach (TextFontUse use in uses)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (groupFonts[FontKey(use.FamilyName, use.Bold, use.Italic)] is not { } font || font.HasTrueTypeOutlines)
+            {
+                substituted.Add(use);
+                continue;
+            }
+            foreach (IGrouping<string, (int CodePoint, string? Typeface)> split in use.CodePoints
+                         .Select(codePoint => (CodePoint: codePoint, Typeface: estimator.ResolveGlyphFont(use.FamilyName, use.Bold, use.Italic, codePoint)?.Typeface))
+                         .Where(resolved => !string.IsNullOrEmpty(resolved.Typeface))
+                         .GroupBy(resolved => resolved.Typeface!, StringComparer.OrdinalIgnoreCase))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                substituted.Add(new TextFontUse(split.Key, use.Bold, use.Italic, split.Select(resolved => resolved.CodePoint).ToArray()));
+            }
+
+            if (reported.Add(FontKey(use.FamilyName, use.Bold, use.Italic)))
+            {
+                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                    "FONT_UNSUPPORTED_OUTLINES",
+                    OoxPdfSeverity.Warning,
+                    "Font '" + use.FamilyName + "' has no embeddable TrueType outlines (CFF/OpenType-CFF); affected runs were substituted with fallback typefaces.",
+                    PartName: null,
+                    SlideIndex: null,
+                    PageIndex: null,
+                    Feature: use.FamilyName,
+                    Fallback: "Per-glyph fallback typeface"));
+            }
+        }
+
+        return substituted;
     }
 
     private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
@@ -235,7 +466,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
+    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts, PptxTextHyperlinkScope? hyperlinkScope = null)
     {
         DrawHighlightSpansWithFonts();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
@@ -250,6 +481,8 @@ internal sealed partial class PptxRenderer
                 if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
                 {
                     DrawWrappedSpan(rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                    // Unresolved-font spans stay link-free: no glyphs are painted and the font layer reports the miss.
+                    hyperlinkScope?.CollectEmissionSpan(emissionSpan, rendered.Font);
                 }
             }
         }

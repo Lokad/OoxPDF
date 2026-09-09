@@ -280,10 +280,10 @@ internal static class PptxModelTests
         TestAssert.True(slideSnapshot.HasSlideXml, "Expected scene inspection to expose slide XML ownership without XML content.");
         TestAssert.Equal(1, slide.MasterRelationships.Count);
         TestAssert.Equal(1, slide.LayoutRelationships.Count);
-        TestAssert.Equal(4, slide.SlideRelationships.Count);
+        TestAssert.Equal(5, slide.SlideRelationships.Count);
         TestAssert.Equal(1, slideSnapshot.MasterRelationshipCount);
         TestAssert.Equal(1, slideSnapshot.LayoutRelationshipCount);
-        TestAssert.Equal(4, slideSnapshot.SlideRelationshipCount);
+        TestAssert.Equal(5, slideSnapshot.SlideRelationshipCount);
         TestAssert.True(slide.SlideBackground.HasFill, "Expected slide background fill in the scene model.");
         TestAssert.True(slideSnapshot.HasSlideBackground, "Expected scene inspection to expose slide background ownership.");
         TestAssert.Equal(new RgbColor(18, 52, 86), slide.SlideBackground.Color);
@@ -1159,7 +1159,7 @@ internal static class PptxModelTests
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
         {
-            return;
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
         }
 
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
