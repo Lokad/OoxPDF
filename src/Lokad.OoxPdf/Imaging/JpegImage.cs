@@ -111,6 +111,8 @@ internal sealed class JpegImage
                 throw new InvalidDataException("JPEG frame metadata is incomplete.");
             }
 
+            ImagePixelBudget.Check(width, height, "JPEG");
+
             return new JpegImage(width, height, BuildRgb());
         }
 

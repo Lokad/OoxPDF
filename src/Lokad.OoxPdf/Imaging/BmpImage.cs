@@ -42,20 +42,28 @@ internal sealed class BmpImage
             throw new NotSupportedException($"Unsupported BMP format: width={width}, height={signedHeight}, bitsPerPixel={bitsPerPixel}, compression={compression}.");
         }
 
+        if (signedHeight == int.MinValue)
+        {
+            throw new InvalidDataException("BMP header is invalid.");
+        }
+
         int height = Math.Abs(signedHeight);
+        ImagePixelBudget.Check(width, height, "BMP");
         bool topDown = signedHeight < 0;
         int bytesPerPixel = bitsPerPixel / 8;
-        int stride = ((width * bytesPerPixel + 3) / 4) * 4;
-        if (pixelOffset + stride * height > bytes.Length)
+        long stride = ((long)width * bytesPerPixel + 3L) / 4L * 4L;
+        if ((long)pixelOffset + stride * height > bytes.Length)
         {
             throw new InvalidDataException("BMP pixel data is truncated.");
         }
+
+        int stride32 = checked((int)stride);
 
         var rgb = new byte[width * height * 3];
         for (int y = 0; y < height; y++)
         {
             int sourceY = topDown ? y : height - 1 - y;
-            int source = pixelOffset + sourceY * stride;
+            int source = pixelOffset + sourceY * stride32;
             int target = y * width * 3;
             for (int x = 0; x < width; x++)
             {

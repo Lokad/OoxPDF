@@ -73,7 +73,13 @@ public static class OoxPdfConverter
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
 
         options ??= new OoxPdfOptions();
+        options.Validate();
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.Equals(Path.GetFullPath(inputPath), Path.GetFullPath(outputPath), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Input and output file paths must be different.", nameof(outputPath));
+        }
 
         if (!File.Exists(inputPath))
         {
@@ -93,8 +99,34 @@ public static class OoxPdfConverter
             Directory.CreateDirectory(outputDirectory);
         }
 
-        using FileStream output = File.Create(outputPath);
-        PdfDocumentWriter.WriteBlank(output, pages, cancellationToken);
+        // Publish atomically: render into a uniquely named temp file beside the destination
+        // (same volume, so the final move is atomic) and move it over the destination once.
+        // A failure at any point leaves a pre-existing destination untouched and removes
+        // only the temporary file owned by this conversion.
+        string stagingPath = Path.Combine(outputDirectory!, Path.GetFileName(outputPath) + ".tmp-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using (FileStream output = File.Create(stagingPath))
+            {
+                PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(stagingPath, outputPath, overwrite: true);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(stagingPath))
+                {
+                    File.Delete(stagingPath);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     private static void ConvertCore(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken)
@@ -112,13 +144,32 @@ public static class OoxPdfConverter
             throw new ArgumentException("Output stream must be writable.", nameof(output));
         }
 
+        if (ReferenceEquals(input, output))
+        {
+            throw new ArgumentException("Input and output streams must be distinct instances.", nameof(output));
+        }
+
+        if (output.CanSeek)
+        {
+            if (output.Position != 0)
+            {
+                throw new ArgumentException("Output stream must be positioned at the start (Position 0) so PDF cross-reference offsets are valid.", nameof(output));
+            }
+
+            if (output.Length != 0)
+            {
+                throw new ArgumentException("Output stream must be empty (Length 0) so no trailing bytes remain after the PDF.", nameof(output));
+            }
+        }
+
         options ??= new OoxPdfOptions();
+        options.Validate();
         cancellationToken.ThrowIfCancellationRequested();
 
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
         IReadOnlyList<PdfPage> pages = RenderPages(input, inputKind, options, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        PdfDocumentWriter.WriteBlank(output, pages, cancellationToken);
+        PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
     }
 
     private static IReadOnlyList<PdfPage> RenderPages(Stream input, OoxPdfInputKind inputKind, OoxPdfOptions options, CancellationToken cancellationToken)
@@ -129,7 +180,7 @@ public static class OoxPdfConverter
 
         return inputKind switch
         {
-            OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken), package, options.DiagnosticSink, cancellationToken),
+            OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken, options.DiagnosticSink), package, options.DiagnosticSink, cancellationToken),
             OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderBlankPages(new DocxReader().Read(package, options.DiagnosticSink, cancellationToken, options.DocxMarkupMode), options.DiagnosticSink, cancellationToken),
             _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
         };

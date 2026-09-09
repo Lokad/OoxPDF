@@ -59,4 +59,10 @@ internal static class TestAssert
             throw new InvalidOperationException(message);
         }
     }
+    [System.Diagnostics.CodeAnalysis.DoesNotReturn]
+    public static void Skip(string reason)
+    {
+        throw new TestSkippedException(reason);
+    }
+
 }

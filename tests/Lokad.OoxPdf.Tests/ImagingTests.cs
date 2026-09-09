@@ -201,4 +201,101 @@ internal static class ImagingTests
         TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }), "32-bit BMP BGRA pixels should expand to RGB pixels.");
         TestAssert.True(image.Alpha is null, "Office treats 32-bit BI_RGB BMP alpha bytes as unused.");
     }
+    public static void RejectsPngLyingDimensions()
+    {
+        byte[] png = BuildPng(100000, 100000, 8, 2, 0);
+        TestAssert.Throws<InvalidDataException>(() => PngImage.Read(png));
+    }
+
+    public static void RejectsPngChunkBeyondEndOfData()
+    {
+        var bytes = new List<byte> { 137, 80, 78, 71, 13, 10, 26, 10 };
+        WritePngChunk(bytes, "IHDR", new byte[] { 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0 });
+        WritePngChunkHeaderOnly(bytes, "IDAT", 1000000);
+        TestAssert.Throws<InvalidDataException>(() => PngImage.Read(bytes.ToArray()));
+    }
+
+    public static void RejectsJpegLyingDimensions()
+    {
+        var bytes = new List<byte> { 0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x9C, 0x40, 0x9C, 0x40, 0x03 };
+        for (int component = 1; component <= 3; component++)
+        {
+            bytes.Add((byte)component);
+            bytes.Add(0x11);
+            bytes.Add(0x00);
+        }
+
+        bytes.Add(0xFF);
+        bytes.Add(0xD9);
+        TestAssert.Throws<InvalidDataException>(() => JpegImage.Read(bytes.ToArray()));
+    }
+
+    public static void RejectsBmpLyingDimensions()
+    {
+        byte[] bmp = BuildBmpHeader(100000, 1, 24);
+        TestAssert.Throws<InvalidDataException>(() => BmpImage.Read(bmp));
+    }
+
+    public static void RejectsBmpMinimumHeight()
+    {
+        byte[] bmp = BuildBmpHeader(1, int.MinValue, 24);
+        TestAssert.Throws<InvalidDataException>(() => BmpImage.Read(bmp));
+    }
+
+    private static byte[] BuildPng(int width, int height, int bitDepth, int colorType, int interlace)
+    {
+        var bytes = new List<byte> { 137, 80, 78, 71, 13, 10, 26, 10 };
+        WritePngChunk(bytes, "IHDR", new byte[]
+        {
+            (byte)(width >> 24), (byte)(width >> 16), (byte)(width >> 8), (byte)width,
+            (byte)(height >> 24), (byte)(height >> 16), (byte)(height >> 8), (byte)height,
+            (byte)bitDepth, (byte)colorType, 0, 0, (byte)interlace,
+        });
+        WritePngChunk(bytes, "IDAT", Array.Empty<byte>());
+        WritePngChunk(bytes, "IEND", Array.Empty<byte>());
+        return bytes.ToArray();
+    }
+
+    private static void WritePngChunk(List<byte> bytes, string type, byte[] data)
+    {
+        bytes.Add((byte)(data.Length >> 24));
+        bytes.Add((byte)(data.Length >> 16));
+        bytes.Add((byte)(data.Length >> 8));
+        bytes.Add((byte)data.Length);
+        foreach (char c in type)
+        {
+            bytes.Add((byte)c);
+        }
+
+        bytes.AddRange(data);
+        bytes.AddRange(new byte[] { 0, 0, 0, 0 });
+    }
+
+    private static void WritePngChunkHeaderOnly(List<byte> bytes, string type, int length)
+    {
+        bytes.Add((byte)(length >> 24));
+        bytes.Add((byte)(length >> 16));
+        bytes.Add((byte)(length >> 8));
+        bytes.Add((byte)length);
+        foreach (char c in type)
+        {
+            bytes.Add((byte)c);
+        }
+    }
+
+    private static byte[] BuildBmpHeader(int width, int height, int bitsPerPixel)
+    {
+        byte[] bmp = new byte[54];
+        bmp[0] = (byte)66;
+        bmp[1] = (byte)77;
+        BitConverter.GetBytes(54).CopyTo(bmp, 2);
+        BitConverter.GetBytes(54).CopyTo(bmp, 10);
+        BitConverter.GetBytes(40).CopyTo(bmp, 14);
+        BitConverter.GetBytes(width).CopyTo(bmp, 18);
+        BitConverter.GetBytes(height).CopyTo(bmp, 22);
+        BitConverter.GetBytes((ushort)1).CopyTo(bmp, 26);
+        BitConverter.GetBytes((ushort)bitsPerPixel).CopyTo(bmp, 28);
+        return bmp;
+    }
 }
+

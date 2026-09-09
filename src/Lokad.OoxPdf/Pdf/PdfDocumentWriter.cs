@@ -5,12 +5,23 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfDocumentWriter
 {
-    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken)
+    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (pages.Count == 0)
         {
             throw new ArgumentException("A PDF document must contain at least one page.", nameof(pages));
+        }
+
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            PdfPage page = pages[pageIndex];
+            if (!double.IsFinite(page.Width) || !double.IsFinite(page.Height) || page.Width <= 0 || page.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pages), "PDF pages must have finite positive dimensions.");
+            }
+
+            PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -111,6 +122,12 @@ internal sealed class PdfDocumentWriter
         }
 
         int objectCount = nextAnnotationObject - 1;
+        int? infoObjectNumber = null;
+        if (creationDate is not null)
+        {
+            infoObjectNumber = nextAnnotationObject++;
+            objectCount = nextAnnotationObject - 1;
+        }
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
         writer.WriteObject(2, BuildPagesObject());
 
@@ -170,6 +187,16 @@ internal sealed class PdfDocumentWriter
             }
         }
 
+        if (infoObjectNumber is not null && creationDate is not null)
+        {
+            writer.WriteObject(infoObjectNumber.Value, BuildInfoObject(creationDate.Value));
+        }
+
+        if (writer.Offsets.Count != objectCount)
+        {
+            throw new InvalidDataException($"PDF object numbering is inconsistent: {writer.Offsets.Count} written objects but {objectCount} counted objects.");
+        }
+
         long xrefOffset = writer.Position;
         writer.WriteAscii(FormattableString.Invariant($"xref\n0 {objectCount + 1}\n"));
         writer.WriteAscii("0000000000 65535 f \n");
@@ -180,7 +207,7 @@ internal sealed class PdfDocumentWriter
         }
 
         writer.WriteAscii(FormattableString.Invariant(
-            $"trailer\n<< /Size {objectCount + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF\n"));
+            $"trailer\n<< /Size {objectCount + 1} /Root 1 0 R{(infoObjectNumber is null ? string.Empty : FormattableString.Invariant($" /Info {infoObjectNumber.Value} 0 R"))} >>\nstartxref\n{xrefOffset}\n%%EOF\n"));
 
         string BuildPagesObject()
         {
@@ -318,8 +345,17 @@ internal sealed class PdfDocumentWriter
         writer.WriteObject(objects.Descriptor, FormattableString.Invariant(
             $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n"));
 
-        writer.WriteStreamObject(objects.FontFile, "/Filter /FlateDecode", Compress(font.FontProgramBytes.Span, cancellationToken));
+        ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
+        byte[] compressedFontProgram = Compress(fontProgram.Span, cancellationToken);
+        writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken)));
+    }
+
+    private static string BuildInfoObject(DateTimeOffset creationDate)
+    {
+        string producer = "Lokad.OoxPdf " + (typeof(PdfDocumentWriter).Assembly.GetName().Version?.ToString() ?? "0");
+        string date = FormatPdfDate(creationDate);
+        return FormattableString.Invariant($"<< /Producer ({producer}) /CreationDate ({date}) /ModDate ({date}) >>\n");
     }
 
     private static void WriteImageObjects(PdfObjectWriter writer, PdfImageXObject image, ImageObjectNumbers objects)
@@ -460,7 +496,7 @@ internal sealed class PdfDocumentWriter
         {
             if (!string.IsNullOrEmpty(annotation.Uri))
             {
-                return $" /A << /S /URI /URI ({EscapePdfString(annotation.Uri)}) >>";
+                return $" /A << /S /URI /URI ({EscapePdfUriString(annotation.Uri)}) >>";
             }
 
             if (annotation.Destination is { } destination)
@@ -480,35 +516,6 @@ internal sealed class PdfDocumentWriter
 
             throw new InvalidOperationException("PDF link annotations must have either a URI target or an internal destination target.");
 
-            string EscapePdfString(string value)
-            {
-                var builder = new StringBuilder(value.Length);
-                foreach (char c in value)
-                {
-                    switch (c)
-                    {
-                        case '\\':
-                        case '(':
-                        case ')':
-                            builder.Append('\\').Append(c);
-                            break;
-                        case '\r':
-                            builder.Append(@"\r");
-                            break;
-                        case '\n':
-                            builder.Append(@"\n");
-                            break;
-                        case '\t':
-                            builder.Append(@"\t");
-                            break;
-                        default:
-                            builder.Append(c);
-                            break;
-                    }
-                }
-
-                return builder.ToString();
-            }
         }
     }
 
@@ -534,7 +541,47 @@ internal sealed class PdfDocumentWriter
 
     internal static string FormatNumber(double value)
     {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "PDF numbers must be finite.");
+        }
+
         return value.ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    internal static string EscapePdfUriString(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (System.Text.Rune rune in value.EnumerateRunes())
+        {
+            if (rune.Value == 92 || rune.Value == 40 || rune.Value == 41)
+            {
+                builder.Append((char)92).Append((char)rune.Value);
+            }
+            else if (rune.Value <= 32 || rune.Value > 126)
+            {
+                Span<byte> utf8 = stackalloc byte[4];
+                int encodedLength = rune.EncodeToUtf8(utf8);
+                for (int i = 0; i < encodedLength; i++)
+                {
+                    builder.Append((char)37);
+                    builder.Append(utf8[i].ToString("X2", CultureInfo.InvariantCulture));
+                }
+            }
+            else
+            {
+                builder.Append((char)rune.Value);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    internal static string FormatPdfDate(DateTimeOffset value)
+    {
+        string sign = value.Offset < TimeSpan.Zero ? "-" : "+";
+        TimeSpan absolute = value.Offset.Duration();
+        return string.Format(CultureInfo.InvariantCulture, "D:{0:yyyyMMddHHmmss}{1}{2:00}\u0027{3:00}\u0027", value, sign, (int)absolute.TotalHours, absolute.Minutes);
     }
 
     internal static string FormatColor(byte value)

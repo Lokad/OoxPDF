@@ -45,6 +45,11 @@ internal sealed class PngImage
         while (offset + 8 <= bytes.Length)
         {
             int length = ReadInt32(bytes, offset);
+            if (length < 0 || (long)offset + 8L + length + 4L > bytes.Length)
+            {
+                throw new InvalidDataException("PNG chunk extends beyond the end of the data.");
+            }
+
             string type = Encoding.ASCII.GetString(bytes, offset + 4, 4);
             offset += 8;
             ReadOnlySpan<byte> data = bytes.AsSpan(offset, length);
@@ -61,6 +66,8 @@ internal sealed class PngImage
                 {
                     throw new NotSupportedException($"Unsupported PNG format: bitDepth={bitDepth}, colorType={colorType}, interlace={interlace}.");
                 }
+
+                ImagePixelBudget.Check(width, height, "PNG");
             }
             else if (type == "PLTE")
             {
@@ -80,12 +87,57 @@ internal sealed class PngImage
             }
         }
 
+        int pngBitsPerPixel = colorType switch { 0 or 3 => bitDepth, 2 => 24, 4 => 16, 6 => 32, _ => 8 };
+        long maxInflated = MaxInflatedBytes(width, height, pngBitsPerPixel, interlace);
         using var input = new MemoryStream(idat.ToArray());
         using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
         using var output = new MemoryStream();
-        zlib.CopyTo(output);
+        CopyInflated(zlib, output, maxInflated);
 
         return Decode(output.ToArray(), width, height, bitDepth, colorType, interlace, palette, transparency);
+    }
+
+    private static long MaxInflatedBytes(int width, int height, int bitsPerPixel, int interlace)
+    {
+        if (interlace == 1)
+        {
+            long total = 0;
+            for (int pass = 0; pass < 7; pass++)
+            {
+                int passWidth = Adam7Size(width, Adam7StartX[pass], Adam7StepX[pass]);
+                int passHeight = Adam7Size(height, Adam7StartY[pass], Adam7StepY[pass]);
+                if (passWidth == 0 || passHeight == 0)
+                {
+                    continue;
+                }
+
+                total = checked(total + (checked((long)passWidth * bitsPerPixel + 7L) / 8L + 1L) * passHeight);
+            }
+
+            return total;
+        }
+
+        return checked(((long)width * bitsPerPixel + 7L) / 8L + 1L) * height;
+    }
+
+    private static void CopyInflated(System.IO.Compression.ZLibStream source, MemoryStream destination, long maxBytes)
+    {
+        byte[] buffer = new byte[81920];
+        while (true)
+        {
+            int read = source.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                return;
+            }
+
+            if (checked(destination.Length + read) > maxBytes)
+            {
+                throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
+            }
+
+            destination.Write(buffer, 0, read);
+        }
     }
 
     private static bool IsSupportedFormat(int bitDepth, int colorType)

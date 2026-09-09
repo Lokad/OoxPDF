@@ -24,6 +24,16 @@ internal static class OoxBoolean
         return attribute is null ? null : IsTrue(attribute.Value);
     }
 
+    // Explicit off-values for display flags; unknown or absent values fail
+    // open (shown), so garbage never drops content (S01).
+    public static bool IsOff(string? value)
+    {
+        return value is not null &&
+            (value == "0" ||
+            value.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("off", StringComparison.OrdinalIgnoreCase));
+    }
+
     public static bool ParseElement(XElement? element, bool defaultValue, XName? valueAttributeName)
     {
         if (element is null)

@@ -27,6 +27,35 @@ internal sealed partial class DocxReader
 
         cancellationToken.ThrowIfCancellationRequested();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
+
+        // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
+        // fail visibly once per document instead of converting silently empty (O02).
+        if (OoxNamespaces.HasStrictOoxmlRoot(document))
+        {
+            diagnosticSink(new OoxPdfDiagnostic(
+                "OOXML_STRICT_DIALECT",
+                OoxPdfSeverity.Warning,
+                "Strict OOXML content was detected; only the transitional dialect is supported and content may be missing.",
+                partName,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: "strict-dialect",
+                Fallback: "Ignored"));
+        }
+
+        if (OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))
+        {
+            diagnosticSink(new OoxPdfDiagnostic(
+                "OOXML_MUST_UNDERSTAND",
+                OoxPdfSeverity.Warning,
+                "Content marked must-understand uses unsupported namespaces and was ignored.",
+                partName,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: "must-understand",
+                Fallback: "Ignored"));
+        }
+
         void EmitUnsupported(string id, string feature)
         {
             Emit(id, feature, "", "Ignored", false);

@@ -26,12 +26,24 @@ internal sealed class OoxContentTypes
             if (element.Name == OoxNamespaces.ContentTypesNamespace + "Default")
             {
                 string extension = RequiredAttribute(element, "Extension");
-                defaults[extension.TrimStart('.')] = RequiredAttribute(element, "ContentType");
+                string defaultKey = extension.TrimStart('.');
+                if (defaults.TryGetValue(defaultKey, out string? existingDefault) && existingDefault != RequiredAttribute(element, "ContentType"))
+                {
+                    throw new InvalidDataException("OOXML package declares conflicting content types.");
+                }
+
+                defaults[defaultKey] = RequiredAttribute(element, "ContentType");
             }
             else if (element.Name == OoxNamespaces.ContentTypesNamespace + "Override")
             {
                 string partName = OoxPath.NormalizePartName(RequiredAttribute(element, "PartName"));
-                overrides[partName] = RequiredAttribute(element, "ContentType");
+                string overrideType = RequiredAttribute(element, "ContentType");
+                if (overrides.TryGetValue(partName, out string? existingOverride) && existingOverride != overrideType)
+                {
+                    throw new InvalidDataException("OOXML package declares conflicting content types.");
+                }
+
+                overrides[partName] = overrideType;
             }
         }
 

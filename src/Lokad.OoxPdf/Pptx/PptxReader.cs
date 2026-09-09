@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
@@ -9,14 +10,42 @@ internal sealed class PptxReader
 {
     private const string PresentationContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
-    private const string SlideRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
+    internal const string SlideRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
 
-    public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken)
+    public PptxDocument Read(OoxPackage package, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart presentationPart = FindPresentationPart();
         using Stream stream = presentationPart.OpenRead();
         XDocument document = SafeXml.Load(stream, cancellationToken);
+
+        // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
+        // fail visibly once per document instead of converting silently empty (O02).
+        if (diagnosticSink is not null && OoxNamespaces.HasStrictOoxmlRoot(document))
+        {
+            diagnosticSink(new OoxPdfDiagnostic(
+                "OOXML_STRICT_DIALECT",
+                OoxPdfSeverity.Warning,
+                "Strict OOXML content was detected; only the transitional dialect is supported and content may be missing.",
+                presentationPart.Name,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: "strict-dialect",
+                Fallback: "Ignored"));
+        }
+
+        if (diagnosticSink is not null && OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))
+        {
+            diagnosticSink(new OoxPdfDiagnostic(
+                "OOXML_MUST_UNDERSTAND",
+                OoxPdfSeverity.Warning,
+                "Content marked must-understand uses unsupported namespaces and was ignored.",
+                presentationPart.Name,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: "must-understand",
+                Fallback: "Ignored"));
+        }
 
         XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");
         double width = size is null ? 720d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cx", "PPTX"));
@@ -37,13 +66,25 @@ internal sealed class PptxReader
             string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
             if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
             {
-                slides.Add(new PptxSlide(relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part."), slides.Count));
+                string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
+                if (!IsHiddenSlide(package, target, cancellationToken))
+                {
+                    slides.Add(new PptxSlide(target, slides.Count));
+                }
             }
         }
 
         if (slides.Count == 0)
         {
-            slides.AddRange(relationships.Values.Select(r => new PptxSlide(r.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part."), slides.Count)));
+            foreach (OoxRelationship relationship in relationships.Values)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
+                if (!IsHiddenSlide(package, target, cancellationToken))
+                {
+                    slides.Add(new PptxSlide(target, slides.Count));
+                }
+            }
         }
 
         return new PptxDocument(presentationPart.Name, slides, width, height);
@@ -65,6 +106,22 @@ internal sealed class PptxReader
             OoxPart? contentTypePart = package.Parts.FirstOrDefault(p => p.ContentType == PresentationContentType);
             return contentTypePart ?? throw new InvalidDataException("PPTX package does not contain a presentation part.");
         }
+    }
+
+    // Hidden slides (unprefixed p:sld flag, verified against PowerPoint-saved
+    // output) are excluded to match PowerPoint PDF export (S01). Missing parts
+    // stay included; the scene renders them as blank pages.
+    private static bool IsHiddenSlide(OoxPackage package, string partName, CancellationToken cancellationToken)
+    {
+        OoxPart? part = package.GetPart(partName);
+        if (part is null)
+        {
+            return false;
+        }
+
+        using Stream stream = part.OpenRead();
+        XDocument slideXml = SafeXml.Load(stream, cancellationToken);
+        return OoxBoolean.IsOff((string?)slideXml.Root?.Attribute("show"));
     }
 
 

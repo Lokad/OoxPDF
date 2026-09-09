@@ -450,6 +450,43 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("Q");
     }
 
+    // Operation/resource boundary for node-level transactional recovery (S09).
+    // Snapshots capture the append-only builder state so a failed node rewinds its
+    // paint without disturbing earlier nodes. Font/image caches are intentionally
+    // outside the boundary: orphan entries are inert, while index rollback could
+    // dangle references held by surviving content.
+    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth);
+
+    public ContentMark MarkContent()
+    {
+        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth);
+    }
+
+    public void TruncateContent(ContentMark mark)
+    {
+        if (mark.ContentLength < builder.Length)
+        {
+            builder.Length = Math.Max(0, mark.ContentLength);
+        }
+
+        while (extGStates.Count > mark.ExtGStateCount)
+        {
+            extGStates.RemoveAt(extGStates.Count - 1);
+        }
+
+        while (shadings.Count > mark.ShadingCount)
+        {
+            shadings.RemoveAt(shadings.Count - 1);
+        }
+
+        while (patterns.Count > mark.PatternCount)
+        {
+            patterns.RemoveAt(patterns.Count - 1);
+        }
+
+        stateDepth = Math.Max(0, mark.StateDepth);
+    }
+
     public override string ToString()
     {
         return builder.ToString();

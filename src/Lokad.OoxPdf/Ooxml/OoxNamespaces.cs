@@ -24,4 +24,30 @@ internal static class OoxNamespaces
     public static readonly XNamespace Office2012WordNamespace = "http://schemas.microsoft.com/office/word/2012/wordml";
     public static readonly XNamespace ContentTypesNamespace = "http://schemas.openxmlformats.org/package/2006/content-types";
     public static readonly XNamespace SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+    public static readonly XNamespace MarkupCompatibilityNamespace = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+
+    // ISO 29500 Strict root namespace family (O02). Transitional queries read these
+    // parts as blank, so readers fail visibly instead of converting silently empty.
+    public static bool IsStrictOoxmlNamespace(string? namespaceName)
+    {
+        return namespaceName?.StartsWith("http://purl.oclc.org/ooxml/", StringComparison.Ordinal) == true;
+    }
+
+    public static bool HasStrictOoxmlRoot(System.Xml.Linq.XDocument? document)
+    {
+        return IsStrictOoxmlNamespace(document?.Root?.Name.NamespaceName);
+    }
+
+    // Strict relationship arcs name the same targets under a purl family (O02).
+    // Normalizing at parse keeps every relationship-type comparison working for
+    // both dialects; package-level (OPC) relationship namespaces are unchanged
+    // in Strict and pass through untouched.
+    public static string NormalizeRelationshipType(string type)
+    {
+        const string strictPrefix = "http://purl.oclc.org/ooxml/officeDocument/relationships/";
+        const string transitionalPrefix = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
+        return type.StartsWith(strictPrefix, StringComparison.Ordinal)
+            ? transitionalPrefix + type.Substring(strictPrefix.Length)
+            : type;
+    }
 }

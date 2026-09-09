@@ -6,8 +6,9 @@ namespace Lokad.OoxPdf.Ooxml;
 internal sealed class OoxPackage
 {
     private const int MaxEntryCount = 10_000;
-    private const long MaxPartBytes = 64L * 1024L * 1024L;
-    private const long MaxTotalBytes = 256L * 1024L * 1024L;
+    internal const long MaxPartBytes = 64L * 1024L * 1024L;
+    internal const long MaxTotalBytes = 256L * 1024L * 1024L;
+    internal const long MaxContentTypesBytes = 4L * 1024L * 1024L;
 
     private readonly Dictionary<string, OoxPart> parts;
 
@@ -40,8 +41,20 @@ internal sealed class OoxPackage
         ZipArchiveEntry? contentTypesEntry = archive.GetEntry("[Content_Types].xml")
             ?? throw new InvalidDataException("OOXML package is missing [Content_Types].xml.");
 
-        using Stream contentTypesStream = contentTypesEntry.Open();
-        OoxContentTypes contentTypes = OoxContentTypes.Parse(contentTypesStream, cancellationToken);
+        // The declared entry length is untrusted: copy through a bounded buffer first
+        // so an oversized Content_Types part fails before XML parsing amplifies it.
+        byte[] contentTypesBytes;
+        using (Stream contentTypesStream = contentTypesEntry.Open())
+        {
+            contentTypesBytes = CopyBounded(contentTypesStream, MaxContentTypesBytes, "[Content_Types].xml", cancellationToken);
+        }
+
+        OoxContentTypes contentTypes;
+        using (var contentTypesBuffer = new MemoryStream(contentTypesBytes, writable: false))
+        {
+            contentTypes = OoxContentTypes.Parse(contentTypesBuffer, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
         long totalBytes = 0;
@@ -56,16 +69,11 @@ internal sealed class OoxPackage
             }
 
             string partName = OoxPath.NormalizePartName(entry.FullName);
-            if (entry.Length > MaxPartBytes)
+            if (entry.Length < 0 || entry.Length > MaxPartBytes)
             {
                 throw new InvalidDataException($"OOXML part '{partName}' exceeds the maximum supported size.");
             }
 
-            totalBytes += entry.Length;
-            if (totalBytes > MaxTotalBytes)
-            {
-                throw new InvalidDataException("OOXML package exceeds the maximum supported uncompressed size.");
-            }
 
             string? contentType = partName == "/[Content_Types].xml"
                 ? "application/xml"
@@ -75,10 +83,26 @@ internal sealed class OoxPackage
                 continue;
             }
 
-            using Stream entryStream = entry.Open();
-            using var memory = new MemoryStream((int)entry.Length);
-            CopyTo(entryStream, memory, cancellationToken);
-            parts[partName] = new OoxPart(partName, contentType, memory.ToArray());
+            // Two archive entries normalizing to one part name are ambiguous: keep neither guess.
+            if (parts.ContainsKey(partName))
+            {
+                throw new InvalidDataException($"OOXML package contains a duplicate part {partName}.");
+            }
+
+            // Declared lengths are untrusted: enforce the budgets on actual copied bytes.
+            byte[] partBytes;
+            using (Stream entryStream = entry.Open())
+            {
+                partBytes = CopyBounded(entryStream, MaxPartBytes, partName, cancellationToken);
+            }
+
+            totalBytes = checked(totalBytes + partBytes.LongLength);
+            if (totalBytes > MaxTotalBytes)
+            {
+                throw new InvalidDataException("OOXML package exceeds the maximum supported uncompressed size.");
+            }
+
+            parts.Add(partName, new OoxPart(partName, contentType, partBytes));
         }
 
         return new OoxPackage(parts, contentTypes);
@@ -108,12 +132,18 @@ internal sealed class OoxPackage
 
         XDocument document = SafeXml.Load(stream, cancellationToken);
         var relationships = new List<OoxRelationship>();
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (XElement element in document.Root?.Elements(OoxNamespaces.PackageRelationshipsNamespace + "Relationship") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
             string id = RequiredAttribute(element, "Id");
+            if (!seenIds.Add(id))
+            {
+                throw new InvalidDataException("OOXML package contains a duplicate relationship id.");
+            }
             string type = RequiredAttribute(element, "Type");
+            type = OoxNamespaces.NormalizeRelationshipType(type);
             string target = RequiredAttribute(element, "Target");
             string? targetMode = (string?)element.Attribute("TargetMode");
             string? resolvedTarget = targetMode?.Equals("External", StringComparison.OrdinalIgnoreCase) == true
@@ -126,16 +156,22 @@ internal sealed class OoxPackage
         return relationships;
     }
 
-    private static void CopyTo(Stream source, Stream destination, CancellationToken cancellationToken)
+    private static byte[] CopyBounded(Stream source, long maxBytes, string what, CancellationToken cancellationToken)
     {
         byte[] buffer = new byte[81920];
+        using var destination = new MemoryStream();
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             int read = source.Read(buffer, 0, buffer.Length);
             if (read == 0)
             {
-                return;
+                return destination.ToArray();
+            }
+
+            if (checked(destination.Length + read) > maxBytes)
+            {
+                throw new InvalidDataException($"OOXML part {what} exceeds the maximum supported size.");
             }
 
             destination.Write(buffer, 0, read);

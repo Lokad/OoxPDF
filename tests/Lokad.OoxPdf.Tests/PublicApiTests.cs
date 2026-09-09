@@ -1,3 +1,4 @@
+using System.Text;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 
@@ -222,6 +223,259 @@ internal static class PublicApiTests
         TestAssert.True(source.ObservedCanBeCanceled, "DOCX conversion should pass the caller token to font loading.");
     }
 
+    public static void ConvertStreamWorksWithForwardOnlyOutputForDocx()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>forward only</w:t></w:r></w:p>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var inner = new MemoryStream();
+        using var output = new ForwardOnlyWriteStream(inner);
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+
+        TestAssert.True(input.CanRead, "Stream conversion should leave the input stream open.");
+        TestAssert.True(output.CanWrite, "Stream conversion should leave the output stream open.");
+        ValidatePdfXref(inner.ToArray());
+    }
+
+    public static void ConvertAsyncStreamWorksWithForwardOnlyOutputForDocx()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>forward only async</w:t></w:r></w:p>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var inner = new MemoryStream();
+        using var output = new ForwardOnlyWriteStream(inner);
+
+        OoxPdfConverter.ConvertAsync(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }).GetAwaiter().GetResult();
+
+        ValidatePdfXref(inner.ToArray());
+    }
+
+    public static void ConvertStreamWorksWithForwardOnlyOutputForPptx()
+    {
+        byte[] bytes = ReadMinimalPptxBytes();
+        using var input = new MemoryStream(bytes, writable: false);
+        using var inner = new MemoryStream();
+        using var output = new ForwardOnlyWriteStream(inner);
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+
+        ValidatePdfXref(inner.ToArray());
+    }
+
+    public static void ConvertAsyncStreamWorksWithForwardOnlyOutputForPptx()
+    {
+        byte[] bytes = ReadMinimalPptxBytes();
+        using var input = new MemoryStream(bytes, writable: false);
+        using var inner = new MemoryStream();
+        using var output = new ForwardOnlyWriteStream(inner);
+
+        OoxPdfConverter.ConvertAsync(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx }).GetAwaiter().GetResult();
+
+        ValidatePdfXref(inner.ToArray());
+    }
+
+    public static void ConvertStreamRejectsIdenticalInputOutput()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var both = new MemoryStream(bytes);
+
+        TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(both, both, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }));
+    }
+
+    public static void ConvertStreamRejectsNonEmptyOutput()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream(new byte[] { 1, 2, 3 });
+
+        TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }));
+    }
+
+    public static void ConvertStreamRejectsNonZeroOutputPosition()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream();
+        output.WriteByte(0);
+        output.Position = 1;
+
+        TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }));
+    }
+
+    public static void ConvertRejectsSameInputOutputPath()
+    {
+        string input = WriteMinimalDocx("<w:p/>");
+
+        TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(input, input));
+    }
+
+    private static byte[] ReadMinimalPptxBytes()
+    {
+        string path = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+        });
+        return File.ReadAllBytes(path);
+    }
+
+    private static void ValidatePdfXref(byte[] pdf)
+    {
+        TestAssert.True(pdf.Length > 20, "Forward-only conversion should write PDF bytes.");
+        string text = System.Text.Encoding.ASCII.GetString(pdf);
+        TestAssert.Contains("%PDF-1.7", text);
+        TestAssert.Contains("xref", text);
+        TestAssert.Contains("trailer", text);
+        TestAssert.Contains("%%EOF", text);
+
+        int xref = text.IndexOf("\nxref\n", StringComparison.Ordinal);
+        TestAssert.True(xref >= 0, "Expected xref table.");
+        string[] lines = text.Substring(xref).Split('\n');
+        TestAssert.True(lines.Length >= 3, "Expected xref entries.");
+        string[] header = lines[2].Trim().Split(' ');
+        TestAssert.Equal(2, header.Length);
+        int count = int.Parse(header[1], System.Globalization.CultureInfo.InvariantCulture);
+        TestAssert.True(count >= 2, "Expected at least catalog and pages objects.");
+        for (int i = 0; i < count; i++)
+        {
+            string entry = lines[3 + i].Trim();
+            if (i == 0)
+            {
+                TestAssert.Equal("0000000000 65535 f", entry);
+                continue;
+            }
+
+            string offsetText = entry.Split(' ')[0];
+            int offset = int.Parse(offsetText, System.Globalization.CultureInfo.InvariantCulture);
+            TestAssert.True(offset >= 0 && offset < pdf.Length, "Xref offset must point inside the PDF, got: " + offset);
+            string atOffset = text.Substring(offset, Math.Min(20, text.Length - offset));
+            TestAssert.True(atOffset.Contains(" 0 obj", StringComparison.Ordinal), "Xref offset must point at an object header, got: " + atOffset);
+        }
+    }
+
+    private sealed class ForwardOnlyWriteStream(MemoryStream inner) : Stream
+    {
+        public override bool CanRead => false;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => inner.CanWrite;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+
+        protected override void Dispose(bool disposing)
+        {
+        }
+    }
+    public static void ConvertRejectsUndefinedOptionEnums()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream();
+
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = (OoxPdfInputKind)99 }));
+        TestAssert.Equal(0L, output.Length);
+    }
+
+    public static void ConvertRejectsUndefinedMarkupModes()
+    {
+        string input = WriteMinimalDocx("<w:p/>");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DocxMarkupMode = (OoxPdfDocxMarkupMode)99 }));
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DocxMarkupGeometryMode = (OoxPdfDocxMarkupGeometryMode)99 }));
+    }
+
+    public static void ConvertHonorsFixedCreationDate()
+    {
+        string input = WriteMinimalDocx("<w:p><w:r><w:t>dated</w:t></w:r></w:p>");
+        var date = new DateTimeOffset(2026, 9, 9, 12, 30, 0, TimeSpan.Zero);
+        string datedOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string undatedOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, datedOutput, new OoxPdfOptions { FixedCreationDate = date });
+        OoxPdfConverter.Convert(input, undatedOutput);
+
+        string dated = File.ReadAllText(datedOutput, Encoding.ASCII);
+        string undated = File.ReadAllText(undatedOutput, Encoding.ASCII);
+        TestAssert.Contains("/CreationDate (D:20260909123000+00", dated);
+        TestAssert.DoesNotContain("/Info", undated);
+    }
+
+    public static void ConvertPreservesExistingDestinationWhenWriterRejectsPage()
+    {
+        string input = WriteZeroWidthDocx();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        File.WriteAllText(output, "SENTINEL");
+
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(input, output));
+        TestAssert.Equal("SENTINEL", File.ReadAllText(output));
+        TestAssert.Equal(0, Directory.GetFiles(Path.GetDirectoryName(output)!, Path.GetFileName(output) + ".tmp-*").Length);
+    }
+
+    public static void ConvertReplacesExistingDestinationOnSuccess()
+    {
+        string input = WriteMinimalDocx("<w:p><w:r><w:t>replaced</w:t></w:r></w:p>");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        File.WriteAllText(output, "SENTINEL");
+
+        OoxPdfConverter.Convert(input, output);
+
+        byte[] bytes = File.ReadAllBytes(output);
+        TestAssert.True(bytes.Length > 5 && bytes[0] == 37, "Completed conversion must publish a real PDF over the destination.");
+        TestAssert.Equal(0, Directory.GetFiles(Path.GetDirectoryName(output)!, Path.GetFileName(output) + ".tmp-*").Length);
+    }
+
+    public static void ConvertPreservesExistingDestinationOnUnreadableInput()
+    {
+        string input = Path.ChangeExtension(Path.GetTempFileName(), ".docx");
+        File.WriteAllBytes(input, new byte[] { 0x50, 0x4B, 0x03, 0x04, 0x00 });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        File.WriteAllText(output, "SENTINEL");
+
+        TestAssert.Throws<InvalidDataException>(() => OoxPdfConverter.Convert(input, output));
+        TestAssert.Equal("SENTINEL", File.ReadAllText(output));
+    }
+
+    private static string WriteZeroWidthDocx()
+    {
+        string input = WriteMinimalDocx("<w:p><w:r><w:t>zero</w:t></w:r></w:p>");
+        string xml;
+        using (var archive = new System.IO.Compression.ZipArchive(File.Open(input, FileMode.Open, FileAccess.Read), System.IO.Compression.ZipArchiveMode.Read))
+        using (var reader = new StreamReader(TestAssert.NotNull(archive.GetEntry("word/document.xml")).Open()))
+        {
+            xml = reader.ReadToEnd().Replace("12240", "00000");
+        }
+
+        using (var archive = new System.IO.Compression.ZipArchive(File.Open(input, FileMode.Open, FileAccess.ReadWrite), System.IO.Compression.ZipArchiveMode.Update))
+        using (var writer = new StreamWriter(TestAssert.NotNull(archive.GetEntry("word/document.xml")).Open()))
+        {
+            writer.Write(xml);
+        }
+
+        return input;
+    }
     private static byte[] ReadMinimalDocxBytes(string bodyContent)
     {
         return File.ReadAllBytes(WriteMinimalDocx(bodyContent));
