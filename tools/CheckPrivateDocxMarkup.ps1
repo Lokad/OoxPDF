@@ -34,10 +34,7 @@ function ConvertTo-RepoPath([string] $Path) {
     return $fullPath
 }
 
-function Get-PdfPageCount([string] $Path) {
-    $pdf = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::Latin1)
-    return [regex]::Matches($pdf, "/Type\s*/Page(?!s)").Count
-}
+. (Join-Path $PSScriptRoot "PdfInfo.ps1")
 
 function Get-PdfMediaBoxSummary([string] $Path) {
     $pdf = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::Latin1)

@@ -721,11 +721,7 @@ function New-FontResourceSummary($fontResources) {
     }
 }
 
-function Get-PdfPageCount([string] $PdfPath) {
-    $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
-    $text = [System.Text.Encoding]::Latin1.GetString($bytes)
-    return ([regex]::Matches($text, '/Type\s*/Page\b') | Where-Object { $_.Value -notmatch '/Pages' }).Count
-}
+. (Join-Path $PSScriptRoot "PdfInfo.ps1")
 
 function Get-PdfMediaBoxes([string] $PdfPath) {
     $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
