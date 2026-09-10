@@ -908,6 +908,20 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(twoDigit - 41.45d) < 0.0001d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
     }
 
+    public static void PptxSyntheticChartMeasuredLeftInsetKeepsPresetFloor()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ResolveMeasuredLeftInset",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart left-inset helper to remain inspectable by the Office evidence guard.");
+
+        double measured = (double)method!.Invoke(null, [25.3d, 27.37d])!;
+        double presetWins = (double)method.Invoke(null, [50.61d, 27.4d])!;
+
+        TestAssert.True(Math.Abs(measured - 50.57d) < 0.0001d, "Wide labels should beat the preset by the Office gap. Got " + measured);
+        TestAssert.True(Math.Abs(presetWins - 50.61d) < 0.0001d, "Fitting labels must keep the preset floor. Got " + presetWins);
+    }
+
     public static void PptxSyntheticChartPieArcKeepsMathConvention()
     {
         var method = typeof(PptxRenderer).GetMethod(

@@ -211,13 +211,97 @@ internal sealed partial class PptxRenderer
 
             ChartPlotBox GetLineTitleRightLegendPlotBox()
             {
-                return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
+                ChartPlotBox presetBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
+                double maxValueLabelWidth = MeasureLineChartValueLabelWidth();
+                if (maxValueLabelWidth <= 0d)
+                {
+                    return presetBox;
+                }
+
+                double x = frame.X + ResolveMeasuredLeftInset(presetBox.X - frame.X, maxValueLabelWidth);
+                double width = Math.Max(1d, presetBox.X + presetBox.Width - x);
+                return new ChartPlotBox(x, presetBox.Y, width, presetBox.Height);
+            }
+
+            double MeasureLineChartValueLabelWidth()
+            {
+                XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
+                PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
+                if (plotElement is null)
+                {
+                    plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Scatter);
+                    plotKind = PptxSceneChartPlotKind.Scatter;
+                }
+
+                if (plotElement is null)
+                {
+                    return 0d;
+                }
+
+                PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind, 0);
+                var textMeasurer = new ChartTextMeasurer(fontResolver);
+                if (plotKind == PptxSceneChartPlotKind.Scatter)
+                {
+                    IReadOnlyList<ScatterSeries> series = ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
+                    if (series.Count == 0)
+                    {
+                        return 0d;
+                    }
+
+                    IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
+                    ChartAxisSource valueAxis = valueAxes.Count > 1
+                        ? valueAxes[1]
+                        : valueAxes.Count > 0
+                            ? valueAxes[0]
+                            : sceneChart is null
+                                ? new ChartAxisSource(null, chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault())
+                                : default;
+                    ChartValueExtents valueExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetScatterYValueExtents(series));
+                    ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), valueExtents);
+                    IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
+                    ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                    string[] tickLabels = tickValues
+                        .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
+                        .ToArray();
+                    return tickLabels.Length == 0
+                        ? 0d
+                        : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
+                }
+
+                PptxSceneChartGrouping grouping = ReadSceneOrXmlCartesianRightLegendGrouping(sceneChart, plot, chartXml, plotElement, plotKind);
+                bool stacked = IsStackedChartGrouping(grouping);
+                bool percentStacked = IsPercentStackedChartGrouping(grouping);
+                IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(plot, plotElement, workbook, plotVisibleOnly);
+                if (CountRenderableSeries(seriesVectors) == 0)
+                {
+                    return 0d;
+                }
+
+                ChartAxisSource lineValueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
+                XElement? valueAxisForScale = ResolveXmlValueAxisForSource(sceneChart, lineValueAxis, chartXml);
+                ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(seriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueAxis.SceneAxis, valueAxisForScale), percentStacked);
+                IReadOnlyList<double> lineTickValues = GetChartAxisTickValues(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
+                ChartTextStyle lineValueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, lineValueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                string[] lineTickLabels = lineTickValues
+                    .Select(value => FormatSceneOrXmlChartAxisLabel(value, lineValueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
+                    .ToArray();
+                return lineTickLabels.Length == 0
+                    ? 0d
+                    : lineTickLabels.Max(label => textMeasurer.Measure(label, lineValueAxisTextStyle));
             }
         }
     }
 
     // The reserve covers the widest label plus a fixed padding; it intentionally does not
     // grow with label character count because the widest label already spans the longest text.
+    // Left edge for preset-driven cartesian plot boxes: the preset stands unless the measured
+    // tick labels need more room, in which case the widest label plus the shared Office gap wins.
+    private static double ResolveMeasuredLeftInset(double presetLeftInset, double maxValueLabelWidth)
+    {
+        return Math.Max(presetLeftInset, maxValueLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding);
+    }
+
     private static double ComputeNoTitleRightLegendLeftInset(double maxValueLabelWidth, double frameWidth)
     {
         return maxValueLabelWidth +
