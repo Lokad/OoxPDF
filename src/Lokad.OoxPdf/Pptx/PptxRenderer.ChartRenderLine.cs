@@ -384,6 +384,25 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // Tail reserve past the legend marker block and widest entry text. Line/scatter use the
+    // Office-calibrated tail; area keeps the legacy padding, character extra, and frame-width
+    // factor untouched until its legend content placement is fixed.
+    private static double ComputeRightLegendReservePadding(double legendFontSize, int maxLegendTextLength, double frameWidth, bool includeAreaReserve)
+    {
+        double markerBlock = legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
+            legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +
+            legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor;
+        if (!includeAreaReserve)
+        {
+            return markerBlock + PptxChartMetricRules.LineScatterRightLegendReservePadding;
+        }
+
+        return markerBlock +
+            PptxChartMetricRules.LineRightLegendReservePadding +
+            Math.Max(0, maxLegendTextLength - 6) * PptxChartMetricRules.LineRightLegendExtraLegendCharacterPadding +
+            frameWidth * PptxChartMetricRules.AreaRightLegendReserveFrameWidthFactor;
+    }
+
     private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver)
     {
         double legendFontSize = legendTextStyle.FontSize;
@@ -395,15 +414,7 @@ internal sealed partial class PptxRenderer
             ? 0
             : seriesNames.Max(name => name.ActiveName.Length);
         double rightReserve = maxLegendTextWidth +
-            legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
-            legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +
-            legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor +
-            PptxChartMetricRules.LineRightLegendReservePadding +
-            Math.Max(0, maxLegendTextLength - 6) * PptxChartMetricRules.LineRightLegendExtraLegendCharacterPadding;
-        if (includeAreaReserve)
-        {
-            rightReserve += frame.Width * PptxChartMetricRules.AreaRightLegendReserveFrameWidthFactor;
-        }
+            ComputeRightLegendReservePadding(legendFontSize, maxLegendTextLength, frame.Width, includeAreaReserve);
 
         return new ChartRightLegendReserve(rightReserve, legendFontSize, maxLegendTextWidth, maxLegendTextLength, includeAreaReserve);
     }

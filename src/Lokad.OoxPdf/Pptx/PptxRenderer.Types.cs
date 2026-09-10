@@ -236,6 +236,12 @@ internal sealed partial class PptxRenderer
         public const double LineRightLegendValueAxisPadding = 23.2d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         public const double LineRightLegendReservePadding = 43.8d;
+        // Tail reserve past the legend marker block for untitled right-legend line/scatter
+        // charts. Calibrated from cached Office references: reserve minus our measured marker
+        // block and widest legend text decomposes to 10.6-11.0pt on 720pt frames for scatter,
+        // line-3series, line-markers and line-stacked ports (the character-count extra term
+        // double-counts length the widest name already spans). Area keeps the legacy reserve.
+        public const double LineScatterRightLegendReservePadding = 10.8d;
         public const double LineRightLegendExtraLegendCharacterPadding = 8.4d;
         public const double AreaRightLegendReserveFrameWidthFactor = 0.025d;
         public const double LineTitleRightLegendPlotBoxXRatio = 0.0639d;

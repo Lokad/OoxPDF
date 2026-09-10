@@ -860,6 +860,22 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(narrowFrame - 29.12d) < 0.0001d, "Narrow frames keep the width-ratio padding cap. Got " + narrowFrame);
     }
 
+    public static void PptxSyntheticChartRightLegendReserveKeepsOfficeTail()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeRightLegendReservePadding",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart right-reserve helper to remain inspectable by the Office evidence guard.");
+
+        double lineScatter = (double)method!.Invoke(null, [18d, 9, 720d, false])!;
+        double shortName = (double)method.Invoke(null, [18d, 5, 720d, false])!;
+        double areaLegacy = (double)method.Invoke(null, [18d, 9, 720d, true])!;
+
+        TestAssert.True(Math.Abs(lineScatter - 47.1d) < 0.001d, "Line/scatter tail should be marker block plus 10.8pt Office padding. Got " + lineScatter);
+        TestAssert.True(Math.Abs(shortName - 47.1d) < 0.001d, "Short names must not shrink the tail: the widest name already spans the text. Got " + shortName);
+        TestAssert.True(Math.Abs(areaLegacy - 123.3d) < 0.001d, "Area keeps the legacy reserve until its legend placement is fixed. Got " + areaLegacy);
+    }
+
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
