@@ -220,6 +220,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(defaultPlotBox);
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasTitle, hasLegend);
+        defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -289,6 +290,55 @@ internal sealed partial class PptxRenderer
             double width = Math.Max(1d, frame.Width - leftReserve - rightReserve);
             double height = Math.Max(1d, frame.Height - bottomReserve - topReserve);
             return new ChartPlotBox(x, y, width, height);
+        }
+
+        ChartPlotBox AdjustHorizontalBarPlotBoxForCategoryLabels(ChartPlotBox plotBox)
+        {
+            if (!horizontalBars)
+            {
+                return plotBox;
+            }
+
+            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            {
+                return plotBox;
+            }
+
+            ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+            var textMeasurer = new ChartTextMeasurer(fontResolver);
+            double maxCategoryWidth = 0d;
+            foreach (ChartIndexedTextPoint? label in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())
+            {
+                string? labelText = label?.Text;
+                if (!string.IsNullOrWhiteSpace(labelText))
+                {
+                    maxCategoryWidth = Math.Max(maxCategoryWidth, textMeasurer.Measure(labelText, tickStyle));
+                }
+            }
+
+            if (maxCategoryWidth <= 0d)
+            {
+                return plotBox;
+            }
+
+            double requiredReserve = ComputeHorizontalBarCategoryLeftReserve(maxCategoryWidth);
+            double leftReserve = plotBox.X - frame.X;
+            double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
+            bool labelsRight = ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultRightSide: false);
+            if (labelsRight)
+            {
+                rightReserve = Math.Max(rightReserve, requiredReserve);
+            }
+            else
+            {
+                leftReserve = Math.Max(leftReserve, requiredReserve);
+            }
+
+            double x = frame.X + leftReserve;
+            double right = frame.X + frame.Width - rightReserve;
+            double width = Math.Max(1d, right - x);
+            return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
         }
 
         ChartPlotBox AdjustBarChartPlotBoxForStackedValueAxisLabels(ChartPlotBox plotBox)
@@ -578,6 +628,14 @@ internal sealed partial class PptxRenderer
         double presetTop = frame.Y + frame.Height * (PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio + PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
         double y = frame.Y + bottomReserve;
         return new ChartPlotBox(plotBox.X, y, plotBox.Width, Math.Max(1d, presetTop - y));
+    }
+
+    // Left reserve for horizontal-bar category labels: widest label plus the shared Office
+    // axis-label-to-plot gap (bar-stacked-port decomposes exactly to frame + 50.0pt label +
+    // 23.2pt, the same gap calibrated for value-axis labels).
+    private static double ComputeHorizontalBarCategoryLeftReserve(double maxCategoryLabelWidth)
+    {
+        return maxCategoryLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
     }
 
     private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver)

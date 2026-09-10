@@ -876,6 +876,22 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(areaLegacy - 123.3d) < 0.001d, "Area keeps the legacy reserve until its legend placement is fixed. Got " + areaLegacy);
     }
 
+    public static void PptxSyntheticChartHorizontalBarCategoryReserveKeepsOfficeGap()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeHorizontalBarCategoryLeftReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart category-reserve helper to remain inspectable by the Office evidence guard.");
+
+        double shortLabels = (double)method!.Invoke(null, [49.9d])!;
+        double longLabels = (double)method.Invoke(null, [86.5d])!;
+        double noLabels = (double)method.Invoke(null, [0d])!;
+
+        TestAssert.True(Math.Abs(shortLabels - 73.1d) < 0.0001d, "Short-label reserve should be label plus 23.2pt Office gap. Got " + shortLabels);
+        TestAssert.True(Math.Abs(longLabels - 109.7d) < 0.0001d, "Long-label reserve should use the same gap. Got " + longLabels);
+        TestAssert.True(Math.Abs(noLabels - 23.2d) < 0.0001d, "Empty labels keep the bare gap below every preset. Got " + noLabels);
+    }
+
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
