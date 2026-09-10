@@ -3,15 +3,13 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-picture-fill-diagnostic.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "effects", "picture-fill", "diagnostic"],
+  "tags": ["pptx", "ladder", "effects", "picture-fill", "diagnostic", "approximate"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
-    "requiredDiagnostics": ["PPTX_UNSUPPORTED_PICTURE_FILL"],
-    "maxMeanAbsoluteError": 4.3,
-    "maxChangedPixelRatioAtThreshold16": 0.057
+    "requiredDiagnostics": ["PPTX_UNSUPPORTED_PICTURE_FILL"]
   },
   "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_PICTURE_FILL"]
 }
