@@ -272,6 +272,14 @@ internal sealed partial class PptxRenderer
         return position is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom;
     }
 
+    // Radius base for polar charts. Pies derive from the plot height even in portrait
+    // plots (composite portrait pie keeps the height-based radius); doughnuts keep the
+    // smaller side for lack of portrait evidence.
+    private static double GetPieOrDoughnutRadiusBase(ChartPolarKind kind, double plotWidth, double plotHeight)
+    {
+        return kind == ChartPolarKind.Pie ? plotHeight : Math.Min(plotWidth, plotHeight);
+    }
+
     private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
@@ -285,7 +293,8 @@ internal sealed partial class PptxRenderer
 
         ChartPolarGeometry GetPieOrDoughnutGeometry()
         {
-            double radius = Math.Min(plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio();
+            double radius = GetPieOrDoughnutRadiusBase(kind, plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio();
+
             if (explosionReserve > 0d)
             {
                 radius /= 1d + explosionReserve;

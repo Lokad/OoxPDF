@@ -923,6 +923,25 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(mid - 0.02d * Math.PI) < 0.000001d, "48-share label mid should follow start-minus-half-share. Got " + mid);
     }
 
+    public static void PptxSyntheticChartPieRadiusBaseUsesPlotHeight()
+    {
+        var renderer = typeof(PptxRenderer);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var method = renderer.GetMethod("GetPieOrDoughnutRadiusBase", flags);
+        TestAssert.True(method is not null, "Expected polar radius helper to remain inspectable by the Office evidence guard.");
+        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
+        object pie = System.Enum.ToObject(kindType, 0);
+        object doughnut = System.Enum.ToObject(kindType, 1);
+
+        double piePortrait = (double)method!.Invoke(null, [pie, 396d, 432d])!;
+        double pieLandscape = (double)method.Invoke(null, [pie, 720d, 432d])!;
+        double doughnutPortrait = (double)method.Invoke(null, [doughnut, 396d, 432d])!;
+
+        TestAssert.True(Math.Abs(piePortrait - 432d) < 0.000001d, "Portrait pies should keep the height-based radius. Got " + piePortrait);
+        TestAssert.True(Math.Abs(pieLandscape - 432d) < 0.000001d, "Landscape pies are unchanged. Got " + pieLandscape);
+        TestAssert.True(Math.Abs(doughnutPortrait - 396d) < 0.000001d, "Doughnuts keep the smaller side without portrait evidence. Got " + doughnutPortrait);
+    }
+
     public static void PptxSyntheticChartMeasuredLeftInsetKeepsPresetFloor()
     {
         var method = typeof(PptxRenderer).GetMethod(
