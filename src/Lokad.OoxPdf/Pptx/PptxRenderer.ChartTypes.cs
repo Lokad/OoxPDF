@@ -396,7 +396,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
-    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartMarkerStyle? Marker, ChartSeriesNameRecord? SeriesName);
+    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartMarkerStyle? Marker, ChartSeriesNameRecord? SeriesName, bool LineHidden);
 
     private enum ChartLegendPlacement
     {

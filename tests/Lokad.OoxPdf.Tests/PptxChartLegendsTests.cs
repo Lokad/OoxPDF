@@ -1824,4 +1824,55 @@ internal static class PptxChartLegendsTests
         TestAssert.True(sceneCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneCategoryAxis) is null, "Expected missing scene category axes not to be repaired from fallback XML.");
         TestAssert.True(xmlOnlyCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyCategoryAxis) is not null, "Expected XML-only category-axis lookup to keep reading XML.");
     }
+    public static void PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers()
+    {
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement scatterChart = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+                <c:scatterChart>
+                  <c:ser>
+                    <c:spPr><a:ln><a:noFill/></a:ln></c:spPr>
+                    <c:marker><c:symbol val="diamond"/><c:size val="9"/></c:marker>
+                    <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:xVal>
+                    <c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:yVal>
+                  </c:ser>
+                  <c:ser>
+                    <c:xVal><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:xVal>
+                    <c:yVal><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:yVal>
+                  </c:ser>
+                </c:scatterChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(chartNamespace + "scatterChart").Single();
+
+        System.Reflection.MethodInfo readMarkerStyles = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlMarkerStyles",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer marker-style bridge.");
+        var markerStyles = (System.Collections.IList)(readMarkerStyles.Invoke(null, [null, scatterChart, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected scatter marker styles."));
+        TestAssert.Equal(2, markerStyles.Count);
+
+        System.Reflection.MethodInfo buildEntries = typeof(PptxRenderer).GetMethod(
+            "BuildStrokeLegendEntries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer stroke-legend bridge.");
+        Type strokeListType = typeof(List<>).MakeGenericType(buildEntries.GetParameters()[5].ParameterType.GetGenericArguments()[0]);
+        object emptyStrokes = Activator.CreateInstance(strokeListType) ?? throw new InvalidOperationException("Expected stroke list.");
+
+        object[] entries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, new List<bool> { true, false }])) ?? throw new InvalidOperationException("Expected stroke legend entries.")).Cast<object>().ToArray();
+        TestAssert.Equal(2, entries.Length);
+        TestAssert.Equal("Series 1", (string?)entries[0].GetType().GetProperty("Name")?.GetValue(entries[0]) ?? string.Empty);
+        TestAssert.True((bool?)entries[0].GetType().GetProperty("LineHidden")?.GetValue(entries[0]) == true, "Expected the explicit-noFill series to suppress its legend line sample (Office marker-only key).");
+        TestAssert.True((bool?)entries[1].GetType().GetProperty("LineHidden")?.GetValue(entries[1]) == false, "Expected the default-line series to keep its legend line sample.");
+        object? marker0 = entries[0].GetType().GetProperty("Marker")?.GetValue(entries[0]);
+        object? marker1 = entries[1].GetType().GetProperty("Marker")?.GetValue(entries[1]);
+        TestAssert.True(marker0 is not null, "Expected the suppressed-line entry to keep its marker (Office marker-only key).");
+        TestAssert.True(marker1 is not null, "Expected marker styles to flow into stroke legend entries.");
+        TestAssert.Equal("diamond", PptxTests.ChartMarkerStyleSymbol(marker0!));
+        TestAssert.Equal(9d, PptxTests.ChartMarkerStyleSize(marker0!));
+
+        object[] defaultEntries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, null])) ?? throw new InvalidOperationException("Expected default stroke legend entries.")).Cast<object>().ToArray();
+        TestAssert.True((bool?)defaultEntries[0].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[0]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
+        TestAssert.True((bool?)defaultEntries[1].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[1]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
+    }
 }

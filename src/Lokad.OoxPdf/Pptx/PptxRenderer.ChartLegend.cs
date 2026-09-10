@@ -30,7 +30,7 @@ internal sealed partial class PptxRenderer
                 stroke = explicitStroke with { Width = ChartFilledSeriesInheritedStrokeWidth };
             }
 
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, stroke, null, names[i]));
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, stroke, null, names[i], LineHidden: false));
         }
 
         return entries;
@@ -53,13 +53,13 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill fill = pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, point.Index), 1d, null, null);
-            entries.Add(new ChartLegendEntry(point.Text, fill, null, null, null));
+            entries.Add(new ChartLegendEntry(point.Text, fill, null, null, null, LineHidden: false));
         }
 
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook)
+    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
@@ -68,7 +68,8 @@ internal sealed partial class PptxRenderer
             ChartMarkerStyle? marker = markerStyles is not null && i < markerStyles.Count
                 ? markerStyles[i]
                 : null;
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, ChartSeriesStrokeColor(theme, colorMap, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth), marker, names[i]));
+            bool lineHidden = seriesLineHidden is not null && i < seriesLineHidden.Count && seriesLineHidden[i];
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, ChartSeriesStrokeColor(theme, colorMap, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth), marker, names[i], LineHidden: lineHidden));
         }
 
         if (reverseOrder)
@@ -262,8 +263,15 @@ internal sealed partial class PptxRenderer
             else if (entry.Stroke is { } stroke)
             {
                 double lineY = markerY + legendBox.MarkerSize / 2d;
-                SetChartStroke(graphics, stroke);
-                graphics.StrokeLine(entryX, lineY, entryX + legendBox.MarkerWidth, lineY);
+                // An explicit series noFill suppresses the key line sample: Office shows
+                // marker-only keys there. The stroke stays on the entry so box layout and
+                // the plot reserve do not move. Without a marker, keep the sample rather
+                // than emitting an empty key.
+                if (!entry.LineHidden || entry.Marker is null)
+                {
+                    SetChartStroke(graphics, stroke);
+                    graphics.StrokeLine(entryX, lineY, entryX + legendBox.MarkerWidth, lineY);
+                }
                 if (entry.Marker is { } marker)
                 {
                     DrawChartMarker(graphics, entryX + legendBox.MarkerWidth / 2d, lineY, marker, stroke.Color, stroke.Color);
