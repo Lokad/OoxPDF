@@ -181,6 +181,10 @@ internal sealed partial class PptxRenderer
         public const double AxisNiceNearMaximumHeadroomRatio = 0.96d;
         public const double AreaChartStackedAxisNearMaximumHeadroomRatio = 0.95d;
         public const double BubbleRadiusPlotRatio = 0.128d;
+        // Default radar series outline width. Office draws 3.75pt outlines on unfilled
+        // radars without an explicit line (both ladder radar ports share style 118, so
+        // revisit if other styles diverge); filled radars omit the outline instead.
+        public const double RadarSeriesOutlineWidth = 3.75d;
         public const double DoughnutHoleMinimumRatio = 0.1d;
         public const double DoughnutHoleMaximumRatio = 0.9d;
         public const double DoughnutHoleFallbackRatio = 0.56d;

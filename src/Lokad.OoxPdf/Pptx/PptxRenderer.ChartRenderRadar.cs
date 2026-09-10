@@ -58,21 +58,28 @@ internal sealed partial class PptxRenderer
                 graphics.FillPolygon(points);
                 graphics.RestoreState();
             }
-            ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
-            if (stroke.Alpha < 1d)
+            // Office omits the polygon outline on filled radars without an explicit line;
+            // marker radars always outline (3.75pt default measured on the ladder reference).
+            bool hasExplicitStroke = seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is not null;
+            if (!layout.IsFilled || hasExplicitStroke)
             {
-                graphics.SaveState();
-                graphics.SetAlpha(1d, stroke.Alpha);
+                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, PptxChartMetricRules.RadarSeriesOutlineWidth);
+                if (stroke.Alpha < 1d)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(1d, stroke.Alpha);
+                }
+
+                SetChartStroke(graphics, stroke);
+                AppendClosedPolylinePath(points);
+                graphics.StrokeCurrentPath();
+
+                if (stroke.Alpha < 1d)
+                {
+                    graphics.RestoreState();
+                }
             }
 
-            SetChartStroke(graphics, stroke);
-            AppendClosedPolylinePath(points);
-            graphics.StrokeCurrentPath();
-
-            if (stroke.Alpha < 1d)
-            {
-                graphics.RestoreState();
-            }
         }
 
         void AppendClosedPolylinePath(IReadOnlyList<(double X, double Y)> points)
