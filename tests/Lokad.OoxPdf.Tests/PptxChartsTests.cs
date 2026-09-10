@@ -370,7 +370,9 @@ internal static class PptxChartsTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        TestAssert.Contains("364.922", pdf);
+        // Value labels moved with the plot edge, which now fits the rendered tick labels
+        // under the Office-calibrated label reserve (composite evidence).
+        TestAssert.Contains("315.514", pdf);
     }
 
     public static void PptxSyntheticChartCategoryAxisLabelOffsetRender()
@@ -890,6 +892,20 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(shortLabels - 73.1d) < 0.0001d, "Short-label reserve should be label plus 23.2pt Office gap. Got " + shortLabels);
         TestAssert.True(Math.Abs(longLabels - 109.7d) < 0.0001d, "Long-label reserve should use the same gap. Got " + longLabels);
         TestAssert.True(Math.Abs(noLabels - 23.2d) < 0.0001d, "Empty labels keep the bare gap below every preset. Got " + noLabels);
+    }
+
+    public static void PptxSyntheticChartBarValueAxisReserveKeepsOfficeGap()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeBarValueAxisLeftReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart value-reserve helper to remain inspectable by the Office evidence guard.");
+
+        double threeDigit = (double)method!.Invoke(null, [27.37d])!;
+        double twoDigit = (double)method.Invoke(null, [18.25d])!;
+
+        TestAssert.True(Math.Abs(threeDigit - 50.57d) < 0.0001d, "Three-digit reserve should be label plus 23.2pt Office gap. Got " + threeDigit);
+        TestAssert.True(Math.Abs(twoDigit - 41.45d) < 0.0001d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
     }
 
     public static void PptxSyntheticChartPieArcKeepsMathConvention()

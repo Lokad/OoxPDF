@@ -662,7 +662,9 @@ internal static class PptxChartLegendsTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        TestAssert.Contains("88.589 271.958 267.034 188.05 re f", pdf);
+        // The overlay legend still reserves nothing; the plot box now also fits the rendered
+        // value tick labels under the Office-calibrated label reserve (composite evidence).
+        TestAssert.Contains("107.016 271.958 248.606 188.05 re f", pdf);
         TestAssert.DoesNotContain("104.256 259.56 247.68 191.16 re f", pdf);
         TestAssert.DoesNotContain("100.8 282.24 236.16 174.96 re f", pdf);
     }

@@ -218,6 +218,7 @@ internal sealed partial class PptxRenderer
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(defaultPlotBox);
         defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(defaultPlotBox);
+        defaultPlotBox = AdjustBarChartPlotBoxForSingleValueAxisLabels(defaultPlotBox);
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasTitle, hasLegend);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
@@ -326,6 +327,68 @@ internal sealed partial class PptxRenderer
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
             bool labelsRight = ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultRightSide: false);
+            if (labelsRight)
+            {
+                rightReserve = Math.Max(rightReserve, requiredReserve);
+            }
+            else
+            {
+                leftReserve = Math.Max(leftReserve, requiredReserve);
+            }
+
+            double x = frame.X + leftReserve;
+            double right = frame.X + frame.Width - rightReserve;
+            double width = Math.Max(1d, right - x);
+            return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
+        }
+
+        ChartPlotBox AdjustBarChartPlotBoxForSingleValueAxisLabels(ChartPlotBox plotBox)
+        {
+            if (horizontalBars)
+            {
+                return plotBox;
+            }
+
+            if (IsStackedChartGrouping(barOptions.Grouping))
+            {
+                return plotBox;
+            }
+
+            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            {
+                return plotBox;
+            }
+
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            if (CountRenderableSeries(seriesVectors) == 0)
+            {
+                return plotBox;
+            }
+
+            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetBarChartValueExtents(seriesVectors, barOptions.Grouping), false, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), false);
+            ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            var textMeasurer = new ChartTextMeasurer(fontResolver);
+            double maxLabelWidth = 0d;
+            foreach (double tickValue in GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount))
+            {
+                string label = FormatSceneOrXmlChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null);
+                if (!string.IsNullOrWhiteSpace(label))
+                {
+                    maxLabelWidth = Math.Max(maxLabelWidth, textMeasurer.Measure(label, tickStyle));
+                }
+            }
+
+            if (maxLabelWidth <= 0d)
+            {
+                return plotBox;
+            }
+
+            double requiredReserve = ComputeBarValueAxisLeftReserve(maxLabelWidth);
+            double leftReserve = plotBox.X - frame.X;
+            double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
+            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false);
             if (labelsRight)
             {
                 rightReserve = Math.Max(rightReserve, requiredReserve);
@@ -633,6 +696,15 @@ internal sealed partial class PptxRenderer
     // Left reserve for horizontal-bar category labels: widest label plus the shared Office
     // axis-label-to-plot gap (bar-stacked-port decomposes exactly to frame + 50.0pt label +
     // 23.2pt, the same gap calibrated for value-axis labels).
+    // Left reserve for single-plot non-stacked vertical-bar value labels: widest tick label
+    // plus the shared Office axis-label-to-plot gap (composite left chart decomposes exactly
+    // to frame plus 27.37pt label plus 23.2pt). Stacked, multi-axis and horizontal paths keep
+    // their own estimators.
+    private static double ComputeBarValueAxisLeftReserve(double maxValueLabelWidth)
+    {
+        return maxValueLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
+    }
+
     private static double ComputeHorizontalBarCategoryLeftReserve(double maxCategoryLabelWidth)
     {
         return maxCategoryLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
