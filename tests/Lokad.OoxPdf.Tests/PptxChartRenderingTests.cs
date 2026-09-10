@@ -50,6 +50,48 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal(9d, plot.Series[3].Marker.Size);
     }
 
+    public static void PptxSceneScatterChartMarkerDefaultsUseDensityAndAutoSymbols()
+    {
+        PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:scatterChart>
+                  <c:ser><c:xVal><c:numLit><c:ptCount val="5"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt><c:pt idx="3"><c:v>4</c:v></c:pt><c:pt idx="4"><c:v>5</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:ptCount val="5"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt><c:pt idx="3"><c:v>4</c:v></c:pt><c:pt idx="4"><c:v>5</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                  <c:ser><c:xVal><c:numLit><c:ptCount val="6"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt><c:pt idx="3"><c:v>4</c:v></c:pt><c:pt idx="4"><c:v>5</c:v></c:pt><c:pt idx="5"><c:v>6</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:ptCount val="6"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt><c:pt idx="3"><c:v>4</c:v></c:pt><c:pt idx="4"><c:v>5</c:v></c:pt><c:pt idx="5"><c:v>6</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                  <c:ser><c:marker><c:symbol val="star"/><c:size val="8"/></c:marker><c:xVal><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                </c:scatterChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartPlot plot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected scatter-chart plot.");
+        TestAssert.Equal(3, plot.Series.Count);
+        TestAssert.True(plot.Series[0].Marker.IsDefined == false, "Expected the sparse auto marker to stay implicit.");
+        TestAssert.Equal("diamond", plot.Series[0].Marker.Symbol);
+        TestAssert.Equal(9.9d, plot.Series[0].Marker.Size);
+        TestAssert.True(plot.Series[1].Marker.IsDefined == false, "Expected the dense auto marker to stay implicit.");
+        TestAssert.Equal("square", plot.Series[1].Marker.Symbol);
+        TestAssert.Equal(7d, plot.Series[1].Marker.Size);
+        TestAssert.True(plot.Series[2].Marker.IsDefined == true, "Expected explicit series marker XML to stay explicit.");
+        TestAssert.Equal("star", plot.Series[2].Marker.Symbol);
+        TestAssert.Equal(8d, plot.Series[2].Marker.Size);
+
+        PptxSceneChart? bubble = PptxTests.BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:bubbleChart>
+                  <c:ser><c:xVal><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:yVal><c:bubbleSize><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:bubbleSize></c:ser>
+                </c:bubbleChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartPlot bubblePlot = bubble?.Plots[0] ?? throw new InvalidOperationException("Expected bubble-chart plot.");
+        TestAssert.Equal("circle", bubblePlot.Series[0].Marker.Symbol);
+    }
+
     public static void PptxChartMarkerStylesPreserveDefinitionState()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""

@@ -584,7 +584,7 @@ internal sealed partial class PptxRenderer
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d));
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth);
         DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill);
         DrawChartMarkerStroke(graphics, x, y, marker.SymbolKind, size, stroke);
     }
@@ -598,7 +598,7 @@ internal sealed partial class PptxRenderer
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d));
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth);
         if (!IsLineOnlyChartMarker(marker.SymbolKind))
         {
             RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill));

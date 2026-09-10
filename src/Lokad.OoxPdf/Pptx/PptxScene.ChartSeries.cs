@@ -145,12 +145,16 @@ internal sealed partial class PptxSceneBuilder
         string symbol = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "symbol")) ??
             ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);
         string? sizeValue = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "size"));
+        int scatterPointCount = plotKind == PptxSceneChartPlotKind.Scatter
+            ? Math.Max(ReadChartSeriesPointCount(series, "xVal") ?? 0, ReadChartSeriesPointCount(series, "yVal") ?? 0)
+            : 0;
         double size = PptxChartMarkerMetricRules.ResolveSize(
             sizeValue,
             plotKind,
             chartMarkersEnabled,
             marker is not null,
-            marker?.Element(ChartNamespace + "spPr") is not null);
+            marker?.Element(ChartNamespace + "spPr") is not null,
+            scatterPointCount);
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
         PptxSceneFillStyle fill = PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
