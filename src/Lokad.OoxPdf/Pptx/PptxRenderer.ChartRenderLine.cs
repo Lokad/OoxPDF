@@ -216,6 +216,16 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // The reserve covers the widest label plus a fixed padding; it intentionally does not
+    // grow with label character count because the widest label already spans the longest text.
+    private static double ComputeNoTitleRightLegendLeftInset(double maxValueLabelWidth, double frameWidth)
+    {
+        return maxValueLabelWidth +
+            Math.Min(
+                PptxChartMetricRules.LineRightLegendValueAxisPadding,
+                frameWidth * PptxChartMetricRules.LineRightLegendValueAxisFrameWidthPaddingRatio);
+    }
+
     private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
     {
         XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
@@ -247,7 +257,6 @@ internal sealed partial class PptxRenderer
         var textMeasurer = new ChartTextMeasurer(fontResolver);
 
         double maxValueLabelWidth = 0d;
-        int maxValueLabelLength = 0;
         bool explicitValueAxisScale = false;
         if (plotKind == PptxSceneChartPlotKind.Scatter)
         {
@@ -273,9 +282,6 @@ internal sealed partial class PptxRenderer
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
                     : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
-                maxValueLabelLength = tickLabels.Length == 0
-                    ? 0
-                    : tickLabels.Max(label => label.Length);
             }
         }
         else
@@ -299,18 +305,11 @@ internal sealed partial class PptxRenderer
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
                     : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
-                maxValueLabelLength = tickLabels.Length == 0
-                    ? 0
-                    : tickLabels.Max(label => label.Length);
             }
         }
 
         double leftInset = maxValueLabelWidth > 0d
-            ? maxValueLabelWidth +
-                Math.Min(
-                    PptxChartMetricRules.LineRightLegendValueAxisPadding,
-                    frame.Width * PptxChartMetricRules.LineRightLegendValueAxisFrameWidthPaddingRatio) +
-                Math.Max(0, maxValueLabelLength - 3) * PptxChartMetricRules.LineRightLegendExtraValueLabelCharacterPadding
+            ? ComputeNoTitleRightLegendLeftInset(maxValueLabelWidth, frame.Width)
             : frame.Width * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxXRatio;
         double x = frame.X + leftInset;
         double yRatio = explicitValueAxisScale

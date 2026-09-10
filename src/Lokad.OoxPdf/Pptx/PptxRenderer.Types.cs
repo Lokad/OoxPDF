@@ -228,9 +228,13 @@ internal sealed partial class PptxRenderer
         public const double LineNoTitleRightLegendPlotBoxHeightRatio = 0.8722d;
         public const double LineNoTitleRightLegendExplicitScalePlotBoxYRatio = 0.10128571428571429d;
         public const double LineNoTitleRightLegendExplicitScalePlotBoxHeightRatio = 0.8463333333333334d;
-        public const double LineRightLegendValueAxisPadding = 35.7d;
+        // Reserve between the widest value-axis tick label and the plot area for untitled
+        // right-legend line/area/scatter charts. Calibrated from cached Office references:
+        // plot-left minus our measured widest-label width decomposes to 23.2pt on 720pt
+        // frames for scatter-clusters (single-digit), line-markers/stacked and area ports
+        // (three-digit), and line-3series (four-digit, which needs no extra character term).
+        public const double LineRightLegendValueAxisPadding = 23.2d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
-        public const double LineRightLegendExtraValueLabelCharacterPadding = 5.3d;
         public const double LineRightLegendReservePadding = 43.8d;
         public const double LineRightLegendExtraLegendCharacterPadding = 8.4d;
         public const double AreaRightLegendReserveFrameWidthFactor = 0.025d;

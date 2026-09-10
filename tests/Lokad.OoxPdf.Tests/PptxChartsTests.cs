@@ -842,6 +842,24 @@ internal static class PptxChartsTests
         TestAssert.Equal(5d, bubbleNoHeadroom);
     }
 
+    public static void PptxSyntheticChartNoTitleRightLegendLeftInsetKeepsOfficePadding()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeNoTitleRightLegendLeftInset",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart left-inset helper to remain inspectable by the Office evidence guard.");
+
+        double singleDigit = (double)method!.Invoke(null, [9.12d, 720d])!;
+        double threeDigit = (double)method.Invoke(null, [27.37d, 720d])!;
+        double fourDigit = (double)method.Invoke(null, [36.49d, 720d])!;
+        double narrowFrame = (double)method.Invoke(null, [9.12d, 400d])!;
+
+        TestAssert.True(Math.Abs(singleDigit - 32.32d) < 0.0001d, "Single-digit inset should be label plus 23.2pt Office padding. Got " + singleDigit);
+        TestAssert.True(Math.Abs(threeDigit - 50.57d) < 0.0001d, "Three-digit inset should use the same padding. Got " + threeDigit);
+        TestAssert.True(Math.Abs(fourDigit - 59.69d) < 0.0001d, "Four-digit inset must not add a character-count extra. Got " + fourDigit);
+        TestAssert.True(Math.Abs(narrowFrame - 29.12d) < 0.0001d, "Narrow frames keep the width-ratio padding cap. Got " + narrowFrame);
+    }
+
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
