@@ -83,7 +83,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents ReadBubbleChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
     {
-        return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+        return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
     }
 
     private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback)
@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = axis.Minimum ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;

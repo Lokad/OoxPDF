@@ -824,6 +824,24 @@ internal static class PptxChartsTests
         TestAssert.Equal(1600d, lineThreeSeriesMax);
     }
 
+    public static void PptxSyntheticChartScatterAxisNearMaximumKeepsOfficeHeadroom()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "GetNiceChartAxisMax",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
+
+        double scatterClustersMax = (double)method!.Invoke(null, [4.8d, 0d, 5d, true, 0.96d])!;
+        double scatterClustersNoHeadroom = (double)method.Invoke(null, [4.8d, 0d, 5d, false, 0.96d])!;
+        double bubbleMax = (double)method.Invoke(null, [4.0d, 0d, 5d, true, 0.96d])!;
+        double bubbleNoHeadroom = (double)method.Invoke(null, [4.0d, 0d, 5d, false, 0.96d])!;
+
+        TestAssert.Equal(6d, scatterClustersMax);
+        TestAssert.Equal(5d, scatterClustersNoHeadroom);
+        TestAssert.Equal(5d, bubbleMax);
+        TestAssert.Equal(5d, bubbleNoHeadroom);
+    }
+
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
