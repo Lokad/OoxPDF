@@ -662,6 +662,7 @@ internal sealed partial class PptxRenderer
             ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
             titleAnchorBox = GetBarChartPlotLayout(
                 theme,
+                colorMap,
                 frame,
                 chartXml,
                 sceneChart,

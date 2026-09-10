@@ -166,12 +166,13 @@ internal sealed partial class PptxRenderer
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, frame, chartXml, sceneChart, barPlot, barChart, title, legend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false);
+        ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, legend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
     private static ChartPlotLayout GetBarChartPlotLayout(
         PptxTheme theme,
+        PptxColorMap colorMap,
         ChartFrameBox frame,
         XDocument chartXml,
         PptxSceneChart? sceneChart,
@@ -196,6 +197,7 @@ internal sealed partial class PptxRenderer
         else if (!hasTitle && legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
         {
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarNoTitleBottomLegend);
+            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, colorMap, sceneChart, chartXml, barPlot, barChart);
         }
         else if (horizontalBars && hasTitle && !hasLegend)
         {
@@ -552,6 +554,30 @@ internal sealed partial class PptxRenderer
             left + 1d,
             plotBox.X + plotBox.Width - PptxChartMetricRules.StackedColumnBottomLegendPlotBoxRightPadding);
         return new ChartPlotBox(left, plotBox.Y, right - left, plotBox.Height);
+    }
+
+    private static ChartPlotBox AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(
+        ChartPlotBox plotBox,
+        ChartFrameBox frame,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        PptxSceneChart? sceneChart,
+        XDocument chartXml,
+        PptxSceneChartPlot? barPlot,
+        XElement barChart)
+    {
+        // Office keeps a content-sized bottom margin for untitled bottom-legend columns
+        // (54.4pt on both measured frames) instead of a frame ratio, so the reserve is
+        // one legend row plus one category-tick row plus the calibrated content gap.
+        ChartTextStyle legendStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+        ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+        ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+        double bottomReserve = legendStyle.FontSize * PptxChartMetricRules.LegendLineHeightFactor +
+            tickStyle.FontSize * PptxChartMetricRules.AxisLabelHeightFactor +
+            PptxChartMetricRules.BarNoTitleBottomLegendContentGap;
+        double presetTop = frame.Y + frame.Height * (PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio + PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
+        double y = frame.Y + bottomReserve;
+        return new ChartPlotBox(plotBox.X, y, plotBox.Width, Math.Max(1d, presetTop - y));
     }
 
     private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver)
