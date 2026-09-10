@@ -222,6 +222,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasTitle, hasLegend);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
+        defaultPlotBox = AdjustHorizontalBarPlotBoxForValueLabels(defaultPlotBox);
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -291,6 +292,51 @@ internal sealed partial class PptxRenderer
             double width = Math.Max(1d, frame.Width - leftReserve - rightReserve);
             double height = Math.Max(1d, frame.Height - bottomReserve - topReserve);
             return new ChartPlotBox(x, y, width, height);
+        }
+
+        ChartPlotBox AdjustHorizontalBarPlotBoxForValueLabels(ChartPlotBox plotBox)
+        {
+            if (!horizontalBars)
+            {
+                return plotBox;
+            }
+
+            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            {
+                return plotBox;
+            }
+
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            if (CountRenderableSeries(seriesVectors) == 0)
+            {
+                return plotBox;
+            }
+
+            bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
+            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetBarChartValueExtents(seriesVectors, barOptions.Grouping), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, percentStacked).Units;
+            ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            var textMeasurer = new ChartTextMeasurer(fontResolver);
+            double maxLabelWidth = 0d;
+            foreach (double tickValue in GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount))
+            {
+                string label = FormatSceneOrXmlChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, percentStacked ? "0%" : null);
+                if (!string.IsNullOrWhiteSpace(label))
+                {
+                    maxLabelWidth = Math.Max(maxLabelWidth, textMeasurer.Measure(label, tickStyle));
+                }
+            }
+
+            if (maxLabelWidth <= 0d)
+            {
+                return plotBox;
+            }
+
+            double rightReserve = ResolveMeasuredRightReserve(frame.X + frame.Width - plotBox.X - plotBox.Width, maxLabelWidth);
+            double right = frame.X + frame.Width - rightReserve;
+            double width = Math.Max(1d, right - plotBox.X);
+            return new ChartPlotBox(plotBox.X, plotBox.Y, width, plotBox.Height);
         }
 
         ChartPlotBox AdjustHorizontalBarPlotBoxForCategoryLabels(ChartPlotBox plotBox)
@@ -703,6 +749,14 @@ internal sealed partial class PptxRenderer
     private static double ComputeBarValueAxisLeftReserve(double maxValueLabelWidth)
     {
         return maxValueLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
+    }
+
+    // Right reserve for horizontal-bar value labels: the edge tick centers on the plot
+    // edge, so half the widest label plus the Office tail fits it (bar margins decompose
+    // to half-width plus 11.0pt on stacked and clustered references).
+    private static double ResolveMeasuredRightReserve(double presetRightReserve, double maxValueLabelWidth)
+    {
+        return Math.Max(presetRightReserve, maxValueLabelWidth / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
     }
 
     private static double ComputeHorizontalBarCategoryLeftReserve(double maxCategoryLabelWidth)

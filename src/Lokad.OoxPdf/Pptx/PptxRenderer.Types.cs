@@ -238,6 +238,10 @@ internal sealed partial class PptxRenderer
         // frames for scatter-clusters (single-digit), line-markers/stacked and area ports
         // (three-digit), and line-3series (four-digit, which needs no extra character term).
         public const double LineRightLegendValueAxisPadding = 23.2d;
+        // Tail past the centered edge tick on horizontal-bar value axes. Calibrated from
+        // cached Office references: right margin minus half the widest bottom label
+        // decomposes to 11.0pt on stacked (300) and clustered (50) bar ports.
+        public const double HorizontalBarValueAxisRightPadding = 11.0d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         public const double LineRightLegendReservePadding = 43.8d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter

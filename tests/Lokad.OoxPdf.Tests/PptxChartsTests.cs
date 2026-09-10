@@ -908,6 +908,20 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(twoDigit - 41.45d) < 0.0001d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
     }
 
+    public static void PptxSyntheticChartMeasuredRightReserveKeepsPresetFloor()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ResolveMeasuredRightReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart right-reserve helper to remain inspectable by the Office evidence guard.");
+
+        double wideLabels = (double)method!.Invoke(null, [10.94d, 27.37d])!;
+        double narrowLabels = (double)method.Invoke(null, [20.16d, 18.25d])!;
+
+        TestAssert.True(Math.Abs(wideLabels - 24.69d) < 0.01d, "Wide labels should beat the preset by half width plus tail. Got " + wideLabels);
+        TestAssert.True(Math.Abs(narrowLabels - 20.16d) < 0.01d, "Fitting labels must keep the preset floor. Got " + narrowLabels);
+    }
+
     public static void PptxSyntheticChartPieLabelAnglesMirrorSlices()
     {
         var renderer = typeof(PptxRenderer);
