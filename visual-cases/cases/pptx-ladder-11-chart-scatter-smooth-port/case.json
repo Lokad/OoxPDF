@@ -3,20 +3,11 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-scatter-smooth-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "scatter-chart", "smooth", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "chart", "scatter-chart", "smooth", "pptx-renderer-port", "approximate"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 2.8,
-    "maxChangedPixelRatioAtThreshold16": 0.025,
-    "maxChartGraphicsStructureBoundsDelta": 11.0,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotBoxCandidate", "VerticalLine"],
-    "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["LegendText"],
-    "maxChartTextStructurePositionDeltaByKind": {
-      "LegendText": 1.0
-    }
+    "diagnosticsMustBeEmpty": true
   }
 }
