@@ -231,7 +231,9 @@ internal sealed partial class PptxRenderer
 
         double radians = DegreesToRadians(gradient.AngleDegrees);
         double dx = Math.Cos(radians);
-        double dy = Math.Sin(radians);
+        // Office places the first gradient stop at the top for a 90-degree linear gradient;
+        // emission space is y-up PDF, so the sine component is negated to keep stop 0 at the Office end.
+        double dy = -Math.Sin(radians);
         double half = Math.Abs(dx) * width / 2d + Math.Abs(dy) * height / 2d;
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;

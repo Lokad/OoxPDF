@@ -1484,4 +1484,68 @@ internal static class PptxShapesTests
         TestAssert.Contains("0 -1 1 0", pdf);
         TestAssert.Contains("36 108 re f", pdf);
     }
+
+    public static void PptxSyntheticVerticalGradientKeepsFirstStopAtTop()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+                </Relationships>
+                """,
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:sldSz cx="9144000" cy="6858000"/>
+                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+                </p:presentation>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></p:bgPr></p:bg>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="2743200" y="2057400"/><a:ext cx="3657600" cy="2286000"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:gradFill flip="none" rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="2F80ED"/></a:gs><a:gs pos="100000"><a:srgbClr val="27AE60"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="1"/></a:gradFill>
+                        </p:spPr>
+                      </p:sp>
+                    </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        Match coords = Regex.Match(pdf, "/Coords \\[([^\\]]+)\\]");
+        TestAssert.True(coords.Success, "Expected an axial shading coordinate array.");
+        string[] parts = coords.Groups[1].Value.Split((char)32, StringSplitOptions.RemoveEmptyEntries);
+        TestAssert.Equal(4, parts.Length);
+        double y0 = double.Parse(parts[1], CultureInfo.InvariantCulture);
+        double y1 = double.Parse(parts[3], CultureInfo.InvariantCulture);
+        TestAssert.True(y0 > y1, "A 90-degree linear gradient must place the first stop at the top in y-up PDF space.");
+        TestAssert.Contains("0.184 0.502 0.929", pdf);
+    }
 }
