@@ -2494,4 +2494,40 @@ internal static class PptxChartRenderingTests
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart point effects should be diagnostic-covered from scene-owned point effect provenance.");
     }
+
+    public static void PptxSceneScatterSeriesLineNoFillSurvivesInSceneModel()
+    {
+        PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+                <c:scatterChart>
+                  <c:scatterStyle val="lineMarker"/>
+                  <c:ser><c:spPr><a:ln w="47625"><a:noFill/></a:ln></c:spPr><c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                  <c:ser><c:xVal><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                </c:scatterChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartPlot plot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected scatter-chart plot.");
+        TestAssert.Equal(2, plot.Series.Count);
+        TestAssert.True(plot.Series[0].Line.NoFill, "Expected explicit series line noFill to survive in the scene model.");
+        TestAssert.True(!plot.Series[1].Line.NoFill, "Expected an absent series line to remain distinct from explicit noFill.");
+    }
+
+    public static void PptxScatterLineConnectionCoversSmoothStyles()
+    {
+        System.Reflection.MethodInfo resolve = typeof(PptxRenderer).GetMethod(
+            "ResolveChartScatterLineConnection",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter line-connection resolver.");
+        bool Invoke(PptxSceneChartScatterStyle style) => (bool)resolve.Invoke(null, [style])!;
+        TestAssert.True(Invoke(PptxSceneChartScatterStyle.Line), "Line scatter style should connect points.");
+        TestAssert.True(Invoke(PptxSceneChartScatterStyle.LineMarker), "LineMarker scatter style should connect points.");
+        TestAssert.True(Invoke(PptxSceneChartScatterStyle.Smooth), "Smooth scatter style should connect points.");
+        TestAssert.True(Invoke(PptxSceneChartScatterStyle.SmoothMarker), "SmoothMarker scatter style should connect points.");
+        TestAssert.True(!Invoke(PptxSceneChartScatterStyle.Marker), "Marker scatter style should not connect points.");
+        TestAssert.True(!Invoke(PptxSceneChartScatterStyle.None), "None scatter style should not connect points.");
+        TestAssert.True(!Invoke(PptxSceneChartScatterStyle.Unknown), "Unknown scatter style should not connect points.");
+    }
 }

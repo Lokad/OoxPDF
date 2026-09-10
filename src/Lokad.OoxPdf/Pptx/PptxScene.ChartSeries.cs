@@ -247,7 +247,7 @@ internal sealed partial class PptxSceneBuilder
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
-            return default;
+            return default(PptxSceneLineStyle) with { NoFill = true };
         }
 
         bool widthSpecified = line?.Attribute("w") is not null;

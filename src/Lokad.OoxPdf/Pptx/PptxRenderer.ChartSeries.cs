@@ -436,7 +436,7 @@ internal sealed partial class PptxRenderer
     {
         return scatterStyle switch
         {
-            PptxSceneChartScatterStyle.Line or PptxSceneChartScatterStyle.LineMarker => true,
+            PptxSceneChartScatterStyle.Line or PptxSceneChartScatterStyle.LineMarker or PptxSceneChartScatterStyle.Smooth or PptxSceneChartScatterStyle.SmoothMarker => true,
             _ => false
         };
     }

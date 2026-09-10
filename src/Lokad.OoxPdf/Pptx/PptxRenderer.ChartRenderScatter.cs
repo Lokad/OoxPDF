@@ -35,7 +35,7 @@ internal sealed partial class PptxRenderer
         return GetScatterYValueExtents(series);
     }
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, ChartValueExtents? xValueExtents, ChartValueExtents? yValueExtents)
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents? xValueExtents, ChartValueExtents? yValueExtents)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -76,7 +76,7 @@ internal sealed partial class PptxRenderer
                     points.Add((pointX, pointY));
                 }
 
-                if (connectLines)
+                if (connectLines && !IsLineHiddenSeries(seriesIndex, seriesLineHidden))
                 {
                     StrokeScatterChartPathInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
                 }
@@ -100,6 +100,11 @@ internal sealed partial class PptxRenderer
                     graphics.RestoreState();
                 }
             }
+        }
+
+        static bool IsLineHiddenSeries(int seriesIndex, IReadOnlyList<bool> seriesLineHidden)
+        {
+            return seriesIndex < seriesLineHidden.Count && seriesLineHidden[seriesIndex];
         }
 
         void FillBubbleInPlotClip(double pointX, double pointY, double radius)
