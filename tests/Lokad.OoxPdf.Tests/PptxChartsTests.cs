@@ -908,6 +908,21 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(twoDigit - 41.45d) < 0.0001d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
     }
 
+    public static void PptxSyntheticChartPieLabelAnglesMirrorSlices()
+    {
+        var renderer = typeof(PptxRenderer);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var startMethod = renderer.GetMethod("GetPieDataLabelStartAngle", flags);
+        var midMethod = renderer.GetMethod("GetPieDataLabelMidpointAngle", flags);
+        TestAssert.True(startMethod is not null && midMethod is not null, "Expected pie label angle helpers to remain inspectable by the Office evidence guard.");
+
+        double start = (double)startMethod!.Invoke(null, [0d])!;
+        double mid = (double)midMethod!.Invoke(null, [start, 48d, 100d])!;
+
+        TestAssert.True(Math.Abs(start - Math.PI / 2d) < 0.000001d, "Labels should start at the top like slices. Got " + start);
+        TestAssert.True(Math.Abs(mid - 0.02d * Math.PI) < 0.000001d, "48-share label mid should follow start-minus-half-share. Got " + mid);
+    }
+
     public static void PptxSyntheticChartMeasuredLeftInsetKeepsPresetFloor()
     {
         var method = typeof(PptxRenderer).GetMethod(
