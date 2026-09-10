@@ -892,6 +892,50 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(noLabels - 23.2d) < 0.0001d, "Empty labels keep the bare gap below every preset. Got " + noLabels);
     }
 
+    public static void PptxSyntheticChartPieArcKeepsMathConvention()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "AppendCircularArc",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie arc helper to remain inspectable by the Office evidence guard.");
+
+        var graphics = new PdfGraphicsBuilder();
+        method!.Invoke(null, [graphics, 100d, 200d, 50d, System.Math.PI / 2d, -System.Math.PI, true]);
+        string path = graphics.ToString();
+        var points = new System.Collections.Generic.List<(double X, double Y)>();
+        var pending = new System.Collections.Generic.List<double>();
+        foreach (string token in path.Split(new[] { (char)32, (char)10, (char)13, (char)9 }, System.StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+            {
+                pending.Add(value);
+                continue;
+            }
+            if ((token == "m" || token == "l") && pending.Count >= 2)
+            {
+                points.Add((pending[pending.Count - 2], pending[pending.Count - 1]));
+            }
+            if (token == "c" && pending.Count >= 6)
+            {
+                points.Add((pending[pending.Count - 2], pending[pending.Count - 1]));
+            }
+            pending.Clear();
+        }
+
+        TestAssert.True(points.Count > 0, "Expected emitted arc points, got: " + path);
+        foreach ((double X, double Y) in points)
+        {
+            double radius = System.Math.Sqrt((X - 100d) * (X - 100d) + (Y - 200d) * (Y - 200d));
+            TestAssert.True(System.Math.Abs(radius - 50d) < 0.6d, "Arc endpoint should stay on the circle, got radius " + radius);
+        }
+        (double firstX, double firstY) = points[0];
+        TestAssert.True(System.Math.Abs(firstX - 100d) < 0.6d && System.Math.Abs(firstY - 250d) < 0.6d, "Semicircle should start at the top, got " + firstX + "," + firstY);
+        (double lastX, double lastY) = points[points.Count - 1];
+        TestAssert.True(System.Math.Abs(lastX - 100d) < 0.6d && System.Math.Abs(lastY - 150d) < 0.6d, "Clockwise semicircle should end at the bottom, got " + lastX + "," + lastY);
+        double maxX = points.Max(p => p.X);
+        TestAssert.True(System.Math.Abs(maxX - 150d) < 0.6d, "Clockwise semicircle should pass through the right point, got maxX " + maxX);
+    }
+
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

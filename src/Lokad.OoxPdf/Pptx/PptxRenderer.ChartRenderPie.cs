@@ -126,8 +126,10 @@ internal sealed partial class PptxRenderer
                 centerY,
                 radius,
                 radius,
-                segmentStart * 180d / Math.PI,
-                segmentSweep * 180d / Math.PI,
+                // AppendEllipseArcSegment takes visual angles (y-down): negate the math
+                // angles (y-up) so the emitted arc matches the MoveTo/LineTo endpoints.
+                -segmentStart * 180d / Math.PI,
+                -segmentSweep * 180d / Math.PI,
                 moveToStart && segment == 0);
         }
     }
