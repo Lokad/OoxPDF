@@ -3,12 +3,13 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-default-axis-titles-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "axis-title", "default-layout", "office-probe"],
+  "tags": ["pptx", "ladder", "chart", "axis-title", "default-layout", "office-probe", "needs-review"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "maxMeanAbsoluteError": 7.0,
+    "minForegroundRecall": 0.89,
     "maxChangedPixelRatioAtThreshold16": 0.08,
     "compareChartGraphicsStructureKinds": [
       "GridlineAxisPlotBoxCandidate",
