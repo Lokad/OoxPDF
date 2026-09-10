@@ -3,13 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-bubble-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "bubble-chart", "pptx-renderer-port"],
+  "tags": ["pptx", "ladder", "chart", "bubble-chart", "pptx-renderer-port", "needs-review"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 1.3,
+    "minForegroundRecall": 0.91,
     "maxChangedPixelRatioAtThreshold16": 0.018,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
     "compareChartGraphicsStructureKinds": [
