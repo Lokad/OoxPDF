@@ -3,12 +3,13 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-noautofit-numbered-tc-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "numbering", "noautofit", "text-state", "tc", "probe"],
+  "tags": ["pptx", "ladder", "typography", "numbering", "noautofit", "text-state", "tc", "probe", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "minForegroundRecall": 0.74
   },
   "allowedUnsupportedFeatures": []
 }
