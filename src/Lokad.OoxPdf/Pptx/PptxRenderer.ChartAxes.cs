@@ -81,16 +81,16 @@ internal sealed partial class PptxRenderer
         return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.AxisNiceTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
     }
 
-    private static ChartValueExtents ReadBubbleChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
+    private static ChartValueExtents ReadBubbleChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
     {
-        return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio, preferUnitOneOverTwo: true);
+        return ReadChartValueAxisExtents(valueAxis, fallback, boundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio, preferUnitOneOverTwo);
     }
 
-    private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback)
+    private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
     {
         if (axis is null)
         {
-            return ReadBubbleChartValueAxisExtents(valueAxis, fallback);
+            return ReadBubbleChartValueAxisExtents(valueAxis, fallback, boundsTickTargetCount, preferUnitOneOverTwo);
         }
 
         if (!axis.HasScaling)
@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = axis.Minimum ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio, preferUnitOneOverTwo: true);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio, preferUnitOneOverTwo);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;

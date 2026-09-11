@@ -875,6 +875,14 @@ internal static class PptxChartsTests
         TestAssert.Equal(5d, (double)method.Invoke(null, [4.0d, 0d, 5d, true, 0.96d, true])!);
         TestAssert.Equal(10d, (double)method.Invoke(null, [7.992d, 0d, 5d, true, 0.96d, false])!);
         TestAssert.Equal(8d, (double)method.Invoke(null, [6.5d, 0d, 5d, true, 0.96d, false])!);
+        TestAssert.Equal(10d, (double)method.Invoke(null, [9.5d, 0d, 8d, true, 0.96d, false])!);
+        TestAssert.Equal(14d, (double)method.Invoke(null, [12d, 0d, 8d, true, 0.96d, false])!);
+        TestAssert.Equal(8d, (double)method.Invoke(null, [7.5d, 0d, 8d, true, 0.96d, false])!);
+        TestAssert.Equal(5d, (double)method.Invoke(null, [4.5d, 0d, 8d, true, 0.96d, false])!);
+        TestAssert.Equal(3.5d, (double)method.Invoke(null, [3d, 0d, 8d, true, 0.96d, false])!);
+        TestAssert.Equal(3d, (double)method.Invoke(null, [2.5d, 0d, 8d, true, 0.96d, false])!);
+        TestAssert.Equal(3.5d, (double)method.Invoke(null, [3.1d, 0d, 8d, true, 0.96d, false])!);
+
     }
 
     public static void PptxSyntheticChartNoTitleRightLegendLeftInsetKeepsOfficePadding()
