@@ -844,6 +844,21 @@ internal static class PptxChartsTests
         TestAssert.Equal(5d, bubbleNoHeadroom);
     }
 
+    public static void PptxSyntheticScatterXAxisUnitHalvesEarlierThanY()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ChooseChartAxisMajorUnit",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart axis unit helper to remain inspectable by the Office evidence guard.");
+
+        TestAssert.Equal(1d, (double)method!.Invoke(null, [8d, 8d])!);
+        TestAssert.Equal(2d, (double)method.Invoke(null, [9d, 8d])!);
+        TestAssert.Equal(2d, (double)method.Invoke(null, [9.5d, 8d])!);
+        TestAssert.Equal(2d, (double)method.Invoke(null, [12d, 8d])!);
+        TestAssert.Equal(1d, (double)method.Invoke(null, [9.5d, 10d])!);
+        TestAssert.Equal(1d, (double)method.Invoke(null, [9d, 10d])!);
+    }
+
     public static void PptxSyntheticScatterAxisMaxPrefersUnitOneOverTwo()
     {
         var method = typeof(PptxRenderer).GetMethod(

@@ -195,10 +195,10 @@ internal sealed partial class PptxRenderer
             : axisUnits;
     }
 
-    private static ChartAxisUnits ResolveBubbleAxisUnits(ChartAxisUnits axisUnits, ChartValueExtents extents)
+    private static ChartAxisUnits ResolveBubbleAxisUnits(ChartAxisUnits axisUnits, ChartValueExtents extents, double tickTargetCount = PptxChartMetricRules.BubbleAxisNiceTickTargetCount)
     {
         return axisUnits.MajorUnit is null
-            ? axisUnits with { MajorUnit = ChooseChartAxisMajorUnit(Math.Max(1d, extents.Max - extents.Min), PptxChartMetricRules.BubbleAxisNiceTickTargetCount) }
+            ? axisUnits with { MajorUnit = ChooseChartAxisMajorUnit(Math.Max(1d, extents.Max - extents.Min), tickTargetCount) }
             : axisUnits;
     }
 
@@ -410,10 +410,11 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxis? sceneAxis,
         XElement? xmlAxis,
         PptxTheme theme,
-        ChartValueExtents extents)
+        ChartValueExtents extents,
+        double tickTargetCount = PptxChartMetricRules.BubbleAxisNiceTickTargetCount)
     {
         return new ChartBubbleValueAxisOptions(
-            ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(sceneAxis, xmlAxis), extents),
+            ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(sceneAxis, xmlAxis), extents, tickTargetCount),
             ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme));
     }
 
