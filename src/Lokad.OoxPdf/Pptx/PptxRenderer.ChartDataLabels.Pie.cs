@@ -45,9 +45,11 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         double angle = GetPieDataLabelStartAngle(firstSliceAngle);
-        // Office draws a leader line for exactly one manually-placed pie label: the
-        // smallest-|x-factor| valid manual layout (|x|<=1 and |y|<=1 in factor mode;
-        // out-of-range manuals fall back to auto with no leader). Charts without any
+        // Office usually draws a leader line for exactly one manually-placed pie label:
+        // the smallest-|x-factor| valid manual layout (|x|<=1 and |y|<=1 in factor mode;
+        // out-of-range manuals fall back to auto with no leader). A crafted probe with two
+        // small-|x-factor| manuals drew two leaders, so the rank is a majority rule with a
+        // known multi-leader residual, not a proven singleton law. Charts without any
         // valid manual label keep the legacy per-label behavior.
         int? manualLeaderSliceIndex = SelectPieManualLeaderLabelIndex(CollectPieManualLeaderFactors(labelOptions, slices));
         foreach (ChartIndexedPieSlice slice in slices)
