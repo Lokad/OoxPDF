@@ -266,7 +266,7 @@ internal sealed partial class PptxRenderer
                         runs.Add(CreateChartTextRun(wrapRun.Text, lineCursor, lineY, wrapRunWidth, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, wrapRun.Style, TextAlignment.Left) with { PreventCoalesce = true });
                         lineCursor += wrapRunWidth + separatorWidth;
                     }
-                    lineY -= height;
+                    lineY -= style.FontSize * PptxChartMetricRules.PieDataLabelLinePitchFactor;
                 }
                 return;
             }

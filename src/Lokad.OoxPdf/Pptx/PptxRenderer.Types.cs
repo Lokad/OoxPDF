@@ -321,6 +321,10 @@ internal sealed partial class PptxRenderer
         // indistinguishable on the constant-aspect corpus, so width wins as the natural
         // horizontal basis; revisit if a different-aspect pie disagrees.
         public const double PieDataLabelWrapWidthFactor = 0.19d;
+        // Wrapped pie label line pitch as a fraction of the tick font size (Office stacks
+        // wrapped lines 21.9pt apart at 18pt; single 18pt sample, Gamma/North/South agree
+        // to 0.1pt; our 24.3pt box height stays for boxes and clips).
+        public const double PieDataLabelLinePitchFactor = 1.22d;
         public const double PieDataLabelRadiusRatio = 0.62d;
         // Pie auto labels sit at this fraction of the pie radius (9 Office samples across
         // two pies: mean 0.735, range 0.67 to 0.85 excluding bestFit overflow; doughnuts

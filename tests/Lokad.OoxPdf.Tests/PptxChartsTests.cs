@@ -1106,6 +1106,8 @@ internal static class PptxChartsTests
         double baseline = (double)rules.GetField("PieDataLabelBaselineFactor")!.GetValue(null)!;
         TestAssert.True(Math.Abs(radius - 0.74d) < 0.000001d, "Pie auto radius should stay at the 9-sample Office mean. Got " + radius);
         TestAssert.True(Math.Abs(baseline - 0.88d) < 0.000001d, "Pie baseline inset should stay at the measured ascent. Got " + baseline);
+        double pitch = (double)rules.GetField("PieDataLabelLinePitchFactor")!.GetValue(null)!;
+        TestAssert.True(Math.Abs(pitch - 1.22d) < 0.000001d, "Pie wrap pitch should stay at the measured line step. Got " + pitch);
     }
 
     private static (double CenterX, double CenterY, double Radius) ReadPolarGeometry(object layout)
