@@ -817,9 +817,9 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
 
-        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, 8d, true, 0.96d])!;
-        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, 8d, false, 0.96d])!;
-        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, 8d, true, 0.96d])!;
+        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, 8d, true, 0.96d, false])!;
+        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, 8d, false, 0.96d, false])!;
+        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, 8d, true, 0.96d, false])!;
 
         TestAssert.Equal(120d, lineMarkerMax);
         TestAssert.Equal(100d, ordinaryMax);
@@ -833,15 +833,33 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
 
-        double scatterClustersMax = (double)method!.Invoke(null, [4.8d, 0d, 5d, true, 0.96d])!;
-        double scatterClustersNoHeadroom = (double)method.Invoke(null, [4.8d, 0d, 5d, false, 0.96d])!;
-        double bubbleMax = (double)method.Invoke(null, [4.0d, 0d, 5d, true, 0.96d])!;
-        double bubbleNoHeadroom = (double)method.Invoke(null, [4.0d, 0d, 5d, false, 0.96d])!;
+        double scatterClustersMax = (double)method!.Invoke(null, [4.8d, 0d, 5d, true, 0.96d, false])!;
+        double scatterClustersNoHeadroom = (double)method.Invoke(null, [4.8d, 0d, 5d, false, 0.96d, false])!;
+        double bubbleMax = (double)method.Invoke(null, [4.0d, 0d, 5d, true, 0.96d, false])!;
+        double bubbleNoHeadroom = (double)method.Invoke(null, [4.0d, 0d, 5d, false, 0.96d, false])!;
 
         TestAssert.Equal(6d, scatterClustersMax);
         TestAssert.Equal(5d, scatterClustersNoHeadroom);
         TestAssert.Equal(5d, bubbleMax);
         TestAssert.Equal(5d, bubbleNoHeadroom);
+    }
+
+    public static void PptxSyntheticScatterAxisMaxPrefersUnitOneOverTwo()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "GetNiceChartAxisMax",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
+
+        TestAssert.Equal(6d, (double)method!.Invoke(null, [5.5d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(7d, (double)method.Invoke(null, [6.5d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(9d, (double)method.Invoke(null, [7.992d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(9d, (double)method.Invoke(null, [8.5d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(10d, (double)method.Invoke(null, [9.5d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(6d, (double)method.Invoke(null, [4.8d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(5d, (double)method.Invoke(null, [4.0d, 0d, 5d, true, 0.96d, true])!);
+        TestAssert.Equal(10d, (double)method.Invoke(null, [7.992d, 0d, 5d, true, 0.96d, false])!);
+        TestAssert.Equal(8d, (double)method.Invoke(null, [6.5d, 0d, 5d, true, 0.96d, false])!);
     }
 
     public static void PptxSyntheticChartNoTitleRightLegendLeftInsetKeepsOfficePadding()

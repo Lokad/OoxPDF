@@ -107,7 +107,7 @@ internal sealed partial class PptxRenderer
         return niceMin < dataMax ? niceMin : dataMin;
     }
 
-    private static double GetNiceChartAxisMax(double dataMax, double dataMin, double tickTargetCount, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
+    private static double GetNiceChartAxisMax(double dataMax, double dataMin, double tickTargetCount, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio, bool preferUnitOneOverTwo = false)
     {
         if (Math.Abs(dataMax) < PptxChartMetricRules.AxisValueEpsilon && Math.Abs(dataMin) < PptxChartMetricRules.AxisValueEpsilon)
         {
@@ -121,6 +121,15 @@ internal sealed partial class PptxRenderer
         }
 
         double unit = ChooseChartAxisMajorUnit(range, tickTargetCount);
+        // Bubble/scatter bounds never nice to a unit of 2: cached Office references over
+        // dataMax 5.5-9.5 all ceiling with unit 1 (maxima 6, 7, 9, 9, 10 with the shared
+        // headroom rule), while unit 2 overshoots to even maxima. Other chart kinds keep
+        // the shared nicing untouched.
+        if (preferUnitOneOverTwo && unit == 2d)
+        {
+            unit = 1d;
+        }
+
         double niceMax = Math.Ceiling(dataMax / unit) * unit;
         if (niceMax < dataMax + PptxChartMetricRules.AxisValueEpsilon)
         {
