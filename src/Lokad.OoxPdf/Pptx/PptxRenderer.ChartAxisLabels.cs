@@ -24,6 +24,26 @@ internal sealed partial class PptxRenderer
         RgbColor color = style.Color;
         double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(sceneAxis, categoryAxis);
         int tickLabelSkip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(sceneAxis, categoryAxis);
+        double widestCategoryLabel = 0d;
+        if (horizontalBars)
+        {
+            var stripMeasurer = new ChartTextMeasurer(fontResolver);
+            for (int labelIndex = 0; labelIndex < labels.Count; labelIndex++)
+            {
+                if (labelIndex % tickLabelSkip != 0)
+                {
+                    continue;
+                }
+
+                string? stripLabel = labels[labelIndex]?.Text;
+                if (string.IsNullOrWhiteSpace(stripLabel))
+                {
+                    continue;
+                }
+
+                widestCategoryLabel = Math.Max(widestCategoryLabel, stripMeasurer.Measure(stripLabel, style));
+            }
+        }
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
@@ -46,9 +66,10 @@ internal sealed partial class PptxRenderer
             if (horizontalBars)
             {
                 double slotHeight = plotBox.Height / labels.Count;
-                x = Math.Max(0d, plotBox.X - plotBox.Width * PptxChartMetricRules.CategoryAxisHorizontalLeftOffsetRatio * labelOffsetScale);
+                double stripRight = plotBox.X - PptxChartMetricRules.HorizontalBarCategoryLabelPlotGapFactor * fontSize * labelOffsetScale;
                 y = plotBox.Y + slotHeight * (i + 0.5d) - height * PptxChartMetricRules.CategoryAxisHorizontalBaselineRatio;
-                width = plotBox.Width * PptxChartMetricRules.CategoryAxisHorizontalWidthRatio;
+                width = Math.Max(1d, widestCategoryLabel);
+                x = Math.Max(0d, stripRight - width);
                 alignment = TextAlignment.Right;
             }
             else

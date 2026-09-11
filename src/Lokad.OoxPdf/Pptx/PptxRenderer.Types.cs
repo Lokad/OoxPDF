@@ -362,6 +362,12 @@ internal sealed partial class PptxRenderer
         public const double CategoryAxisHorizontalLeftOffsetRatio = 0.1882d;
         public const double CategoryAxisHorizontalWidthRatio = 0.16d;
         public const double CategoryAxisHorizontalBaselineRatio = 0.217d;
+        // Font-relative gap between horizontal-bar category label ink and the plot edge.
+        // Calibrated from cached Office references: plot-left minus the common label right
+        // edge over label font size gives 0.928 at 18pt (clustered 181.73-165.0, stacked
+        // 145.20-128.5, inner 330.5-313.8, outer 443.2-426.5) and 0.922 at 9pt (axis-titles
+        // probe 181.4-173.1), so the bar-default probe with 9pt labels sits at 8.3pt, not 16.7pt.
+        public const double HorizontalBarCategoryLabelPlotGapFactor = 0.925d;
         public const double CategoryAxisVerticalWidthFactor = 1.35d;
         public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
         public const double CategoryAxisVerticalTopSideOffsetFactor = 0.70d;
