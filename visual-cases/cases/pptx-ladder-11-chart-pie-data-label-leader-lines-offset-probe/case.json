@@ -3,11 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-data-label-leader-lines-offset-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "pie-chart", "data-labels", "manual-layout", "leader-lines", "office-probe", "approximate"],
+  "tags": ["pptx", "ladder", "chart", "pie-chart", "data-labels", "manual-layout", "leader-lines", "office-probe", "needs-review"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.2,
+    "minForegroundRecall": 0.94,
+    "maxChangedPixelRatioAtThreshold16": 0.013
   }
 }
