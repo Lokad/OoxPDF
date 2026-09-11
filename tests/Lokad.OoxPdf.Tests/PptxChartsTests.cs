@@ -1049,6 +1049,20 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(wx - 126d) < 0.0001d, "Overflowing text should expand the clip symmetrically. Got " + wx);
     }
 
+    public static void PptxSyntheticPieLabelWordWrapPacksWords()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "SplitPieLabelWordLines",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie word-wrap helper to remain inspectable by the Office evidence guard.");
+        System.Collections.Generic.List<int[]> Gamma() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 62.6d, 34.1d }, 5d, 98.8d])!;
+        System.Collections.Generic.List<int[]> West() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 40.1d, 34.1d }, 5d, 79.8d])!;
+        System.Collections.Generic.List<int[]> North() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 44.4d, 34.1d }, 5d, 79.8d])!;
+        TestAssert.True(Gamma().Count == 2 && Gamma()[0].Length == 1 && Gamma()[1].Length == 1, "Gamma total over the cap should break between words.");
+        TestAssert.True(West().Count == 1 && West()[0].Length == 2, "West total inside the cap should stay single-line.");
+        TestAssert.True(North().Count == 2, "North total over the cap should wrap despite near-equal single-line widths.");
+    }
+
     private static (double X, double Y) ReadLayoutBoxXY(object box)
     {
         double x = (double)box.GetType().GetProperty("X")!.GetValue(box)!;

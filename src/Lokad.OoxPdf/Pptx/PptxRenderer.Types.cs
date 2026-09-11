@@ -307,6 +307,12 @@ internal sealed partial class PptxRenderer
         // Slice-anchored manual pie labels sit this fraction of the tick font size past
         // the rim midpoint (7 Office samples at 18pt average 9.0pt, range 6.4 to 11.8).
         public const double PieManualLabelEdgeGapFactor = 0.5d;
+        // Pie labels wrap past this fraction of the plot width (8 Office samples: every
+        // wrapped label exceeds it, every single-line label stays below; tightest margins
+        // are West 0.6pt and Gamma 2.8pt. Plot-width, height, and radius bases are
+        // indistinguishable on the constant-aspect corpus, so width wins as the natural
+        // horizontal basis; revisit if a different-aspect pie disagrees.
+        public const double PieDataLabelWrapWidthFactor = 0.19d;
         public const double PieDataLabelRadiusRatio = 0.62d;
         // Pie auto labels sit at this fraction of the pie radius (9 Office samples across
         // two pies: mean 0.735, range 0.67 to 0.85 excluding bestFit overflow; doughnuts

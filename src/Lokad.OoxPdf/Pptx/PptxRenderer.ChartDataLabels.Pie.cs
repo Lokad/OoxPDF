@@ -80,12 +80,50 @@ internal sealed partial class PptxRenderer
                 // Factor-mode manuals resolve against the slice-anchored box (label edge
                 // just outside the rim midpoint); out-of-range manuals fall back to auto,
                 // edge-mode and layout-free labels keep the legacy path.
+                List<int[]>? pieWrapLines = null;
+                double pieWrapLongest = 0d;
+                string pieWrapSeparator = GetChartDataLabelSeparator(effectiveOptions);
+                if (labelParts.Count > 1 && effectiveOptions.CustomTextRuns.Count == 0 && pieWrapSeparator.Length > 0 && pieWrapSeparator.All(char.IsWhiteSpace))
+                {
+                    var pieWrapMeasurer = new ChartTextMeasurer(fontResolver);
+                    var pieWrapWidths = new List<double>(labelParts.Count);
+                    foreach (string part in labelParts)
+                    {
+                        if (string.IsNullOrWhiteSpace(part))
+                        {
+                            continue;
+                        }
+                        double partWidth = Math.Max(0d, pieWrapMeasurer.Measure(part, style));
+                        if (partWidth <= 0d)
+                        {
+                            continue;
+                        }
+                        pieWrapWidths.Add(partWidth);
+                    }
+                    double pieWrapSepWidth = pieWrapMeasurer.Measure(pieWrapSeparator, style);
+                    double pieWrapCapWidth = plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor;
+                    List<int[]> pieSplitLines = SplitPieLabelWordLines(pieWrapWidths, pieWrapSepWidth, pieWrapCapWidth);
+                    if (pieSplitLines.Count > 1)
+                    {
+                        pieWrapLines = pieSplitLines;
+                        foreach (int[] pieLine in pieSplitLines)
+                        {
+                            double pieLineWidth = pieWrapSepWidth * Math.Max(0, pieLine.Length - 1);
+                            foreach (int pieIndex in pieLine)
+                            {
+                                pieLineWidth += pieWrapWidths[pieIndex];
+                            }
+                            pieWrapLongest = Math.Max(pieWrapLongest, pieLineWidth);
+                        }
+                    }
+                }
                 ChartLayoutBox labelBox;
                 if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _))
                 {
                     double rimMidX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion);
                     double rimMidY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion);
-                    labelBox = ResolvePieManualDataLabelBox(plotBox, effectiveOptions.Layout, rimMidX, rimMidY, geometry.CenterX, labelWidth, labelHeight, fontSize);
+                    double pieAnchorWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d) ? pieWrapLongest : labelWidth;
+                    labelBox = ResolvePieManualDataLabelBox(plotBox, effectiveOptions.Layout, rimMidX, rimMidY, geometry.CenterX, pieAnchorWidth, labelHeight, fontSize);
                 }
                 else if (effectiveOptions.Layout.HasLayout && (effectiveOptions.Layout.XModeKind == PptxSceneChartManualLayoutMode.Edge || effectiveOptions.Layout.YModeKind == PptxSceneChartManualLayoutMode.Edge))
                 {
@@ -119,7 +157,7 @@ internal sealed partial class PptxRenderer
 
                 if (!string.IsNullOrEmpty(label))
                 {
-                    AddPolarChartLabelRuns(labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, style, alignment);
+                    AddPolarChartLabelRuns(labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines);
                 }
             }
             angle += sweep;
@@ -165,7 +203,7 @@ internal sealed partial class PptxRenderer
             return parts;
         }
 
-        void AddPolarChartLabelRuns(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment)
+        void AddPolarChartLabelRuns(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<int[]>? wrapLines)
         {
             var textMeasurer = new ChartTextMeasurer(fontResolver);
             ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
@@ -196,6 +234,42 @@ internal sealed partial class PptxRenderer
             double separatorWidth = textMeasurer.Measure(GetChartDataLabelSeparator(options), style);
             double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
             clipBox = ExpandPieLabelClipToText(clipBox, x, y, width, height, totalWidth);
+            int wrapPartCount = 0;
+            if (wrapLines is not null && wrapLines.Count > 1)
+            {
+                foreach (int[] wrapLine in wrapLines)
+                {
+                    wrapPartCount += wrapLine.Length;
+                }
+            }
+            if (wrapPartCount == labelRuns.Length && wrapPartCount > 0)
+            {
+                clipBox = ExpandPieLabelClipToText(clipBox, x, y, width, height + (wrapLines!.Count - 1) * height, totalWidth);
+                double lineY = y;
+                foreach (int[] wrapLine in wrapLines)
+                {
+                    double lineWidth = separatorWidth * Math.Max(0, wrapLine.Length - 1);
+                    foreach (int wrapIndex in wrapLine)
+                    {
+                        lineWidth += labelRuns[wrapIndex].Width;
+                    }
+                    double lineCursor = alignment switch
+                    {
+                        TextAlignment.Right => x + Math.Max(1d, width) - lineWidth,
+                        TextAlignment.Center => x + (Math.Max(1d, width) - lineWidth) / 2d,
+                        _ => x
+                    };
+                    foreach (int wrapIndex in wrapLine)
+                    {
+                        ChartTextRunLayout wrapRun = labelRuns[wrapIndex];
+                        double wrapRunWidth = Math.Max(0.1d, wrapRun.Width);
+                        runs.Add(CreateChartTextRun(wrapRun.Text, lineCursor, lineY, wrapRunWidth, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, wrapRun.Style, TextAlignment.Left) with { PreventCoalesce = true });
+                        lineCursor += wrapRunWidth + separatorWidth;
+                    }
+                    lineY -= height;
+                }
+                return;
+            }
             double cursor = alignment switch
             {
                 TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
@@ -226,6 +300,31 @@ internal sealed partial class PptxRenderer
         double right = Math.Max(clip.X + clip.Width, left + textWidth);
         double newLeft = Math.Min(clip.X, left);
         return new ChartLayoutBox(newLeft, clip.Y, Math.Max(1d, right - newLeft), clip.Height);
+    }
+    // Greedy pie label word wrap: pack words into lines within maxWidth, counting the
+    // separator between words on a line; overlong single words ride whole on their own
+    // line. Returns part-index groups; more than one group means the label wraps.
+    private static List<int[]> SplitPieLabelWordLines(IReadOnlyList<double> wordWidths, double separatorWidth, double maxWidth)
+    {
+        var lines = new List<int[]>();
+        var current = new List<int>();
+        double lineWidth = 0d;
+        for (int i = 0; i < wordWidths.Count; i++)
+        {
+            if (current.Count > 0 && lineWidth + separatorWidth + wordWidths[i] > maxWidth)
+            {
+                lines.Add(current.ToArray());
+                current = new List<int>();
+                lineWidth = 0d;
+            }
+            current.Add(i);
+            lineWidth += (current.Count == 1 ? wordWidths[i] : separatorWidth + wordWidths[i]);
+        }
+        if (current.Count > 0)
+        {
+            lines.Add(current.ToArray());
+        }
+        return lines;
     }
     // Valid manual pie-label layouts for leader selection: factor-mode x/y within
     // unit range (missing modes count as factor, matching ResolveDataLabelBox).
