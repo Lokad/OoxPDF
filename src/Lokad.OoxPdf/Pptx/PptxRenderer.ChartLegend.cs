@@ -342,7 +342,9 @@ internal sealed partial class PptxRenderer
             : markerSize;
         double textGap = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
-            : PptxChartMetricRules.LegendTextGap;
+            : placement == ChartLegendPlacement.AreaRightLegend
+                ? PptxChartMetricRules.AreaRightLegendTextGap
+                : PptxChartMetricRules.LegendTextGap;
         double GetSideLegendContentWidth()
         {
             double contentWidth = entries.Count == 0
@@ -362,10 +364,14 @@ internal sealed partial class PptxRenderer
             return Math.Max(1d, packedWidth);
         }
 
+        // Area right legends right-anchor to the frame tail, so their box must be
+        // content-tight like the Office block; the plot-relative ratio floor would
+        // over-widen it by ~33pt.
+        bool areaRightLegend = sideFillLegend && placement == ChartLegendPlacement.AreaRightLegend;
         double width = horizontal
             ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth())
             : Math.Max(
-                sideStrokeLegend || sideFillLegendInFullFrame
+                sideStrokeLegend || sideFillLegendInFullFrame || areaRightLegend
                     ? 0d
                     : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio),
                 GetSideLegendContentWidth());
@@ -376,6 +382,7 @@ internal sealed partial class PptxRenderer
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
             _ when sideFillLegend && placement == ChartLegendPlacement.BubbleTitleRightLegend => frame.X + frame.Width * PptxChartMetricRules.BubbleTitleRightLegendSwatchXRatio,
+            _ when sideFillLegend && placement == ChartLegendPlacement.AreaRightLegend && !layout.Overlay && layout.PositionKind == PptxSceneChartLegendPosition.Right => frame.X + frame.Width - PptxChartMetricRules.AreaRightLegendTail - width,
             _ when sideFillLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillContentBoxReservedBandOffsetFactor,
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
             _ => plotBox.X + plotBox.Width + sideGap

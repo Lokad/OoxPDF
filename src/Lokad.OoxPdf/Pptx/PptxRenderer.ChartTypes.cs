@@ -401,7 +401,8 @@ internal sealed partial class PptxRenderer
     private enum ChartLegendPlacement
     {
         Default,
-        BubbleTitleRightLegend
+        BubbleTitleRightLegend,
+        AreaRightLegend
     }
 
     private readonly record struct ChartBooleanOption(bool Value, string RawValue, bool IsDefined);

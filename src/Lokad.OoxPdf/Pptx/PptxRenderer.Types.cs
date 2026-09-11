@@ -243,15 +243,25 @@ internal sealed partial class PptxRenderer
         // decomposes to 11.0pt on stacked (300) and clustered (50) bar ports.
         public const double HorizontalBarValueAxisRightPadding = 11.0d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
-        public const double LineRightLegendReservePadding = 43.8d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter
         // charts. Calibrated from cached Office references: reserve minus our measured marker
         // block and widest legend text decomposes to 10.6-11.0pt on 720pt frames for scatter,
         // line-3series, line-markers and line-stacked ports (the character-count extra term
-        // double-counts length the widest name already spans). Area keeps the legacy reserve.
+        // double-counts length the widest name already spans).
         public const double LineScatterRightLegendReservePadding = 10.8d;
-        public const double LineRightLegendExtraLegendCharacterPadding = 8.4d;
-        public const double AreaRightLegendReserveFrameWidthFactor = 0.025d;
+        // Area right-legend reserve block past the widest legend text and half the last
+        // category label. Calibrated from cached Office references (two public ports plus
+        // six purpose-built probes): reserve minus our measured widest text and half the
+        // last category label decomposes to 42.05pt on all eight (within 0.06), covering
+        // the fill key block, the 17.5pt swatch lead past the last category label end,
+        // and the tail below.
+        public const double AreaRightLegendFixedBlock = 42.05d;
+        // Tail past the longest legend entry for area right legends (Office 9.85-10.04
+        // across the same eight references); the content box right-anchors to it.
+        public const double AreaRightLegendTail = 10.0d;
+        // Gap between the fill swatch and the entry text for area right legends (Office
+        // 4.65-4.67 across five same-branch references; stroke keys keep their own gap).
+        public const double AreaRightLegendTextGap = 4.66d;
         public const double LineTitleRightLegendPlotBoxXRatio = 0.0639d;
         public const double LineTitleRightLegendPlotBoxYRatio = 0.0924d;
         public const double LineTitleRightLegendPlotBoxWidthRatio = 0.7391d;
