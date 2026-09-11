@@ -1033,6 +1033,22 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(lx - 579.7d) < 0.5d && Math.Abs(ly - 429.5d) < 0.5d, "Left-side anchor reads toward the slice past the full width. Got " + lx + "/" + ly);
     }
 
+    public static void PptxSyntheticPieLabelClipExpandsForOverflow()
+    {
+        var renderer = typeof(PptxRenderer);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var method = renderer.GetMethod("ExpandPieLabelClipToText", flags);
+        TestAssert.True(method is not null, "Expected pie clip helper to remain inspectable by the Office evidence guard.");
+        var boxType = renderer.GetNestedType("ChartLayoutBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected layout box.");
+        object box = System.Activator.CreateInstance(boxType, [136d, 100d, 80d, 24d])!;
+        object fitting = method!.Invoke(null, [box, 136d, 100d, 80d, 24d, 62d])!;
+        (double fx, double fy) = ReadLayoutBoxXY(fitting);
+        TestAssert.True(Math.Abs(fx - 136d) < 0.0001d, "Fitting text should keep the clip. Got " + fx);
+        object wide = method.Invoke(null, [box, 136d, 100d, 80d, 24d, 100d])!;
+        (double wx, double wy) = ReadLayoutBoxXY(wide);
+        TestAssert.True(Math.Abs(wx - 126d) < 0.0001d, "Overflowing text should expand the clip symmetrically. Got " + wx);
+    }
+
     private static (double X, double Y) ReadLayoutBoxXY(object box)
     {
         double x = (double)box.GetType().GetProperty("X")!.GetValue(box)!;

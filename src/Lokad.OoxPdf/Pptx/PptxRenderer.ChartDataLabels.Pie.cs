@@ -195,6 +195,7 @@ internal sealed partial class PptxRenderer
 
             double separatorWidth = textMeasurer.Measure(GetChartDataLabelSeparator(options), style);
             double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
+            clipBox = ExpandPieLabelClipToText(clipBox, x, y, width, height, totalWidth);
             double cursor = alignment switch
             {
                 TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
@@ -211,6 +212,21 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // Centered clip expansion for overflowing pie label text: single-line text wider
+    // than its box (Office wraps instead, still open) would otherwise lose glyphs at
+    // the box clip. Fitting text returns the clip unchanged; all alignments stay inside
+    // the centered expansion.
+    private static ChartLayoutBox ExpandPieLabelClipToText(ChartLayoutBox clip, double x, double y, double width, double height, double textWidth)
+    {
+        if (textWidth <= width)
+        {
+            return clip;
+        }
+        double left = x + (width - textWidth) / 2d;
+        double right = Math.Max(clip.X + clip.Width, left + textWidth);
+        double newLeft = Math.Min(clip.X, left);
+        return new ChartLayoutBox(newLeft, clip.Y, Math.Max(1d, right - newLeft), clip.Height);
+    }
     // Valid manual pie-label layouts for leader selection: factor-mode x/y within
     // unit range (missing modes count as factor, matching ResolveDataLabelBox).
     private static bool TryGetPieManualLeaderFactorX(PptxSceneChartManualLayout layout, out double factorX)
