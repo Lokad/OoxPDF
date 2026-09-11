@@ -280,7 +280,7 @@ internal sealed partial class PptxRenderer
         return kind == ChartPolarKind.Pie ? plotHeight : Math.Min(plotWidth, plotHeight);
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend)
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -313,6 +313,7 @@ internal sealed partial class PptxRenderer
                 bool legendVisible = legend.Visible && !legend.Overlay;
                 return kind switch
                 {
+                    ChartPolarKind.Pie when !legendVisible && hasVisibleDataLabels => PptxChartMetricRules.PieLabeledRadiusRatio,
                     ChartPolarKind.Pie => PptxChartMetricRules.PieRadiusRatio,
                     ChartPolarKind.Doughnut when !legendVisible => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
@@ -345,6 +346,7 @@ internal sealed partial class PptxRenderer
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Top => PptxChartMetricRules.DoughnutTopLegendCenterYRatio,
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Bottom => PptxChartMetricRules.DoughnutBottomLegendCenterYRatio,
+                    ChartPolarKind.Pie when !legendVisible && hasVisibleDataLabels => PptxChartMetricRules.PieLabeledCenterYRatio,
                     _ => PptxChartMetricRules.PieCenterYRatio
                 };
             }

@@ -298,6 +298,12 @@ internal sealed partial class PptxRenderer
         public const double DoughnutExplosionCenterOffsetRatio = 1.0d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
+        // Labeled pies (any visible data labels, no legend): Office centers the pie
+        // in the plot with a smaller radius (probe-1/offset/auto/noleader renders:
+        // centers exact at 0.5, radii 0.4007-0.4069 of plot height). Unlabeled pies
+        // keep the constants above (5-categories port: 0.4595 center, 0.4327 radius).
+        public const double PieLabeledCenterYRatio = 0.5d;
+        public const double PieLabeledRadiusRatio = 0.404d;
         public const double PieDataLabelRadiusRatio = 0.62d;
         public const double PieDataLabelWidthRatio = 0.55d;
         public const double PieDataLabelMinimumWidth = 18d;

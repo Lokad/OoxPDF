@@ -1010,6 +1010,36 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)method.Invoke(null, edgeArgs)!, "Edge-mode manuals carry points, not factors, and stay out of the pick.");
     }
 
+    public static void PptxSyntheticPieLabeledLayoutShrinksAndCenters()
+    {
+        var renderer = typeof(PptxRenderer);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags);
+        TestAssert.True(method is not null, "Expected polar layout helper to remain inspectable by the Office evidence guard.");
+        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
+        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
+        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected legend layout.");
+        object pie = System.Enum.ToObject(kindType, 0);
+        object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 120d, 520d, 360d])!;
+        object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
+        var empty = new Dictionary<int, double>();
+        object unlabeled = method!.Invoke(null, [pie, plotBox, empty, hidden, false])!;
+        object labeled = method.Invoke(null, [pie, plotBox, empty, hidden, true])!;
+        (double ux, double uy, double ur) = ReadPolarGeometry(unlabeled);
+        (double lx, double ly, double lr) = ReadPolarGeometry(labeled);
+        TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 284.88d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Unlabeled pies keep the tall radius (5-categories port). Got " + ux + "/" + uy + "/" + ur);
+        TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 145.44d) < 0.01d, "Labeled pies center with the smaller radius (leader probes). Got " + lx + "/" + ly + "/" + lr);
+    }
+
+    private static (double CenterX, double CenterY, double Radius) ReadPolarGeometry(object layout)
+    {
+        object geometry = layout.GetType().GetProperty("Geometry")!.GetValue(layout)!;
+        double cx = (double)geometry.GetType().GetProperty("CenterX")!.GetValue(geometry)!;
+        double cy = (double)geometry.GetType().GetProperty("CenterY")!.GetValue(geometry)!;
+        double radius = (double)geometry.GetType().GetProperty("Radius")!.GetValue(geometry)!;
+        return (cx, cy, radius);
+    }
+
     public static void PptxSyntheticChartMeasuredRightReserveKeepsPresetFloor()
     {
         var method = typeof(PptxRenderer).GetMethod(
