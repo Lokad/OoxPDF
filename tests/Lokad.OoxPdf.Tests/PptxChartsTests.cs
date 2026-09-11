@@ -1058,12 +1058,24 @@ internal static class PptxChartsTests
             "SplitPieLabelWordLines",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected pie word-wrap helper to remain inspectable by the Office evidence guard.");
-        System.Collections.Generic.List<int[]> Gamma() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 62.6d, 34.1d }, 5d, 98.8d])!;
-        System.Collections.Generic.List<int[]> West() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 40.1d, 34.1d }, 5d, 79.8d])!;
-        System.Collections.Generic.List<int[]> North() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 44.4d, 34.1d }, 5d, 79.8d])!;
+        System.Collections.Generic.List<int[]> Gamma() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 62.6d, 34.1d }, new double[] { 5d, 0d }, 98.8d])!;
+        System.Collections.Generic.List<int[]> West() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 40.1d, 34.1d }, new double[] { 5d, 0d }, 79.8d])!;
+        System.Collections.Generic.List<int[]> North() => (System.Collections.Generic.List<int[]>)method!.Invoke(null, [new double[] { 44.4d, 34.1d }, new double[] { 5d, 0d }, 79.8d])!;
         TestAssert.True(Gamma().Count == 2 && Gamma()[0].Length == 1 && Gamma()[1].Length == 1, "Gamma total over the cap should break between words.");
         TestAssert.True(West().Count == 1 && West()[0].Length == 2, "West total inside the cap should stay single-line.");
         TestAssert.True(North().Count == 2, "North total over the cap should wrap despite near-equal single-line widths.");
+    }
+
+    public static void PptxSyntheticPieLabelLongWordSplitsGreedily()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "SplitPieLabelLongWord",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie long-word helper to remain inspectable by the Office evidence guard.");
+        System.Collections.Generic.List<int> Tens() => (System.Collections.Generic.List<int>)method!.Invoke(null, [new double[] { 10d, 10d, 10d, 10d, 10d, 10d, 10d, 10d, 10d, 10d, 10d, 10d }, 95d])!;
+        System.Collections.Generic.List<int> Exact() => (System.Collections.Generic.List<int>)method!.Invoke(null, [new double[] { 40d, 40d }, 80d])!;
+        TestAssert.True(string.Join(",", Tens()) == "9,3", "Twelve 10pt chars at cap 95 should split 9 and 3.");
+        TestAssert.True(string.Join(",", Exact()) == "2", "An exact-fit word should stay whole.");
     }
 
     private static (double X, double Y) ReadLayoutBoxXY(object box)
