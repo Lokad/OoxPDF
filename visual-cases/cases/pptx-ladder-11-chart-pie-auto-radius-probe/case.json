@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-11-chart-pie-auto-radius-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-auto-radius-probe.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "pie-chart",
+    "data-labels",
+    "auto-layout",
+    "office-probe",
+    "needs-review"
+  ],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.75,
+    "minForegroundRecall": 0.96,
+    "maxChangedPixelRatioAtThreshold16": 0.013
+  }
+}

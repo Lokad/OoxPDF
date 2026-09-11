@@ -308,6 +308,14 @@ internal sealed partial class PptxRenderer
         // the rim midpoint (7 Office samples at 18pt average 9.0pt, range 6.4 to 11.8).
         public const double PieManualLabelEdgeGapFactor = 0.5d;
         public const double PieDataLabelRadiusRatio = 0.62d;
+        // Pie auto labels sit at this fraction of the pie radius (9 Office samples across
+        // two pies: mean 0.735, range 0.67 to 0.85 excluding bestFit overflow; doughnuts
+        // keep the shared constant above through the hole-size max).
+        public const double PieAutoDataLabelRadiusRatio = 0.74d;
+        // Pie label baselines sit this fraction of the font size below the box top
+        // (single-line Office labels: 16.0pt at 18pt). Bar labels are baseline-anchored
+        // by construction and never take this path.
+        public const double PieDataLabelBaselineFactor = 0.88d;
         public const double PieDataLabelWidthRatio = 0.55d;
         public const double PieDataLabelMinimumWidth = 18d;
         public const double PieDataLabelHeightFactor = 1.35d;

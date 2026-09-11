@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
 
         ChartPlotBox plotBox = layout.PlotBox;
         ChartPolarGeometry geometry = layout.Geometry;
-        double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieDataLabelRadiusRatio);
+        double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieAutoDataLabelRadiusRatio);
         double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
@@ -167,6 +167,7 @@ internal sealed partial class PptxRenderer
         {
             var textMeasurer = new ChartTextMeasurer(fontResolver);
             ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
+            y += style.FontSize * PptxChartMetricRules.PieDataLabelBaselineFactor;
             bool ShouldSplitPolarDataLabelParts()
             {
                 string separator = GetChartDataLabelSeparator(options);

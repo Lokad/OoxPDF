@@ -1061,6 +1061,15 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 145.44d) < 0.01d, "Labeled pies center with the smaller radius (leader probes). Got " + lx + "/" + ly + "/" + lr);
     }
 
+    public static void PptxSyntheticPieAutoLabelConstantsKeepOfficeCalibration()
+    {
+        var rules = typeof(PptxRenderer).GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected metric rules.");
+        double radius = (double)rules.GetField("PieAutoDataLabelRadiusRatio")!.GetValue(null)!;
+        double baseline = (double)rules.GetField("PieDataLabelBaselineFactor")!.GetValue(null)!;
+        TestAssert.True(Math.Abs(radius - 0.74d) < 0.000001d, "Pie auto radius should stay at the 9-sample Office mean. Got " + radius);
+        TestAssert.True(Math.Abs(baseline - 0.88d) < 0.000001d, "Pie baseline inset should stay at the measured ascent. Got " + baseline);
+    }
+
     private static (double CenterX, double CenterY, double Radius) ReadPolarGeometry(object layout)
     {
         object geometry = layout.GetType().GetProperty("Geometry")!.GetValue(layout)!;
