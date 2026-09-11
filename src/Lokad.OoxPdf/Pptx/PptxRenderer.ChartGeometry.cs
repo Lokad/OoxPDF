@@ -270,7 +270,9 @@ internal sealed partial class PptxRenderer
         {
             contentWidth = Math.Max(contentWidth, markerWidth + PptxChartMetricRules.LegendTextGap + textMeasurer.Measure(entry.Name, style));
         }
-        contentWidth = Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
+        // No minimum-width floor here (unlike legend boxes): the unexploded narrow-legend
+        // probe needs content plus gaps only (Office entries at 18pt with ~10pt names give
+        // a 42pt reserve, well under the 35pt box floor).
         return contentWidth + PptxChartMetricRules.LegendSideGap + PptxChartMetricRules.DoughnutRightLegendTail;
     }
     private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
