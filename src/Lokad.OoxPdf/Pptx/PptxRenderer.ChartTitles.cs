@@ -469,7 +469,7 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.DefaultAxisTitleLeftSideBaselineRatio;
         double baselineX = rightSide
             ? plotBox.X + plotBox.Width + sideReserve * sideBaselineRatio
-            : frame.X + sideReserve * sideBaselineRatio;
+            : frame.X + PptxChartMetricRules.DefaultAxisTitleLeftColumnOffset;
         // Office centers the title ink on the plot middle: the TJ origin sits exactly
         // at mid minus half the EMITTED width on three cached references (bar 253.9 vs
         // 253.7, column 280.95 vs 280.8, top-right 245.09 vs 245.0). The caller-measured

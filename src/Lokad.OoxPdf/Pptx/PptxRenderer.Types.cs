@@ -403,6 +403,11 @@ internal sealed partial class PptxRenderer
         public const double DefaultAxisTitleSideBaselineRatio = 0.28d;
         public const double DefaultAxisTitleTopBandBaselineRatio = 0.485d;
         public const double DefaultAxisTitleLeftSideBaselineRatio = 0.50d;
+        // Left vertical axis title column: identical 143.81pt on the bar, column, and
+        // long-label probes sharing one 540pt frame while plots (181.4/168.1/227.4) and
+        // label strips (22/10/69pt wide) all move, so the column is frame-anchored, not
+        // plot- or strip-anchored. Same-frame corpus caveat: needs a different-frame probe.
+        public const double DefaultAxisTitleLeftColumnOffset = 23.8d;
         public const double DefaultAxisTitleRightSideBaselineRatio = 0.67d;
         public const double DefaultAxisTitlePlotSideReserveRatio = 0.089d;
         public const double DefaultAxisTitlePlotOppositeSideReserveRatio = 0.020d;
