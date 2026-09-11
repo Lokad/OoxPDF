@@ -484,7 +484,40 @@ internal sealed partial class PptxRenderer
                 percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), percentStacked);
             string? defaultNumberFormat = percentStacked ? "0%" : null;
-            double requiredReserve = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, defaultNumberFormat, fontResolver);
+            // Office single-value-axis origins decompose to frame + 6.5pt indent + tick width
+            // + 0.92 * tick font size (column-stacked/clustered, dashboard, composite ports),
+            // while multi-plot dual-axis charts pack their strips tighter (compact probe:
+            // Office keeps a 17.6pt strip where the measured rule wants 24.1pt), so the
+            // measured rule applies to single-plot stacked charts while multi-plot charts
+            // keep the shared estimator.
+            IReadOnlyList<PptxSceneChartPlot> stackedBarPlots = ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar);
+            IReadOnlyList<XElement> stackedBarCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
+            double requiredReserve;
+            if (UseMeasuredStackedValueAxisReserve(Math.Max(stackedBarCharts.Count, stackedBarPlots.Count)))
+            {
+                ChartTextStyle stackedTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                var stackedTextMeasurer = new ChartTextMeasurer(fontResolver);
+                double stackedMaxLabelWidth = 0d;
+                foreach (double tickValue in GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount))
+                {
+                    string stackedLabel = FormatSceneOrXmlChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat);
+                    if (!string.IsNullOrWhiteSpace(stackedLabel))
+                    {
+                        stackedMaxLabelWidth = Math.Max(stackedMaxLabelWidth, stackedTextMeasurer.Measure(stackedLabel, stackedTickStyle));
+                    }
+                }
+
+                if (stackedMaxLabelWidth <= 0d)
+                {
+                    return plotBox;
+                }
+
+                requiredReserve = ComputeBarValueAxisLeftReserve(stackedMaxLabelWidth, stackedTickStyle.FontSize);
+            }
+            else
+            {
+                requiredReserve = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, defaultNumberFormat, fontResolver);
+            }
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
             bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false);
@@ -739,6 +772,13 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(plotBox.X, y, plotBox.Width, Math.Max(1d, presetTop - y));
     }
 
+    // Regime gate for stacked value-axis reserves: the measured indent-plus-font-gap rule
+    // is calibrated on single-plot single-axis charts only; multi-plot charts (dual-axis
+    // compact/overlay probes in corpus) keep the shared estimator.
+    private static bool UseMeasuredStackedValueAxisReserve(int barPlotCount)
+    {
+        return barPlotCount == 1;
+    }
     // Left reserve for horizontal-bar category labels: widest label plus the shared Office
     // axis-label-to-plot gap (bar-stacked-port decomposes exactly to frame + 50.0pt label +
     // 23.2pt, the same gap calibrated for value-axis labels).

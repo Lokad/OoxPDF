@@ -957,6 +957,17 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(compositeNarrow - 23.95d) < 0.01d, "Narrow-tick titled columns should not overshoot the preset. Got " + compositeNarrow);
     }
 
+    public static void PptxSyntheticStackedValueAxisReserveKeepsSinglePlotRegime()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "UseMeasuredStackedValueAxisReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected stacked value-reserve regime gate to remain inspectable by the Office evidence guard.");
+
+        TestAssert.True((bool)method!.Invoke(null, [1])!, "Single-plot stacked charts should use the measured indent-plus-font-gap rule (column-stacked Office origin within 0.1pt).");
+        TestAssert.True(!(bool)method.Invoke(null, [2])!, "Multi-plot stacked charts should keep the shared estimator (compact probe Office strip 17.6pt vs 24.1pt measured).");
+    }
+
     public static void PptxSyntheticChartMeasuredRightReserveKeepsPresetFloor()
     {
         var method = typeof(PptxRenderer).GetMethod(

@@ -9,10 +9,10 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 2.1,
-    "minForegroundRecall": 0.95,
-    "maxChangedPixelRatioAtThreshold16": 0.025,
-    "maxChartGraphicsStructureBoundsDelta": 4.2,
+    "maxMeanAbsoluteError": 0.6,
+    "minForegroundRecall": 0.97,
+    "maxChangedPixelRatioAtThreshold16": 0.013,
+    "maxChartGraphicsStructureBoundsDelta": 2.0,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
     "compareChartGraphicsStructureKinds": [
       "AxisPairPlotBoxCandidate",
@@ -26,7 +26,7 @@
     "additionalChartGraphicsStructureComparisons": [
       {
         "kinds": ["FilledRegion"],
-        "maxBoundsDelta": 4.2,
+        "maxBoundsDelta": 2.0,
         "matchSegmentCounts": true,
         "matchPathCommandCounts": true,
         "matchPathOperators": true
