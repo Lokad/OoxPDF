@@ -181,9 +181,18 @@ internal sealed partial class PptxRenderer
         RenderChartTextRuns(runs, graphics, chartFonts, "CVA", fontResolver, diagnosticSink);
     }
 
-    private static void RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static void RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxSceneChartAxis? primarySceneAxis = null, XElement? primaryXmlAxis = null)
     {
         ChartAxisSource rightValueAxisSource = ReadSceneOrXmlSecondaryRightValueAxis(sceneChart, chartXml);
+        if (primarySceneAxis is not null && rightValueAxisSource.SceneAxis is not null && string.Equals(primarySceneAxis.Id, rightValueAxisSource.SceneAxis.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (primaryXmlAxis is not null && rightValueAxisSource.XmlAxis is not null && string.Equals(ReadChartAxisId(primaryXmlAxis), ReadChartAxisId(rightValueAxisSource.XmlAxis), StringComparison.Ordinal))
+        {
+            return;
+        }
         XElement? rightValueAxis = rightValueAxisSource.XmlAxis;
         PptxSceneChartAxis? rightSceneAxis = rightValueAxisSource.SceneAxis;
         if (rightValueAxis is null && rightSceneAxis is null)

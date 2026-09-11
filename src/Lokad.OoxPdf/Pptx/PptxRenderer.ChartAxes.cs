@@ -454,7 +454,8 @@ internal sealed partial class PptxRenderer
             ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis, categoryAxisElement, defaultRightSide: false),
             valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : valueAxis.IsDeleted != true,
             categoryAxis is null ? !IsChartAxisDeleted(categoryAxisElement) : categoryAxis.IsDeleted != true,
-            ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis, categoryAxisElement));
+            ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis, categoryAxisElement),
+            ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis, categoryAxisElement, defaultTopSide: false));
     }
 
     private static ChartSeriesStroke? ReadSceneOrXmlChartAxisStroke(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)

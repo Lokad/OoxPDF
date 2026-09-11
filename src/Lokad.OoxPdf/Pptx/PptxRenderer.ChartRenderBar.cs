@@ -25,6 +25,9 @@ internal sealed partial class PptxRenderer
             bool percentStacked = IsPercentStackedChartGrouping(plotOptions.Grouping);
             double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisOptions.Reversed);
             double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
+            double columnBaseY = !horizontalBars && axesStyle.CategoryAxisTopSide
+                ? ChartValueToPlotCoordinate(valueExtents, valueExtents.Max, plotY, plotHeight, valueAxisOptions.Reversed)
+                : zeroY;
             double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
             double valueAxisAutoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible, manualPlotLayoutApplied);
             if (valueAxisOptions.MinorGridlines)
@@ -73,7 +76,7 @@ internal sealed partial class PptxRenderer
                     SetChartStroke(graphics, stroke);
                     double axisY = horizontalBars
                         ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
-                        : valueAxisCrossingY;
+                        : (axesStyle.CategoryAxisTopSide ? plotY + plotHeight : valueAxisCrossingY);
                     RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY));
                 }
             }
@@ -139,8 +142,8 @@ internal sealed partial class PptxRenderer
                     ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, value);
                     double barX = categoryX + seriesIndex * step;
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
-                    double barY = Math.Min(zeroY, valueY);
-                    double barHeight = Math.Abs(valueY - zeroY);
+                    double barY = Math.Min(columnBaseY, valueY);
+                    double barHeight = Math.Abs(valueY - columnBaseY);
                     FillChartRectangleInPlotClip(graphics, plotBox, barX, barY, barWidth, barHeight, fill);
                     StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
                 }

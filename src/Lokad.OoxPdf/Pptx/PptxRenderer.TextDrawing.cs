@@ -371,7 +371,8 @@ internal sealed partial class PptxRenderer
                 ApplyTextTransform(graphics, run);
             }
 
-            graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
             TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
             if (glyphRun is not null)
             {
@@ -496,7 +497,8 @@ internal sealed partial class PptxRenderer
                 ApplyTextTransform(graphics, run);
             }
 
-            graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
             TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
             if (glyphRun is not null)
             {

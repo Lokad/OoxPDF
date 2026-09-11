@@ -116,6 +116,36 @@ internal sealed partial class PptxRenderer
 
     // Affine matrix matching ApplyTextTransform, reused so link areas cover the
     // same transformed glyph positions the emitter paints (S08).
+    // Clip rects are authored in device space; inside a rotated text transform
+    // they must be mapped back through the inverse rotation, otherwise rotated
+    // text near the frame edge is cut (right-side vertical axis titles lost all
+    // but their first glyphs). Flip-only runs keep legacy behavior.
+    private static (double X, double Y, double Width, double Height) InverseTransformClip(TextRun run, double clipX, double clipY, double clipWidth, double clipHeight)
+    {
+        if (Math.Abs(run.RotationDegrees) <= PptxTextMetricRules.TextStateTolerance)
+        {
+            return (clipX, clipY, clipWidth, clipHeight);
+        }
+
+        (double a, double b, double c, double d, double e, double f) = TextTransformMatrix(run);
+        double det = a * d - b * c;
+        double MapX(double x, double y) => (d * (x - e) - c * (y - f)) / det;
+        double MapY(double x, double y) => (a * (y - f) - b * (x - e)) / det;
+        double x0 = MapX(clipX, clipY);
+        double y0 = MapY(clipX, clipY);
+        double x1 = MapX(clipX + clipWidth, clipY);
+        double y1 = MapY(clipX + clipWidth, clipY);
+        double x2 = MapX(clipX, clipY + clipHeight);
+        double y2 = MapY(clipX, clipY + clipHeight);
+        double x3 = MapX(clipX + clipWidth, clipY + clipHeight);
+        double y3 = MapY(clipX + clipWidth, clipY + clipHeight);
+        double minX = Math.Min(Math.Min(x0, x1), Math.Min(x2, x3));
+        double maxX = Math.Max(Math.Max(x0, x1), Math.Max(x2, x3));
+        double minY = Math.Min(Math.Min(y0, y1), Math.Min(y2, y3));
+        double maxY = Math.Max(Math.Max(y0, y1), Math.Max(y2, y3));
+        return (minX, minY, maxX - minX, maxY - minY);
+    }
+
     private static (double A, double B, double C, double D, double E, double F) TextTransformMatrix(TextRun run)
     {
         double radians = -run.RotationDegrees * Math.PI / 180d;
