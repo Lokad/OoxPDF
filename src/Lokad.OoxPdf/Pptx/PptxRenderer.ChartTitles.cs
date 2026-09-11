@@ -470,8 +470,26 @@ internal sealed partial class PptxRenderer
         double baselineX = rightSide
             ? plotBox.X + plotBox.Width + sideReserve * sideBaselineRatio
             : frame.X + sideReserve * sideBaselineRatio;
-        double baselineY = plotBox.Y + plotBox.Height / 2d
-            - textWidth * PptxChartMetricRules.DefaultAxisTitleSideBaselineRatio;
+        // Office centers the title ink on the plot middle: the TJ origin sits exactly
+        // at mid minus half the EMITTED width on three cached references (bar 253.9 vs
+        // 253.7, column 280.95 vs 280.8, top-right 245.09 vs 245.0). The caller-measured
+        // textWidth uses the chart-level size while runs emit at run-level sizes, so the
+        // width is remeasured here with the merged run styles that drive emission.
+        double emittedTitleWidth = 0d;
+        if (textRuns.Count != 0)
+        {
+            var titleMeasurer = new ChartTextMeasurer(fontResolver);
+            foreach (ChartTextRunOverride titleRun in textRuns)
+            {
+                if (!string.IsNullOrEmpty(titleRun.Text))
+                {
+                    emittedTitleWidth += Math.Max(0d, titleMeasurer.Measure(titleRun.Text, style.Merge(titleRun.TextStyle)));
+                }
+            }
+        }
+
+        double centeredTitleWidth = emittedTitleWidth > 0d ? emittedTitleWidth : textWidth;
+        double baselineY = plotBox.Y + plotBox.Height / 2d - centeredTitleWidth / 2d;
         double boxX = Math.Max(frame.X, Math.Min(frame.X + frame.Width - titleHeight, baselineX - titleHeight * 0.5d));
         double boxY = Math.Max(frame.Y, Math.Min(frame.Y + frame.Height - textWidth, baselineY));
         RenderChartShapeStyle(graphics, boxX, boxY, titleHeight, textWidth, shapeStyle);
