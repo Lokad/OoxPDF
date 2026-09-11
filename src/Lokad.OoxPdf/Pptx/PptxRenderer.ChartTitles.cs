@@ -214,7 +214,7 @@ internal sealed partial class PptxRenderer
                     axis.Title.TextBodyProperties,
                     ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
                     ChartTextStyleOverride.Empty,
-                    ChartTextStyleOverride.Empty,
+                    ToChartTextStyleOverride(axis.Title.TextStyle),
                     fontResolver, chartFonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink);
             }
 
@@ -329,6 +329,15 @@ internal sealed partial class PptxRenderer
         style = style.Merge(chartTextStyle);
         style = style.Merge(chartStyleRoleTextStyle);
         style = style.Merge(titleTextStyle);
+        if (titleTextStyle.Bold is null)
+        {
+            style = style with { Bold = true };
+        }
+
+        if (titleTextStyle.Color is null)
+        {
+            style = style with { Color = new RgbColor(0, 0, 0) };
+        }
         string trimmed = text.Trim();
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         var textMeasurer = new ChartTextMeasurer(fontResolver);
