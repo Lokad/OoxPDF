@@ -1070,7 +1070,7 @@ internal static class PptxChartsTests
         return (x, y);
     }
 
-    public static void PptxSyntheticPieLabeledLayoutShrinksAndCenters()
+    public static void PptxSyntheticPolarLabeledLayoutShrinksAndCenters()
     {
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
@@ -1083,12 +1083,17 @@ internal static class PptxChartsTests
         object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 120d, 520d, 360d])!;
         object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
         var empty = new Dictionary<int, double>();
-        object unlabeled = method!.Invoke(null, [pie, plotBox, empty, hidden, false])!;
-        object labeled = method.Invoke(null, [pie, plotBox, empty, hidden, true])!;
+        object unlabeled = method!.Invoke(null, [pie, plotBox, empty, hidden, false, false])!;
+        object labeled = method.Invoke(null, [pie, plotBox, empty, hidden, true, false])!;
         (double ux, double uy, double ur) = ReadPolarGeometry(unlabeled);
         (double lx, double ly, double lr) = ReadPolarGeometry(labeled);
         TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 284.88d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Unlabeled pies keep the tall radius (5-categories port). Got " + ux + "/" + uy + "/" + ur);
         TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 145.44d) < 0.01d, "Labeled pies center with the smaller radius (leader probes). Got " + lx + "/" + ly + "/" + lr);
+        object doughnut = System.Enum.ToObject(kindType, 1);
+        object narrowPlot = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 246d, 432d])!;
+        object narrowDoughnut = method.Invoke(null, [doughnut, narrowPlot, empty, hidden, false, false])!;
+        (double nx, double ny, double nr) = ReadPolarGeometry(narrowDoughnut);
+        TestAssert.True(Math.Abs(nx - 267d) < 0.01d && Math.Abs(ny - 288d) < 0.01d && Math.Abs(nr - 112.03d) < 0.01d, "Narrow doughnuts bind the width margin, not min-side (portrait probe). Got " + nx + "/" + ny + "/" + nr);
     }
 
     public static void PptxSyntheticPieAutoLabelConstantsKeepOfficeCalibration()
@@ -1154,7 +1159,7 @@ internal static class PptxChartsTests
 
         TestAssert.True(Math.Abs(piePortrait - 432d) < 0.000001d, "Portrait pies should keep the height-based radius. Got " + piePortrait);
         TestAssert.True(Math.Abs(pieLandscape - 432d) < 0.000001d, "Landscape pies are unchanged. Got " + pieLandscape);
-        TestAssert.True(Math.Abs(doughnutPortrait - 396d) < 0.000001d, "Doughnuts keep the smaller side without portrait evidence. Got " + doughnutPortrait);
+        TestAssert.True(Math.Abs(doughnutPortrait - 432d) < 0.000001d, "Portrait doughnut probes use the height base with the width-margin min. Got " + doughnutPortrait);
     }
 
     public static void PptxSyntheticChartMeasuredLeftInsetKeepsPresetFloor()

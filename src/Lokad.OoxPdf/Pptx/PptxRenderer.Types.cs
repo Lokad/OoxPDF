@@ -296,6 +296,14 @@ internal sealed partial class PptxRenderer
         public const double DoughnutNoLegendCenterYRatio = 0.5d;
         public const double DoughnutNoLegendRadiusRatio = 0.4746d;
         public const double DoughnutExplosionCenterOffsetRatio = 1.0d;
+        // Doughnut ring-to-plot-edge side margin: portrait/square Office rings fit
+        // (plotW - 2m)/2 exactly (m = 10.97pt both sides, two samples), capped by the
+        // height rule on wide plots.
+        public const double DoughnutPlotSideMargin = 10.97d;
+        // Uniform frame tail past the longest right-legend entry for doughnut plots
+        // (10.0 to 10.1pt over three Office renders, same phenomenon as the cartesian
+        // 10pt tails).
+        public const double DoughnutRightLegendTail = 10.0d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

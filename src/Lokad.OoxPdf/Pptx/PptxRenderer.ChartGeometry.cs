@@ -258,6 +258,21 @@ internal sealed partial class PptxRenderer
             frame.Height * ratios.Height);
     }
 
+    // Measured right-legend reserve for doughnut geometry plots: content width plus
+    // the side gap plus the uniform 10pt frame tail (three Office renders agree on the
+    // 117pt total to 0.4pt). The legend renderer keeps the unreduced plot box, so only
+    // geometry (center/radius) moves.
+    private static double ComputeDoughnutRightLegendReserve(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
+    {
+        double markerWidth = style.FontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
+        double contentWidth = 0d;
+        foreach (ChartLegendEntry entry in entries)
+        {
+            contentWidth = Math.Max(contentWidth, markerWidth + PptxChartMetricRules.LegendTextGap + textMeasurer.Measure(entry.Name, style));
+        }
+        contentWidth = Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
+        return contentWidth + PptxChartMetricRules.LegendSideGap + PptxChartMetricRules.DoughnutRightLegendTail;
+    }
     private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
@@ -272,15 +287,15 @@ internal sealed partial class PptxRenderer
         return position is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom;
     }
 
-    // Radius base for polar charts. Pies derive from the plot height even in portrait
-    // plots (composite portrait pie keeps the height-based radius); doughnuts keep the
-    // smaller side for lack of portrait evidence.
+    // Radius base for polar charts: plot height for pies and doughnuts alike (portrait
+    // probes killed the min-side base, which undershoots narrow plots); the width-margin
+    // min below handles narrow frames. Landscape plots keep byte-identical bases.
     private static double GetPieOrDoughnutRadiusBase(ChartPolarKind kind, double plotWidth, double plotHeight)
     {
-        return kind == ChartPolarKind.Pie ? plotHeight : Math.Min(plotWidth, plotHeight);
+        return plotHeight;
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels)
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -294,6 +309,10 @@ internal sealed partial class PptxRenderer
         ChartPolarGeometry GetPieOrDoughnutGeometry()
         {
             double radius = GetPieOrDoughnutRadiusBase(kind, plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio();
+            if (kind == ChartPolarKind.Doughnut)
+            {
+                radius = Math.Min(radius, Math.Max(1d, (plotBox.Width - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
+            }
 
             if (explosionReserve > 0d)
             {
@@ -329,6 +348,10 @@ internal sealed partial class PptxRenderer
                 return kind switch
                 {
                     ChartPolarKind.Pie => legendVisible ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
+                    // Right-legend doughnut centers sit on the reduced-plot middle (three
+                    // Office samples within 1.5pt) once the reserve applies; reserve-less
+                    // right legends (exploded) keep the legacy frame fraction.
+                    ChartPolarKind.Doughnut when legendVisible && legend.PositionKind == PptxSceneChartLegendPosition.Right && hasLegendReserve => 0.5d,
                     ChartPolarKind.Doughnut when legendVisible && legend.PositionKind == PptxSceneChartLegendPosition.Right => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
                     ChartPolarKind.Doughnut when legendVisible && legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutLeftLegendCenterXRatio,
                     ChartPolarKind.Doughnut when legendVisible && IsHorizontalLegendPosition(legend.PositionKind) => PptxChartMetricRules.DoughnutHorizontalLegendCenterXRatio,
