@@ -23,13 +23,13 @@ Unsupported feature warnings:
 - `PPTX_UNSUPPORTED_TRANSITION`: slide transition content was detected and ignored.
 - `PPTX_UNSUPPORTED_VIDEO`: video content was detected and ignored.
 - `PPTX_CHART_MISSING_CACHED_DATA`: a supported chart referenced formula-only data without chart-side cached numeric values; workbook provenance is preserved but not used for layout.
-- `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`: default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.
+- `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`: a chart axis title with manual positioning that cannot be honored (default-placement titles render natively).
 - `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION`: a default-placement chart axis title has an unsupported or missing axis kind/position.
 - `PPTX_UNSUPPORTED_CHART_NUMBER_FORMAT`: a chart number format uses unsupported syntax (locale rules, colors, native digit shapes, `!` escapes, `@` placeholders, or unknown brackets) that is dropped; one warning per construct per chart.
 - `PPTX_UNSUPPORTED_GRAPHIC_FRAME`: an unsupported graphic frame was detected and ignored.
 - `PPTX_UNSUPPORTED_GRADIENT_FILL`: an unsupported gradient fill was detected and ignored.
 - `PPTX_UNSUPPORTED_PATTERN_FILL`: an unsupported pattern fill was detected and ignored.
-- `PPTX_UNSUPPORTED_TEXT_ORIENTATION`: vertical text orientation was detected and ignored.
+- `PPTX_UNSUPPORTED_TEXT_ORIENTATION`: an unrecognized text orientation was detected and ignored (horz, vert, vert270, eaVert, mongolianVert, and the wordArt variants render).
 - `PPTX_UNSUPPORTED_TEXT_OVERFLOW`: text vertical overflow uses ellipsis; local clipping was applied but the ellipsis marker is not rendered.
 - `PPTX_UNSUPPORTED_PICTURE_FILL`: an unsupported picture fill was detected and ignored.
 - `PPTX_UNSUPPORTED_IMAGE_TILE`: a tiled image fill was detected and ignored.

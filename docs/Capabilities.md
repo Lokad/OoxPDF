@@ -21,7 +21,7 @@ Supported:
 - Grouped shapes with nested translation and scaling.
 - Fixed-grid tables with cell fills, explicit grid borders, merged-cell continuations (horizontal merges and row spans), vertical anchoring approximations, and cell text, plus first-pass built-in table styles (light/medium/dark header, banding, first/last row/column accents).
 - Clickable hyperlink annotations for shape, picture, connector, group, table, chart, and unknown-frame clicks plus shape and table body-text runs and chart title, axis-title, and data-label runs, resolving external URLs and internal slide targets with transformed bounds.
-- Native chart rendering for bar/column, line, area, pie/doughnut, scatter, bubble, and radar charts with cached numeric values, including titles, legends, category/value axes, tick labels, and first-pass data labels. Tier-1 (clustered/stacked bar/column, line with markers, plain pie) is the close-parity target; Tier-2 (area, scatter/bubble, secondary axes, leader-line labels, percent-stacked, trendlines) remains approximate; doughnut and radar ports hold needs-review tripwires after the polar-arc fixes.
+- Native chart rendering for bar/column, line, area, pie/doughnut, scatter, bubble, and radar charts with cached numeric values, including titles (single-series charts gain the series name as an auto title), legends, category/value axes on any side, tick labels, measured horizontal-bar label strips and outer-manual plot reserves, and first-pass data labels. Unstyled axis titles render bold black. Tier-1 (clustered/stacked bar/column, line with markers, plain pie) is the close-parity target; Tier-2 (area, scatter/bubble, secondary axes, leader-line labels, percent-stacked, trendlines) remains approximate; doughnut and radar ports hold needs-review tripwires after the polar-arc fixes.
 - Chart number formats: sign and conditional sections, 1900/1904 dates and datetimes, scientific and fraction rendering, accounting skip/fill runs, scaling commas, quoted/escaped/bare literal runs, locale currency symbols, and source-linked workbook formats including dates; axes and data labels share one formatter.
 - Markup-compatibility Choice/Fallback selection renders exactly one AlternateContent representation (first understood Choice, else Fallback).
 - Failed slide nodes rewind partial paint and annotations, then report PPTX_NODE_RENDER_FAILED while neighboring nodes render normally.
@@ -41,7 +41,7 @@ Unsupported or ignored:
 - Strict OOXML (ISO 29500) content: only the transitional dialect is supported; strict parts warn OOXML_STRICT_DIALECT and may render missing.
 - Complex scripts, bidirectional text, text shaping, fallback font selection, and OpenType layout features.
 
-Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides. PPTX_UNSUPPORTED_CHART is now reserved for unsupported kinds, missing parts, formula-only data without cached values, and unrendered default axis-title layouts (see Diagnostics.md).
+Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides. PPTX_UNSUPPORTED_CHART is now reserved for unsupported kinds, missing parts, and formula-only data without cached values (see Diagnostics.md).
 
 ## DOCX
 
