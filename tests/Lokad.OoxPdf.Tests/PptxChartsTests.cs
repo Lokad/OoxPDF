@@ -370,9 +370,9 @@ internal static class PptxChartsTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        // Value labels moved with the plot edge, which now fits the rendered tick labels
-        // under the Office-calibrated label reserve (composite evidence).
-        TestAssert.Contains("315.514", pdf);
+        // Value labels moved with the plot edge, which now rests on the preset floor since
+        // the recalibrated label reserve (frame indent plus font-relative gap) fits inside it.
+        TestAssert.Contains("323.014", pdf);
     }
 
     public static void PptxSyntheticChartCategoryAxisLabelOffsetRender()
@@ -948,11 +948,13 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart value-reserve helper to remain inspectable by the Office evidence guard.");
 
-        double threeDigit = (double)method!.Invoke(null, [27.37d])!;
-        double twoDigit = (double)method.Invoke(null, [18.25d])!;
+        double threeDigit = (double)method!.Invoke(null, [27.37d, 18d])!;
+        double twoDigit = (double)method.Invoke(null, [18.25d, 18d])!;
+        double compositeNarrow = (double)method.Invoke(null, [6.41d, 12d])!;
 
-        TestAssert.True(Math.Abs(threeDigit - 50.57d) < 0.0001d, "Three-digit reserve should be label plus 23.2pt Office gap. Got " + threeDigit);
-        TestAssert.True(Math.Abs(twoDigit - 41.45d) < 0.0001d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
+        TestAssert.True(Math.Abs(threeDigit - 50.43d) < 0.01d, "Three-digit reserve should be label plus indent plus font-relative gap. Got " + threeDigit);
+        TestAssert.True(Math.Abs(twoDigit - 41.31d) < 0.01d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
+        TestAssert.True(Math.Abs(compositeNarrow - 23.95d) < 0.01d, "Narrow-tick titled columns should not overshoot the preset. Got " + compositeNarrow);
     }
 
     public static void PptxSyntheticChartMeasuredRightReserveKeepsPresetFloor()

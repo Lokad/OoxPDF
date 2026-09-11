@@ -687,9 +687,10 @@ internal static class PptxCompositionTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
         // The grouped plot box now also fits the rendered value tick labels under the
-        // Office-calibrated label reserve (composite evidence); the transform still applies.
-        TestAssert.Contains("179.016 330.653 106.795 62.683 re f", pdf);
-        TestAssert.Contains("219.064 330.653 26.699 62.683 re f", pdf);
+        // recalibrated label reserve (frame indent plus font-relative gap); the transform
+        // still applies.
+        TestAssert.Contains("170.136 330.653 115.675 62.683 re f", pdf);
+        TestAssert.Contains("213.514 330.653 28.919 62.683 re f", pdf);
         TestAssert.DoesNotContain("160.128 326.52 123.84 63.72 re f", pdf);
         TestAssert.DoesNotContain("86.4 406.08 118.08 51.84 re f", pdf);
     }

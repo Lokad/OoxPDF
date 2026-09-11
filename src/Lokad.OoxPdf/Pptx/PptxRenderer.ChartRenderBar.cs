@@ -431,7 +431,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            double requiredReserve = ComputeBarValueAxisLeftReserve(maxLabelWidth);
+            double requiredReserve = ComputeBarValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
             bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false);
@@ -742,13 +742,16 @@ internal sealed partial class PptxRenderer
     // Left reserve for horizontal-bar category labels: widest label plus the shared Office
     // axis-label-to-plot gap (bar-stacked-port decomposes exactly to frame + 50.0pt label +
     // 23.2pt, the same gap calibrated for value-axis labels).
-    // Left reserve for single-plot non-stacked vertical-bar value labels: widest tick label
-    // plus the shared Office axis-label-to-plot gap (composite left chart decomposes exactly
-    // to frame plus 27.37pt label plus 23.2pt). Stacked, multi-axis and horizontal paths keep
-    // their own estimators.
-    private static double ComputeBarValueAxisLeftReserve(double maxValueLabelWidth)
+    // Left reserve for single-plot non-stacked vertical-bar value labels: frame indent plus
+    // widest tick label plus a font-relative gap (Office origins decompose to frame plus
+    // 6.5pt plus tick width plus 0.92 times tick font size; the old shared 23.2pt gap
+    // overshot narrow-tick titled columns like the composite port by 5.7pt). Stacked,
+    // multi-axis and horizontal paths keep their own estimators.
+    private static double ComputeBarValueAxisLeftReserve(double maxValueLabelWidth, double tickFontSize)
     {
-        return maxValueLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
+        return maxValueLabelWidth +
+            PptxChartMetricRules.BarValueAxisLabelFrameIndent +
+            tickFontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
     }
 
     // Right reserve for horizontal-bar value labels: the edge tick centers on the plot

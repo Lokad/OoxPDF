@@ -248,6 +248,12 @@ internal sealed partial class PptxRenderer
         // cached Office references: right margin minus half the widest bottom label
         // decomposes to 11.0pt on stacked (300) and clustered (50) bar ports.
         public const double HorizontalBarValueAxisRightPadding = 11.0d;
+        // Left indent of vertical-bar value tick labels from the chart frame, then a
+        // font-relative gap to the plot edge (Office origins decompose to frame plus 6.5pt
+        // plus tick width plus 0.92 times tick font size on column-stacked, column-clustered,
+        // dashboard, and composite ports, within 0.1).
+        public const double BarValueAxisLabelFrameIndent = 6.5d;
+        public const double BarValueAxisLabelGapFactor = 0.92d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter
         // charts. Calibrated from cached Office references: reserve minus our measured marker
