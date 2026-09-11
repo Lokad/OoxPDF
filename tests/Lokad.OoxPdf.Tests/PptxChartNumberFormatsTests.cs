@@ -197,11 +197,28 @@ internal static class PptxChartNumberFormatsTests
         TestAssert.Equal("\u20AC3/15/23", FormatChartNumber(45000d, "[$\u20AC-407]m/d/yy"));
     }
 
+    public static void PptxChartNumberGeneralFallbackKeepsFullPrecision()
+    {
+        TestAssert.Equal("6.438276616", FormatChartAxisLabel(6.438276615812609d));
+        TestAssert.Equal("1.25", FormatChartAxisLabel(1.25d));
+        TestAssert.Equal("0.125", FormatChartAxisLabel(0.125d));
+        TestAssert.Equal("100", FormatChartAxisLabel(100d));
+        TestAssert.Equal("2.5", FormatChartAxisLabel(2.5d));
+    }
+
     private static string FormatChartNumber(double value, string formatCode, bool date1904 = false)
     {
         System.Reflection.MethodInfo format = typeof(PptxRenderer).GetMethod(
             "FormatChartNumber",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart number-format bridge.");
         return (string)(format.Invoke(null, [value, formatCode, date1904]) ?? throw new InvalidOperationException("Expected formatted chart number."));
+    }
+
+    private static string FormatChartAxisLabel(double value)
+    {
+        System.Reflection.MethodInfo format = typeof(PptxRenderer).GetMethod(
+            "FormatChartAxisLabel",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart axis-label bridge.");
+        return (string)(format.Invoke(null, [value, null]) ?? throw new InvalidOperationException("Expected formatted axis label."));
     }
 }

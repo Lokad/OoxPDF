@@ -19,10 +19,12 @@ internal sealed partial class PptxRenderer
             return FormatChartNumber(value, numberFormat.FormatCode, ResolveAxisDate1904(axis));
         }
 
+        // Unrenderable codes fall back to General semantics: up to 10 significant digits
+        // (Office renders 6.438276615812609 as 6.438276616), not two-decimal rounding.
         double rounded = Math.Round(value);
         return Math.Abs(value - rounded) < PptxChartMetricRules.AxisValueEpsilon
             ? rounded.ToString("0", CultureInfo.InvariantCulture)
-            : value.ToString("0.##", CultureInfo.InvariantCulture);
+            : value.ToString("G10", CultureInfo.InvariantCulture);
     }
 
     private static string FormatSceneOrXmlChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, XElement? axis, string? defaultNumberFormat)
