@@ -1551,6 +1551,49 @@ internal static class PptxChartLegendsTests
         TestAssert.True(largeWidth < smallWidth, "Expected larger legend text style to reserve more right-legend width.");
     }
 
+    public static void PptxSyntheticNoTitleRightLegendPlotBoxSitsOnOfficeAxisLine()
+    {
+        XDocument chartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser>
+                    <c:tx><c:v>Series</c:v></c:tx>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/></c:catAx>
+                <c:valAx><c:axId val="20"/></c:valAx>
+              </c:plotArea>
+              <c:legend><c:legendPos val="r"/></c:legend>
+              </c:chart>
+            </c:chartSpace>
+            """);
+
+        System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartLegendTextStyle",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+            binder: null,
+            [typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument)],
+            modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
+        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, chartXml]) ?? throw new InvalidOperationException("Expected legend style.");
+        Type frameType = typeof(PptxRenderer).GetNestedType(
+            "ChartFrameBox",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
+        object frame = Activator.CreateInstance(frameType, [72d, 36d, 720d, 432d]) ?? throw new InvalidOperationException("Expected chart frame.");
+        System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
+            "GetCartesianNoTitleRightLegendPlotBox",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
+        object plotBox = getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, null, null, true, null, legendStyle]) ?? throw new InvalidOperationException("Expected plot box.");
+        double y = (double)(plotBox.GetType().GetProperty("Y")?.GetValue(plotBox) ?? 0d);
+        double height = (double)(plotBox.GetType().GetProperty("Height")?.GetValue(plotBox) ?? 0d);
+        TestAssert.True(Math.Abs(y - 75.90d) < 0.05d, "Plot bottom should sit 39.9pt below the frame top, on the Office category-axis line. Got " + y);
+        TestAssert.True(Math.Abs(y + height - 452.02d) < 0.05d, "Plot top should stay fixed. Got " + (y + height));
+    }
+
     public static void PptxChartRightLegendValueAxisReserveUsesAxisTextStyle()
     {
         const string chartXmlTemplate = """

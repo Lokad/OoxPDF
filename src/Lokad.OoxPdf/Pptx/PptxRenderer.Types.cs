@@ -230,9 +230,12 @@ internal sealed partial class PptxRenderer
         public const double HorizontalBarManualLayoutTargetPlotBoxXRatio = 0.179d;
         public const double HorizontalBarManualLayoutTargetPlotBoxYRatio = 0.1005d;
         public const double LineNoTitleRightLegendPlotBoxXRatio = 0.0828d;
-        public const double LineNoTitleRightLegendPlotBoxYRatio = 0.0908d;
+        // Untitled right-legend plot bottom sits on the Office category-axis line (111.90pt
+        // on 432pt frames across 19 cached references, all chart kinds; the clip padding below
+        // it is not reproduced). The top stays fixed.
+        public const double LineNoTitleRightLegendPlotBoxYRatio = 0.09236111111111111d;
         public const double LineNoTitleRightLegendPlotBoxWidthRatio = 0.7687d;
-        public const double LineNoTitleRightLegendPlotBoxHeightRatio = 0.8722d;
+        public const double LineNoTitleRightLegendPlotBoxHeightRatio = 0.87064814814814812d;
         public const double LineNoTitleRightLegendExplicitScalePlotBoxYRatio = 0.10128571428571429d;
         public const double LineNoTitleRightLegendExplicitScalePlotBoxHeightRatio = 0.8463333333333334d;
         // Reserve between the widest value-axis tick label and the plot area for untitled
