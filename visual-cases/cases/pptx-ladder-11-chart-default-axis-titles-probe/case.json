@@ -8,9 +8,9 @@
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "maxMeanAbsoluteError": 7.0,
+    "maxMeanAbsoluteError": 3.2,
     "minForegroundRecall": 0.89,
-    "maxChangedPixelRatioAtThreshold16": 0.08,
+    "maxChangedPixelRatioAtThreshold16": 0.047,
     "compareChartGraphicsStructureKinds": [
       "GridlineAxisPlotBoxCandidate",
       "HorizontalLine",
