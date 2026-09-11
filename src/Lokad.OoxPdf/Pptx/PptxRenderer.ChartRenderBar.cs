@@ -220,7 +220,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(defaultPlotBox);
         defaultPlotBox = AdjustBarChartPlotBoxForSingleValueAxisLabels(defaultPlotBox);
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
-        defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasTitle, hasLegend);
+        defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasLegend);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForValueLabels(defaultPlotBox);
         if (ignoreManualPlotLayout)
@@ -245,9 +245,9 @@ internal sealed partial class PptxRenderer
             return new ChartPlotBox(x, y, defaultPlotBox.Width, defaultPlotBox.Height);
         }
 
-        ChartPlotBox AdjustBarChartPlotBoxForDefaultAxisTitles(ChartPlotBox plotBox, bool horizontalBars, bool hasChartTitle, bool hasLegend)
+        ChartPlotBox AdjustBarChartPlotBoxForDefaultAxisTitles(ChartPlotBox plotBox, bool horizontalBars, bool hasLegend)
         {
-            if (hasChartTitle || hasLegend)
+            if (hasLegend)
             {
                 return plotBox;
             }
