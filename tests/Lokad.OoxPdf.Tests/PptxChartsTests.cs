@@ -968,6 +968,48 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)method.Invoke(null, [2])!, "Multi-plot stacked charts should keep the shared estimator (compact probe Office strip 17.6pt vs 24.1pt measured).");
     }
 
+    public static void PptxSyntheticPieManualLeaderPicksSmallestXFactor()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "SelectPieManualLeaderLabelIndex",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie manual-leader pick helper to remain inspectable by the Office evidence guard.");
+
+        int? probePick = (int?)method!.Invoke(null, [new List<(int, double)> { (0, -0.77024), (1, 0.66015), (2, -0.07016), (3, 0.61922) }]);
+        TestAssert.True(probePick == 2, "Leader probe should pick Gamma (smallest |x-factor|). Got " + probePick);
+        int? offsetPick = (int?)method.Invoke(null, [new List<(int, double)> { (0, -0.77342), (1, 0.43820), (2, 0.07619), (3, 0.63844) }]);
+        TestAssert.True(offsetPick == 2, "Offset probe should pick West (smallest |x-factor|). Got " + offsetPick);
+        int? legacyPick = (int?)method.Invoke(null, [new List<(int, double)>()]);
+        TestAssert.True(legacyPick is null, "Charts without valid manual labels should keep legacy emission. Got " + legacyPick);
+    }
+
+    public static void PptxSyntheticPieManualLeaderRejectsOutOfRangeFactors()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "TryGetPieManualLeaderFactorX",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie manual-leader validity helper to remain inspectable by the Office evidence guard.");
+
+        PptxSceneChartManualLayout FactorLayout(double? x, double? y) => new(
+            HasLayout: true, X: x, XValue: "", Y: y, YValue: "",
+            Width: null, WidthValue: "", Height: null, HeightValue: "",
+            LayoutTargetKind: PptxSceneChartManualLayoutTarget.Unknown, LayoutTarget: "",
+            XModeKind: PptxSceneChartManualLayoutMode.Unknown, XMode: "",
+            YModeKind: PptxSceneChartManualLayoutMode.Unknown, YMode: "",
+            WidthModeKind: PptxSceneChartManualLayoutMode.Unknown, WidthMode: "",
+            HeightModeKind: PptxSceneChartManualLayoutMode.Unknown, HeightMode: "");
+
+        object?[] inRange = [FactorLayout(0.07, 0.54), 0d];
+        TestAssert.True(((bool?)method!.Invoke(null, inRange) ?? false) && Math.Abs((double)(inRange[1] ?? 0d) - 0.07) < 0.000001d, "In-range factor manuals should stay eligible with their x factor.");
+        object?[] wideY = [FactorLayout(0.03, 1.93), 0d];
+        TestAssert.True(!(bool)method.Invoke(null, wideY)!, "Out-of-range y factor should drop the manual layout (ladder Delta falls back to auto).");
+        object?[] wideX = [FactorLayout(1.5, 0.2), 0d];
+        TestAssert.True(!(bool)method.Invoke(null, wideX)!, "Out-of-range x factor should drop the manual layout.");
+        PptxSceneChartManualLayout edge = FactorLayout(0.07, 0.54) with { XModeKind = PptxSceneChartManualLayoutMode.Edge };
+        object?[] edgeArgs = [edge, 0d];
+        TestAssert.True(!(bool)method.Invoke(null, edgeArgs)!, "Edge-mode manuals carry points, not factors, and stay out of the pick.");
+    }
+
     public static void PptxSyntheticChartMeasuredRightReserveKeepsPresetFloor()
     {
         var method = typeof(PptxRenderer).GetMethod(

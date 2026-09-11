@@ -45,6 +45,11 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         double angle = GetPieDataLabelStartAngle(firstSliceAngle);
+        // Office draws a leader line for exactly one manually-placed pie label: the
+        // smallest-|x-factor| valid manual layout (|x|<=1 and |y|<=1 in factor mode;
+        // out-of-range manuals fall back to auto with no leader). Charts without any
+        // valid manual label keep the legacy per-label behavior.
+        int? manualLeaderSliceIndex = SelectPieManualLeaderLabelIndex(CollectPieManualLeaderFactors(labelOptions, slices));
         foreach (ChartIndexedPieSlice slice in slices)
         {
             ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
@@ -71,7 +76,10 @@ internal sealed partial class PptxRenderer
             if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
             {
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
-                RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
+                if (manualLeaderSliceIndex is null || slice.Index == manualLeaderSliceIndex.Value)
+                {
+                    RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
+                }
                 RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
                 double textX = labelBox.X;
                 double textWidth = labelBox.Width;
@@ -181,6 +189,65 @@ internal sealed partial class PptxRenderer
                 cursor += runWidth + separatorWidth;
             }
         }
+    }
+
+    // Valid manual pie-label layouts for leader selection: factor-mode x/y within
+    // unit range (missing modes count as factor, matching ResolveDataLabelBox).
+    private static bool TryGetPieManualLeaderFactorX(PptxSceneChartManualLayout layout, out double factorX)
+    {
+        factorX = 0d;
+        if (!layout.HasLayout)
+        {
+            return false;
+        }
+        if (layout.XModeKind == PptxSceneChartManualLayoutMode.Edge || layout.YModeKind == PptxSceneChartManualLayoutMode.Edge)
+        {
+            return false;
+        }
+        double x = layout.X ?? 0d;
+        double y = layout.Y ?? 0d;
+        if (Math.Abs(x) > 1d || Math.Abs(y) > 1d)
+        {
+            return false;
+        }
+        factorX = x;
+        return true;
+    }
+
+    private static List<(int SliceIndex, double FactorX)> CollectPieManualLeaderFactors(ChartDataLabelOptions labelOptions, IReadOnlyList<ChartIndexedPieSlice> slices)
+    {
+        var factors = new List<(int SliceIndex, double FactorX)>(slices.Count);
+        foreach (ChartIndexedPieSlice slice in slices)
+        {
+            ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
+            if (!effectiveOptions.HasVisibleContent)
+            {
+                continue;
+            }
+            if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out double factorX))
+            {
+                factors.Add((slice.Index, factorX));
+            }
+        }
+        return factors;
+    }
+
+    // Leader pick: smallest |x-factor| valid manual label, first wins ties; null keeps
+    // legacy per-label emission (no valid manual label on the chart).
+    private static int? SelectPieManualLeaderLabelIndex(IReadOnlyList<(int SliceIndex, double FactorX)> manualLabels)
+    {
+        int? best = null;
+        double bestAbs = double.MaxValue;
+        foreach ((int sliceIndex, double factorX) in manualLabels)
+        {
+            double abs = Math.Abs(factorX);
+            if (abs < bestAbs)
+            {
+                bestAbs = abs;
+                best = sliceIndex;
+            }
+        }
+        return best;
     }
 
     private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options)
