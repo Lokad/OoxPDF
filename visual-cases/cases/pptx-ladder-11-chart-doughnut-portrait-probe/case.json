@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-11-chart-doughnut-portrait-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-portrait-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "narrow-plot", "office-probe", "needs-review"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.0,
+    "minForegroundRecall": 0.93,
+    "maxChangedPixelRatioAtThreshold16": 0.012
+  }
+}
