@@ -368,6 +368,15 @@ internal sealed partial class PptxRenderer
         // 145.20-128.5, inner 330.5-313.8, outer 443.2-426.5) and 0.922 at 9pt (axis-titles
         // probe 181.4-173.1), so the bar-default probe with 9pt labels sits at 8.3pt, not 16.7pt.
         public const double HorizontalBarCategoryLabelPlotGapFactor = 0.925d;
+        // Pad between the outer manual area edge and horizontal-bar category label ink.
+        // Calibrated from cached Office references: outer carve (plot-left minus area-left)
+        // is constant 104.8pt across five probes (x10/x18/x24/x30/w50), decomposing exactly
+        // to widest label plus the font-relative gap above plus 1.6pt here.
+        public const double HorizontalBarOuterAreaLabelPad = 1.6d;
+        // Right reserve between the outer manual area edge and the plot edge for
+        // horizontal bars. Calibrated from cached Office references: area-right minus
+        // plot-right is constant 15.1pt across the same five outer probes.
+        public const double HorizontalBarOuterPlotRightReserve = 15.1d;
         public const double CategoryAxisVerticalWidthFactor = 1.35d;
         public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
         public const double CategoryAxisVerticalTopSideOffsetFactor = 0.70d;

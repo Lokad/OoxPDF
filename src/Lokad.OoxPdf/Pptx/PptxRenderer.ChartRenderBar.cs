@@ -239,7 +239,7 @@ internal sealed partial class PptxRenderer
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
         }
 
-        return ResolveBarManualPlotLayoutTarget(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars);
+        return ResolveBarManualPlotLayoutTarget(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver);
 
         ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartPlotBox defaultPlotBox)
         {
@@ -667,16 +667,80 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? barPlot,
         XElement barChart,
         ChartPlotLayout layout,
-        bool horizontalBars)
+        bool horizontalBars,
+        ChartFrameBox frame,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly,
+        PresentationFontResolver? fontResolver)
     {
         if (!horizontalBars || layout.ManualLayoutTargetKind != PptxSceneChartManualLayoutTarget.Outer)
         {
             return layout;
         }
 
-        ChartPlotBox plotBox = DeriveHorizontalBarInnerPlotBox(layout.PlotAreaBox);
-        return new ChartPlotLayout(layout.PlotAreaBox, plotBox, layout.ManualLayoutTargetKind);
+        ChartLayoutBox centeredArea = ResolveCenteredOuterAreaBox(layout.PlotAreaBox);
+        ChartPlotBox plotBox = DeriveHorizontalBarOuterPlotBox(centeredArea);
+        return new ChartPlotLayout(centeredArea, plotBox, layout.ManualLayoutTargetKind);
 
+        // Office centers outer manual areas: six-probe calibration (x10/x18/x24/x30/w50
+        // plus an x14 prediction verified within 0.1pt) shows area center = frame center
+        // plus x-factor times frame width, clamped to fit the frame. Left-anchored factor
+        // math (shared with the inner target) misses x18 by 7.9pt and diverges without
+        // bound on larger x, while centering fits all six exactly.
+        ChartLayoutBox ResolveCenteredOuterAreaBox(ChartLayoutBox areaBox)
+        {
+            PptxSceneChartManualLayout manual = sceneChart?.PlotAreaLayout ?? PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml);
+            if (manual.XModeKind != PptxSceneChartManualLayoutMode.Factor || manual.X is not { } xFactor)
+            {
+                return areaBox;
+            }
+
+            double centerX = frame.X + frame.Width / 2d + xFactor * frame.Width;
+            double minCenterX = frame.X + areaBox.Width / 2d;
+            double maxCenterX = frame.X + frame.Width - areaBox.Width / 2d;
+            double clampedCenterX = Math.Clamp(centerX, Math.Min(minCenterX, maxCenterX), Math.Max(minCenterX, maxCenterX));
+            return new ChartLayoutBox(clampedCenterX - areaBox.Width / 2d, areaBox.Y, areaBox.Width, areaBox.Height);
+        }
+
+        // Outer carve: the manual area minus a measured label strip (widest label plus
+        // the font-relative gap plus the area pad) on the left and the constant right
+        // reserve. The ratio carve shared with the inner derivation overshoots by a
+        // constant 10.5pt here; the measured carve lands within 0.1pt on all six probes.
+        ChartPlotBox DeriveHorizontalBarOuterPlotBox(ChartLayoutBox plotAreaBox)
+        {
+            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            double leftReserve = 0d;
+            if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            {
+                ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                int tickLabelSkip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                var textMeasurer = new ChartTextMeasurer(fontResolver);
+                double maxCategoryWidth = 0d;
+                int labelIndex = 0;
+                foreach (ChartIndexedTextPoint? label in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())
+                {
+                    // Mirror the emission skip logic in RenderChartCategoryLabels so the
+                    // reserve covers rendered labels only.
+                    string? reserveLabel = label?.Text;
+                    if (labelIndex % tickLabelSkip == 0 && !string.IsNullOrWhiteSpace(reserveLabel))
+                    {
+                        maxCategoryWidth = Math.Max(maxCategoryWidth, textMeasurer.Measure(reserveLabel, tickStyle));
+                    }
+
+                    labelIndex++;
+                }
+
+                leftReserve = maxCategoryWidth +
+                    PptxChartMetricRules.HorizontalBarCategoryLabelPlotGapFactor * tickStyle.FontSize * labelOffsetScale +
+                    PptxChartMetricRules.HorizontalBarOuterAreaLabelPad;
+            }
+
+            double plotX = plotAreaBox.X + leftReserve;
+            double plotRight = plotAreaBox.X + plotAreaBox.Width - PptxChartMetricRules.HorizontalBarOuterPlotRightReserve;
+            ChartPlotBox derived = DeriveHorizontalBarInnerPlotBox(plotAreaBox);
+            return new ChartPlotBox(plotX, derived.Y, Math.Max(1d, plotRight - plotX), derived.Height);
+        }
         ChartPlotBox DeriveHorizontalBarInnerPlotBox(ChartLayoutBox plotAreaBox)
         {
             double leftReserve = 0d;
