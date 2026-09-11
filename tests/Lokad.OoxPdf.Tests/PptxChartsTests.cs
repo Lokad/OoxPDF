@@ -1031,6 +1031,9 @@ internal static class PptxChartsTests
         (double lx, double ly) = ReadLayoutBoxXY(left);
         TestAssert.True(Math.Abs(rx - 158.2d) < 0.5d && Math.Abs(ry - 430.2d) < 0.5d, "Right-side anchor reads away from the slice. Got " + rx + "/" + ry);
         TestAssert.True(Math.Abs(lx - 579.7d) < 0.5d && Math.Abs(ly - 429.5d) < 0.5d, "Left-side anchor reads toward the slice past the full width. Got " + lx + "/" + ly);
+        object straight = method!.Invoke(null, [plotBox, Layout(0.63844, 0.87143), 294d, 174d, 294d, 40d, 24.3d, 18d])!;
+        (double sx, double sy) = ReadLayoutBoxXY(straight);
+        TestAssert.True(Math.Abs(sx - 606.0d) < 0.5d, "Straight up/down slices should center the box on the rim midpoint. Got " + sx + "/" + sy);
     }
 
     public static void PptxSyntheticPieLabelClipExpandsForOverflow()

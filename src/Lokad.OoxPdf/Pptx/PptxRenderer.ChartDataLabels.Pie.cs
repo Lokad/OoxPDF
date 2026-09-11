@@ -388,13 +388,18 @@ internal sealed partial class PptxRenderer
     // Slice-anchored box for factor-mode manual pie labels: the label edge sits just
     // outside the rim midpoint (right side reads away from the slice, left side reads
     // toward it, so the width enters on the left only), then factors offset in plot
-    // units like Office (x with the plot width, y against the plot height).
+    // units like Office (x with the plot width, y against the plot height). Slices
+    // pointing straight up or down center the box on the rim midpoint (South sample:
+    // Office anchor matches centered to 0.1pt where sided misses by 30+).
     private static ChartLayoutBox ResolvePieManualDataLabelBox(ChartPlotBox plotBox, PptxSceneChartManualLayout layout, double rimMidX, double rimMidY, double centerX, double labelWidth, double labelHeight, double fontSize)
     {
         double gap = fontSize * PptxChartMetricRules.PieManualLabelEdgeGapFactor;
-        double left = rimMidX >= centerX
-            ? rimMidX + gap
-            : rimMidX - labelWidth - gap;
+        double edge = rimMidX - centerX;
+        double left = Math.Abs(edge) <= plotBox.Width * 0.01d
+            ? rimMidX - labelWidth / 2d
+            : edge > 0d
+                ? rimMidX + gap
+                : rimMidX - labelWidth - gap;
         double top = rimMidY - labelHeight / 2d;
         double factorX = layout.X ?? 0d;
         double factorY = layout.Y ?? 0d;
