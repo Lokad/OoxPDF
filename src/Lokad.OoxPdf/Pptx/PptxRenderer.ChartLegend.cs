@@ -198,7 +198,7 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement);
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -311,7 +311,7 @@ internal sealed partial class PptxRenderer
         RenderChartTextRuns(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink);
     }
 
-    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement)
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d)
     {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
@@ -385,7 +385,7 @@ internal sealed partial class PptxRenderer
             _ when sideFillLegend && placement == ChartLegendPlacement.AreaRightLegend && !layout.Overlay && layout.PositionKind == PptxSceneChartLegendPosition.Right => frame.X + frame.Width - PptxChartMetricRules.AreaRightLegendTail - width,
             _ when sideFillLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillContentBoxReservedBandOffsetFactor,
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
-            _ => plotBox.X + plotBox.Width + sideGap
+            _ => plotBox.X + plotBox.Width + sideGap + legendLeadExtra
         };
         double GetLegendSideStrokeBaselineCenterOffsetFactor()
         {

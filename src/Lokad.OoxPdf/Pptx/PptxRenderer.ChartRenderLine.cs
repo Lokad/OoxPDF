@@ -335,13 +335,17 @@ internal sealed partial class PptxRenderer
         double lastCategoryLabelWidth = plotKind == PptxSceneChartPlotKind.Area
             ? MeasureLastCategoryLabelWidth(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver)
             : 0d;
+        double lastXLabelWidth = plotKind == PptxSceneChartPlotKind.Scatter
+            ? MeasureScatterLastXLabelWidth(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver)
+            : 0d;
         ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(
             frame,
             seriesNames,
             legendTextStyle,
             includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area,
             fontResolver: fontResolver,
-            lastCategoryLabelWidth: lastCategoryLabelWidth);
+            lastCategoryLabelWidth: lastCategoryLabelWidth,
+            lastXLabelWidth: lastXLabelWidth);
         var textMeasurer = new ChartTextMeasurer(fontResolver);
 
         double maxValueLabelWidth = 0d;
@@ -475,14 +479,24 @@ internal sealed partial class PptxRenderer
     // Tail reserve past the legend marker block and widest entry text. Line/scatter use the
     // Office-calibrated tail; area uses its calibrated fixed block plus half the last
     // category label (the swatch clears the last category label end by a fixed lead).
-    private static double ComputeRightLegendReservePadding(double legendFontSize, int maxLegendTextLength, double frameWidth, bool includeAreaReserve, double lastCategoryLabelWidth)
+    private static double ComputeRightLegendReservePadding(double legendFontSize, int maxLegendTextLength, double frameWidth, bool includeAreaReserve, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
     {
         double markerBlock = legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
             legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +
             legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor;
-        if (!includeAreaReserve)
+        // A positive last-X width marks scatter legends with line-sample keys (line charts
+        // and marker-only keys always pass zero): their swatch clears the overhanging edge
+        // label by half of it on top of the marker block and their own tail.
+        if (!includeAreaReserve && lastXLabelWidth <= 0d)
         {
             return markerBlock + PptxChartMetricRules.LineScatterRightLegendReservePadding;
+        }
+
+        if (!includeAreaReserve)
+        {
+            return markerBlock +
+                PptxChartMetricRules.ScatterRightLegendReserveTail +
+                0.5d * lastXLabelWidth;
         }
 
         return PptxChartMetricRules.AreaRightLegendFixedBlock +
@@ -516,7 +530,45 @@ internal sealed partial class PptxRenderer
         return new ChartTextMeasurer(fontResolver).Measure(label.Text, categoryStyle);
     }
 
-    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth)
+    // Full width of the last visible X tick label for the scatter right-legend reserve
+    // and content: the swatch clears that edge label (centered on the plot edge) by half
+    // of it on top of the side gap. Mirrors the render-site X extents, units, style, and
+    // formatting exactly so both callers observe identical doubles. Returns zero when X
+    // labels are hidden or empty, and when any series hides its line (marker-only keys
+    // keep the legacy luck-matched layout).
+    private static double MeasureScatterLastXLabelWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    {
+        IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
+        ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
+        if (!IsSceneOrXmlChartAxisLabelVisible(xValueAxis.SceneAxis, xValueAxis.XmlAxis))
+        {
+            return 0d;
+        }
+
+        if (ReadSceneOrXmlSeriesLineHidden(plot, plotElement).Any(hidden => hidden))
+        {
+            return 0d;
+        }
+
+        ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetScatterXValueExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly)), PptxChartMetricRules.ScatterXAxisNiceTickTargetCount, preferUnitOneOverTwo: false);
+        ChartAxisUnits xUnits = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents, PptxChartMetricRules.ScatterXAxisNiceTickTargetCount).Units;
+        IReadOnlyList<double> tickValues = GetChartAxisTickValues(xExtents, xUnits.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false));
+        if (tickValues.Count == 0)
+        {
+            return 0d;
+        }
+
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, chartXml, xValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        string lastLabel = FormatSceneOrXmlChartAxisLabel(tickValues[tickValues.Count - 1], xValueAxis.SceneAxis, xValueAxis.XmlAxis, defaultNumberFormat: null);
+        if (string.IsNullOrEmpty(lastLabel))
+        {
+            return 0d;
+        }
+
+        return new ChartTextMeasurer(fontResolver).Measure(lastLabel, style);
+    }
+
+    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
     {
         double legendFontSize = legendTextStyle.FontSize;
         var textMeasurer = new ChartTextMeasurer(fontResolver);
@@ -527,7 +579,7 @@ internal sealed partial class PptxRenderer
             ? 0
             : seriesNames.Max(name => name.ActiveName.Length);
         double rightReserve = maxLegendTextWidth +
-            ComputeRightLegendReservePadding(legendFontSize, maxLegendTextLength, frame.Width, includeAreaReserve, lastCategoryLabelWidth);
+            ComputeRightLegendReservePadding(legendFontSize, maxLegendTextLength, frame.Width, includeAreaReserve, lastCategoryLabelWidth, lastXLabelWidth);
 
         return new ChartRightLegendReserve(rightReserve, legendFontSize, maxLegendTextWidth, maxLegendTextLength, includeAreaReserve);
     }

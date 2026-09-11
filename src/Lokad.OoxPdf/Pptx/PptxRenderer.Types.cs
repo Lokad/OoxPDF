@@ -252,6 +252,10 @@ internal sealed partial class PptxRenderer
         // line-3series, line-markers and line-stacked ports (the character-count extra term
         // double-counts length the widest name already spans).
         public const double LineScatterRightLegendReservePadding = 10.8d;
+        // Tail past the legend marker block for untitled right-legend scatter charts with
+        // line-sample keys (Office 10.01-10.03 across seven cached references; line keeps
+        // its own tail, marker-only keys keep the legacy layout untouched).
+        public const double ScatterRightLegendReserveTail = 10.0d;
         // Area right-legend reserve block past the widest legend text and half the last
         // category label. Calibrated from cached Office references (two public ports plus
         // six purpose-built probes): reserve minus our measured widest text and half the

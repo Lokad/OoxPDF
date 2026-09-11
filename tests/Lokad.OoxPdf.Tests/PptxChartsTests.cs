@@ -910,14 +910,16 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart right-reserve helper to remain inspectable by the Office evidence guard.");
 
-        double lineScatter = (double)method!.Invoke(null, [18d, 9, 720d, false, 0d])!;
-        double shortName = (double)method.Invoke(null, [18d, 5, 720d, false, 0d])!;
-        double areaWideCats = (double)method.Invoke(null, [18d, 9, 720d, true, 36.56d])!;
-        double areaNarrowCats = (double)method.Invoke(null, [18d, 9, 720d, true, 21.25d])!;
-        double areaNoCats = (double)method.Invoke(null, [18d, 9, 720d, true, 0d])!;
+        double lineScatter = (double)method!.Invoke(null, [18d, 9, 720d, false, 0d, 0d])!;
+        double shortName = (double)method.Invoke(null, [18d, 5, 720d, false, 0d, 0d])!;
+        double scatterWideX = (double)method.Invoke(null, [18d, 9, 720d, false, 0d, 18.25d])!;
+        double areaWideCats = (double)method.Invoke(null, [18d, 9, 720d, true, 36.56d, 0d])!;
+        double areaNarrowCats = (double)method.Invoke(null, [18d, 9, 720d, true, 21.25d, 0d])!;
+        double areaNoCats = (double)method.Invoke(null, [18d, 9, 720d, true, 0d, 0d])!;
 
         TestAssert.True(Math.Abs(lineScatter - 47.1d) < 0.001d, "Line/scatter tail should be marker block plus 10.8pt Office padding. Got " + lineScatter);
         TestAssert.True(Math.Abs(shortName - 47.1d) < 0.001d, "Short names must not shrink the tail: the widest name already spans the text. Got " + shortName);
+        TestAssert.True(Math.Abs(scatterWideX - 55.425d) < 0.001d, "Scatter padding should add half the overhanging edge label with its own tail. Got " + scatterWideX);
         TestAssert.True(Math.Abs(areaWideCats - 60.33d) < 0.001d, "Area padding should be the 42.05pt block plus half the last category label. Got " + areaWideCats);
         TestAssert.True(Math.Abs(areaNarrowCats - 52.675d) < 0.001d, "Narrow edge labels should shrink the area padding. Got " + areaNarrowCats);
         TestAssert.True(Math.Abs(areaNoCats - 42.05d) < 0.001d, "Missing edge labels should leave the bare block. Got " + areaNoCats);
