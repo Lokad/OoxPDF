@@ -3,11 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-stacked-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "line-chart", "stacked", "pptx-renderer-port", "approximate"],
+  "tags": ["pptx", "ladder", "chart", "line-chart", "stacked", "pptx-renderer-port", "needs-review"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.5,
+    "minForegroundRecall": 0.93,
+    "maxChangedPixelRatioAtThreshold16": 0.012
   }
 }
