@@ -304,6 +304,9 @@ internal sealed partial class PptxRenderer
         // keep the constants above (5-categories port: 0.4595 center, 0.4327 radius).
         public const double PieLabeledCenterYRatio = 0.5d;
         public const double PieLabeledRadiusRatio = 0.404d;
+        // Slice-anchored manual pie labels sit this fraction of the tick font size past
+        // the rim midpoint (7 Office samples at 18pt average 9.0pt, range 6.4 to 11.8).
+        public const double PieManualLabelEdgeGapFactor = 0.5d;
         public const double PieDataLabelRadiusRatio = 0.62d;
         public const double PieDataLabelWidthRatio = 0.55d;
         public const double PieDataLabelMinimumWidth = 18d;

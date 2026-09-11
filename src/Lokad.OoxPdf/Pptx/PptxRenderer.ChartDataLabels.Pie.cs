@@ -75,7 +75,24 @@ internal sealed partial class PptxRenderer
             string label = JoinChartDataLabelParts();
             if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
             {
-                ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                // Factor-mode manuals resolve against the slice-anchored box (label edge
+                // just outside the rim midpoint); out-of-range manuals fall back to auto,
+                // edge-mode and layout-free labels keep the legacy path.
+                ChartLayoutBox labelBox;
+                if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _))
+                {
+                    double rimMidX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion);
+                    double rimMidY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion);
+                    labelBox = ResolvePieManualDataLabelBox(plotBox, effectiveOptions.Layout, rimMidX, rimMidY, geometry.CenterX, labelWidth, labelHeight, fontSize);
+                }
+                else if (effectiveOptions.Layout.HasLayout && (effectiveOptions.Layout.XModeKind == PptxSceneChartManualLayoutMode.Edge || effectiveOptions.Layout.YModeKind == PptxSceneChartManualLayoutMode.Edge))
+                {
+                    labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                }
+                else
+                {
+                    labelBox = new ChartLayoutBox(labelX, labelY, labelWidth, labelHeight);
+                }
                 if (manualLeaderSliceIndex is null || slice.Index == manualLeaderSliceIndex.Value)
                 {
                     RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
@@ -250,6 +267,21 @@ internal sealed partial class PptxRenderer
         return best;
     }
 
+    // Slice-anchored box for factor-mode manual pie labels: the label edge sits just
+    // outside the rim midpoint (right side reads away from the slice, left side reads
+    // toward it, so the width enters on the left only), then factors offset in plot
+    // units like Office (x with the plot width, y against the plot height).
+    private static ChartLayoutBox ResolvePieManualDataLabelBox(ChartPlotBox plotBox, PptxSceneChartManualLayout layout, double rimMidX, double rimMidY, double centerX, double labelWidth, double labelHeight, double fontSize)
+    {
+        double gap = fontSize * PptxChartMetricRules.PieManualLabelEdgeGapFactor;
+        double left = rimMidX >= centerX
+            ? rimMidX + gap
+            : rimMidX - labelWidth - gap;
+        double top = rimMidY - labelHeight / 2d;
+        double factorX = layout.X ?? 0d;
+        double factorY = layout.Y ?? 0d;
+        return new ChartLayoutBox(left + factorX * plotBox.Width, top - factorY * plotBox.Height, labelWidth, labelHeight);
+    }
     private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options)
     {
         if (!options.ShowLeaderLines)

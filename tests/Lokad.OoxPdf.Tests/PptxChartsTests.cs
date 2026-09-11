@@ -1010,6 +1010,36 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)method.Invoke(null, edgeArgs)!, "Edge-mode manuals carry points, not factors, and stay out of the pick.");
     }
 
+    public static void PptxSyntheticPieManualAnchorSitsOutsideRimMidpoint()
+    {
+        var renderer = typeof(PptxRenderer);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var layoutType = renderer.Assembly.GetType("Lokad.OoxPdf.Pptx.PptxSceneChartManualLayout") ?? throw new InvalidOperationException("Expected manual layout.");
+        var method = renderer.GetMethod("ResolvePieManualDataLabelBox", flags);
+        TestAssert.True(method is not null, "Expected pie manual-anchor helper to remain inspectable by the Office evidence guard.");
+        var targetType = renderer.Assembly.GetType("Lokad.OoxPdf.Pptx.PptxSceneChartManualLayoutTarget")!;
+        var modeType = renderer.Assembly.GetType("Lokad.OoxPdf.Pptx.PptxSceneChartManualLayoutMode")!;
+        object Layout(double? x, double? y)
+        {
+            return System.Activator.CreateInstance(layoutType, [true, x, "", y, "", null, "", null, "", System.Enum.ToObject(targetType, 0), "", System.Enum.ToObject(modeType, 0), "", System.Enum.ToObject(modeType, 0), "", System.Enum.ToObject(modeType, 0), "", System.Enum.ToObject(modeType, 0), ""])!;
+        }
+        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
+        object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 120d, 520d, 360d])!;
+        object right = method!.Invoke(null, [plotBox, Layout(-0.77024, -0.36990), 549.7d, 309.2d, 404d, 80d, 24.3d, 18d])!;
+        object left = method.Invoke(null, [plotBox, Layout(0.66015, -0.73512), 325.4d, 177d, 404d, 80d, 24.3d, 18d])!;
+        (double rx, double ry) = ReadLayoutBoxXY(right);
+        (double lx, double ly) = ReadLayoutBoxXY(left);
+        TestAssert.True(Math.Abs(rx - 158.2d) < 0.5d && Math.Abs(ry - 430.2d) < 0.5d, "Right-side anchor reads away from the slice. Got " + rx + "/" + ry);
+        TestAssert.True(Math.Abs(lx - 579.7d) < 0.5d && Math.Abs(ly - 429.5d) < 0.5d, "Left-side anchor reads toward the slice past the full width. Got " + lx + "/" + ly);
+    }
+
+    private static (double X, double Y) ReadLayoutBoxXY(object box)
+    {
+        double x = (double)box.GetType().GetProperty("X")!.GetValue(box)!;
+        double y = (double)box.GetType().GetProperty("Y")!.GetValue(box)!;
+        return (x, y);
+    }
+
     public static void PptxSyntheticPieLabeledLayoutShrinksAndCenters()
     {
         var renderer = typeof(PptxRenderer);
