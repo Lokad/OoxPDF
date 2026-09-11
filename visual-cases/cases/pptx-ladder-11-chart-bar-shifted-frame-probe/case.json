@@ -1,0 +1,28 @@
+{
+  "id": "pptx-ladder-11-chart-bar-shifted-frame-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-bar-shifted-frame-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "bar-chart", "axis-title", "frame-geometry", "office-probe", "needs-review"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.8,
+    "minForegroundRecall": 0.92,
+    "maxChangedPixelRatioAtThreshold16": 0.014,
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate",
+      "VerticalGridlineGroupCandidate",
+      "VerticalLine"
+    ],
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "maxChartGraphicsStructureLineWidthDelta": 0.25,
+    "compareChartTextStructureKinds": ["AxisTitleText", "CategoryAxisTickLabel"],
+    "compareChartTextStructureTextHash": true,
+    "maxChartTextStructurePositionDelta": 8.0
+  }
+}
