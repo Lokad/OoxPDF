@@ -13,7 +13,7 @@
     "minForegroundRecall": 0.86,
     "maxChangedPixelRatioAtThreshold16": 0.008,
     "maxChartGraphicsStructureBoundsDelta": 8.0,
-    "compareChartGraphicsStructureKinds": ["HorizontalLine", "PlotAreaClipBoxCandidate"],
+    "compareChartGraphicsStructureKinds": ["HorizontalLine", "PlotAreaClipBoxCandidate"]
   },
   "allowedUnsupportedFeatures": []
 }
