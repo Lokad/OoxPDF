@@ -304,6 +304,13 @@ internal sealed partial class PptxRenderer
         // (10.0 to 10.1pt over three Office renders, same phenomenon as the cartesian
         // 10pt tails).
         public const double DoughnutRightLegendTail = 10.0d;
+        // Exploded right-legend slack: Office keeps plotRight minus legendBoxLeft at 35pt on
+        // narrow/mid/wide exploded doughnuts (sigma 0.05), i.e. the plot shrinks only past
+        // a 25pt legend box (35pt overlap minus the 10pt tail). Our gap-3 content runs
+        // 1.65pt under Office box widths, so the no-shrink boundary lands at 23.4pt of
+        // content; narrow A/B/C content (23.32) stays unshrunk with 0.08 margin, guarded
+        // by the exploded-port tripwires.
+        public const double DoughnutExplodedLegendSlack = 23.4d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

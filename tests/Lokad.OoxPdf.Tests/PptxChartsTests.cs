@@ -1098,18 +1098,60 @@ internal static class PptxChartsTests
         object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 120d, 520d, 360d])!;
         object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
         var empty = new Dictionary<int, double>();
-        object unlabeled = method!.Invoke(null, [pie, plotBox, empty, hidden, false, false])!;
-        object labeled = method.Invoke(null, [pie, plotBox, empty, hidden, true, false])!;
+        object unlabeled = method!.Invoke(null, [pie, plotBox, empty, hidden, false, false, 0d])!;
+        object labeled = method.Invoke(null, [pie, plotBox, empty, hidden, true, false, 0d])!;
         (double ux, double uy, double ur) = ReadPolarGeometry(unlabeled);
         (double lx, double ly, double lr) = ReadPolarGeometry(labeled);
         TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 284.88d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Unlabeled pies keep the tall radius (5-categories port). Got " + ux + "/" + uy + "/" + ur);
         TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 145.44d) < 0.01d, "Labeled pies center with the smaller radius (leader probes). Got " + lx + "/" + ly + "/" + lr);
         object doughnut = System.Enum.ToObject(kindType, 1);
         object narrowPlot = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 246d, 432d])!;
-        object narrowDoughnut = method.Invoke(null, [doughnut, narrowPlot, empty, hidden, false, false])!;
+        object narrowDoughnut = method.Invoke(null, [doughnut, narrowPlot, empty, hidden, false, false, 0d])!;
         (double nx, double ny, double nr) = ReadPolarGeometry(narrowDoughnut);
         TestAssert.True(Math.Abs(nx - 267d) < 0.01d && Math.Abs(ny - 288d) < 0.01d && Math.Abs(nr - 112.03d) < 0.01d, "Narrow doughnuts bind the width margin, not min-side (portrait probe). Got " + nx + "/" + ny + "/" + nr);
     }
+    public static void PptxSyntheticExplodedDoughnutReserveFollowsOfficeSlack()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeExplodedDoughnutRightLegendReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected exploded doughnut reserve helper to remain inspectable by the Office evidence guard.");
+
+        double narrow = (double)method!.Invoke(null, [23.32d])!;
+        double mid = (double)method.Invoke(null, [66.23d])!;
+        double wide = (double)method.Invoke(null, [132.78d])!;
+
+        TestAssert.True(Math.Abs(narrow - 0d) < 0.000001d, "Narrow A/B/C content stays inside the slack (exploded port keeps full frame). Got " + narrow);
+        TestAssert.True(Math.Abs(mid - 42.83d) < 0.01d, "Mid legend content reserves 42.83 past the slack. Got " + mid);
+        TestAssert.True(Math.Abs(wide - 109.38d) < 0.01d, "Wide legend content reserves 109.38 past the slack. Got " + wide);
+    }
+
+    public static void PptxSyntheticExplodedDoughnutLayoutTranslatesRigidly()
+    {
+        var renderer = typeof(PptxRenderer);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags);
+        TestAssert.True(method is not null, "Expected polar layout helper to remain inspectable by the Office evidence guard.");
+        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
+        var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
+        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected legend layout.");
+        var instanceFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
+        object doughnut = System.Enum.ToObject(kindType, 1);
+        object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 576d, 432d])!;
+        object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
+        object manual = legendType.GetProperty("Layout", instanceFlags)!.GetValue(hidden)!;
+        object textBody = legendType.GetProperty("TextBodyProperties", instanceFlags)!.GetValue(hidden)!;
+        object shape = legendType.GetProperty("ShapeStyle", instanceFlags)!.GetValue(hidden)!;
+        object rightVisible = System.Activator.CreateInstance(legendType, [PptxSceneChartLegendPosition.Right, "r", false, true, manual, textBody, shape])!;
+        var explosions = new Dictionary<int, double> { [0] = 0.1d };
+        object legacy = method!.Invoke(null, [doughnut, plotBox, explosions, rightVisible, false, false, 0d])!;
+        object shifted = method.Invoke(null, [doughnut, plotBox, explosions, rightVisible, false, false, 42.83d])!;
+        (double lx, double ly, double lr) = ReadPolarGeometry(legacy);
+        (double sx, double sy, double sr) = ReadPolarGeometry(shifted);
+        TestAssert.True(Math.Abs(sr - lr) < 0.000001d && Math.Abs(sy - ly) < 0.000001d, "The reserve must not resize the ring, only translate it. Got " + sr + "/" + sy);
+        TestAssert.True(Math.Abs((lx - sx) - 42.83d / 2d) < 0.01d, "The ring translates by half the reserve (1:2 ring:legend rule). Got " + (lx - sx));
+    }
+
 
     public static void PptxSyntheticPieAutoLabelConstantsKeepOfficeCalibration()
     {

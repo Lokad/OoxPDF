@@ -258,11 +258,7 @@ internal sealed partial class PptxRenderer
             frame.Height * ratios.Height);
     }
 
-    // Measured right-legend reserve for doughnut geometry plots: content width plus
-    // the side gap plus the uniform 10pt frame tail (three Office renders agree on the
-    // 117pt total to 0.4pt). The legend renderer keeps the unreduced plot box, so only
-    // geometry (center/radius) moves.
-    private static double ComputeDoughnutRightLegendReserve(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
+    private static double MeasureDoughnutLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
     {
         double markerWidth = style.FontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         double contentWidth = 0d;
@@ -270,10 +266,29 @@ internal sealed partial class PptxRenderer
         {
             contentWidth = Math.Max(contentWidth, markerWidth + PptxChartMetricRules.LegendTextGap + textMeasurer.Measure(entry.Name, style));
         }
+        return contentWidth;
+    }
+
+    // Measured right-legend reserve for doughnut geometry plots: content width plus
+    // the side gap plus the uniform 10pt frame tail (three Office renders agree on the
+    // 117pt total to 0.4pt). The legend renderer keeps the unreduced plot box, so only
+    // geometry (center/radius) moves.
+    private static double ComputeDoughnutRightLegendReserve(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
+    {
+        double contentWidth = MeasureDoughnutLegendContentWidth(entries, style, textMeasurer);
         // No minimum-width floor here (unlike legend boxes): the unexploded narrow-legend
         // probe needs content plus gaps only (Office entries at 18pt with ~10pt names give
         // a 42pt reserve, well under the 35pt box floor).
         return contentWidth + PptxChartMetricRules.LegendSideGap + PptxChartMetricRules.DoughnutRightLegendTail;
+    }
+
+    // Exploded right-legend reserve on measured content width: Office keeps plotRight minus
+    // legendBoxLeft at 35pt, so the ring translates rigidly by half the content past the slack
+    // (mid 42.9 and wide 109.5pt shrinks from 66.23/132.78pt contents; narrow 23.32pt content
+    // stays at zero). Applies to geometry translation only; the plot box itself stays full-frame.
+    private static double ComputeExplodedDoughnutRightLegendReserve(double contentWidth)
+    {
+        return Math.Max(0d, contentWidth - PptxChartMetricRules.DoughnutExplodedLegendSlack);
     }
     private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
     {
@@ -297,7 +312,7 @@ internal sealed partial class PptxRenderer
         return plotHeight;
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false)
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false, double explodedRightLegendReserve = 0d)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -384,7 +399,9 @@ internal sealed partial class PptxRenderer
                     !legend.Overlay &&
                     legend.PositionKind == PptxSceneChartLegendPosition.Right)
                 {
-                    return radius * explosionReserve * PptxChartMetricRules.DoughnutExplosionCenterOffsetRatio;
+                    // Exploded wide legends translate the ring rigidly: the legacy full-frame offset
+                    // minus half the reserve (1:2 ring:legend rule; radius identical). Zero keeps legacy.
+                    return radius * explosionReserve * PptxChartMetricRules.DoughnutExplosionCenterOffsetRatio - explodedRightLegendReserve / 2d;
                 }
 
                 return 0d;
