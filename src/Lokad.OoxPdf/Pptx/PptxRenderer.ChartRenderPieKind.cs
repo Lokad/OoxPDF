@@ -103,7 +103,9 @@ internal sealed partial class PptxRenderer
                 // left (1:2 ring:legend rule), so wide legends force a content-driven reserve that
                 // translates the ring by half the reserve with identical radius. The legend box
                 // below re-anchors to the same tail edge.
-                bool isDoughnutRightFillLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right && !doughnutLegendEntries.All(entry => entry.Stroke is not null && entry.Fill is null);
+                bool isDoughnutFillLegend = legend.Visible && !legend.Overlay && !doughnutLegendEntries.All(entry => entry.Stroke is not null && entry.Fill is null);
+                bool isDoughnutRightFillLegend = isDoughnutFillLegend && legend.PositionKind == PptxSceneChartLegendPosition.Right;
+                bool isDoughnutLeftFillLegend = isDoughnutFillLegend && legend.PositionKind == PptxSceneChartLegendPosition.Left;
                 bool isExplodedDoughnut = polarPoints.PointExplosions.Count != 0;
                 double explodedDoughnutLegendReserve = 0d;
                 if (isDoughnutRightFillLegend && !isExplodedDoughnut)
@@ -119,7 +121,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, doughnutGeometryPlotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: false, hasLegendReserve: hasDoughnutLegendReserve, explodedRightLegendReserve: explodedDoughnutLegendReserve);
                 RenderDoughnutChart(graphics, theme, colorMap, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle);
                 RenderPieDataLabels(theme, colorMap, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle, doughnutSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
-                RenderChartLegend(graphics, frame, plotBox, doughnutLegendEntries, legend, doughnutLegendStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, explodedDoughnutRightLegend: isDoughnutRightFillLegend && isExplodedDoughnut, doughnutRightLegend: isDoughnutRightFillLegend);
+                RenderChartLegend(graphics, frame, plotBox, doughnutLegendEntries, legend, doughnutLegendStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, explodedDoughnutRightLegend: isDoughnutRightFillLegend && isExplodedDoughnut, doughnutRightLegend: isDoughnutRightFillLegend, doughnutLeftLegend: isDoughnutLeftFillLegend);
                 return true;
             }
         }

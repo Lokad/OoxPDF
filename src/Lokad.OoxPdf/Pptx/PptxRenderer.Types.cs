@@ -317,6 +317,10 @@ internal sealed partial class PptxRenderer
         // scaling stands and only the anchor moves. Left legends keep their own offset (minus
         // 5.0pt on one sample) for lack of evidence.
         public const double DoughnutRightLegendVerticalShift = 22.92d;
+        // Doughnut left-legend vertical shift: the block middle sits 5.0pt below the plot middle
+        // (two Office renders at n=3 and n=5, same middle, sigma 0.01); the left x anchor stays
+        // legacy on a single box sample.
+        public const double DoughnutLeftLegendVerticalShift = 5.0d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

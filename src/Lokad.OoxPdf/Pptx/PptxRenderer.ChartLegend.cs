@@ -198,7 +198,7 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool explodedDoughnutRightLegend = false, bool doughnutRightLegend = false)
+    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool explodedDoughnutRightLegend = false, bool doughnutRightLegend = false, bool doughnutLeftLegend = false)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, explodedDoughnutRightLegend, doughnutRightLegend);
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, explodedDoughnutRightLegend, doughnutRightLegend, doughnutLeftLegend);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -311,7 +311,7 @@ internal sealed partial class PptxRenderer
         RenderChartTextRuns(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink);
     }
 
-    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool explodedDoughnutRightLegend = false, bool doughnutRightLegend = false)
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool explodedDoughnutRightLegend = false, bool doughnutRightLegend = false, bool doughnutLeftLegend = false)
     {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
@@ -332,6 +332,14 @@ internal sealed partial class PptxRenderer
         // Doughnut right legends (exploded or not) share the measured vertical anchor; manual-layout
         // charts keep the legacy placement for lack of evidence.
         bool useDoughnutRightAnchor = doughnutRightLegend && sideFillLegendInFullFrame;
+        // Doughnut left legends share the pattern with their own measured shift; the left x anchor
+        // stays legacy.
+        bool useDoughnutLeftAnchor = doughnutLeftLegend && sideFillLegendInFullFrame;
+        // Shared vertical anchor: right and left blocks sit below the plot middle by their own
+        // measured shifts; every other side legend keeps the centered anchor.
+        double doughnutLegendVerticalShift = useDoughnutRightAnchor
+            ? PptxChartMetricRules.DoughnutRightLegendVerticalShift
+            : useDoughnutLeftAnchor ? PptxChartMetricRules.DoughnutLeftLegendVerticalShift : 0d;
         // Exploded doughnut right legends additionally re-anchor to the tail edge with a content-tight
         // box (Office block right edge sits 10pt inside the frame on all three exploded probes).
         bool useExplodedDoughnutAnchor = useDoughnutRightAnchor && explodedDoughnutRightLegend;
@@ -421,11 +429,8 @@ internal sealed partial class PptxRenderer
             _ when sideFillLegend => frame.Y + frame.Height / 2d -
                 fontSize * PptxChartMetricRules.LegendSideFillBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
-            // Doughnut right-legend blocks sit below the plot middle by the measured shift
-            // (8 Office renders, constant middle across n=3 and n=5); all other side legends
-            // keep the centered anchor.
             _ when !sideStrokeLegend && !horizontal => frame.Y + frame.Height / 2d -
-                (useDoughnutRightAnchor ? PptxChartMetricRules.DoughnutRightLegendVerticalShift : 0d) +
+                doughnutLegendVerticalShift +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when !horizontal => plotBox.Y + plotBox.Height / 2d +
                 fontSize * PptxChartMetricRules.LegendMarkerBaselineFactor +
