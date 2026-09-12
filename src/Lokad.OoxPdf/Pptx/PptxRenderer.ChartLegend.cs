@@ -198,7 +198,7 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false)
+    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend);
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -311,7 +311,7 @@ internal sealed partial class PptxRenderer
         RenderChartTextRuns(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink);
     }
 
-    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false)
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d)
     {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
@@ -430,7 +430,9 @@ internal sealed partial class PptxRenderer
             _ when sideFillLegend => frame.Y + frame.Height / 2d -
                 fontSize * PptxChartMetricRules.LegendSideFillBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
-            _ when !sideStrokeLegend && !horizontal => frame.Y + frame.Height / 2d -
+            // Left blocks hang below the ring center (exact on landscape probes, 0.2 residual on
+            // square); right blocks keep the plot-relative shift proven by the short-plot probe.
+            _ when !sideStrokeLegend && !horizontal => (useDoughnutLeftAnchor && doughnutRingCenterY > 0d ? doughnutRingCenterY : frame.Y + frame.Height / 2d) -
                 doughnutLegendVerticalShift +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when !horizontal => plotBox.Y + plotBox.Height / 2d +

@@ -325,6 +325,12 @@ internal sealed partial class PptxRenderer
         // on four renders (narrow/wide/square/exploded-left, exact to 0.01) regardless of content
         // width, i.e. the box grows rightward from a fixed head edge with the shared 4.65pt gap.
         public const double DoughnutLeftLegendHeadInset = 13.19d;
+        // Left-ring center lead past the remaining-space middle (narrow/mid/wide/square Office
+        // box widths agree within 0.02).
+        public const double DoughnutLeftRingCenterLead = 2.05d;
+        // Titled doughnut side legends center the ring a measured band below the plot middle
+        // (four 270.32 renders against four 288.0 untitled); the band holds the title zone.
+        public const double DoughnutTitledCenterYOffset = 17.68d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

@@ -312,7 +312,7 @@ internal sealed partial class PptxRenderer
         return plotHeight;
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false, double explodedRightLegendReserve = 0d)
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false, double explodedRightLegendReserve = 0d, double leftLegendBoxRight = 0d, bool doughnutHasTitle = false)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -339,9 +339,33 @@ internal sealed partial class PptxRenderer
             double centerXRatio = GetPieOrDoughnutCenterXRatio();
             double centerYRatio = GetPieOrDoughnutCenterYRatio();
             double centerXOffset = GetPieOrDoughnutCenterXOffset(radius);
+            double centerX = plotBox.X + plotBox.Width * centerXRatio + centerXOffset;
+            double centerY = plotBox.Y + plotBox.Height * centerYRatio;
+            bool leftFillLegend = legend.Visible && !legend.Overlay &&
+                legend.PositionKind == PptxSceneChartLegendPosition.Left;
+            // Left legends center the ring past the legend box (four Office box widths agree);
+            // manual layouts keep the legacy ratio (call site passes zero box edge there).
+            if (kind == ChartPolarKind.Doughnut && leftFillLegend && leftLegendBoxRight > 0d)
+            {
+                centerX = (leftLegendBoxRight + plotBox.X + plotBox.Width) / 2d + PptxChartMetricRules.DoughnutLeftRingCenterLead;
+            }
+            // Titled doughnut side legends center the ring below the title band; untitled rings
+            // and title-less layouts keep the calibrated ratios (right-untitled is unobserved).
+            if (kind == ChartPolarKind.Doughnut &&
+                (legend.PositionKind == PptxSceneChartLegendPosition.Left || legend.PositionKind == PptxSceneChartLegendPosition.Right) &&
+                doughnutHasTitle && hasLegend)
+            {
+                centerY = plotBox.Y + plotBox.Height / 2d - PptxChartMetricRules.DoughnutTitledCenterYOffset;
+            }
+            // Unexploded left rings hold the standard side margin off the frame edge (wide and
+            // square Office rings bind it within 0.12; narrow/mid keep baseline radius).
+            if (kind == ChartPolarKind.Doughnut && leftFillLegend && leftLegendBoxRight > 0d && explosionReserve == 0d)
+            {
+                radius = Math.Min(radius, Math.Max(1d, plotBox.X + plotBox.Width - centerX - PptxChartMetricRules.DoughnutPlotSideMargin));
+            }
             return new ChartPolarGeometry(
-                plotBox.X + plotBox.Width * centerXRatio + centerXOffset,
-                plotBox.Y + plotBox.Height * centerYRatio,
+                centerX,
+                centerY,
                 radius);
 
             double GetPieOrDoughnutRadiusRatio()
