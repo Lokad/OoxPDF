@@ -921,5 +921,25 @@ internal static class PdfWriterTests
             count++;
             start = index + value.Length;
         }
+
+    }
+
+    public static void DrawGlyphTextEmitsQuarterTurnTextMatrices()
+    {
+        TestAssert.Contains("1 0 0 1 100 200 Tm", DrawGlyphTextContent(0));
+        TestAssert.Contains("0 -1 1 0 100 200 Tm", DrawGlyphTextContent(1));
+        TestAssert.Contains("-1 0 0 -1 100 200 Tm", DrawGlyphTextContent(2));
+        TestAssert.Contains("0 1 -1 0 100 200 Tm", DrawGlyphTextContent(3));
+        TestAssert.Contains("1 0 0 1 100 200 Tm", DrawGlyphTextContent(4));
+        TestAssert.Contains("0 -1 1 0 100 200 Tm", DrawGlyphTextContent(-3));
+
+        static string DrawGlyphTextContent(int quarterTurns)
+        {
+            var graphics = new PdfGraphicsBuilder();
+            graphics.DrawGlyphText("F1", 24d, 100d, 200d, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d, quarterTurns);
+            System.Reflection.FieldInfo? field = typeof(PdfGraphicsBuilder).GetField("builder", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var content = (System.Text.StringBuilder?)field?.GetValue(graphics);
+            return content?.ToString() ?? throw new System.InvalidOperationException("Expected builder content.");
+        }
     }
 }

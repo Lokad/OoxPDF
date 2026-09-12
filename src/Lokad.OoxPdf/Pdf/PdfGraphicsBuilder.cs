@@ -354,9 +354,10 @@ internal sealed class PdfGraphicsBuilder
         byte strokeRed,
         byte strokeGreen,
         byte strokeBlue,
-        double strokeWidth)
+        double strokeWidth,
+        int textRotationQuarterTurns = 0)
     {
-        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, '<' + glyphHex + "> Tj", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth);
+        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, '<' + glyphHex + "> Tj", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth, textRotationQuarterTurns);
     }
 
     public void DrawGlyphPositionedText(
@@ -374,9 +375,10 @@ internal sealed class PdfGraphicsBuilder
         byte strokeRed,
         byte strokeGreen,
         byte strokeBlue,
-        double strokeWidth)
+        double strokeWidth,
+        int textRotationQuarterTurns = 0)
     {
-        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth);
+        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth, textRotationQuarterTurns);
     }
 
     private void DrawGlyphTextOperator(
@@ -394,7 +396,8 @@ internal sealed class PdfGraphicsBuilder
         byte strokeRed,
         byte strokeGreen,
         byte strokeBlue,
-        double strokeWidth)
+        double strokeWidth,
+        int textRotationQuarterTurns = 0)
     {
         builder.AppendLine("BT");
         if (!TryAppendFillGray(red, green, blue))
@@ -416,8 +419,26 @@ internal sealed class PdfGraphicsBuilder
         builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(PdfDocumentWriter.FormatNumber(fontSize)).AppendLine(" Tf");
         builder.Append(Math.Abs(characterSpacing) > 0.001d ? PdfDocumentWriter.FormatNumber(characterSpacing) : "0").AppendLine(" Tc");
 
-        double shear = italic ? SyntheticItalicShear : 0d;
-        builder.Append("1 0 ").Append(PdfDocumentWriter.FormatNumber(shear)).Append(" 1 ").Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" Tm");
+        if (textRotationQuarterTurns == 0)
+        {
+            double shear = italic ? SyntheticItalicShear : 0d;
+            builder.Append("1 0 ").Append(PdfDocumentWriter.FormatNumber(shear)).Append(" 1 ").Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" Tm");
+        }
+        else
+        {
+            // Quarter-turn text matrices for vertical text: exact integer matrices,
+            // no float dust (Office emits 0/-1/1/0 forms). Italic shear stays on the
+            // identity path until a rotated-italic sample is observed.
+            int turns = ((textRotationQuarterTurns % 4) + 4) % 4;
+            (double ra, double rb, double rc, double rd) = turns switch
+            {
+                1 => (0d, -1d, 1d, 0d),
+                2 => (-1d, 0d, 0d, -1d),
+                3 => (0d, 1d, -1d, 0d),
+                _ => (1d, 0d, 0d, 1d),
+            };
+            builder.Append(PdfDocumentWriter.FormatNumber(ra)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rb)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rc)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rd)).Append(' ').Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" Tm");
+        }
         builder.AppendLine(textOperator);
         if (textRenderingMode is 1 or 2)
         {
