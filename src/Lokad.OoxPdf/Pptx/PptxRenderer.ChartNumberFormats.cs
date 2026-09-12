@@ -74,6 +74,17 @@ internal sealed partial class PptxRenderer
 
         string section = StripSectionCondition(sections[sectionIndex]);
         string localeCurrency = section.IndexOf("[", StringComparison.Ordinal) >= 0 ? ParseChartNumberLocaleCurrency(section) : string.Empty;
+        // Calibrated [$LCID] brackets render locale decimal/group separators (S04); every other
+        // bracket keeps invariant formatting with its diagnostic.
+        CultureInfo numberCulture = CultureInfo.InvariantCulture;
+        if (section.IndexOf("[$", StringComparison.Ordinal) >= 0
+            && TryResolveChartNumberLocaleSeparators(section, out string localeDecimalSeparator, out string localeGroupSeparator)
+            && (localeDecimalSeparator != "." || localeGroupSeparator != ","))
+        {
+            numberCulture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+            numberCulture.NumberFormat.NumberDecimalSeparator = localeDecimalSeparator;
+            numberCulture.NumberFormat.NumberGroupSeparator = localeGroupSeparator;
+        }
         if (TryFormatDateNumber(section, value, date1904, out string? dateText))
         {
             return localeCurrency.Length == 0 ? dateText : localeCurrency + dateText;
@@ -122,11 +133,11 @@ internal sealed partial class PptxRenderer
         // Explicit negative/zero sections carry their own sign; single-section formats keep signed .NET formatting.
         double emitValue = sectionIndex > 0 ? Math.Abs(displayValue) : displayValue;
         string text;
-        if (TryFormatScientific(view, emitValue, out string? scientific))
+        if (TryFormatScientific(view, emitValue, numberCulture, out string? scientific))
         {
             text = scientific;
         }
-        else if (TryFormatFraction(view, emitValue, out string? fraction))
+        else if (TryFormatFraction(view, emitValue, numberCulture, out string? fraction))
         {
             text = fraction;
         }
@@ -134,7 +145,7 @@ internal sealed partial class PptxRenderer
         {
             string numberFormat = (thousands ? "#,##0" : "0") +
                 (decimals > 0 ? "." + new string('0', decimals) : string.Empty);
-            text = emitValue.ToString(numberFormat, CultureInfo.InvariantCulture);
+            text = emitValue.ToString(numberFormat, numberCulture);
         }
 
         if (view.Contains('$', StringComparison.Ordinal) || localeCurrency.Length > 0 || view.Contains(LiteralDollarPlaceholder, StringComparison.Ordinal))
@@ -165,7 +176,7 @@ internal sealed partial class PptxRenderer
     // Scientific notation renders mantissa and base-10 exponent from the digit
     // placeholders around E[+|-]; escaped/quoted characters are already masked
     // in the syntax view (S04).
-    private static bool TryFormatScientific(string view, double value, out string text)
+    private static bool TryFormatScientific(string view, double value, CultureInfo numberCulture, out string text)
     {
         text = string.Empty;
         int eIndex = -1;
@@ -232,7 +243,7 @@ internal sealed partial class PptxRenderer
         }
 
         string mantissaPattern = new string('0', intDigits) + (decimals > 0 ? "." + new string('0', decimals) : string.Empty);
-        string mantissaText = (value < 0d ? -mantissa : mantissa).ToString(mantissaPattern, CultureInfo.InvariantCulture);
+        string mantissaText = (value < 0d ? -mantissa : mantissa).ToString(mantissaPattern, numberCulture);
         string sign = exponent < 0 ? "-" : alwaysSign ? "+" : string.Empty;
         text = mantissaText + view[eIndex] + sign + Math.Abs(exponent).ToString(CultureInfo.InvariantCulture).PadLeft(expWidth, '0');
         return true;
@@ -271,7 +282,7 @@ internal sealed partial class PptxRenderer
 
     // Fractions render whole and numerator/denominator from ? precision; the
     // denominator search caps at 9999 to bound per-label work (S04).
-    private static bool TryFormatFraction(string view, double emitValue, out string text)
+    private static bool TryFormatFraction(string view, double emitValue, CultureInfo numberCulture, out string text)
     {
         text = string.Empty;
         int slash = view.IndexOf('/', StringComparison.Ordinal);
@@ -365,8 +376,8 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        text = sign + (showWhole || whole != 0 ? whole.ToString(CultureInfo.InvariantCulture) + " " : string.Empty)
-            + bestNum.ToString(CultureInfo.InvariantCulture) + "/" + bestDen.ToString(CultureInfo.InvariantCulture);
+        text = sign + (showWhole || whole != 0 ? whole.ToString(numberCulture) + " " : string.Empty)
+            + bestNum.ToString(numberCulture) + "/" + bestDen.ToString(numberCulture);
         return true;
     }
 
@@ -1303,6 +1314,14 @@ internal sealed partial class PptxRenderer
 
         if (inner.StartsWith('$'))
         {
+            // Calibrated LCIDs render locale separators (no diagnostic); system and unlisted
+            // LCIDs keep the "locale" fallback warning.
+            if (TryParseChartNumberLocaleId(inner, out int localeId)
+                && TryGetChartNumberLocaleSeparators(localeId, out _, out _))
+            {
+                return;
+            }
+
             AddUnsupportedChartConstruct(ref unsupported, "locale");
             return;
         }
@@ -1430,6 +1449,102 @@ internal sealed partial class PptxRenderer
             "text-placeholder" => "Chart number formats use '@' text placeholders that are dropped.",
             _ => "Chart number formats contain unsupported bracketed constructs that are dropped.",
         };
+    }
+
+    // Locale decimal/group separators for calibrated LCIDs (S04; CLDR as independent spec).
+    // System-locale ($-Fxxx) and unlisted LCIDs keep the "locale" diagnostic (open); locale
+    // month/day names stay English (open). Table covers unambiguous decimal/group pairs only
+    // (fr-FR narrow-nbsp and friends stay flagged).
+    private static bool TryResolveChartNumberLocaleSeparators(string section, out string decimalSeparator, out string groupSeparator)
+    {
+        decimalSeparator = ".";
+        groupSeparator = ",";
+        bool inQuotes = false;
+        for (int i = 0; i < section.Length; i++)
+        {
+            char c = section[i];
+            if (!inQuotes && c == '\\' && i + 1 < section.Length)
+            {
+                i++;
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (inQuotes || c != '[')
+            {
+                continue;
+            }
+
+            int close = section.IndexOf(']', i);
+            if (close < 0)
+            {
+                return false;
+            }
+
+            string inner = section.Substring(i + 1, close - i - 1).Trim();
+            if (TryParseChartNumberLocaleId(inner, out int localeId)
+                && TryGetChartNumberLocaleSeparators(localeId, out decimalSeparator, out groupSeparator))
+            {
+                return true;
+            }
+        }
+
+        decimalSeparator = ".";
+        groupSeparator = ",";
+        return false;
+    }
+
+    private static bool TryParseChartNumberLocaleId(string inner, out int localeId)
+    {
+        localeId = 0;
+        if (!inner.StartsWith('$'))
+        {
+            return false;
+        }
+
+        int dash = inner.LastIndexOf('-');
+        if (dash < 1 || dash + 1 >= inner.Length)
+        {
+            return false;
+        }
+
+        string localeText = inner.Substring(dash + 1).Trim();
+        if (!int.TryParse(localeText, System.Globalization.NumberStyles.HexNumber, CultureInfo.InvariantCulture, out localeId))
+        {
+            return false;
+        }
+
+        return localeId < 0xF000;
+    }
+
+    private static bool TryGetChartNumberLocaleSeparators(int localeId, out string decimalSeparator, out string groupSeparator)
+    {
+        switch (localeId)
+        {
+            case 0x0407:
+            case 0x040A:
+            case 0x0410:
+            case 0x0413:
+            case 0x0416:
+                decimalSeparator = ",";
+                groupSeparator = ".";
+                return true;
+            case 0x0409:
+            case 0x0809:
+            case 0x0411:
+                decimalSeparator = ".";
+                groupSeparator = ",";
+                return true;
+            default:
+                decimalSeparator = ".";
+                groupSeparator = ",";
+                return false;
+        }
     }
 
     // [$currency-locale] symbol for numeric sections (S04); [$−locale] carries no

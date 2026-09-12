@@ -167,7 +167,10 @@ internal static class PptxChartNumberFormatsTests
 
     public static void PptxChartNumberUnsupportedConstructsIdentifyFallbackGaps()
     {
-        TestAssert.Equal("locale", GetUnsupportedChartNumberConstructs("[$-409]0"));
+        TestAssert.Equal("", GetUnsupportedChartNumberConstructs("[$-409]0"));
+        TestAssert.Equal("", GetUnsupportedChartNumberConstructs("[$-407]0.00"));
+        TestAssert.Equal("locale", GetUnsupportedChartNumberConstructs("[$-999]0"));
+        TestAssert.Equal("locale", GetUnsupportedChartNumberConstructs("[$-F400]0"));
         TestAssert.Equal("color", GetUnsupportedChartNumberConstructs("[Red]0.0"));
         TestAssert.Equal("color", GetUnsupportedChartNumberConstructs("[Red]0;[Blue]0.0"));
         TestAssert.Equal("native-digits", GetUnsupportedChartNumberConstructs("[DBNum1]0"));
@@ -191,10 +194,24 @@ internal static class PptxChartNumberFormatsTests
 
     public static void PptxChartNumberLocaleCurrencyResolvesSymbol()
     {
-        TestAssert.Equal("\u20AC5.00", FormatChartNumber(5d, "[$\u20AC-407]0.00"));
+        TestAssert.Equal("\u20AC5,00", FormatChartNumber(5d, "[$\u20AC-407]0.00"));
         TestAssert.Equal("\u00A35", FormatChartNumber(5d, "[$\u00A3-809]0"));
         TestAssert.Equal("5", FormatChartNumber(5d, "[$-409]0"));
         TestAssert.Equal("\u20AC3/15/23", FormatChartNumber(45000d, "[$\u20AC-407]m/d/yy"));
+    }
+
+    public static void PptxChartNumberLocaleSeparatorsFollowCalibratedLcids()
+    {
+        TestAssert.Equal("1,234.56", FormatChartNumber(1234.56d, "[$-409]#,##0.00"));
+        TestAssert.Equal("1.234,56", FormatChartNumber(1234.56d, "[$-407]#,##0.00"));
+        TestAssert.Equal("1.234,56", FormatChartNumber(1234.56d, "[$-410]#,##0.00"));
+        TestAssert.Equal("1,234.56", FormatChartNumber(1234.56d, "[$-411]#,##0.00"));
+        TestAssert.Equal("1,234", FormatChartNumber(1234d, "[$-809]#,##0"));
+        TestAssert.Equal("500,0%", FormatChartNumber(5d, "[$-407]0.0%"));
+        TestAssert.Equal("1,2E+03", FormatChartNumber(1234d, "[$-407]0.0E+00"));
+        TestAssert.Equal("\u20AC1.234,56", FormatChartNumber(1234.56d, "[$\u20AC-410]#,##0.00"));
+        TestAssert.Equal("\u00A35", FormatChartNumber(5d, "[$\u00A3-809]0"));
+        TestAssert.Equal("5", FormatChartNumber(5d, "[$-409]0"));
     }
 
     public static void PptxChartNumberGeneralFallbackKeepsFullPrecision()
