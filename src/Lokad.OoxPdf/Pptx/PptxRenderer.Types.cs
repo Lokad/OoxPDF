@@ -311,6 +311,12 @@ internal sealed partial class PptxRenderer
         // content; narrow A/B/C content (23.32) stays unshrunk with 0.08 margin, guarded
         // by the exploded-port tripwires.
         public const double DoughnutExplodedLegendSlack = 23.4d;
+        // Doughnut right-legend vertical shift: the legend block middle sits 22.92pt below the
+        // plot middle on eight Office renders (narrow/mid/wide/notitle/unexploded/portrait/square
+        // at n=3 plus a 5-entry probe, sigma 0.05) with identical pitch, so the (n-1) block
+        // scaling stands and only the anchor moves. Left legends keep their own offset (minus
+        // 5.0pt on one sample) for lack of evidence.
+        public const double DoughnutRightLegendVerticalShift = 22.92d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

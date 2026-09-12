@@ -1153,6 +1153,15 @@ internal static class PptxChartsTests
     }
 
 
+    public static void PptxSyntheticDoughnutLegendConstantsKeepOfficeCalibration()
+    {
+        var rules = typeof(PptxRenderer).GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected metric rules.");
+        double slack = (double)rules.GetField("DoughnutExplodedLegendSlack")!.GetValue(null)!;
+        double shift = (double)rules.GetField("DoughnutRightLegendVerticalShift")!.GetValue(null)!;
+        TestAssert.True(Math.Abs(slack - 23.4d) < 0.000001d, "Exploded doughnuts should keep the 23.4pt legend slack (narrow A/B/C stays unshrunk). Got " + slack);
+        TestAssert.True(Math.Abs(shift - 22.92d) < 0.000001d, "Doughnut right legends should keep the 22.92pt vertical shift (8 Office renders). Got " + shift);
+    }
+
     public static void PptxSyntheticPieAutoLabelConstantsKeepOfficeCalibration()
     {
         var rules = typeof(PptxRenderer).GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected metric rules.");
