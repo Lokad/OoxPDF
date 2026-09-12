@@ -353,11 +353,11 @@ internal sealed partial class PptxRenderer
         double markerWidth = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor
             : markerSize;
-        // Doughnut right legends share the area branch 4.65pt Office swatch lead
-        // (eight Office renders agree at 4.58-4.66, sigma 0.03).
+        // Doughnut legends share the area branch 4.65pt Office swatch lead
+        // (eleven Office renders agree at 4.58-4.66, sigma 0.03).
         double textGap = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
-            : placement == ChartLegendPlacement.AreaRightLegend || useDoughnutRightAnchor
+            : placement == ChartLegendPlacement.AreaRightLegend || useDoughnutRightAnchor || useDoughnutLeftAnchor
                 ? PptxChartMetricRules.AreaRightLegendTextGap
                 : PptxChartMetricRules.LegendTextGap;
         double GetSideLegendContentWidth()
@@ -394,6 +394,8 @@ internal sealed partial class PptxRenderer
                 GetSideLegendContentWidth());
         double x = layout.PositionKind switch
         {
+            // Doughnut left blocks grow rightward from a fixed head edge (four Office renders).
+            _ when useDoughnutLeftAnchor => frame.X + PptxChartMetricRules.DoughnutLeftLegendHeadInset,
             PptxSceneChartLegendPosition.Left when sideFillLegendInFullFrame => frame.X + frame.Width * PptxChartMetricRules.LegendFullFrameSideInsetRatio,
             PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,

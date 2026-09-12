@@ -321,6 +321,10 @@ internal sealed partial class PptxRenderer
         // (two Office renders at n=3 and n=5, same middle, sigma 0.01); the left x anchor stays
         // legacy on a single box sample.
         public const double DoughnutLeftLegendVerticalShift = 5.0d;
+        // Doughnut left-legend head inset: the Office box left edge sits at frame.X plus 13.19pt
+        // on four renders (narrow/wide/square/exploded-left, exact to 0.01) regardless of content
+        // width, i.e. the box grows rightward from a fixed head edge with the shared 4.65pt gap.
+        public const double DoughnutLeftLegendHeadInset = 13.19d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

@@ -1162,6 +1162,8 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(slack - 23.4d) < 0.000001d, "Exploded doughnuts should keep the 23.4pt legend slack (narrow A/B/C stays unshrunk). Got " + slack);
         TestAssert.True(Math.Abs(shift - 22.92d) < 0.000001d, "Doughnut right legends should keep the 22.92pt vertical shift (8 Office renders). Got " + shift);
         TestAssert.True(Math.Abs(leftShift - 5.0d) < 0.000001d, "Doughnut left legends should keep the 5.0pt vertical shift (2 Office renders). Got " + leftShift);
+        double headInset = (double)rules.GetField("DoughnutLeftLegendHeadInset")!.GetValue(null)!;
+        TestAssert.True(Math.Abs(headInset - 13.19d) < 0.000001d, "Doughnut left legends should keep the 13.19pt head inset (4 Office renders). Got " + headInset);
     }
 
     public static void PptxSyntheticPieAutoLabelConstantsKeepOfficeCalibration()
