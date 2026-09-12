@@ -305,13 +305,12 @@ internal sealed partial class PptxRenderer
         // 10pt tails).
         public const double DoughnutRightLegendTail = 10.0d;
         // Exploded right-legend slack: Office keeps plotRight minus legendBoxLeft at 35pt on
-        // narrow/mid/wide exploded doughnuts (sigma 0.05), i.e. the plot shrinks only past
-        // a 25pt legend box (35pt overlap minus the 10pt tail). Our gap-3 content runs
-        // 1.65pt under Office box widths, so the no-shrink boundary lands at 23.4pt of
-        // content; narrow A/B/C content (23.32) stays unshrunk with 0.08 margin, guarded
-        // by the exploded-port tripwires.
-        public const double DoughnutExplodedLegendSlack = 23.4d;
-        // Doughnut right-legend vertical shift: the legend block middle sits 22.92pt below the
+        // Exploded right-legend clearance: Office keeps 86.3pt clear between the legend box
+        // left edge and the unshrunk ring right edge (narrow/mid/wide/short-mid Office renders
+        // agree within 0.05); narrow sits at the boundary, guarded by the exploded-port tripwires.
+        // Replaces the content-slack form, which died on short plots where identical content needs
+        // no reserve. Geometry translation only; the plot box stays full-frame.
+        public const double DoughnutExplodedLegendClearance = 86.3d;
         // plot middle on eight Office renders (narrow/mid/wide/notitle/unexploded/portrait/square
         // at n=3 plus a 5-entry probe, sigma 0.05) with identical pitch, so the (n-1) block
         // scaling stands and only the anchor moves. Left legends keep their own offset (minus

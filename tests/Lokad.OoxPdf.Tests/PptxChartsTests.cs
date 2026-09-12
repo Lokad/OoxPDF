@@ -1110,21 +1110,24 @@ internal static class PptxChartsTests
         (double nx, double ny, double nr) = ReadPolarGeometry(narrowDoughnut);
         TestAssert.True(Math.Abs(nx - 267d) < 0.01d && Math.Abs(ny - 288d) < 0.01d && Math.Abs(nr - 112.03d) < 0.01d, "Narrow doughnuts bind the width margin, not min-side (portrait probe). Got " + nx + "/" + ny + "/" + nr);
     }
-    public static void PptxSyntheticExplodedDoughnutReserveFollowsOfficeSlack()
+    public static void PptxSyntheticExplodedDoughnutReserveFollowsRingGap()
     {
         var method = typeof(PptxRenderer).GetMethod(
             "ComputeExplodedDoughnutRightLegendReserve",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected exploded doughnut reserve helper to remain inspectable by the Office evidence guard.");
 
-        double narrow = (double)method!.Invoke(null, [23.32d])!;
-        double mid = (double)method.Invoke(null, [66.23d])!;
-        double wide = (double)method.Invoke(null, [132.78d])!;
+        double narrow = (double)method!.Invoke(null, [685.03d, 598.53d])!;
+        double mid = (double)method.Invoke(null, [642.11d, 598.53d])!;
+        double wide = (double)method.Invoke(null, [575.55d, 598.53d])!;
+        double shortPlot = (double)method.Invoke(null, [642.11d, 468.93d])!;
 
-        TestAssert.True(Math.Abs(narrow - 0d) < 0.000001d, "Narrow A/B/C content stays inside the slack (exploded port keeps full frame). Got " + narrow);
-        TestAssert.True(Math.Abs(mid - 42.83d) < 0.01d, "Mid legend content reserves 42.83 past the slack. Got " + mid);
-        TestAssert.True(Math.Abs(wide - 109.38d) < 0.01d, "Wide legend content reserves 109.38 past the slack. Got " + wide);
+        TestAssert.True(Math.Abs(narrow - 0d) < 0.01d, "Narrow keeps full frame at the clearance boundary (exploded port). Got " + narrow);
+        TestAssert.True(Math.Abs(mid - 42.72d) < 0.05d, "Mid legend crowds the ring by 42.72. Got " + mid);
+        TestAssert.True(Math.Abs(wide - 109.28d) < 0.05d, "Wide legend crowds the ring by 109.28. Got " + wide);
+        TestAssert.True(Math.Abs(shortPlot - 0d) < 0.000001d, "Short plots keep full frame at identical content (gap clears). Got " + shortPlot);
     }
+
 
     public static void PptxSyntheticExplodedDoughnutLayoutTranslatesRigidly()
     {
@@ -1156,10 +1159,10 @@ internal static class PptxChartsTests
     public static void PptxSyntheticDoughnutLegendConstantsKeepOfficeCalibration()
     {
         var rules = typeof(PptxRenderer).GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected metric rules.");
-        double slack = (double)rules.GetField("DoughnutExplodedLegendSlack")!.GetValue(null)!;
+        double clearance = (double)rules.GetField("DoughnutExplodedLegendClearance")!.GetValue(null)!;
         double shift = (double)rules.GetField("DoughnutRightLegendVerticalShift")!.GetValue(null)!;
         double leftShift = (double)rules.GetField("DoughnutLeftLegendVerticalShift")!.GetValue(null)!;
-        TestAssert.True(Math.Abs(slack - 23.4d) < 0.000001d, "Exploded doughnuts should keep the 23.4pt legend slack (narrow A/B/C stays unshrunk). Got " + slack);
+        TestAssert.True(Math.Abs(clearance - 86.3d) < 0.000001d, "Exploded doughnuts should keep the 86.3pt ring clearance (narrow/mid/wide/short renders). Got " + clearance);
         TestAssert.True(Math.Abs(shift - 22.92d) < 0.000001d, "Doughnut right legends should keep the 22.92pt vertical shift (8 Office renders). Got " + shift);
         TestAssert.True(Math.Abs(leftShift - 5.0d) < 0.000001d, "Doughnut left legends should keep the 5.0pt vertical shift (2 Office renders). Got " + leftShift);
         double headInset = (double)rules.GetField("DoughnutLeftLegendHeadInset")!.GetValue(null)!;

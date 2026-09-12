@@ -258,13 +258,13 @@ internal sealed partial class PptxRenderer
             frame.Height * ratios.Height);
     }
 
-    private static double MeasureDoughnutLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
+    private static double MeasureDoughnutLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer, double textGap)
     {
         double markerWidth = style.FontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         double contentWidth = 0d;
         foreach (ChartLegendEntry entry in entries)
         {
-            contentWidth = Math.Max(contentWidth, markerWidth + PptxChartMetricRules.LegendTextGap + textMeasurer.Measure(entry.Name, style));
+            contentWidth = Math.Max(contentWidth, markerWidth + textGap + textMeasurer.Measure(entry.Name, style));
         }
         return contentWidth;
     }
@@ -275,20 +275,19 @@ internal sealed partial class PptxRenderer
     // geometry (center/radius) moves.
     private static double ComputeDoughnutRightLegendReserve(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
     {
-        double contentWidth = MeasureDoughnutLegendContentWidth(entries, style, textMeasurer);
+        double contentWidth = MeasureDoughnutLegendContentWidth(entries, style, textMeasurer, PptxChartMetricRules.LegendTextGap);
         // No minimum-width floor here (unlike legend boxes): the unexploded narrow-legend
         // probe needs content plus gaps only (Office entries at 18pt with ~10pt names give
         // a 42pt reserve, well under the 35pt box floor).
         return contentWidth + PptxChartMetricRules.LegendSideGap + PptxChartMetricRules.DoughnutRightLegendTail;
     }
 
-    // Exploded right-legend reserve on measured content width: Office keeps plotRight minus
-    // legendBoxLeft at 35pt, so the ring translates rigidly by half the content past the slack
-    // (mid 42.9 and wide 109.5pt shrinks from 66.23/132.78pt contents; narrow 23.32pt content
-    // stays at zero). Applies to geometry translation only; the plot box itself stays full-frame.
-    private static double ComputeExplodedDoughnutRightLegendReserve(double contentWidth)
+    // Exploded right-legend reserve from the ring gap: Office translates the ring only while
+    // the legend crowds it, keeping 86.3pt clear of the unshrunk ring right edge (narrow/mid/
+    // wide/short-mid Office renders). The plot box stays full-frame; only the center moves.
+    private static double ComputeExplodedDoughnutRightLegendReserve(double legendBoxLeft, double ringRightUnshrunk)
     {
-        return Math.Max(0d, contentWidth - PptxChartMetricRules.DoughnutExplodedLegendSlack);
+        return Math.Max(0d, ringRightUnshrunk - legendBoxLeft + PptxChartMetricRules.DoughnutExplodedLegendClearance);
     }
     private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
     {
