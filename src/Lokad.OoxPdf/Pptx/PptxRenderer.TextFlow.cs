@@ -195,10 +195,12 @@ internal sealed partial class PptxRenderer
     {
         // For vertical text the flow stacking axis maps onto the shape horizontal axis with
         // the first line at the shape-right side, so the stack origin consumes the right
-        // inset, not the top one: using Top shifted vert270-case rows 3.51pt right of Office
-        // (tIns 3.6; zero-inset box2 sat at -0.09). Right-vs-left is geometrically argued but
-        // only symmetric insets are observed so far; the rival Cambria-baseline theory and a
-        // uniform -0.09 start residual stay open. Vertical270 keeps legacy Top (unobserved).
+        // inset, not the top one. Three asymmetric-inset Office probes prove it (ignored
+        // vprobe-* artifacts, all 20pt Cambria): zero insets put the first token at 328.61
+        // (ours 328.52), killing the Cambria-baseline rival; l14.4/r0 keeps 328.61, killing
+        // Top; l14.4/r7.2 keeps 321.41 unchanged, killing Left. A uniform -0.09 start
+        // residual stands across all five vertical samples. Vertical270 keeps legacy Top
+        // (unobserved).
         double stackOriginInset = frame.Orientation == PptxTextOrientation.Vertical
             ? frame.Insets.Right
             : frame.Insets.Top;
