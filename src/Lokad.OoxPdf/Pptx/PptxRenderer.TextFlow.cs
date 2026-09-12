@@ -366,7 +366,11 @@ internal sealed partial class PptxRenderer
     {
         verticalOffset = 0d;
         PptxTextFrameModel frame = layout.Model;
-        if (frame.Orientation != PptxTextOrientation.Horizontal ||
+        // Vertical middle/bottom anchors center the laid-out stack in the left/right-based
+        // text height (the stacking extent spans the shape width) with unclamped negatives
+        // (Office middle-anchor probe sits +6.77 off the top baseline, bottom +13.56).
+        bool verticalAnchorPath = frame.Orientation == PptxTextOrientation.Vertical;
+        if ((frame.Orientation != PptxTextOrientation.Horizontal && !verticalAnchorPath) ||
             frame.ColumnCount != 1 ||
             frame.VerticalOffset > PptxTextMetricRules.CoordinateTolerance ||
             IsTableCellVerticalAnchorSource(frame.BodyProperties.VerticalAnchorSource))
@@ -394,7 +398,10 @@ internal sealed partial class PptxRenderer
         double top = lines.Max(line => line.Box.TopY);
         double bottom = lines.Min(line => line.Box.TopY - line.Box.Advance);
         double occupiedHeight = Math.Max(0d, top - bottom);
-        double slack = frame.TextHeight - occupiedHeight;
+        double anchorBoxHeight = verticalAnchorPath
+            ? OoxUnits.EmuToPoints(frame.Bounds.Width) - frame.Insets.Left - frame.Insets.Right
+            : frame.TextHeight;
+        double slack = anchorBoxHeight - occupiedHeight;
         if (Math.Abs(slack) <= PptxTextMetricRules.CoordinateTolerance)
         {
             return false;

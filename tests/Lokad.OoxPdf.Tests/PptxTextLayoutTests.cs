@@ -1910,6 +1910,57 @@ internal static class PptxTextLayoutTests
         TestAssert.Contains("0 -1 1 0 254.95 480 Tm", pdf);
     }
 
+    public static void PptxVerticalAnchorLadderIsLinear()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        // One-line vertical runs stack 28.8pt per line at 24pt; an 87.24pt-wide shape with
+        // 14.4pt side insets leaves a 58.44pt stacking box, so middle and bottom anchors sit
+        // exactly half and full slack past top: (58.44 - 28.8) / 2 = 14.82pt per step. The sign
+        // is negative in layout Tm-Y: the content is smaller than the box, so the positive
+        // offset starts lines later in flow (smaller Tm-Y, mirrored to larger device-X).
+        double topY = RenderVerticalAnchorProbe(null);
+        double middleY = RenderVerticalAnchorProbe("ctr");
+        double bottomY = RenderVerticalAnchorProbe("b");
+        TestAssert.True(Math.Abs((middleY - topY) + 14.82d) < 0.05d, "Expected the middle anchor one half-slack past top.");
+        TestAssert.True(Math.Abs((bottomY - middleY) + 14.82d) < 0.05d, "Expected the bottom anchor one full slack past top.");
+
+        static double RenderVerticalAnchorProbe(string? anchor)
+        {
+            string anchorAttribute = anchor is null ? string.Empty : " anchor=\"" + anchor + "\"";
+            string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+                ["_rels/.rels"] = PptxTests.PackageRelationship(),
+                ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+                ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+                ["ppt/slides/slide1.xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                      <p:cSld><p:spTree><p:sp>
+                        <p:spPr><a:xfrm><a:off x="3311604" y="1219200"/><a:ext cx="1107996" cy="707886"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                        <p:txBody>
+                          <a:bodyPr vert="vert" lIns="182880" tIns="45720" rIns="182880" bIns="45720"__ANCHOR__ rtlCol="0"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
+                          <a:p><a:r><a:rPr lang="en-US" sz="2400"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>A</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp></p:spTree></p:cSld>
+                    </p:sld>
+                    """.Replace("__ANCHOR__", anchorAttribute)
+            });
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+            OoxPdfConverter.Convert(input, output);
+
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            MatchCollection matrices = Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ ([0-9.]+) Tm");
+            TestAssert.Equal(1, matrices.Count);
+            return double.Parse(matrices[0].Groups[1].Value, CultureInfo.InvariantCulture);
+        }
+    }
     public static void PptxVerticalAutoFitOverflowKeepsWrappedFullSizeText()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

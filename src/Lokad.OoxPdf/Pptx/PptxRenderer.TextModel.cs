@@ -341,7 +341,10 @@ internal sealed partial class PptxRenderer
             compatibleLineSpacing,
             compatibleDefaultLineSpacingFactor,
             shapeFontColor, default);
-        double verticalOffset = bodyProperties.VerticalAnchor switch
+        // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
+        // uses the wrong axis and advance); other orientations keep estimated offsets.
+        TextVerticalAnchor anchorForEstimate = orientation == PptxTextOrientation.Vertical ? TextVerticalAnchor.Top : bodyProperties.VerticalAnchor;
+        double verticalOffset = anchorForEstimate switch
         {
             TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)) / 2d),
             TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)),
