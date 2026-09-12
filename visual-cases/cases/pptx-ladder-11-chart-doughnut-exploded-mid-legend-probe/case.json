@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-11-chart-doughnut-exploded-mid-legend-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-exploded-mid-legend-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "exploded", "wide-legend", "office-probe", "needs-review"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.8,
+    "minForegroundRecall": 0.96,
+    "maxChangedPixelRatioAtThreshold16": 0.011
+  }
+}
