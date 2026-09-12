@@ -330,6 +330,19 @@ internal sealed partial class PptxRenderer
             {
                 radius = Math.Min(radius, Math.Max(1d, (plotBox.Width - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
             }
+            // Titled doughnut rings fit between the title band and the bottom margin (landscape and
+            // short Office renders agree to 0.03); untitled rings span the full height minus margins.
+            // Right-untitled, title-only, and horizontal layouts keep the calibrated ratios (unobserved).
+            bool leftFillLegend = legend.Visible && !legend.Overlay &&
+                legend.PositionKind == PptxSceneChartLegendPosition.Left;
+            bool leftOrCalibratedRight = leftFillLegend ||
+                (legend.PositionKind == PptxSceneChartLegendPosition.Right && doughnutHasTitle && hasLegend) ||
+                (!legend.Visible && !doughnutHasTitle);
+            if (kind == ChartPolarKind.Doughnut && leftOrCalibratedRight)
+            {
+                double titleBand = doughnutHasTitle && hasLegend ? 2d * PptxChartMetricRules.DoughnutTitledCenterYOffset : 0d;
+                radius = Math.Min(radius, Math.Max(1d, (plotBox.Height - titleBand - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
+            }
 
             if (explosionReserve > 0d)
             {
@@ -341,8 +354,6 @@ internal sealed partial class PptxRenderer
             double centerXOffset = GetPieOrDoughnutCenterXOffset(radius);
             double centerX = plotBox.X + plotBox.Width * centerXRatio + centerXOffset;
             double centerY = plotBox.Y + plotBox.Height * centerYRatio;
-            bool leftFillLegend = legend.Visible && !legend.Overlay &&
-                legend.PositionKind == PptxSceneChartLegendPosition.Left;
             // Left legends center the ring past the legend box (four Office box widths agree);
             // manual layouts keep the legacy ratio (call site passes zero box edge there).
             if (kind == ChartPolarKind.Doughnut && leftFillLegend && leftLegendBoxRight > 0d)
