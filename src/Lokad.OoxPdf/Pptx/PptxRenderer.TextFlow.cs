@@ -96,6 +96,18 @@ internal sealed partial class PptxRenderer
         PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, true);
         if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
         {
+            // spAutoFit grows the shape around overflowing text, so under the non-clipping
+            // overflow mode the wrapped layout stands at full size: unwrapping plus font shrink
+            // models shrink-to-fit, which dropped vertical-text-port row 2 to 4.08pt against
+            // Office 24pt and the vert-oriented 270 case to 8.04pt against Office 20.04pt.
+            // Clipping modes and true vert270 keep the legacy shrink path below (vert270 behavior
+            // is unobserved; PptxSyntheticVerticalShapeAutoFitPrefersSingleLine pins it).
+            if (frameModel.Orientation == PptxTextOrientation.Vertical &&
+                !ClipsTextVerticalOverflow(frameModel.BodyProperties.VerticalOverflow))
+            {
+                return ApplyActualVerticalAnchorOffsetIfNeeded(layout, document, advanceEstimator, allowWrapping: true);
+            }
+
             PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
             if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
             {
@@ -181,9 +193,18 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
+        // For vertical text the flow stacking axis maps onto the shape horizontal axis with
+        // the first line at the shape-right side, so the stack origin consumes the right
+        // inset, not the top one: using Top shifted vert270-case rows 3.51pt right of Office
+        // (tIns 3.6; zero-inset box2 sat at -0.09). Right-vs-left is geometrically argued but
+        // only symmetric insets are observed so far; the rival Cambria-baseline theory and a
+        // uniform -0.09 start residual stay open. Vertical270 keeps legacy Top (unobserved).
+        double stackOriginInset = frame.Orientation == PptxTextOrientation.Vertical
+            ? frame.Insets.Right
+            : frame.Insets.Top;
         var box = new PptxTextFlowBox(
             frame.FlowYTop,
-            document.SlideHeightPoints - frame.FlowYTop - frame.Insets.Top - frame.VerticalOffset,
+            document.SlideHeightPoints - frame.FlowYTop - stackOriginInset - frame.VerticalOffset,
             frame.TextX,
             frame.TextWidth,
             frame.TextWrapWidth,
