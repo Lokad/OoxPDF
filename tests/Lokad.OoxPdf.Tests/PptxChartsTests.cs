@@ -1170,6 +1170,13 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(band - 17.68d) < 0.000001d, "Titled doughnuts should keep the 17.68pt center band (8 Office renders). Got " + band);
     }
 
+    public static void PptxSyntheticPolarTitleTopOffsetKeepsOfficeCalibration()
+    {
+        var rules = typeof(PptxRenderer).GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected metric rules.");
+        double offset = (double)rules.GetField("PolarTitleTopOffset")!.GetValue(null)!;
+        TestAssert.True(Math.Abs(offset - 28.0d) < 0.000001d, "Polar auto titles should keep the 28pt top inset (full/short/moved frames). Got " + offset);
+    }
+
     public static void PptxSyntheticDoughnutLeftGeometryFollowsLegendBox()
     {
         var renderer = typeof(PptxRenderer);

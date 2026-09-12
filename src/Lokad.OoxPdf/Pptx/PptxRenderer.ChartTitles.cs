@@ -41,7 +41,12 @@ internal sealed partial class PptxRenderer
         double titleBaselineRatio = !titleManualLayoutApplied && HasSceneOrXmlPolarChart(sceneChart, chartXml)
             ? PptxChartMetricRules.PolarTitleBaselineYRatio
             : PptxChartMetricRules.TitleBaselineYRatio;
-        double fallbackBaselineY = y + height * titleBaselineRatio;
+        // Polar auto titles sit a fixed inset below the title-box top (Office keeps 476.0 across
+        // frame heights); every other title keeps the ratio fallback.
+        bool usePolarTitleTopOffset = !titleManualLayoutApplied && isAutoTitle && HasSceneOrXmlPolarChart(sceneChart, chartXml);
+        double fallbackBaselineY = usePolarTitleTopOffset
+            ? y + height - PptxChartMetricRules.PolarTitleTopOffset
+            : y + height * titleBaselineRatio;
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
             : ResolveChartTitleBaselineY(document, theme, colorMap, bounds, chartXml, sceneChart, workbook, plotVisibleOnly, fallbackBaselineY, fontSize, fontResolver);

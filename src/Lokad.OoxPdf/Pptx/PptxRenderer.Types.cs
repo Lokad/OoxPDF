@@ -421,6 +421,10 @@ internal sealed partial class PptxRenderer
         public const double TitleXInsetRatio = 0.08d;
         public const double TitleBaselineYRatio = 0.88d;
         public const double PolarTitleBaselineYRatio = 0.935d;
+        // Polar auto-title inset below the title-box top: Office baselines sit 28.0pt under the top
+        // on full, short, and moved frames alike (sigma 0.05); plot-top versus shape-top stays
+        // confounded on full-frame plots. Explicit and manual titles keep the ratio fallback.
+        public const double PolarTitleTopOffset = 28.0d;
         public const double AutoTitleFontScale = 1.2d;
         public const double TitleAbovePlotBaselineOffsetFactor = 0.8483333333333334d;
         public const double AutoBarTitleAbovePlotBaselineOffsetFactor = 1.08d;
