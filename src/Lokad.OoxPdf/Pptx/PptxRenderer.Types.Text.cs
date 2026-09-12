@@ -39,7 +39,8 @@ internal sealed partial class PptxRenderer
         bool FlipVertical,
         bool PreventCoalesce,
         TextOutline? Outline,
-        bool StrictClip);
+        bool StrictClip,
+        int GlyphRotationQuarterTurns = 0);
 
     private sealed record TextGlyphRun(
         TextRun Source,

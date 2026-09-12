@@ -1443,8 +1443,8 @@ internal static class PptxChartAxesTests
             "InverseTransformClip",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected rotated-clip bridge.");
         object center = Enum.ToObject(alignmentType, 1);
-        object? plainRun = Activator.CreateInstance(textRunType, ["", 0d, 0d, 0d, 0d, 0d, 0d, 0d, 0d, 12d, 0d, 0d, new RgbColor(0, 0, 0), 1d, null, false, false, false, false, true, center, null, 0d, 0d, 0d, false, false, false, null, false]);
-        object? rotatedRun = Activator.CreateInstance(textRunType, ["", 0d, 0d, 0d, 0d, 0d, 0d, 0d, 0d, 12d, 0d, 0d, new RgbColor(0, 0, 0), 1d, null, false, false, false, false, true, center, null, -90d, 100d, 200d, false, false, false, null, false]);
+        object? plainRun = Activator.CreateInstance(textRunType, ["", 0d, 0d, 0d, 0d, 0d, 0d, 0d, 0d, 12d, 0d, 0d, new RgbColor(0, 0, 0), 1d, null, false, false, false, false, true, center, null, 0d, 0d, 0d, false, false, false, null, false, 0]);
+        object? rotatedRun = Activator.CreateInstance(textRunType, ["", 0d, 0d, 0d, 0d, 0d, 0d, 0d, 0d, 12d, 0d, 0d, new RgbColor(0, 0, 0), 1d, null, false, false, false, false, true, center, null, -90d, 100d, 200d, false, false, false, null, false, 0]);
         (double plainX, double plainY, double plainW, double plainH) = ((double, double, double, double))(inverseClip.Invoke(null, [plainRun, 10d, 20d, 30d, 40d]) ?? throw new InvalidOperationException("Expected clip."));
         (double rotX, double rotY, double rotW, double rotH) = ((double, double, double, double))(inverseClip.Invoke(null, [rotatedRun, 10d, 20d, 30d, 40d]) ?? throw new InvalidOperationException("Expected clip."));
         TestAssert.Equal((10d, 20d, 30d, 40d), (plainX, plainY, plainW, plainH));

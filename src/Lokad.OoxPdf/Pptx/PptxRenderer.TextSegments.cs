@@ -358,7 +358,99 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken), fontResolver);
+        return RemapMongolianVerticalSpans(FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken), fontResolver), shape);
+    }
+
+    // Mongolian vertical Latin runs as a horizontal left-to-right row of clockwise-spun glyphs
+    // (Office emits per-run 0 -1 1 0 text matrices). The layout engine stacks vertical text downward
+    // under a shared pivot, so remap those spans to per-run clockwise matrices here. Tables never
+    // reach this path (table cells use ReadTextSpansForTableCellTextFrame below).
+    // Single-sample calibration on pptx-ladder-04-vertical-text-port: row starts at shape X plus
+    // 6.15pt with a self-calibrating pitch (median nonzero run-Y step, 28.8pt on the fixture).
+    private const double MongolianVerticalRowStartInset = 6.15d;
+
+    private static bool IsMongolianVerticalShape(XElement shape)
+    {
+        foreach (XElement bodyPr in shape.Descendants(DrawingNamespace + "bodyPr"))
+        {
+            XAttribute? vert = bodyPr.Attribute("vert");
+            if (vert is not null && string.Equals(vert.Value, "mongolianVert", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> RemapMongolianVerticalSpans(IReadOnlyList<PptxPositionedTextSpan> spans, XElement shape)
+    {
+        if (spans.Count == 0 || !IsMongolianVerticalShape(shape))
+        {
+            return spans;
+        }
+
+        double pitch = ResolveMongolianVerticalPitch(spans);
+        if (pitch <= PptxTextMetricRules.CoordinateTolerance)
+        {
+            return spans;
+        }
+
+        PptxPositionedTextSpan first = spans[0];
+        if (!HasTextTransform(first.Run))
+        {
+            return spans;
+        }
+
+        (double a, double b, double c, double d, double e, double f) = TextTransformMatrix(first.Run);
+        double firstBaselineY = first.Run.Y + first.Run.BaselineOffset;
+        double deviceY = b * first.Run.X + d * firstBaselineY + f;
+        double startX = first.FrameShapeX + MongolianVerticalRowStartInset;
+        var remapped = new List<PptxPositionedTextSpan>(spans.Count);
+        for (int i = 0; i < spans.Count; i++)
+        {
+            PptxPositionedTextSpan span = spans[i];
+            double newX = startX + i * pitch;
+            double newY = deviceY - span.Run.BaselineOffset;
+            TextRun newRun = span.Run with { X = newX, Y = newY, RotationDegrees = 0d, PreventCoalesce = true, GlyphRotationQuarterTurns = 1 };
+            IReadOnlyList<PptxTextGlyphLayout> glyphs = span.GlyphSpan.Glyphs;
+            if (glyphs.Count > 0 && Math.Abs(glyphs[0].AdjustmentBefore) > PptxTextMetricRules.TextStateTolerance)
+            {
+                var fixedGlyphs = new PptxTextGlyphLayout[glyphs.Count];
+                for (int g = 0; g < glyphs.Count; g++)
+                {
+                    fixedGlyphs[g] = g == 0 ? glyphs[g] with { AdjustmentBefore = 0d } : glyphs[g];
+                }
+
+                glyphs = fixedGlyphs;
+            }
+
+            PptxTextGlyphSpanLayout newGlyphSpan = span.GlyphSpan with { Glyphs = glyphs };
+            remapped.Add(span with { Run = newRun, EndX = newX + span.Run.Width, LineBox = null, GlyphSpan = newGlyphSpan });
+        }
+
+        return remapped;
+    }
+
+    private static double ResolveMongolianVerticalPitch(IReadOnlyList<PptxPositionedTextSpan> spans)
+    {
+        var gaps = new List<double>(spans.Count);
+        for (int i = 1; i < spans.Count; i++)
+        {
+            double gap = Math.Abs(spans[i].Run.Y - spans[i - 1].Run.Y);
+            if (gap > PptxTextMetricRules.CoordinateTolerance)
+            {
+                gaps.Add(gap);
+            }
+        }
+
+        if (gaps.Count == 0)
+        {
+            return 0d;
+        }
+
+        gaps.Sort();
+        return gaps[(gaps.Count - 1) / 2];
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)

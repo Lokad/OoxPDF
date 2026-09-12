@@ -1871,4 +1871,42 @@ internal static class PptxTextLayoutTests
         TestAssert.Contains(" re f", pdf);
         TestAssert.True(PptxTests.CountOccurrences(pdf, " TJ") >= 1, "Expected styled text to be emitted.");
     }
+
+    public static void PptxMongolianVerticalEmitsClockwiseRowMatrices()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="2794000" y="762000"/><a:ext cx="6647974" cy="276999"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr vert="mongolianVert" lIns="0" tIns="0" rIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr lang="en-US" sz="2400"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>AB</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(2, PptxTests.CountOccurrences(pdf, "0 -1 1 0 "));
+        TestAssert.Equal(0, PptxTests.CountOccurrences(pdf, " cm"));
+        TestAssert.Contains("0 -1 1 0 226.15 480 Tm", pdf);
+        TestAssert.Contains("0 -1 1 0 254.95 480 Tm", pdf);
+    }
 }

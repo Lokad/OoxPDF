@@ -867,7 +867,8 @@ internal sealed partial class PptxRenderer
                 strokeRed: TextStrokeColor(glyphRun).Red,
                 strokeGreen: TextStrokeColor(glyphRun).Green,
                 strokeBlue: TextStrokeColor(glyphRun).Blue,
-                strokeWidth: TextStrokeWidth(glyphRun));
+                strokeWidth: TextStrokeWidth(glyphRun),
+                textRotationQuarterTurns: glyphRun.Source.GlyphRotationQuarterTurns);
         }
         else
         {
@@ -886,7 +887,8 @@ internal sealed partial class PptxRenderer
                 strokeRed: TextStrokeColor(glyphRun).Red,
                 strokeGreen: TextStrokeColor(glyphRun).Green,
                 strokeBlue: TextStrokeColor(glyphRun).Blue,
-                strokeWidth: TextStrokeWidth(glyphRun));
+                strokeWidth: TextStrokeWidth(glyphRun),
+                textRotationQuarterTurns: glyphRun.Source.GlyphRotationQuarterTurns);
         }
 
         void DrawGlyphOutlinePath()
