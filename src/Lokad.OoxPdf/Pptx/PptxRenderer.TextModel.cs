@@ -300,8 +300,13 @@ internal sealed partial class PptxRenderer
             textRotationDegrees += TextOrientationRotationDegrees(orientation);
         }
 
-        double textX = flowX + insets.Left;
-        double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
+        // Vertical text wraps and centers against the top/bottom insets: the flow column
+        // spans the shape height, so Office measures it with the vertical insets (six Office
+        // renders agree on tokens and centering). Tables keep Left/Right (unobserved).
+        double columnInsetStart = orientation == PptxTextOrientation.Vertical ? insets.Top : insets.Left;
+        double columnInsetEnd = orientation == PptxTextOrientation.Vertical ? insets.Bottom : insets.Right;
+        double textX = flowX + columnInsetStart;
+        double textWidth = Math.Max(1d, flowWidth - columnInsetStart - columnInsetEnd);
         double textWrapWidth = bodyProperties.ExplicitWrapWidth ?? textWidth;
         double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
         int columnCount = bodyProperties.ColumnCount;

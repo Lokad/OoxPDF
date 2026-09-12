@@ -235,11 +235,64 @@ internal sealed partial class PptxRenderer
                             segmentWidth > frame.TextWidth) ||
                         splitOverwideFirstSegment)
                     {
+                        // Office starts every vertical chunk run on a fresh pitch row instead
+                        // of gluing it after the previous segment on one line. This mirrors the
+                        // manual-break path (no leading-space shuffling: observed vertical chunk
+                        // runs carry trailing spaces, never leading ones).
+                        if (frame.Orientation == PptxTextOrientation.Vertical && line.Spans.Count > 0)
+                        {
+                            double freshLineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+                            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, freshLineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                            double freshLineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, freshLineFontSize);
+                            cursorLineTop -= freshLineAdvance;
+                            MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, ref linesInCurrentColumn, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, frame.BodyProperties.VerticalOverflow, columnBreakMode, freshLineAdvance, lineBalanceTarget, lineBalanceStartColumn, linePlaced: true);
+                            columnClipX = clipsColumnsIndividually ? columnStartX : frame.TextClipX;
+                            columnClipWidth = clipsColumnsIndividually ? columnWidth : frame.TextClipWidth;
+                            paragraphTextX = bulletText is null
+                                ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                                : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
+                            cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
+                            cursorX = paragraphTextX;
+                            line.Reset(paragraphTextX);
+                            maxFontSize = 0d;
+                            previousAdvanceCodePoint = null;
+                            pendingVisibleLeadingAdjustment = 0d;
+                            noBreakAnchorSpan = null;
+                            pendingNoBreakAdvanceText = string.Empty;
+                        }
+
                         double chunkMaxWidth = frame.Orientation == PptxTextOrientation.Horizontal
                             ? effectiveTextWidth
                             : frame.TextWidth;
-                        double chunkFitTolerance = PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
-                        string[] chunks = SplitTextIntoFittingChunks(currentSegment, chunkMaxWidth + chunkFitTolerance, fragmentFontSize, runStyle, advanceEstimator);
+                        // Vertical chunks split strictly at the column edge: Office breaks them
+                        // tighter than the wrap tolerance ('tic' splits at +2.19 over in a 21.81 column).
+                        double chunkFitTolerance = frame.Orientation == PptxTextOrientation.Vertical
+                            ? PptxTextMetricRules.CoordinateTolerance
+                            : PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
+                        // Office glues trailing spaces to the final vertical chunk ('al ')
+                        // instead of stranding them on their own pitch step.
+                        string chunkSourceText = currentSegment;
+                        string chunkTrailingSpaces = string.Empty;
+                        if (frame.Orientation == PptxTextOrientation.Vertical)
+                        {
+                            int chunkContentEnd = chunkSourceText.Length;
+                            while (chunkContentEnd > 0 && chunkSourceText[chunkContentEnd - 1] == ' ')
+                            {
+                                chunkContentEnd--;
+                            }
+
+                            if (chunkContentEnd > 0 && chunkContentEnd < chunkSourceText.Length)
+                            {
+                                chunkTrailingSpaces = chunkSourceText[chunkContentEnd..];
+                                chunkSourceText = chunkSourceText[..chunkContentEnd];
+                            }
+                        }
+
+                        string[] chunks = SplitTextIntoFittingChunks(chunkSourceText, chunkMaxWidth + chunkFitTolerance, fragmentFontSize, runStyle, advanceEstimator);
+                        if (chunkTrailingSpaces.Length != 0 && chunks.Length != 0)
+                        {
+                            chunks[^1] += chunkTrailingSpaces;
+                        }
                         for (int chunkIndex = 0; chunkIndex < chunks.Length; chunkIndex++)
                         {
                             string chunk = chunks[chunkIndex];

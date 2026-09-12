@@ -1942,10 +1942,8 @@ internal static class PptxTextLayoutTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        // Six tail-chunked runs at full size; legacy shrinks to one 3.96pt run.
-        // (The full port package chunks this tail as five runs; that package-context
-        // dependence is open and does not affect the un-shrink contract pinned here.)
-        TestAssert.Equal(6, PptxTests.CountOccurrences(pdf, " TJ"));
+        // Eight strict-greedy runs at full size; legacy shrinks to one 3.96pt run.
+        TestAssert.Equal(8, PptxTests.CountOccurrences(pdf, " TJ"));
         TestAssert.Contains(" 24 Tf", pdf);
     }
 }
