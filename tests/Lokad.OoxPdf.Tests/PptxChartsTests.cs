@@ -968,6 +968,13 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)method.Invoke(null, [2])!, "Multi-plot stacked charts should keep the shared estimator (compact probe Office strip 17.6pt vs 24.1pt measured).");
     }
 
+    public static void PptxSyntheticChartAreaDefaultBorderKeepsOfficeCalibration()
+    {
+        var rules = typeof(PptxRenderer).GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected metric rules.");
+        double border = (double)rules.GetField("ChartAreaDefaultBorderWidth")!.GetValue(null)!;
+        TestAssert.True(Math.Abs(border - 0.14d) < 0.000001d, "Chart-area default border should stay at the Office hairline (10 kind ports). Got " + border);
+    }
+
     public static void PptxSyntheticPieManualLeaderNeedsSameSideNarrowBox()
     {
         var method = typeof(PptxRenderer).GetMethod(

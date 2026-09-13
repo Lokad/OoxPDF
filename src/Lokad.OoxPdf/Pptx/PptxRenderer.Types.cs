@@ -364,6 +364,10 @@ internal sealed partial class PptxRenderer
         // and the box must fit this width (24 Office labels: West 83.31 leads while
         // graded Gamma 87.23 does not; singles above 83.31 same-side are unobserved).
         public const double PieManualLabelLeaderMaxBoxWidth = 85.3d;
+        // Office emits a chart-area placeholder border by default (11 kind refs carry
+        // the G:0 0.14pt rect with a fully transparent stroke and no chartArea markup
+        // anywhere in the corpus); an explicit area stroke keeps winning and skips it.
+        public const double ChartAreaDefaultBorderWidth = 0.14d;
         // Pie labels wrap past this fraction of the plot width (8 Office samples: every
         // wrapped label exceeds it, every single-line label stays below; tightest margins
         // are West 0.6pt and Gamma 2.8pt. Plot-width, height, and radius bases are

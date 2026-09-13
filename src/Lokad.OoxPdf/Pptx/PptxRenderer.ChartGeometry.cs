@@ -489,7 +489,20 @@ internal sealed partial class PptxRenderer
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme, PptxColorMap colorMap)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
-        RenderChartShapeStyle(graphics, frame.X, frame.Y, frame.Width, frame.Height, ReadSceneOrXmlChartAreaStyle(sceneChart, chartXml, theme, colorMap));
+        ChartShapeStyle areaStyle = ReadSceneOrXmlChartAreaStyle(sceneChart, chartXml, theme, colorMap);
+        RenderChartShapeStyle(graphics, frame.X, frame.Y, frame.Width, frame.Height, areaStyle);
+        if (areaStyle.Stroke is null)
+        {
+            // Office placeholder border: same hairline geometry, fully transparent
+            // stroke (11 kind refs carry CA 0), so it matches Office structurally while
+            // staying raster-invisible like the reference.
+            graphics.SaveState();
+            graphics.SetAlpha(1d, 0d);
+            graphics.SetStrokeRgb(0, 0, 0);
+            graphics.SetLineWidth(PptxChartMetricRules.ChartAreaDefaultBorderWidth);
+            graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
+            graphics.RestoreState();
+        }
     }
 
     private static ChartShapeStyle ReadSceneOrXmlChartAreaStyle(PptxSceneChart? sceneChart, XDocument chartXml, PptxTheme theme, PptxColorMap colorMap)
