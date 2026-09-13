@@ -421,7 +421,7 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartLegendPosition.Bottom when fillLegendInFullFrame => frame.Y + lineHeight * PptxChartMetricRules.LegendFullFrameBottomBaselineFactor,
             PptxSceneChartLegendPosition.Top when fillLegendInFullFrame => frame.Y + frame.Height - lineHeight * PptxChartMetricRules.LegendFullFrameTopBaselineFactor,
-            PptxSceneChartLegendPosition.Bottom => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
+            PptxSceneChartLegendPosition.Bottom => frame.Y + PptxChartMetricRules.LegendBottomFramePad + fontSize * PptxChartMetricRules.LegendBottomBaselineFontFactor,
             PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
                 fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor() +

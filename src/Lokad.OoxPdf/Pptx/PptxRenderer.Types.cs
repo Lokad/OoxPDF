@@ -564,7 +564,13 @@ internal sealed partial class PptxRenderer
         public const double LegendFullFrameSideInsetRatio = 0.02d;
         public const double LegendFullFrameBottomBaselineFactor = 0.57d;
         public const double LegendFullFrameTopBaselineFactor = 0.95d;
-        public const double LegendBottomOffsetFactor = 2.61d;
+        // Bottom-legend text baseline rides the frame, not the plot: four Office renders
+        // (two frames, 12/18pt legend fonts, titled/untitled, plus a plot-shifted control
+        // that leaves the legend fixed) agree on frame bottom plus 8.6 plus 0.35 times
+        // the legend font size within 0.1pt. Doughnut bottom legends keep their own
+        // full-frame branch and are untouched.
+        public const double LegendBottomFramePad = 8.6d;
+        public const double LegendBottomBaselineFontFactor = 0.35d;
         public const double LegendTopOffsetFactor = 0.15d;
         public const double LegendHorizontalClipHeightFactor = 1.25d;
         public const double LegendMarkerBaselineFactor = 0.35d;
