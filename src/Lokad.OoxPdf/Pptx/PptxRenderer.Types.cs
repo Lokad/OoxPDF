@@ -411,14 +411,15 @@ internal sealed partial class PptxRenderer
         public const double DataLabelLegendKeyTextGapFactor = 0.35d;
         // Swatch+text unit centering for clustered vertical-bar legend-key labels:
         // Office centers the unit on the bar middle plus this much (9 Office labels
-        // across two gap widths: sigma 0.03; the swatch gap equals the swatch size
-        // within 0.1 at 8pt, single-size evidence for both).
+        // across two gap widths at 8pt: sigma 0.03; consistent at 16pt with the
+        // calibrated swatch gap (textX exact within 0.06), so textX stays on this law).
         public const double BarLegendKeyUnitCenterOffset = 1.45d;
         // Bottom reserve for vertical-bar category labels: frame margin plus
         // category descent plus our emitted category gap (Office baselines sit
         // frame plus 7.0 plus descent within 0.3 over 7, 14, and 18pt cats;
         // plots land within 1.0 using our 1.18 gap, column-clustered stays
-        // on preset via slop).
+        // on preset via slop; bottoms hold at 156.72 across value-range, tick-unit,
+        // and tall-frame probes with identical category labels).
         public const double BarCategoryBottomMargin = 7.0d;
         public const double BarCategoryDescentFactor = 0.22d;
         // Out-end gap for legend-key data labels: 4.75 plus 0.28fs (Office baselines
@@ -430,9 +431,9 @@ internal sealed partial class PptxRenderer
         public const double BarLegendKeyOutEndGapFontFactor = 0.28d;
         public const double BarLegendKeyOutEndGapConstant = 1.5d;
         // Swatch gap and vertical anchor for legend-key labels: Office gaps read
-        // 4.50 at 8pt and 6.63 at 16pt (kills G equals S at 16pt, 6.63 versus 8.8);
-        // swatch centers sit baseline plus 0.34fs (both sizes within 0.1).
-        // Two-size evidence.
+        // 4.50 at 8pt, 5.56 at 12pt, and 6.63 at 16pt (kills G equals S at 16pt,
+        // 6.63 versus 8.8); swatch centers sit baseline plus 0.34fs (all sizes
+        // within 0.11, Y anchor exact at 12pt). Three-size evidence.
         public const double BarLegendKeySwatchGapFactor = 0.266d;
         public const double BarLegendKeySwatchGapConstant = 2.37d;
         public const double BarLegendKeySwatchCenterOffsetFactor = 0.34d;
