@@ -227,6 +227,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasLegend);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForValueLabels(defaultPlotBox);
+        defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -341,6 +342,62 @@ internal sealed partial class PptxRenderer
             double right = frame.X + frame.Width - rightReserve;
             double width = Math.Max(1d, right - plotBox.X);
             return new ChartPlotBox(plotBox.X, plotBox.Y, width, plotBox.Height);
+        }
+
+        ChartPlotBox AdjustHorizontalBarPlotBoxForTopAndBottom(ChartPlotBox plotBox)
+        {
+            if (!horizontalBars)
+            {
+                return plotBox;
+            }
+
+            if (hasTitle || hasLegend || legend.Visible)
+            {
+                return plotBox;
+            }
+
+            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            {
+                return plotBox;
+            }
+
+            IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            if (CountRenderableSeries(topBottomSeriesVectors) == 0)
+            {
+                return plotBox;
+            }
+
+            bool percentBottomStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
+            ChartValueExtents bottomValueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetBarChartValueExtents(topBottomSeriesVectors, barOptions.Grouping), percentBottomStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartAxisUnits bottomAxisUnits = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, bottomValueExtents, percentBottomStacked).Units;
+            ChartTextStyle bottomTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            bool hasBottomValueLabel = false;
+            foreach (double bottomTickValue in GetChartAxisTickValues(bottomValueExtents, bottomAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount))
+            {
+                string bottomLabel = FormatSceneOrXmlChartAxisLabel(bottomTickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, percentBottomStacked ? "0%" : null);
+                if (!string.IsNullOrWhiteSpace(bottomLabel))
+                {
+                    hasBottomValueLabel = true;
+                    break;
+                }
+            }
+
+            if (!hasBottomValueLabel)
+            {
+                return plotBox;
+            }
+
+            double requiredBottomReserve = ComputeBarLabelStripBottomReserve(bottomTickStyle.FontSize);
+            double presetBottomReserve = plotBox.Y - frame.Y;
+            double newY = Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
+                ? plotBox.Y
+                : frame.Y + requiredBottomReserve;
+            double presetTopReserve = frame.Y + frame.Height - plotBox.Y - plotBox.Height;
+            double newTop = Math.Abs(presetTopReserve - PptxChartMetricRules.HorizontalBarPlotTopReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
+                ? plotBox.Y + plotBox.Height
+                : frame.Y + frame.Height - PptxChartMetricRules.HorizontalBarPlotTopReserve;
+            return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, newTop - newY));
         }
 
         ChartPlotBox AdjustHorizontalBarPlotBoxForCategoryLabels(ChartPlotBox plotBox)
@@ -509,7 +566,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-            double requiredBottomReserve = ComputeBarCategoryBottomReserve(categoryTickStyle.FontSize);
+            double requiredBottomReserve = ComputeBarLabelStripBottomReserve(categoryTickStyle.FontSize);
             double presetBottomReserve = plotBox.Y - frame.Y;
             if (Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
             {
@@ -929,13 +986,14 @@ internal sealed partial class PptxRenderer
             tickFontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
     }
 
-    // Bottom reserve for vertical-bar category labels: frame margin plus descent
-    // plus our emitted category gap (Office baselines frame plus 7.0 plus descent).
-    private static double ComputeBarCategoryBottomReserve(double categoryFontSize)
+    // Bottom reserve for the label strip below a bar plot: frame margin plus descent
+    // plus our emitted label gap (Office baselines frame plus 7.0 plus descent on
+    // vertical category and horizontal value labels alike).
+    private static double ComputeBarLabelStripBottomReserve(double labelFontSize)
     {
         return PptxChartMetricRules.BarCategoryBottomMargin +
-            categoryFontSize * PptxChartMetricRules.BarCategoryDescentFactor +
-            categoryFontSize * PptxChartMetricRules.AxisLabelHeightFactor *
+            labelFontSize * PptxChartMetricRules.BarCategoryDescentFactor +
+            labelFontSize * PptxChartMetricRules.AxisLabelHeightFactor *
             PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor;
     }
 

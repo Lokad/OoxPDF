@@ -990,15 +990,17 @@ internal static class PptxChartsTests
     public static void PptxSyntheticBarCategoryBottomReserveMeasuresOfficeStrip()
     {
         var method = typeof(PptxRenderer).GetMethod(
-            "ComputeBarCategoryBottomReserve",
+            "ComputeBarLabelStripBottomReserve",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected bar category bottom helper to remain inspectable by the Office evidence guard.");
         double seven = (double)method!.Invoke(null, [6.96d])!;
         double fourteen = (double)method!.Invoke(null, [14.04d])!;
         double eighteen = (double)method!.Invoke(null, [18d])!;
+        double nine = (double)method!.Invoke(null, [9d])!;
         TestAssert.True(Math.Abs(seven - 19.62d) < 0.15d, "Seven-point cats should reserve the measured bottom strip (Office 18.72). Got " + seven);
         TestAssert.True(Math.Abs(fourteen - 32.45d) < 0.15d, "Fourteen-point cats should reserve the measured bottom strip (Office 31.68). Got " + fourteen);
         TestAssert.True(Math.Abs(eighteen - 39.63d) < 0.15d, "Eighteen-point cats should reserve the measured bottom strip (Office 39.24). Got " + eighteen);
+        TestAssert.True(Math.Abs(nine - 23.32d) < 0.15d, "Nine-point value labels should reserve the measured bottom strip (Office 23.2). Got " + nine);
     }
 
     public static void PptxSyntheticBarLegendKeyOutEndGapLiftsWithFontSize()
@@ -2945,7 +2947,11 @@ internal static class PptxChartsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("88.589 352.008 144 108 re f", pdf);
+        // Unknown-target manuals fall back to the default plot box, which now carries
+        // the measured horizontal top and bottom strips (axis-less charts still render
+        // default value ticks, so the strips are legitimate; X and size are untouched,
+        // bars and labels fit inside as verified by inspection).
+        TestAssert.Contains("88.589 349 144 108 re f", pdf);
         TestAssert.DoesNotContain("123.552", pdf);
     }
 

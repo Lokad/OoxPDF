@@ -245,9 +245,20 @@ internal sealed partial class PptxRenderer
         // (three-digit), and line-3series (four-digit, which needs no extra character term).
         public const double LineRightLegendValueAxisPadding = 23.2d;
         // Tail past the centered edge tick on horizontal-bar value axes. Calibrated from
-        // cached Office references: right margin minus half the widest bottom label
-        // decomposes to 11.0pt on stacked (300) and clustered (50) bar ports.
+        // cached Office references: axis-relative right margin minus half the widest
+        // bottom label decomposes to 11.0pt on stacked, clustered, and 9pt-value probes
+        // (10.994 to 11.001, sigma 0.004; clip-relative math reads 10.31 because the
+        // Office plot clip pads the axis rect by about 0.7pt on the right).
         public const double HorizontalBarValueAxisRightPadding = 11.0d;
+        // Top reserve for untitled horizontal-bar plots: the Office axis top sits
+        // frameTop minus 11.0pt on stacked, short-frame, and 9pt-value probes (all
+        // exact; font- and frame-invariant, unlike the vertical top; titled paths keep
+        // their own presets).
+        public const double HorizontalBarPlotTopReserve = 11.0d;
+        // Preset-floor slop for horizontal-bar plot top and bottom: the measured
+        // reserve replaces the preset only on clear disagreement (stacked bottom
+        // 0.29 keeps the preset axis-exact bottom; short-frame top 0.99 replaces).
+        public const double HorizontalBarPlotFloorSlop = 0.5d;
         // Left indent of vertical-bar value tick labels from the chart frame, then a
         // font-relative gap to the axis (Office origins decompose to frame plus 6.5pt
         // plus tick width plus 0.92 times tick font size on column-stacked, column-clustered,
