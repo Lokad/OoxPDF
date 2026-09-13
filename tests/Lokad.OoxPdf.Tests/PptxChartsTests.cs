@@ -987,6 +987,58 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(singleDigit - 195.157d) < 0.1d, "Single-digit swatches should start at the unit left (Office Alpha 195.1). Got " + singleDigit);
     }
 
+    public static void PptxSyntheticBarCategoryBottomReserveMeasuresOfficeStrip()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeBarCategoryBottomReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected bar category bottom helper to remain inspectable by the Office evidence guard.");
+        double seven = (double)method!.Invoke(null, [6.96d])!;
+        double fourteen = (double)method!.Invoke(null, [14.04d])!;
+        double eighteen = (double)method!.Invoke(null, [18d])!;
+        TestAssert.True(Math.Abs(seven - 19.62d) < 0.15d, "Seven-point cats should reserve the measured bottom strip (Office 18.72). Got " + seven);
+        TestAssert.True(Math.Abs(fourteen - 32.45d) < 0.15d, "Fourteen-point cats should reserve the measured bottom strip (Office 31.68). Got " + fourteen);
+        TestAssert.True(Math.Abs(eighteen - 39.63d) < 0.15d, "Eighteen-point cats should reserve the measured bottom strip (Office 39.24). Got " + eighteen);
+    }
+
+    public static void PptxSyntheticBarLegendKeyOutEndGapLiftsWithFontSize()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeBarLegendKeyOutEndGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected bar out-end gap helper to remain inspectable by the Office evidence guard.");
+        double eight = (double)method!.Invoke(null, [8d])!;
+        double sixteen = (double)method!.Invoke(null, [16d])!;
+        TestAssert.True(Math.Abs(eight - 6.74d) < 0.05d, "Eight-point labels should lift 6.74 above bar tops (Office 6.6 to 7.1). Got " + eight);
+        TestAssert.True(Math.Abs(sixteen - 8.98d) < 0.05d, "Sixteen-point labels should lift 8.98 above bar tops (Office 9.1 to 9.4). Got " + sixteen);
+    }
+
+    public static void PptxSyntheticBarLegendKeySwatchAnchorsToText()
+    {
+        var gapMethod = typeof(PptxRenderer).GetMethod(
+            "ComputeBarLegendKeySwatchGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var xMethod = typeof(PptxRenderer).GetMethod(
+            "ComputeBarLegendKeySwatchX",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var yMethod = typeof(PptxRenderer).GetMethod(
+            "ComputeBarLegendKeySwatchY",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gapMethod is not null && xMethod is not null && yMethod is not null, "Expected bar swatch helpers to remain inspectable by the Office evidence guard.");
+        double gapEight = (double)gapMethod!.Invoke(null, [8d])!;
+        double gapSixteen = (double)gapMethod!.Invoke(null, [16d])!;
+        TestAssert.True(Math.Abs(gapEight - 4.5d) < 0.05d, "Eight-point swatch gap should read 4.50 (Office 4.47). Got " + gapEight);
+        TestAssert.True(Math.Abs(gapSixteen - 6.63d) < 0.05d, "Sixteen-point swatch gap should read 6.63 (Office 6.64, kills G equals S). Got " + gapSixteen);
+        double swatchXEight = (double)xMethod!.Invoke(null, [203.98d, 8.04d])!;
+        double swatchYEight = (double)yMethod!.Invoke(null, [247.94d, 8.04d])!;
+        TestAssert.True(Math.Abs(swatchXEight - 195.12d) < 0.15d, "Eight-point swatch should start at the Office left (195.12). Got " + swatchXEight);
+        TestAssert.True(Math.Abs(swatchYEight - 248.54d) < 0.15d, "Eight-point swatch should sit at the Office top (248.54). Got " + swatchYEight);
+        double swatchXSixteen = (double)xMethod!.Invoke(null, [334.97d, 15.96d])!;
+        double swatchYSixteen = (double)yMethod!.Invoke(null, [271.25d, 15.96d])!;
+        TestAssert.True(Math.Abs(swatchXSixteen - 319.54d) < 0.15d, "Sixteen-point swatch should start at the Office left (319.54). Got " + swatchXSixteen);
+        TestAssert.True(Math.Abs(swatchYSixteen - 272.25d) < 0.15d, "Sixteen-point swatch should sit at the Office top (272.25). Got " + swatchYSixteen);
+    }
+
     public static void PptxSyntheticPieLongWordSplitWidthReservesSeparator()
     {
         var method = typeof(PptxRenderer).GetMethod(

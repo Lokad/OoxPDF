@@ -222,6 +222,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(defaultPlotBox);
         defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(defaultPlotBox);
         defaultPlotBox = AdjustBarChartPlotBoxForSingleValueAxisLabels(defaultPlotBox);
+        defaultPlotBox = AdjustBarChartPlotBoxForCategoryLabels(defaultPlotBox);
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasLegend);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
@@ -461,6 +462,63 @@ internal sealed partial class PptxRenderer
             double right = frame.X + frame.Width - rightReserve;
             double width = Math.Max(1d, right - x);
             return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
+        }
+
+        ChartPlotBox AdjustBarChartPlotBoxForCategoryLabels(ChartPlotBox plotBox)
+        {
+            if (horizontalBars)
+            {
+                return plotBox;
+            }
+
+            if (IsStackedChartGrouping(barOptions.Grouping))
+            {
+                return plotBox;
+            }
+
+            if (hasTitle || hasLegend || legend.Visible)
+            {
+                return plotBox;
+            }
+
+            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            {
+                return plotBox;
+            }
+
+            IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            if (CountRenderableSeries(categorySeriesVectors) == 0)
+            {
+                return plotBox;
+            }
+
+            bool hasCategoryLabel = false;
+            foreach (ChartIndexedTextPoint? labelPoint in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())
+            {
+                if (!string.IsNullOrWhiteSpace(labelPoint?.Text))
+                {
+                    hasCategoryLabel = true;
+                    break;
+                }
+            }
+
+            if (!hasCategoryLabel)
+            {
+                return plotBox;
+            }
+
+            ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+            double requiredBottomReserve = ComputeBarCategoryBottomReserve(categoryTickStyle.FontSize);
+            double presetBottomReserve = plotBox.Y - frame.Y;
+            if (Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
+            {
+                return plotBox;
+            }
+
+            double newY = frame.Y + requiredBottomReserve;
+            double plotTop = plotBox.Y + plotBox.Height;
+            return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, plotTop - newY));
         }
 
         ChartPlotBox AdjustBarChartPlotBoxForStackedValueAxisLabels(ChartPlotBox plotBox)
@@ -869,6 +927,16 @@ internal sealed partial class PptxRenderer
         return maxValueLabelWidth +
             PptxChartMetricRules.BarValueAxisLabelFrameIndent +
             tickFontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
+    }
+
+    // Bottom reserve for vertical-bar category labels: frame margin plus descent
+    // plus our emitted category gap (Office baselines frame plus 7.0 plus descent).
+    private static double ComputeBarCategoryBottomReserve(double categoryFontSize)
+    {
+        return PptxChartMetricRules.BarCategoryBottomMargin +
+            categoryFontSize * PptxChartMetricRules.BarCategoryDescentFactor +
+            categoryFontSize * PptxChartMetricRules.AxisLabelHeightFactor *
+            PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor;
     }
 
     // Right reserve for horizontal-bar value labels: the edge tick centers on the plot

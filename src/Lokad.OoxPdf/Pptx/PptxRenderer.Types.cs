@@ -414,6 +414,27 @@ internal sealed partial class PptxRenderer
         // across two gap widths: sigma 0.03; the swatch gap equals the swatch size
         // within 0.1 at 8pt, single-size evidence for both).
         public const double BarLegendKeyUnitCenterOffset = 1.45d;
+        // Bottom reserve for vertical-bar category labels: frame margin plus
+        // category descent plus our emitted category gap (Office baselines sit
+        // frame plus 7.0 plus descent within 0.3 over 7, 14, and 18pt cats;
+        // plots land within 1.0 using our 1.18 gap, column-clustered stays
+        // on preset via slop).
+        public const double BarCategoryBottomMargin = 7.0d;
+        public const double BarCategoryDescentFactor = 0.22d;
+        // Out-end gap for legend-key data labels: box pad plus bottom-pad law
+        // (Office baselines sit barTop plus 6.74 at 8pt and plus 8.98 at 16pt,
+        // within 0.4; the 0.28fs plus 1.5 bottom pad matches pie manual labels,
+        // 3.0 is the label box pad).
+        public const double BarLegendKeyOutEndBoxPad = 3.0d;
+        public const double BarLegendKeyOutEndGapFontFactor = 0.28d;
+        public const double BarLegendKeyOutEndGapConstant = 1.5d;
+        // Swatch gap and vertical anchor for legend-key labels: Office gaps read
+        // 4.50 at 8pt and 6.63 at 16pt (kills G equals S at 16pt, 6.63 versus 8.8);
+        // swatch centers sit baseline plus 0.34fs (both sizes within 0.1).
+        // Two-size evidence.
+        public const double BarLegendKeySwatchGapFactor = 0.266d;
+        public const double BarLegendKeySwatchGapConstant = 2.37d;
+        public const double BarLegendKeySwatchCenterOffsetFactor = 0.34d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;

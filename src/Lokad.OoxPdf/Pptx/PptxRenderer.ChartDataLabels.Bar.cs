@@ -18,6 +18,36 @@ internal sealed partial class PptxRenderer
         return barCenterX + PptxChartMetricRules.BarLegendKeyUnitCenterOffset - (swatchSize + swatchSize + textWidth) / 2d;
     }
 
+    // Out-end baseline gap for clustered vertical-bar legend-key labels
+    // (Office baselines barTop plus 6.74 at 8pt, plus 8.98 at 16pt).
+    private static double ComputeBarLegendKeyOutEndGap(double fontSize)
+    {
+        return PptxChartMetricRules.BarLegendKeyOutEndBoxPad +
+            fontSize * PptxChartMetricRules.BarLegendKeyOutEndGapFontFactor +
+            PptxChartMetricRules.BarLegendKeyOutEndGapConstant;
+    }
+
+    // Swatch gap for legend-key labels (Office 4.50 at 8pt, 6.63 at 16pt).
+    private static double ComputeBarLegendKeySwatchGap(double fontSize)
+    {
+        return fontSize * PptxChartMetricRules.BarLegendKeySwatchGapFactor +
+            PptxChartMetricRules.BarLegendKeySwatchGapConstant;
+    }
+
+    // Swatch left from text left (Office swatchX equals textX minus G minus S).
+    private static double ComputeBarLegendKeySwatchX(double textX, double fontSize)
+    {
+        double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+        return textX - ComputeBarLegendKeySwatchGap(fontSize) - swatchSize;
+    }
+
+    // Swatch top from baseline (Office centers baseline plus 0.34fs).
+    private static double ComputeBarLegendKeySwatchY(double baselineY, double fontSize)
+    {
+        double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+        return baselineY + fontSize * PptxChartMetricRules.BarLegendKeySwatchCenterOffsetFactor - swatchSize / 2d;
+    }
+
     private static void RenderBarDataLabels(
         PptxTheme theme,
         PptxColorMap colorMap,
@@ -174,6 +204,14 @@ internal sealed partial class PptxRenderer
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                     PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
                     double y = ResolveVerticalBarDataLabelY(labelPosition, barBaseY, barEndY, labelHeight);
+                    PptxSceneChartDataLabelPosition barLegendKeyGapPosition = ResolveChartDataLabelPosition(effectiveOptions.PositionKind);
+                    if (effectiveOptions.ShowLegendKey && !stacked && barEndY >= barBaseY &&
+                        barLegendKeyGapPosition == PptxSceneChartDataLabelPosition.OutsideEnd)
+                    {
+                        // Office lifts legend-key out-end baselines by box pad plus
+                        // bottom-pad law (other positions and plain labels keep legacy 1.0).
+                        y = barEndY + ComputeBarLegendKeyOutEndGap(fontSize);
+                    }
                     ChartIndexedNumberPoint point = points[category] ?? default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
@@ -206,16 +244,26 @@ internal sealed partial class PptxRenderer
                         if (effectiveOptions.ShowLegendKey)
                         {
                             ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, value);
-                            double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
                             if (barLegendKeyUnitCenter)
                             {
                                 textX = labelBox.X + barLegendKeySwatch + barLegendKeySwatch;
                                 textWidth = Math.Max(1d, labelBox.X + labelBox.Width - textX);
+                                // Office anchors swatches to text (swatchX equals textX minus G minus S,
+                                // center equals baseline plus 0.34fs), not box-centered.
+                                double barLegendKeySwatchX = ComputeBarLegendKeySwatchX(textX, fontSize);
+                                double barLegendKeySwatchY = ComputeBarLegendKeySwatchY(labelBox.Y, fontSize);
+                                ChartLayoutBox barLegendKeySwatchBox = new ChartLayoutBox(
+                                    barLegendKeySwatchX,
+                                    barLegendKeySwatchY,
+                                    barLegendKeySwatch,
+                                    barLegendKeySwatch);
+                                RenderFillDataLabelLegendKey(graphics, barLegendKeySwatchBox, fontSize, fill);
                             }
                             else
                             {
-                            textX += consumedWidth;
-                            textWidth = Math.Max(1d, textWidth - consumedWidth);
+                                double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
+                                textX += consumedWidth;
+                                textWidth = Math.Max(1d, textWidth - consumedWidth);
                             }
                             alignment = TextAlignment.Left;
                         }
