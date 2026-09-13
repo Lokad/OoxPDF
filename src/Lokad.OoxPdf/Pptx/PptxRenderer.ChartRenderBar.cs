@@ -229,6 +229,9 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustHorizontalBarPlotBoxForValueLabels(defaultPlotBox);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
         defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
+        ChartAxisSource rightReserveCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+        bool rightReserveLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis, rightReserveCategoryAxis.XmlAxis);
+        defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -918,6 +921,28 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(plotBox.X, plotBox.Y, plotBox.Width, Math.Max(1d, flooredTop - plotBox.Y));
     }
 
+    // Right reserve for columns: Office keeps the plot right edge at least 10.3pt inside
+    // the frame (exact on eight renders, but an exact set trips tight tick gates on green
+    // ports and shoves right-axis charts into their axes, so the edge is floored, not set).
+    // Horizontal bars keep the value-axis tail law; side legends, hidden-label and
+    // label-less charts keep legacy edges.
+    private static ChartPlotBox AdjustVerticalBarPlotBoxRightReserve(ChartPlotBox plotBox, ChartFrameBox frame, bool horizontalBars, ChartLegendLayout legend, bool hasCategoryLabels)
+    {
+        if (horizontalBars || !hasCategoryLabels)
+        {
+            return plotBox;
+        }
+
+        if (legend.Visible && !legend.Overlay &&
+            (legend.PositionKind == PptxSceneChartLegendPosition.Left || legend.PositionKind == PptxSceneChartLegendPosition.Right))
+        {
+            return plotBox;
+        }
+
+        double flooredRight = frame.X + frame.Width - PptxChartMetricRules.ColumnPlotRightReserve;
+        double right = Math.Min(plotBox.X + plotBox.Width, flooredRight);
+        return new ChartPlotBox(plotBox.X, plotBox.Y, Math.Max(1d, right - plotBox.X), plotBox.Height);
+    }
     private static bool HasRenderableCategoryLabels(PptxSceneChartPlot? barPlot, XElement barChart, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
         foreach (ChartIndexedTextPoint? labelPoint in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())

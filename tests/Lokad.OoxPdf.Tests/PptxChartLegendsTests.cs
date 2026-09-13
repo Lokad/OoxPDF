@@ -1871,6 +1871,25 @@ internal static class PptxChartLegendsTests
         TestAssert.True(Math.Abs(unlabeledTop - 370.2d) < 1e-9, "Column top floor must not touch label-less plots.");
     }
 
+    public static void PptxVerticalBarPlotBoxRightReserveSetsOfficeEdge()
+    {
+        // Office column right edges keep at least 10.3pt inside the frame.
+        Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
+        Type plotBoxType = typeof(PptxRenderer).GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
+        Type layoutType = typeof(PptxRenderer).GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart legend layout.");
+        object hiddenLegend = layoutType.GetProperty("Hidden", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null) ?? throw new InvalidOperationException("Expected hidden legend layout.");
+        System.Reflection.MethodInfo adjust = typeof(PptxRenderer).GetMethod("AdjustVerticalBarPlotBoxRightReserve", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected column right-reserve adjuster.");
+        object frame = Activator.CreateInstance(frameType, [72d, 72d, 720d, 432d]) ?? throw new InvalidOperationException("Expected chart frame.");
+        object plot = Activator.CreateInstance(plotBoxType, [122.5d, 111.9d, 667.5d, 376.1d]) ?? throw new InvalidOperationException("Expected chart plot box.");
+        object set = adjust.Invoke(null, [plot, frame, false, hiddenLegend, true]) ?? throw new InvalidOperationException("Expected set plot box.");
+        Type boxType = set.GetType();
+        double right = (double)(boxType.GetProperty("X")?.GetValue(set) ?? 0d) + (double)(boxType.GetProperty("Width")?.GetValue(set) ?? 0d);
+        TestAssert.True(Math.Abs(right - 781.7d) < 1e-9, "Column right reserve drifts from the Office 10.3pt edge.");
+        object widePlot = Activator.CreateInstance(plotBoxType, [122.5d, 111.9d, 667.5d, 376.1d]) ?? throw new InvalidOperationException("Expected wide plot box.");
+        object bars = adjust.Invoke(null, [widePlot, frame, true, hiddenLegend, true]) ?? throw new InvalidOperationException("Expected bars plot box.");
+        double barsRight = (double)(boxType.GetProperty("X")?.GetValue(bars) ?? 0d) + (double)(boxType.GetProperty("Width")?.GetValue(bars) ?? 0d);
+        TestAssert.True(Math.Abs(barsRight - 790d) < 1e-9, "Column right reserve must not touch horizontal bars.");
+    }
     public static void PptxChartRadarWebGeometryIsFrameLocked()
     {
         // Office radar webs are style-invariant frame-locked squares: 432H untitled
