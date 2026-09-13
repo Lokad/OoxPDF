@@ -1845,6 +1845,32 @@ internal static class PptxChartLegendsTests
         TestAssert.True(Math.Abs(floored - 108d) < 1e-9, "Bottom axis-title baseline must floor at the frame bottom.");
     }
 
+    public static void PptxVerticalBarPlotBoxTopFloorBindsShortFrames()
+    {
+        // Office keeps untitled legendless column tops at least 10.9pt below the frame
+        // (exact on 170H/288H/130H renders); taller frames keep the ratio top.
+        Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
+        Type plotBoxType = typeof(PptxRenderer).GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
+        System.Reflection.MethodInfo adjust = typeof(PptxRenderer).GetMethod("AdjustVerticalBarPlotBoxTopFloor", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected column top-floor adjuster.");
+        object frame = Activator.CreateInstance(frameType, [430d, 245d, 255d, 130d]) ?? throw new InvalidOperationException("Expected chart frame.");
+        object plot = Activator.CreateInstance(plotBoxType, [468.6d, 264.7d, 212.5d, 105.5d]) ?? throw new InvalidOperationException("Expected chart plot box.");
+        object floored = adjust.Invoke(null, [plot, frame, false, false, false, true]) ?? throw new InvalidOperationException("Expected floored plot box.");
+        Type boxType = floored.GetType();
+        double top = (double)(boxType.GetProperty("Y")?.GetValue(floored) ?? 0d) + (double)(boxType.GetProperty("Height")?.GetValue(floored) ?? 0d);
+        TestAssert.True(Math.Abs(top - 364.1d) < 1e-9, "Column top floor drifts from the Office 10.9pt clearance.");
+        object tallPlot = Activator.CreateInstance(plotBoxType, [122.5d, 111.9d, 659.2d, 376.1d]) ?? throw new InvalidOperationException("Expected tall plot box.");
+        object tallFrame = Activator.CreateInstance(frameType, [72d, 72d, 720d, 432d]) ?? throw new InvalidOperationException("Expected tall chart frame.");
+        object kept = adjust.Invoke(null, [tallPlot, tallFrame, false, false, false, true]) ?? throw new InvalidOperationException("Expected kept plot box.");
+        double keptTop = (double)(boxType.GetProperty("Y")?.GetValue(kept) ?? 0d) + (double)(boxType.GetProperty("Height")?.GetValue(kept) ?? 0d);
+        TestAssert.True(Math.Abs(keptTop - 488d) < 1e-9, "Column top floor must not touch ratio-driven tall tops.");
+        object titled = adjust.Invoke(null, [plot, frame, false, true, false, true]) ?? throw new InvalidOperationException("Expected titled plot box.");
+        double titledTop = (double)(boxType.GetProperty("Y")?.GetValue(titled) ?? 0d) + (double)(boxType.GetProperty("Height")?.GetValue(titled) ?? 0d);
+        TestAssert.True(Math.Abs(titledTop - 370.2d) < 1e-9, "Column top floor must not touch titled plots.");
+        object unlabeled = adjust.Invoke(null, [plot, frame, false, false, false, false]) ?? throw new InvalidOperationException("Expected unlabeled plot box.");
+        double unlabeledTop = (double)(boxType.GetProperty("Y")?.GetValue(unlabeled) ?? 0d) + (double)(boxType.GetProperty("Height")?.GetValue(unlabeled) ?? 0d);
+        TestAssert.True(Math.Abs(unlabeledTop - 370.2d) < 1e-9, "Column top floor must not touch label-less plots.");
+    }
+
     public static void PptxChartRadarWebGeometryIsFrameLocked()
     {
         // Office radar webs are style-invariant frame-locked squares: 432H untitled

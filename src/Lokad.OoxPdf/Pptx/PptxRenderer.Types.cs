@@ -286,6 +286,9 @@ internal sealed partial class PptxRenderer
         // replaces the preset only on clear disagreement (legend-keys 4.45 vs
         // column-clustered 0.06); inside slop the preset stands untouched.
         public const double BarValueAxisPresetFloorSlop = 1d;
+        // Minimum Office top clearance for untitled legendless columns (10.9pt on three
+        // short-frame renders; the frame ratio stands above it).
+        public const double ColumnPlotTopMarginFloor = 10.9d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter
         // charts. Calibrated from cached Office references: reserve minus our measured marker

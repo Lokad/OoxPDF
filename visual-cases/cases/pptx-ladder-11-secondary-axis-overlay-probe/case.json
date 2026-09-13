@@ -10,7 +10,7 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 1.6,
-    "minForegroundRecall": 0.89,
+    "minForegroundRecall": 0.91,
     "maxChangedPixelRatioAtThreshold16": 0.028,
     "maxChartGraphicsStructureBoundsDelta": 4.6,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,

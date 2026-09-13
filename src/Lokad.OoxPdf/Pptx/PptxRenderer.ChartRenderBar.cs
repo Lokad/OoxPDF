@@ -228,6 +228,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustHorizontalBarPlotBoxForCategoryLabels(defaultPlotBox);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForValueLabels(defaultPlotBox);
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
+        defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -548,17 +549,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            bool hasCategoryLabel = false;
-            foreach (ChartIndexedTextPoint? labelPoint in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())
-            {
-                if (!string.IsNullOrWhiteSpace(labelPoint?.Text))
-                {
-                    hasCategoryLabel = true;
-                    break;
-                }
-            }
-
-            if (!hasCategoryLabel)
+            if (!HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
             {
                 return plotBox;
             }
@@ -911,6 +902,34 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.BarMultiValueAxisPrimaryStripFactor;
     }
 
+    // Minimum top clearance for untitled legendless columns: Office keeps the plot top
+    // at least 10.9pt below the frame top (exact on 170H, 288H and 130H Office renders
+    // where the frame ratio alone wants 6.3/10.7/4.8); taller frames keep the ratio.
+    // Titled, legend, horizontal and label-less paths keep legacy tops (the law comes
+    // from labeled charts only; the single-point confound stays open).
+    private static ChartPlotBox AdjustVerticalBarPlotBoxTopFloor(ChartPlotBox plotBox, ChartFrameBox frame, bool horizontalBars, bool hasTitle, bool hasLegend, bool hasCategoryLabels)
+    {
+        if (horizontalBars || hasTitle || hasLegend || !hasCategoryLabels)
+        {
+            return plotBox;
+        }
+
+        double flooredTop = Math.Min(plotBox.Y + plotBox.Height, frame.Y + frame.Height - PptxChartMetricRules.ColumnPlotTopMarginFloor);
+        return new ChartPlotBox(plotBox.X, plotBox.Y, plotBox.Width, Math.Max(1d, flooredTop - plotBox.Y));
+    }
+
+    private static bool HasRenderableCategoryLabels(PptxSceneChartPlot? barPlot, XElement barChart, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    {
+        foreach (ChartIndexedTextPoint? labelPoint in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())
+        {
+            if (!string.IsNullOrWhiteSpace(labelPoint?.Text))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     private static ChartPlotBox AdjustStackedColumnBottomLegendPlotBox(
         ChartPlotBox plotBox,
         ChartFrameBox frame,
