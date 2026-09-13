@@ -948,9 +948,9 @@ internal sealed partial class PptxRenderer
             return plotBox;
         }
 
-        double left = Math.Min(
-            frame.X + frame.Width,
-            plotBox.X + PptxChartMetricRules.StackedColumnBottomLegendPlotBoxLeftPadding);
+        // No left pad: the measured value-axis reserve already lands the left edge within
+        // 0.1pt (the 1.8pt pad predates it and overshoots); the right pad stays measured.
+        double left = Math.Min(frame.X + frame.Width, plotBox.X);
         double right = Math.Max(
             left + 1d,
             plotBox.X + plotBox.Width - PptxChartMetricRules.StackedColumnBottomLegendPlotBoxRightPadding);

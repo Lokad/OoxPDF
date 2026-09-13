@@ -227,7 +227,6 @@ internal sealed partial class PptxRenderer
         // Calibrated to the 54.4pt Office bottom margin measured on 360pt and 216pt frames
         // (12pt and 18pt legends over 12pt and 8pt ticks respectively).
         public const double BarNoTitleBottomLegendContentGap = 19.2d;
-        public const double StackedColumnBottomLegendPlotBoxLeftPadding = 1.8d;
         public const double StackedColumnBottomLegendPlotBoxRightPadding = 3.9d;
         public const double BarTitleNoLegendPlotBoxXRatio = 0.1106d;
         public const double BarTitleNoLegendPlotBoxYRatio = 0.1008d;

@@ -405,6 +405,8 @@ internal static class PptxCoreTests
 
     public static void PptxStackedColumnBottomLegendPlotBoxUsesOfficeHorizontalPadding()
     {
+        // Office needs no left pad here (bottom-legend probe: Office left 142.3 against the
+        // measured 142.46, while the old 1.8pt pad overshoots); the right pad stays measured.
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
@@ -442,8 +444,8 @@ internal static class PptxCoreTests
         double x = (double)(adjusted.GetType().GetProperty("X")?.GetValue(adjusted) ?? 0d);
         double width = (double)(adjusted.GetType().GetProperty("Width")?.GetValue(adjusted) ?? 0d);
 
-        TestAssert.Equal(142.04d, Math.Round(x, 2));
-        TestAssert.Equal(327.62d, Math.Round(width, 2));
+        TestAssert.Equal(140.24d, Math.Round(x, 2));
+        TestAssert.Equal(329.42d, Math.Round(width, 2));
     }
 
     public static void PptxUnsupportedFeaturesEmitDiagnostics()
