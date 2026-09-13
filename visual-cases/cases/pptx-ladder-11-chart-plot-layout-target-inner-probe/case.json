@@ -9,7 +9,7 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.3,
+    "maxMeanAbsoluteError": 0.25,
     "minForegroundRecall": 0.97,
     "maxChangedPixelRatioAtThreshold16": 0.006,
     "minForegroundColorHistogramCorrelation": 0.998,
@@ -18,7 +18,7 @@
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ChartTitleText", "ValueAxisTickLabel"],
     "maxChartTextStructurePositionDeltaByKind": {
-      "CategoryAxisTickLabel": 20.0,
+      "CategoryAxisTickLabel": 0.2,
       "ChartTitleText": 1.0,
       "ValueAxisTickLabel": 0.2
     }
