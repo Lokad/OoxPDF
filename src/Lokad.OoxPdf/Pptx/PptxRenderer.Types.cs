@@ -188,6 +188,16 @@ internal sealed partial class PptxRenderer
         // radars without an explicit line (both ladder radar ports share style 118, so
         // revisit if other styles diverge); filled radars omit the outline instead.
         public const double RadarSeriesOutlineWidth = 3.75d;
+        // Radar web square: Office bottom-anchors an S-by-S plot square at 32.76pt
+        // above the frame bottom with a 33.36pt top reserve untitled (series-clip rects
+        // on 432H and 324H Office renders, both styles byte-identical), so the available
+        // side is the frame height minus this 66.12pt total; a single-line 21.6pt auto
+        // title adds an exact 35.4pt band (two 1-series Office renders). Narrow frames
+        // and explicit or multi-line titles are unobserved.
+        public const double RadarPlotVerticalReserveTotal = 66.12d;
+        public const double RadarTitledPlotBand = 35.4d;
+        // Radar web radius stops half a web-graticule width (0.75pt) inside the square.
+        public const double RadarWebRadiusPenHalf = 0.375d;
         public const double DoughnutHoleMinimumRatio = 0.1d;
         public const double DoughnutHoleMaximumRatio = 0.9d;
         public const double DoughnutHoleFallbackRatio = 0.56d;

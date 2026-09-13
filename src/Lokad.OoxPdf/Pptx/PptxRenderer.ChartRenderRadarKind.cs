@@ -42,9 +42,13 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, radarPlot, chartXml, radarChart);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetRadarChartValueExtents(radarSeries), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis);
-                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
+                ChartFrameBox frame = GetChartFrameBox(document, bounds);
+                ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
+                bool radarManualPlot = TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout radarManualLayout);
+                ChartPlotBox plotBox = radarManualPlot ? radarManualLayout.PlotBox : defaultPlotBox;
                 ChartRadarPlotOptions radarOptions = ReadSceneOrXmlChartRadarOptions(radarPlot, radarChart);
-                ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, radarOptions.RadarStyle, radarSeries);
+                bool radarHasTitle = !string.IsNullOrWhiteSpace(ReadSceneOrXmlChartTitleText(sceneChart, chartXml));
+                ChartRadarLayout radarLayout = ResolveRadarLayout(frame, plotBox, radarOptions.RadarStyle, radarSeries, radarHasTitle, radarManualPlot);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
                 if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))

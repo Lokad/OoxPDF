@@ -1783,6 +1783,35 @@ internal static class PptxChartLegendsTests
         TestAssert.True(longWidth > shortWidth, "Expected radar value-axis label frames to expand for measured label text.");
     }
 
+    public static void PptxChartRadarWebGeometryIsFrameLocked()
+    {
+        // Office radar webs are style-invariant frame-locked squares: 432H untitled
+        // centers at (432, 288) with R 182.565, a single-line auto title shifts to
+        // (432, 270.3) with R 164.865, and the 324H frame centers at (432, 342).
+        Type frameType = typeof(PptxRenderer).GetNestedType(
+            "ChartFrameBox",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
+        System.Reflection.MethodInfo compute = typeof(PptxRenderer).GetMethod(
+            "ComputeRadarWebGeometry",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected radar web geometry helper.");
+        object frame = Activator.CreateInstance(frameType, [144d, 72d, 576d, 432d]) ?? throw new InvalidOperationException("Expected chart frame.");
+        AssertRadarWebGeometry(compute.Invoke(null, [frame, false]), 432d, 288d, 182.565d);
+        AssertRadarWebGeometry(compute.Invoke(null, [frame, true]), 432d, 270.3d, 164.865d);
+        object shortFrame = Activator.CreateInstance(frameType, [144d, 180d, 576d, 324d]) ?? throw new InvalidOperationException("Expected short chart frame.");
+        AssertRadarWebGeometry(compute.Invoke(null, [shortFrame, false]), 432d, 342d, 128.565d);
+    }
+
+    private static void AssertRadarWebGeometry(object? geometry, double centerX, double centerY, double radius)
+    {
+        TestAssert.True(geometry is not null, "Expected radar web geometry.");
+        Type geometryType = geometry!.GetType();
+        double actualX = (double)(geometryType.GetProperty("CenterX")?.GetValue(geometry) ?? 0d);
+        double actualY = (double)(geometryType.GetProperty("CenterY")?.GetValue(geometry) ?? 0d);
+        double actualR = (double)(geometryType.GetProperty("Radius")?.GetValue(geometry) ?? 0d);
+        TestAssert.True(Math.Abs(actualX - centerX) < 1e-9, "Radar web center X drifts from the Office-calibrated frame lock.");
+        TestAssert.True(Math.Abs(actualY - centerY) < 1e-9, "Radar web center Y drifts from the Office-calibrated frame lock.");
+        TestAssert.True(Math.Abs(actualR - radius) < 1e-9, "Radar web radius drifts from the Office-calibrated frame lock.");
+    }
     public static void PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""

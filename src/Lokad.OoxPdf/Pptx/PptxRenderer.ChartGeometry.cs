@@ -452,7 +452,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartRadarLayout ResolveRadarLayout(ChartPlotBox plotBox, PptxSceneChartRadarStyle radarStyle, IReadOnlyList<ChartRadarSeries> series)
+    private static ChartRadarLayout ResolveRadarLayout(ChartFrameBox frame, ChartPlotBox plotBox, PptxSceneChartRadarStyle radarStyle, IReadOnlyList<ChartRadarSeries> series, bool hasTitle, bool manualPlotLayout)
     {
         ChartRadarStyle style = radarStyle == PptxSceneChartRadarStyle.Filled
             ? ChartRadarStyle.Filled
@@ -466,11 +466,18 @@ internal sealed partial class PptxRenderer
 
         ChartPolarGeometry GetRadarChartGeometry()
         {
-            ChartRadarGeometryRule rule = ResolveRadarGeometryRule(style);
-            return new ChartPolarGeometry(
-                plotBox.X + plotBox.Width * rule.CenterXRatio,
-                plotBox.Y + plotBox.Height * rule.CenterYRatio,
-                Math.Min(plotBox.Width, plotBox.Height) * rule.RadiusRatio);
+            // Manual plot boxes keep the legacy plot-relative rule (Office manual radar
+            // layout is unobserved); automatic layout uses the frame-locked square.
+            if (manualPlotLayout)
+            {
+                ChartRadarGeometryRule rule = ResolveRadarGeometryRule(style);
+                return new ChartPolarGeometry(
+                    plotBox.X + plotBox.Width * rule.CenterXRatio,
+                    plotBox.Y + plotBox.Height * rule.CenterYRatio,
+                    Math.Min(plotBox.Width, plotBox.Height) * rule.RadiusRatio);
+            }
+
+            return ComputeRadarWebGeometry(frame, hasTitle);
         }
     }
 
@@ -479,6 +486,23 @@ internal sealed partial class PptxRenderer
         return style == ChartRadarStyle.Filled
             ? new ChartRadarGeometryRule(CenterXRatio: 0.5d, CenterYRatio: 0.4583333333333333d, RadiusRatio: 0.3825d)
             : new ChartRadarGeometryRule(CenterXRatio: 0.5d, CenterYRatio: 0.5d, RadiusRatio: 0.4226d);
+    }
+
+    private static ChartPolarGeometry ComputeRadarWebGeometry(ChartFrameBox frame, bool hasTitle)
+    {
+        // Office radar webs are style-invariant (marker and filled styles render
+        // byte-identically): the web is inscribed in a bottom-anchored square of side
+        // S = frameH - 66.12 (- 35.4 more with a title), centered on the frame middle
+        // minus half the title band, radius S/2 minus the 0.375pt web half-width.
+        // Calibrated on seven Office renders (432H/324H frames, 1-2 series, both
+        // styles, halved data, relabeled cats); narrow frames and explicit or
+        // multi-line titles are unobserved.
+        double titleBand = hasTitle ? PptxChartMetricRules.RadarTitledPlotBand : 0d;
+        double side = frame.Height - PptxChartMetricRules.RadarPlotVerticalReserveTotal - titleBand;
+        return new ChartPolarGeometry(
+            frame.X + frame.Width / 2d,
+            frame.Y + frame.Height / 2d - titleBand / 2d,
+            side / 2d - PptxChartMetricRules.RadarWebRadiusPenHalf);
     }
 
     private static ChartRadarLabelRules ResolveRadarLabelRules(ChartRadarStyle style)
