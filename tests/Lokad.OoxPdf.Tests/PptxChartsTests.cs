@@ -1012,9 +1012,9 @@ internal static class PptxChartsTests
         double eight = (double)method!.Invoke(null, [8d])!;
         double twelve = (double)method!.Invoke(null, [12d])!;
         double sixteen = (double)method!.Invoke(null, [16d])!;
-        TestAssert.True(Math.Abs(eight - 6.99d) < 0.05d, "Eight-point labels should lift 6.99 above bar tops (Office 6.7 to 7.1). Got " + eight);
-        TestAssert.True(Math.Abs(twelve - 8.11d) < 0.05d, "Twelve-point labels should lift 8.11 above bar tops (Office 7.9 to 8.3). Got " + twelve);
-        TestAssert.True(Math.Abs(sixteen - 9.23d) < 0.05d, "Sixteen-point labels should lift 9.23 above bar tops (Office 9.1 to 9.4). Got " + sixteen);
+        TestAssert.True(Math.Abs(eight - 6.74d) < 0.05d, "Eight-point labels should lift 6.74 above bar tops (Office 6.66). Got " + eight);
+        TestAssert.True(Math.Abs(twelve - 7.86d) < 0.05d, "Twelve-point labels should lift 7.86 above bar tops (Office 7.83). Got " + twelve);
+        TestAssert.True(Math.Abs(sixteen - 8.98d) < 0.05d, "Sixteen-point labels should lift 8.98 above bar tops (Office 8.99). Got " + sixteen);
     }
 
     public static void PptxSyntheticBarLegendKeySwatchAnchorsToText()
