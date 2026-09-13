@@ -45,13 +45,12 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         double angle = GetPieDataLabelStartAngle(firstSliceAngle);
-        // Office usually draws a leader line for exactly one manually-placed pie label:
-        // the smallest-|x-factor| valid manual layout (|x|<=1 and |y|<=1 in factor mode;
-        // out-of-range manuals fall back to auto with no leader). A crafted probe with two
-        // small-|x-factor| manuals drew two leaders, so the rank is a majority rule with a
-        // known multi-leader residual, not a proven singleton law. Charts without any
-        // valid manual label keep the legacy per-label behavior.
-        int? manualLeaderSliceIndex = SelectPieManualLeaderLabelIndex(CollectPieManualLeaderFactors(labelOptions, slices));
+        // Office draws leader lines only for same-side narrow manual pie labels (the
+        // box center sits on the wedge half and the box fits 85.3pt): one leader on
+        // the base probes (Gamma/West), two on rotated small-factor probes
+        // (Beta+Gamma), none when the same-side box runs wide (graded/long-Gamma).
+        // Charts without any valid manual label keep the legacy per-label behavior.
+        bool pieChartHasManualLeaderCandidate = HasPieManualLeaderCandidate(labelOptions, slices);
         foreach (ChartIndexedPieSlice slice in slices)
         {
             ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
@@ -155,7 +154,8 @@ internal sealed partial class PptxRenderer
                 }
                 ChartLayoutBox labelBox;
                 bool pieManualBottomAnchor = false;
-                if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _))
+                bool pieIsFactorManual = TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _);
+                if (pieIsFactorManual)
                 {
                     double pieCircleGap = plotBox.Width * PptxChartMetricRules.PieManualLabelCircleGapPlotWidthFactor;
                     double pieCircleX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion + pieCircleGap);
@@ -178,7 +178,9 @@ internal sealed partial class PptxRenderer
                 {
                     labelBox = new ChartLayoutBox(labelX, labelY, labelWidth, labelHeight);
                 }
-                if (manualLeaderSliceIndex is null || slice.Index == manualLeaderSliceIndex.Value)
+                bool pieDrawLeader = !pieChartHasManualLeaderCandidate
+                    || (pieIsFactorManual && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), labelBox.Width));
+                if (pieDrawLeader)
                 {
                     RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
                 }
@@ -438,9 +440,10 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static List<(int SliceIndex, double FactorX)> CollectPieManualLeaderFactors(ChartDataLabelOptions labelOptions, IReadOnlyList<ChartIndexedPieSlice> slices)
+    // Whether the chart carries any valid manual pie label (factor-mode, in range):
+    // charts without one keep legacy per-label leader emission.
+    private static bool HasPieManualLeaderCandidate(ChartDataLabelOptions labelOptions, IReadOnlyList<ChartIndexedPieSlice> slices)
     {
-        var factors = new List<(int SliceIndex, double FactorX)>(slices.Count);
         foreach (ChartIndexedPieSlice slice in slices)
         {
             ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
@@ -448,30 +451,22 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
-            if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out double factorX))
+            if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out double _))
             {
-                factors.Add((slice.Index, factorX));
+                return true;
             }
         }
-        return factors;
+        return false;
     }
-
-    // Leader pick: smallest |x-factor| valid manual label, first wins ties; null keeps
-    // legacy per-label emission (no valid manual label on the chart).
-    private static int? SelectPieManualLeaderLabelIndex(IReadOnlyList<(int SliceIndex, double FactorX)> manualLabels)
+    // Per-label leader pick for charts with valid manuals: the box center must sit on
+    // the wedge half of the pie (near-cardinal rims count as on-axis below 0.01) and
+    // the box must fit the narrow width above.
+    private static bool ShouldDrawPieManualLeaderLabel(double boxCenterX, double centerX, double cosTheta, double boxWidth)
     {
-        int? best = null;
-        double bestAbs = double.MaxValue;
-        foreach ((int sliceIndex, double factorX) in manualLabels)
-        {
-            double abs = Math.Abs(factorX);
-            if (abs < bestAbs)
-            {
-                bestAbs = abs;
-                best = sliceIndex;
-            }
-        }
-        return best;
+        bool east = cosTheta > 0.01d;
+        bool west = cosTheta < -0.01d;
+        bool sameSide = (east && boxCenterX > centerX) || (west && boxCenterX < centerX);
+        return sameSide && boxWidth <= PptxChartMetricRules.PieManualLabelLeaderMaxBoxWidth;
     }
 
     // Circle-anchored box for factor-mode manual pie labels: the anchor rides a

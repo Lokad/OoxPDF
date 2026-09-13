@@ -968,19 +968,22 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)method.Invoke(null, [2])!, "Multi-plot stacked charts should keep the shared estimator (compact probe Office strip 17.6pt vs 24.1pt measured).");
     }
 
-    public static void PptxSyntheticPieManualLeaderPicksSmallestXFactor()
+    public static void PptxSyntheticPieManualLeaderNeedsSameSideNarrowBox()
     {
         var method = typeof(PptxRenderer).GetMethod(
-            "SelectPieManualLeaderLabelIndex",
+            "ShouldDrawPieManualLeaderLabel",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected pie manual-leader pick helper to remain inspectable by the Office evidence guard.");
-
-        int? probePick = (int?)method!.Invoke(null, [new List<(int, double)> { (0, -0.77024), (1, 0.66015), (2, -0.07016), (3, 0.61922) }]);
-        TestAssert.True(probePick == 2, "Leader probe should pick Gamma (smallest |x-factor|). Got " + probePick);
-        int? offsetPick = (int?)method.Invoke(null, [new List<(int, double)> { (0, -0.77342), (1, 0.43820), (2, 0.07619), (3, 0.63844) }]);
-        TestAssert.True(offsetPick == 2, "Offset probe should pick West (smallest |x-factor|). Got " + offsetPick);
-        int? legacyPick = (int?)method.Invoke(null, [new List<(int, double)>()]);
-        TestAssert.True(legacyPick is null, "Charts without valid manual labels should keep legacy emission. Got " + legacyPick);
+        object?[] gamma = [182.3d, 404d, -0.9767d, 68.59d];
+        object?[] alpha = [202.32d, 404d, 0.998d, 88.64d];
+        object?[] wide = [187.7d, 404d, -0.9767d, 87.23d];
+        object?[] axial = [478.04d, 294d, 0d, 51.92d];
+        object?[] west = [157.66d, 294d, -1d, 83.31d];
+        TestAssert.True((bool)method!.Invoke(null, gamma)!, "Same-side narrow Gamma should keep its leader (Office draws one).");
+        TestAssert.True(!(bool)method.Invoke(null, alpha)!, "Opposite-side Alpha should stay leaderless (Office draws none).");
+        TestAssert.True(!(bool)method.Invoke(null, wide)!, "Same-side wide labels should stay leaderless (Office graded Gamma draws none).");
+        TestAssert.True(!(bool)method.Invoke(null, axial)!, "On-axis rims should stay leaderless (Office South draws none).");
+        TestAssert.True((bool)method.Invoke(null, west)!, "Same-side West at 83.31pt should keep its leader (Office draws one).");
     }
 
     public static void PptxSyntheticPieManualLeaderRejectsOutOfRangeFactors()

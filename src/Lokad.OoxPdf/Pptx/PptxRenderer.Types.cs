@@ -359,6 +359,11 @@ internal sealed partial class PptxRenderer
         // this much (3 Office boxes within 1.1pt; south uses the single-line height
         // even when wrapped; near-cardinals like West 1.8deg off keep the radial rule).
         public const double PieManualLabelCardinalVerticalShift = 2.42d;
+        // Manual pie/doughnut leaders go to same-side narrow boxes only: the box center
+        // must sit on the wedge half of the pie (on-axis rims never lead, 3 samples)
+        // and the box must fit this width (24 Office labels: West 83.31 leads while
+        // graded Gamma 87.23 does not; singles above 83.31 same-side are unobserved).
+        public const double PieManualLabelLeaderMaxBoxWidth = 85.3d;
         // Pie labels wrap past this fraction of the plot width (8 Office samples: every
         // wrapped label exceeds it, every single-line label stays below; tightest margins
         // are West 0.6pt and Gamma 2.8pt. Plot-width, height, and radius bases are
