@@ -239,7 +239,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind, 0);
-                var textMeasurer = new ChartTextMeasurer(fontResolver);
+                var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 if (plotKind == PptxSceneChartPlotKind.Scatter)
                 {
                     IReadOnlyList<ScatterSeries> series = ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
@@ -346,7 +346,7 @@ internal sealed partial class PptxRenderer
             fontResolver: fontResolver,
             lastCategoryLabelWidth: lastCategoryLabelWidth,
             lastXLabelWidth: lastXLabelWidth);
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
 
         double maxValueLabelWidth = 0d;
         bool explicitValueAxisScale = false;
@@ -527,7 +527,7 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        return new ChartTextMeasurer(fontResolver).Measure(label.Text, categoryStyle);
+        return new ChartTextMeasurer(fontResolver, kerningEnabled: false).Measure(label.Text, categoryStyle);
     }
 
     // Full width of the last visible X tick label for the scatter right-legend reserve
@@ -565,7 +565,7 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        return new ChartTextMeasurer(fontResolver).Measure(lastLabel, style);
+        return new ChartTextMeasurer(fontResolver, kerningEnabled: false).Measure(lastLabel, style);
     }
 
     private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)

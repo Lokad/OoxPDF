@@ -205,10 +205,20 @@ internal sealed partial class PptxRenderer
     private sealed class ChartTextMeasurer
     {
         private readonly TextAdvanceEstimator estimator;
+        private readonly bool kerningEnabled;
 
+        // Office applies no pair kerning to chart axis tick and category labels
+        // (adjustment sums read 0 across bar probes at 7 to 18pt); data labels,
+        // legends, and titles keep the legacy behavior until role evidence lands (F03).
         public ChartTextMeasurer(PresentationFontResolver? fontResolver)
+            : this(fontResolver, kerningEnabled: true)
+        {
+        }
+
+        public ChartTextMeasurer(PresentationFontResolver? fontResolver, bool kerningEnabled)
         {
             estimator = new TextAdvanceEstimator(fontResolver, CancellationToken.None);
+            this.kerningEnabled = kerningEnabled;
         }
 
         public double Measure(string text, ChartTextStyle style)
@@ -225,7 +235,7 @@ internal sealed partial class PptxRenderer
                 bold,
                 italic,
                 characterSpacing,
-                kerningEnabled: true);
+                kerningEnabled: kerningEnabled);
         }
     }
 

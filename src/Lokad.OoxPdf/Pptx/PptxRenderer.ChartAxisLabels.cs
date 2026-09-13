@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
         double widestCategoryLabel = 0d;
         if (horizontalBars)
         {
-            var stripMeasurer = new ChartTextMeasurer(fontResolver);
+            var stripMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             for (int labelIndex = 0; labelIndex < labels.Count; labelIndex++)
             {
                 if (labelIndex % tickLabelSkip != 0)
@@ -108,7 +108,7 @@ internal sealed partial class PptxRenderer
                 Italic: style.Italic,
                 Underline: style.Underline,
                 Strike: style.Strike,
-                KerningEnabled: true,
+                KerningEnabled: false,
                 alignment,
                 FontFamily: style.FontFamily,
                 RotationDegrees: 0d,
@@ -128,7 +128,7 @@ internal sealed partial class PptxRenderer
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         RgbColor color = style.Color;
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double autoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible: true, manualPlotLayoutApplied);
         IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, autoTickTargetCount);
         double maxLabelWidth = tickValues
@@ -189,7 +189,7 @@ internal sealed partial class PptxRenderer
                 Italic: style.Italic,
                 Underline: style.Underline,
                 Strike: style.Strike,
-                KerningEnabled: true,
+                KerningEnabled: false,
                 alignment,
                 FontFamily: style.FontFamily,
                 RotationDegrees: 0d,

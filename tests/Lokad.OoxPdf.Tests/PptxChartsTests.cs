@@ -1043,6 +1043,29 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(swatchYSixteen - 272.25d) < 0.15d, "Sixteen-point swatch should sit at the Office top (272.25). Got " + swatchYSixteen);
     }
 
+    public static void PptxSyntheticChartAxisLabelsSkipPairKerning()
+    {
+        var measurerType = typeof(PptxRenderer).GetNestedType(
+            "ChartTextMeasurer",
+            System.Reflection.BindingFlags.NonPublic);
+        TestAssert.True(measurerType is not null, "Expected chart text measurer to remain inspectable by the Office evidence guard.");
+        object kerned = System.Activator.CreateInstance(measurerType!, [null, true])!;
+        object plain = System.Activator.CreateInstance(measurerType!, [null, false])!;
+        System.Reflection.MethodInfo? measure = null;
+        foreach (var candidate in measurerType!.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            if (candidate.Name == "Measure" && candidate.GetParameters().Length == 6)
+            {
+                measure = candidate;
+                break;
+            }
+        }
+        double kernedWidth = (double)measure!.Invoke(kerned, ["Marketing", 18d, "Calibri", false, false, 0d])!;
+        double plainWidth = (double)measure.Invoke(plain, ["Marketing", 18d, "Calibri", false, false, 0d])!;
+        TestAssert.True(Math.Abs(plainWidth - 75.55d) < 0.5d, "Unkerned Marketing should match the Office advance (75.55). Got " + plainWidth);
+        TestAssert.True(Math.Abs((plainWidth - kernedWidth) - 0.68d) < 0.15d, "Legacy pair kerning should tighten Marketing by 0.68 (ke plus et); axis labels must not carry it. Got " + (plainWidth - kernedWidth));
+    }
+
     public static void PptxSyntheticPieLongWordSplitWidthReservesSeparator()
     {
         var method = typeof(PptxRenderer).GetMethod(
