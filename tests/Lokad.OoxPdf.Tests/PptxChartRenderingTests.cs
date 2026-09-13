@@ -242,7 +242,7 @@ internal static class PptxChartRenderingTests
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
-                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:dLbl><c:idx val="1"/><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="CC11AA"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbl></c:dLbls></c:ser>
+                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:dLbl><c:idx val="1"/><c:layout><c:manualLayout><c:xMode val="factor"/><c:yMode val="factor"/><c:x val="0.1"/><c:y val="0.1"/></c:manualLayout></c:layout><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="CC11AA"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbl></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """),
@@ -335,9 +335,9 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 9.96 Tf", pdf);
         TestAssert.Contains("1 0 0 1 79.2 357.525 Tm", pdf);
-        TestAssert.Contains("0.267 0.8 0.533 RG", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"0\.267 0\.8 0\.533 RG\s+1\.5 w[\s\S]+? m\s+[\s\S]+? l\s+[\s\S]+? l\s+S"),
-            "Expected polar data-label leader lines to render as two-segment stroked paths using the preserved leader-line style.");
+        // Auto pie labels emit no leaders (Office draws none for the styled auto labels
+        // on the auto-radius reference); only the factor-manual label below keeps one.
+        TestAssert.DoesNotContain("0.267 0.8 0.533 RG", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"0\.8 0\.067 0\.667 RG\s+2\.25 w[\s\S]+? m\s+[\s\S]+? l\s+[\s\S]+? l\s+S"),
             "Expected per-label polar leader-line style to override the chart-wide leader-line style.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
@@ -407,6 +407,58 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.Matches(pdf, "0\\.071 0\\.204 0\\.337 rg").Count >= 2, "Expected sparse point index 4 to drive both the slice fill and its category legend marker fill.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Sparse pie charts should render through the native chart path.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Sparse pie charts should not emit unsupported chart diagnostics.");
+    }
+
+    public static void PptxSyntheticPieAutoLabelsEmitNoLeaders()
+    {
+        // Office draws no leaders for styled auto pie labels (auto-radius reference
+        // carries a red 2.25pt leader style yet zero leader strokes); only manual
+        // labels keep them.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:pieChart>
+                    <c:ser>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>30</c:v></c:pt><c:pt idx="1"><c:v>70</c:v></c:pt></c:numLit></c:val>
+                      <c:dLbls><c:showVal val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbls>
+                    </c:ser>
+                  </c:pieChart></c:plotArea></c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.DoesNotContain("1 0 0 RG", pdf);
+        TestAssert.Contains("BT", pdf);
     }
 
     public static void PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts()

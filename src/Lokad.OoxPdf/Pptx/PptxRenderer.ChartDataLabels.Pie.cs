@@ -49,8 +49,6 @@ internal sealed partial class PptxRenderer
         // box center sits on the wedge half and the box fits 85.3pt): one leader on
         // the base probes (Gamma/West), two on rotated small-factor probes
         // (Beta+Gamma), none when the same-side box runs wide (graded/long-Gamma).
-        // Charts without any valid manual label keep the legacy per-label behavior.
-        bool pieChartHasManualLeaderCandidate = HasPieManualLeaderCandidate(labelOptions, slices);
         foreach (ChartIndexedPieSlice slice in slices)
         {
             ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
@@ -186,8 +184,12 @@ internal sealed partial class PptxRenderer
                 {
                     labelBox = new ChartLayoutBox(labelX, labelY, labelWidth, labelHeight);
                 }
-                bool pieDrawLeader = !pieChartHasManualLeaderCandidate
-                    || (pieIsFactorManual && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), pieUnwrappedWidth, plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor, plotBox.Width, plotBox.Height));
+                // Office draws leaders only for manual pie labels (the auto-radius
+                // Office reference carries a leader style yet zero leader strokes for
+                // its four auto labels); auto and edge-mode labels stay leaderless,
+                // and mixed manual/auto interplay is unobserved.
+                bool pieDrawLeader = pieIsFactorManual
+                    && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), pieUnwrappedWidth, plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor, plotBox.Width, plotBox.Height);
                 if (pieDrawLeader)
                 {
                     RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions, fontSize, pieManualLineCount, pieManualBottomAnchor);
@@ -456,24 +458,6 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    // Whether the chart carries any valid manual pie label (factor-mode, in range):
-    // charts without one keep legacy per-label leader emission.
-    private static bool HasPieManualLeaderCandidate(ChartDataLabelOptions labelOptions, IReadOnlyList<ChartIndexedPieSlice> slices)
-    {
-        foreach (ChartIndexedPieSlice slice in slices)
-        {
-            ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
-            if (!effectiveOptions.HasVisibleContent)
-            {
-                continue;
-            }
-            if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out double _))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
     // Per-label leader pick for charts with valid manuals: the box center must sit on
     // the wedge half of the pie (near-cardinal rims count as on-axis below 0.01), the
     // unwrapped text must fit 1.12 wrap caps, and the plot must be wide (squares draw
