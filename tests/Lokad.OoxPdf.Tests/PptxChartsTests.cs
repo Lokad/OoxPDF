@@ -1010,7 +1010,7 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)method.Invoke(null, edgeArgs)!, "Edge-mode manuals carry points, not factors, and stay out of the pick.");
     }
 
-    public static void PptxSyntheticPieManualAnchorSitsOutsideRimMidpoint()
+    public static void PptxSyntheticPieManualAnchorRidesCirclePastRim()
     {
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
@@ -1025,13 +1025,13 @@ internal static class PptxChartsTests
         }
         var plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected plot box.");
         object plotBox = System.Activator.CreateInstance(plotBoxType, [144d, 120d, 520d, 360d])!;
-        object right = method!.Invoke(null, [plotBox, Layout(-0.77024, -0.36990), 549.7d, 309.2d, 404d, 80d, 24.3d, 18d])!;
-        object left = method.Invoke(null, [plotBox, Layout(0.66015, -0.73512), 325.4d, 177d, 404d, 80d, 24.3d, 18d])!;
+        object right = method!.Invoke(null, [plotBox, Layout(-0.77024, -0.36990), 558.46d, 309.72d, 0.06279d, 0.99803d, 404d, 88.64d, 24.97d, 24.97d])!;
+        object left = method.Invoke(null, [plotBox, Layout(0.66015, -0.73512), 320.98d, 169.40d, -0.84385d, -0.53644d, 404d, 79.43d, 24.97d, 24.97d])!;
         (double rx, double ry) = ReadLayoutBoxXY(right);
         (double lx, double ly) = ReadLayoutBoxXY(left);
-        TestAssert.True(Math.Abs(rx - 158.2d) < 0.5d && Math.Abs(ry - 430.2d) < 0.5d, "Right-side anchor reads away from the slice. Got " + rx + "/" + ry);
-        TestAssert.True(Math.Abs(lx - 579.7d) < 0.5d && Math.Abs(ly - 429.5d) < 0.5d, "Left-side anchor reads toward the slice past the full width. Got " + lx + "/" + ly);
-        object straight = method!.Invoke(null, [plotBox, Layout(0.63844, 0.87143), 294d, 174d, 294d, 40d, 24.3d, 18d])!;
+        TestAssert.True(Math.Abs(rx - 157.94d) < 0.5d && Math.Abs(ry - 431.18d) < 0.5d, "Right-side anchor reads away from the circle (Office Alpha 158.0/431.0). Got " + rx + "/" + ry);
+        TestAssert.True(Math.Abs(lx - 584.83d) < 0.5d && Math.Abs(ly - 411.02d) < 0.5d, "Left-side anchor reads toward the circle past the full width (Office Beta 584.6/411.0). Got " + lx + "/" + ly);
+        object straight = method!.Invoke(null, [plotBox, Layout(0.63844, 0.87143), 294d, 174d, -1d, 0d, 294d, 40d, 24.3d, 24.3d])!;
         (double sx, double sy) = ReadLayoutBoxXY(straight);
         TestAssert.True(Math.Abs(sx - 606.0d) < 0.5d, "Straight up/down slices should center the box on the rim midpoint. Got " + sx + "/" + sy);
     }
@@ -1268,6 +1268,63 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(baseline - 0.88d) < 0.000001d, "Pie baseline inset should stay at the measured ascent. Got " + baseline);
         double pitch = (double)rules.GetField("PieDataLabelLinePitchFactor")!.GetValue(null)!;
         TestAssert.True(Math.Abs(pitch - 1.22d) < 0.000001d, "Pie wrap pitch should stay at the measured line step. Got " + pitch);
+    }
+    public static void PptxSyntheticPieManualCircleGapKeepsOfficeCalibration()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputePieManualLabelCircleGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie manual circle-gap helper to remain inspectable by the Office evidence guard.");
+
+        double wide = (double)method!.Invoke(null, [520d])!;
+        double narrow = (double)method.Invoke(null, [420d])!;
+        TestAssert.True(Math.Abs(wide - 8.268d) < 0.01d, "Wide-plot manual labels should anchor 8.27pt past the rim (joint ladder fit). Got " + wide);
+        TestAssert.True(Math.Abs(narrow - 6.678d) < 0.01d, "Narrow-plot manual labels should anchor 6.68pt past the rim (joint ladder fit). Got " + narrow);
+    }
+
+    public static void PptxSyntheticPieManualBoxHeightKeepsOfficeCalibration()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputePieManualLabelBoxHeight",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie manual box-height helper to remain inspectable by the Office evidence guard.");
+
+        double single = (double)method!.Invoke(null, [18d, 1])!;
+        double wrapped = (double)method.Invoke(null, [18d, 2])!;
+        double large = (double)method.Invoke(null, [24d, 2])!;
+        TestAssert.True(Math.Abs(single - 24.96d) < 0.01d, "Single-line manual boxes should be pitch plus pad (Office 24.97). Got " + single);
+        TestAssert.True(Math.Abs(wrapped - 46.92d) < 0.01d, "Two-line manual boxes should be two pitches plus pad (Office 46.94). Got " + wrapped);
+        TestAssert.True(Math.Abs(large - 61.56d) < 0.01d, "Large-font wrapped boxes should scale by pitch (Office 61.59). Got " + large);
+    }
+
+    public static void PptxSyntheticPieManualBaselinePadKeepsOfficeCalibration()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputePieManualLabelBaselinePad",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie manual baseline-pad helper to remain inspectable by the Office evidence guard.");
+
+        double basePad = (double)method!.Invoke(null, [18d])!;
+        double largePad = (double)method.Invoke(null, [24d])!;
+        TestAssert.True(Math.Abs(basePad - 6.54d) < 0.01d, "Manual baselines should sit 6.5pt above the box bottom at 18pt. Got " + basePad);
+        TestAssert.True(Math.Abs(largePad - 8.22d) < 0.01d, "Manual baselines should sit 8.2pt above the box bottom at 24pt. Got " + largePad);
+    }
+
+    public static void PptxSyntheticPieManualEdgeClampKeepsPlot()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ClampPieManualLabelEdge",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie manual edge-clamp helper to remain inspectable by the Office evidence guard.");
+
+        double inside = (double)method!.Invoke(null, [158d, 88.64d, 144d, 520d])!;
+        double pastRight = (double)method.Invoke(null, [700d, 80d, 144d, 520d])!;
+        double pastLeft = (double)method.Invoke(null, [0d, 80d, 144d, 520d])!;
+        double oversize = (double)method.Invoke(null, [0d, 600d, 144d, 520d])!;
+        TestAssert.True(Math.Abs(inside - 158d) < 0.01d, "Inside edges should keep the anchored position. Got " + inside);
+        TestAssert.True(Math.Abs(pastRight - 584d) < 0.01d, "Right-overflow edges should freeze at the plot edge minus width. Got " + pastRight);
+        TestAssert.True(Math.Abs(pastLeft - 144d) < 0.01d, "Left-overflow edges should freeze at the plot edge (Office Gamma 144.0). Got " + pastLeft);
+        TestAssert.True(Math.Abs(oversize - 144d) < 0.01d, "Oversize boxes should pin to the plot origin. Got " + oversize);
     }
 
     private static (double CenterX, double CenterY, double Radius) ReadPolarGeometry(object layout)

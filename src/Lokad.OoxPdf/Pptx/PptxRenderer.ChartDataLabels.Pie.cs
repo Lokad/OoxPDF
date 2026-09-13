@@ -77,8 +77,8 @@ internal sealed partial class PptxRenderer
             string label = JoinChartDataLabelParts();
             if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
             {
-                // Factor-mode manuals resolve against the slice-anchored box (label edge
-                // just outside the rim midpoint); out-of-range manuals fall back to auto,
+                // Factor-mode manuals resolve on a circle past the rim with content-tight
+                // boxes clamped into the plot; out-of-range manuals fall back to auto,
                 // edge-mode and layout-free labels keep the legacy path.
                 List<ChartTextRunLayout[]>? pieWrapLines = null;
                 double pieWrapLongest = 0d;
@@ -154,12 +154,21 @@ internal sealed partial class PptxRenderer
                     }
                 }
                 ChartLayoutBox labelBox;
+                bool pieManualBottomAnchor = false;
                 if (TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _))
                 {
-                    double rimMidX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion);
-                    double rimMidY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion);
-                    double pieAnchorWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d) ? pieWrapLongest : labelWidth;
-                    labelBox = ResolvePieManualDataLabelBox(plotBox, effectiveOptions.Layout, rimMidX, rimMidY, geometry.CenterX, pieAnchorWidth, labelHeight, fontSize);
+                    double pieCircleGap = plotBox.Width * PptxChartMetricRules.PieManualLabelCircleGapPlotWidthFactor;
+                    double pieCircleX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion + pieCircleGap);
+                    double pieCircleY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion + pieCircleGap);
+                    double pieContentWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d)
+                        ? pieWrapLongest
+                        : MeasurePieLabelPartsWidth(labelParts, pieWrapSeparator, style, fontResolver);
+                    int pieLineCount = pieWrapLines is not null && pieWrapLines.Count > 1 ? pieWrapLines.Count : 1;
+                    double pieManualWidth = pieContentWidth + 2d * PptxChartMetricRules.PieManualLabelBoxSidePad;
+                    double pieManualHeight = ComputePieManualLabelBoxHeight(fontSize, pieLineCount);
+                    double pieSingleHeight = ComputePieManualLabelBoxHeight(fontSize, 1);
+                    labelBox = ResolvePieManualDataLabelBox(plotBox, effectiveOptions.Layout, pieCircleX, pieCircleY, Math.Sin(mid), Math.Cos(mid), geometry.CenterX, pieManualWidth, pieManualHeight, pieSingleHeight);
+                    pieManualBottomAnchor = true;
                 }
                 else if (effectiveOptions.Layout.HasLayout && (effectiveOptions.Layout.XModeKind == PptxSceneChartManualLayoutMode.Edge || effectiveOptions.Layout.YModeKind == PptxSceneChartManualLayoutMode.Edge))
                 {
@@ -193,7 +202,12 @@ internal sealed partial class PptxRenderer
 
                 if (!string.IsNullOrEmpty(label))
                 {
-                    AddPolarChartLabelRuns(labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines, pieWrapLongest);
+                double pieManualTextX = textX;
+                if (pieManualBottomAnchor && pieWrapLines is not null && pieWrapLines.Count > 1)
+                {
+                    pieManualTextX = textX + PptxChartMetricRules.PieManualLabelBoxSidePad;
+                }
+                    AddPolarChartLabelRuns(labelParts, label, effectiveOptions, pieManualTextX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines, pieWrapLongest, pieManualBottomAnchor);
                 }
             }
             angle += sweep;
@@ -239,11 +253,20 @@ internal sealed partial class PptxRenderer
             return parts;
         }
 
-        void AddPolarChartLabelRuns(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest)
+        void AddPolarChartLabelRuns(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest, bool bottomAnchor = false)
         {
             var textMeasurer = new ChartTextMeasurer(fontResolver);
             ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
-            y += style.FontSize * PptxChartMetricRules.PieDataLabelBaselineFactor;
+            if (bottomAnchor)
+            {
+                int pieAnchorLines = wrapLines is not null && wrapLines.Count > 1 ? wrapLines.Count : 1;
+                y += ComputePieManualLabelBaselinePad(style.FontSize)
+                    + style.FontSize * PptxChartMetricRules.PieDataLabelLinePitchFactor * (pieAnchorLines - 1);
+            }
+            else
+            {
+                y += style.FontSize * PptxChartMetricRules.PieDataLabelBaselineFactor;
+            }
             bool ShouldSplitPolarDataLabelParts()
             {
                 string separator = GetChartDataLabelSeparator(options);
@@ -451,25 +474,92 @@ internal sealed partial class PptxRenderer
         return best;
     }
 
-    // Slice-anchored box for factor-mode manual pie labels: the label edge sits just
-    // outside the rim midpoint (right side reads away from the slice, left side reads
-    // toward it, so the width enters on the left only), then factors offset in plot
-    // units like Office (x with the plot width, y against the plot height). Slices
-    // pointing straight up or down center the box on the rim midpoint (South sample:
-    // Office anchor matches centered to 0.1pt where sided misses by 30+).
-    private static ChartLayoutBox ResolvePieManualDataLabelBox(ChartPlotBox plotBox, PptxSceneChartManualLayout layout, double rimMidX, double rimMidY, double centerX, double labelWidth, double labelHeight, double fontSize)
+    // Circle-anchored box for factor-mode manual pie labels: the anchor rides a
+    // circle past the rim (R plus the plot-width gap, explosion included), the box
+    // hangs off it with its rim-side edge at the circle in X and its center H/2 out
+    // along the radial in Y (bottom = circleY + (H/2)(sin-1) - fy plotH), then factor
+    // offsets apply in plot units like Office. Exact-vertical labels shift toward the
+    // center; the box clamps into the plot on all four edges (Office freezes label
+    // edges at the plot rect: top-clamp kink at fy=-1, Gamma triple pinned at 120).
+    private static ChartLayoutBox ResolvePieManualDataLabelBox(ChartPlotBox plotBox, PptxSceneChartManualLayout layout, double circleX, double circleY, double sinTheta, double cosTheta, double centerX, double labelWidth, double labelHeight, double singleLineHeight)
     {
-        double gap = fontSize * PptxChartMetricRules.PieManualLabelEdgeGapFactor;
-        double edge = rimMidX - centerX;
-        double left = Math.Abs(edge) <= plotBox.Width * 0.01d
-            ? rimMidX - labelWidth / 2d
-            : edge > 0d
-                ? rimMidX + gap
-                : rimMidX - labelWidth - gap;
-        double top = rimMidY - labelHeight / 2d;
+        double edge = circleX - centerX;
         double factorX = layout.X ?? 0d;
         double factorY = layout.Y ?? 0d;
-        return new ChartLayoutBox(left + factorX * plotBox.Width, top - factorY * plotBox.Height, labelWidth, labelHeight);
+        double left = Math.Abs(edge) <= plotBox.Width * 0.01d
+            ? circleX - labelWidth / 2d
+            : edge > 0d
+                ? circleX
+                : circleX - labelWidth;
+        left += factorX * plotBox.Width;
+        double bottom;
+        if (Math.Abs(cosTheta) < 0.01d)
+        {
+            double shift = PptxChartMetricRules.PieManualLabelCardinalVerticalShift;
+            bottom = sinTheta > 0d
+                ? circleY - factorY * plotBox.Height - shift
+                : circleY - singleLineHeight - factorY * plotBox.Height + shift;
+        }
+        else
+        {
+            bottom = circleY + labelHeight / 2d * (sinTheta - 1d) - factorY * plotBox.Height;
+        }
+        double clampedLeft = ClampPieManualLabelEdge(left, labelWidth, plotBox.X, plotBox.Width);
+        double clampedBottom = ClampPieManualLabelEdge(bottom, labelHeight, plotBox.Y, plotBox.Height);
+        return new ChartLayoutBox(clampedLeft, clampedBottom, labelWidth, labelHeight);
+    }
+    // Plot clamp for one manual-label box edge: boxes wider than the plot pin to the
+    // plot origin; otherwise the edge freezes at the plot rect like Office.
+    private static double ClampPieManualLabelEdge(double edge, double size, double plotMin, double plotSize)
+    {
+        if (size >= plotSize)
+        {
+            return plotMin;
+        }
+        return Math.Min(Math.Max(edge, plotMin), plotMin + plotSize - size);
+    }
+    // Anchor-circle gap for manual pie labels: R plus this plot-width fraction.
+    private static double ComputePieManualLabelCircleGap(double plotWidth)
+    {
+        return plotWidth * PptxChartMetricRules.PieManualLabelCircleGapPlotWidthFactor;
+    }
+    // Content-tight manual box height: line pitch times lines plus the total pad.
+    private static double ComputePieManualLabelBoxHeight(double fontSize, int lineCount)
+    {
+        return fontSize * PptxChartMetricRules.PieDataLabelLinePitchFactor * lineCount + PptxChartMetricRules.PieManualLabelBoxHeightPad;
+    }
+    // Bottom-anchored manual baseline pad above the box bottom.
+    private static double ComputePieManualLabelBaselinePad(double fontSize)
+    {
+        return fontSize * PptxChartMetricRules.PieManualLabelBaselinePadFontFactor + PptxChartMetricRules.PieManualLabelBaselinePadConstant;
+    }
+    // Rendered width of pie label parts joined by the separator (wrap-block skip
+    // rules: blank and zero-width parts contribute nothing).
+    private static double MeasurePieLabelPartsWidth(IReadOnlyList<string> parts, string separator, ChartTextStyle style, PresentationFontResolver? fontResolver)
+    {
+        var measurer = new ChartTextMeasurer(fontResolver);
+        double separatorWidth = measurer.Measure(separator, style);
+        double total = 0d;
+        bool first = true;
+        foreach (string part in parts)
+        {
+            if (string.IsNullOrWhiteSpace(part))
+            {
+                continue;
+            }
+            double partWidth = Math.Max(0d, measurer.Measure(part, style));
+            if (partWidth <= 0d)
+            {
+                continue;
+            }
+            if (!first)
+            {
+                total += separatorWidth;
+            }
+            total += partWidth;
+            first = false;
+        }
+        return total;
     }
     private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options)
     {

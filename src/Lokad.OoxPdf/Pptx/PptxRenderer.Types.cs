@@ -338,9 +338,27 @@ internal sealed partial class PptxRenderer
         // keep the constants above (5-categories port: 0.4595 center, 0.4327 radius).
         public const double PieLabeledCenterYRatio = 0.5d;
         public const double PieLabeledRadiusRatio = 0.404d;
-        // Slice-anchored manual pie labels sit this fraction of the tick font size past
-        // the rim midpoint (7 Office samples at 18pt average 9.0pt, range 6.4 to 11.8).
-        public const double PieManualLabelEdgeGapFactor = 0.5d;
+        // Manual pie/doughnut labels anchor on a circle past the rim: radius R plus
+        // this fraction of the plot width (joint X/Y fit over 19 unclamped Office
+        // single-line boxes: rms 0.68/1.1 at 0.0159; 0.0566 R is identical on the
+        // constant-aspect corpus, plot width wins as the factor-family basis).
+        public const double PieManualLabelCircleGapPlotWidthFactor = 0.0159d;
+        // Manual pie/doughnut boxes are content-tight: 3.0pt side pads (9 Office box
+        // fills agree within 0.15pt) around the unwrapped text, or the longest wrapped
+        // line past the 0.19 plot-width wrap cap.
+        public const double PieManualLabelBoxSidePad = 3.0d;
+        // Manual pie/doughnut box height rides the line pitch plus this total pad
+        // (7 Office boxes: H = 1.22 fs nLines + 3.0 within 0.06pt).
+        public const double PieManualLabelBoxHeightPad = 3.0d;
+        // Manual pie/doughnut text is bottom-anchored: the last baseline sits this far
+        // above the box bottom (4 Office sizes 14/18/24/36pt fit 0.28 fs + 1.5 within
+        // 0.04pt; auto labels keep the top-anchored ascent rule below).
+        public const double PieManualLabelBaselinePadFontFactor = 0.28d;
+        public const double PieManualLabelBaselinePadConstant = 1.5d;
+        // Exact-vertical (north/south) manual labels shift toward the pie center by
+        // this much (3 Office boxes within 1.1pt; south uses the single-line height
+        // even when wrapped; near-cardinals like West 1.8deg off keep the radial rule).
+        public const double PieManualLabelCardinalVerticalShift = 2.42d;
         // Pie labels wrap past this fraction of the plot width (8 Office samples: every
         // wrapped label exceeds it, every single-line label stays below; tightest margins
         // are West 0.6pt and Gamma 2.8pt. Plot-width, height, and radius bases are
