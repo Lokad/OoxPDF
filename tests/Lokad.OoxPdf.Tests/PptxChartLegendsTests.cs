@@ -2181,5 +2181,19 @@ internal static class PptxChartLegendsTests
         TestAssert.Equal(3d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected legacy text gap."));
         double strokeFactor = (double?)rulesType.GetField("LegendSideStrokeTextGapFactor", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null) ?? throw new InvalidOperationException("Expected stroke text-gap factor.");
         TestAssert.Equal(18d * strokeFactor, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, true, 18d]) ?? throw new InvalidOperationException("Expected stroke text gap."));
+    }    public static void PptxScatterLegendKeepsPlainCenterOffset()
+    {
+        System.Reflection.MethodInfo resolveOffset = typeof(PptxRenderer).GetMethod(
+            "ResolveSideStrokeLegendCenterOffsetFactor",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer side-stroke center-offset bridge.");
+        // Office centers sparse-scatter (9.9 default markers), dense (7), line and
+        // line-markers blocks identically (282.77 on three ladder ports): only explicitly
+        // styled line keys keep the 0.561 offset, so scatter keeps plain 0.955 at any size.
+        TestAssert.Equal(0.561d, (double?)resolveOffset.Invoke(null, [new List<double> { 9d }, false]) ?? throw new InvalidOperationException("Expected styled offset."));
+        TestAssert.Equal(0.955d, (double?)resolveOffset.Invoke(null, [new List<double> { 9d }, true]) ?? throw new InvalidOperationException("Expected scatter plain offset."));
+        TestAssert.Equal(0.955d, (double?)resolveOffset.Invoke(null, [new List<double> { 9.9d }, true]) ?? throw new InvalidOperationException("Expected sparse scatter plain offset."));
+        TestAssert.Equal(0.561d, (double?)resolveOffset.Invoke(null, [new List<double> { 9.9d }, false]) ?? throw new InvalidOperationException("Expected size-threshold offset."));
+        TestAssert.Equal(0.955d, (double?)resolveOffset.Invoke(null, [new List<double> { 7d }, false]) ?? throw new InvalidOperationException("Expected dense plain offset."));
+        TestAssert.Equal(0.955d, (double?)resolveOffset.Invoke(null, [new List<double>(), false]) ?? throw new InvalidOperationException("Expected markerless plain offset."));
     }
 }

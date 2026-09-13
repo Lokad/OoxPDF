@@ -198,7 +198,7 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d)
+    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY);
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -332,7 +332,19 @@ internal sealed partial class PptxRenderer
                 : PptxChartMetricRules.LegendTextGap;
     }
 
-    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d)
+    // The styled-line center offset is for explicitly shaped line markers only: sparse
+    // scatter defaults (9.9) trip the size threshold while Office centers them exactly
+    // like plain keys (scatter, line and line-markers blocks all center at 282.77 on
+    // three ladder ports), so scatter legends keep the plain offset.
+    private static double ResolveSideStrokeLegendCenterOffsetFactor(IReadOnlyList<double> markerSizes, bool scatterLegend)
+    {
+        return !scatterLegend && markerSizes.Any(size =>
+            size >= PptxChartMarkerMetricRules.StyledLineChartMarkerSize - PptxChartMetricRules.AxisValueEpsilon)
+            ? PptxChartMetricRules.LegendSideStrokeStyledMarkerBaselineCenterOffsetFactor
+            : PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor;
+    }
+
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)
     {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
@@ -426,12 +438,14 @@ internal sealed partial class PptxRenderer
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
             _ => plotBox.X + plotBox.Width + sideGap + legendLeadExtra
         };
-        double GetLegendSideStrokeBaselineCenterOffsetFactor()
+
+        List<double> legendMarkerSizes = new(entries.Count);
+        foreach (ChartLegendEntry legendEntry in entries)
         {
-            return entries.Any(entry => entry.Marker is { } marker &&
-                marker.Size >= PptxChartMarkerMetricRules.StyledLineChartMarkerSize - PptxChartMetricRules.AxisValueEpsilon)
-                ? PptxChartMetricRules.LegendSideStrokeStyledMarkerBaselineCenterOffsetFactor
-                : PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor;
+            if (legendEntry.Marker is { } legendMarker)
+            {
+                legendMarkerSizes.Add(legendMarker.Size);
+            }
         }
 
         double firstY = layout.PositionKind switch
@@ -441,7 +455,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Bottom => frame.Y + PptxChartMetricRules.LegendBottomFramePad + fontSize * PptxChartMetricRules.LegendBottomBaselineFontFactor,
             PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
-                fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor() +
+                fontSize * ResolveSideStrokeLegendCenterOffsetFactor(legendMarkerSizes, scatterLegend) +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when sideFillLegend && placement == ChartLegendPlacement.BubbleTitleRightLegend => frame.Y + frame.Height * PptxChartMetricRules.BubbleTitleRightLegendSwatchYRatio,
             _ when sideFillLegend => frame.Y + frame.Height / 2d -
