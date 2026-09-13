@@ -3456,5 +3456,42 @@ internal static class PptxChartsTests
         TestAssert.True(!(bool)resolveHeadroom.Invoke(null, [true, false])!, "Expected horizontal bars to keep frozen behavior.");
         TestAssert.True(!(bool)resolveHeadroom.Invoke(null, [false, true])!, "Expected percent stacks to keep frozen behavior.");
         TestAssert.True(!(bool)resolveHeadroom.Invoke(null, [true, true])!, "Expected horizontal percent stacks to keep frozen behavior.");
+    }    public static void PptxDualAxisStripFallbackUsesOwningPlotData()
+    {
+        string chartXmlText = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:ser><c:tx><c:v>Primary</c:v></c:tx><c:val><c:numLit><c:pt idx="0"><c:v>30</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:barChart>
+                <c:barChart>
+                  <c:ser><c:tx><c:v>Secondary</c:v></c:tx><c:val><c:numLit><c:pt idx="0"><c:v>50</c:v></c:pt><c:pt idx="1"><c:v>100</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="30"/><c:axId val="40"/>
+                </c:barChart>
+                <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+                <c:catAx><c:axId val="30"/><c:axPos val="b"/><c:crossAx val="40"/></c:catAx>
+                <c:valAx><c:axId val="40"/><c:axPos val="l"/><c:crossAx val="30"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        PptxSceneChart chart = PptxTests.BuildSingleChartScene(chartXmlText) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(2, chart.Plots.Count);
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XDocument chartXml = XDocument.Parse(chartXmlText);
+        System.Collections.Generic.List<XElement> barCharts = chartXml.Descendants(c + "barChart").ToList();
+        TestAssert.Equal(2, barCharts.Count);
+        System.Reflection.MethodInfo fallback = typeof(PptxRenderer).GetMethod(
+            "GetDualAxisStripFallbackExtents",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected dual-axis strip fallback bridge.");
+        // The secondary axis must resolve its owning plot data (clustered max 100), not
+        // the legacy (0,1) dummy that froze auto-max dual reserves on the Office probes.
+        object secondary = fallback.Invoke(null, [chart, chartXml, chart.Plots, barCharts, "40", null, false]) ?? throw new InvalidOperationException("Expected secondary fallback extents.");
+        TestAssert.Equal(100d, (double)secondary.GetType().GetProperty("Max")?.GetValue(secondary)!);
+        TestAssert.Equal(0d, (double)secondary.GetType().GetProperty("Min")?.GetValue(secondary)!);
+        object unknown = fallback.Invoke(null, [chart, chartXml, chart.Plots, barCharts, "99", null, false]) ?? throw new InvalidOperationException("Expected unknown-axis fallback extents.");
+        TestAssert.Equal(1d, (double)unknown.GetType().GetProperty("Max")?.GetValue(unknown)!);
     }
 }

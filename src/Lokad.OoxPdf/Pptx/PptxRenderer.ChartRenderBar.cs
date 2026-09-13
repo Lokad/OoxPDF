@@ -706,10 +706,12 @@ internal sealed partial class PptxRenderer
             var rightStrips = new List<ChartValueAxisStripMeasure>();
             foreach (ChartAxisSource valueAxis in valueAxes)
             {
+                string stripAxisId = valueAxis.SceneAxis?.Id ?? ReadChartAxisId(valueAxis.XmlAxis) ?? string.Empty;
+                ChartValueExtents stripFallback = GetDualAxisStripFallbackExtents(sceneChart, chartXml, barPlots, barCharts, stripAxisId, workbook, plotVisibleOnly);
                 ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(
                     valueAxis.SceneAxis,
                     valueAxis.XmlAxis,
-                    new ChartValueExtents(0d, 1d), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                    stripFallback, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits units = ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis);
                 ChartValueAxisStripMeasure strip = MeasureVerticalValueAxisLabelStrip(
                     theme,
@@ -1107,6 +1109,35 @@ internal sealed partial class PptxRenderer
     private static bool ResolveBarValueAxisHeadroom(bool horizontalBars, bool percentStacked)
     {
         return !horizontalBars && !percentStacked;
+    }
+
+    // Dual-axis strip fallback: strips must measure the owning plot data extents, not
+    // the legacy (0,1) dummy (auto-max dual probes otherwise render stale strips while the
+    // render path nices real data; explicit axis bounds ignore the fallback downstream, so
+    // explicit-max dual configs are untouched by construction).
+    private static ChartValueExtents GetDualAxisStripFallbackExtents(PptxSceneChart? sceneChart, XDocument chartXml, IReadOnlyList<PptxSceneChartPlot> barPlots, IReadOnlyList<XElement> barCharts, string stripAxisId, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    {
+        for (int plotIndex = 0; plotIndex < Math.Max(barCharts.Count, barPlots.Count); plotIndex++)
+        {
+            PptxSceneChartPlot? stripPlot = plotIndex < barPlots.Count ? barPlots[plotIndex] : null;
+            XElement? stripChart = plotIndex < barCharts.Count ? barCharts[plotIndex] : null;
+            if (stripChart is null)
+            {
+                continue;
+            }
+
+            bool ownsAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, stripPlot, chartXml, stripChart)
+                .Any(source => string.Equals(source.SceneAxis?.Id ?? ReadChartAxisId(source.XmlAxis) ?? string.Empty, stripAxisId, StringComparison.Ordinal));
+            if (!ownsAxis)
+            {
+                continue;
+            }
+
+            ChartBarPlotOptions stripOptions = ReadSceneOrXmlChartBarOptions(stripPlot, stripChart, PptxSceneChartGrouping.Clustered);
+            return GetBarChartValueExtents(ReadSceneOrXmlChartSeriesVectors(stripPlot, stripChart, workbook, plotVisibleOnly), stripOptions.Grouping);
+        }
+
+        return new ChartValueExtents(0d, 1d);
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)
