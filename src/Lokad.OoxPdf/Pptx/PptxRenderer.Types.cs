@@ -198,6 +198,12 @@ internal sealed partial class PptxRenderer
         public const double RadarTitledPlotBand = 35.4d;
         // Radar web radius stops half a web-graticule width (0.75pt) inside the square.
         public const double RadarWebRadiusPenHalf = 0.375d;
+        // Radar category-label gaps: the horizontal gap is 0.0202 times the web-side
+        // length (7.39/6.68/5.21pt across the 432H untitled/titled and 324H Office
+        // renders, killing the legacy 0.35/0.41 style split); the vertical gap adds
+        // 0.28 times the label font size on top (5.04-5.05pt at 18pt on both heights).
+        public const double RadarCategoryGapSideFactor = 0.0202d;
+        public const double RadarCategoryVerticalGapFontFactor = 0.28d;
         public const double DoughnutHoleMinimumRatio = 0.1d;
         public const double DoughnutHoleMaximumRatio = 0.9d;
         public const double DoughnutHoleFallbackRatio = 0.56d;

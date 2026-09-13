@@ -1767,7 +1767,7 @@ internal static class PptxChartLegendsTests
         object plotBox = Activator.CreateInstance(plotBoxType, [0d, 0d, 300d, 200d]) ?? throw new InvalidOperationException("Expected chart plot box.");
         object geometry = Activator.CreateInstance(geometryType, [150d, 100d, 80d]) ?? throw new InvalidOperationException("Expected chart geometry.");
         object radarStyle = Enum.Parse(radarStyleType, "Marker");
-        object labelRules = Activator.CreateInstance(labelRulesType, [0.65d, 0.41d, -0.309d, -0.005d, 0.397d, 1.01d, 0.25d, 3.0d]) ?? throw new InvalidOperationException("Expected radar label rules.");
+        object labelRules = Activator.CreateInstance(labelRulesType, [0.0202d, 0.0202d, 0.28d, -0.3138d, -0.012d, 0.3951d, 1.01d, 0.255d, 3.0d]) ?? throw new InvalidOperationException("Expected radar label rules.");
         object layout = Activator.CreateInstance(layoutType, [plotBox, geometry, radarStyle, 4, labelRules]) ?? throw new InvalidOperationException("Expected radar layout.");
         object style = Activator.CreateInstance(textStyleType, ["Arial", 8.5d, 0d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
         object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
@@ -1801,6 +1801,30 @@ internal static class PptxChartLegendsTests
         AssertRadarWebGeometry(compute.Invoke(null, [shortFrame, false]), 432d, 342d, 128.565d);
     }
 
+    public static void PptxChartRadarLabelRulesAreUnified()
+    {
+        // Office radar label gaps are style-invariant: side-proportional gaps plus
+        // the sine-level baseline fit, shared by marker and filled charts.
+        System.Reflection.MethodInfo resolve = typeof(PptxRenderer).GetMethod(
+            "ResolveRadarLabelRules",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected radar label rule resolver.");
+        object rules = resolve.Invoke(null, []) ?? throw new InvalidOperationException("Expected radar label rules.");
+        Type rulesType = rules.GetType();
+        double hSide = (double)(rulesType.GetProperty("CategoryHorizontalGapSideFactor")?.GetValue(rules) ?? 0d);
+        double vSide = (double)(rulesType.GetProperty("CategoryVerticalGapSideFactor")?.GetValue(rules) ?? 0d);
+        double vFont = (double)(rulesType.GetProperty("CategoryVerticalGapFontFactor")?.GetValue(rules) ?? 0d);
+        double b0 = (double)(rulesType.GetProperty("CategoryBaselineBaseFactor")?.GetValue(rules) ?? 0d);
+        double b1 = (double)(rulesType.GetProperty("CategoryBaselineSineFactor")?.GetValue(rules) ?? 0d);
+        double b2 = (double)(rulesType.GetProperty("CategoryBaselineSineSquaredFactor")?.GetValue(rules) ?? 0d);
+        double vOff = (double)(rulesType.GetProperty("ValueBaselineOffsetFactor")?.GetValue(rules) ?? 0d);
+        TestAssert.True(Math.Abs(hSide - 0.0202d) < 1e-12, "Radar horizontal gap drifts from the Office side law.");
+        TestAssert.True(Math.Abs(vSide - 0.0202d) < 1e-12, "Radar vertical gap drifts from the Office side law.");
+        TestAssert.True(Math.Abs(vFont - 0.28d) < 1e-12, "Radar vertical font term drifts from the Office law.");
+        TestAssert.True(Math.Abs(b0 - -0.3138d) < 1e-12, "Radar baseline base drifts from the Office sine fit.");
+        TestAssert.True(Math.Abs(b1 - -0.012d) < 1e-12, "Radar baseline sine term drifts from the Office sine fit.");
+        TestAssert.True(Math.Abs(b2 - 0.3951d) < 1e-12, "Radar baseline sine-squared term drifts from the Office sine fit.");
+        TestAssert.True(Math.Abs(vOff - 0.255d) < 1e-12, "Radar value offset drifts from the Office micro-law.");
+    }
     private static void AssertRadarWebGeometry(object? geometry, double centerX, double centerY, double radius)
     {
         TestAssert.True(geometry is not null, "Expected radar web geometry.");

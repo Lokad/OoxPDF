@@ -448,8 +448,9 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartRadarGeometryRule(double CenterXRatio, double CenterYRatio, double RadiusRatio);
 
     private readonly record struct ChartRadarLabelRules(
-        double CategoryVerticalGapFactor,
-        double CategoryHorizontalGapFactor,
+        double CategoryHorizontalGapSideFactor,
+        double CategoryVerticalGapSideFactor,
+        double CategoryVerticalGapFontFactor,
         double CategoryBaselineBaseFactor,
         double CategoryBaselineSineFactor,
         double CategoryBaselineSineSquaredFactor,

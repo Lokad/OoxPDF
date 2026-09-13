@@ -195,8 +195,11 @@ internal sealed partial class PptxRenderer
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         ChartRadarLabelRules labelRules = layout.LabelRules;
-        double verticalGap = fontSize * labelRules.CategoryVerticalGapFactor;
-        double horizontalGap = fontSize * labelRules.CategoryHorizontalGapFactor;
+        // Gaps key off the web-side length (exact inverse of the web construction);
+        // manual-plot webs reuse their legacy radius here (Office manual layout open).
+        double webSide = 2d * (geometry.Radius + PptxChartMetricRules.RadarWebRadiusPenHalf);
+        double verticalGap = webSide * labelRules.CategoryVerticalGapSideFactor + fontSize * labelRules.CategoryVerticalGapFontFactor;
+        double horizontalGap = webSide * labelRules.CategoryHorizontalGapSideFactor;
         double angle = GetRadarPointAngle(index, pointCount);
         double cosine = Math.Cos(angle);
         double anchorX = geometry.CenterX + cosine * (geometry.Radius + horizontalGap);

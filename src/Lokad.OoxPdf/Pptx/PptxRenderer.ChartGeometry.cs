@@ -462,7 +462,7 @@ internal sealed partial class PptxRenderer
             GetRadarChartGeometry(),
             style,
             Math.Max(3, series.Max(item => item.Points.Count)),
-            ResolveRadarLabelRules(style));
+            ResolveRadarLabelRules());
 
         ChartPolarGeometry GetRadarChartGeometry()
         {
@@ -505,17 +505,22 @@ internal sealed partial class PptxRenderer
             side / 2d - PptxChartMetricRules.RadarWebRadiusPenHalf);
     }
 
-    private static ChartRadarLabelRules ResolveRadarLabelRules(ChartRadarStyle style)
+    private static ChartRadarLabelRules ResolveRadarLabelRules()
     {
-        double categoryHorizontalGapFactor = style == ChartRadarStyle.Filled ? 0.35d : 0.41d;
+        // Style-invariant (marker/filled Office labels are byte-identical); gaps key
+        // off the web-side length with a font-relative vertical term (see metric rules).
+        // Baseline coefficients fit the post-gap sine-level residuals (top +0.33, mid
+        // +0.18, bottom +0.01) uniformly over all seven Office probes; value labels
+        // carry a separate uniform +0.12 offset.
         return new ChartRadarLabelRules(
-            CategoryVerticalGapFactor: 0.65d,
-            CategoryHorizontalGapFactor: categoryHorizontalGapFactor,
-            CategoryBaselineBaseFactor: -0.309d,
-            CategoryBaselineSineFactor: -0.005d,
-            CategoryBaselineSineSquaredFactor: 0.397d,
+            CategoryHorizontalGapSideFactor: PptxChartMetricRules.RadarCategoryGapSideFactor,
+            CategoryVerticalGapSideFactor: PptxChartMetricRules.RadarCategoryGapSideFactor,
+            CategoryVerticalGapFontFactor: PptxChartMetricRules.RadarCategoryVerticalGapFontFactor,
+            CategoryBaselineBaseFactor: -0.3138d,
+            CategoryBaselineSineFactor: -0.012d,
+            CategoryBaselineSineSquaredFactor: 0.3951d,
             ValueGapFactor: 1.01d,
-            ValueBaselineOffsetFactor: 0.25d,
+            ValueBaselineOffsetFactor: 0.255d,
             ValueWidthFactor: 3.0d);
     }
 
