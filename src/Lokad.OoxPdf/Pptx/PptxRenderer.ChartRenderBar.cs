@@ -528,11 +528,9 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            if (IsStackedChartGrouping(barOptions.Grouping))
-            {
-                return plotBox;
-            }
-
+            // Stacked columns share the measured bottom strip (Office bottom margins fit
+            // the same 7.0 plus 1.813fs rule within 1pt on ladder, compact and overlay
+            // probes); titled/legend/label-less charts keep legacy paths below.
             if (hasTitle || hasLegend || legend.Visible)
             {
                 return plotBox;
