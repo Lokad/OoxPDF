@@ -223,10 +223,12 @@ internal sealed partial class PptxRenderer
         public const double BarNoTitleBottomLegendPlotBoxYRatio = 0.213d;
         public const double BarNoTitleBottomLegendPlotBoxWidthRatio = 0.9406d;
         public const double BarNoTitleBottomLegendPlotBoxHeightRatio = 0.736d;
-        // Bottom reserve below the legend and tick rows for untitled bottom-legend columns.
-        // Calibrated to the 54.4pt Office bottom margin measured on 360pt and 216pt frames
-        // (12pt and 18pt legends over 12pt and 8pt ticks respectively).
-        public const double BarNoTitleBottomLegendContentGap = 19.2d;
+        // Bottom reserve below the legend and tick rows for untitled bottom-legend columns,
+        // calibrated as an additive plane over legend and tick font sizes (four same-frame
+        // Office probes: 55.02, 47.77, 66.10 and 58.86; all four land within 0.06).
+        public const double BarNoTitleBottomLegendReserveLegendFactor = 1.21d;
+        public const double BarNoTitleBottomLegendReserveTickFactor = 1.85d;
+        public const double BarNoTitleBottomLegendReserveBase = 18.43d;
         public const double StackedColumnBottomLegendPlotBoxRightPadding = 3.9d;
         public const double BarTitleNoLegendPlotBoxXRatio = 0.1106d;
         public const double BarTitleNoLegendPlotBoxYRatio = 0.1008d;

@@ -1008,6 +1008,15 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(left, plotBox.Y, right - left, plotBox.Height);
     }
 
+    // Bottom reserve for untitled bottom-legend columns as a calibrated additive plane
+    // over legend and category-tick font sizes (see call-site probe table).
+    private static double ComputeNoTitleBottomLegendReserve(double legendFontSize, double tickFontSize)
+    {
+        return legendFontSize * PptxChartMetricRules.BarNoTitleBottomLegendReserveLegendFactor +
+            tickFontSize * PptxChartMetricRules.BarNoTitleBottomLegendReserveTickFactor +
+            PptxChartMetricRules.BarNoTitleBottomLegendReserveBase;
+    }
+
     private static ChartPlotBox AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(
         ChartPlotBox plotBox,
         ChartFrameBox frame,
@@ -1018,15 +1027,16 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? barPlot,
         XElement barChart)
     {
-        // Office keeps a content-sized bottom margin for untitled bottom-legend columns
-        // (54.4pt on both measured frames) instead of a frame ratio, so the reserve is
-        // one legend row plus one category-tick row plus the calibrated content gap.
+        // Office keeps a content-sized bottom margin for untitled bottom-legend columns.
+        // Four same-frame probes with varied fonts pin an additive plane (all within 0.06):
+        // 55.02 over 18pt legend plus 8pt cats, 47.77 over 12pt plus 8pt, 66.10 over 18pt
+        // plus 14pt, 58.86 over 12pt plus 14pt. The single-knob forms are dead (the error
+        // flips sign across probes), and bottom-minus-cat-baseline scales cleanly at 1.566
+        // catFs inside the total without its own usable law, so the plane ships as such.
         ChartTextStyle legendStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
         ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
         ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-        double bottomReserve = legendStyle.FontSize * PptxChartMetricRules.LegendLineHeightFactor +
-            tickStyle.FontSize * PptxChartMetricRules.AxisLabelHeightFactor +
-            PptxChartMetricRules.BarNoTitleBottomLegendContentGap;
+        double bottomReserve = ComputeNoTitleBottomLegendReserve(legendStyle.FontSize, tickStyle.FontSize);
         double presetTop = frame.Y + frame.Height * (PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio + PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
         double y = frame.Y + bottomReserve;
         return new ChartPlotBox(plotBox.X, y, plotBox.Width, Math.Max(1d, presetTop - y));

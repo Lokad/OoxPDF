@@ -3493,5 +3493,16 @@ internal static class PptxChartsTests
         TestAssert.Equal(0d, (double)secondary.GetType().GetProperty("Min")?.GetValue(secondary)!);
         object unknown = fallback.Invoke(null, [chart, chartXml, chart.Plots, barCharts, "99", null, false]) ?? throw new InvalidOperationException("Expected unknown-axis fallback extents.");
         TestAssert.Equal(1d, (double)unknown.GetType().GetProperty("Max")?.GetValue(unknown)!);
+    }    public static void PptxNoTitleBottomLegendReserveMatchesOfficePlane()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeNoTitleBottomLegendReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected bottom-legend reserve bridge.");
+        // Four same-frame Office probes pin the additive plane (all within 0.06); the
+        // legacy single-knob formula misses by plus-1.1 to minus-1.9 across the same set.
+        TestAssert.True(Math.Abs((double)method.Invoke(null, [18d, 8.04d])! - 55.02d) < 0.1, "Expected ladder reserve near 55.02.");
+        TestAssert.True(Math.Abs((double)method.Invoke(null, [12d, 8.04d])! - 47.77d) < 0.1, "Expected leg12 reserve near 47.77.");
+        TestAssert.True(Math.Abs((double)method.Invoke(null, [18d, 14.04d])! - 66.10d) < 0.1, "Expected cat14 reserve near 66.10.");
+        TestAssert.True(Math.Abs((double)method.Invoke(null, [12d, 14.04d])! - 58.86d) < 0.1, "Expected leg12cat14 reserve near 58.86.");
     }
 }
