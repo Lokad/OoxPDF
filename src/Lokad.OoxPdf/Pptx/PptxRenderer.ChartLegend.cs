@@ -311,6 +311,27 @@ internal sealed partial class PptxRenderer
         RenderChartTextRuns(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink);
     }
 
+    // Fill-swatch side keys share the 4.66pt Office entry text gap: area right legends
+    // measure 4.65-4.67 on five references, doughnut 4.58-4.66 on eleven renders, and the
+    // bubble title-right ladder port 4.64. Stroke keys keep their font-scaled gap; every
+    // other side legend keeps the legacy 3pt gap for lack of evidence.
+    private static double ResolveSideLegendTextGap(
+        ChartLegendPlacement placement,
+        bool useDoughnutRightAnchor,
+        bool useDoughnutLeftAnchor,
+        bool sideStrokeLegend,
+        double fontSize)
+    {
+        return sideStrokeLegend
+            ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
+            : placement == ChartLegendPlacement.AreaRightLegend
+                || placement == ChartLegendPlacement.BubbleTitleRightLegend
+                || useDoughnutRightAnchor
+                || useDoughnutLeftAnchor
+                ? PptxChartMetricRules.AreaRightLegendTextGap
+                : PptxChartMetricRules.LegendTextGap;
+    }
+
     private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d)
     {
         double fontSize = style.FontSize;
@@ -353,13 +374,9 @@ internal sealed partial class PptxRenderer
         double markerWidth = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor
             : markerSize;
-        // Doughnut legends share the area branch 4.65pt Office swatch lead
-        // (eleven Office renders agree at 4.58-4.66, sigma 0.03).
-        double textGap = sideStrokeLegend
-            ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
-            : placement == ChartLegendPlacement.AreaRightLegend || useDoughnutRightAnchor || useDoughnutLeftAnchor
-                ? PptxChartMetricRules.AreaRightLegendTextGap
-                : PptxChartMetricRules.LegendTextGap;
+        // Fill-swatch side keys share the resolved 4.66pt Office text gap (area, doughnut
+        // and bubble branches per the helper evidence note).
+        double textGap = ResolveSideLegendTextGap(placement, useDoughnutRightAnchor, useDoughnutLeftAnchor, sideStrokeLegend, fontSize);
         double GetSideLegendContentWidth()
         {
             double contentWidth = entries.Count == 0

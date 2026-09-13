@@ -2161,5 +2161,24 @@ internal static class PptxChartLegendsTests
         object[] defaultEntries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, null])) ?? throw new InvalidOperationException("Expected default stroke legend entries.")).Cast<object>().ToArray();
         TestAssert.True((bool?)defaultEntries[0].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[0]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
         TestAssert.True((bool?)defaultEntries[1].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[1]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
+    }    public static void PptxSyntheticBubbleRightLegendSharesAreaTextGap()
+    {
+        System.Type rendererType = typeof(PptxRenderer);
+        System.Reflection.MethodInfo resolveTextGap = rendererType.GetMethod(
+            "ResolveSideLegendTextGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer side-legend text-gap bridge.");
+        System.Type placementType = rendererType.GetNestedType("ChartLegendPlacement", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected renderer legend placement type.");
+        System.Type rulesType = rendererType.GetNestedType("PptxChartMetricRules", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected renderer chart metric rules type.");
+        object bubblePlacement = System.Enum.Parse(placementType, "BubbleTitleRightLegend");
+        object areaPlacement = System.Enum.Parse(placementType, "AreaRightLegend");
+        object defaultPlacement = System.Enum.Parse(placementType, "Default");
+        // Office measures 4.64pt on the bubble title-right ladder port against the shared
+        // 4.66pt area/doughnut gap; unevidenced side placements keep the legacy 3pt gap.
+        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [bubblePlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected bubble text gap."));
+        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [areaPlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected area text gap."));
+        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, true, false, false, 18d]) ?? throw new InvalidOperationException("Expected doughnut-anchored text gap."));
+        TestAssert.Equal(3d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected legacy text gap."));
+        double strokeFactor = (double?)rulesType.GetField("LegendSideStrokeTextGapFactor", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null) ?? throw new InvalidOperationException("Expected stroke text-gap factor.");
+        TestAssert.Equal(18d * strokeFactor, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, true, 18d]) ?? throw new InvalidOperationException("Expected stroke text gap."));
     }
 }

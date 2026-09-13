@@ -9,7 +9,7 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.8,
+    "maxMeanAbsoluteError": 0.65,
     "minForegroundRecall": 0.93,
     "maxChangedPixelRatioAtThreshold16": 0.018,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
