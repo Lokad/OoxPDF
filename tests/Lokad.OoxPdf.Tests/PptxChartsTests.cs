@@ -1139,7 +1139,11 @@ internal static class PptxChartsTests
         (double ux, double uy, double ur) = ReadPolarGeometry(unlabeled);
         (double lx, double ly, double lr) = ReadPolarGeometry(labeled);
         TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 284.88d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Unlabeled pies keep the tall radius (5-categories port). Got " + ux + "/" + uy + "/" + ur);
-        TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 145.44d) < 0.01d, "Labeled pies center with the smaller radius (leader probes). Got " + lx + "/" + ly + "/" + lr);
+        TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 146.5d) < 0.01d, "Labeled pies center with the tall radius (leader probes 146.50). Got " + lx + "/" + ly + "/" + lr);
+        object shortPlotBox = System.Activator.CreateInstance(plotBoxType, [84d, 144d, 420d, 300d])!;
+        object shortLabeled = method.Invoke(null, [pie, shortPlotBox, empty, hidden, true, false, 0d, 0d, false])!;
+        (double qx, double qy, double qr) = ReadPolarGeometry(shortLabeled);
+        TestAssert.True(Math.Abs(qx - 294d) < 0.01d && Math.Abs(qy - 294d) < 0.01d && Math.Abs(qr - 120.25d) < 0.01d, "Short labeled pies use the short radius (offset probe 120.25). Got " + qx + "/" + qy + "/" + qr);
         object doughnut = System.Enum.ToObject(kindType, 1);
         object narrowPlot = System.Activator.CreateInstance(plotBoxType, [144d, 72d, 246d, 432d])!;
         object narrowDoughnut = method.Invoke(null, [doughnut, narrowPlot, empty, hidden, false, false, 0d, 0d, false])!;
@@ -1305,6 +1309,19 @@ internal static class PptxChartsTests
         double pitch = (double)rules.GetField("PieDataLabelLinePitchFactor")!.GetValue(null)!;
         TestAssert.True(Math.Abs(pitch - 1.22d) < 0.000001d, "Pie wrap pitch should stay at the measured line step. Got " + pitch);
     }
+
+    public static void PptxSyntheticPieLabeledRadiusGateKeepsPlotHeight()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "SelectPieLabeledRadiusRatio",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie labeled-radius helper to remain inspectable by the Office evidence guard.");
+        double shortPlot = (double)method!.Invoke(null, [300d])!;
+        double tallPlot = (double)method.Invoke(null, [360d])!;
+        TestAssert.True(Math.Abs(shortPlot - 0.40083d) < 0.00001d, "300H labeled pies should use the short radius ratio (Office 0.40083). Got " + shortPlot);
+        TestAssert.True(Math.Abs(tallPlot - 0.40694d) < 0.00001d, "360H labeled pies should use the tall radius ratio (Office 0.40694). Got " + tallPlot);
+    }
+
     public static void PptxSyntheticPieManualCircleGapKeepsOfficeCalibration()
     {
         var method = typeof(PptxRenderer).GetMethod(

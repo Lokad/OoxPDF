@@ -306,6 +306,15 @@ internal sealed partial class PptxRenderer
     // Radius base for polar charts: plot height for pies and doughnuts alike (portrait
     // probes killed the min-side base, which undershoots narrow plots); the width-margin
     // min below handles narrow frames. Landscape plots keep byte-identical bases.
+    // Labeled-pie radius ratio gated by plot height (300H renders at the short
+    // ratio, 360H at the tall one; only these heights observed in the corpus).
+    private static double SelectPieLabeledRadiusRatio(double plotHeight)
+    {
+        return plotHeight <= PptxChartMetricRules.PieShortLabeledPlotHeightCutoff
+            ? PptxChartMetricRules.PieShortLabeledRadiusRatio
+            : PptxChartMetricRules.PieLabeledRadiusRatio;
+    }
+
     private static double GetPieOrDoughnutRadiusBase(ChartPolarKind kind, double plotWidth, double plotHeight)
     {
         return plotHeight;
@@ -383,7 +392,7 @@ internal sealed partial class PptxRenderer
                 bool legendVisible = legend.Visible && !legend.Overlay;
                 return kind switch
                 {
-                    ChartPolarKind.Pie when !legendVisible && hasVisibleDataLabels => PptxChartMetricRules.PieLabeledRadiusRatio,
+                    ChartPolarKind.Pie when !legendVisible && hasVisibleDataLabels => SelectPieLabeledRadiusRatio(plotBox.Height),
                     ChartPolarKind.Pie => PptxChartMetricRules.PieRadiusRatio,
                     ChartPolarKind.Doughnut when !legendVisible => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,

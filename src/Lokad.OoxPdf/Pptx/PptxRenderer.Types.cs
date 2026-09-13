@@ -333,11 +333,17 @@ internal sealed partial class PptxRenderer
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
-        // in the plot with a smaller radius (probe-1/offset/auto/noleader renders:
-        // centers exact at 0.5, radii 0.4007-0.4069 of plot height). Unlabeled pies
-        // keep the constants above (5-categories port: 0.4595 center, 0.4327 radius).
+        // in the plot middle with a height-gated radius (360H renders at 0.40694 over
+        // probe-1/auto/square/tall-offset; 300H renders at 0.40083 over offset and
+        // short-probe1 with swapped content, so height drives it, not labels or width).
+        // Unlabeled pies keep the constants above (5-categories port: 0.4595 center,
+        // 0.4327 radius).
         public const double PieLabeledCenterYRatio = 0.5d;
-        public const double PieLabeledRadiusRatio = 0.404d;
+        public const double PieLabeledRadiusRatio = 0.40694d;
+        // Short-plot labeled-pie radius ratio (300H Office renders; the 330H cutoff
+        // splits the only observed heights with maximum margin; form beyond is open).
+        public const double PieShortLabeledRadiusRatio = 0.40083d;
+        public const double PieShortLabeledPlotHeightCutoff = 330d;
         // Manual pie/doughnut labels anchor on a circle past the rim: radius R plus
         // 0.0566 R (joint X/Y fit over 19 unclamped Office single-line boxes, rms
         // 0.68/1.1; square-plot Beta/Delta pairs fit within 0.12 here against 1.06+
