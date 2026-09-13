@@ -250,9 +250,12 @@ internal sealed partial class PptxRenderer
             string.IsNullOrEmpty(properties.VerticalOverflowValue);
     }
 
-    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
+    // Radar axis labels route here alone (data labels use AddChartLabelRuns below);
+    // Office applies no pair kerning to them (Power/Defense/Stamina read 0 to 4
+    // against our GPOS pairs), so radar passes kerning off like the cartesian axes.
+    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, bool kerningEnabled = true)
     {
-        return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment);
+        return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment, kerningEnabled);
     }
 
     private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks)
@@ -326,7 +329,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static TextRun CreateChartTextRun(string text, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment)
+    private static TextRun CreateChartTextRun(string text, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, bool kerningEnabled = true)
     {
         return new TextRun(
             text,
@@ -348,7 +351,7 @@ internal sealed partial class PptxRenderer
             Italic: style.Italic,
             Underline: style.Underline,
             Strike: style.Strike,
-            KerningEnabled: true,
+            KerningEnabled: kerningEnabled,
             alignment,
             FontFamily: style.FontFamily,
             RotationDegrees: 0d,

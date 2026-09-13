@@ -172,7 +172,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         ChartPlotBox plotBox = layout.PlotBox;
         int pointCount = Math.Max(labels.Count, layout.PointCount);
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
@@ -183,7 +183,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, label, style, textMeasurer, i, pointCount);
-            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
+            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
         }
 
         RenderChartTextRuns(runs, graphics, chartFonts, "RCA", fontResolver, diagnosticSink);
@@ -242,14 +242,14 @@ internal sealed partial class PptxRenderer
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         ChartPlotBox plotBox = layout.PlotBox;
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var runs = new List<TextRun>();
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount))
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
             string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis, null);
             ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, label, style, textMeasurer, ratio);
-            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
+            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
         }
 
         RenderChartTextRuns(runs, graphics, chartFonts, "RVA", fontResolver, diagnosticSink);
