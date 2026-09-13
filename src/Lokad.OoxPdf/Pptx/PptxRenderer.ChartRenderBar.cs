@@ -945,8 +945,8 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(plotBox.X, plotBox.Y, plotBox.Width, Math.Max(1d, flooredTop - plotBox.Y));
     }
 
-    // Right reserve for columns: Office keeps the plot right edge at least 10.3pt inside
-    // the frame (exact on eight renders, but an exact set trips tight tick gates on green
+    // Right reserve for columns: Office keeps the plot AXIS right edge 11.0pt inside
+    // the frame (axis truth after the clip-vs-axis finding; an exact set trips tight tick gates on green
     // ports and shoves right-axis charts into their axes, so the edge is floored, not set).
     // Horizontal bars keep the value-axis tail law; side legends, hidden-label and
     // label-less charts keep legacy edges.

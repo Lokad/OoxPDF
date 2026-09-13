@@ -1873,7 +1873,8 @@ internal static class PptxChartLegendsTests
 
     public static void PptxVerticalBarPlotBoxRightReserveSetsOfficeEdge()
     {
-        // Office column right edges keep at least 10.3pt inside the frame.
+        // Office column AXIS right edges keep 11.0pt inside the frame (clip boxes read
+        // 10.3; axis strokes are truth per the horizontal-frame finding).
         Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
         Type plotBoxType = typeof(PptxRenderer).GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
         Type layoutType = typeof(PptxRenderer).GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart legend layout.");
@@ -1884,7 +1885,7 @@ internal static class PptxChartLegendsTests
         object set = adjust.Invoke(null, [plot, frame, false, hiddenLegend, true]) ?? throw new InvalidOperationException("Expected set plot box.");
         Type boxType = set.GetType();
         double right = (double)(boxType.GetProperty("X")?.GetValue(set) ?? 0d) + (double)(boxType.GetProperty("Width")?.GetValue(set) ?? 0d);
-        TestAssert.True(Math.Abs(right - 781.7d) < 1e-9, "Column right reserve drifts from the Office 10.3pt edge.");
+        TestAssert.True(Math.Abs(right - 781.0d) < 1e-9, "Column right reserve drifts from the Office 11.0pt axis edge.");
         object widePlot = Activator.CreateInstance(plotBoxType, [122.5d, 111.9d, 667.5d, 376.1d]) ?? throw new InvalidOperationException("Expected wide plot box.");
         object bars = adjust.Invoke(null, [widePlot, frame, true, hiddenLegend, true]) ?? throw new InvalidOperationException("Expected bars plot box.");
         double barsRight = (double)(boxType.GetProperty("X")?.GetValue(bars) ?? 0d) + (double)(boxType.GetProperty("Width")?.GetValue(bars) ?? 0d);

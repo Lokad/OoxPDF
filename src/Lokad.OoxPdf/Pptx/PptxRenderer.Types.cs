@@ -291,9 +291,11 @@ internal sealed partial class PptxRenderer
         // Minimum Office top clearance for untitled legendless columns (10.9pt on three
         // short-frame renders; the frame ratio stands above it).
         public const double ColumnPlotTopMarginFloor = 10.9d;
-        // Office right reserve for column plots: the plot right edge keeps at least 10.3pt
-        // inside the frame on eight renders across kinds, groupings, titles and legends.
-        public const double ColumnPlotRightReserve = 10.3d;
+        // Office right reserve for column plots: the plot AXIS right edge keeps 11.0pt
+        // inside the frame (axis strokes, not clips: the prior 10.3 came from clip boxes,
+        // which pad the axis rect by the known 0.7; compact/overlay/bottom-legend Office
+        // axes all sit at 11.0 while our clip-bound rights overshot by 0.66-0.70).
+        public const double ColumnPlotRightReserve = 11.0d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter
         // charts. Calibrated from cached Office references: reserve minus our measured marker
