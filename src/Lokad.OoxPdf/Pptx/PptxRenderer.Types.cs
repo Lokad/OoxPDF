@@ -339,10 +339,11 @@ internal sealed partial class PptxRenderer
         public const double PieLabeledCenterYRatio = 0.5d;
         public const double PieLabeledRadiusRatio = 0.404d;
         // Manual pie/doughnut labels anchor on a circle past the rim: radius R plus
-        // this fraction of the plot width (joint X/Y fit over 19 unclamped Office
-        // single-line boxes: rms 0.68/1.1 at 0.0159; 0.0566 R is identical on the
-        // constant-aspect corpus, plot width wins as the factor-family basis).
-        public const double PieManualLabelCircleGapPlotWidthFactor = 0.0159d;
+        // 0.0566 R (joint X/Y fit over 19 unclamped Office single-line boxes, rms
+        // 0.68/1.1; square-plot Beta/Delta pairs fit within 0.12 here against 1.06+
+        // for the plot-width framing, which is identical on the constant-aspect
+        // corpus; near-identical on probe 2 either way).
+        public const double PieManualLabelCircleGapRadiusFactor = 0.0566d;
         // Manual pie/doughnut boxes are content-tight: 3.0pt side pads (9 Office box
         // fills agree within 0.15pt) around the unwrapped text, or the longest wrapped
         // line past the 0.19 plot-width wrap cap.
@@ -376,9 +377,8 @@ internal sealed partial class PptxRenderer
         public const double ChartAreaDefaultBorderWidth = 0.14d;
         // Pie labels wrap past this fraction of the plot width (8 Office samples: every
         // wrapped label exceeds it, every single-line label stays below; tightest margins
-        // are West 0.6pt and Gamma 2.8pt. Plot-width, height, and radius bases are
-        // indistinguishable on the constant-aspect corpus, so width wins as the natural
-        // horizontal basis; revisit if a different-aspect pie disagrees.
+        // are West 0.6pt and Gamma 2.8pt. A square-plot probe kills the radius basis
+        // (Beta/Delta wrap at 73-80pt against 0.67R = 98.2) while 0.19 plotW holds at 68.4.
         public const double PieDataLabelWrapWidthFactor = 0.19d;
         // Wrapped pie label line pitch as a fraction of the tick font size (Office stacks
         // wrapped lines 21.9pt apart at 18pt; single 18pt sample, Gamma/North/South agree

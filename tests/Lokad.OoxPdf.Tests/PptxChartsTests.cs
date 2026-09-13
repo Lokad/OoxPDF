@@ -1302,10 +1302,10 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected pie manual circle-gap helper to remain inspectable by the Office evidence guard.");
 
-        double wide = (double)method!.Invoke(null, [520d])!;
-        double narrow = (double)method.Invoke(null, [420d])!;
-        TestAssert.True(Math.Abs(wide - 8.268d) < 0.01d, "Wide-plot manual labels should anchor 8.27pt past the rim (joint ladder fit). Got " + wide);
-        TestAssert.True(Math.Abs(narrow - 6.678d) < 0.01d, "Narrow-plot manual labels should anchor 6.68pt past the rim (joint ladder fit). Got " + narrow);
+        double landscape = (double)method!.Invoke(null, [146.5d])!;
+        double small = (double)method.Invoke(null, [120.25d])!;
+        TestAssert.True(Math.Abs(landscape - 8.292d) < 0.01d, "Landscape manual labels should anchor 8.29pt past the rim (joint ladder fit). Got " + landscape);
+        TestAssert.True(Math.Abs(small - 6.806d) < 0.01d, "Small-plot manual labels should anchor 6.81pt past the rim (joint ladder fit). Got " + small);
     }
 
     public static void PptxSyntheticPieManualBoxHeightKeepsOfficeCalibration()

@@ -159,7 +159,7 @@ internal sealed partial class PptxRenderer
                 bool pieIsFactorManual = TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _);
                 if (pieIsFactorManual)
                 {
-                    double pieCircleGap = plotBox.Width * PptxChartMetricRules.PieManualLabelCircleGapPlotWidthFactor;
+                    double pieCircleGap = geometry.Radius * PptxChartMetricRules.PieManualLabelCircleGapRadiusFactor;
                     double pieCircleX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion + pieCircleGap);
                     double pieCircleY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion + pieCircleGap);
                     pieUnwrappedWidth = MeasurePieLabelPartsWidth(labelParts, pieWrapSeparator, style, fontResolver);
@@ -521,10 +521,10 @@ internal sealed partial class PptxRenderer
         }
         return Math.Min(Math.Max(edge, plotMin), plotMin + plotSize - size);
     }
-    // Anchor-circle gap for manual pie labels: R plus this plot-width fraction.
-    private static double ComputePieManualLabelCircleGap(double plotWidth)
+    // Anchor-circle gap for manual pie labels: this fraction of the pie radius.
+    private static double ComputePieManualLabelCircleGap(double radius)
     {
-        return plotWidth * PptxChartMetricRules.PieManualLabelCircleGapPlotWidthFactor;
+        return radius * PptxChartMetricRules.PieManualLabelCircleGapRadiusFactor;
     }
     // Content-tight manual box height: line pitch times lines plus the total pad.
     private static double ComputePieManualLabelBoxHeight(double fontSize, int lineCount)
