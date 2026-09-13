@@ -421,11 +421,12 @@ internal sealed partial class PptxRenderer
         // on preset via slop).
         public const double BarCategoryBottomMargin = 7.0d;
         public const double BarCategoryDescentFactor = 0.22d;
-        // Out-end gap for legend-key data labels: box pad plus bottom-pad law
-        // (Office baselines sit barTop plus 6.74 at 8pt and plus 8.98 at 16pt,
-        // within 0.4; the 0.28fs plus 1.5 bottom pad matches pie manual labels,
-        // 3.0 is the label box pad).
-        public const double BarLegendKeyOutEndBoxPad = 3.0d;
+        // Out-end gap for legend-key data labels: 4.75 plus 0.28fs (Office baselines
+        // sit barTop plus 6.99 at 8pt, 8.11 at 12pt, and 9.23 at 16pt: 20 labels over
+        // three sizes within 0.27 of the law with zero mean; the slope matches pie
+        // manual bottom-pad, the constant is bar-calibrated. A minus 0.05 per unit
+        // tilt with bar height stays open as a scale second-order).
+        public const double BarLegendKeyOutEndBoxPad = 3.25d;
         public const double BarLegendKeyOutEndGapFontFactor = 0.28d;
         public const double BarLegendKeyOutEndGapConstant = 1.5d;
         // Swatch gap and vertical anchor for legend-key labels: Office gaps read
