@@ -359,11 +359,14 @@ internal sealed partial class PptxRenderer
         // this much (3 Office boxes within 1.1pt; south uses the single-line height
         // even when wrapped; near-cardinals like West 1.8deg off keep the radial rule).
         public const double PieManualLabelCardinalVerticalShift = 2.42d;
-        // Manual pie/doughnut leaders go to same-side narrow boxes only: the box center
-        // must sit on the wedge half of the pie (on-axis rims never lead, 3 samples)
-        // and the box must fit this width (24 Office labels: West 83.31 leads while
-        // graded Gamma 87.23 does not; singles above 83.31 same-side are unobserved).
-        public const double PieManualLabelLeaderMaxBoxWidth = 85.3d;
+        // Manual pie/doughnut leaders go to same-side labels whose unwrapped text fits
+        // 1.12 wrap caps on wide plots (27 Office configs: West at 96.9% of cap leads
+        // while graded Gamma at 121.9% does not; narrow-line wrapped boxes like G2 at
+        // 265% of cap never lead). Square plots (plot no wider than 1.1 heights) draw
+        // no leaders at all (2 narrow same-side square qualifiers leadless).
+        public const double PieManualLabelLeaderUnwrappedCapRatio = 1.12d;
+        // Wide-plot gate for manual pie/doughnut leaders (square plots draw none).
+        public const double PieManualLabelLeaderMinPlotAspect = 1.1d;
         // Office emits a chart-area placeholder border by default (11 kind refs carry
         // the G:0 0.14pt rect with a fully transparent stroke and no chartArea markup
         // anywhere in the corpus); an explicit area stroke keeps winning and skips it.

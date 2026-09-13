@@ -154,15 +154,17 @@ internal sealed partial class PptxRenderer
                 }
                 ChartLayoutBox labelBox;
                 bool pieManualBottomAnchor = false;
+                double pieUnwrappedWidth = 0d;
                 bool pieIsFactorManual = TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _);
                 if (pieIsFactorManual)
                 {
                     double pieCircleGap = plotBox.Width * PptxChartMetricRules.PieManualLabelCircleGapPlotWidthFactor;
                     double pieCircleX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion + pieCircleGap);
                     double pieCircleY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion + pieCircleGap);
+                    pieUnwrappedWidth = MeasurePieLabelPartsWidth(labelParts, pieWrapSeparator, style, fontResolver);
                     double pieContentWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d)
                         ? pieWrapLongest
-                        : MeasurePieLabelPartsWidth(labelParts, pieWrapSeparator, style, fontResolver);
+                        : pieUnwrappedWidth;
                     int pieLineCount = pieWrapLines is not null && pieWrapLines.Count > 1 ? pieWrapLines.Count : 1;
                     double pieManualWidth = pieContentWidth + 2d * PptxChartMetricRules.PieManualLabelBoxSidePad;
                     double pieManualHeight = ComputePieManualLabelBoxHeight(fontSize, pieLineCount);
@@ -179,7 +181,7 @@ internal sealed partial class PptxRenderer
                     labelBox = new ChartLayoutBox(labelX, labelY, labelWidth, labelHeight);
                 }
                 bool pieDrawLeader = !pieChartHasManualLeaderCandidate
-                    || (pieIsFactorManual && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), labelBox.Width));
+                    || (pieIsFactorManual && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), pieUnwrappedWidth, plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor, plotBox.Width, plotBox.Height));
                 if (pieDrawLeader)
                 {
                     RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
@@ -459,14 +461,19 @@ internal sealed partial class PptxRenderer
         return false;
     }
     // Per-label leader pick for charts with valid manuals: the box center must sit on
-    // the wedge half of the pie (near-cardinal rims count as on-axis below 0.01) and
-    // the box must fit the narrow width above.
-    private static bool ShouldDrawPieManualLeaderLabel(double boxCenterX, double centerX, double cosTheta, double boxWidth)
+    // the wedge half of the pie (near-cardinal rims count as on-axis below 0.01), the
+    // unwrapped text must fit 1.12 wrap caps, and the plot must be wide (squares draw
+    // none).
+    private static bool ShouldDrawPieManualLeaderLabel(double boxCenterX, double centerX, double cosTheta, double unwrappedWidth, double capWidth, double plotWidth, double plotHeight)
     {
+        if (plotWidth <= plotHeight * PptxChartMetricRules.PieManualLabelLeaderMinPlotAspect)
+        {
+            return false;
+        }
         bool east = cosTheta > 0.01d;
         bool west = cosTheta < -0.01d;
         bool sameSide = (east && boxCenterX > centerX) || (west && boxCenterX < centerX);
-        return sameSide && boxWidth <= PptxChartMetricRules.PieManualLabelLeaderMaxBoxWidth;
+        return sameSide && unwrappedWidth <= capWidth * PptxChartMetricRules.PieManualLabelLeaderUnwrappedCapRatio;
     }
 
     // Circle-anchored box for factor-mode manual pie labels: the anchor rides a

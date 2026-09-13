@@ -975,22 +975,26 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(border - 0.14d) < 0.000001d, "Chart-area default border should stay at the Office hairline (10 kind ports). Got " + border);
     }
 
-    public static void PptxSyntheticPieManualLeaderNeedsSameSideNarrowBox()
+    public static void PptxSyntheticPieManualLeaderNeedsSameSideNarrowText()
     {
         var method = typeof(PptxRenderer).GetMethod(
             "ShouldDrawPieManualLeaderLabel",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected pie manual-leader pick helper to remain inspectable by the Office evidence guard.");
-        object?[] gamma = [182.3d, 404d, -0.9767d, 68.59d];
-        object?[] alpha = [202.32d, 404d, 0.998d, 88.64d];
-        object?[] wide = [187.7d, 404d, -0.9767d, 87.23d];
-        object?[] axial = [478.04d, 294d, 0d, 51.92d];
-        object?[] west = [157.66d, 294d, -1d, 83.31d];
-        TestAssert.True((bool)method!.Invoke(null, gamma)!, "Same-side narrow Gamma should keep its leader (Office draws one).");
-        TestAssert.True(!(bool)method.Invoke(null, alpha)!, "Opposite-side Alpha should stay leaderless (Office draws none).");
+        object?[] gamma = [182.3d, 404d, -0.9767d, 100.3d, 97.67d, 520d, 360d];
+        object?[] west = [157.66d, 294d, -1d, 77.3d, 79.8d, 420d, 300d];
+        object?[] wide = [187.7d, 404d, -0.9767d, 119.07d, 97.67d, 520d, 360d];
+        object?[] narrowWrapped = [182.73d, 404d, -0.9767d, 259.34d, 97.67d, 520d, 360d];
+        object?[] squareNarrow = [172.11d, 324d, -0.9767d, 50.15d, 68.4d, 360d, 360d];
+        object?[] alpha = [202.32d, 404d, 0.998d, 82.6d, 97.67d, 520d, 360d];
+        object?[] axial = [478.04d, 294d, 0d, 83.8d, 79.8d, 420d, 300d];
+        TestAssert.True((bool)method!.Invoke(null, gamma)!, "Same-side Gamma at 102.7% of cap should keep its leader (Office draws one).");
+        TestAssert.True((bool)method.Invoke(null, west)!, "Same-side West at 96.9% of cap should keep its leader (Office draws one).");
         TestAssert.True(!(bool)method.Invoke(null, wide)!, "Same-side wide labels should stay leaderless (Office graded Gamma draws none).");
+        TestAssert.True(!(bool)method.Invoke(null, narrowWrapped)!, "Narrow-line wrapped boxes over the text cap should stay leaderless (Office G2 draws none).");
+        TestAssert.True(!(bool)method.Invoke(null, squareNarrow)!, "Square plots should stay leaderless (Office H2 Gamma draws none).");
+        TestAssert.True(!(bool)method.Invoke(null, alpha)!, "Opposite-side Alpha should stay leaderless (Office draws none).");
         TestAssert.True(!(bool)method.Invoke(null, axial)!, "On-axis rims should stay leaderless (Office South draws none).");
-        TestAssert.True((bool)method.Invoke(null, west)!, "Same-side West at 83.31pt should keep its leader (Office draws one).");
     }
 
     public static void PptxSyntheticPieManualLeaderRejectsOutOfRangeFactors()
