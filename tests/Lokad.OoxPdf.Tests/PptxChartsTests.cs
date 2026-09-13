@@ -975,6 +975,18 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(border - 0.14d) < 0.000001d, "Chart-area default border should stay at the Office hairline (10 kind ports). Got " + border);
     }
 
+    public static void PptxSyntheticPieLeaderFootYKeepsOfficeBaselines()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputePieLeaderFootY",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie leader-foot helper to remain inspectable by the Office evidence guard.");
+        double single = (double)method!.Invoke(null, [239.28d, 24.97d, 18d, 1])!;
+        double wrapped = (double)method.Invoke(null, [120d, 46.94d, 18d, 2])!;
+        TestAssert.True(Math.Abs(single - 245.82d) < 0.1d, "Single-line feet should sit on the text baseline (Office Beta 245.78). Got " + single);
+        TestAssert.True(Math.Abs(wrapped - 150.86d) < 0.1d, "Wrapped feet should sit 2.35pt above the first baseline (Office Gamma 150.79). Got " + wrapped);
+    }
+
     public static void PptxSyntheticPieManualLeaderNeedsSameSideNarrowText()
     {
         var method = typeof(PptxRenderer).GetMethod(

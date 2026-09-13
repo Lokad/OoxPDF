@@ -155,6 +155,7 @@ internal sealed partial class PptxRenderer
                 ChartLayoutBox labelBox;
                 bool pieManualBottomAnchor = false;
                 double pieUnwrappedWidth = 0d;
+                int pieManualLineCount = 1;
                 bool pieIsFactorManual = TryGetPieManualLeaderFactorX(effectiveOptions.Layout, out _);
                 if (pieIsFactorManual)
                 {
@@ -165,9 +166,9 @@ internal sealed partial class PptxRenderer
                     double pieContentWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d)
                         ? pieWrapLongest
                         : pieUnwrappedWidth;
-                    int pieLineCount = pieWrapLines is not null && pieWrapLines.Count > 1 ? pieWrapLines.Count : 1;
+                    pieManualLineCount = pieWrapLines is not null && pieWrapLines.Count > 1 ? pieWrapLines.Count : 1;
                     double pieManualWidth = pieContentWidth + 2d * PptxChartMetricRules.PieManualLabelBoxSidePad;
-                    double pieManualHeight = ComputePieManualLabelBoxHeight(fontSize, pieLineCount);
+                    double pieManualHeight = ComputePieManualLabelBoxHeight(fontSize, pieManualLineCount);
                     double pieSingleHeight = ComputePieManualLabelBoxHeight(fontSize, 1);
                     labelBox = ResolvePieManualDataLabelBox(plotBox, effectiveOptions.Layout, pieCircleX, pieCircleY, Math.Sin(mid), Math.Cos(mid), geometry.CenterX, pieManualWidth, pieManualHeight, pieSingleHeight);
                     pieManualBottomAnchor = true;
@@ -184,7 +185,7 @@ internal sealed partial class PptxRenderer
                     || (pieIsFactorManual && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), pieUnwrappedWidth, plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor, plotBox.Width, plotBox.Height));
                 if (pieDrawLeader)
                 {
-                    RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
+                    RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions, fontSize, pieManualLineCount, pieManualBottomAnchor);
                 }
                 RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
                 double textX = labelBox.X;
@@ -563,7 +564,19 @@ internal sealed partial class PptxRenderer
         }
         return total;
     }
-    private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options)
+    // Manual-leader foot height: single-line feet sit on the text baseline (2 Office
+    // samples exact); wrapped feet sit 2.35pt above the first baseline at 18pt (3 Office
+    // samples exact, single-size evidence so the rise scales with font size).
+    private static double ComputePieLeaderFootY(double boxBottom, double boxHeight, double fontSize, int lineCount)
+    {
+        if (lineCount > 1)
+        {
+            double firstBaseline = boxBottom + boxHeight - (0.94d * fontSize + 1.5d);
+            return firstBaseline + PptxChartMetricRules.PieManualLabelLeaderWrappedFootRise * fontSize / 18d;
+        }
+        return boxBottom + ComputePieManualLabelBaselinePad(fontSize);
+    }
+    private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options, double fontSize, int lineCount, bool bottomAnchor)
     {
         if (!options.ShowLeaderLines)
         {
@@ -582,8 +595,24 @@ internal sealed partial class PptxRenderer
         double labelCenterY = labelBox.Y + labelBox.Height / 2d;
         bool labelIsLeft = labelCenterX < geometry.CenterX;
         double labelEdgeX = labelIsLeft ? labelBox.X + labelBox.Width : labelBox.X;
-        double tail = Math.Min(Math.Max(stroke.Width * 2d, 4d), Math.Max(4d, labelBox.Width * 0.18d));
-        double elbowX = labelIsLeft ? labelEdgeX + tail : labelEdgeX - tail;
+        double footY = labelCenterY;
+        double outInset;
+        double inInset;
+        bool verticalDrop = false;
+        if (bottomAnchor)
+        {
+            footY = ComputePieLeaderFootY(labelBox.Y, labelBox.Height, fontSize, lineCount);
+            outInset = 3d;
+            inInset = 1.5d;
+            verticalDrop = startX >= labelBox.X && startX <= labelBox.X + labelBox.Width && startY > labelBox.Y + labelBox.Height;
+        }
+        else
+        {
+            outInset = Math.Min(Math.Max(stroke.Width * 2d, 4d), Math.Max(4d, labelBox.Width * 0.18d));
+            inInset = 0d;
+        }
+        double elbowX = labelIsLeft ? labelEdgeX + outInset : labelEdgeX - outInset;
+        double tipX = labelIsLeft ? labelEdgeX - inInset : labelEdgeX + inInset;
 
         if (stroke.Alpha < 1d)
         {
@@ -593,8 +622,16 @@ internal sealed partial class PptxRenderer
 
         SetChartStroke(graphics, stroke);
         graphics.MoveTo(startX, startY);
-        graphics.LineTo(elbowX, labelCenterY);
-        graphics.LineTo(labelEdgeX, labelCenterY);
+        if (verticalDrop)
+        {
+            graphics.LineTo(startX, labelBox.Y + labelBox.Height + outInset);
+            graphics.LineTo(startX, labelBox.Y + labelBox.Height - inInset);
+        }
+        else
+        {
+            graphics.LineTo(elbowX, footY);
+            graphics.LineTo(tipX, footY);
+        }
         graphics.StrokeCurrentPath();
 
         if (stroke.Alpha < 1d)

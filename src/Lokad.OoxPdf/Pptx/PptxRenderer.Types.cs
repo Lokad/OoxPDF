@@ -367,6 +367,9 @@ internal sealed partial class PptxRenderer
         public const double PieManualLabelLeaderUnwrappedCapRatio = 1.12d;
         // Wide-plot gate for manual pie/doughnut leaders (square plots draw none).
         public const double PieManualLabelLeaderMinPlotAspect = 1.1d;
+        // Wrapped manual-leader foot rise above the first baseline at 18pt (3 Office
+        // samples exact at 150.79; single-size evidence so it scales with font size).
+        public const double PieManualLabelLeaderWrappedFootRise = 2.35d;
         // Office emits a chart-area placeholder border by default (11 kind refs carry
         // the G:0 0.14pt rect with a fully transparent stroke and no chartArea markup
         // anywhere in the corpus); an explicit area stroke keeps winning and skips it.
