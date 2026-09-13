@@ -442,9 +442,19 @@ internal sealed partial class PptxRenderer
             {
                 rightReserve = Math.Max(rightReserve, requiredReserve);
             }
-            else
+            else if (hasTitle || hasLegend || legend.Visible || leftReserve - requiredReserve < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
             {
                 leftReserve = Math.Max(leftReserve, requiredReserve);
+            }
+            else
+            {
+                // Office measures the strip (frame + 6.5 indent + tick width + 0.925 fs)
+                // rather than flooring at the preset (legend-keys probe: preset exceeds measured
+                // by 4.45 against Office 20.44); layouts with titles or any legend, and presets
+                // within slop, keep the legacy floor (column-clustered agrees within 0.06).
+                double presetLeftReserve = leftReserve;
+                leftReserve = requiredReserve;
+                rightReserve = Math.Max(rightReserve, rightReserve + (presetLeftReserve - requiredReserve));
             }
 
             double x = frame.X + leftReserve;

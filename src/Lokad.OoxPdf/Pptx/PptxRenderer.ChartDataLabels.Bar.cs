@@ -11,6 +11,13 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    // Swatch+text unit left for clustered vertical-bar legend-key labels (unit centered
+    // on the bar middle plus the calibrated offset).
+    private static double ComputeBarLegendKeyUnitLeft(double barCenterX, double swatchSize, double textWidth)
+    {
+        return barCenterX + PptxChartMetricRules.BarLegendKeyUnitCenterOffset - (swatchSize + swatchSize + textWidth) / 2d;
+    }
+
     private static void RenderBarDataLabels(
         PptxTheme theme,
         PptxColorMap colorMap,
@@ -180,12 +187,36 @@ internal sealed partial class PptxRenderer
                         double textX = labelBox.X;
                         double textWidth = labelBox.Width;
                         TextAlignment alignment = TextAlignment.Center;
+                        double barLegendKeySwatch = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+                        bool barLegendKeyUnitCenter = effectiveOptions.ShowLegendKey && !stacked;
+                        if (barLegendKeyUnitCenter)
+                        {
+                            // Office centers the swatch+text unit on the bar middle (other
+                            // groupings and plain labels keep the legacy slot math, unobserved).
+                            double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, new ChartTextMeasurer(fontResolver).Measure(label, style));
+                            double barLegendKeyCategoryWidth = plotBox.Width / categoryCount;
+                            double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, densePointSeries.Count, barOptions.GapWidth);
+                            double barLegendKeyStep = GetClusteredBarStep(barLegendKeyBarWidth, barOptions.Overlap);
+                            double barLegendKeyClusterWidth = barLegendKeyBarWidth + Math.Max(0, densePointSeries.Count - 1) * barLegendKeyStep;
+                            double barLegendKeyBarCenterX = plotBox.X + category * barLegendKeyCategoryWidth + (barLegendKeyCategoryWidth - barLegendKeyClusterWidth) / 2d + seriesIndex * barLegendKeyStep + barLegendKeyBarWidth / 2d;
+                            double barLegendKeyUnitLeft = ComputeBarLegendKeyUnitLeft(barLegendKeyBarCenterX, barLegendKeySwatch, barLegendKeyTextWidth);
+                            labelBox = new ChartLayoutBox(barLegendKeyUnitLeft, labelBox.Y, labelBox.Width, labelBox.Height);
+                            textX = barLegendKeyUnitLeft + barLegendKeySwatch + barLegendKeySwatch;
+                        }
                         if (effectiveOptions.ShowLegendKey)
                         {
                             ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, value);
                             double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
+                            if (barLegendKeyUnitCenter)
+                            {
+                                textX = labelBox.X + barLegendKeySwatch + barLegendKeySwatch;
+                                textWidth = Math.Max(1d, labelBox.X + labelBox.Width - textX);
+                            }
+                            else
+                            {
                             textX += consumedWidth;
                             textWidth = Math.Max(1d, textWidth - consumedWidth);
+                            }
                             alignment = TextAlignment.Left;
                         }
 

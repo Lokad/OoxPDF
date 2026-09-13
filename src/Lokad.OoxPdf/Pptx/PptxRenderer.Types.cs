@@ -249,11 +249,16 @@ internal sealed partial class PptxRenderer
         // decomposes to 11.0pt on stacked (300) and clustered (50) bar ports.
         public const double HorizontalBarValueAxisRightPadding = 11.0d;
         // Left indent of vertical-bar value tick labels from the chart frame, then a
-        // font-relative gap to the plot edge (Office origins decompose to frame plus 6.5pt
+        // font-relative gap to the axis (Office origins decompose to frame plus 6.5pt
         // plus tick width plus 0.92 times tick font size on column-stacked, column-clustered,
-        // dashboard, and composite ports, within 0.1).
+        // dashboard, and composite ports, within 0.1; two exact decompositions read 0.924-0.928,
+        // kept at 0.92 until wider axis samples justify the bump without golden churn).
         public const double BarValueAxisLabelFrameIndent = 6.5d;
         public const double BarValueAxisLabelGapFactor = 0.92d;
+        // Preset-floor slop for the single-value-axis strip: the measured reserve
+        // replaces the preset only on clear disagreement (legend-keys 4.45 vs
+        // column-clustered 0.06); inside slop the preset stands untouched.
+        public const double BarValueAxisPresetFloorSlop = 1d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter
         // charts. Calibrated from cached Office references: reserve minus our measured marker
@@ -404,6 +409,11 @@ internal sealed partial class PptxRenderer
         public const double PieDataLabelHeightFactor = 1.35d;
         public const double DataLabelLegendKeySizeFactor = 0.55d;
         public const double DataLabelLegendKeyTextGapFactor = 0.35d;
+        // Swatch+text unit centering for clustered vertical-bar legend-key labels:
+        // Office centers the unit on the bar middle plus this much (9 Office labels
+        // across two gap widths: sigma 0.03; the swatch gap equals the swatch size
+        // within 0.1 at 8pt, single-size evidence for both).
+        public const double BarLegendKeyUnitCenterOffset = 1.45d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;

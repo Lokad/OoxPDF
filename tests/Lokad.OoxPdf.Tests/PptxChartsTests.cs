@@ -975,6 +975,18 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(border - 0.14d) < 0.000001d, "Chart-area default border should stay at the Office hairline (10 kind ports). Got " + border);
     }
 
+    public static void PptxSyntheticBarLegendKeyUnitLeftCentersOnBar()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeBarLegendKeyUnitLeft",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected bar legend-key unit helper to remain inspectable by the Office evidence guard.");
+        double twoDigit = (double)method!.Invoke(null, [500.65d, 4.4d, 8.63d])!;
+        double singleDigit = (double)method.Invoke(null, [200.25d, 4.4d, 4.2934d])!;
+        TestAssert.True(Math.Abs(twoDigit - 493.385d) < 0.1d, "Two-digit swatches should start at the unit left (Office Delta 493.4). Got " + twoDigit);
+        TestAssert.True(Math.Abs(singleDigit - 195.157d) < 0.1d, "Single-digit swatches should start at the unit left (Office Alpha 195.1). Got " + singleDigit);
+    }
+
     public static void PptxSyntheticPieLongWordSplitWidthReservesSeparator()
     {
         var method = typeof(PptxRenderer).GetMethod(
