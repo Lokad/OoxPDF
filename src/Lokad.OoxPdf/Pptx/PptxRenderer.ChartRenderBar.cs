@@ -477,7 +477,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetBarChartValueExtents(seriesVectors, barOptions.Grouping), false, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetBarChartValueExtents(seriesVectors, barOptions.Grouping), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), false);
             ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -601,7 +601,7 @@ internal sealed partial class PptxRenderer
                 valueAxis.SceneAxis,
                 valueAxis.XmlAxis,
                 GetBarChartValueExtents(seriesVectors, grouping),
-                percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                percentStacked, ResolveBarValueAxisHeadroom(barOptions.BarDirection == PptxSceneChartBarDirection.Bar, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), percentStacked);
             string? defaultNumberFormat = percentStacked ? "0%" : null;
             // Office single-value-axis origins decompose to frame + 6.5pt indent + tick width
@@ -1098,6 +1098,15 @@ internal sealed partial class PptxRenderer
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
         double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
         return new ChartValueAxisStripMeasure(maxLabelWidth, fontSize, labelWidth + sideGap);
+    }
+
+    // Near-maximum headroom (the shared 0.96 rule) applies to vertical-bar value axes:
+    // Office ceilings dataMax 68 to 80 on the ladder column probe. Horizontal bars keep
+    // the legacy frozen behavior their tuned right-margin laws were calibrated against,
+    // and percent stacks keep theirs (their max is pinned downstream anyway).
+    private static bool ResolveBarValueAxisHeadroom(bool horizontalBars, bool percentStacked)
+    {
+        return !horizontalBars && !percentStacked;
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)

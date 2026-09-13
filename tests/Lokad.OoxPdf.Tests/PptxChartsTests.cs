@@ -3438,5 +3438,23 @@ internal static class PptxChartsTests
         TestAssert.Contains("GS45000F100000S", pdf);
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("f", pdf);
+    }    public static void PptxSyntheticChartColumnAxisNearMaximumKeepsOfficeHeadroom()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "GetNiceChartAxisMax",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
+        // Office ceilings dataMax 68 to 80 on the ladder column axis-titles probe (unit 10 kept).
+        TestAssert.Equal(80d, (double)method!.Invoke(null, [68d, 0d, 9d, true, 0.96d, false])!);
+
+        var resolveHeadroom = typeof(PptxRenderer).GetMethod(
+            "ResolveBarValueAxisHeadroom",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected bar value-axis headroom bridge.");
+        // Only vertical non-percent bars take the shared headroom rule; horizontal bars
+        // keep the frozen behavior their tuned right-margin laws rely on.
+        TestAssert.True((bool)resolveHeadroom.Invoke(null, [false, false])!, "Expected vertical non-percent columns to take Office headroom.");
+        TestAssert.True(!(bool)resolveHeadroom.Invoke(null, [true, false])!, "Expected horizontal bars to keep frozen behavior.");
+        TestAssert.True(!(bool)resolveHeadroom.Invoke(null, [false, true])!, "Expected percent stacks to keep frozen behavior.");
+        TestAssert.True(!(bool)resolveHeadroom.Invoke(null, [true, true])!, "Expected horizontal percent stacks to keep frozen behavior.");
     }
 }
