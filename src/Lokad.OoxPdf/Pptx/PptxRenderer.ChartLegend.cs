@@ -298,7 +298,10 @@ internal sealed partial class PptxRenderer
                 Italic: style.Italic,
                 Underline: style.Underline,
                 Strike: style.Strike,
-                KerningEnabled: true,
+                // Office applies no pair kerning to legend entries (Markets 37.6 vs 4, Monthly
+                // Trend 84 vs 5, Base 6.8 vs 0 against our GPOS pairs; titles keep kerning, like
+                // the cartesian axes and radar labels which already pass kerning off).
+                KerningEnabled: false,
                 TextAlignment.Left,
                 FontFamily: style.FontFamily,
                 RotationDegrees: 0d,
