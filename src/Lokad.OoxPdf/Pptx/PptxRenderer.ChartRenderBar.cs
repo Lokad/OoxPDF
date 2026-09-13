@@ -702,6 +702,8 @@ internal sealed partial class PptxRenderer
             double rightStripWidth = 0d;
             int leftStripCount = 0;
             int rightStripCount = 0;
+            var leftStrips = new List<ChartValueAxisStripMeasure>();
+            var rightStrips = new List<ChartValueAxisStripMeasure>();
             foreach (ChartAxisSource valueAxis in valueAxes)
             {
                 ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(
@@ -709,7 +711,7 @@ internal sealed partial class PptxRenderer
                     valueAxis.XmlAxis,
                     new ChartValueExtents(0d, 1d), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits units = ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis);
-                double stripWidth = EstimateVerticalValueAxisLabelStripWidth(
+                ChartValueAxisStripMeasure strip = MeasureVerticalValueAxisLabelStrip(
                     theme,
                     sceneChart,
                     chartXml,
@@ -719,6 +721,7 @@ internal sealed partial class PptxRenderer
                     units,
                     defaultNumberFormat: null,
                     fontResolver: fontResolver);
+                double stripWidth = strip.StripWidth;
                 bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(
                     valueAxis.SceneAxis,
                     valueAxis.XmlAxis,
@@ -726,16 +729,22 @@ internal sealed partial class PptxRenderer
                 if (labelsRight)
                 {
                     rightStripWidth = Math.Max(rightStripWidth, stripWidth);
+                    rightStrips.Add(strip);
                     rightStripCount++;
                 }
                 else
                 {
                     leftStripWidth = Math.Max(leftStripWidth, stripWidth);
+                    leftStrips.Add(strip);
                     leftStripCount++;
                 }
             }
 
-            double requiredLeftReserve = Math.Max(leftReserve, leftStripWidth * GetMultiValueAxisStripFactor(leftStripCount, labelsRight: false));
+            // Same-side axis pairs chain their strips (Office lays dual left axes side by side)
+            // instead of maxing one; right-side pairs keep the legacy factor (unobserved).
+            double requiredLeftReserve = leftStrips.Count >= 2
+                ? Math.Max(leftReserve, ComputeChainedLeftValueAxisReserve(leftStrips))
+                : Math.Max(leftReserve, leftStripWidth * GetMultiValueAxisStripFactor(leftStripCount, labelsRight: false));
             double requiredRightReserve = Math.Max(rightReserve, rightStripWidth * GetMultiValueAxisStripFactor(rightStripCount, labelsRight: true));
             double x = frame.X + requiredLeftReserve;
             double right = frame.X + frame.Width - requiredRightReserve;
@@ -893,6 +902,21 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // Chained same-side value-axis reserve: Office lays dual left axes side by side, each
+    // with the single-axis indent/gap idiom (6.5pt frame indent, 0.92fs plot gap) and a
+    // sideGap-plus-1.46 inter-axis gap (three Office renders agree within 0.1pt). Strips
+    // run outer-to-inner in plot order; beyond-two and mixed-font configs unobserved.
+    private static double ComputeChainedLeftValueAxisReserve(IReadOnlyList<ChartValueAxisStripMeasure> strips)
+    {
+        double reserve = PptxChartMetricRules.BarValueAxisLabelFrameIndent + strips[0].MaxLabelWidth;
+        for (int stripIndex = 1; stripIndex < strips.Count; stripIndex++)
+        {
+            double sideGap = Math.Max(3d, strips[stripIndex].FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
+            reserve += sideGap + PptxChartMetricRules.BarDualValueAxisInterAxisGap + strips[stripIndex].MaxLabelWidth;
+        }
+
+        return reserve + strips[strips.Count - 1].FontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
+    }
     private static double GetMultiValueAxisStripFactor(int sameSideAxisCount, bool labelsRight)
     {
         if (sameSideAxisCount <= 1)
@@ -1052,7 +1076,14 @@ internal sealed partial class PptxRenderer
         return maxCategoryLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
     }
 
+    private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth);
+
     private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver)
+    {
+        return MeasureVerticalValueAxisLabelStrip(theme, sceneChart, chartXml, valueAxis, sceneAxis, extents, units, defaultNumberFormat, fontResolver).StripWidth;
+    }
+
+    private static ChartValueAxisStripMeasure MeasureVerticalValueAxisLabelStrip(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
@@ -1066,7 +1097,7 @@ internal sealed partial class PptxRenderer
             fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
         double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
-        return labelWidth + sideGap;
+        return new ChartValueAxisStripMeasure(maxLabelWidth, fontSize, labelWidth + sideGap);
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)

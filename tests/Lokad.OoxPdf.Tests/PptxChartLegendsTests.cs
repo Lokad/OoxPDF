@@ -1890,6 +1890,23 @@ internal static class PptxChartLegendsTests
         double barsRight = (double)(boxType.GetProperty("X")?.GetValue(bars) ?? 0d) + (double)(boxType.GetProperty("Width")?.GetValue(bars) ?? 0d);
         TestAssert.True(Math.Abs(barsRight - 790d) < 1e-9, "Column right reserve must not touch horizontal bars.");
     }
+    public static void PptxDualValueAxisStripChainsSideBySide()
+    {
+        // Office lays dual left axes side by side (6.5 indent, true widths, sideGap-plus-1.46
+        // middle, 0.92fs plot gap) instead of maxing one strip times 1.85.
+        Type stripType = typeof(PptxRenderer).GetNestedType("ChartValueAxisStripMeasure", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected value-axis strip measure.");
+        System.Reflection.MethodInfo chain = typeof(PptxRenderer).GetMethod("ComputeChainedLeftValueAxisReserve", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chained strip helper.");
+        Array compact = Array.CreateInstance(stripType, 2);
+        compact.SetValue(Activator.CreateInstance(stripType, [7.44d, 7d, 0d]), 0);
+        compact.SetValue(Activator.CreateInstance(stripType, [11.16d, 7d, 0d]), 1);
+        double compactReserve = (double)(chain.Invoke(null, [compact]) ?? 0d);
+        TestAssert.True(Math.Abs(compactReserve - 39.51d) < 1e-9, "Chained dual-axis reserve drifts from the Office side-by-side law.");
+        Array overlay = Array.CreateInstance(stripType, 2);
+        overlay.SetValue(Activator.CreateInstance(stripType, [9.61d, 9d, 0d]), 0);
+        overlay.SetValue(Activator.CreateInstance(stripType, [14.41d, 9d, 0d]), 1);
+        double overlayReserve = (double)(chain.Invoke(null, [overlay]) ?? 0d);
+        TestAssert.True(Math.Abs(overlayReserve - 48.63d) < 1e-9, "Chained dual-axis reserve drifts from the Office side-by-side law.");
+    }
     public static void PptxChartRadarWebGeometryIsFrameLocked()
     {
         // Office radar webs are style-invariant frame-locked squares: 432H untitled
