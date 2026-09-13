@@ -362,6 +362,14 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // Bottom default axis-title baseline: frame bottom plus 0.338 times the
+    // plot-to-frame reserve (two Office renders agree within 0.01pt).
+    private static double ComputeDefaultBottomAxisTitleBaselineY(double frameBottomY, double plotBottomY)
+    {
+        double bottomReserve = Math.Max(0d, plotBottomY - frameBottomY);
+        return frameBottomY + bottomReserve * PptxChartMetricRules.DefaultAxisTitleBandBaselineRatio;
+    }
+
     private static bool IsRenderableDefaultChartAxisTitle(PptxSceneChartAxisKind axisKind, PptxSceneChartAxisPosition positionKind)
     {
         return positionKind switch
@@ -415,8 +423,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            double bottomReserve = Math.Max(0d, plotBox.Y - frame.Y);
-            baselineY = frame.Y + bottomReserve * PptxChartMetricRules.DefaultAxisTitleBandBaselineRatio;
+            baselineY = ComputeDefaultBottomAxisTitleBaselineY(frame.Y, plotBox.Y);
             boxY = Math.Max(frame.Y, baselineY - titleHeight);
         }
 

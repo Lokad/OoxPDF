@@ -1831,6 +1831,20 @@ internal static class PptxChartLegendsTests
         TestAssert.True(Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ 264\.8 Tm").Count == 2, "Expected both bottom-legend entries at the frame-anchored baseline.");
     }
 
+    public static void PptxDefaultBottomAxisTitleBaselineFollowsReserve()
+    {
+        // Office bottom default axis titles sit at frame bottom plus 0.338 times the
+        // plot reserve (108 plus 46.77 times 0.338 lands 123.81 against Office 123.8 on
+        // both axis-title probes); the legacy 0.23 lands 118.76 and fails this pin.
+        System.Reflection.MethodInfo compute = typeof(PptxRenderer).GetMethod(
+            "ComputeDefaultBottomAxisTitleBaselineY",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected bottom axis-title baseline helper.");
+        double baseline = (double)(compute.Invoke(null, [108d, 154.77d]) ?? 0d);
+        TestAssert.True(Math.Abs(baseline - 123.80826d) < 1e-9, "Bottom axis-title baseline drifts from the Office reserve law.");
+        double floored = (double)(compute.Invoke(null, [108d, 100d]) ?? 0d);
+        TestAssert.True(Math.Abs(floored - 108d) < 1e-9, "Bottom axis-title baseline must floor at the frame bottom.");
+    }
+
     public static void PptxChartRadarWebGeometryIsFrameLocked()
     {
         // Office radar webs are style-invariant frame-locked squares: 432H untitled

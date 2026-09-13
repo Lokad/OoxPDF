@@ -529,7 +529,11 @@ internal sealed partial class PptxRenderer
         public const double AutoBarTitleAbovePlotBaselineOffsetFactor = 1.08d;
         public const double TitleWidthRatio = 0.84d;
         public const double TitleHeightFactor = 1.4d;
-        public const double DefaultAxisTitleBandBaselineRatio = 0.23d;
+        // Bottom default axis-title baseline: two Office renders (column category title
+        // and bar value title, same frame, both 12pt) agree on frame bottom plus 0.338
+        // times the plot-to-frame reserve within 0.01pt; the legacy 0.23 had no sliced
+        // provenance. Different-frame reserves stay unobserved.
+        public const double DefaultAxisTitleBandBaselineRatio = 0.338d;
         public const double DefaultAxisTitleSideBaselineRatio = 0.28d;
         public const double DefaultAxisTitleTopBandBaselineRatio = 0.485d;
         public const double DefaultAxisTitleLeftSideBaselineRatio = 0.50d;

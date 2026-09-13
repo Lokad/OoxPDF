@@ -23,6 +23,6 @@
     "maxChartGraphicsStructureLineWidthDelta": 0.25,
     "compareChartTextStructureKinds": ["AxisTitleText", "CategoryAxisTickLabel"],
     "compareChartTextStructureTextHash": true,
-    "maxChartTextStructurePositionDelta": 8.0
+    "maxChartTextStructurePositionDelta": 2.0
   }
 }
