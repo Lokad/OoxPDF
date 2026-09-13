@@ -975,6 +975,16 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(border - 0.14d) < 0.000001d, "Chart-area default border should stay at the Office hairline (10 kind ports). Got " + border);
     }
 
+    public static void PptxSyntheticPieLongWordSplitWidthReservesSeparator()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputePieLongWordSplitWidth",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected pie long-word split helper to remain inspectable by the Office evidence guard.");
+        double split = (double)method!.Invoke(null, [98.8d, 3.77d])!;
+        TestAssert.True(Math.Abs(split - 95.03d) < 0.01d, "Pre-split chunks should reserve the trailing separator (E2 breaks at 7 chars). Got " + split);
+    }
+
     public static void PptxSyntheticPieLeaderFootYKeepsOfficeBaselines()
     {
         var method = typeof(PptxRenderer).GetMethod(

@@ -96,29 +96,34 @@ internal sealed partial class PptxRenderer
                         {
                             continue;
                         }
-                        double partWidth = Math.Max(0d, pieWrapMeasurer.Measure(part, style));
-                        if (partWidth <= 0d)
+                        // Office wraps space-separated words first and chunks only overlong
+                        // single words (G2 spaced name wraps [w][w][w][17%], never mid-word).
+                        foreach (string pieToken in part.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                         {
-                            continue;
-                        }
-                        if (partWidth > pieWrapCapWidth && part.Length > 1)
-                        {
-                            List<int> pieChunks = SplitPieLabelLongWord(MeasurePieLabelChars(part, style, pieWrapMeasurer), pieWrapCapWidth);
-                            int pieOffset = 0;
-                            foreach (int pieChunkLength in pieChunks)
+                            double tokenWidth = Math.Max(0d, pieWrapMeasurer.Measure(pieToken, style));
+                            if (tokenWidth <= 0d)
                             {
-                                pieWrapTexts.Add(part.Substring(pieOffset, pieChunkLength));
-                                pieWrapWidths.Add(0d);
-                                pieWrapSeps.Add(0d);
-                                pieOffset += pieChunkLength;
+                                continue;
                             }
-                            pieWrapSeps[^1] = pieWrapSepWidth;
-                        }
-                        else
-                        {
-                            pieWrapTexts.Add(part);
-                            pieWrapWidths.Add(partWidth);
-                            pieWrapSeps.Add(pieWrapSepWidth);
+                            if (tokenWidth > pieWrapCapWidth && pieToken.Length > 1)
+                            {
+                                List<int> pieChunks = SplitPieLabelLongWord(MeasurePieLabelChars(pieToken, style, pieWrapMeasurer), ComputePieLongWordSplitWidth(pieWrapCapWidth, pieWrapSepWidth));
+                                int pieOffset = 0;
+                                foreach (int pieChunkLength in pieChunks)
+                                {
+                                    pieWrapTexts.Add(pieToken.Substring(pieOffset, pieChunkLength));
+                                    pieWrapWidths.Add(0d);
+                                    pieWrapSeps.Add(0d);
+                                    pieOffset += pieChunkLength;
+                                }
+                                pieWrapSeps[^1] = pieWrapSepWidth;
+                            }
+                            else
+                            {
+                                pieWrapTexts.Add(pieToken);
+                                pieWrapWidths.Add(tokenWidth);
+                                pieWrapSeps.Add(pieWrapSepWidth);
+                            }
                         }
                     }
                     if (pieWrapSeps.Count > 0)
@@ -384,6 +389,14 @@ internal sealed partial class PptxRenderer
             lines.Add(current.ToArray());
         }
         return lines;
+    }
+
+    // Long-word pre-split width: the wrap cap minus one trailing separator so chunks
+    // leave room for what follows (E2 chunks break at 7/7/10 chars against 95.03 while
+    // the full 98.8 cap would swallow an 8th char).
+    private static double ComputePieLongWordSplitWidth(double capWidth, double separatorWidth)
+    {
+        return capWidth - separatorWidth;
     }
 
     // Greedy mid-word split: longest prefix runs fitting maxWidth by per-character
