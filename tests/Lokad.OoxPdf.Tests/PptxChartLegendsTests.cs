@@ -1733,10 +1733,11 @@ internal static class PptxChartLegendsTests
         string label = "Series";
         double markerSize = 4.95d;
         double measuredText = (double)(measure.Invoke(textMeasurer, [label, style]) ?? 0d);
-        double width = (double)(entryWidth.Invoke(null, [label, style, textMeasurer, markerSize]) ?? 0d);
-
+        // Caller-supplied gaps compose additively (office values now resolve per size/content upstream).
         double markerTextGap = 3d;
         double officePackedLegendEntryPadding = 8d;
+        double width = (double)(entryWidth.Invoke(null, [label, style, textMeasurer, markerSize, markerTextGap, officePackedLegendEntryPadding]) ?? 0d);
+
         TestAssert.Equal(Math.Round(markerTextGap + officePackedLegendEntryPadding, 2), Math.Round(width - markerSize - measuredText, 2));
     }
 

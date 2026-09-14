@@ -590,6 +590,19 @@ internal sealed partial class PptxRenderer
         // 12pt value titles): the vertical-bottom composition re-bases from it to the actual
         // category-title size, reusing both fitted slopes with zero new constants.
         public const double DefaultAxisTitleHorizontalBarReferenceTitleFontSize = 12d;
+        // Bottom-legend horizontal packing: six Office renders overconstrain both terms.
+        // Swatch-text gap is content-independent (4.59/4.59/4.61 at fs18 across three fixtures)
+        // and linear in font size (2.96/4.59/6.25 at 12/18/24pt, residuals under 0.01, four spare
+        // DOF); the negative intercept is fitted, mechanism open. Inter-entry gap carries a
+        // content term in entry-advance range (max minus min measured advance): 9.60/14.27/18.90
+        // same-entries ladder plus 13.54/14.79/14.77 content knots fit 0.813fs minus 0.0276range
+        // plus 0.285 within 0.031 on all six (three spare DOF); longest/total/average forms all go
+        // non-monotonic and are killed. Top legends keep legacy constants, unobserved.
+        public const double LegendHorizontalTextGapFactor = 0.275d;
+        public const double LegendHorizontalTextGapIntercept = -0.35d;
+        public const double LegendHorizontalInterEntryGapFactor = 0.813d;
+        public const double LegendHorizontalInterEntryGapRangeFactor = 0.0276d;
+        public const double LegendHorizontalInterEntryGapBase = 0.285d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;

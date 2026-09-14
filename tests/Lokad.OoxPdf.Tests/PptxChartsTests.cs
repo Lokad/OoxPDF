@@ -890,6 +890,34 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, [0, true])!);
     }
 
+    public static void PptxSyntheticHorizontalLegendPackingGaps()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var textGap = rendererType.GetMethod(
+            "ComputeHorizontalLegendTextGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var interGap = rendererType.GetMethod(
+            "ComputeHorizontalLegendInterEntryGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(textGap is not null && interGap is not null, "Expected horizontal packing helpers to remain inspectable by the Office evidence guard.");
+
+        // Swatch-text gap: legacy 3.0 off-bottom; content-independent line 0.275fs-0.35
+        // (2.96/4.60/6.25 at 12/18/24pt) on bottom legends.
+        TestAssert.True(System.Math.Abs((double)textGap!.Invoke(null, [12d, false])! - 3.0d) < 0.01d, "Expected legacy text gap.");
+        TestAssert.True(System.Math.Abs((double)textGap.Invoke(null, [12.02d, true])! - 2.96d) < 0.05d, "Expected leg12 text gap.");
+        TestAssert.True(System.Math.Abs((double)textGap.Invoke(null, [18d, true])! - 4.60d) < 0.05d, "Expected leg18 text gap.");
+        TestAssert.True(System.Math.Abs((double)textGap.Invoke(null, [24d, true])! - 6.25d) < 0.05d, "Expected leg24 text gap.");
+
+        // Inter-entry gap: legacy 8.0 off-bottom; 0.813fs-0.0276range+0.285 on bottom
+        // legends (six Office knots within 0.031).
+        TestAssert.True(System.Math.Abs((double)interGap!.Invoke(null, [18d, 24.19d, false])! - 8.0d) < 0.01d, "Expected legacy inter gap.");
+        TestAssert.True(System.Math.Abs((double)interGap.Invoke(null, [12.02d, 16.18d, true])! - 9.60d) < 0.05d, "Expected leg12 inter gap.");
+        TestAssert.True(System.Math.Abs((double)interGap.Invoke(null, [18d, 24.19d, true])! - 14.27d) < 0.05d, "Expected leg18 inter gap.");
+        TestAssert.True(System.Math.Abs((double)interGap.Invoke(null, [24d, 32.30d, true])! - 18.90d) < 0.05d, "Expected leg24 inter gap.");
+        TestAssert.True(System.Math.Abs((double)interGap.Invoke(null, [18d, 50.56d, true])! - 13.54d) < 0.05d, "Expected longnames inter gap.");
+        TestAssert.True(System.Math.Abs((double)interGap.Invoke(null, [18d, 5.80d, true])! - 14.79d) < 0.05d, "Expected nsw inter gap.");
+    }
+
     public static void PptxSyntheticDefaultAxisTitleVerticalBottomReserve()
     {
         var method = typeof(PptxRenderer).GetMethod(
