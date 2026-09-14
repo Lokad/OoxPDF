@@ -70,7 +70,7 @@ internal sealed partial class PptxRenderer
                 // Unstyled series strokes default to round caps/joins; explicitly styled
                 // lines keep DrawingML attr defaults (combo contract).
                 bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
-                ChartSeriesStroke scatterStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1 } : stroke;
+                ChartSeriesStroke scatterStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
                 SetChartStroke(graphics, scatterStroke);
                 graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
                 var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
@@ -94,7 +94,7 @@ internal sealed partial class PptxRenderer
                     }
                     else
                     {
-                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
+                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, defaultSeriesStroke ? ApplyUnstyledLineStrokeTint(stroke.Color) : stroke.Color);
                     }
 
                 }

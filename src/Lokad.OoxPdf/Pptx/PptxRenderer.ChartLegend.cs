@@ -101,7 +101,7 @@ internal sealed partial class PptxRenderer
             // DrawingML attr defaults (same rule as series lines).
             if (i >= seriesStrokes.Count || seriesStrokes[i] is null)
             {
-                keyStroke = keyStroke with { Cap = keyStroke.Cap ?? 1, Join = keyStroke.Join ?? 1 };
+                keyStroke = keyStroke with { Cap = keyStroke.Cap ?? 1, Join = keyStroke.Join ?? 1, Color = ApplyUnstyledLineStrokeTint(keyStroke.Color) };
             }
             entries.Add(new ChartLegendEntry(names[i].ActiveName, null, keyStroke, marker, names[i], LineHidden: lineHidden));
         }
