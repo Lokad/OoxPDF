@@ -125,7 +125,7 @@ internal sealed partial class PptxRenderer
             }
 
             double categoryWidth = plotWidth / categoryCount;
-            double barWidth = GetClusteredBarWidth(categoryWidth, denseSeries.Count, plotOptions.GapWidth);
+            double barWidth = GetClusteredBarWidth(categoryWidth, denseSeries.Count, plotOptions.GapWidth, plotOptions.Overlap);
             double step = GetClusteredBarStep(barWidth, plotOptions.Overlap);
             double clusterWidth = barWidth + Math.Max(0, denseSeries.Count - 1) * step;
             for (int category = 0; category < categoryCount; category++)
@@ -1418,7 +1418,7 @@ internal sealed partial class PptxRenderer
     private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
-        double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent);
+        double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent, overlapPercent);
         double step = GetClusteredBarStep(barHeight, overlapPercent);
         double clusterHeight = barHeight + Math.Max(0, series.Count - 1) * step;
         for (int category = 0; category < categoryCount; category++)

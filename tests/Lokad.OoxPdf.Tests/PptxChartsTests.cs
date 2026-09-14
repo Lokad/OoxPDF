@@ -859,6 +859,21 @@ internal static class PptxChartsTests
         TestAssert.Equal(1d, (double)method.Invoke(null, [9d, 10d])!);
     }
 
+    public static void PptxSyntheticClusteredBarWidthHonorsNegativeOverlap()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "GetClusteredBarWidth",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected clustered bar width helper to remain inspectable by the Office evidence guard.");
+
+        // Office composite vectors: barW 23.64 with step 30.0 on band 135.45, gap 219,
+        // overlap -27 (573 divisor); zero overlap keeps the legacy divisor exactly.
+        double separated = (double)method!.Invoke(null, [135.45d, 3, 219d, -27d])!;
+        TestAssert.True(System.Math.Abs(separated - 23.64d) < 0.01d, "Expected separated width 23.64, got " + separated.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        double plain = (double)method.Invoke(null, [135.27d, 3, 219d, 0d])!;
+        TestAssert.True(System.Math.Abs(plain - 26.0636d) < 0.01d, "Expected legacy width 26.0636, got " + plain.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     public static void PptxSyntheticScatterAxisMaxPrefersUnitOneOverTwo()
     {
         var method = typeof(PptxRenderer).GetMethod(

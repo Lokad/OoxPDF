@@ -60,10 +60,14 @@ internal sealed partial class PptxRenderer
         return Math.Max(0.5d, categoryBand * 100d / (100d + Math.Max(0d, gapWidthPercent)));
     }
 
-    private static double GetClusteredBarWidth(double categoryBand, int seriesCount, double gapWidthPercent)
+    // Clustered width shares the gap divisor with the step overlap term: Office composite
+    // vectors read barW 23.64 with step 30.0 on band 135.45, gap 219, overlap -27, i.e. a
+    // 573 divisor (step honors overlap at 30/23.64 = 1.2691), so separation widens the
+    // effective gap on both flanks. Zero overlap keeps the legacy divisor exactly.
+    private static double GetClusteredBarWidth(double categoryBand, int seriesCount, double gapWidthPercent, double overlapPercent)
     {
         int count = Math.Max(1, seriesCount);
-        return Math.Max(0.5d, categoryBand * 100d / (100d * count + Math.Max(0d, gapWidthPercent)));
+        return Math.Max(0.5d, categoryBand * 100d / (100d * count + Math.Max(0d, gapWidthPercent) - 2d * overlapPercent));
     }
 
     private static double GetClusteredBarStep(double barWidth, double overlapPercent)

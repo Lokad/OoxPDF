@@ -233,7 +233,7 @@ internal sealed partial class PptxRenderer
                             // groupings and plain labels keep the legacy slot math, unobserved).
                             double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, new ChartTextMeasurer(fontResolver).Measure(label, style));
                             double barLegendKeyCategoryWidth = plotBox.Width / categoryCount;
-                            double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, densePointSeries.Count, barOptions.GapWidth);
+                            double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, densePointSeries.Count, barOptions.GapWidth, barOptions.Overlap);
                             double barLegendKeyStep = GetClusteredBarStep(barLegendKeyBarWidth, barOptions.Overlap);
                             double barLegendKeyClusterWidth = barLegendKeyBarWidth + Math.Max(0, densePointSeries.Count - 1) * barLegendKeyStep;
                             double barLegendKeyBarCenterX = plotBox.X + category * barLegendKeyCategoryWidth + (barLegendKeyCategoryWidth - barLegendKeyClusterWidth) / 2d + seriesIndex * barLegendKeyStep + barLegendKeyBarWidth / 2d;
