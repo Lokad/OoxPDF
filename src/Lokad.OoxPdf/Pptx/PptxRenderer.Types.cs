@@ -279,13 +279,15 @@ internal sealed partial class PptxRenderer
         // reserve replaces the preset only on clear disagreement (stacked bottom
         // 0.29 keeps the preset axis-exact bottom; short-frame top 0.99 replaces).
         public const double HorizontalBarPlotFloorSlop = 0.5d;
-        // Plot-clip pad past the axis-bounded plot rect for horizontal bars: the Office
+        // Plot-clip pad past the axis-bounded plot rect for bar/column charts: the Office
         // clip extends past our axis-coincident clip on the bottom and right edges only
-        // (stacked bottom -0.68 and right +0.68, clustered -0.68/+0.72, axis-titles
-        // -0.71/+0.69, shifted-frame -0.71/+0.65; linewidth-independent across 0.75
-        // and 1.0 axis strokes while axes and gridlines already match within 0.04).
-        // Clip-only: geometry, labels, legends, and titles keep the unpadded plot box.
-        public const double HorizontalBarPlotClipPad = 0.69d;
+        // (horizontal stacked -0.68/+0.68, clustered -0.68/+0.72, axis-titles -0.71/+0.69,
+        // shifted-frame -0.71/+0.65; vertical column-stacked -0.68/+0.68, column-clustered
+        // -0.68/+0.68; linewidth-independent across 0.75 and 1.0 axis strokes while axes
+        // and gridlines already match within 0.04; dual-axis plots keep larger strip
+        // residuals on top). Clip-only: geometry, labels, legends, and titles keep the
+        // unpadded plot box.
+        public const double BarPlotClipPad = 0.69d;
         // Left indent of vertical-bar value tick labels from the chart frame, then a
         // font-relative gap to the axis (Office origins decompose to frame plus 6.5pt
         // plus tick width plus 0.92 times tick font size on column-stacked, column-clustered,

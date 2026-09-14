@@ -11,20 +11,16 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    // Office horizontal-bar plot clips extend past the axis-bounded plot rect on the
-    // bottom and right edges; vertical charts keep the axis-coincident clip.
-    private static ChartPlotBox GetHorizontalBarPlotClipBox(ChartPlotBox plotBox, bool horizontalBars)
+    // Office bar/column plot clips extend past the axis-bounded plot rect on the bottom
+    // and right edges; single- and multi-plot bar charts share the axis-coincident
+    // geometry, so every bar/column clip takes the pad.
+    private static ChartPlotBox GetBarPlotClipBox(ChartPlotBox plotBox)
     {
-        if (!horizontalBars)
-        {
-            return plotBox;
-        }
-
         return new ChartPlotBox(
             plotBox.X,
-            plotBox.Y - PptxChartMetricRules.HorizontalBarPlotClipPad,
-            plotBox.Width + PptxChartMetricRules.HorizontalBarPlotClipPad,
-            plotBox.Height + PptxChartMetricRules.HorizontalBarPlotClipPad);
+            plotBox.Y - PptxChartMetricRules.BarPlotClipPad,
+            plotBox.Width + PptxChartMetricRules.BarPlotClipPad,
+            plotBox.Height + PptxChartMetricRules.BarPlotClipPad);
     }
 
     private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool horizontalBars, ChartBarPlotOptions plotOptions, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied)
@@ -35,7 +31,7 @@ internal sealed partial class PptxRenderer
         double plotHeight = plotBox.Height;
 
         // Clip-only pad: legends, titles, labels, and bar geometry keep plotBox.
-        ChartPlotBox plotClipBox = GetHorizontalBarPlotClipBox(plotBox, horizontalBars);
+        ChartPlotBox plotClipBox = GetBarPlotClipBox(plotBox);
         IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
@@ -139,7 +135,7 @@ internal sealed partial class PptxRenderer
 
             if (stacked)
             {
-                RenderStackedColumns(graphics, plotBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth);
+                RenderStackedColumns(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth);
                 return;
             }
 
@@ -163,8 +159,8 @@ internal sealed partial class PptxRenderer
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
                     double barY = Math.Min(columnBaseY, valueY);
                     double barHeight = Math.Abs(valueY - columnBaseY);
-                    FillChartRectangleInPlotClip(graphics, plotBox, barX, barY, barWidth, barHeight, fill);
-                    StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
+                    FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
+                    StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
                 }
             }
         }

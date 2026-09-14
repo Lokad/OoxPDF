@@ -3733,23 +3733,20 @@ internal static class PptxChartsTests
         TestAssert.True(pdf.Contains("1 j"), "Expected round line joins on chart series lines.");
     }
 
-    public static void PptxHorizontalBarPlotClipPadsBottomAndRight()
+    public static void PptxBarPlotClipPadsBottomAndRight()
     {
-        // Office horizontal-bar plot clips extend past the axis-bounded plot rect on
-        // the bottom and right edges only (stacked -0.68/+0.68, clustered -0.68/+0.72,
-        // axis-titles -0.71/+0.69, shifted-frame -0.71/+0.65); verticals keep the
-        // axis-coincident clip.
+        // Office bar/column plot clips extend past the axis-bounded plot rect on the
+        // bottom and right edges only (horizontal stacked -0.68/+0.68, clustered
+        // -0.68/+0.72, axis-titles -0.71/+0.69, shifted-frame -0.71/+0.65; vertical
+        // column-stacked -0.68/+0.68, column-clustered -0.68/+0.68).
         Type plotBoxType = typeof(PptxRenderer).GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
-        System.Reflection.MethodInfo clip = typeof(PptxRenderer).GetMethod("GetHorizontalBarPlotClipBox", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected horizontal-bar clip helper.");
+        System.Reflection.MethodInfo clip = typeof(PptxRenderer).GetMethod("GetBarPlotClipBox", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected bar clip helper.");
         object plot = Activator.CreateInstance(plotBoxType, [145.2d, 111.92d, 622.12d, 381.08d]) ?? throw new InvalidOperationException("Expected chart plot box.");
-        object padded = clip.Invoke(null, [plot, true]) ?? throw new InvalidOperationException("Expected padded clip box.");
+        object padded = clip.Invoke(null, [plot]) ?? throw new InvalidOperationException("Expected padded clip box.");
         Type boxType = padded.GetType();
         TestAssert.True(Math.Abs((double)(boxType.GetProperty("X")?.GetValue(padded) ?? 0d) - 145.2d) < 1e-9, "Clip pad must not move the left edge.");
         TestAssert.True(Math.Abs((double)(boxType.GetProperty("Y")?.GetValue(padded) ?? 0d) - 111.23d) < 1e-9, "Clip pad must extend 0.69 below the axis edge.");
         TestAssert.True(Math.Abs((double)(boxType.GetProperty("Width")?.GetValue(padded) ?? 0d) - 622.81d) < 1e-9, "Clip pad must extend 0.69 past the right edge.");
         TestAssert.True(Math.Abs((double)(boxType.GetProperty("Height")?.GetValue(padded) ?? 0d) - 381.77d) < 1e-9, "Clip height must grow with the bottom pad.");
-        object kept = clip.Invoke(null, [plot, false]) ?? throw new InvalidOperationException("Expected kept clip box.");
-        TestAssert.True(Math.Abs((double)(boxType.GetProperty("Y")?.GetValue(kept) ?? 0d) - 111.92d) < 1e-9, "Clip pad must not touch vertical charts.");
-        TestAssert.True(Math.Abs((double)(boxType.GetProperty("Width")?.GetValue(kept) ?? 0d) - 622.12d) < 1e-9, "Clip pad must not touch vertical charts.");
     }
 }
