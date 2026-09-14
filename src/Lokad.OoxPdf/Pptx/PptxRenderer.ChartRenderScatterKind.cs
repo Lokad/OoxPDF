@@ -71,6 +71,45 @@ internal sealed partial class PptxRenderer
                 RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts);
                 RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts);
                 RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
+                // Major tick marks (Office honors out/in/cross at both value axes with the
+                // same font-relative length as bars and lines).
+                PptxSceneChartAxisTickMark xTickMark = ReadSceneOrXmlChartAxisMajorTickMark(xValueAxis.SceneAxis, xValueAxis.XmlAxis);
+                if (xTickMark != PptxSceneChartAxisTickMark.None)
+                {
+                    ChartSeriesStroke xTickStroke = xAxisOptions.GridlineStyle.Major ?? DefaultChartGridlineStroke(major: true);
+                    if (xTickStroke.Alpha > 0.001d)
+                    {
+                        ChartTextStyle xTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, chartXml, xValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                        IReadOnlyList<double> xTickValues = GetChartAxisTickValues(xExtents, xAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: IsSceneOrXmlChartAxisLabelVisible(xValueAxis.SceneAxis, xValueAxis.XmlAxis), manualPlotLayoutApplied: false));
+                        double[] xTickEdges = new double[xTickValues.Count];
+                        for (int xTickIndex = 0; xTickIndex < xTickValues.Count; xTickIndex++)
+                        {
+                            xTickEdges[xTickIndex] = ChartValueToPlotCoordinate(xExtents, xTickValues[xTickIndex], plotBox.X, plotBox.Width, false);
+                        }
+
+                        SetChartStroke(graphics, xTickStroke);
+                        StrokeMajorTickSegments(graphics, xTickEdges, plotBox.Y, verticalSegments: true, outwardIsLowSide: true, xTickMark, xTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+                    }
+                }
+
+                PptxSceneChartAxisTickMark yTickMark = ReadSceneOrXmlChartAxisMajorTickMark(yValueAxis.SceneAxis, yValueAxis.XmlAxis);
+                if (yTickMark != PptxSceneChartAxisTickMark.None)
+                {
+                    ChartSeriesStroke yTickStroke = yAxisOptions.GridlineStyle.Major ?? DefaultChartGridlineStroke(major: true);
+                    if (yTickStroke.Alpha > 0.001d)
+                    {
+                        ChartTextStyle yTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, yValueAxis.SceneAxis, chartXml, yValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                        IReadOnlyList<double> yTickValues = GetChartAxisTickValues(yExtents, yAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: IsSceneOrXmlChartAxisLabelVisible(yValueAxis.SceneAxis, yValueAxis.XmlAxis), manualPlotLayoutApplied: false));
+                        double[] yTickEdges = new double[yTickValues.Count];
+                        for (int yTickIndex = 0; yTickIndex < yTickValues.Count; yTickIndex++)
+                        {
+                            yTickEdges[yTickIndex] = ChartValueToPlotCoordinate(yExtents, yTickValues[yTickIndex], plotBox.Y, plotBox.Height, false);
+                        }
+
+                        SetChartStroke(graphics, yTickStroke);
+                        StrokeMajorTickSegments(graphics, yTickEdges, plotBox.X, verticalSegments: false, outwardIsLowSide: true, yTickMark, yTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+                    }
+                }
                 double scatterLegendLeadExtra = 0.5d * MeasureScatterLastXLabelWidth(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver);
                 RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, scatterChart, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true);
                 return true;
