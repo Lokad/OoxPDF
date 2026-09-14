@@ -890,6 +890,26 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, [0, true])!);
     }
 
+    public static void PptxSyntheticDefaultAxisTitleHorizontalBarReserves()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeDefaultAxisTitleHorizontalBarReserves",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected horizontal-bar title reserves to remain inspectable by the Office evidence guard.");
+
+        // Office three-knot ladders: top 46.77/52.31/56.00 over 9/12/14.04pt value ticks,
+        // bottom 46.37/41.10/37.57 over 21.6/17.28/14.4pt chart titles (residuals under 0.03).
+        (double top9, double bottom216) = ((double, double))method!.Invoke(null, [9d, 21.6d])!;
+        TestAssert.True(System.Math.Abs(top9 - 46.77d) < 0.05d, "Expected top 46.77, got " + top9.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        TestAssert.True(System.Math.Abs(bottom216 - 46.37d) < 0.05d, "Expected bottom 46.37, got " + bottom216.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        (double top12, double bottom1728) = ((double, double))method.Invoke(null, [12d, 17.28d])!;
+        TestAssert.True(System.Math.Abs(top12 - 52.31d) < 0.05d, "Expected top 52.31, got " + top12.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        TestAssert.True(System.Math.Abs(bottom1728 - 41.10d) < 0.05d, "Expected bottom 41.10, got " + bottom1728.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        (double top14, double bottom144) = ((double, double))method.Invoke(null, [14.04d, 14.4d])!;
+        TestAssert.True(System.Math.Abs(top14 - 56.00d) < 0.05d, "Expected top 56.00, got " + top14.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        TestAssert.True(System.Math.Abs(bottom144 - 37.57d) < 0.05d, "Expected bottom 37.57, got " + bottom144.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     public static void PptxSyntheticSingleSeriesVaryColorsShadeFactor()
     {
         var rendererType = typeof(PptxRenderer);

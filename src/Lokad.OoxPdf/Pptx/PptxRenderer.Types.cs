@@ -575,6 +575,17 @@ internal sealed partial class PptxRenderer
         public const double DefaultAxisTitleHorizontalBarPlotSideReserveRatio = 0.114d;
         public const double DefaultAxisTitleHorizontalBarPlotOppositeSideReserveRatio = 0.028d;
         public const double DefaultAxisTitleHorizontalBarPlotBandReserveRatio = 0.126d;
+        // Horizontal-bar default-axis-titles content reserves: three Office renders per side
+        // overconstrain the linear form (residuals under 0.03pt, one spare DOF each). Top grows
+        // 1.833pt per value-tick point (9/12/14.04pt ticks give 46.77/52.31/56.00); bottom grows
+        // 1.222pt per chart-title point (21.6/17.28/14.4pt titles give 46.37/41.10/37.57). The
+        // symmetric 0.126 band it replaces under-read both sides unevenly (top minus 0.65,
+        // bottom minus 0.24); side-dependent content reserves follow the bottom-reserve-plane
+        // method. Horizontals only: the vertical branch keeps its own ratios, unobserved.
+        public const double DefaultAxisTitleHorizontalBarTopReserveBase = 30.29d;
+        public const double DefaultAxisTitleHorizontalBarTopReservePerTickFontSize = 1.833d;
+        public const double DefaultAxisTitleHorizontalBarBottomReserveBase = 19.98d;
+        public const double DefaultAxisTitleHorizontalBarBottomReservePerTitleFontSize = 1.222d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;
