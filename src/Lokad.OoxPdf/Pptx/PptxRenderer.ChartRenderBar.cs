@@ -11,12 +11,31 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    // Office horizontal-bar plot clips extend past the axis-bounded plot rect on the
+    // bottom and right edges; vertical charts keep the axis-coincident clip.
+    private static ChartPlotBox GetHorizontalBarPlotClipBox(ChartPlotBox plotBox, bool horizontalBars)
+    {
+        if (!horizontalBars)
+        {
+            return plotBox;
+        }
+
+        return new ChartPlotBox(
+            plotBox.X,
+            plotBox.Y - PptxChartMetricRules.HorizontalBarPlotClipPad,
+            plotBox.Width + PptxChartMetricRules.HorizontalBarPlotClipPad,
+            plotBox.Height + PptxChartMetricRules.HorizontalBarPlotClipPad);
+    }
+
     private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool horizontalBars, ChartBarPlotOptions plotOptions, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
+
+        // Clip-only pad: legends, titles, labels, and bar geometry keep plotBox.
+        ChartPlotBox plotClipBox = GetHorizontalBarPlotClipBox(plotBox, horizontalBars);
         IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
@@ -36,14 +55,14 @@ internal sealed partial class PptxRenderer
                 {
                     RenderInChartPlotAreaClip(
                         graphics,
-                        plotBox,
+                        plotClipBox,
                         () => DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MinorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: false, valueAxisOptions.GridlineStyle.Minor, PptxChartMetricRules.AxisNiceTickTargetCount));
                 }
                 else
                 {
                     RenderInChartPlotAreaClip(
                         graphics,
-                        plotBox,
+                        plotClipBox,
                         () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MinorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: false, valueAxisOptions.GridlineStyle.Minor));
                 }
             }
@@ -54,14 +73,14 @@ internal sealed partial class PptxRenderer
                 {
                     RenderInChartPlotAreaClip(
                         graphics,
-                        plotBox,
+                        plotClipBox,
                         () => DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MajorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: true, valueAxisOptions.GridlineStyle.Major, valueAxisAutoTickTargetCount));
                 }
                 else
                 {
                     RenderInChartPlotAreaClip(
                         graphics,
-                        plotBox,
+                        plotClipBox,
                         () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MajorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: true, valueAxisOptions.GridlineStyle.Major));
                 }
             }
@@ -77,7 +96,7 @@ internal sealed partial class PptxRenderer
                     double axisY = horizontalBars
                         ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
                         : (axesStyle.CategoryAxisTopSide ? plotY + plotHeight : valueAxisCrossingY);
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY));
+                    RenderInChartPlotAreaClip(graphics, plotClipBox, () => graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY));
                 }
             }
 
@@ -90,7 +109,7 @@ internal sealed partial class PptxRenderer
                     double axisX = horizontalBars
                         ? (axesStyle.CategoryAxisRightSide ? plotX + plotWidth : plotX)
                         : (axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX);
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
+                    RenderInChartPlotAreaClip(graphics, plotClipBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
             }
 
@@ -100,7 +119,7 @@ internal sealed partial class PptxRenderer
                 {
                     SetChartStroke(graphics, secondaryValueAxisStroke);
                     double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
+                    RenderInChartPlotAreaClip(graphics, plotClipBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
             }
 
@@ -108,11 +127,11 @@ internal sealed partial class PptxRenderer
             {
                 if (stacked)
                 {
-                    RenderStackedHorizontalBars(graphics, plotBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth);
+                    RenderStackedHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth);
                 }
                 else
                 {
-                    RenderClusteredHorizontalBars(graphics, plotBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, plotOptions.Overlap);
+                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, plotOptions.Overlap);
                 }
 
                 return;
