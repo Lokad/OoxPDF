@@ -3762,4 +3762,15 @@ internal static class PptxChartsTests
         TestAssert.Equal(new RgbColor(190, 75, 72), (RgbColor)tint.Invoke(null, [new RgbColor(192, 80, 77)])!);
         TestAssert.Equal(new RgbColor(152, 185, 84), (RgbColor)tint.Invoke(null, [new RgbColor(155, 187, 89)])!);
     }
+
+    public static void PptxChartAxisDefaultStrokeIsBlack()
+    {
+        // Office draws unstyled axes and ticks black across bar, column, line,
+        // scatter, and area refs; the 90-gray default is killed.
+        System.Reflection.PropertyInfo axisDefault = typeof(PptxRenderer).GetProperty(
+            "ChartAxisDefaultStroke",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected axis default stroke.");
+        object stroke = axisDefault.GetValue(null) ?? throw new InvalidOperationException("Expected axis default stroke value.");
+        TestAssert.Equal(new RgbColor(0, 0, 0), (RgbColor)stroke.GetType().GetProperty("Color")?.GetValue(stroke)!);
+    }
 }

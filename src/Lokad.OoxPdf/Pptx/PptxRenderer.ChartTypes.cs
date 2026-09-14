@@ -184,7 +184,10 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
+    // Default axis/tick stroke: Office draws unstyled axes and ticks black across
+    // bar, column, line, scatter, and area refs (0.75 and 1.0 widths); explicitly
+    // styled axes keep their colors.
+    private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(0, 0, 0), 1d, 0.75d);
 
     private static ChartSeriesStroke ChartNegativeBarDefaultStroke { get; } = new(new RgbColor(0, 0, 0), 1d, 0.75d);
 
