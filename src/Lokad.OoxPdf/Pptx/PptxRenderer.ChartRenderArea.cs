@@ -189,19 +189,25 @@ internal sealed partial class PptxRenderer
             graphics.RestoreState();
         }
 
-        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
-        if (stroke.Alpha < 1d)
+        // Unstyled area series carry no outline (Office draws fills only); explicit
+        // strokes keep the inherited-width behavior below.
+        bool defaultAreaOutline = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
+        if (!defaultAreaOutline)
         {
-            graphics.SaveState();
-            graphics.SetAlpha(1d, stroke.Alpha);
-        }
+            ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
+            if (stroke.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, stroke.Alpha);
+            }
 
-        SetChartStroke(graphics, stroke);
-        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokePolygon(polygon));
+            SetChartStroke(graphics, stroke);
+            RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokePolygon(polygon));
 
-        if (stroke.Alpha < 1d)
-        {
-            graphics.RestoreState();
+            if (stroke.Alpha < 1d)
+            {
+                graphics.RestoreState();
+            }
         }
     }
 }
