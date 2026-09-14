@@ -71,8 +71,34 @@ internal sealed partial class PptxRenderer
                 RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts);
                 RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts);
                 RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
-                // Major tick marks (Office honors out/in/cross at both value axes with the
-                // same font-relative length as bars and lines).
+                RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions);
+                double scatterLegendLeadExtra = 0.5d * MeasureScatterLastXLabelWidth(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver);
+                RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, scatterChart, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static IReadOnlyList<bool> ReadSceneOrXmlSeriesLineHidden(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        // An explicit series line noFill suppresses the connecting path even when the
+        // scatter style itself requests lines; an absent line definition still connects.
+        if (plot is not null)
+        {
+            return plot.Series.Select(series => series.Line.NoFill).ToArray();
+        }
+
+        return chartElement
+            .Elements(ChartNamespace + "ser")
+            .Select(series => series.Element(ChartNamespace + "spPr")?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
+            .ToArray();
+    }
+
+    // Shared scatter/bubble major ticks (Office honors out/in/cross at both value axes
+    // with the same font-relative length as bars and lines).
+    private static void RenderScatterBubbleMajorTicks(PdfGraphicsBuilder graphics, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartPlotBox plotBox, ChartAxisSource xValueAxis, ChartAxisSource yValueAxis, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartBubbleValueAxisOptions xAxisOptions, ChartBubbleValueAxisOptions yAxisOptions)
+    {
                 PptxSceneChartAxisTickMark xTickMark = ReadSceneOrXmlChartAxisMajorTickMark(xValueAxis.SceneAxis, xValueAxis.XmlAxis);
                 if (xTickMark != PptxSceneChartAxisTickMark.None)
                 {
@@ -110,27 +136,6 @@ internal sealed partial class PptxRenderer
                         StrokeMajorTickSegments(graphics, yTickEdges, plotBox.X, verticalSegments: false, outwardIsLowSide: true, yTickMark, yTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
                     }
                 }
-                double scatterLegendLeadExtra = 0.5d * MeasureScatterLastXLabelWidth(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver);
-                RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, scatterChart, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static IReadOnlyList<bool> ReadSceneOrXmlSeriesLineHidden(PptxSceneChartPlot? plot, XElement chartElement)
-    {
-        // An explicit series line noFill suppresses the connecting path even when the
-        // scatter style itself requests lines; an absent line definition still connects.
-        if (plot is not null)
-        {
-            return plot.Series.Select(series => series.Line.NoFill).ToArray();
-        }
-
-        return chartElement
-            .Elements(ChartNamespace + "ser")
-            .Select(series => series.Element(ChartNamespace + "spPr")?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
-            .ToArray();
     }
 
     private static bool TryRenderBubbleChartKind(
@@ -187,6 +192,7 @@ internal sealed partial class PptxRenderer
                 RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts);
                 RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts);
                 RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
+                RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions);
                 RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.BubbleTitleRightLegend, chartFonts: fonts);
                 return true;
             }
