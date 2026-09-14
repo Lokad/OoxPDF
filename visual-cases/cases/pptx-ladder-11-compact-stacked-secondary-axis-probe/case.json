@@ -10,7 +10,7 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.25,
-    "minForegroundRecall": 0.94,
+    "minForegroundRecall": 0.96,
     "maxChangedPixelRatioAtThreshold16": 0.005,
     "maxChartGraphicsStructureBoundsDelta": 8.0,
     "compareChartGraphicsStructureKinds": ["HorizontalLine", "PlotAreaClipBoxCandidate"]
