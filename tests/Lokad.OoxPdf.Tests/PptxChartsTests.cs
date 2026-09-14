@@ -890,6 +890,22 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, [0, true])!);
     }
 
+    public static void PptxSyntheticFullFrameFillLegendLineHeight()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeFullFrameFillLegendLineHeight",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected fill line height to remain inspectable by the Office evidence guard.");
+
+        // Office overlay pitches 20.51/27.77/35.00 at 12/18/24pt (residuals under 0.025);
+        // non-full-frame paths keep their factors.
+        TestAssert.True(System.Math.Abs((double)method!.Invoke(null, [12d, true, false, false])! - 20.51d) < 0.05d, "Expected fs12 fill pitch.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, true, false, false])! - 27.77d) < 0.05d, "Expected fs18 fill pitch.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [24d, true, false, false])! - 35.00d) < 0.05d, "Expected fs24 fill pitch.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, false, false, true])! - 27.78d) < 0.05d, "Expected side-fill legacy pitch.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, false, true, false])! - 27.78d) < 0.05d, "Expected stroke legacy pitch.");
+    }
+
     public static void PptxSyntheticOverlayLegendVerticalShift()
     {
         var method = typeof(PptxRenderer).GetMethod(

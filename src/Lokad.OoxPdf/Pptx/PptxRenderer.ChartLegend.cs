@@ -423,11 +423,7 @@ internal sealed partial class PptxRenderer
             : useDoughnutLeftAnchor ? PptxChartMetricRules.DoughnutLeftLegendVerticalShift : 0d;
         // The x re-anchor below now covers every doughnut right legend (exploded or not): the
         // Office block right-anchors to the 10pt tail edge content-tight on eight renders.
-        double lineHeight = fontSize * (sideStrokeLegend
-            || sideFillLegend
-            || sideFillLegendInFullFrame
-            ? PptxChartMetricRules.LegendSideStrokeLineHeightFactor
-            : PptxChartMetricRules.LegendLineHeightFactor);
+        double lineHeight = ComputeFullFrameFillLegendLineHeight(fontSize, sideFillLegendInFullFrame, sideStrokeLegend, sideFillLegend);
         double sideGap = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeGapFactor
             : PptxChartMetricRules.LegendSideGap;
@@ -557,6 +553,15 @@ internal sealed partial class PptxRenderer
         // within 0.06 on all three. Sole overlay legend in corpus is doughnut-right; other
         // kinds keep legacy output through the flag, unobserved.
         return overlayLegend ? markerSize / 2d : 0d;
+    }
+
+    private static double ComputeFullFrameFillLegendLineHeight(double fontSize, bool fullFrameFillLegend, bool sideStrokeLegend, bool sideFillLegend)
+    {
+        return fullFrameFillLegend
+            ? PptxChartMetricRules.FullFrameFillLegendLineHeightPerFontSize * fontSize + PptxChartMetricRules.FullFrameFillLegendLineHeightBase
+            : fontSize * ((sideStrokeLegend || sideFillLegend)
+                ? PptxChartMetricRules.LegendSideStrokeLineHeightFactor
+                : PptxChartMetricRules.LegendLineHeightFactor);
     }
 
     private static double ComputeHorizontalLegendTextGap(double fontSize, bool bottomLegend)

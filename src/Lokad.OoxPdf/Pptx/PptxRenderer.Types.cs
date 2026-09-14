@@ -590,6 +590,13 @@ internal sealed partial class PptxRenderer
         // 12pt value titles): the vertical-bottom composition re-bases from it to the actual
         // category-title size, reusing both fitted slopes with zero new constants.
         public const double DefaultAxisTitleHorizontalBarReferenceTitleFontSize = 12d;
+        // Full-frame fill-legend row pitch: three Office overlay knots (20.51/27.77/35.00
+        // at 12/18/24pt) fit 1.208fs plus 6.03 within 0.022 (one spare DOF); the shared 1.5433
+        // stroke factor fits fs18 but misses fs24 by 2.0 per row. Scoped to full-frame fill
+        // legends (overlay shape, sole evidence); other fill legends keep the stroke factor,
+        // unobserved at other sizes (they agree within 0.02 at fs18).
+        public const double FullFrameFillLegendLineHeightPerFontSize = 1.208d;
+        public const double FullFrameFillLegendLineHeightBase = 6.03d;
         // Bottom-legend horizontal packing: six Office renders overconstrain both terms.
         // Swatch-text gap is content-independent (4.59/4.59/4.61 at fs18 across three fixtures)
         // and linear in font size (2.96/4.59/6.25 at 12/18/24pt, residuals under 0.01, four spare
