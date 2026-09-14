@@ -31,6 +31,20 @@ internal sealed partial class PptxRenderer
             (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsShadeFactor, System.MidpointRounding.AwayFromZero));
     }
 
+    // Office slot-7 overflow: the 7th vary-colors point paints fixed light steel
+    // (dash7/dash8 Office fills bit-identical), not a shaded 7th accent. Slot-8-plus
+    // keeps shaded cycling (slot8 single sample, 9-plus unobserved).
+    private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 6)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot7Fill;
+            return true;
+        }
+        fill = default;
+        return false;
+    }
+
     // Unstyled series strokes take the palette color through a 97.5% HSL luminance
     // modulation (Office 9/9 bytes exact on line series; same bytes on scatter and
     // radar outlines); fills keep raw colors.
@@ -119,7 +133,9 @@ internal sealed partial class PptxRenderer
             RgbColor paletteColor = ChartPalette(chartPalette, theme, colorMap, categoryIndex);
             if (ShouldShadeSingleSeriesVaryColors(valuePointCount, shadeSingleSeriesVaryColors))
             {
-                paletteColor = ShadeSingleSeriesVaryColorsFill(paletteColor);
+                paletteColor = TryResolveSingleSeriesVaryColorsOverflowFill(categoryIndex, out RgbColor overflowFill)
+                    ? overflowFill
+                    : ShadeSingleSeriesVaryColorsFill(paletteColor);
             }
 
             return new ChartSeriesFill(paletteColor, 1d, null, null);

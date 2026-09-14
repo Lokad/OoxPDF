@@ -400,6 +400,12 @@ internal sealed partial class PptxRenderer
         // colors. Linear per-channel scaling is killed (predicts 77 vs observed 74).
         public const double UnstyledLineStrokeLuminanceFactor = 0.975d;
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
+        // Single-series vary-colors slot-7 overflow: Office paints the 7th point
+        // light steel (147,169,207) instead of a shaded accent (dash7/dash8 Office
+        // renders agree bit-identically at 0.576/0.663/0.812; slot-8-plus stays open:
+        // slot8 dusty rose is a single sample, theme dependence and 9-plus cycling
+        // unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot7Fill = new(147, 169, 207);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

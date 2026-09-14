@@ -1015,6 +1015,32 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)166, (byte)rgbType.GetProperty("Blue")!.GetValue(shaded)!);
     }
 
+    public static void PptxSyntheticSingleSeriesVaryColorsOverflowSlot7()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the overflow pin.");
+        var method = rendererType.GetMethod(
+            "TryResolveSingleSeriesVaryColorsOverflowFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected vary-colors overflow helper to remain inspectable by the Office evidence guard.");
+
+        // Office dash7/dash8 fills agree bit-identically: slot7 light steel
+        // (0.576/0.663/0.812 to 147,169,207); slots 1-6 keep the 0.88 shade,
+        // slot-8-plus keeps shaded cycling (slot8 single sample, 9-plus open).
+        object?[] slot7 = [6, null];
+        TestAssert.Equal(true, (bool)method!.Invoke(null, slot7)!);
+        TestAssert.Equal((byte)147, (byte)rgbType!.GetProperty("Red")!.GetValue(slot7[1])!);
+        TestAssert.Equal((byte)169, (byte)rgbType.GetProperty("Green")!.GetValue(slot7[1])!);
+        TestAssert.Equal((byte)207, (byte)rgbType.GetProperty("Blue")!.GetValue(slot7[1])!);
+        object?[] first = [0, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, first)!);
+        object?[] sixth = [5, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, sixth)!);
+        object?[] eighth = [7, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, eighth)!);
+    }
+
     public static void PptxSyntheticMajorTickSegmentsScaleWithLabelSize()
     {
         var method = typeof(PptxRenderer).GetMethod(
