@@ -11,6 +11,28 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    // Trendlines ride on series but are never painted; warn once per chart so the
+    // omission is explicit instead of silent (unsupported content must diagnose).
+    private static void EmitUnsupportedChartTrendlineDiagnostics(
+        XDocument chartXml,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        string? chartPartName,
+        int slideIndex)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+
+        bool hasTrendline = chartXml
+            .Descendants(ChartNamespace + "ser")
+            .Any(series => series.Element(ChartNamespace + "trendline") is not null);
+        if (hasTrendline)
+        {
+            EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_TRENDLINE", OoxPdfSeverity.Warning, "Chart trendlines were detected and are not rendered.", chartPartName, slideIndex, "Ignored");
+        }
+    }
+
     private static void RenderChartFrame(
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
@@ -86,6 +108,7 @@ internal sealed partial class PptxRenderer
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
+            EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
             RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
             RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
             return;
@@ -98,6 +121,7 @@ internal sealed partial class PptxRenderer
             {
                 EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
                 EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
+            EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
                 RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
                 RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
                 return;
