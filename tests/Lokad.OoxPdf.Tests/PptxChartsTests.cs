@@ -3773,4 +3773,20 @@ internal static class PptxChartsTests
         object stroke = axisDefault.GetValue(null) ?? throw new InvalidOperationException("Expected axis default stroke value.");
         TestAssert.Equal(new RgbColor(0, 0, 0), (RgbColor)stroke.GetType().GetProperty("Color")?.GetValue(stroke)!);
     }
+
+    public static void PptxGalleryAxisFamilyDefaultNeedsStyleTwoWithoutPart()
+    {
+        // Gallery style 2 without a style part renders unstyled axis-family strokes
+        // gray-0.537 at width 1.0; any other gallery id, missing id, or style-part
+        // chart keeps the null default (legacy black fallback downstream).
+        System.Reflection.MethodInfo gallery = typeof(PptxRenderer).GetMethod(
+            "ResolveGalleryAxisFamilyDefault",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected gallery axis default.");
+        object styled = gallery.Invoke(null, ["2", false]) ?? throw new InvalidOperationException("Expected gallery default stroke.");
+        TestAssert.Equal(new RgbColor(137, 137, 137), (RgbColor)styled.GetType().GetProperty("Color")?.GetValue(styled)!);
+        TestAssert.Equal(1d, (double)styled.GetType().GetProperty("Width")?.GetValue(styled)!);
+        TestAssert.True(gallery.Invoke(null, ["18", false]) is null, "Gallery default must not touch other style ids.");
+        TestAssert.True(gallery.Invoke(null, [null, false]) is null, "Gallery default must not touch style-less charts.");
+        TestAssert.True(gallery.Invoke(null, ["2", true]) is null, "Gallery default must not touch style-part charts.");
+    }
 }

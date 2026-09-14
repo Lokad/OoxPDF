@@ -383,6 +383,27 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // Gallery style 2 axis-family default (S05): single-plot bar/column charts carrying
+    // the built-in gallery style render unstyled axis-family strokes gray-0.537 at width
+    // 1.0 (three cached Office refs); style-part charts keep their role-driven output and
+    // multi-plot dual-axis charts keep legacy output for lack of axis-color evidence.
+    // Modern Office applies the c14 Choice branch, not this fallback value, so a future
+    // c14-capable normalization must revisit which branch drives the gray.
+    private static ChartSeriesStroke? ResolveGalleryAxisFamilyDefault(string? galleryStyleId, bool hasStylePart)
+    {
+        if (hasStylePart)
+        {
+            return null;
+        }
+
+        if (galleryStyleId != "2")
+        {
+            return null;
+        }
+
+        return new ChartSeriesStroke(new RgbColor(137, 137, 137), 1d, 1d);
+    }
+
     private static bool ReadSceneOrXmlMinorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
         return sceneAxis?.HasMinorGridlines ?? HasMinorGridlines();

@@ -55,6 +55,23 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
+                // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
+                // (multi-plot dual-axis charts keep legacy output); explicit styles win by
+                // construction since only null entries are replaced.
+                if (barCharts.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart?.StyleId, sceneChart?.StylePart.IsDefined == true) is { } galleryAxisDefault)
+                {
+                    // SecondaryValueAxis stays untouched: its null-ness gates secondary-axis
+                    // emission downstream, and filling it would conjure duplicate axis lines.
+                    axesStyle = axesStyle with
+                    {
+                        ValueAxis = axesStyle.ValueAxis ?? galleryAxisDefault,
+                        CategoryAxis = axesStyle.CategoryAxis ?? galleryAxisDefault,
+                    };
+                    valueAxisOptions = valueAxisOptions with
+                    {
+                        GridlineStyle = valueAxisOptions.GridlineStyle with { Major = valueAxisOptions.GridlineStyle.Major ?? galleryAxisDefault },
+                    };
+                }
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
                 RenderBarChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied);
                 XElement? secondaryValueAxis = null;
