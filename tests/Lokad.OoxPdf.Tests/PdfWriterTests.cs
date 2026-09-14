@@ -186,6 +186,54 @@ internal static class PdfWriterTests
         TestAssert.Contains("/XStep 16 /YStep 16", pdf);
     }
 
+    public static void WritesPct70WeaveBlockTilingPattern()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        var pattern = PdfTilingPattern.OfficeBitmapWeaveBlocks(47, 133, 106, 191, 191, 191);
+        graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/TilingType 2", pdf);
+        TestAssert.Contains("/BBox [0 0 16 16]", pdf);
+        TestAssert.Contains("/Matrix [0.375 0 0 0.375 0 0]", pdf);
+        TestAssert.Contains("/XStep 16 /YStep 16", pdf);
+
+        // Weave mask matches the banked Office pct70 tile: 192 foreground cells with
+        // background where ((x - 4 * band) mod 8) < 2 over 2-row bands.
+        TestAssert.Equal(1, pattern.Images.Count);
+        TestAssert.Equal(16, pattern.Images[0].Image.Width);
+        TestAssert.Equal(16, pattern.Images[0].Image.Height);
+        byte[] rgb = DecompressWeaveBytes(pattern.Images[0].Image.Bytes);
+        TestAssert.Equal(768, rgb.Length);
+        int foreground = 0;
+        for (int y = 0; y < 16; y++)
+        {
+            for (int x = 0; x < 16; x++)
+            {
+                int index = (y * 16 + x) * 3;
+                bool isForeground = rgb[index] == 47 && rgb[index + 1] == 133 && rgb[index + 2] == 106;
+                bool expected = (((x - 4 * ((y / 2) % 2)) % 8) + 8) % 8 >= 2;
+                TestAssert.True(isForeground == expected, "Weave mask differs at " + x + "," + y);
+                if (isForeground)
+                {
+                    foreground++;
+                }
+            }
+        }
+        TestAssert.Equal(192, foreground);
+    }
+
+    private static byte[] DecompressWeaveBytes(byte[] bytes)
+    {
+        using var input = new System.IO.MemoryStream(bytes);
+        using var inflater = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
+        using var output = new System.IO.MemoryStream();
+        inflater.CopyTo(output);
+        return output.ToArray();
+    }
+
     public static void WritesLinkAnnotations()
     {
         var page = new PdfPage(

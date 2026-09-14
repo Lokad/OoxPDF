@@ -1297,6 +1297,14 @@ internal sealed partial class PptxRenderer
         string patternPreset = fill.PatternPreset ?? "pct50";
         if (TryReadPercentageChartPattern(patternPreset, out int densityPercent))
         {
+            if (densityPercent == 70)
+            {
+                RgbColor weaveBackground = fill.BackgroundColor ?? new RgbColor(255, 255, 255);
+                var weave = PdfTilingPattern.OfficeBitmapWeaveBlocks(fill.Color.Red, fill.Color.Green, fill.Color.Blue, weaveBackground.Red, weaveBackground.Green, weaveBackground.Blue);
+                graphics.FillRectangleWithTilingPattern(x, y, width, height, weave);
+                return;
+            }
+
             graphics.SaveState();
             graphics.ClipRectangle(x, y, width, height);
             graphics.SetStrokeRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
