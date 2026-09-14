@@ -593,7 +593,9 @@ internal sealed partial class PptxRenderer
     private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
     {
         double legendFontSize = legendTextStyle.FontSize;
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        // Legend layout measures unkerned advances like the emission (Office legend advances
+        // equal natural widths; the kerned default under-reads kern-heavy names and narrows reserves).
+        var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
             : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendTextStyle));

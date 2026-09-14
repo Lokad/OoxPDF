@@ -212,7 +212,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        var textMeasurer = new ChartTextMeasurer(fontResolver);
+        // Legend boxes measure unkerned advances like the emission (see reserve note).
+        var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
