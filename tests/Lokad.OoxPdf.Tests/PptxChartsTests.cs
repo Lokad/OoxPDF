@@ -3749,4 +3749,17 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs((double)(boxType.GetProperty("Width")?.GetValue(padded) ?? 0d) - 622.81d) < 1e-9, "Clip pad must extend 0.69 past the right edge.");
         TestAssert.True(Math.Abs((double)(boxType.GetProperty("Height")?.GetValue(padded) ?? 0d) - 381.77d) < 1e-9, "Clip height must grow with the bottom pad.");
     }
+
+    public static void PptxUnstyledLineStrokeTintMatchesOfficeLuminance()
+    {
+        // Office unstyled line-chart series strokes carry the raw theme accent through
+        // 97.5% HSL luminance (3 cached Office refs: blue/red/green series, 9/9 bytes
+        // exact); fills and explicitly styled strokes keep raw colors.
+        System.Reflection.MethodInfo tint = typeof(PptxRenderer).GetMethod(
+            "ApplyUnstyledLineStrokeTint",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected line-stroke tint helper.");
+        TestAssert.Equal(new RgbColor(74, 126, 187), (RgbColor)tint.Invoke(null, [new RgbColor(79, 129, 189)])!);
+        TestAssert.Equal(new RgbColor(190, 75, 72), (RgbColor)tint.Invoke(null, [new RgbColor(192, 80, 77)])!);
+        TestAssert.Equal(new RgbColor(152, 185, 84), (RgbColor)tint.Invoke(null, [new RgbColor(155, 187, 89)])!);
+    }
 }

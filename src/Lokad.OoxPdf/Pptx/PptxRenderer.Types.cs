@@ -390,6 +390,11 @@ internal sealed partial class PptxRenderer
         // bars keep legacy output (no 6pt horizontal sample); pies/doughnuts/markers and
         // explicit or negative fills keep theirs (pie ports green raw, markers exact).
         public const double SingleSeriesVaryColorsShadeFactor = 0.88d;
+        // Unstyled line-chart series-stroke tint: Office modulates the raw theme-accent
+        // luminance by 0.975 in HSL (3 cached Office refs, 9/9 bytes exact across blue,
+        // red, and green series), while fills and explicitly styled strokes keep raw
+        // colors. Linear per-channel scaling is killed (predicts 77 vs observed 74).
+        public const double UnstyledLineStrokeLuminanceFactor = 0.975d;
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
