@@ -192,24 +192,47 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1, null);
 
-    private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark)
+    private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark, double tickFontSize)
     {
-        if (pointCount <= 0 || majorTickMark == PptxSceneChartAxisTickMark.None)
+        if (pointCount <= 0)
         {
             return;
         }
 
-        double outward = majorTickMark == PptxSceneChartAxisTickMark.Cross
-            ? PptxChartMetricRules.CategoryAxisMajorTickLength / 2d
-            : PptxChartMetricRules.CategoryAxisMajorTickLength;
-        double inward = majorTickMark == PptxSceneChartAxisTickMark.Inside || majorTickMark == PptxSceneChartAxisTickMark.Cross
-            ? PptxChartMetricRules.CategoryAxisMajorTickLength / 2d
-            : 0d;
         double slotWidth = plotWidth / pointCount;
+        double[] edges = new double[pointCount + 1];
         for (int i = 0; i <= pointCount; i++)
         {
-            double x = plotX + slotWidth * i;
-            graphics.StrokeLine(x, axisY - outward, x, axisY + inward);
+            edges[i] = plotX + slotWidth * i;
+        }
+
+        StrokeMajorTickSegments(graphics, edges, axisY, verticalSegments: true, outwardIsLowSide: true, majorTickMark, tickFontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+    }
+
+    // Shared cartesian major-tick segments for category slot boundaries and value
+    // gridlines: Office honors out/inside/cross on every cartesian axis with the same
+    // font-relative length. outwardIsLowSide selects the out side for bottom/left
+    // axes (top/right mirrors are definitional).
+    private static void StrokeMajorTickSegments(PdfGraphicsBuilder graphics, IReadOnlyList<double> edgePositions, double axisCoordinate, bool verticalSegments, bool outwardIsLowSide, PptxSceneChartAxisTickMark tickMark, double tickLength)
+    {
+        if (tickMark == PptxSceneChartAxisTickMark.None || edgePositions.Count == 0 || tickLength <= 0d)
+        {
+            return;
+        }
+
+        double outward = tickMark == PptxSceneChartAxisTickMark.Cross ? tickLength / 2d : tickLength;
+        double inward = tickMark == PptxSceneChartAxisTickMark.Inside || tickMark == PptxSceneChartAxisTickMark.Cross ? tickLength / 2d : 0d;
+        double direction = outwardIsLowSide ? -1d : 1d;
+        foreach (double position in edgePositions)
+        {
+            if (verticalSegments)
+            {
+                graphics.StrokeLine(position, axisCoordinate + direction * outward, position, axisCoordinate - direction * inward);
+            }
+            else
+            {
+                graphics.StrokeLine(axisCoordinate + direction * outward, position, axisCoordinate - direction * inward, position);
+            }
         }
     }
 

@@ -874,6 +874,27 @@ internal static class PptxChartsTests
         TestAssert.True(System.Math.Abs(plain - 26.0636d) < 0.01d, "Expected legacy width 26.0636, got " + plain.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
+    public static void PptxSyntheticMajorTickSegmentsScaleWithLabelSize()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "StrokeMajorTickSegments",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected major-tick segment helper to remain inspectable by the Office evidence guard.");
+
+        // Office tick ink runs about 0.315 label sizes (5.71 at 18pt, 2.82 at 9pt).
+        var graphics = new PdfGraphicsBuilder();
+        method!.Invoke(null, [graphics, new double[] { 100d, 200d }, 50d, true, true, PptxSceneChartAxisTickMark.Outside, 18d * 0.315d]);
+        string content = graphics.ToString();
+        System.Text.RegularExpressions.MatchCollection segments = System.Text.RegularExpressions.Regex.Matches(content, @"([0-9.]+) ([0-9.]+) m ([0-9.]+) ([0-9.]+) l");
+        TestAssert.Equal(2, segments.Count);
+        foreach (System.Text.RegularExpressions.Match segment in segments)
+        {
+            double y1 = double.Parse(segment.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+            double y2 = double.Parse(segment.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture);
+            TestAssert.True(System.Math.Abs((y2 - y1) - 18d * 0.315d) < 0.01d, "Expected tick length " + (18d * 0.315d).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+    }
+
     public static void PptxSyntheticScatterAxisMaxPrefersUnitOneOverTwo()
     {
         var method = typeof(PptxRenderer).GetMethod(

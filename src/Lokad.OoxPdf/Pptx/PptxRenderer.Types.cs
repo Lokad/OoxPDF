@@ -519,6 +519,11 @@ internal sealed partial class PptxRenderer
         public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
         public const double CategoryAxisVerticalTopSideOffsetFactor = 0.70d;
         public const double CategoryAxisMajorTickLength = 4d;
+        // Major tick-mark ink length scales with the tick label size: Office draws 5.71pt
+        // ticks at 18pt labels (line trend/markers, scatter clusters) and 2.82pt at 9pt
+        // (bar default-axis-titles), i.e. about 0.315fs; the fixed 4d above stays for
+        // label-strip reserves (safe bound, not ink).
+        public const double ChartAxisMajorTickLengthFactor = 0.315d;
         public const double AxisLabelClipTopOffsetFactor = 0.25d;
         public const double AxisLabelClipHeightFactor = 1.6d;
         public const double ValueAxisMinimumLabelWidthFactor = 1.6d;
