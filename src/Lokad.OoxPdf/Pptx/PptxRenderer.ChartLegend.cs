@@ -511,7 +511,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        double firstY = layout.PositionKind switch
+                double firstY = layout.PositionKind switch
         {
             PptxSceneChartLegendPosition.Bottom when fillLegendInFullFrame => frame.Y + lineHeight * PptxChartMetricRules.LegendFullFrameBottomBaselineFactor,
             PptxSceneChartLegendPosition.Top when fillLegendInFullFrame => frame.Y + frame.Height - lineHeight * PptxChartMetricRules.LegendFullFrameTopBaselineFactor,
@@ -527,7 +527,7 @@ internal sealed partial class PptxRenderer
             // Left blocks hang below the ring center (exact on landscape probes, 0.2 residual on
             // square); right blocks keep the plot-relative shift proven by the short-plot probe.
             _ when !sideStrokeLegend && !horizontal => (useDoughnutLeftAnchor && doughnutRingCenterY > 0d ? doughnutRingCenterY : frame.Y + frame.Height / 2d) -
-                doughnutLegendVerticalShift +
+                doughnutLegendVerticalShift - ComputeOverlayLegendVerticalShift(markerSize, layout.Overlay) +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when !horizontal => plotBox.Y + plotBox.Height / 2d +
                 fontSize * PptxChartMetricRules.LegendMarkerBaselineFactor +
@@ -548,6 +548,15 @@ internal sealed partial class PptxRenderer
         }
 
         return new ChartLegendBox(x, clipY, width, clipHeight, firstY, lineHeight, markerSize, markerWidth, textGap, horizontal, sideStrokeLegend);
+    }
+
+    private static double ComputeOverlayLegendVerticalShift(double markerSize, bool overlayLegend)
+    {
+        // Overlay legend blocks center a half marker below the frame middle on two Office
+        // renders (n=4 shift 5.01, n=3 shift 5.03, fs24 middle shift 6.64): markerSize/2 lands
+        // within 0.06 on all three. Sole overlay legend in corpus is doughnut-right; other
+        // kinds keep legacy output through the flag, unobserved.
+        return overlayLegend ? markerSize / 2d : 0d;
     }
 
     private static double ComputeHorizontalLegendTextGap(double fontSize, bool bottomLegend)

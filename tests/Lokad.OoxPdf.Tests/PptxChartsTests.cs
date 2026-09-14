@@ -890,6 +890,19 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, [0, true])!);
     }
 
+    public static void PptxSyntheticOverlayLegendVerticalShift()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeOverlayLegendVerticalShift",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected overlay shift to remain inspectable by the Office evidence guard.");
+
+        // Office middles sit markerSize/2 below frame middle (5.01/5.03 at fs18, 6.64 at fs24).
+        TestAssert.True(System.Math.Abs((double)method!.Invoke(null, [9.9d, true])! - 4.95d) < 0.01d, "Expected fs18 overlay shift.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [13.2d, true])! - 6.6d) < 0.01d, "Expected fs24 overlay shift.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [9.9d, false])!) < 0.01d, "Expected no shift off-overlay.");
+    }
+
     public static void PptxSyntheticHorizontalLegendPackingGaps()
     {
         var rendererType = typeof(PptxRenderer);
