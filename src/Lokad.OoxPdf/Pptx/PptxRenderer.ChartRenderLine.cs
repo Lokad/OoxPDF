@@ -101,7 +101,11 @@ internal sealed partial class PptxRenderer
                     graphics.SetAlpha(1d, stroke.Alpha);
                 }
 
-                SetChartStroke(graphics, stroke);
+                // Unstyled series lines default to round caps/joins (Office line forensics);
+                // explicitly styled lines keep DrawingML attr defaults (combo contract).
+                bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
+                ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1 } : stroke;
+                SetChartStroke(graphics, lineStroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
                 for (int i = 0; i < values.Count; i++)
@@ -683,7 +687,9 @@ internal sealed partial class PptxRenderer
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth);
+        // Unstyled marker outlines default to round joins (Office marker forensics); explicitly
+        // styled markers keep their DrawingML cap/join defaults.
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
         DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill);
         DrawChartMarkerStroke(graphics, x, y, marker.SymbolKind, size, stroke);
     }
@@ -697,7 +703,9 @@ internal sealed partial class PptxRenderer
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth);
+        // Unstyled marker outlines default to round joins (Office marker forensics); explicitly
+        // styled markers keep their DrawingML cap/join defaults.
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
         if (!IsLineOnlyChartMarker(marker.SymbolKind))
         {
             RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill));

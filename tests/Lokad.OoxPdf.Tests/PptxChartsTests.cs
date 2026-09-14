@@ -3504,5 +3504,55 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs((double)method.Invoke(null, [12d, 8.04d])! - 47.77d) < 0.1, "Expected leg12 reserve near 47.77.");
         TestAssert.True(Math.Abs((double)method.Invoke(null, [18d, 14.04d])! - 66.10d) < 0.1, "Expected cat14 reserve near 66.10.");
         TestAssert.True(Math.Abs((double)method.Invoke(null, [12d, 14.04d])! - 58.86d) < 0.1, "Expected leg12cat14 reserve near 58.86.");
+    }    public static void PptxSyntheticChartSeriesLineUsesRoundCapsAndJoins()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart>
+                    <c:plotArea>
+                      <c:lineChart>
+                        <c:ser>
+                          <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Wave</c:v></c:pt></c:strCache></c:strRef></c:tx>
+                          <c:marker><c:symbol val="none"/></c:marker>
+                          <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                        </c:ser>
+                        <c:axId val="10"/><c:axId val="20"/>
+                      </c:lineChart>
+                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                      <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+                    </c:plotArea>
+                  </c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(pdf.Contains("1 J"), "Expected round line caps on chart series lines.");
+        TestAssert.True(pdf.Contains("1 j"), "Expected round line joins on chart series lines.");
     }
 }

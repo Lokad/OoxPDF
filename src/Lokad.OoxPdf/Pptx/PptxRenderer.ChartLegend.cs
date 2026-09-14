@@ -69,7 +69,14 @@ internal sealed partial class PptxRenderer
                 ? markerStyles[i]
                 : null;
             bool lineHidden = seriesLineHidden is not null && i < seriesLineHidden.Count && seriesLineHidden[i];
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, ChartSeriesStrokeColor(theme, colorMap, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth), marker, names[i], LineHidden: lineHidden));
+            ChartSeriesStroke keyStroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth);
+            // Unstyled key lines default to round caps/joins; explicitly styled keys keep
+            // DrawingML attr defaults (same rule as series lines).
+            if (i >= seriesStrokes.Count || seriesStrokes[i] is null)
+            {
+                keyStroke = keyStroke with { Cap = keyStroke.Cap ?? 1, Join = keyStroke.Join ?? 1 };
+            }
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, keyStroke, marker, names[i], LineHidden: lineHidden));
         }
 
         if (reverseOrder)

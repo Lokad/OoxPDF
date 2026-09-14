@@ -67,7 +67,11 @@ internal sealed partial class PptxRenderer
                     graphics.SetAlpha(fill.Alpha, stroke.Alpha);
                 }
 
-                SetChartStroke(graphics, stroke);
+                // Unstyled series strokes default to round caps/joins; explicitly styled
+                // lines keep DrawingML attr defaults (combo contract).
+                bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
+                ChartSeriesStroke scatterStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1 } : stroke;
+                SetChartStroke(graphics, scatterStroke);
                 graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
                 var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
                 foreach (ScatterPoint point in series[seriesIndex].Points)
