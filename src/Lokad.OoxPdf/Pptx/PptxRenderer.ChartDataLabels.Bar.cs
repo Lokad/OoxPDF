@@ -148,7 +148,7 @@ internal sealed partial class PptxRenderer
                         double textWidth = labelBox.Width;
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, value);
+                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, points.Count, !horizontalBars, value);
                             double legendKeyWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
                             textX += legendKeyWidth;
                             textWidth = Math.Max(1d, textWidth - legendKeyWidth);
@@ -243,7 +243,7 @@ internal sealed partial class PptxRenderer
                         }
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, value);
+                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, points.Count, !horizontalBars, value);
                             if (barLegendKeyUnitCenter)
                             {
                                 textX = labelBox.X + barLegendKeySwatch + barLegendKeySwatch;

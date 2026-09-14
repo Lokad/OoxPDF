@@ -139,7 +139,7 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, value);
+                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, true, value);
                     double barX = categoryX + seriesIndex * step;
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
                     double barY = Math.Min(columnBaseY, valueY);
@@ -1432,7 +1432,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, value);
+                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, false, value);
                 double valueX = ChartValueToPlotCoordinate(valueExtents, value, plotX, plotWidth, valueAxisReversed);
                 double barX = Math.Min(zeroX, valueX);
                 double barWidth = Math.Abs(valueX - zeroX);
@@ -1464,7 +1464,7 @@ internal sealed partial class PptxRenderer
 
                 double categoryX = plotX + category * categoryWidth + (categoryWidth - barWidth) / 2d;
                 double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
-                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, value);
+                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, true, value);
                 double segmentStartValue;
                 double segmentEndValue;
                 if (value >= 0d)
@@ -1547,7 +1547,7 @@ internal sealed partial class PptxRenderer
 
                 double categoryY = plotY + category * categoryHeight + (categoryHeight - barHeight) / 2d;
                 double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
-                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, value);
+                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, false, value);
                 double segmentStartValue;
                 double segmentEndValue;
                 if (value >= 0d)

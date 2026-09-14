@@ -873,6 +873,41 @@ internal static class PptxChartsTests
         double plain = (double)method.Invoke(null, [135.27d, 3, 219d, 0d])!;
         TestAssert.True(System.Math.Abs(plain - 26.0636d) < 0.01d, "Expected legacy width 26.0636, got " + plain.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
+    public static void PptxSyntheticSingleSeriesVaryColorsShadeGate()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ShouldShadeSingleSeriesVaryColors",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected vary-colors shade gate to remain inspectable by the Office evidence guard.");
+
+        // Office count ladder: 4/5pt raw (neg4/neg5/dash5), 6/7pt dark (neg6/dash6/dash7);
+        // horizontals keep legacy output (no 6pt horizontal sample).
+        TestAssert.Equal(false, (bool)method!.Invoke(null, [4, true])!);
+        TestAssert.Equal(false, (bool)method.Invoke(null, [5, true])!);
+        TestAssert.Equal(true, (bool)method.Invoke(null, [6, true])!);
+        TestAssert.Equal(true, (bool)method.Invoke(null, [7, true])!);
+        TestAssert.Equal(false, (bool)method.Invoke(null, [6, false])!);
+        TestAssert.Equal(false, (bool)method.Invoke(null, [0, true])!);
+    }
+
+    public static void PptxSyntheticSingleSeriesVaryColorsShadeFactor()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the shade pin.");
+        var method = rendererType.GetMethod(
+            "ShadeSingleSeriesVaryColorsFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected vary-colors shade helper to remain inspectable by the Office evidence guard.");
+
+        // Office allpositive vectors: accent1 (79,129,189) renders (69,114,167);
+        // AwayFromZero rounding lands (70,114,166), inside PDF-quantum noise.
+        object? accent = System.Activator.CreateInstance(rgbType!, (byte)79, (byte)129, (byte)189);
+        object? shaded = method!.Invoke(null, [accent]);
+        TestAssert.Equal((byte)70, (byte)rgbType!.GetProperty("Red")!.GetValue(shaded)!);
+        TestAssert.Equal((byte)114, (byte)rgbType.GetProperty("Green")!.GetValue(shaded)!);
+        TestAssert.Equal((byte)166, (byte)rgbType.GetProperty("Blue")!.GetValue(shaded)!);
+    }
 
     public static void PptxSyntheticMajorTickSegmentsScaleWithLabelSize()
     {

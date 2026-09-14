@@ -374,6 +374,14 @@ internal sealed partial class PptxRenderer
         // Titled doughnut side legends center the ring a measured band below the plot middle
         // (four 270.32 renders against four 288.0 untitled); the band holds the title zone.
         public const double DoughnutTitledCenterYOffset = 17.68d;
+        // Single-series vary-colors shade: Office darkens per-point bar/column fills by
+        // 0.88x once the series holds six or more points (4/5pt raw on neg4/neg5/dash5,
+        // 6pt dark on neg6/allpos6/dash6, 7pt dark plus a light slot-7 tint on dash7;
+        // factor mean 0.8797 over 18 channels, HLS-lumMod killed by accent6). Horizontal
+        // bars keep legacy output (no 6pt horizontal sample); pies/doughnuts/markers and
+        // explicit or negative fills keep theirs (pie ports green raw, markers exact).
+        public const double SingleSeriesVaryColorsShadeFactor = 0.88d;
+        public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
