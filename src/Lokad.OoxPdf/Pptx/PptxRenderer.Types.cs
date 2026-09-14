@@ -586,6 +586,10 @@ internal sealed partial class PptxRenderer
         public const double DefaultAxisTitleHorizontalBarTopReservePerTickFontSize = 1.833d;
         public const double DefaultAxisTitleHorizontalBarBottomReserveBase = 19.98d;
         public const double DefaultAxisTitleHorizontalBarBottomReservePerTitleFontSize = 1.222d;
+        // Reference title size baked into the horizontal-top law (all three top knots carry
+        // 12pt value titles): the vertical-bottom composition re-bases from it to the actual
+        // category-title size, reusing both fitted slopes with zero new constants.
+        public const double DefaultAxisTitleHorizontalBarReferenceTitleFontSize = 12d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;

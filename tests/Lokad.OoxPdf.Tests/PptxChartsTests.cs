@@ -890,6 +890,20 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, [0, true])!);
     }
 
+    public static void PptxSyntheticDefaultAxisTitleVerticalBottomReserve()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ComputeDefaultAxisTitleVerticalBottomReserve",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected vertical-bottom composition to remain inspectable by the Office evidence guard.");
+
+        // Additive composition: topright base 46.79, cat-title-18 knot 54.12,
+        // cat-label-14 knot 56.03 (Office 46.77/54.09/56.00, all within 0.03).
+        TestAssert.True(System.Math.Abs((double)method!.Invoke(null, [9d, 12d])! - 46.79d) < 0.05d, "Expected base 46.79.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [9d, 18d])! - 54.12d) < 0.05d, "Expected title18 54.12.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [14.04d, 12d])! - 56.03d) < 0.05d, "Expected label14 56.03.");
+    }
+
     public static void PptxSyntheticDefaultAxisTitleHorizontalBarReserves()
     {
         var method = typeof(PptxRenderer).GetMethod(

@@ -173,6 +173,91 @@ internal sealed partial class PptxRenderer
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
+    private static double ReadSceneOrXmlCategoryTitleFontSizeAtPosition(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartAxisPosition titlePosition)
+    {
+        // Horizontal axis titles render on the opposite side of their recorded position
+        // (Top hangs below the plot, Bottom sits above it). The caller sizes each reserve var
+        // from the title recorded on its own side: Bottom-positioned titles size bottomReserve
+        // (which anchors the plot top edge y), Top-positioned titles size topReserve (which sets
+        // the height and hence the bottom edge). Category-kind only: value-kind horizontal
+        // titles keep legacy output, unobserved. Run sizes win over paragraph defaults,
+        // mirroring emission.
+        if (sceneChart is not null)
+        {
+            foreach (PptxSceneChartAxis axis in sceneChart.Axes)
+            {
+                if (axis.PositionKind != titlePosition || !IsBottomPlacedCategoryTitleCandidate(axis.AxisKind, axis.Title.Text, axis.Title.Layout.HasLayout))
+                {
+                    continue;
+                }
+
+                foreach (PptxSceneChartTextRun run in axis.Title.TextRuns)
+                {
+                    if (run.TextStyle.FontSize is { } runSize && runSize > 0d)
+                    {
+                        return runSize;
+                    }
+                }
+
+                ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind)));
+                if (titleStyle.FontSize is { } sceneSize && sceneSize > 0d)
+                {
+                    return sceneSize;
+                }
+
+                return 0d;
+            }
+
+            return 0d;
+        }
+
+        foreach (XElement axis in ReadChartAxisElements(chartXml))
+        {
+            PptxSceneChartAxisKind axisKind = PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName);
+            PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"));
+            XElement? title = axis.Element(ChartNamespace + "title");
+            if (positionKind != titlePosition || title is null || !IsBottomPlacedCategoryTitleCandidate(axisKind, PptxSceneBuilder.ReadChartText(title.Element(ChartNamespace + "tx"), trimLiteral: true), PptxSceneBuilder.ReadChartManualLayout(title).HasLayout))
+            {
+                continue;
+            }
+
+            foreach (XElement runProperties in title.Descendants(OoxNamespaces.DrawingNamespace + "rPr"))
+            {
+                if (runProperties.Attribute("sz") is { } sizeAttribute && int.TryParse(sizeAttribute.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int sizeHundredths) && sizeHundredths > 0)
+                {
+                    return sizeHundredths / 100d;
+                }
+            }
+
+            ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(title, theme, colorMap));
+            if (titleStyle.FontSize is { } xmlSize && xmlSize > 0d)
+            {
+                return xmlSize;
+            }
+
+            return 0d;
+        }
+
+        return 0d;
+    }
+
+    private static bool IsBottomPlacedCategoryTitleCandidate(PptxSceneChartAxisKind axisKind, string? titleText, bool hasManualLayout)
+    {
+        return (axisKind is PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date or PptxSceneChartAxisKind.Series)
+            && !string.IsNullOrWhiteSpace(titleText)
+            && !hasManualLayout;
+    }
+
+    private static double ComputeDefaultAxisTitleVerticalBottomReserve(double categoryLabelFontSize, double categoryTitleFontSize)
+    {
+        // Additive composition confirmed by two single-variable topright knots (title 12 to 18
+        // lands 54.09 vs 54.12 predicted, labels 9 to 14.04 land 56.00 vs 56.03): the horizontal-top
+        // law evaluated at the category-label size, re-based from its baked-in 12pt title to the
+        // actual category-title size via the horizontal-bottom slope.
+        (double topAtLabelSize, _) = ComputeDefaultAxisTitleHorizontalBarReserves(categoryLabelFontSize, PptxChartMetricRules.DefaultAxisTitleHorizontalBarReferenceTitleFontSize);
+        return topAtLabelSize + PptxChartMetricRules.DefaultAxisTitleHorizontalBarBottomReservePerTitleFontSize * (categoryTitleFontSize - PptxChartMetricRules.DefaultAxisTitleHorizontalBarReferenceTitleFontSize);
+    }
+
     private static (double TopReserve, double BottomReserve) ComputeDefaultAxisTitleHorizontalBarReserves(double valueTickFontSize, double chartTitleFontSize)
     {
         return (
@@ -321,6 +406,30 @@ internal sealed partial class PptxRenderer
             double topReserve = frame.Height * (reserveSides.Top
                 ? PptxChartMetricRules.DefaultAxisTitlePlotBandReserveRatio
                 : PptxChartMetricRules.DefaultAxisTitlePlotOppositeBandReserveRatio);
+            if (!horizontalBars)
+            {
+                bottomReserve = ResolveDefaultAxisTitleVerticalSideReserve(bottomReserve, PptxSceneChartAxisPosition.Bottom);
+                topReserve = ResolveDefaultAxisTitleVerticalSideReserve(topReserve, PptxSceneChartAxisPosition.Top);
+            }
+
+            double ResolveDefaultAxisTitleVerticalSideReserve(double legacyReserve, PptxSceneChartAxisPosition titlePosition)
+            {
+                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+                {
+                    return legacyReserve;
+                }
+
+                ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                double categoryTitleFontSize = ReadSceneOrXmlCategoryTitleFontSizeAtPosition(theme, colorMap, sceneChart, chartXml, titlePosition);
+                if (categoryTitleFontSize <= 0d)
+                {
+                    return legacyReserve;
+                }
+
+                return ComputeDefaultAxisTitleVerticalBottomReserve(categoryTickStyle.FontSize, categoryTitleFontSize);
+            }
+
             double x = frame.X + leftReserve;
             double y = frame.Y + bottomReserve;
             double width = Math.Max(1d, frame.Width - leftReserve - rightReserve);
