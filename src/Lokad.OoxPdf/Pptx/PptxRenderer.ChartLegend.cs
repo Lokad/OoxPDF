@@ -45,13 +45,14 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0)
     {
         ChartIndexedTextVector labels = ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly);
         IReadOnlyList<ChartIndexedTextPoint> points = labels.DensePoints()
             .OfType<ChartIndexedTextPoint>()
             .ToArray();
         var entries = new List<ChartLegendEntry>(points.Count);
+        var usedIndexes = new HashSet<int>();
         foreach (ChartIndexedTextPoint point in points.OrderBy(point => point.Index))
         {
             if (!point.HasText || string.IsNullOrWhiteSpace(point.Text))
@@ -59,10 +60,27 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
+            usedIndexes.Add(point.Index);
             ChartSeriesFill fill = pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, point.Index), 1d, null, null);
             entries.Add(new ChartLegendEntry(point.Text, fill, null, null, null, LineHidden: false));
+        }
+
+        // Value points without category text still draw swatch-only legend rows
+        // (doughnut overlay probe: four values over three categories emits a textless
+        // fourth swatch; pies share the rule, unobserved).
+        for (int valueIndex = 0; valueIndex < valuePointCount; valueIndex++)
+        {
+            if (!usedIndexes.Add(valueIndex))
+            {
+                continue;
+            }
+
+            ChartSeriesFill valueFill = pointFills.TryGetValue(valueIndex, out ChartSeriesFill valuePointFill)
+                ? valuePointFill
+                : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, valueIndex), 1d, null, null);
+            entries.Add(new ChartLegendEntry(string.Empty, valueFill, null, null, null, LineHidden: false));
         }
 
         return entries;
