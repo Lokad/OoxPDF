@@ -2176,12 +2176,12 @@ internal static class PptxChartLegendsTests
         object defaultPlacement = System.Enum.Parse(placementType, "Default");
         // Office measures 4.64pt on the bubble title-right ladder port against the shared
         // 4.66pt area/doughnut gap; unevidenced side placements keep the legacy 3pt gap.
-        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [bubblePlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected bubble text gap."));
-        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [areaPlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected area text gap."));
-        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, true, false, false, 18d]) ?? throw new InvalidOperationException("Expected doughnut-anchored text gap."));
-        TestAssert.Equal(3d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, false, 18d]) ?? throw new InvalidOperationException("Expected legacy text gap."));
+        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [bubblePlacement, false, false, false, 18d, false]) ?? throw new InvalidOperationException("Expected bubble text gap."));
+        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [areaPlacement, false, false, false, 18d, false]) ?? throw new InvalidOperationException("Expected area text gap."));
+        TestAssert.Equal(4.66d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, true, false, false, 18d, false]) ?? throw new InvalidOperationException("Expected doughnut-anchored text gap."));
+        TestAssert.Equal(3d, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, false, 18d, false]) ?? throw new InvalidOperationException("Expected legacy text gap."));
         double strokeFactor = (double?)rulesType.GetField("LegendSideStrokeTextGapFactor", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null) ?? throw new InvalidOperationException("Expected stroke text-gap factor.");
-        TestAssert.Equal(18d * strokeFactor, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, true, 18d]) ?? throw new InvalidOperationException("Expected stroke text gap."));
+        TestAssert.Equal(18d * strokeFactor, (double?)resolveTextGap.Invoke(null, [defaultPlacement, false, false, true, 18d, false]) ?? throw new InvalidOperationException("Expected stroke text gap."));
     }    public static void PptxScatterLegendKeepsPlainCenterOffset()
     {
         System.Reflection.MethodInfo resolveOffset = typeof(PptxRenderer).GetMethod(

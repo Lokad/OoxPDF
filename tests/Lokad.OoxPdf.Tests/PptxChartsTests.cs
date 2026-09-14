@@ -906,6 +906,21 @@ internal static class PptxChartsTests
         TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, false, true, false])! - 27.78d) < 0.05d, "Expected stroke legacy pitch.");
     }
 
+    public static void PptxSyntheticOverlayLegendTextGap()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ResolveSideLegendTextGap",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected side text gap to remain inspectable by the Office evidence guard.");
+
+        // Overlay side keys take the measured 4.66pt fill-swatch gap like doughnut-right
+        // (Office overlay swatch-to-text 4.66 exact); everything else keeps legacy routing.
+        var placementType = typeof(PptxRenderer).GetNestedType("ChartLegendPlacement", System.Reflection.BindingFlags.NonPublic);
+        object? placement = System.Enum.Parse(placementType!, "Default");
+        TestAssert.Equal(4.66d, (double)method!.Invoke(null, [placement, false, false, false, 18d, true])!);
+        TestAssert.Equal(3.0d, (double)method.Invoke(null, [placement, false, false, false, 18d, false])!);
+    }
+
     public static void PptxSyntheticOverlayLegendVerticalShift()
     {
         var method = typeof(PptxRenderer).GetMethod(

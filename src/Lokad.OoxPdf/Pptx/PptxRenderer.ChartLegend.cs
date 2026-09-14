@@ -361,7 +361,8 @@ internal sealed partial class PptxRenderer
         bool useDoughnutRightAnchor,
         bool useDoughnutLeftAnchor,
         bool sideStrokeLegend,
-        double fontSize)
+        double fontSize,
+        bool overlayLegend)
     {
         return sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
@@ -369,6 +370,7 @@ internal sealed partial class PptxRenderer
                 || placement == ChartLegendPlacement.BubbleTitleRightLegend
                 || useDoughnutRightAnchor
                 || useDoughnutLeftAnchor
+                || overlayLegend
                 ? PptxChartMetricRules.AreaRightLegendTextGap
                 : PptxChartMetricRules.LegendTextGap;
     }
@@ -432,7 +434,7 @@ internal sealed partial class PptxRenderer
             : markerSize;
         // Fill-swatch side keys share the resolved 4.66pt Office text gap (area, doughnut
         // and bubble branches per the helper evidence note).
-        double textGap = ResolveSideLegendTextGap(placement, useDoughnutRightAnchor, useDoughnutLeftAnchor, sideStrokeLegend, fontSize);
+        double textGap = ResolveSideLegendTextGap(placement, useDoughnutRightAnchor, useDoughnutLeftAnchor, sideStrokeLegend, fontSize, layout.Overlay);
         double GetSideLegendContentWidth()
         {
             double contentWidth = entries.Count == 0
@@ -490,6 +492,7 @@ internal sealed partial class PptxRenderer
             // Doughnut right blocks right-anchor to the tail edge like the Office block (right
             // edge 10pt inside the frame on eight Office renders, same tail as the geometry).
             _ when useDoughnutRightAnchor => frame.X + frame.Width - PptxChartMetricRules.DoughnutRightLegendTail - width,
+            _ when sideFillLegendInFullFrame && layout.Overlay => frame.X + frame.Width - PptxChartMetricRules.DoughnutRightLegendTail - width,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
             _ when sideFillLegend && placement == ChartLegendPlacement.BubbleTitleRightLegend => frame.X + frame.Width * PptxChartMetricRules.BubbleTitleRightLegendSwatchXRatio,
             _ when sideFillLegend && placement == ChartLegendPlacement.AreaRightLegend && !layout.Overlay && layout.PositionKind == PptxSceneChartLegendPosition.Right => frame.X + frame.Width - PptxChartMetricRules.AreaRightLegendTail - width,
