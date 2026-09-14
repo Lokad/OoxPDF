@@ -31,8 +31,9 @@ internal sealed partial class PptxRenderer
             (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsShadeFactor, System.MidpointRounding.AwayFromZero));
     }
 
-    // Unstyled line-chart series strokes take the palette color through a 97.5%
-    // HSL luminance modulation (Office 9/9 bytes exact); fills keep raw colors.
+    // Unstyled series strokes take the palette color through a 97.5% HSL luminance
+    // modulation (Office 9/9 bytes exact on line series; same bytes on scatter and
+    // radar outlines); fills keep raw colors.
     private static RgbColor ApplyUnstyledLineStrokeTint(RgbColor color)
     {
         (double hue, double saturation, double luminosity) = ToHsl(color);

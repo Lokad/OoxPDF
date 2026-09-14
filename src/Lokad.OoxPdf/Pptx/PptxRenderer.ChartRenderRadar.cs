@@ -64,6 +64,10 @@ internal sealed partial class PptxRenderer
             if (!layout.IsFilled || hasExplicitStroke)
             {
                 ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, PptxChartMetricRules.RadarSeriesOutlineWidth);
+                if (!hasExplicitStroke)
+                {
+                    stroke = stroke with { Color = ApplyUnstyledLineStrokeTint(stroke.Color) };
+                }
                 if (stroke.Alpha < 1d)
                 {
                     graphics.SaveState();
