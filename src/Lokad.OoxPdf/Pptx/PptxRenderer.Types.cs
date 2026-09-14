@@ -572,6 +572,11 @@ internal sealed partial class PptxRenderer
         public const double LegendSideStrokeGapFactor = 0.8333333333333334d;
         public const double LegendSideStrokeMarkerWidthFactor = 1.0666666666666667d;
         public const double LegendSideStrokeTextGapFactor = 0.11666666666666667d;
+        // Right stroke-key legend blocks anchor to the plot CLIP edge rather than the
+        // axis line: legendLeft minus axisRight reads a fixed 0.65 over sideGap plus leadExtra
+        // on line-3series, line-markers, line-trend and scatter-smooth (same 0.65-0.7 band as
+        // the shipped axis-vs-clip finding). Marker-only scatter keeps its separate residual.
+        public const double LegendStrokeRightClipAllowance = 0.65d;
         public const double LegendSideStrokeBaselineCenterOffsetFactor = 0.955d;
         public const double LegendSideStrokeStyledMarkerBaselineCenterOffsetFactor = 0.561d;
         public const double LegendSideFillReservedBandOffsetFactor = 0.04d;

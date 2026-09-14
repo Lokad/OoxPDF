@@ -185,6 +185,14 @@ internal sealed partial class PptxRenderer
         RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeLineChartPointSegment(graphics, points, smooth));
     }
 
+    // Titled right-legend plot right edge: the preset ratio stands, but never past the
+    // measured legend reserve (composite narrow frame: preset 354.0 vs measured 347.98,
+    // while ladder frames keep the preset; same min-cap shape as the column reserve).
+    private static double ResolveTitledRightLegendPlotRight(double presetRight, double frameRight, double reserveWidth)
+    {
+        return Math.Min(presetRight, frameRight - reserveWidth);
+    }
+
     private static ChartLayout GetLineChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxColorMap colorMap, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
@@ -219,7 +227,17 @@ internal sealed partial class PptxRenderer
                 }
 
                 double x = frame.X + ResolveMeasuredLeftInset(presetBox.X - frame.X, maxValueLabelWidth);
-                double width = Math.Max(1d, presetBox.X + presetBox.Width - x);
+                double presetRight = presetBox.X + presetBox.Width;
+                double right = presetRight;
+                XElement? titleLegendPlotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
+                if (titleLegendPlotElement is not null)
+                {
+                    PptxSceneChartPlot? titleLegendPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
+                    IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSceneOrXmlChartSeriesNameRecords(titleLegendPlot, titleLegendPlotElement, workbook);
+                    ChartRightLegendReserve titleLegendReserve = ResolveRightLegendReserve(frame, titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d);
+                    right = ResolveTitledRightLegendPlotRight(presetRight, frame.X + frame.Width, titleLegendReserve.Width);
+                }
+                double width = Math.Max(1d, right - x);
                 return new ChartPlotBox(x, presetBox.Y, width, presetBox.Height);
             }
 

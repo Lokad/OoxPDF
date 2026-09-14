@@ -2276,5 +2276,29 @@ internal static class PptxChartLegendsTests
             }
         }
         TestAssert.True(!(maxCoalesced > 6d), "Expected legend entry text without pair-kerning adjustments, largest TJ number: " + maxCoalesced.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }    public static void PptxStrokeLegendRightXAddsClipAllowance()
+    {
+        System.Reflection.MethodInfo resolveX = typeof(PptxRenderer).GetMethod(
+            "ResolveStrokeLegendRightX",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected stroke-legend right-X bridge.");
+        // Office anchors right stroke-key legend blocks to the plot clip edge: legendLeft
+        // minus axisRight reads 15.65 over a 15.0 sideGap on line-3series/markers/trend and
+        // 24.77 over 24.12 with leadExtra on smooth.
+        double plain = (double?)resolveX.Invoke(null, [684.42d, 15d, 0d]) ?? throw new InvalidOperationException("Expected plain anchor.");
+        TestAssert.True(System.Math.Abs(plain - 700.07d) < 1e-9, "Expected clip-anchored right legend X.");
+        double leaded = (double?)resolveX.Invoke(null, [693.46d, 15d, 9.12d]) ?? throw new InvalidOperationException("Expected leaded anchor.");
+        TestAssert.True(System.Math.Abs(leaded - 718.23d) < 1e-9, "Expected clip allowance on top of leadExtra.");
+        double bare = (double?)resolveX.Invoke(null, [0d, 0d, 0d]) ?? throw new InvalidOperationException("Expected bare allowance.");
+        TestAssert.Equal(0.65d, bare);
+    }    public static void PptxTitledRightLegendPlotRightCapsAtMeasuredReserve()
+    {
+        System.Reflection.MethodInfo resolveRight = typeof(PptxRenderer).GetMethod(
+            "ResolveTitledRightLegendPlotRight",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected titled right-legend plot-right bridge.");
+        // Composite narrow frame: preset 354.0 yields to measured 347.98; wide ladder
+        // frames keep the preset ratio untouched.
+        double capped = (double?)resolveRight.Invoke(null, [354d, 432d, 84.02d]) ?? throw new InvalidOperationException("Expected capped plot right.");
+        TestAssert.True(System.Math.Abs(capped - 347.98d) < 1e-9, "Expected measured reserve to cap the preset ratio.");
+        TestAssert.Equal(578d, (double?)resolveRight.Invoke(null, [578d, 792d, 150d]) ?? throw new InvalidOperationException("Expected preset plot right."));
     }
 }

@@ -347,6 +347,13 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor;
     }
 
+    // Right stroke-key legend X from the axis-based plot right edge plus the clip
+    // allowance (Office anchors to the clip edge; see the constant evidence note).
+    private static double ResolveStrokeLegendRightX(double plotRight, double sideGap, double legendLeadExtra)
+    {
+        return plotRight + sideGap + legendLeadExtra + PptxChartMetricRules.LegendStrokeRightClipAllowance;
+    }
+
     private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)
     {
         double fontSize = style.FontSize;
@@ -439,7 +446,7 @@ internal sealed partial class PptxRenderer
             _ when sideFillLegend && placement == ChartLegendPlacement.AreaRightLegend && !layout.Overlay && layout.PositionKind == PptxSceneChartLegendPosition.Right => frame.X + frame.Width - PptxChartMetricRules.AreaRightLegendTail - width,
             _ when sideFillLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillContentBoxReservedBandOffsetFactor,
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
-            _ => plotBox.X + plotBox.Width + sideGap + legendLeadExtra
+            _ => ResolveStrokeLegendRightX(plotBox.X + plotBox.Width, sideGap, legendLeadExtra)
         };
 
         List<double> legendMarkerSizes = new(entries.Count);
