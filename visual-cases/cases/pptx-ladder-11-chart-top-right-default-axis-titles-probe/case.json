@@ -9,9 +9,9 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.7,
-    "minForegroundRecall": 0.94,
-    "maxChangedPixelRatioAtThreshold16": 0.013,
+    "maxMeanAbsoluteError": 0.3,
+    "minForegroundRecall": 0.96,
+    "maxChangedPixelRatioAtThreshold16": 0.006,
     "compareChartGraphicsStructureKinds": [
       "HorizontalLine",
       "PlotAreaClipBoxCandidate",
