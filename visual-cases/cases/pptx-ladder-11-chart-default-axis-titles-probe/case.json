@@ -8,7 +8,7 @@
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "maxMeanAbsoluteError": 1.0,
+    "maxMeanAbsoluteError": 0.8,
     "minForegroundRecall": 0.94,
     "maxChangedPixelRatioAtThreshold16": 0.018,
     "compareChartGraphicsStructureKinds": [
