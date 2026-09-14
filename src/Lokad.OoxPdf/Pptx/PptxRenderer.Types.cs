@@ -183,7 +183,11 @@ internal sealed partial class PptxRenderer
         public const double AxisNiceTickStepMaximum = 10d;
         public const double AxisNiceNearMaximumHeadroomRatio = 0.96d;
         public const double AreaChartStackedAxisNearMaximumHeadroomRatio = 0.95d;
-        public const double BubbleRadiusPlotRatio = 0.128d;
+        // Max bubble radius as a fraction of the smaller plot dimension: Office renders
+        // the largest bubble at 0.1306 of min(plot) against 0.128 shipped (bubble port:
+        // Office max diameter 89.22 over plot min 341.52; relative sqrt sizing already exact
+        // across all four bubbles, so only the scale moves).
+        public const double BubbleRadiusPlotRatio = 0.131d;
         // Default radar series outline width. Office draws 3.75pt outlines on unfilled
         // radars without an explicit line (both ladder radar ports share style 118, so
         // revisit if other styles diverge); filled radars omit the outline instead.

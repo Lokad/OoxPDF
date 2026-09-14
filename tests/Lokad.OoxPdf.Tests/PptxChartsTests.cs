@@ -3789,4 +3789,33 @@ internal static class PptxChartsTests
         TestAssert.True(gallery.Invoke(null, [null, false]) is null, "Gallery default must not touch style-less charts.");
         TestAssert.True(gallery.Invoke(null, ["2", true]) is null, "Gallery default must not touch style-part charts.");
     }
+
+    public static void PptxBubbleMaxRadiusMatchesOfficePlotRatio()
+    {
+        // Office renders the largest bubble at 0.131 of the smaller plot dimension
+        // (bubble port: Office max diameter 89.22 over plot min 341.52; relative sqrt
+        // sizing already exact across all four bubbles).
+        System.Type renderer = typeof(PptxRenderer);
+        System.Type plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
+        System.Type extentsType = renderer.GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents.");
+        System.Type pointType = renderer.GetNestedType("ScatterPoint", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected scatter point.");
+        System.Type indexedPointType = renderer.GetNestedType("ChartIndexedNumberPoint", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed number point.");
+        System.Type cellType = renderer.GetNestedType("ChartWorkbookRangeCell", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected workbook range cell.");
+        System.Type sourceType = renderer.GetNestedType("ChartPointIndexSource", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected point index source.");
+        System.Reflection.MethodInfo geometry = renderer.GetMethod("ResolveScatterPointGeometry", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter geometry helper.");
+        object indexSource = System.Enum.GetValues(sourceType).GetValue(0) ?? throw new InvalidOperationException("Expected index source value.");
+        object cell = System.Activator.CreateInstance(cellType) ?? throw new InvalidOperationException("Expected default cell.");
+        object indexed = System.Activator.CreateInstance(indexedPointType, [0, indexSource, null, "", false, cell]) ?? throw new InvalidOperationException("Expected indexed point.");
+        object plot = System.Activator.CreateInstance(plotBoxType, [0d, 0d, 200d, 100d]) ?? throw new InvalidOperationException("Expected plot box.");
+        object extents = System.Activator.CreateInstance(extentsType, [0d, 10d]) ?? throw new InvalidOperationException("Expected extents.");
+        double RadiusOf(object point)
+        {
+            object result = geometry.Invoke(null, [plot, point, true, extents, extents, 16d]) ?? throw new InvalidOperationException("Expected geometry result.");
+            return (double)(result.GetType().GetField("Item3")?.GetValue(result) ?? 0d);
+        }
+        object maxPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 16d, 0, indexed, indexed, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected max point.");
+        TestAssert.True(System.Math.Abs(RadiusOf(maxPoint) - 13.1d) < 1e-9, "Max bubble radius drifts from the Office 0.131 plot ratio.");
+        object quarterPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 4d, 0, indexed, indexed, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected quarter point.");
+        TestAssert.True(System.Math.Abs(RadiusOf(quarterPoint) - 6.55d) < 1e-9, "Bubble sqrt sizing must halve radius at quarter size.");
+    }
 }
