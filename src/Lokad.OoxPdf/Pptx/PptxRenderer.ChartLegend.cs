@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
@@ -31,6 +31,15 @@ internal sealed partial class PptxRenderer
             }
 
             entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, stroke, null, names[i], LineHidden: false));
+        }
+
+        // Stacked area legends list top-of-stack first (area-stacked Office reference
+        // shows Support/Service/Product against file order Product/Service/Support, while
+        // standard areas, stacked columns and stacked lines keep their own established
+        // orders; stacked-right-column would discriminate a position-driven rival).
+        if (reverseOrder)
+        {
+            entries.Reverse();
         }
 
         return entries;
