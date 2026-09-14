@@ -402,10 +402,16 @@ internal sealed partial class PptxRenderer
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         // Single-series vary-colors slot-7 overflow: Office paints the 7th point
         // light steel (147,169,207) instead of a shaded accent (dash7/dash8 Office
-        // renders agree bit-identically at 0.576/0.663/0.812; slot-8-plus stays open:
-        // slot8 dusty rose is a single sample, theme dependence and 9-plus cycling
-        // unobserved).
+        // renders agree bit-identically at 0.576/0.663/0.812; slot-9-plus stays open:
+        // slot8 dusty rose now ships on two samples; slot9 light green, theme
+        // dependence and 10-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot7Fill = new(147, 169, 207);
+        // Single-series vary-colors slot-8 overflow: Office paints the 8th point
+        // dusty rose (209,147,146) instead of a shaded accent (dash8/dash9 Office
+        // renders agree at 0.82/0.576/0.573, stable across the 8-to-9 transition;
+        // slot-9-plus stays open: slot9 light green is a single sample, theme
+        // dependence and 10-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot8Fill = new(209, 147, 146);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
