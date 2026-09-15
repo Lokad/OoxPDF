@@ -3946,11 +3946,11 @@ var tail = rendererType.GetMethod(
         }
         object?[] seventhSinglePast = [28, null];
         TestAssert.Equal(false, (bool)seventhSingle.Invoke(null, seventhSinglePast)!);
-        // Twentieth-regime TailSingle (slots 120-122), dash120/dash121/dash122 agree bit-identical.
-        int[] tailSingleIdx = [119, 120, 121];
-        int[] tailSingleR = [252, 211, 234];
-        int[] tailSingleG = [218, 218, 211];
-        int[] tailSingleB = [203, 233, 211];
+        // Twentieth-regime TailSingle (slots 120-123), dash120/dash121/dash122/dash123 agree bit-identical.
+        int[] tailSingleIdx = [119, 120, 121, 122];
+        int[] tailSingleR = [252, 211, 234, 224];
+        int[] tailSingleG = [218, 218, 211, 232];
+        int[] tailSingleB = [203, 233, 211, 212];
         for (int slot = 0; slot < tailSingleIdx.Length; slot++)
         {
             object?[] tailSingleArgs = [tailSingleIdx[slot], null];
