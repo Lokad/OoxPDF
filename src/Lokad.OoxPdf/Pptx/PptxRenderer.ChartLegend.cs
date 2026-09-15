@@ -488,6 +488,10 @@ internal sealed partial class PptxRenderer
             _ when useDoughnutLeftAnchor => frame.X + PptxChartMetricRules.DoughnutLeftLegendHeadInset,
             PptxSceneChartLegendPosition.Left when sideFillLegendInFullFrame => frame.X + frame.Width * PptxChartMetricRules.LegendFullFrameSideInsetRatio,
             PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
+            // Bottom blocks anchor to the frame center plus a marker-relative bias (Office block
+            // centers within 0.05 of frame-center plus markerSize over 4 plus 0.65 across twelve
+            // renders); top-positioned legends keep the plot-centered legacy for lack of evidence.
+            _ when horizontal && layout.PositionKind == PptxSceneChartLegendPosition.Bottom => ResolveBottomLegendFrameAnchorX(frame.X, frame.Width, width, markerSize),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             // Doughnut right blocks right-anchor to the tail edge like the Office block (right
             // edge 10pt inside the frame on eight Office renders, same tail as the geometry).
@@ -599,6 +603,12 @@ internal sealed partial class PptxRenderer
     private static double ComputePerSeriesHorizontalLegendInterEntryGap(double fontSize, double meanAdvance)
     {
         return PptxChartMetricRules.LegendPerSeriesInterEntryGapBase + PptxChartMetricRules.LegendPerSeriesInterEntryGapFontSizeFactor * fontSize + PptxChartMetricRules.LegendPerSeriesInterEntryGapMeanAdvanceFactor * meanAdvance;
+    }
+
+    // Frame-anchored bottom-legend block X for the reflection pin.
+    private static double ResolveBottomLegendFrameAnchorX(double frameX, double frameWidth, double blockWidth, double markerSize)
+    {
+        return frameX + (frameWidth - blockWidth) / 2d + markerSize / 4d + PptxChartMetricRules.LegendBottomFrameAnchorBias;
     }
 
     private static double ComputeHorizontalLegendAdvanceMean(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)

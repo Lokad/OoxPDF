@@ -684,6 +684,13 @@ internal sealed partial class PptxRenderer
         // full-frame branch and are untouched.
         public const double LegendBottomFramePad = 8.6d;
         public const double LegendBottomBaselineFontFactor = 0.35d;
+        // Bottom-legend block X anchors to the frame center plus markerSize over 4
+        // plus a fitted 0.65 bias (twelve Office renders: botleg family, composite
+        // family, doughnut bottom; block centers within 0.05 of frame-center plus bias
+        // while plot-centeredness residuals run 1.8 to 4.5; the val14 splitter proves
+        // frame anchoring decisively with the plot moved plus-6 and the block unmoved).
+        // Top-positioned legends keep legacy; mechanism behind the bias stays open.
+        public const double LegendBottomFrameAnchorBias = 0.65d;
         public const double LegendTopOffsetFactor = 0.15d;
         public const double LegendHorizontalClipHeightFactor = 1.25d;
         public const double LegendMarkerBaselineFactor = 0.35d;

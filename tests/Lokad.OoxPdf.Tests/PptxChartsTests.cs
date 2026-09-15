@@ -1082,6 +1082,20 @@ internal static class PptxChartsTests
         TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, 43.47d])! - 14.79d) < 0.1d, "Expected nsw inter.");
     }
 
+    public static void PptxSyntheticBottomLegendFrameAnchorX()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "ResolveBottomLegendFrameAnchorX",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected bottom-legend frame anchor to remain inspectable by the Office evidence guard.");
+
+        // Office bottom-legend blocks sit at frame-center plus markerSize over 4 plus
+        // 0.65 (twelve renders within 0.05); the val14 splitter proves frame anchoring
+        // with the plot moved plus-6 and the block unmoved.
+        TestAssert.True(System.Math.Abs((double)method!.Invoke(null, [72d, 576d, 174.82d, 6.57d])! - 274.87d) < 0.1d, "Expected composite anchored X.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [120d, 360d, 128.05d, 6.59d])! - 238.23d) < 0.1d, "Expected botleg anchored X.");
+    }
+
     public static void PptxSyntheticMajorTickSegmentsScaleWithLabelSize()
     {
         var method = typeof(PptxRenderer).GetMethod(
