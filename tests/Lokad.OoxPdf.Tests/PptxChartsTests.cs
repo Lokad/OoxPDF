@@ -1067,8 +1067,9 @@ internal static class PptxChartsTests
         // slot31 lavender-blue (0.761/0.804/0.882 to 194,205,225),
         // slot32 pale coral (0.886/0.761/0.761 to 226,194,194),
         // slot33 pale spring (0.835/0.878/0.769 to 213,224,196),
-        // slot34 pale violet (0.804/0.776/0.843 to 205,198,215);
-        // slots 1-6 keep the 0.88 shade, slot-35-plus keeps shaded cycling (slot35 sky-cyan single sample).
+        // slot34 pale violet (0.804/0.776/0.843 to 205,198,215),
+        // slot37 periwinkle (0.773/0.812/0.886 to 197,207,226);
+        // slots 1-6 keep the 0.88 shade, slot-38-plus keeps shaded cycling (slot38 terracotta single sample).
         object?[] eleventh = [10, null];
         TestAssert.Equal(false, (bool)method.Invoke(null, eleventh)!);
         object?[] thirteenth = [12, null];
@@ -1159,6 +1160,13 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)215, (byte)rgbType.GetProperty("Blue")!.GetValue(thirtyFourth[1])!);
         object?[] thirtyFifth = [34, null];
         TestAssert.Equal(false, (bool)method.Invoke(null, thirtyFifth)!);
+        object?[] thirtySeventh = [36, null];
+        TestAssert.Equal(true, (bool)method.Invoke(null, thirtySeventh)!);
+        TestAssert.Equal((byte)197, (byte)rgbType.GetProperty("Red")!.GetValue(thirtySeventh[1])!);
+        TestAssert.Equal((byte)207, (byte)rgbType.GetProperty("Green")!.GetValue(thirtySeventh[1])!);
+        TestAssert.Equal((byte)226, (byte)rgbType.GetProperty("Blue")!.GetValue(thirtySeventh[1])!);
+        object?[] thirtyEighth = [37, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, thirtyEighth)!);
     }
 
     public static void PptxSyntheticThirdVaryColorsRegime()
