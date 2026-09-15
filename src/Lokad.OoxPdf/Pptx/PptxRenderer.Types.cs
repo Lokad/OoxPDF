@@ -485,9 +485,12 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot23Fill = new(145, 195, 213);
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot24Fill = new(249, 181, 144);
         // Post-replay fixed entry: Office paints the 25th point periwinkle-blue
-        // (188,200,223) (dash25/dash26 Office fills agree at 0.737/0.784/0.875); slot-26
-        // pale rose is a single sample, theme dependence and 27-plus cycling unobserved).
+        // (188,200,223) (dash25/dash26 Office fills agree at 0.737/0.784/0.875.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot25Fill = new(188, 200, 223);
+        // Post-replay fixed entry, second point: Office paints the 26th point pale rose
+        // (224,188,188) (dash26/dash27 Office fills agree at 0.878/0.737/0.737); slot-27
+        // pale mint is a single sample, theme dependence and 28-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot26Fill = new(224, 188, 188);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
