@@ -407,8 +407,8 @@ internal sealed partial class PptxRenderer
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         // Second variation regime at twelve-plus points (dash12 twice plus dash13):
         // slots 1-6 shade at 0.82 (maxabs 1 over 18 channels) and slots 7-12 go raw
-        // (byte-exact accents); slot-13 pale teal and slot-14 dusty pink are fixed with slot-15-plus on
-        // shaded-cycling fallback (mint single sample; confound noted: all probes share one frame).
+        // (byte-exact accents); slot-13 pale teal, slot-14 dusty pink and slot-15 mint are fixed with slot-16-plus on
+        // shaded-cycling fallback (periwinkle single sample; confound noted: all probes share one frame).
         public const double SingleSeriesVaryColorsSecondRegimeShadeFactor = 0.82d;
         public const int SingleSeriesVaryColorsSecondRegimePointThreshold = 12;
         // Single-series vary-colors slot-7 overflow: Office paints the 7th point
@@ -428,17 +428,19 @@ internal sealed partial class PptxRenderer
         // agree at 0.663/0.608/0.741, killing shaded-accent and raw-accent rivals.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot10Fill = new(169, 155, 189);
         // Regime-2 fixed tail: Office paints the 13th point pale teal (170,186,215)
-        // (dash13/dash14 Office fills agree at 0.667/0.729/0.843); slot-14 pink is a
-        // single sample, theme dependence and 15-plus cycling unobserved).
+        // (dash13/dash14 Office fills agree at 0.667/0.729/0.843.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot13Fill = new(170, 186, 215);
         // Regime-2 fixed tail, second entry: Office paints the 14th point dusty pink
-        // (217,170,169) (dash14/dash15 Office fills agree at 0.851/0.667/0.663); slot-15
-        // mint is a single sample, theme dependence and 16-plus cycling unobserved).
+        // (217,170,169) (dash14/dash15 Office fills agree at 0.851/0.667/0.663.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot14Fill = new(217, 170, 169);
         // Regime-2 fixed tail, third entry: Office paints the 15th point mint
         // (198,214,172) (dash15/dash16 Office fills agree at 0.776/0.839/0.675); slot-16
         // periwinkle is a single sample, theme dependence and 17-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot15Fill = new(198, 214, 172);
+        // Regime-2 fixed tail, fourth entry: Office paints the 16th point periwinkle
+        // (186,176,201) (dash16/dash17 Office fills agree at 0.729/0.69/0.788); slot-17
+        // bright cyan is a single sample, theme dependence and 18-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot16Fill = new(186, 176, 201);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
