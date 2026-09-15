@@ -4278,6 +4278,229 @@ var tail = rendererType.GetMethod(
         object?[] tailFuture = [130, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, tailFuture)!);
     }
+    public static void PptxSyntheticTwentySecondVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseTwentySecondVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected twenty-second-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var nineteenthSingle = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeNineteenthSingleFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(nineteenthSingle is not null, "Expected twenty-second-regime nineteenthsingle table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime NineteenthSingle (slot 42), dash132/dash133 agree bit-identical.
+        int[] nineteenthSingleIdx = [41];
+        int[] nineteenthSingleR = [211];
+        int[] nineteenthSingleG = [127];
+        int[] nineteenthSingleB = [58];
+        for (int slot = 0; slot < nineteenthSingleIdx.Length; slot++)
+        {
+            object?[] nineteenthSingleArgs = [nineteenthSingleIdx[slot], null];
+            TestAssert.Equal(true, (bool)nineteenthSingle!.Invoke(null, nineteenthSingleArgs)!);
+            TestAssert.Equal((byte)nineteenthSingleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(nineteenthSingleArgs[1])!);
+            TestAssert.Equal((byte)nineteenthSingleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(nineteenthSingleArgs[1])!);
+            TestAssert.Equal((byte)nineteenthSingleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(nineteenthSingleArgs[1])!);
+        }
+        object?[] nineteenthSinglePast = [40, null];
+        TestAssert.Equal(false, (bool)nineteenthSingle!.Invoke(null, nineteenthSinglePast)!);
+        var seventeenth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeSeventeenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(seventeenth22 is not null, "Expected twenty-second-regime seventeenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Seventeenth (slots 54, 60), dash132/dash133 agree bit-identical replays within 1.
+        int[] seventeenth22Idx = [53, 59];
+        int[] seventeenth22R = [225, 233];
+        int[] seventeenth22G = [136, 141];
+        int[] seventeenth22B = [63, 66];
+        for (int slot = 0; slot < seventeenth22Idx.Length; slot++)
+        {
+            object?[] seventeenth22Args = [seventeenth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)seventeenth22!.Invoke(null, seventeenth22Args)!);
+            TestAssert.Equal((byte)seventeenth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(seventeenth22Args[1])!);
+            TestAssert.Equal((byte)seventeenth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(seventeenth22Args[1])!);
+            TestAssert.Equal((byte)seventeenth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(seventeenth22Args[1])!);
+        }
+        object?[] seventeenth22Past = [54, null];
+        TestAssert.Equal(false, (bool)seventeenth22!.Invoke(null, seventeenth22Past)!);
+        var eighteenth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeEighteenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eighteenth22 is not null, "Expected twenty-second-regime eighteenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Eighteenth (slots 66-72), dash132/dash133 agree bit-identical replays within 1.
+        int[] eighteenth22Idx = [65, 66, 67, 68, 69, 70, 71];
+        int[] eighteenth22R = [239, 79, 192, 155, 128, 75, 247];
+        int[] eighteenth22G = [145, 129, 80, 187, 100, 172, 150];
+        int[] eighteenth22B = [67, 189, 77, 89, 162, 198, 70];
+        for (int slot = 0; slot < eighteenth22Idx.Length; slot++)
+        {
+            object?[] eighteenth22Args = [eighteenth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)eighteenth22!.Invoke(null, eighteenth22Args)!);
+            TestAssert.Equal((byte)eighteenth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eighteenth22Args[1])!);
+            TestAssert.Equal((byte)eighteenth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eighteenth22Args[1])!);
+            TestAssert.Equal((byte)eighteenth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eighteenth22Args[1])!);
+        }
+        object?[] eighteenth22Past = [64, null];
+        TestAssert.Equal(false, (bool)eighteenth22!.Invoke(null, eighteenth22Past)!);
+        var eleventh22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeEleventhFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eleventh22 is not null, "Expected twenty-second-regime eleventh table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Eleventh (slots 73-78), dash132/dash133 agree bit-identical.
+        int[] eleventh22Idx = [72, 73, 74, 75, 76, 77];
+        int[] eleventh22R = [99, 196, 162, 138, 96, 247];
+        int[] eleventh22G = [139, 100, 191, 115, 177, 158];
+        int[] eleventh22B = [193, 97, 106, 168, 201, 92];
+        for (int slot = 0; slot < eleventh22Idx.Length; slot++)
+        {
+            object?[] eleventh22Args = [eleventh22Idx[slot], null];
+            TestAssert.Equal(true, (bool)eleventh22!.Invoke(null, eleventh22Args)!);
+            TestAssert.Equal((byte)eleventh22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eleventh22Args[1])!);
+            TestAssert.Equal((byte)eleventh22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eleventh22Args[1])!);
+            TestAssert.Equal((byte)eleventh22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eleventh22Args[1])!);
+        }
+        object?[] eleventh22Past = [60, null];
+        TestAssert.Equal(false, (bool)eleventh22!.Invoke(null, eleventh22Past)!);
+        var tenth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeTenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tenth22 is not null, "Expected twenty-second-regime tenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Tenth (slots 79-84, 119-120, 127-130), dash132/dash133 agree bit-identical.
+        int[] tenth22Idx = [78, 79, 80, 81, 82, 83, 118, 119, 126, 127, 128, 129];
+        int[] tenth22R = [118, 200, 170, 149, 115, 248, 187, 251, 205, 231, 220, 214];
+        int[] tenth22G = [150, 118, 196, 130, 184, 166, 215, 207, 214, 205, 230, 208];
+        int[] tenth22B = [198, 116, 123, 176, 205, 113, 227, 186, 230, 205, 207, 222];
+        for (int slot = 0; slot < tenth22Idx.Length; slot++)
+        {
+            object?[] tenth22Args = [tenth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)tenth22!.Invoke(null, tenth22Args)!);
+            TestAssert.Equal((byte)tenth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(tenth22Args[1])!);
+            TestAssert.Equal((byte)tenth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tenth22Args[1])!);
+            TestAssert.Equal((byte)tenth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tenth22Args[1])!);
+        }
+        object?[] tenth22Past = [61, null];
+        TestAssert.Equal(false, (bool)tenth22!.Invoke(null, tenth22Past)!);
+        var sixth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeSixthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(sixth22 is not null, "Expected twenty-second-regime sixth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Sixth (slots 85-90, 107-108), dash132/dash133 agree bit-identical.
+        int[] sixth22Idx = [84, 85, 86, 87, 88, 89, 106, 107];
+        int[] sixth22R = [133, 205, 177, 160, 131, 248, 169, 250];
+        int[] sixth22G = [160, 134, 201, 143, 190, 174, 206, 195];
+        int[] sixth22B = [202, 132, 138, 182, 209, 129, 220, 168];
+        for (int slot = 0; slot < sixth22Idx.Length; slot++)
+        {
+            object?[] sixth22Args = [sixth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)sixth22!.Invoke(null, sixth22Args)!);
+            TestAssert.Equal((byte)sixth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(sixth22Args[1])!);
+            TestAssert.Equal((byte)sixth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(sixth22Args[1])!);
+            TestAssert.Equal((byte)sixth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(sixth22Args[1])!);
+        }
+        object?[] sixth22Past = [62, null];
+        TestAssert.Equal(false, (bool)sixth22!.Invoke(null, sixth22Past)!);
+        var overflow22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeOverflowFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(overflow22 is not null, "Expected twenty-second-regime overflow table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Overflow (slots 91-94, 103-106, 115-118, 121-124), dash132/dash133 agree bit-identical.
+        int[] overflow22Idx = [90, 91, 92, 93, 102, 103, 104, 105, 114, 115, 116, 117, 120, 121, 122, 123];
+        int[] overflow22R = [147, 209, 185, 169, 170, 217, 198, 186, 188, 224, 209, 200, 197, 228, 215, 207];
+        int[] overflow22G = [169, 147, 205, 155, 186, 170, 214, 176, 200, 188, 222, 192, 207, 197, 226, 201];
+        int[] overflow22B = [207, 146, 150, 189, 215, 169, 172, 201, 223, 188, 190, 212, 226, 197, 199, 217];
+        for (int slot = 0; slot < overflow22Idx.Length; slot++)
+        {
+            object?[] overflow22Args = [overflow22Idx[slot], null];
+            TestAssert.Equal(true, (bool)overflow22!.Invoke(null, overflow22Args)!);
+            TestAssert.Equal((byte)overflow22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(overflow22Args[1])!);
+            TestAssert.Equal((byte)overflow22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(overflow22Args[1])!);
+            TestAssert.Equal((byte)overflow22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(overflow22Args[1])!);
+        }
+        object?[] overflow22Past = [63, null];
+        TestAssert.Equal(false, (bool)overflow22!.Invoke(null, overflow22Past)!);
+        var fourth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeFourthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fourth22 is not null, "Expected twenty-second-regime fourth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Fourth (slots 95-96), dash132/dash133 agree bit-identical.
+        int[] fourth22Idx = [94, 95];
+        int[] fourth22R = [145, 249];
+        int[] fourth22G = [195, 181];
+        int[] fourth22B = [213, 144];
+        for (int slot = 0; slot < fourth22Idx.Length; slot++)
+        {
+            object?[] fourth22Args = [fourth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)fourth22!.Invoke(null, fourth22Args)!);
+            TestAssert.Equal((byte)fourth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fourth22Args[1])!);
+            TestAssert.Equal((byte)fourth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fourth22Args[1])!);
+            TestAssert.Equal((byte)fourth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fourth22Args[1])!);
+        }
+        object?[] fourth22Past = [58, null];
+        TestAssert.Equal(false, (bool)fourth22!.Invoke(null, fourth22Past)!);
+        var fifth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeFifthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fifth22 is not null, "Expected twenty-second-regime fifth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Fifth (slots 97-102), dash132/dash133 agree bit-identical replays within 2.
+        int[] fifth22Idx = [96, 97, 98, 99, 100, 101];
+        int[] fifth22R = [161, 214, 192, 179, 160, 249];
+        int[] fifth22G = [180, 161, 210, 168, 202, 190];
+        int[] fifth22B = [212, 160, 164, 196, 217, 158];
+        for (int slot = 0; slot < fifth22Idx.Length; slot++)
+        {
+            object?[] fifth22Args = [fifth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)fifth22!.Invoke(null, fifth22Args)!);
+            TestAssert.Equal((byte)fifth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fifth22Args[1])!);
+            TestAssert.Equal((byte)fifth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fifth22Args[1])!);
+            TestAssert.Equal((byte)fifth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fifth22Args[1])!);
+        }
+        object?[] fifth22Past = [57, null];
+        TestAssert.Equal(false, (bool)fifth22!.Invoke(null, fifth22Past)!);
+        var twelfth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeTwelfthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(twelfth22 is not null, "Expected twenty-second-regime twelfth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Twelfth (slots 109-114), dash132/dash133 agree bit-identical.
+        int[] twelfth22Idx = [108, 109, 110, 111, 112, 113];
+        int[] twelfth22R = [178, 220, 203, 192, 177, 250];
+        int[] twelfth22G = [193, 179, 218, 184, 210, 201];
+        int[] twelfth22B = [219, 178, 181, 206, 223, 176];
+        for (int slot = 0; slot < twelfth22Idx.Length; slot++)
+        {
+            object?[] twelfth22Args = [twelfth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)twelfth22!.Invoke(null, twelfth22Args)!);
+            TestAssert.Equal((byte)twelfth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(twelfth22Args[1])!);
+            TestAssert.Equal((byte)twelfth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(twelfth22Args[1])!);
+            TestAssert.Equal((byte)twelfth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(twelfth22Args[1])!);
+        }
+        object?[] twelfth22Past = [56, null];
+        TestAssert.Equal(false, (bool)twelfth22!.Invoke(null, twelfth22Past)!);
+        var fourteenth22 = rendererType.GetMethod(
+            "TryResolveTwentySecondRegimeFourteenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fourteenth22 is not null, "Expected twenty-second-regime fourteenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-second-regime Fourteenth (slots 125-126), dash132/dash133 agree bit-identical.
+        int[] fourteenth22Idx = [124, 125];
+        int[] fourteenth22R = [196, 251];
+        int[] fourteenth22G = [220, 213];
+        int[] fourteenth22B = [230, 196];
+        for (int slot = 0; slot < fourteenth22Idx.Length; slot++)
+        {
+            object?[] fourteenth22Args = [fourteenth22Idx[slot], null];
+            TestAssert.Equal(true, (bool)fourteenth22!.Invoke(null, fourteenth22Args)!);
+            TestAssert.Equal((byte)fourteenth22R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fourteenth22Args[1])!);
+            TestAssert.Equal((byte)fourteenth22G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fourteenth22Args[1])!);
+            TestAssert.Equal((byte)fourteenth22B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fourteenth22Args[1])!);
+        }
+        object?[] fourteenth22Past = [55, null];
+        TestAssert.Equal(false, (bool)fourteenth22!.Invoke(null, fourteenth22Past)!);
+        // One-hundred-thirty-one points and fewer keep earlier regimes; one-hundred-thirty-two-plus take the twenty-second rows.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [131])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [132])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [133])!);
+    }
     public static void PptxSyntheticSecondVaryColorsRegime()
     {
         var rendererType = typeof(PptxRenderer);
