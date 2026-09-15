@@ -31,10 +31,10 @@ internal sealed partial class PptxRenderer
             (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsShadeFactor, System.MidpointRounding.AwayFromZero));
     }
 
-    // Office slot-7/slot-8 overflow: the 7th vary-colors point paints fixed light
-    // steel and the 8th fixed dusty rose (dash7/dash8/dash9 Office fills agree),
-    // not shaded accents. Slot-9-plus keeps shaded cycling (slot9 light green is
-    // a single sample, 10-plus unobserved).
+    // Office slot-7/slot-8/slot-9 overflow: the 7th vary-colors point paints fixed light
+    // steel, the 8th fixed dusty rose and the 9th fixed light green (dash7 through
+    // dash10 Office fills agree), not shaded accents. Slot-10-plus (lavender single sample,
+    // 11-plus unobserved) keeps shaded cycling.
     private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 6)
@@ -46,6 +46,12 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 7)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot8Fill;
+            return true;
+        }
+
+        if (categoryIndex == 8)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot9Fill;
             return true;
         }
 
