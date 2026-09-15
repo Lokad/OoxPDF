@@ -527,9 +527,12 @@ internal sealed partial class PptxRenderer
         // (194,205,225) (dash31/dash32 Office fills agree at 0.761/0.804/0.882.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot31Fill = new(194, 205, 225);
         // Post-palest fixed entry, second point: Office paints the 32nd point pale coral
-        // (226,194,194) (dash32/dash33 Office fills agree at 0.886/0.761/0.761); slot-33
-        // pale spring is a single sample, theme dependence and 34-plus cycling unobserved).
+        // (226,194,194) (dash32/dash33 Office fills agree at 0.886/0.761/0.761.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot32Fill = new(226, 194, 194);
+        // Post-palest fixed entry, third point: Office paints the 33rd point pale spring
+        // (213,224,196) (dash33/dash34 Office fills agree at 0.835/0.878/0.769); slot-34
+        // pale violet is a single sample, theme dependence and 35-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot33Fill = new(213, 224, 196);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
