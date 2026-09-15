@@ -1140,9 +1140,16 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        if (categoryIndex == 57)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeReplaySlot58Fill;
+            return true;
+        }
+
         fill = default;
         return false;
     }
+
     private static RgbColor ShadeSecondRegimeSingleSeriesVaryColorsFill(RgbColor color)
     {
         return new RgbColor(
