@@ -414,7 +414,7 @@ internal sealed partial class PptxRenderer
         // Third variation regime at eighteen-plus points (dash18/dash19 Office fills
         // agree): slots 1-6 shade at 0.78, slots 7-12 at 0.93 (maxabs 2 and 1 over 18
         // channels each) and slots 13-18 take a fixed light row (six byte-exact vectors);
-        // slot-19 pale sky is fixed with slot-20-plus on first-regime cycling fallback (dusty-mauve single sample).
+        // slots 19-20 (pale sky, dusty mauve) are fixed with slot-21-plus on first-regime cycling fallback (pistachio single sample).
         public const double SingleSeriesVaryColorsThirdRegimeDarkShadeFactor = 0.78d;
         public const double SingleSeriesVaryColorsThirdRegimeMidShadeFactor = 0.93d;
         public const int SingleSeriesVaryColorsThirdRegimePointThreshold = 18;
@@ -453,9 +453,12 @@ internal sealed partial class PptxRenderer
         // (186,176,201) (dash16/dash17 Office fills agree at 0.729/0.69/0.788.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot16Fill = new(186, 176, 201);
         // Post-light-row fixed entry: Office paints the 19th point pale sky
-        // (182,195,220) (dash19/dash20 Office fills agree at 0.714/0.765/0.863); slot-20
-        // dusty mauve is a single sample, theme dependence and 21-plus cycling unobserved).
+        // (182,195,220) (dash19/dash20 Office fills agree at 0.714/0.765/0.863.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot19Fill = new(182, 195, 220);
+        // Post-light-row fixed entry, second point: Office paints the 20th point dusty mauve
+        // (221,182,181) (dash20/dash21 Office fills agree at 0.867/0.714/0.71); slot-21
+        // pale pistachio is a single sample, theme dependence and 22-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot20Fill = new(221, 182, 181);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
