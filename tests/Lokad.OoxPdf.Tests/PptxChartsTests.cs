@@ -2779,11 +2779,11 @@ var tail = rendererType.GetMethod(
         }
         object?[] eleventhLatePast = [92, null];
         TestAssert.Equal(false, (bool)eleventhLate.Invoke(null, eleventhLatePast)!);
-        // Seventeenth-regime sixteenth-tail replay (slots 101-102), dash102/dash103 agree bit-identical.
-        int[] sixteenthTailReplayIdx = [100, 101];
-        int[] sixteenthTailReplayR = [199, 251];
-        int[] sixteenthTailReplayG = [222, 215];
-        int[] sixteenthTailReplayB = [231, 199];
+        // Seventeenth-regime sixteenth-tail replay (slots 101-103), dash102/dash103 agree bit-identical.
+        int[] sixteenthTailReplayIdx = [100, 101, 102];
+        int[] sixteenthTailReplayR = [199, 251, 211];
+        int[] sixteenthTailReplayG = [222, 215, 218];
+        int[] sixteenthTailReplayB = [231, 199, 233];
         for (int slot = 0; slot < sixteenthTailReplayIdx.Length; slot++)
         {
             object?[] sixteenthTailReplayArgs = [sixteenthTailReplayIdx[slot], null];
@@ -2792,7 +2792,7 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)sixteenthTailReplayG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(sixteenthTailReplayArgs[1])!);
             TestAssert.Equal((byte)sixteenthTailReplayB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(sixteenthTailReplayArgs[1])!);
         }
-        object?[] sixteenthTailReplayPast = [102, null];
+        object?[] sixteenthTailReplayPast = [103, null];
         TestAssert.Equal(false, (bool)sixteenthTailReplay.Invoke(null, sixteenthTailReplayPast)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
