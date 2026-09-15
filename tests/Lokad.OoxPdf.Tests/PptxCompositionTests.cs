@@ -60,6 +60,44 @@ internal static class PptxCompositionTests
         TestAssert.Contains("0.184 0.522 0.416 rg", pdf);
     }
 
+    public static void PptxSyntheticUngroupedStealthConnectorUsesFilledBody()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+
+                        <p:cxnSp>
+                          <p:spPr>
+                            <a:xfrm><a:off x="1200000" y="1500000"/><a:ext cx="2400000" cy="0"/></a:xfrm>
+                            <a:prstGeom prst="straightConnector1"/>
+                            <a:ln w="12700"><a:solidFill><a:srgbClr val="2F856A"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+                          </p:spPr>
+                        </p:cxnSp>
+
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        // Office fills stealth-tailed straight bodies (1pt and 2pt fill 6pt wide); stroked lines stay legacy for transformed shapes.
+        TestAssert.DoesNotContain(" l S", pdf);
+        TestAssert.Contains("0.184 0.522 0.416 rg", pdf);
+
+    }
+
     public static void PptxMalformedSvgPictureEmitsNodeDiagnosticAndKeepsSiblings()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

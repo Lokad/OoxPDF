@@ -109,6 +109,9 @@ internal sealed partial class PptxRenderer
         double uy = dy / length;
         double nx = -uy;
         double ny = ux;
+        // Office fills stealth-tailed straight bodies at line width with separate
+        // 6pt marker polygons (compact ops: 1pt body rect plus marker quad, not a 6pt
+        // body); union bboxes misled once here, compare subpaths instead.
         double half = lineWidth / 2d;
         double headInset = headEnd.Kind == LineEndKind.Stealth
             ? GetStraightStealthLineEndLength(lineWidth, headEnd) * OfficeStraightStealthLineEndNotchFactor
