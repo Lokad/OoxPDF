@@ -1900,7 +1900,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
-        // Fixed tail (slots 67-69), second samples bit-identical across dash67-dash70.
+        // Fixed tail (slots 67-70), second samples bit-identical across dash67-dash71.
         var tail67 = rendererType.GetMethod(
             "TryResolveEleventhRegimeTailFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
@@ -1920,8 +1920,13 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)221, (byte)rgbType.GetProperty("Red")!.GetValue(tail69Args[1])!);
         TestAssert.Equal((byte)230, (byte)rgbType.GetProperty("Green")!.GetValue(tail69Args[1])!);
         TestAssert.Equal((byte)208, (byte)rgbType.GetProperty("Blue")!.GetValue(tail69Args[1])!);
-        object?[] past69 = [69, null];
-        TestAssert.Equal(false, (bool)tail67.Invoke(null, past69)!);
+        object?[] tail70Args = [69, null];
+        TestAssert.Equal(true, (bool)tail67!.Invoke(null, tail70Args)!);
+        TestAssert.Equal((byte)215, (byte)rgbType.GetProperty("Red")!.GetValue(tail70Args[1])!);
+        TestAssert.Equal((byte)210, (byte)rgbType.GetProperty("Green")!.GetValue(tail70Args[1])!);
+        TestAssert.Equal((byte)223, (byte)rgbType.GetProperty("Blue")!.GetValue(tail70Args[1])!);
+        object?[] past70 = [70, null];
+        TestAssert.Equal(false, (bool)tail67.Invoke(null, past70)!);
         object?[] past = [66, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
     }
