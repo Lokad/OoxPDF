@@ -3244,6 +3244,10 @@ var tail = rendererType.GetMethod(
             "TryResolveNineteenthRegimeSixteenthSingleFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(sixteenthSingle is not null, "Expected nineteenth-regime sixteenthsingle table to remain inspectable by the Office evidence guard.");
+        var tail = rendererType.GetMethod(
+            "TryResolveNineteenthRegimeTailFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tail is not null, "Expected nineteenth-regime tail table to remain inspectable by the Office evidence guard.");
         // One-hundred-thirteen points and fewer keep earlier regimes; one-hundred-fourteen-plus take the nineteenth rows.
         TestAssert.Equal(false, (bool)gate!.Invoke(null, [113])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [114])!);
@@ -3563,6 +3567,21 @@ var tail = rendererType.GetMethod(
         }
         object?[] sixteenthSinglePast = [112, null];
         TestAssert.Equal(false, (bool)sixteenthSingle.Invoke(null, sixteenthSinglePast)!);
+        // Nineteenth-regime tail (slot 115), dash115/dash116 agree bit-identical.
+        int[] tailIdx = [114];
+        int[] tailR = [211];
+        int[] tailG = [218];
+        int[] tailB = [233];
+        for (int slot = 0; slot < tailIdx.Length; slot++)
+        {
+            object?[] tailArgs = [tailIdx[slot], null];
+            TestAssert.Equal(true, (bool)tail!.Invoke(null, tailArgs)!);
+            TestAssert.Equal((byte)tailR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(tailArgs[1])!);
+            TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
+            TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
+        }
+        object?[] tailPast = [113, null];
+        TestAssert.Equal(false, (bool)tail.Invoke(null, tailPast)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
     {
