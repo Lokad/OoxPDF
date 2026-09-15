@@ -2366,7 +2366,7 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
-        // Fixed tail (slots 91-92), second samples bit-identical across dash91-dash93.
+        // Fixed tail (slots 91-93), second samples bit-identical across dash91-dash94.
         var tail91 = rendererType.GetMethod(
             "TryResolveFifteenthRegimeTailFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
@@ -2381,8 +2381,13 @@ var tail = rendererType.GetMethod(
         TestAssert.Equal((byte)233, (byte)rgbType.GetProperty("Red")!.GetValue(tail92Args[1])!);
         TestAssert.Equal((byte)210, (byte)rgbType.GetProperty("Green")!.GetValue(tail92Args[1])!);
         TestAssert.Equal((byte)209, (byte)rgbType.GetProperty("Blue")!.GetValue(tail92Args[1])!);
-        object?[] past92 = [92, null];
-        TestAssert.Equal(false, (bool)tail91.Invoke(null, past92)!);
+        object?[] tail93Args = [92, null];
+        TestAssert.Equal(true, (bool)tail91!.Invoke(null, tail93Args)!);
+        TestAssert.Equal((byte)223, (byte)rgbType.GetProperty("Red")!.GetValue(tail93Args[1])!);
+        TestAssert.Equal((byte)232, (byte)rgbType.GetProperty("Green")!.GetValue(tail93Args[1])!);
+        TestAssert.Equal((byte)211, (byte)rgbType.GetProperty("Blue")!.GetValue(tail93Args[1])!);
+        object?[] past93 = [93, null];
+        TestAssert.Equal(false, (bool)tail91.Invoke(null, past93)!);
         object?[] past = [90, null];
         TestAssert.Equal(false, (bool)fixed85.Invoke(null, past)!);
     }
