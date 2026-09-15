@@ -4256,6 +4256,25 @@ var tail = rendererType.GetMethod(
         }
         object?[] twentiethPast = [124, null];
         TestAssert.Equal(false, (bool)twentieth.Invoke(null, twentiethPast)!);
+        var tail = rendererType.GetMethod(
+            "TryResolveTwentyFirstRegimeTailFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tail is not null, "Expected twenty-first-regime tail table to remain inspectable by the Office evidence guard.");
+        // Twenty-first-regime Tail (slot 127), dash127/dash128 agree bit-identical.
+        int[] tailIdx = [126];
+        int[] tailR = [211];
+        int[] tailG = [218];
+        int[] tailB = [233];
+        for (int slot = 0; slot < tailIdx.Length; slot++)
+        {
+            object?[] tailArgs = [tailIdx[slot], null];
+            TestAssert.Equal(true, (bool)tail!.Invoke(null, tailArgs)!);
+            TestAssert.Equal((byte)tailR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(tailArgs[1])!);
+            TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
+            TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
+        }
+        object?[] tailPast = [125, null];
+        TestAssert.Equal(false, (bool)tail.Invoke(null, tailPast)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
     {
