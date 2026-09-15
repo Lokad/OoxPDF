@@ -841,7 +841,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot80Fill = new(232, 208, 208);
         public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot81Fill = new(222, 231, 209);
         public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot82Fill = new(216, 211, 224);
-        // Fourteenth variation regime at eighty-four-plus points (dash84/dash85 Office fills agree on all eighty-four vectors): slots 1-6 take a fixed dark row (six byte-exact vectors, maxabs 4 vs eleventh dark); slots 7-12 replay sixth-regime slots 1-6 byte-exact; slots 13-18 shade at 0.77 (maxabs 2, re-verified on the independent dash85 vectors); slots 19-24, 25-30, 31-36 and 37-42 reuse the 0.82, 0.87, 0.91 and 0.96 shades (maxabs 1/2/1/1); slots 43-48 take raw accents byte-exact; slots 49-54 take a fixed row (six byte-exact vectors); slots 55-60 replay sixth-regime slots 25-30 byte-exact; slots 61-66 replay eleventh-regime slots 49-54 byte-exact; slots 67-72 replay sixth-regime slots 31-36 byte-exact; slots 73-78 take a fixed row (six byte-exact vectors); slots 79-82 replay overflow slots 37-40 byte-exact; slots 83-84 take fixed tail singles (two byte-exact vectors, second-sampled in dash85); slot-85-plus falls back to overflow/0.88 cycling (slot85 new single).
+        // Fourteenth variation regime at eighty-four-plus points (dash84/dash85 Office fills agree on all eighty-four vectors): slots 1-6 take a fixed dark row (six byte-exact vectors, maxabs 4 vs eleventh dark); slots 7-12 replay sixth-regime slots 1-6 byte-exact; slots 13-18 shade at 0.77 (maxabs 2, re-verified on the independent dash85 vectors); slots 19-24, 25-30, 31-36 and 37-42 reuse the 0.82, 0.87, 0.91 and 0.96 shades (maxabs 1/2/1/1); slots 43-48 take raw accents byte-exact; slots 49-54 take a fixed row (six byte-exact vectors); slots 55-60 replay sixth-regime slots 25-30 byte-exact; slots 61-66 replay eleventh-regime slots 49-54 byte-exact; slots 67-72 replay sixth-regime slots 31-36 byte-exact; slots 73-78 take a fixed row (six byte-exact vectors); slots 79-82 replay overflow slots 37-40 byte-exact; slots 83-85 take fixed tail singles (three byte-exact vectors, second-sampled in dash85/dash86); slot-86-plus falls back to overflow/0.88 cycling (slot86 new single).
         public const int SingleSeriesVaryColorsFourteenthRegimePointThreshold = 84;
         public const double SingleSeriesVaryColorsFourteenthRegimeThirdRowShadeFactor = 0.77d;
         public static readonly RgbColor SingleSeriesVaryColorsFourteenthRegimeSlot1Fill = new(48, 82, 122);
@@ -864,6 +864,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsFourteenthRegimeSlot78Fill = new(250, 204, 181);
         public static readonly RgbColor SingleSeriesVaryColorsFourteenthRegimeSlot83Fill = new(196, 220, 230);
         public static readonly RgbColor SingleSeriesVaryColorsFourteenthRegimeSlot84Fill = new(251, 213, 196);
+        public static readonly RgbColor SingleSeriesVaryColorsFourteenthRegimeSlot85Fill = new(209, 217, 232);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
