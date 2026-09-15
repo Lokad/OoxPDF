@@ -807,6 +807,36 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot74Fill = new(232, 208, 208);
         public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot75Fill = new(222, 231, 209);
         public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot76Fill = new(216, 211, 224);
+        // Thirteenth variation regime at seventy-eight-plus points (dash78/dash79 Office fills agree on all seventy-eight vectors): slots 1-6 replay eleventh-regime slots 1-6 byte-exact; slots 7-12 take a fixed row (six byte-exact vectors, best round shade 0.71 at maxabs 3); slots 13-18 and 19-24 shade at 0.78 and 0.83 (maxabs 2 each, re-verified on the independent dash79 vectors); slots 25-30 reuse the 0.88 shade (maxabs 2); slots 31-36 and 37-42 shade at 0.93 and 0.98 (maxabs 1 each); slots 43-48 take a fixed row (six byte-exact vectors); slots 49-54 replay eighth-regime slots 31-36 byte-exact; slots 55-60 replay seventh-regime slots 31-36 byte-exact; slots 61-66 take a fixed row (six byte-exact vectors); slots 67-72 replay eighth-regime slots 43-48 byte-exact; slots 73-78 take a fixed row (six byte-exact vectors); slot-79-plus falls back to overflow/0.88 cycling (slot79 new single).
+        public const int SingleSeriesVaryColorsThirteenthRegimePointThreshold = 78;
+        public const double SingleSeriesVaryColorsThirteenthRegimeThirdRowShadeFactor = 0.78d;
+        public const double SingleSeriesVaryColorsThirteenthRegimeFourthRowShadeFactor = 0.83d;
+        public const double SingleSeriesVaryColorsThirteenthRegimeSixthRowShadeFactor = 0.93d;
+        public const double SingleSeriesVaryColorsThirteenthRegimeSeventhRowShadeFactor = 0.98d;
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot7Fill = new(54, 91, 136);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot8Fill = new(138, 55, 53);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot9Fill = new(110, 134, 62);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot10Fill = new(91, 70, 116);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot11Fill = new(52, 123, 142);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot12Fill = new(178, 107, 48);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot43Fill = new(95, 137, 192);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot44Fill = new(195, 96, 94);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot45Fill = new(161, 190, 103);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot46Fill = new(136, 112, 167);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot47Fill = new(92, 176, 201);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot48Fill = new(247, 156, 89);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot61Fill = new(164, 182, 213);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot62Fill = new(215, 165, 164);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot63Fill = new(195, 212, 167);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot64Fill = new(182, 171, 198);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot65Fill = new(163, 204, 218);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot66Fill = new(250, 192, 162);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot73Fill = new(195, 206, 226);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot74Fill = new(227, 196, 195);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot75Fill = new(214, 225, 197);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot76Fill = new(206, 199, 216);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot77Fill = new(195, 220, 229);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot78Fill = new(251, 212, 194);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
