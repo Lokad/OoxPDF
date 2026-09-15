@@ -4260,11 +4260,11 @@ var tail = rendererType.GetMethod(
             "TryResolveTwentyFirstRegimeTailFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(tail is not null, "Expected twenty-first-regime tail table to remain inspectable by the Office evidence guard.");
-        // Twenty-first-regime Tail (slots 127-129), dash127/dash128, dash128/dash129 and dash129/dash130 agree bit-identical.
-        int[] tailIdx = [126, 127, 128];
-        int[] tailR = [211, 234, 224];
-        int[] tailG = [218, 211, 232];
-        int[] tailB = [233, 211, 212];
+        // Twenty-first-regime Tail (slots 127-130), dash127/dash128, dash128/dash129, dash129/dash130 and dash130/dash131 agree bit-identical.
+        int[] tailIdx = [126, 127, 128, 129];
+        int[] tailR = [211, 234, 224, 218];
+        int[] tailG = [218, 211, 232, 213];
+        int[] tailB = [233, 211, 212, 226];
         for (int slot = 0; slot < tailIdx.Length; slot++)
         {
             object?[] tailArgs = [tailIdx[slot], null];
@@ -4275,7 +4275,7 @@ var tail = rendererType.GetMethod(
         }
         object?[] tailPast = [125, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, tailPast)!);
-        object?[] tailFuture = [129, null];
+        object?[] tailFuture = [130, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, tailFuture)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
