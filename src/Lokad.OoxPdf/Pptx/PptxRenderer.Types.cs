@@ -407,21 +407,26 @@ internal sealed partial class PptxRenderer
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         // Single-series vary-colors slot-7 overflow: Office paints the 7th point
         // light steel (147,169,207) instead of a shaded accent (dash7/dash8 Office
-        // renders agree bit-identically at 0.576/0.663/0.812; slot-10-plus stays open:
-        // slot8/slot9 dusty rose and light green now ship on two samples each; slot10 lavender is a single sample; theme
-        // dependence and 11-plus cycling unobserved).
+        // renders agree bit-identically at 0.576/0.663/0.812; slot-11-plus stays open:
+        // slot8/slot9/slot10 dusty rose, light green and lavender now ship on two samples each; slot11 teal is a single sample; theme
+        // dependence and 12-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot7Fill = new(147, 169, 207);
         // Single-series vary-colors slot-8 overflow: Office paints the 8th point
         // dusty rose (209,147,146) instead of a shaded accent (dash8/dash9 Office
         // renders agree at 0.82/0.576/0.573, stable across the 8-to-9 transition;
-        // slot-10-plus stays open: slot9 light green now ships on two samples; slot10 lavender is a single sample; theme
-        // dependence and 11-plus cycling unobserved).
+        // slot-11-plus stays open: slot9/slot10 light green and lavender now ship on two samples; slot11 teal is a single sample; theme
+        // dependence and 12-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot8Fill = new(209, 147, 146);
         // Single-series vary-colors slot-9 overflow: Office paints the 9th point light
         // green (185,205,150) instead of a shaded accent (dash9/dash10 Office renders
         // agree at 0.725/0.804/0.588, killing shaded-cycle and raw-restart rivals; slot-10
-        // lavender is a single sample, theme dependence and 11-plus cycling unobserved).
+        // lavender is a single sample, theme dependence and 12-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot9Fill = new(185, 205, 150);
+        // Single-series vary-colors slot-10 overflow: Office paints the 10th point
+        // lavender (169,155,189) instead of a shaded accent (dash10/dash11 Office renders
+        // agree at 0.663/0.608/0.741, killing shaded-accent and raw-accent rivals; slot-11
+        // teal is a single sample, theme dependence and 12-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot10Fill = new(169, 155, 189);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

@@ -1015,7 +1015,7 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)166, (byte)rgbType.GetProperty("Blue")!.GetValue(shaded)!);
     }
 
-    public static void PptxSyntheticSingleSeriesVaryColorsOverflowSlots789()
+    public static void PptxSyntheticSingleSeriesVaryColorsOverflowSlots7Plus()
     {
         var rendererType = typeof(PptxRenderer);
         var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
@@ -1025,10 +1025,10 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected vary-colors overflow helper to remain inspectable by the Office evidence guard.");
 
-        // Office dash7 through dash10 fills agree: slot7 light steel
+        // Office dash7 through dash11 fills agree: slot7 light steel
         // (0.576/0.663/0.812 to 147,169,207), slot8 dusty rose (0.82/0.576/0.573
-        // to 209,147,146), slot9 light green (0.725/0.804/0.588 to 185,205,150);
-        // slots 1-6 keep the 0.88 shade, slot-10-plus keeps shaded cycling
+        // to 209,147,146), slot9 light green (0.725/0.804/0.588 to 185,205,150),
+        // slot10 lavender (0.663/0.608/0.741 to 169,155,189); slots 1-6 keep the 0.88
         object?[] slot7 = [6, null];
         TestAssert.Equal(true, (bool)method!.Invoke(null, slot7)!);
         TestAssert.Equal((byte)147, (byte)rgbType!.GetProperty("Red")!.GetValue(slot7[1])!);
@@ -1049,7 +1049,12 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)205, (byte)rgbType.GetProperty("Green")!.GetValue(ninth[1])!);
         TestAssert.Equal((byte)150, (byte)rgbType.GetProperty("Blue")!.GetValue(ninth[1])!);
         object?[] tenth = [9, null];
-        TestAssert.Equal(false, (bool)method.Invoke(null, tenth)!);
+        TestAssert.Equal(true, (bool)method.Invoke(null, tenth)!);
+        TestAssert.Equal((byte)169, (byte)rgbType.GetProperty("Red")!.GetValue(tenth[1])!);
+        TestAssert.Equal((byte)155, (byte)rgbType.GetProperty("Green")!.GetValue(tenth[1])!);
+        TestAssert.Equal((byte)189, (byte)rgbType.GetProperty("Blue")!.GetValue(tenth[1])!);
+        object?[] eleventh = [10, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, eleventh)!);
     }
 
     public static void PptxSyntheticNoTitleBottomLegendAnchoredTop()
