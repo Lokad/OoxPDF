@@ -1057,6 +1057,33 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, eleventh)!);
     }
 
+    public static void PptxSyntheticSecondVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseSecondVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected second-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var shade = rendererType.GetMethod(
+            "ShadeSecondRegimeSingleSeriesVaryColorsFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(shade is not null, "Expected second-regime shade helper to remain inspectable by the Office evidence guard.");
+
+        // Eleven points and fewer keep the first regime; twelve-plus take dark-plus-raw.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [11])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [12])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [13])!);
+        // Office dash12 slots 1-6 shade at 0.82 (maxabs 1 over 18 channels): accent1
+        // (79,129,189) renders (65,106,155).
+        object? accent = System.Activator.CreateInstance(rgbType!, (byte)79, (byte)129, (byte)189);
+        object? shaded = shade!.Invoke(null, [accent]);
+        TestAssert.Equal((byte)65, (byte)rgbType!.GetProperty("Red")!.GetValue(shaded)!);
+        TestAssert.Equal((byte)106, (byte)rgbType.GetProperty("Green")!.GetValue(shaded)!);
+        TestAssert.Equal((byte)155, (byte)rgbType.GetProperty("Blue")!.GetValue(shaded)!);
+    }
+
     public static void PptxSyntheticNoTitleBottomLegendAnchoredTop()
     {
         var rendererType = typeof(PptxRenderer);

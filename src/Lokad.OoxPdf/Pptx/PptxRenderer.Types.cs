@@ -405,6 +405,12 @@ internal sealed partial class PptxRenderer
         // colors. Linear per-channel scaling is killed (predicts 77 vs observed 74).
         public const double UnstyledLineStrokeLuminanceFactor = 0.975d;
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
+        // Second variation regime at twelve-plus points (dash12 twice plus dash13):
+        // slots 1-6 shade at 0.82 (maxabs 1 over 18 channels) and slots 7-12 go raw
+        // (byte-exact accents); slot-13-plus keeps first-regime cycling (teal single
+        // sample, count-vs-bar-width confound noted: all probes share one frame).
+        public const double SingleSeriesVaryColorsSecondRegimeShadeFactor = 0.82d;
+        public const int SingleSeriesVaryColorsSecondRegimePointThreshold = 12;
         // Single-series vary-colors slot-7 overflow: Office paints the 7th point
         // light steel (147,169,207) instead of a shaded accent (dash7/dash8 Office
         // renders agree bit-identically at 0.576/0.663/0.812; slot-11-plus stays open:

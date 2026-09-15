@@ -23,6 +23,20 @@ internal sealed partial class PptxRenderer
         return verticalBars && valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsShadePointThreshold;
     }
 
+    // Second-regime gate: twelve-plus points take the dark-plus-raw variation row.
+    private static bool UseSecondVaryColorsRegime(int valuePointCount)
+    {
+        return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsSecondRegimePointThreshold;
+    }
+
+    private static RgbColor ShadeSecondRegimeSingleSeriesVaryColorsFill(RgbColor color)
+    {
+        return new RgbColor(
+            (byte)System.Math.Round(color.Red * PptxChartMetricRules.SingleSeriesVaryColorsSecondRegimeShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Green * PptxChartMetricRules.SingleSeriesVaryColorsSecondRegimeShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsSecondRegimeShadeFactor, System.MidpointRounding.AwayFromZero));
+    }
+
     private static RgbColor ShadeSingleSeriesVaryColorsFill(RgbColor color)
     {
         return new RgbColor(
@@ -31,10 +45,9 @@ internal sealed partial class PptxRenderer
             (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsShadeFactor, System.MidpointRounding.AwayFromZero));
     }
 
-    // Office slot-7 through slot-10 overflow: the 7th vary-colors point paints fixed light
-    // steel, the 8th fixed dusty rose, the 9th fixed light green and the 10th fixed
-    // lavender (dash7 through dash11 Office fills agree), not shaded accents. Slot-11-plus
-    // (teal single sample, 12-plus unobserved) keeps shaded cycling.
+    // First-regime fixed overflow tints (dash7 through dash11 Office fills agree),
+    // also serving as the fallback past the second-regime raw window (slot-13-plus,
+    // teal single sample, 13-plus otherwise unobserved).
     private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 6)
@@ -146,6 +159,28 @@ internal sealed partial class PptxRenderer
         return (byte)System.Math.Clamp((int)System.Math.Round(value * 255d, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
+    // Regime router: twelve-plus points shade slots 1-6 at 0.82 and leave slots 7-12
+    // raw; slot-13-plus falls back to first-regime cycling (teal single sample).
+    private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
+    {
+        if (UseSecondVaryColorsRegime(valuePointCount))
+        {
+            if (categoryIndex < 6)
+            {
+                return ShadeSecondRegimeSingleSeriesVaryColorsFill(paletteColor);
+            }
+
+            if (categoryIndex < 12)
+            {
+                return paletteColor;
+            }
+        }
+
+        return TryResolveSingleSeriesVaryColorsOverflowFill(categoryIndex, out RgbColor overflowFill)
+            ? overflowFill
+            : ShadeSingleSeriesVaryColorsFill(paletteColor);
+    }
+
     private static ChartSeriesFill ChartCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, int valuePointCount, bool shadeSingleSeriesVaryColors)
     {
         if (varyColors && seriesCount == 1 && (seriesFills.Count == 0 || seriesFills[0] is null))
@@ -153,9 +188,7 @@ internal sealed partial class PptxRenderer
             RgbColor paletteColor = ChartPalette(chartPalette, theme, colorMap, categoryIndex);
             if (ShouldShadeSingleSeriesVaryColors(valuePointCount, shadeSingleSeriesVaryColors))
             {
-                paletteColor = TryResolveSingleSeriesVaryColorsOverflowFill(categoryIndex, out RgbColor overflowFill)
-                    ? overflowFill
-                    : ShadeSingleSeriesVaryColorsFill(paletteColor);
+                paletteColor = ResolveShadedSingleSeriesVaryColorsFill(paletteColor, categoryIndex, valuePointCount);
             }
 
             return new ChartSeriesFill(paletteColor, 1d, null, null);
