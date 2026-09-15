@@ -1016,6 +1016,17 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsNineteenthRegimeSlot46Fill = new(117, 91, 149);
         public static readonly RgbColor SingleSeriesVaryColorsNineteenthRegimeSlot48Fill = new(228, 138, 64);
         public static readonly RgbColor SingleSeriesVaryColorsNineteenthRegimeSlot54Fill = new(236, 143, 66);
+        // Twentieth variation regime at one-hundred-twenty-plus points (dash120/dash121 Office fills agree bit-identical on all one-hundred-twenty vectors; sixty-plus rows replay seventh/seventeenth/eighteenth/ninth/fifteenth/eleventh/fourth/overflow/twelfth rows, nine early rows take new fixed fills).
+        public const int SingleSeriesVaryColorsTwentiethRegimePointThreshold = 120;
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot10Fill = new(85, 65, 109);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot17Fill = new(52, 124, 143);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot18Fill = new(180, 108, 48);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot22Fill = new(97, 75, 123);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot31Fill = new(65, 108, 159);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot33Fill = new(130, 157, 74);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot34Fill = new(107, 83, 136);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot35Fill = new(62, 144, 167);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot120Fill = new(252, 218, 203);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
