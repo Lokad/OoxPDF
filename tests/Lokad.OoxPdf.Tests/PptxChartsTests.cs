@@ -1900,6 +1900,18 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
+        // Fixed tail (slot 67), second sample bit-identical across dash67-dash68.
+        var tail67 = rendererType.GetMethod(
+            "TryResolveEleventhRegimeTailFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tail67 is not null, "Expected eleventh-regime tail table to remain inspectable by the Office evidence guard.");
+        object?[] tail67Args = [66, null];
+        TestAssert.Equal(true, (bool)tail67!.Invoke(null, tail67Args)!);
+        TestAssert.Equal((byte)207, (byte)rgbType.GetProperty("Red")!.GetValue(tail67Args[1])!);
+        TestAssert.Equal((byte)215, (byte)rgbType.GetProperty("Green")!.GetValue(tail67Args[1])!);
+        TestAssert.Equal((byte)231, (byte)rgbType.GetProperty("Blue")!.GetValue(tail67Args[1])!);
+        object?[] past67 = [67, null];
+        TestAssert.Equal(false, (bool)tail67.Invoke(null, past67)!);
         object?[] past = [66, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
     }
