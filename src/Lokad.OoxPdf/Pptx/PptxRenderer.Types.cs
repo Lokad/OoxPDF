@@ -655,6 +655,10 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot46Fill = new(195, 186, 208);
         public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot47Fill = new(181, 212, 224);
         public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot48Fill = new(250, 203, 180);
+        // Post-palest fixed entry: Office paints the 49th point steel-blue
+        // (203,212,229) (dash49/dash50 Office fills agree at 0.796/0.831/0.898); slot-50
+        // pale terracotta-rose is a single sample, theme dependence and 51-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot49Fill = new(203, 212, 229);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
