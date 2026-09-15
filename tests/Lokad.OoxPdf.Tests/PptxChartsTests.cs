@@ -1073,13 +1073,14 @@ internal static class PptxChartsTests
         TestAssert.True(method is not null, "Expected per-series inter law to remain inspectable by the Office evidence guard.");
 
         // Office per-series knots (fs, mean advance, inter): composite base plus
-        // leg18 plus longnames plus shortnames plus NSW fit 0.45fs plus 0.148avgW
-        // plus 0.195 within 0.062 with two spare DOF.
+        // leg18 plus longnames plus shortnames plus NSW plus rangednames fit 0.45fs
+        // plus 0.148avgW plus 0.195 within 0.062 with three spare DOF (wide ranges to 42 absorbed).
         TestAssert.True(System.Math.Abs((double)method!.Invoke(null, [12d, 40.99d])! - 11.66d) < 0.1d, "Expected composite-base inter.");
         TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, 61.57d])! - 17.39d) < 0.1d, "Expected leg18 inter.");
         TestAssert.True(System.Math.Abs((double)method.Invoke(null, [12d, 85.40d])! - 18.24d) < 0.1d, "Expected longnames inter.");
         TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, 37.77d])! - 13.85d) < 0.1d, "Expected shortnames inter.");
         TestAssert.True(System.Math.Abs((double)method.Invoke(null, [18d, 43.47d])! - 14.79d) < 0.1d, "Expected nsw inter.");
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [12d, 40.40d])! - 11.55d) < 0.1d, "Expected rangednames inter (wide range absorbed).");
     }
 
     public static void PptxSyntheticBottomLegendFrameAnchorX()
