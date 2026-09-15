@@ -580,9 +580,12 @@ internal sealed partial class PptxRenderer
         // (229,200,199) (dash44/dash45 Office fills agree at 0.898/0.784/0.78.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot44Fill = new(229, 200, 199);
         // Post-replay fixed entry, seventh point: Office paints the 45th point pale apple
-        // (217,227,201) (dash45/dash46 Office fills agree at 0.851/0.89/0.788); slot-46
-        // pale lilac-gray is a single sample, theme dependence and 47-plus cycling unobserved).
+        // (217,227,201) (dash45/dash46 Office fills agree at 0.851/0.89/0.788.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot45Fill = new(217, 227, 201);
+        // Post-replay fixed entry, eighth point: Office paints the 46th point pale lilac-gray
+        // (209,203,219) (dash46/dash47 Office fills agree at 0.82/0.796/0.859); slot-47
+        // pale cyan-blue is a single sample, theme dependence and 48-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot46Fill = new(209, 203, 219);
         // Seventh variation regime at forty-two-plus points (dash42/dash43 Office fills
         // agree on all forty-two vectors): slots 1-12 take fixed dark and mid rows (twelve byte-exact vectors, no round linear fits within 2);
         // slots 13-18 reuse the 0.88 shade (byte-exact first-regime dark strings) and slots 19-24 shade at 0.96 (maxabs 1);
