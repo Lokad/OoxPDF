@@ -623,6 +623,38 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsSeventhRegimeSlot40Fill = new(190, 180, 204);
         public static readonly RgbColor SingleSeriesVaryColorsSeventhRegimeSlot41Fill = new(174, 209, 222);
         public static readonly RgbColor SingleSeriesVaryColorsSeventhRegimeSlot42Fill = new(250, 199, 173);
+        // Eighth variation regime at forty-eight-plus points (dash48/dash49 Office fills
+        // agree on all forty-eight vectors): slots 1-6 take a fixed dark row (six byte-exact vectors, no round linear fit within 2);
+        // slots 7-12 reuse the third-regime 0.78 dark row and slots 19-24 the third-regime 0.93 mid row (maxabs 1);
+        // slots 13-18 shade at 0.86 (maxabs 2); slots 25-30 go raw (byte-exact accents);
+        // slots 31-36 reuse the third-light row, slots 37-42 take a fixed row and slots 43-48 a fixed palest row, all byte-exact;
+        // slot-49-plus falls back to first-regime cycling (steel-blue single sample).
+        public const int SingleSeriesVaryColorsEighthRegimePointThreshold = 48;
+        public const double SingleSeriesVaryColorsEighthRegimeMidShadeFactor = 0.86d;
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot1Fill = new(52, 88, 130);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot2Fill = new(132, 53, 51);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot3Fill = new(106, 129, 59);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot4Fill = new(87, 67, 111);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot5Fill = new(49, 118, 137);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot6Fill = new(171, 102, 46);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot31Fill = new(126, 155, 200);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot32Fill = new(202, 126, 125);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot33Fill = new(174, 198, 131);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot34Fill = new(155, 137, 179);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot35Fill = new(124, 187, 207);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot36Fill = new(248, 170, 121);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot37Fill = new(157, 177, 210);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot38Fill = new(212, 157, 156);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot39Fill = new(190, 209, 160);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot40Fill = new(176, 164, 194);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot41Fill = new(156, 200, 216);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot42Fill = new(249, 187, 154);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot43Fill = new(182, 195, 220);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot44Fill = new(221, 182, 181);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot45Fill = new(205, 219, 184);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot46Fill = new(195, 186, 208);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot47Fill = new(181, 212, 224);
+        public static readonly RgbColor SingleSeriesVaryColorsEighthRegimeSlot48Fill = new(250, 203, 180);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
