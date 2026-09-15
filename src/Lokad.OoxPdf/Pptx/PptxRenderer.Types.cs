@@ -497,6 +497,32 @@ internal sealed partial class PptxRenderer
         // (200,192,212) (dash28/dash29 Office fills agree at 0.784/0.753/0.831); slot-29
         // pale azure is a single sample, theme dependence and 30-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot28Fill = new(200, 192, 212);
+        // Fifth variation regime at thirty-plus points (dash30/dash31 Office fills
+        // agree on all thirty vectors): slots 1-6 take a fixed dark row (six byte-exact vectors);
+        // slots 7-12 shade at 0.85 (maxabs 2 over 18 channels) and slots 13-18 at 0.95 (maxabs 1);
+        // slots 19-24 and 25-30 take fixed rows (twelve byte-exact vectors);
+        // slot-31-plus falls back to first-regime cycling (lavender-blue single sample).
+        public const int SingleSeriesVaryColorsFifthRegimePointThreshold = 30;
+        public const double SingleSeriesVaryColorsFifthRegimeMidShadeFactor = 0.85d;
+        public const double SingleSeriesVaryColorsFifthRegimeLightShadeFactor = 0.95d;
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot1Fill = new(56, 93, 138);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot2Fill = new(140, 56, 54);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot3Fill = new(113, 137, 63);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot4Fill = new(92, 71, 118);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot5Fill = new(53, 125, 145);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot6Fill = new(182, 109, 49);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot19Fill = new(115, 148, 197);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot20Fill = new(200, 115, 114);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot21Fill = new(169, 195, 121);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot22Fill = new(148, 128, 174);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot23Fill = new(112, 183, 205);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot24Fill = new(248, 165, 110);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot25Fill = new(161, 180, 212);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot26Fill = new(214, 161, 160);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot27Fill = new(192, 210, 164);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot28Fill = new(179, 168, 196);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot29Fill = new(160, 202, 217);
+        public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot30Fill = new(249, 190, 158);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

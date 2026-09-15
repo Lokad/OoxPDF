@@ -1238,6 +1238,74 @@ internal static class PptxChartsTests
         object?[] past = [24, null];
         TestAssert.Equal(false, (bool)replay.Invoke(null, past)!);
     }
+    public static void PptxSyntheticFifthVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseFifthVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected fifth-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var mid = rendererType.GetMethod(
+            "ShadeFifthRegimeMidSingleSeriesVaryColorsFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(mid is not null, "Expected fifth-regime mid shade to remain inspectable by the Office evidence guard.");
+        var light = rendererType.GetMethod(
+            "ShadeFifthRegimeLightSingleSeriesVaryColorsFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(light is not null, "Expected fifth-regime light shade to remain inspectable by the Office evidence guard.");
+        var dark = rendererType.GetMethod(
+            "TryResolveFifthRegimeDarkFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(dark is not null, "Expected fifth-regime dark table to remain inspectable by the Office evidence guard.");
+        var palest = rendererType.GetMethod(
+            "TryResolveFifthRegimePalestFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(palest is not null, "Expected fifth-regime palest table to remain inspectable by the Office evidence guard.");
+
+        // Twenty-nine points and fewer keep earlier regimes; thirty-plus take dark/0.85/0.95/fixed/palest rows.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [29])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [30])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [31])!);
+        // Office dash30/dash31 mid row at 0.85 (maxabs 2): accent1 (79,129,189) renders (67,110,161).
+        object? accent = System.Activator.CreateInstance(rgbType!, (byte)79, (byte)129, (byte)189);
+        object? midded = mid!.Invoke(null, [accent]);
+        TestAssert.Equal((byte)67, (byte)rgbType!.GetProperty("Red")!.GetValue(midded)!);
+        TestAssert.Equal((byte)110, (byte)rgbType.GetProperty("Green")!.GetValue(midded)!);
+        TestAssert.Equal((byte)161, (byte)rgbType.GetProperty("Blue")!.GetValue(midded)!);
+        // Light row at 0.95 (maxabs 1): accent1 renders (75,123,180).
+        object? lighted = light!.Invoke(null, [accent]);
+        TestAssert.Equal((byte)75, (byte)rgbType.GetProperty("Red")!.GetValue(lighted)!);
+        TestAssert.Equal((byte)123, (byte)rgbType.GetProperty("Green")!.GetValue(lighted)!);
+        TestAssert.Equal((byte)180, (byte)rgbType.GetProperty("Blue")!.GetValue(lighted)!);
+        // Dark row fixed table, both renders agree on all six.
+        int[] darkR = [56, 140, 113, 92, 53, 182];
+        int[] darkG = [93, 56, 137, 71, 125, 109];
+        int[] darkB = [138, 54, 63, 118, 145, 49];
+        for (int slot = 0; slot < 6; slot++)
+        {
+            object?[] args = [slot, null];
+            TestAssert.Equal(true, (bool)dark!.Invoke(null, args)!);
+            TestAssert.Equal((byte)darkR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)darkG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)darkB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
+        }
+        // Palest row fixed table, both renders agree on all six (slots 25-30).
+        int[] paleR = [161, 214, 192, 179, 160, 249];
+        int[] paleG = [180, 161, 210, 168, 202, 190];
+        int[] paleB = [212, 160, 164, 196, 217, 158];
+        for (int slot = 0; slot < 6; slot++)
+        {
+            object?[] args = [24 + slot, null];
+            TestAssert.Equal(true, (bool)palest!.Invoke(null, args)!);
+            TestAssert.Equal((byte)paleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)paleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)paleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
+        }
+        object?[] past = [30, null];
+        TestAssert.Equal(false, (bool)palest.Invoke(null, past)!);
+    }
 
     public static void PptxSyntheticSecondVaryColorsRegime()
     {

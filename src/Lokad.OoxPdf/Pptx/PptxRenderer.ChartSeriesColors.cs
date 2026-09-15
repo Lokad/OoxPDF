@@ -32,6 +32,12 @@ internal sealed partial class PptxRenderer
     // Third-regime gate: eighteen-plus points take the dark/mid/light rows.
 
     // Fourth-regime gate: twenty-four-plus points take the dark/0.88/raw/replay rows.
+
+    // Fifth-regime gate: thirty-plus points take the dark/0.85/0.95/fixed/palest rows.
+    private static bool UseFifthVaryColorsRegime(int valuePointCount)
+    {
+        return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimePointThreshold;
+    }
     private static bool UseFourthVaryColorsRegime(int valuePointCount)
     {
         return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimePointThreshold;
@@ -176,6 +182,149 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 23)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot24Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static RgbColor ShadeFifthRegimeMidSingleSeriesVaryColorsFill(RgbColor color)
+    {
+        return new RgbColor(
+            (byte)System.Math.Round(color.Red * PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeMidShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Green * PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeMidShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeMidShadeFactor, System.MidpointRounding.AwayFromZero));
+    }
+
+    private static RgbColor ShadeFifthRegimeLightSingleSeriesVaryColorsFill(RgbColor color)
+    {
+        return new RgbColor(
+            (byte)System.Math.Round(color.Red * PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeLightShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Green * PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeLightShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeLightShadeFactor, System.MidpointRounding.AwayFromZero));
+    }
+
+
+    private static bool TryResolveFifthRegimeDarkFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 0)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot1Fill;
+            return true;
+        }
+
+        if (categoryIndex == 1)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot2Fill;
+            return true;
+        }
+
+        if (categoryIndex == 2)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot3Fill;
+            return true;
+        }
+
+        if (categoryIndex == 3)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot4Fill;
+            return true;
+        }
+
+        if (categoryIndex == 4)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot5Fill;
+            return true;
+        }
+
+        if (categoryIndex == 5)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot6Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveFifthRegimeFixedFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 18)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot19Fill;
+            return true;
+        }
+
+        if (categoryIndex == 19)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot20Fill;
+            return true;
+        }
+
+        if (categoryIndex == 20)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot21Fill;
+            return true;
+        }
+
+        if (categoryIndex == 21)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot22Fill;
+            return true;
+        }
+
+        if (categoryIndex == 22)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot23Fill;
+            return true;
+        }
+
+        if (categoryIndex == 23)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot24Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveFifthRegimePalestFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 24)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot25Fill;
+            return true;
+        }
+
+        if (categoryIndex == 25)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot26Fill;
+            return true;
+        }
+
+        if (categoryIndex == 26)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot27Fill;
+            return true;
+        }
+
+        if (categoryIndex == 27)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot28Fill;
+            return true;
+        }
+
+        if (categoryIndex == 28)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot29Fill;
+            return true;
+        }
+
+        if (categoryIndex == 29)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFifthRegimeSlot30Fill;
             return true;
         }
 
@@ -387,10 +536,38 @@ internal sealed partial class PptxRenderer
         return (byte)System.Math.Clamp((int)System.Math.Round(value * 255d, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
-    // Regime router: twenty-four-plus points take dark/0.88/raw/replay rows, eighteen-plus points take dark/mid/light rows, twelve-plus points
+    // Regime router: thirty-plus points take dark/0.85/0.95/fixed/palest rows, twenty-four-plus points take dark/0.88/raw/replay rows, eighteen-plus points take dark/mid/light rows, twelve-plus points
     // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table (fixed through slot-22) and 0.88 cycling.
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
+        if (UseFifthVaryColorsRegime(valuePointCount))
+        {
+            if (TryResolveFifthRegimeDarkFill(categoryIndex, out RgbColor fifthDarkFill))
+            {
+                return fifthDarkFill;
+            }
+
+            if (categoryIndex < 12)
+            {
+                return ShadeFifthRegimeMidSingleSeriesVaryColorsFill(paletteColor);
+            }
+
+            if (categoryIndex < 18)
+            {
+                return ShadeFifthRegimeLightSingleSeriesVaryColorsFill(paletteColor);
+            }
+
+            if (TryResolveFifthRegimeFixedFill(categoryIndex, out RgbColor fifthFixedFill))
+            {
+                return fifthFixedFill;
+            }
+
+            if (TryResolveFifthRegimePalestFill(categoryIndex, out RgbColor fifthPalestFill))
+            {
+                return fifthPalestFill;
+            }
+        }
+
         if (UseFourthVaryColorsRegime(valuePointCount))
         {
             if (TryResolveFourthRegimeDarkFill(categoryIndex, out RgbColor darkFill))
