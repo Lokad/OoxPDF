@@ -39,6 +39,13 @@ internal sealed partial class PptxRenderer
 
     // Seventh-regime gate: forty-two-plus points take the dark/mid/0.88/0.96/fixed/replay/palest rows.
 
+    // Seventeenth-regime gate: one-hundred-two-plus points keep dark/seventh/fourth/seventh rows, re-tint mid rows with new fixed fills, and replay tenth/sixth/ninth/eleventh/thirteenth/twelfth/overflow/sixteenth rows past sixty.
+
+    private static bool UseSeventeenthVaryColorsRegime(int valuePointCount)
+    {
+        return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimePointThreshold;
+    }
+
     // Sixteenth-regime gate: ninety-six-plus points take the dark/seventh/fourth/seventh/0.85/0.88/0.93/0.96/raw/seventh/fixed/seventh/ninth/seventh/overflow/tenth/overflow/tail rows.
     private static bool UseSixteenthVaryColorsRegime(int valuePointCount)
     {
@@ -1690,6 +1697,563 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
+    private static bool TryResolveSeventeenthRegimeSeventhMidFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 19)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot20Fill;
+            return true;
+        }
+
+        if (categoryIndex == 20)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot21Fill;
+            return true;
+        }
+
+        if (categoryIndex == 22)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot23Fill;
+            return true;
+        }
+
+        if (categoryIndex == 23)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot24Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeFifthMidFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 24)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot25Fill;
+            return true;
+        }
+
+        if (categoryIndex == 25)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot26Fill;
+            return true;
+        }
+
+        if (categoryIndex == 26)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot27Fill;
+            return true;
+        }
+
+        if (categoryIndex == 27)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot28Fill;
+            return true;
+        }
+
+        if (categoryIndex == 28)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot29Fill;
+            return true;
+        }
+
+        if (categoryIndex == 29)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot30Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeShadeFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 35)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot36Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeThirteenthSixthFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 36)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot37Fill;
+            return true;
+        }
+
+        if (categoryIndex == 37)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot38Fill;
+            return true;
+        }
+
+        if (categoryIndex == 38)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot39Fill;
+            return true;
+        }
+
+        if (categoryIndex == 39)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot40Fill;
+            return true;
+        }
+
+        if (categoryIndex == 40)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot41Fill;
+            return true;
+        }
+
+        if (categoryIndex == 41)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot42Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeSeventhLightFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 42)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot43Fill;
+            return true;
+        }
+
+        if (categoryIndex == 43)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot44Fill;
+            return true;
+        }
+
+        if (categoryIndex == 44)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot45Fill;
+            return true;
+        }
+
+        if (categoryIndex == 45)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot46Fill;
+            return true;
+        }
+
+        if (categoryIndex == 46)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot47Fill;
+            return true;
+        }
+
+        if (categoryIndex == 47)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot48Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeRawFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 48)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot49Fill;
+            return true;
+        }
+
+        if (categoryIndex == 49)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot50Fill;
+            return true;
+        }
+
+        if (categoryIndex == 50)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot51Fill;
+            return true;
+        }
+
+        if (categoryIndex == 51)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot52Fill;
+            return true;
+        }
+
+        if (categoryIndex == 52)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot53Fill;
+            return true;
+        }
+
+        if (categoryIndex == 53)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot54Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeFixed55Fill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 54)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot55Fill;
+            return true;
+        }
+
+        if (categoryIndex == 55)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot56Fill;
+            return true;
+        }
+
+        if (categoryIndex == 56)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot57Fill;
+            return true;
+        }
+
+        if (categoryIndex == 57)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot58Fill;
+            return true;
+        }
+
+        if (categoryIndex == 58)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot59Fill;
+            return true;
+        }
+
+        if (categoryIndex == 59)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSeventeenthRegimeSlot60Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeTenthFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 60)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTenthRegimeSlot37Fill;
+            return true;
+        }
+
+        if (categoryIndex == 61)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTenthRegimeSlot38Fill;
+            return true;
+        }
+
+        if (categoryIndex == 62)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTenthRegimeSlot39Fill;
+            return true;
+        }
+
+        if (categoryIndex == 63)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTenthRegimeSlot40Fill;
+            return true;
+        }
+
+        if (categoryIndex == 64)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTenthRegimeSlot41Fill;
+            return true;
+        }
+
+        if (categoryIndex == 65)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTenthRegimeSlot42Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeSixth25Fill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 66)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSixthRegimeSlot25Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeNinthFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 67)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeSlot38Fill;
+            return true;
+        }
+
+        if (categoryIndex == 68)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeSlot39Fill;
+            return true;
+        }
+
+        if (categoryIndex == 69)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeSlot40Fill;
+            return true;
+        }
+
+        if (categoryIndex == 70)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeSlot41Fill;
+            return true;
+        }
+
+        if (categoryIndex == 71)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeSlot42Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeEleventhFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 72)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot49Fill;
+            return true;
+        }
+
+        if (categoryIndex == 73)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot50Fill;
+            return true;
+        }
+
+        if (categoryIndex == 74)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot51Fill;
+            return true;
+        }
+
+        if (categoryIndex == 75)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot52Fill;
+            return true;
+        }
+
+        if (categoryIndex == 76)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot53Fill;
+            return true;
+        }
+
+        if (categoryIndex == 77)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot54Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeThirteenthFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 78)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot61Fill;
+            return true;
+        }
+
+        if (categoryIndex == 79)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot62Fill;
+            return true;
+        }
+
+        if (categoryIndex == 80)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot63Fill;
+            return true;
+        }
+
+        if (categoryIndex == 81)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot64Fill;
+            return true;
+        }
+
+        if (categoryIndex == 82)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot65Fill;
+            return true;
+        }
+
+        if (categoryIndex == 83)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot66Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeTwelfthFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 84)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwelfthRegimeSlot61Fill;
+            return true;
+        }
+
+        if (categoryIndex == 85)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwelfthRegimeSlot62Fill;
+            return true;
+        }
+
+        if (categoryIndex == 86)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwelfthRegimeSlot63Fill;
+            return true;
+        }
+
+        if (categoryIndex == 87)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwelfthRegimeSlot64Fill;
+            return true;
+        }
+
+        if (categoryIndex == 88)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwelfthRegimeSlot65Fill;
+            return true;
+        }
+
+        if (categoryIndex == 89)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwelfthRegimeSlot66Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeOverflowFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 90)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot25Fill;
+            return true;
+        }
+
+        if (categoryIndex == 92)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot27Fill;
+            return true;
+        }
+
+        if (categoryIndex == 96)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot43Fill;
+            return true;
+        }
+
+        if (categoryIndex == 97)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot44Fill;
+            return true;
+        }
+
+        if (categoryIndex == 98)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot51Fill;
+            return true;
+        }
+
+        if (categoryIndex == 99)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot46Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeEleventhLateFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 91)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot62Fill;
+            return true;
+        }
+
+        if (categoryIndex == 93)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot64Fill;
+            return true;
+        }
+
+        if (categoryIndex == 94)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot65Fill;
+            return true;
+        }
+
+        if (categoryIndex == 95)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsEleventhRegimeSlot66Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveSeventeenthRegimeSixteenthTailReplayFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 100)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSixteenthRegimeSlot95Fill;
+            return true;
+        }
+
+        if (categoryIndex == 101)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSixteenthRegimeSlot96Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
     private static RgbColor ShadeFifteenthRegimeFourthRowSingleSeriesVaryColorsFill(RgbColor color)
     {
         return new RgbColor(
@@ -4158,6 +4722,89 @@ internal sealed partial class PptxRenderer
     // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table (fixed through slot-22) and 0.88 cycling.
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
+        if (UseSeventeenthVaryColorsRegime(valuePointCount))
+        {
+            if (TryResolveSeventeenthRegimeSeventhMidFill(categoryIndex, out RgbColor seventeenthSeventhMidFill))
+            {
+                return seventeenthSeventhMidFill;
+            }
+
+            if (TryResolveSeventeenthRegimeFifthMidFill(categoryIndex, out RgbColor seventeenthFifthMidFill))
+            {
+                return seventeenthFifthMidFill;
+            }
+
+            if (TryResolveSeventeenthRegimeShadeFill(categoryIndex, out RgbColor seventeenthShadeFill))
+            {
+                return seventeenthShadeFill;
+            }
+
+            if (TryResolveSeventeenthRegimeThirteenthSixthFill(categoryIndex, out RgbColor seventeenthThirteenthSixthFill))
+            {
+                return seventeenthThirteenthSixthFill;
+            }
+
+            if (TryResolveSeventeenthRegimeSeventhLightFill(categoryIndex, out RgbColor seventeenthSeventhLightFill))
+            {
+                return seventeenthSeventhLightFill;
+            }
+
+            if (TryResolveSeventeenthRegimeRawFill(categoryIndex, out RgbColor seventeenthRawFill))
+            {
+                return seventeenthRawFill;
+            }
+
+            if (TryResolveSeventeenthRegimeFixed55Fill(categoryIndex, out RgbColor seventeenthFixed55Fill))
+            {
+                return seventeenthFixed55Fill;
+            }
+
+            if (TryResolveSeventeenthRegimeTenthFill(categoryIndex, out RgbColor seventeenthTenthFill))
+            {
+                return seventeenthTenthFill;
+            }
+
+            if (TryResolveSeventeenthRegimeSixth25Fill(categoryIndex, out RgbColor seventeenthSixth25Fill))
+            {
+                return seventeenthSixth25Fill;
+            }
+
+            if (TryResolveSeventeenthRegimeNinthFill(categoryIndex, out RgbColor seventeenthNinthFill))
+            {
+                return seventeenthNinthFill;
+            }
+
+            if (TryResolveSeventeenthRegimeEleventhFill(categoryIndex, out RgbColor seventeenthEleventhFill))
+            {
+                return seventeenthEleventhFill;
+            }
+
+            if (TryResolveSeventeenthRegimeThirteenthFill(categoryIndex, out RgbColor seventeenthThirteenthFill))
+            {
+                return seventeenthThirteenthFill;
+            }
+
+            if (TryResolveSeventeenthRegimeTwelfthFill(categoryIndex, out RgbColor seventeenthTwelfthFill))
+            {
+                return seventeenthTwelfthFill;
+            }
+
+            if (TryResolveSeventeenthRegimeOverflowFill(categoryIndex, out RgbColor seventeenthOverflowFill))
+            {
+                return seventeenthOverflowFill;
+            }
+
+            if (TryResolveSeventeenthRegimeEleventhLateFill(categoryIndex, out RgbColor seventeenthEleventhLateFill))
+            {
+                return seventeenthEleventhLateFill;
+            }
+
+            if (TryResolveSeventeenthRegimeSixteenthTailReplayFill(categoryIndex, out RgbColor seventeenthSixteenthTailReplayFill))
+            {
+                return seventeenthSixteenthTailReplayFill;
+            }
+
+        }
         if (UseSixteenthVaryColorsRegime(valuePointCount))
         {
             if (TryResolveSixteenthRegimeDarkFill(categoryIndex, out RgbColor sixteenthDarkFill))

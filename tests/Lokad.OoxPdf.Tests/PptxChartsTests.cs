@@ -2477,6 +2477,324 @@ var tail = rendererType.GetMethod(
         object?[] past = [100, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
     }
+    public static void PptxSyntheticSeventeenthVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseSeventeenthVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected seventeenth-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var seventhMid = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeSeventhMidFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(seventhMid is not null, "Expected seventeenth-regime seventhmid table to remain inspectable by the Office evidence guard.");
+        var fifthMid = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeFifthMidFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fifthMid is not null, "Expected seventeenth-regime fifthmid table to remain inspectable by the Office evidence guard.");
+        var shade = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeShadeFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(shade is not null, "Expected seventeenth-regime shade table to remain inspectable by the Office evidence guard.");
+        var thirteenthSixth = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeThirteenthSixthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(thirteenthSixth is not null, "Expected seventeenth-regime thirteenthsixth table to remain inspectable by the Office evidence guard.");
+        var seventhLight = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeSeventhLightFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(seventhLight is not null, "Expected seventeenth-regime seventhlight table to remain inspectable by the Office evidence guard.");
+        var raw = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeRawFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(raw is not null, "Expected seventeenth-regime raw table to remain inspectable by the Office evidence guard.");
+        var fixed55 = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeFixed55Fill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fixed55 is not null, "Expected seventeenth-regime fixed55 table to remain inspectable by the Office evidence guard.");
+        var tenth = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeTenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tenth is not null, "Expected seventeenth-regime tenth table to remain inspectable by the Office evidence guard.");
+        var sixth25 = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeSixth25Fill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(sixth25 is not null, "Expected seventeenth-regime sixth25 table to remain inspectable by the Office evidence guard.");
+        var ninth = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeNinthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(ninth is not null, "Expected seventeenth-regime ninth table to remain inspectable by the Office evidence guard.");
+        var eleventh = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeEleventhFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eleventh is not null, "Expected seventeenth-regime eleventh table to remain inspectable by the Office evidence guard.");
+        var thirteenth = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeThirteenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(thirteenth is not null, "Expected seventeenth-regime thirteenth table to remain inspectable by the Office evidence guard.");
+        var twelfth = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeTwelfthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(twelfth is not null, "Expected seventeenth-regime twelfth table to remain inspectable by the Office evidence guard.");
+        var overflow = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeOverflowFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(overflow is not null, "Expected seventeenth-regime overflow table to remain inspectable by the Office evidence guard.");
+        var eleventhLate = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeEleventhLateFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eleventhLate is not null, "Expected seventeenth-regime eleventhlate table to remain inspectable by the Office evidence guard.");
+        var sixteenthTailReplay = rendererType.GetMethod(
+            "TryResolveSeventeenthRegimeSixteenthTailReplayFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(sixteenthTailReplay is not null, "Expected seventeenth-regime sixteenthtailreplay table to remain inspectable by the Office evidence guard.");
+        // One-hundred-one points and fewer keep earlier regimes; one-hundred-two-plus take the seventeenth rows.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [101])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [102])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [103])!);
+        // Seventeenth-regime seventh-mid row (slots 20, 21, 23, 24), dash102/dash103 agree bit-identical.
+        int[] seventhMidIdx = [19, 20, 22, 23];
+        int[] seventhMidR = [151, 122, 57, 195];
+        int[] seventhMidG = [61, 147, 135, 118];
+        int[] seventhMidB = [59, 69, 156, 53];
+        for (int slot = 0; slot < seventhMidIdx.Length; slot++)
+        {
+            object?[] seventhMidArgs = [seventhMidIdx[slot], null];
+            TestAssert.Equal(true, (bool)seventhMid!.Invoke(null, seventhMidArgs)!);
+            TestAssert.Equal((byte)seventhMidR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(seventhMidArgs[1])!);
+            TestAssert.Equal((byte)seventhMidG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(seventhMidArgs[1])!);
+            TestAssert.Equal((byte)seventhMidB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(seventhMidArgs[1])!);
+        }
+        object?[] seventhMidPast = [21, null];
+        TestAssert.Equal(false, (bool)seventhMid.Invoke(null, seventhMidPast)!);
+        // Seventeenth-regime fifth-mid row (slots 25-30), dash102/dash103 agree bit-identical.
+        int[] fifthMidIdx = [24, 25, 26, 27, 28, 29];
+        int[] fifthMidR = [64, 159, 128, 105, 61, 206];
+        int[] fifthMidG = [106, 65, 155, 82, 142, 124];
+        int[] fifthMidB = [157, 63, 73, 134, 164, 57];
+        for (int slot = 0; slot < fifthMidIdx.Length; slot++)
+        {
+            object?[] fifthMidArgs = [fifthMidIdx[slot], null];
+            TestAssert.Equal(true, (bool)fifthMid!.Invoke(null, fifthMidArgs)!);
+            TestAssert.Equal((byte)fifthMidR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fifthMidArgs[1])!);
+            TestAssert.Equal((byte)fifthMidG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fifthMidArgs[1])!);
+            TestAssert.Equal((byte)fifthMidB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fifthMidArgs[1])!);
+        }
+        object?[] fifthMidPast = [30, null];
+        TestAssert.Equal(false, (bool)fifthMid.Invoke(null, fifthMidPast)!);
+        // Seventeenth-regime shade single (slot 36), dash102/dash103 agree bit-identical.
+        int[] shadeIdx = [35];
+        int[] shadeR = [216];
+        int[] shadeG = [131];
+        int[] shadeB = [60];
+        for (int slot = 0; slot < shadeIdx.Length; slot++)
+        {
+            object?[] shadeArgs = [shadeIdx[slot], null];
+            TestAssert.Equal(true, (bool)shade!.Invoke(null, shadeArgs)!);
+            TestAssert.Equal((byte)shadeR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(shadeArgs[1])!);
+            TestAssert.Equal((byte)shadeG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(shadeArgs[1])!);
+            TestAssert.Equal((byte)shadeB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(shadeArgs[1])!);
+        }
+        object?[] shadePast = [34, null];
+        TestAssert.Equal(false, (bool)shade.Invoke(null, shadePast)!);
+        // Seventeenth-regime thirteenth-sixth replacement row (slots 37-42), dash102/dash103 agree bit-identical.
+        int[] thirteenthSixthIdx = [36, 37, 38, 39, 40, 41];
+        int[] thirteenthSixthR = [71, 175, 141, 116, 68, 225];
+        int[] thirteenthSixthG = [117, 72, 170, 90, 156, 136];
+        int[] thirteenthSixthB = [172, 69, 80, 147, 180, 63];
+        for (int slot = 0; slot < thirteenthSixthIdx.Length; slot++)
+        {
+            object?[] thirteenthSixthArgs = [thirteenthSixthIdx[slot], null];
+            TestAssert.Equal(true, (bool)thirteenthSixth!.Invoke(null, thirteenthSixthArgs)!);
+            TestAssert.Equal((byte)thirteenthSixthR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(thirteenthSixthArgs[1])!);
+            TestAssert.Equal((byte)thirteenthSixthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(thirteenthSixthArgs[1])!);
+            TestAssert.Equal((byte)thirteenthSixthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(thirteenthSixthArgs[1])!);
+        }
+        object?[] thirteenthSixthPast = [35, null];
+        TestAssert.Equal(false, (bool)thirteenthSixth.Invoke(null, thirteenthSixthPast)!);
+        // Seventeenth-regime seventh-light replacement row (slots 43-48), dash102/dash103 agree bit-identical.
+        int[] seventhLightIdx = [42, 43, 44, 45, 46, 47];
+        int[] seventhLightR = [74, 181, 146, 121, 70, 233];
+        int[] seventhLightG = [122, 75, 177, 94, 162, 141];
+        int[] seventhLightB = [178, 72, 84, 153, 187, 66];
+        for (int slot = 0; slot < seventhLightIdx.Length; slot++)
+        {
+            object?[] seventhLightArgs = [seventhLightIdx[slot], null];
+            TestAssert.Equal(true, (bool)seventhLight!.Invoke(null, seventhLightArgs)!);
+            TestAssert.Equal((byte)seventhLightR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(seventhLightArgs[1])!);
+            TestAssert.Equal((byte)seventhLightG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(seventhLightArgs[1])!);
+            TestAssert.Equal((byte)seventhLightB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(seventhLightArgs[1])!);
+        }
+        object?[] seventhLightPast = [41, null];
+        TestAssert.Equal(false, (bool)seventhLight.Invoke(null, seventhLightPast)!);
+        // Seventeenth-regime raw replacement row (slots 49-54), dash102/dash103 agree bit-identical.
+        int[] rawIdx = [48, 49, 50, 51, 52, 53];
+        int[] rawR = [77, 189, 152, 126, 74, 243];
+        int[] rawG = [127, 78, 184, 98, 169, 147];
+        int[] rawB = [186, 75, 87, 159, 194, 69];
+        for (int slot = 0; slot < rawIdx.Length; slot++)
+        {
+            object?[] rawArgs = [rawIdx[slot], null];
+            TestAssert.Equal(true, (bool)raw!.Invoke(null, rawArgs)!);
+            TestAssert.Equal((byte)rawR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(rawArgs[1])!);
+            TestAssert.Equal((byte)rawG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(rawArgs[1])!);
+            TestAssert.Equal((byte)rawB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(rawArgs[1])!);
+        }
+        object?[] rawPast = [47, null];
+        TestAssert.Equal(false, (bool)raw.Invoke(null, rawPast)!);
+        // Seventeenth-regime fixed55 replacement row (slots 55-60), dash102/dash103 agree bit-identical.
+        int[] fixed55Idx = [54, 55, 56, 57, 58, 59];
+        int[] fixed55R = [92, 194, 159, 134, 88, 247];
+        int[] fixed55G = [135, 92, 190, 109, 175, 155];
+        int[] fixed55B = [191, 90, 100, 166, 200, 84];
+        for (int slot = 0; slot < fixed55Idx.Length; slot++)
+        {
+            object?[] fixed55Args = [fixed55Idx[slot], null];
+            TestAssert.Equal(true, (bool)fixed55!.Invoke(null, fixed55Args)!);
+            TestAssert.Equal((byte)fixed55R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fixed55Args[1])!);
+            TestAssert.Equal((byte)fixed55G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fixed55Args[1])!);
+            TestAssert.Equal((byte)fixed55B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fixed55Args[1])!);
+        }
+        object?[] fixed55Past = [53, null];
+        TestAssert.Equal(false, (bool)fixed55.Invoke(null, fixed55Past)!);
+        // Seventeenth-regime tenth replay (slots 61-66 take tenth slots 37-42), dash102/dash103 agree bit-identical.
+        int[] tenthIdx = [60, 61, 62, 63, 64, 65];
+        int[] tenthR = [118, 200, 170, 149, 115, 248];
+        int[] tenthG = [150, 118, 196, 130, 184, 166];
+        int[] tenthB = [198, 116, 123, 176, 205, 113];
+        for (int slot = 0; slot < tenthIdx.Length; slot++)
+        {
+            object?[] tenthArgs = [tenthIdx[slot], null];
+            TestAssert.Equal(true, (bool)tenth!.Invoke(null, tenthArgs)!);
+            TestAssert.Equal((byte)tenthR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(tenthArgs[1])!);
+            TestAssert.Equal((byte)tenthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tenthArgs[1])!);
+            TestAssert.Equal((byte)tenthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tenthArgs[1])!);
+        }
+        object?[] tenthPast = [59, null];
+        TestAssert.Equal(false, (bool)tenth.Invoke(null, tenthPast)!);
+        // Seventeenth-regime sixth25 replay (slot 67), dash102/dash103 agree bit-identical.
+        int[] sixth25Idx = [66];
+        int[] sixth25R = [133];
+        int[] sixth25G = [160];
+        int[] sixth25B = [202];
+        for (int slot = 0; slot < sixth25Idx.Length; slot++)
+        {
+            object?[] sixth25Args = [sixth25Idx[slot], null];
+            TestAssert.Equal(true, (bool)sixth25!.Invoke(null, sixth25Args)!);
+            TestAssert.Equal((byte)sixth25R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(sixth25Args[1])!);
+            TestAssert.Equal((byte)sixth25G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(sixth25Args[1])!);
+            TestAssert.Equal((byte)sixth25B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(sixth25Args[1])!);
+        }
+        object?[] sixth25Past = [65, null];
+        TestAssert.Equal(false, (bool)sixth25.Invoke(null, sixth25Past)!);
+        // Seventeenth-regime ninth replay (slots 68-72 take ninth slots 38-42), dash102/dash103 agree bit-identical.
+        int[] ninthIdx = [67, 68, 69, 70, 71];
+        int[] ninthR = [206, 180, 163, 136, 249];
+        int[] ninthG = [138, 202, 147, 192, 177];
+        int[] ninthB = [137, 142, 185, 210, 134];
+        for (int slot = 0; slot < ninthIdx.Length; slot++)
+        {
+            object?[] ninthArgs = [ninthIdx[slot], null];
+            TestAssert.Equal(true, (bool)ninth!.Invoke(null, ninthArgs)!);
+            TestAssert.Equal((byte)ninthR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(ninthArgs[1])!);
+            TestAssert.Equal((byte)ninthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(ninthArgs[1])!);
+            TestAssert.Equal((byte)ninthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(ninthArgs[1])!);
+        }
+        object?[] ninthPast = [66, null];
+        TestAssert.Equal(false, (bool)ninth.Invoke(null, ninthPast)!);
+        // Seventeenth-regime eleventh replay (slots 73-78 take eleventh slots 49-54), dash102/dash103 agree bit-identical.
+        int[] eleventhIdx = [72, 73, 74, 75, 76, 77];
+        int[] eleventhR = [153, 211, 188, 173, 152, 249];
+        int[] eleventhG = [174, 153, 208, 161, 198, 185];
+        int[] eleventhB = [209, 152, 156, 192, 215, 150];
+        for (int slot = 0; slot < eleventhIdx.Length; slot++)
+        {
+            object?[] eleventhArgs = [eleventhIdx[slot], null];
+            TestAssert.Equal(true, (bool)eleventh!.Invoke(null, eleventhArgs)!);
+            TestAssert.Equal((byte)eleventhR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eleventhArgs[1])!);
+            TestAssert.Equal((byte)eleventhG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eleventhArgs[1])!);
+            TestAssert.Equal((byte)eleventhB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eleventhArgs[1])!);
+        }
+        object?[] eleventhPast = [71, null];
+        TestAssert.Equal(false, (bool)eleventh.Invoke(null, eleventhPast)!);
+        // Seventeenth-regime thirteenth replay (slots 79-84 take thirteenth slots 61-66), dash102/dash103 agree bit-identical.
+        int[] thirteenthIdx = [78, 79, 80, 81, 82, 83];
+        int[] thirteenthR = [164, 215, 195, 182, 163, 250];
+        int[] thirteenthG = [182, 165, 212, 171, 204, 192];
+        int[] thirteenthB = [213, 164, 167, 198, 218, 162];
+        for (int slot = 0; slot < thirteenthIdx.Length; slot++)
+        {
+            object?[] thirteenthArgs = [thirteenthIdx[slot], null];
+            TestAssert.Equal(true, (bool)thirteenth!.Invoke(null, thirteenthArgs)!);
+            TestAssert.Equal((byte)thirteenthR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(thirteenthArgs[1])!);
+            TestAssert.Equal((byte)thirteenthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(thirteenthArgs[1])!);
+            TestAssert.Equal((byte)thirteenthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(thirteenthArgs[1])!);
+        }
+        object?[] thirteenthPast = [77, null];
+        TestAssert.Equal(false, (bool)thirteenth.Invoke(null, thirteenthPast)!);
+        // Seventeenth-regime twelfth replay (slots 85-90 take twelfth slots 61-66), dash102/dash103 agree bit-identical.
+        int[] twelfthIdx = [84, 85, 86, 87, 88, 89];
+        int[] twelfthR = [178, 220, 203, 192, 177, 250];
+        int[] twelfthG = [193, 179, 218, 184, 210, 201];
+        int[] twelfthB = [219, 178, 181, 206, 223, 176];
+        for (int slot = 0; slot < twelfthIdx.Length; slot++)
+        {
+            object?[] twelfthArgs = [twelfthIdx[slot], null];
+            TestAssert.Equal(true, (bool)twelfth!.Invoke(null, twelfthArgs)!);
+            TestAssert.Equal((byte)twelfthR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(twelfthArgs[1])!);
+            TestAssert.Equal((byte)twelfthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(twelfthArgs[1])!);
+            TestAssert.Equal((byte)twelfthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(twelfthArgs[1])!);
+        }
+        object?[] twelfthPast = [83, null];
+        TestAssert.Equal(false, (bool)twelfth.Invoke(null, twelfthPast)!);
+        // Seventeenth-regime overflow replay (slots 91/93/97-100), dash102/dash103 agree bit-identical.
+        int[] overflowIdx = [90, 92, 96, 97, 98, 99];
+        int[] overflowR = [188, 209, 200, 229, 218, 209];
+        int[] overflowG = [200, 222, 209, 200, 228, 203];
+        int[] overflowB = [223, 190, 228, 199, 204, 219];
+        for (int slot = 0; slot < overflowIdx.Length; slot++)
+        {
+            object?[] overflowArgs = [overflowIdx[slot], null];
+            TestAssert.Equal(true, (bool)overflow!.Invoke(null, overflowArgs)!);
+            TestAssert.Equal((byte)overflowR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(overflowArgs[1])!);
+            TestAssert.Equal((byte)overflowG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(overflowArgs[1])!);
+            TestAssert.Equal((byte)overflowB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(overflowArgs[1])!);
+        }
+        object?[] overflowPast = [91, null];
+        TestAssert.Equal(false, (bool)overflow.Invoke(null, overflowPast)!);
+        // Seventeenth-regime eleventh-late replay (slots 92/94-96), dash102/dash103 agree bit-identical.
+        int[] eleventhLateIdx = [91, 93, 94, 95];
+        int[] eleventhLateR = [225, 202, 190, 251];
+        int[] eleventhLateG = [191, 195, 217, 209];
+        int[] eleventhLateB = [191, 213, 228, 189];
+        for (int slot = 0; slot < eleventhLateIdx.Length; slot++)
+        {
+            object?[] eleventhLateArgs = [eleventhLateIdx[slot], null];
+            TestAssert.Equal(true, (bool)eleventhLate!.Invoke(null, eleventhLateArgs)!);
+            TestAssert.Equal((byte)eleventhLateR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eleventhLateArgs[1])!);
+            TestAssert.Equal((byte)eleventhLateG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eleventhLateArgs[1])!);
+            TestAssert.Equal((byte)eleventhLateB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eleventhLateArgs[1])!);
+        }
+        object?[] eleventhLatePast = [92, null];
+        TestAssert.Equal(false, (bool)eleventhLate.Invoke(null, eleventhLatePast)!);
+        // Seventeenth-regime sixteenth-tail replay (slots 101-102), dash102/dash103 agree bit-identical.
+        int[] sixteenthTailReplayIdx = [100, 101];
+        int[] sixteenthTailReplayR = [199, 251];
+        int[] sixteenthTailReplayG = [222, 215];
+        int[] sixteenthTailReplayB = [231, 199];
+        for (int slot = 0; slot < sixteenthTailReplayIdx.Length; slot++)
+        {
+            object?[] sixteenthTailReplayArgs = [sixteenthTailReplayIdx[slot], null];
+            TestAssert.Equal(true, (bool)sixteenthTailReplay!.Invoke(null, sixteenthTailReplayArgs)!);
+            TestAssert.Equal((byte)sixteenthTailReplayR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(sixteenthTailReplayArgs[1])!);
+            TestAssert.Equal((byte)sixteenthTailReplayG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(sixteenthTailReplayArgs[1])!);
+            TestAssert.Equal((byte)sixteenthTailReplayB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(sixteenthTailReplayArgs[1])!);
+        }
+        object?[] sixteenthTailReplayPast = [102, null];
+        TestAssert.Equal(false, (bool)sixteenthTailReplay.Invoke(null, sixteenthTailReplayPast)!);
+    }
     public static void PptxSyntheticSecondVaryColorsRegime()
     {
         var rendererType = typeof(PptxRenderer);
