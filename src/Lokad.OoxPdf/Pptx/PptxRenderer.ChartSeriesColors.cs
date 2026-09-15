@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
 
     // Fixed overflow tints (dash7 through dash14 Office fills agree),
     // also serving as the fallback past the second-regime raw window, the pale-teal
-    // slot-13 fix and the dusty-pink slot-14 fix (dash14/dash15 agree); slot-15-plus
+    // slot-13 fix, the dusty-pink slot-14 fix and the mint slot-15 fix (dash14/dash15/dash16 agree); slot-16-plus
     private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 6)
@@ -83,6 +83,12 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 13)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot14Fill;
+            return true;
+        }
+
+        if (categoryIndex == 14)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot15Fill;
             return true;
         }
 
