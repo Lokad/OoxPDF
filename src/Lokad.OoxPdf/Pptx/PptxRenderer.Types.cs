@@ -501,7 +501,7 @@ internal sealed partial class PptxRenderer
         // agree on all thirty vectors): slots 1-6 take a fixed dark row (six byte-exact vectors);
         // slots 7-12 shade at 0.85 (maxabs 2 over 18 channels) and slots 13-18 at 0.95 (maxabs 1);
         // slots 19-24 and 25-30 take fixed rows (twelve byte-exact vectors);
-        // slot-31-plus falls back to first-regime cycling (lavender-blue single sample).
+        // slot-31 lavender-blue is fixed with slot-32-plus on first-regime cycling fallback (coral single sample).
         public const int SingleSeriesVaryColorsFifthRegimePointThreshold = 30;
         public const double SingleSeriesVaryColorsFifthRegimeMidShadeFactor = 0.85d;
         public const double SingleSeriesVaryColorsFifthRegimeLightShadeFactor = 0.95d;
@@ -523,6 +523,10 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot28Fill = new(179, 168, 196);
         public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot29Fill = new(160, 202, 217);
         public static readonly RgbColor SingleSeriesVaryColorsFifthRegimeSlot30Fill = new(249, 190, 158);
+        // Post-palest fixed entry: Office paints the 31st point lavender-blue
+        // (194,205,225) (dash31/dash32 Office fills agree at 0.761/0.804/0.882); slot-32
+        // pale coral is a single sample, theme dependence and 33-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot31Fill = new(194, 205, 225);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
