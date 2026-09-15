@@ -712,7 +712,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeReplaySlot56Fill = new(231, 204, 204);
         public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeReplaySlot57Fill = new(219, 229, 205);
         public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeReplaySlot58Fill = new(213, 207, 221);
-        // Tenth variation regime at sixty-plus points (dash60/dash61 Office fills agree on all sixty vectors): slots 1-6 take a fixed dark row (six byte-exact vectors, within 2 of the ninth dark row); slots 7-12 replay fourth-regime slots 1-6 byte-exact; slots 13-18, 19-24 and 25-30 shade at 0.82, 0.88 and 0.94 (maxabs 1/2/1); slots 31-36 take raw accents byte-exact; slots 37-42 take a fixed row (six byte-exact vectors); slots 43-48 replay seventh-regime slots 31-36 byte-exact; slots 49-54 replay sixth-regime slots 31-36 byte-exact; slots 55-58 replay overflow slots 25-28 byte-exact; slots 59-61 take a fixed tail (three byte-exact vectors, 3/2/2 samples); slot-62-plus falls back to overflow/0.88 cycling (slot59/slot60 still single-samples, slot61 new single).
+        // Tenth variation regime at sixty-plus points (dash60/dash61 Office fills agree on all sixty vectors): slots 1-6 take a fixed dark row (six byte-exact vectors, within 2 of the ninth dark row); slots 7-12 replay fourth-regime slots 1-6 byte-exact; slots 13-18, 19-24 and 25-30 shade at 0.82, 0.88 and 0.94 (maxabs 1/2/1); slots 31-36 take raw accents byte-exact; slots 37-42 take a fixed row (six byte-exact vectors); slots 43-48 replay seventh-regime slots 31-36 byte-exact; slots 49-54 replay sixth-regime slots 31-36 byte-exact; slots 55-58 replay overflow slots 25-28 byte-exact; slots 59-62 take a fixed tail (four byte-exact vectors, 3/2/2/2 samples); slot-63-plus falls back to overflow/0.88 cycling (slot59/slot60 still single-samples, slot61 new single).
         public const int SingleSeriesVaryColorsTenthRegimePointThreshold = 60;
         public const double SingleSeriesVaryColorsTenthRegimeFifthRowShadeFactor = 0.94d;
         public static readonly RgbColor SingleSeriesVaryColorsTenthRegimeSlot1Fill = new(50, 85, 126);
@@ -730,6 +730,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsTenthRegimeSlot59Fill = new(187, 215, 227);
         public static readonly RgbColor SingleSeriesVaryColorsTenthRegimeSlot60Fill = new(251, 207, 186);
         public static readonly RgbColor SingleSeriesVaryColorsTenthRegimeSlot61Fill = new(205, 214, 230);
+        public static readonly RgbColor SingleSeriesVaryColorsTenthRegimeSlot62Fill = new(231, 205, 205);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

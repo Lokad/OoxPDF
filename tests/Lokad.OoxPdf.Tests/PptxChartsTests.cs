@@ -1789,11 +1789,11 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)fourthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
             TestAssert.Equal((byte)fourthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
-        // Overflow replay covers slots 55-58; fixed tail covers slots 59-61 (3/2/2 samples, bit-identical across dash60-dash62).
-        int[] tailR = [187, 251, 205];
-        int[] tailG = [215, 207, 214];
-        int[] tailB = [227, 186, 230];
-        for (int slot = 0; slot < 3; slot++)
+        // Overflow replay covers slots 55-58; fixed tail covers slots 59-62 (3/2/2/2 samples, bit-identical across dash60-dash63).
+        int[] tailR = [187, 251, 205, 231];
+        int[] tailG = [215, 207, 214, 205];
+        int[] tailB = [227, 186, 230, 205];
+        for (int slot = 0; slot < 4; slot++)
         {
             object?[] tailArgs = [58 + slot, null];
             TestAssert.Equal(true, (bool)overflow!.Invoke(null, tailArgs)!);
@@ -1801,7 +1801,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
-        object?[] past = [61, null];
+        object?[] past = [62, null];
         TestAssert.Equal(false, (bool)overflow!.Invoke(null, past)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
