@@ -414,7 +414,8 @@ internal sealed partial class PptxRenderer
         // Third variation regime at eighteen-plus points (dash18/dash19 Office fills
         // agree): slots 1-6 shade at 0.78, slots 7-12 at 0.93 (maxabs 2 and 1 over 18
         // channels each) and slots 13-18 take a fixed light row (six byte-exact vectors);
-        // slots 19-22 (pale sky, dusty mauve, pistachio, lilac) are fixed with slot-23-plus on first-regime cycling fallback (cyan single sample).
+        // slots 19-22 (pale sky, dusty mauve, pistachio, lilac) are fixed with slot-23-plus on first-regime cycling fallback (cyan single sample in the 18-23 window;
+        // twenty-four-plus counts take the fourth-regime rows instead).
         public const double SingleSeriesVaryColorsThirdRegimeDarkShadeFactor = 0.78d;
         public const double SingleSeriesVaryColorsThirdRegimeMidShadeFactor = 0.93d;
         public const int SingleSeriesVaryColorsThirdRegimePointThreshold = 18;
@@ -465,6 +466,24 @@ internal sealed partial class PptxRenderer
         // (195,186,208) (dash22/dash23 Office fills agree at 0.765/0.729/0.816); slot-23
         // pale cyan is a single sample, theme dependence and 24-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot22Fill = new(195, 186, 208);
+        // Fourth variation regime at twenty-four-plus points (dash24/dash25 Office fills
+        // agree on all twenty-four vectors): slots 1-6 take a fixed dark row (six byte-exact vectors near a 0.74 shade, no pure-linear fit within 2 units);
+        // slots 7-12 shade at 0.88 (maxabs 2 over 18 channels); slots 13-18 go raw (byte-exact accents);
+        // slots 19-24 replay the first-regime fixed tail byte-exact (steel/rose/green/lavender/teal/peach);
+        // slot-25-plus falls back to first-regime cycling (periwinkle-blue single sample).
+        public const int SingleSeriesVaryColorsFourthRegimePointThreshold = 24;
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot1Fill = new(57, 96, 142);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot2Fill = new(144, 58, 56);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot3Fill = new(116, 140, 65);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot4Fill = new(95, 73, 121);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot5Fill = new(54, 129, 149);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot6Fill = new(186, 112, 50);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot19Fill = new(147, 169, 207);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot20Fill = new(209, 147, 146);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot21Fill = new(185, 205, 150);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot22Fill = new(169, 155, 189);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot23Fill = new(145, 195, 213);
+        public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot24Fill = new(249, 181, 144);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

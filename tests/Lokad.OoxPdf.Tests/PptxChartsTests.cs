@@ -1161,6 +1161,57 @@ internal static class PptxChartsTests
         object?[] past = [18, null];
         TestAssert.Equal(false, (bool)light!.Invoke(null, past)!);
     }
+    public static void PptxSyntheticFourthVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseFourthVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected fourth-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var dark = rendererType.GetMethod(
+            "TryResolveFourthRegimeDarkFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(dark is not null, "Expected fourth-regime dark row to remain inspectable by the Office evidence guard.");
+        var replay = rendererType.GetMethod(
+            "TryResolveFourthRegimeReplayFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(replay is not null, "Expected fourth-regime replay row to remain inspectable by the Office evidence guard.");
+
+        // Twenty-three points and fewer keep earlier regimes; twenty-four-plus take dark/0.88/raw/replay rows.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [23])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [24])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [25])!);
+        // Office dash24/dash25 dark row, both renders agree on all six vectors.
+        int[] darkR = [57, 144, 116, 95, 54, 186];
+        int[] darkG = [96, 58, 140, 73, 129, 112];
+        int[] darkB = [142, 56, 65, 121, 149, 50];
+        for (int slot = 0; slot < 6; slot++)
+        {
+            object?[] args = [slot, null];
+            TestAssert.Equal(true, (bool)dark!.Invoke(null, args)!);
+            TestAssert.Equal((byte)darkR[slot], (byte)rgbType!.GetProperty("Red")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)darkG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)darkB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
+        }
+        object?[] seventh = [6, null];
+        TestAssert.Equal(false, (bool)dark.Invoke(null, seventh)!);
+        // Replay row: first-regime fixed tail byte-exact across both renders, slots 19-24.
+        int[] reR = [147, 209, 185, 169, 145, 249];
+        int[] reG = [169, 147, 205, 155, 195, 181];
+        int[] reB = [207, 146, 150, 189, 213, 144];
+        for (int slot = 0; slot < 6; slot++)
+        {
+            object?[] args = [18 + slot, null];
+            TestAssert.Equal(true, (bool)replay!.Invoke(null, args)!);
+            TestAssert.Equal((byte)reR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)reG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)reB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
+        }
+        object?[] past = [24, null];
+        TestAssert.Equal(false, (bool)replay.Invoke(null, past)!);
+    }
 
     public static void PptxSyntheticSecondVaryColorsRegime()
     {

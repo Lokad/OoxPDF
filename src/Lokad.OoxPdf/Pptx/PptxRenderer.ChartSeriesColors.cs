@@ -30,6 +30,12 @@ internal sealed partial class PptxRenderer
     }
 
     // Third-regime gate: eighteen-plus points take the dark/mid/light rows.
+
+    // Fourth-regime gate: twenty-four-plus points take the dark/0.88/raw/replay rows.
+    private static bool UseFourthVaryColorsRegime(int valuePointCount)
+    {
+        return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimePointThreshold;
+    }
     private static bool UseThirdVaryColorsRegime(int valuePointCount)
     {
         return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimePointThreshold;
@@ -86,6 +92,90 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 17)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot18Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveFourthRegimeDarkFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 0)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot1Fill;
+            return true;
+        }
+
+        if (categoryIndex == 1)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot2Fill;
+            return true;
+        }
+
+        if (categoryIndex == 2)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot3Fill;
+            return true;
+        }
+
+        if (categoryIndex == 3)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot4Fill;
+            return true;
+        }
+
+        if (categoryIndex == 4)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot5Fill;
+            return true;
+        }
+
+        if (categoryIndex == 5)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot6Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
+    private static bool TryResolveFourthRegimeReplayFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 18)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot19Fill;
+            return true;
+        }
+
+        if (categoryIndex == 19)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot20Fill;
+            return true;
+        }
+
+        if (categoryIndex == 20)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot21Fill;
+            return true;
+        }
+
+        if (categoryIndex == 21)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot22Fill;
+            return true;
+        }
+
+        if (categoryIndex == 22)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot23Fill;
+            return true;
+        }
+
+        if (categoryIndex == 23)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsFourthRegimeSlot24Fill;
             return true;
         }
 
@@ -272,10 +362,33 @@ internal sealed partial class PptxRenderer
         return (byte)System.Math.Clamp((int)System.Math.Round(value * 255d, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
-    // Regime router: eighteen-plus points take dark/mid/light rows, twelve-plus points
+    // Regime router: twenty-four-plus points take dark/0.88/raw/replay rows, eighteen-plus points take dark/mid/light rows, twelve-plus points
     // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table (fixed through slot-22) and 0.88 cycling.
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
+        if (UseFourthVaryColorsRegime(valuePointCount))
+        {
+            if (TryResolveFourthRegimeDarkFill(categoryIndex, out RgbColor darkFill))
+            {
+                return darkFill;
+            }
+
+            if (categoryIndex < 12)
+            {
+                return ShadeSingleSeriesVaryColorsFill(paletteColor);
+            }
+
+            if (categoryIndex < 18)
+            {
+                return paletteColor;
+            }
+
+            if (TryResolveFourthRegimeReplayFill(categoryIndex, out RgbColor replayFill))
+            {
+                return replayFill;
+            }
+        }
+
         if (UseThirdVaryColorsRegime(valuePointCount))
         {
             if (categoryIndex < 6)
