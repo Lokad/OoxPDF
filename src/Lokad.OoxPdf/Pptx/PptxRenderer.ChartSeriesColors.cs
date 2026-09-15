@@ -489,10 +489,10 @@ internal sealed partial class PptxRenderer
             (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsShadeFactor, System.MidpointRounding.AwayFromZero));
     }
 
-    // Fixed overflow tints (dash7 through dash39 Office fills agree),
+    // Fixed overflow tints (dash7 through dash40 Office fills agree),
     // also serving as the fallback past every regime row: first-regime slots 7-10, regime-2 tail slots 13-16,
     // third-regime tail slots 19-22, fourth-regime post-replay slots 25-28, fifth-regime post-palest slots 31-34
-    // and sixth-regime post-replay slots 37-38 (dash37/dash38/dash39 agree); slot-39-plus keeps shaded cycling (lime single sample).
+    // and sixth-regime post-replay slots 37-39 (dash37 through dash40 agree); slot-40-plus keeps shaded cycling (heather single sample).
     private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 6)
@@ -624,6 +624,12 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 37)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot38Fill;
+            return true;
+        }
+
+        if (categoryIndex == 38)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot39Fill;
             return true;
         }
 
