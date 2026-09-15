@@ -1083,6 +1083,59 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, seventeenth)!);
     }
 
+    public static void PptxSyntheticThirdVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseThirdVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected third-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var dark = rendererType.GetMethod(
+            "ShadeThirdRegimeDarkSingleSeriesVaryColorsFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(dark is not null, "Expected third-regime dark shade to remain inspectable by the Office evidence guard.");
+        var mid = rendererType.GetMethod(
+            "ShadeThirdRegimeMidSingleSeriesVaryColorsFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(mid is not null, "Expected third-regime mid shade to remain inspectable by the Office evidence guard.");
+        var light = rendererType.GetMethod(
+            "TryResolveThirdRegimeLightFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(light is not null, "Expected third-regime light table to remain inspectable by the Office evidence guard.");
+
+        // Seventeen points and fewer keep earlier regimes; eighteen-plus take dark/mid/light rows.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [17])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [18])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [19])!);
+        // Office dash18/dash19 dark row at 0.78 (maxabs 2): accent1 (79,129,189) renders (62,101,147).
+        object? accent = System.Activator.CreateInstance(rgbType!, (byte)79, (byte)129, (byte)189);
+        object? darked = dark!.Invoke(null, [accent]);
+        TestAssert.Equal((byte)62, (byte)rgbType!.GetProperty("Red")!.GetValue(darked)!);
+        TestAssert.Equal((byte)101, (byte)rgbType.GetProperty("Green")!.GetValue(darked)!);
+        TestAssert.Equal((byte)147, (byte)rgbType.GetProperty("Blue")!.GetValue(darked)!);
+        // Mid row at 0.93 (maxabs 1): accent1 renders (73,120,176).
+        object? midded = mid!.Invoke(null, [accent]);
+        TestAssert.Equal((byte)73, (byte)rgbType.GetProperty("Red")!.GetValue(midded)!);
+        TestAssert.Equal((byte)120, (byte)rgbType.GetProperty("Green")!.GetValue(midded)!);
+        TestAssert.Equal((byte)176, (byte)rgbType.GetProperty("Blue")!.GetValue(midded)!);
+        // Light row fixed table, both renders agree on all six.
+        int[] wantR = [126, 202, 174, 155, 124, 248];
+        int[] wantG = [155, 126, 198, 137, 187, 170];
+        int[] wantB = [200, 125, 131, 179, 207, 121];
+        for (int slot = 0; slot < 6; slot++)
+        {
+            object?[] args = [12 + slot, null];
+            TestAssert.Equal(true, (bool)light!.Invoke(null, args)!);
+            TestAssert.Equal((byte)wantR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)wantG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)wantB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
+        }
+        object?[] past = [18, null];
+        TestAssert.Equal(false, (bool)light!.Invoke(null, past)!);
+    }
+
     public static void PptxSyntheticSecondVaryColorsRegime()
     {
         var rendererType = typeof(PptxRenderer);

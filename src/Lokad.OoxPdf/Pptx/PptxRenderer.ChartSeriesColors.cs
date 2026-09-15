@@ -29,6 +29,70 @@ internal sealed partial class PptxRenderer
         return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsSecondRegimePointThreshold;
     }
 
+    // Third-regime gate: eighteen-plus points take the dark/mid/light rows.
+    private static bool UseThirdVaryColorsRegime(int valuePointCount)
+    {
+        return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimePointThreshold;
+    }
+
+    private static RgbColor ShadeThirdRegimeDarkSingleSeriesVaryColorsFill(RgbColor color)
+    {
+        return new RgbColor(
+            (byte)System.Math.Round(color.Red * PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeDarkShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Green * PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeDarkShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeDarkShadeFactor, System.MidpointRounding.AwayFromZero));
+    }
+
+    private static RgbColor ShadeThirdRegimeMidSingleSeriesVaryColorsFill(RgbColor color)
+    {
+        return new RgbColor(
+            (byte)System.Math.Round(color.Red * PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeMidShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Green * PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeMidShadeFactor, System.MidpointRounding.AwayFromZero),
+            (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeMidShadeFactor, System.MidpointRounding.AwayFromZero));
+    }
+
+    private static bool TryResolveThirdRegimeLightFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 12)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot13Fill;
+            return true;
+        }
+
+        if (categoryIndex == 13)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot14Fill;
+            return true;
+        }
+
+        if (categoryIndex == 14)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot15Fill;
+            return true;
+        }
+
+        if (categoryIndex == 15)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot16Fill;
+            return true;
+        }
+
+        if (categoryIndex == 16)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot17Fill;
+            return true;
+        }
+
+        if (categoryIndex == 17)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirdRegimeSlot18Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
     private static RgbColor ShadeSecondRegimeSingleSeriesVaryColorsFill(RgbColor color)
     {
         return new RgbColor(
@@ -184,10 +248,28 @@ internal sealed partial class PptxRenderer
         return (byte)System.Math.Clamp((int)System.Math.Round(value * 255d, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
-    // Regime router: twelve-plus points shade slots 1-6 at 0.82 and leave slots 7-12
-    // raw; slot-13 pale teal and slot-14 dusty pink are fixed with slot-15-plus on shaded-cycling fallback.
+    // Regime router: eighteen-plus points take dark/mid/light rows, twelve-plus points
+    // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table and 0.88 cycling.
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
+        if (UseThirdVaryColorsRegime(valuePointCount))
+        {
+            if (categoryIndex < 6)
+            {
+                return ShadeThirdRegimeDarkSingleSeriesVaryColorsFill(paletteColor);
+            }
+
+            if (categoryIndex < 12)
+            {
+                return ShadeThirdRegimeMidSingleSeriesVaryColorsFill(paletteColor);
+            }
+
+            if (TryResolveThirdRegimeLightFill(categoryIndex, out RgbColor lightFill))
+            {
+                return lightFill;
+            }
+        }
+
         if (UseSecondVaryColorsRegime(valuePointCount))
         {
             if (categoryIndex < 6)

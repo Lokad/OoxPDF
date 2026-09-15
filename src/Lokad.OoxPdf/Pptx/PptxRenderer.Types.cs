@@ -411,6 +411,19 @@ internal sealed partial class PptxRenderer
         // shaded-cycling fallback (periwinkle single sample; confound noted: all probes share one frame).
         public const double SingleSeriesVaryColorsSecondRegimeShadeFactor = 0.82d;
         public const int SingleSeriesVaryColorsSecondRegimePointThreshold = 12;
+        // Third variation regime at eighteen-plus points (dash18/dash19 Office fills
+        // agree): slots 1-6 shade at 0.78, slots 7-12 at 0.93 (maxabs 2 and 1 over 18
+        // channels each) and slots 13-18 take a fixed light row (six byte-exact vectors);
+        // slot-19-plus falls back to first-regime cycling (pale-sky single sample).
+        public const double SingleSeriesVaryColorsThirdRegimeDarkShadeFactor = 0.78d;
+        public const double SingleSeriesVaryColorsThirdRegimeMidShadeFactor = 0.93d;
+        public const int SingleSeriesVaryColorsThirdRegimePointThreshold = 18;
+        public static readonly RgbColor SingleSeriesVaryColorsThirdRegimeSlot13Fill = new(126, 155, 200);
+        public static readonly RgbColor SingleSeriesVaryColorsThirdRegimeSlot14Fill = new(202, 126, 125);
+        public static readonly RgbColor SingleSeriesVaryColorsThirdRegimeSlot15Fill = new(174, 198, 131);
+        public static readonly RgbColor SingleSeriesVaryColorsThirdRegimeSlot16Fill = new(155, 137, 179);
+        public static readonly RgbColor SingleSeriesVaryColorsThirdRegimeSlot17Fill = new(124, 187, 207);
+        public static readonly RgbColor SingleSeriesVaryColorsThirdRegimeSlot18Fill = new(248, 170, 121);
         // Single-series vary-colors slot-7 overflow: Office paints the 7th point
         // light steel (147,169,207) instead of a shaded accent (dash7/dash8 Office
         // renders agree bit-identically at 0.576/0.663/0.812.)
