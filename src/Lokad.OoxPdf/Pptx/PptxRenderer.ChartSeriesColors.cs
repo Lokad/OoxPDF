@@ -1541,6 +1541,17 @@ internal sealed partial class PptxRenderer
         fill = default;
         return false;
     }
+    private static bool TryResolveThirteenthRegimeTailFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 78)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsThirteenthRegimeSlot79Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
     private static RgbColor ShadeTwelfthRegimeSecondRowSingleSeriesVaryColorsFill(RgbColor color)
     {
         return new RgbColor(
@@ -2846,6 +2857,11 @@ internal sealed partial class PptxRenderer
             if (TryResolveThirteenthRegimeFixed73Fill(categoryIndex, out RgbColor thirteenthFixed73Fill))
             {
                 return thirteenthFixed73Fill;
+            }
+
+            if (TryResolveThirteenthRegimeTailFill(categoryIndex, out RgbColor thirteenthTailFill))
+            {
+                return thirteenthTailFill;
             }
         }
         if (UseTwelfthVaryColorsRegime(valuePointCount))

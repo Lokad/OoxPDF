@@ -2141,6 +2141,18 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
+        // Fixed tail (slot 79), second sample bit-identical across dash79-dash80.
+        var tail79 = rendererType.GetMethod(
+            "TryResolveThirteenthRegimeTailFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tail79 is not null, "Expected thirteenth-regime tail table to remain inspectable by the Office evidence guard.");
+        object?[] tail79Args = [78, null];
+        TestAssert.Equal(true, (bool)tail79!.Invoke(null, tail79Args)!);
+        TestAssert.Equal((byte)208, (byte)rgbType.GetProperty("Red")!.GetValue(tail79Args[1])!);
+        TestAssert.Equal((byte)216, (byte)rgbType.GetProperty("Green")!.GetValue(tail79Args[1])!);
+        TestAssert.Equal((byte)232, (byte)rgbType.GetProperty("Blue")!.GetValue(tail79Args[1])!);
+        object?[] past79 = [79, null];
+        TestAssert.Equal(false, (bool)tail79.Invoke(null, past79)!);
         object?[] past = [78, null];
         TestAssert.Equal(false, (bool)fixed73.Invoke(null, past)!);
     }
