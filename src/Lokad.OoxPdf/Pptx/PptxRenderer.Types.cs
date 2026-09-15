@@ -785,6 +785,24 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsEleventhRegimeSlot68Fill = new(232, 207, 206);
         public static readonly RgbColor SingleSeriesVaryColorsEleventhRegimeSlot69Fill = new(221, 230, 208);
         public static readonly RgbColor SingleSeriesVaryColorsEleventhRegimeSlot70Fill = new(215, 210, 223);
+        // Twelfth variation regime at seventy-two-plus points (dash72/dash73 Office fills agree on all seventy-two vectors): slots 1-6 replay eleventh-regime slots 1-6 byte-exact; slots 7-12 and 13-18 shade at 0.73 and 0.79 (maxabs 2 each, re-verified on the independent dash73 vectors); slots 19-24, 25-30 and 31-36 reuse the 0.85, 0.90 and 0.95 shades (maxabs 2/2/1); slots 37-42 take raw accents byte-exact; slots 43-48 replay fifth-regime slots 19-24 byte-exact; slots 49-54 take a fixed row (six byte-exact vectors); slots 55-60 replay fifth-regime slots 25-30 byte-exact; slots 61-66 take a fixed row (six byte-exact vectors); slots 67-70 replay overflow slots 31-34 byte-exact; slots 71-72 take fixed tail singles (two byte-exact vectors, second-sampled in dash73); slot-73-plus falls back to overflow/0.88 cycling (slot73 new single).
+        public const int SingleSeriesVaryColorsTwelfthRegimePointThreshold = 72;
+        public const double SingleSeriesVaryColorsTwelfthRegimeSecondRowShadeFactor = 0.73d;
+        public const double SingleSeriesVaryColorsTwelfthRegimeThirdRowShadeFactor = 0.79d;
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot49Fill = new(140, 165, 204);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot50Fill = new(207, 140, 139);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot51Fill = new(181, 203, 144);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot52Fill = new(164, 149, 186);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot53Fill = new(139, 192, 211);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot54Fill = new(249, 178, 137);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot61Fill = new(178, 193, 219);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot62Fill = new(220, 179, 178);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot63Fill = new(203, 218, 181);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot64Fill = new(192, 184, 206);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot65Fill = new(177, 210, 223);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot66Fill = new(250, 201, 176);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot71Fill = new(193, 219, 229);
+        public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot72Fill = new(251, 211, 193);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
