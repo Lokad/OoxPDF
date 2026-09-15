@@ -639,12 +639,21 @@ internal sealed partial class PptxRenderer
         // content term in entry-advance range (max minus min measured advance): 9.60/14.27/18.90
         // same-entries ladder plus 13.54/14.79/14.77 content knots fit 0.813fs minus 0.0276range
         // plus 0.285 within 0.031 on all six (three spare DOF); longest/total/average forms all go
-        // non-monotonic and are killed. Top legends keep legacy constants, unobserved.
+        // non-monotonic over per-point entries and are killed there. Top legends keep legacy constants, unobserved.
         public const double LegendHorizontalTextGapFactor = 0.275d;
         public const double LegendHorizontalTextGapIntercept = -0.35d;
         public const double LegendHorizontalInterEntryGapFactor = 0.813d;
         public const double LegendHorizontalInterEntryGapRangeFactor = 0.0276d;
         public const double LegendHorizontalInterEntryGapBase = 0.285d;
+        // Per-series bottom entries (multi-series names) answer to mean advance instead:
+        // composite base/leg18/longnames/shortnames plus NSW fit 0.45fs plus 0.148avgW
+        // plus 0.195 within 0.062 on all five (two spare DOF); no range term (shortnames
+        // range 17.2 absorbed within 0.04, dedicated varied-range per-series knots unobserved).
+        // Series-tagged fill-only entries take this arm; point and stroke-key entries keep
+        // the range law above.
+        public const double LegendPerSeriesInterEntryGapBase = 0.195d;
+        public const double LegendPerSeriesInterEntryGapFontSizeFactor = 0.45d;
+        public const double LegendPerSeriesInterEntryGapMeanAdvanceFactor = 0.148d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;

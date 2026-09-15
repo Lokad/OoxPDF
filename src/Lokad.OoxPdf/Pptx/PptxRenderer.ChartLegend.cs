@@ -247,7 +247,7 @@ internal sealed partial class PptxRenderer
 
         bool emitBottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double emitTextGap = ComputeHorizontalLegendTextGap(style.FontSize, emitBottomLegend);
-        double emitEntryPadding = ComputeHorizontalLegendInterEntryGap(style.FontSize, ComputeHorizontalLegendAdvanceRange(entries, style, textMeasurer), emitBottomLegend);
+        double emitEntryPadding = ResolveHorizontalLegendInterEntryGap(style.FontSize, entries, style, textMeasurer, emitBottomLegend);
         var runs = new List<TextRun>(entries.Count);
         for (int i = 0; i < entries.Count; i++)
         {
@@ -447,7 +447,7 @@ internal sealed partial class PptxRenderer
 
         bool bottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double horizontalTextGap = ComputeHorizontalLegendTextGap(fontSize, bottomLegend);
-        double horizontalEntryPadding = ComputeHorizontalLegendInterEntryGap(fontSize, ComputeHorizontalLegendAdvanceRange(entries, style, textMeasurer), bottomLegend);
+        double horizontalEntryPadding = ResolveHorizontalLegendInterEntryGap(fontSize, entries, style, textMeasurer, bottomLegend);
         if (horizontal && bottomLegend)
         {
             textGap = horizontalTextGap;
@@ -579,6 +579,37 @@ internal sealed partial class PptxRenderer
         return bottomLegend
             ? PptxChartMetricRules.LegendHorizontalInterEntryGapFactor * fontSize - PptxChartMetricRules.LegendHorizontalInterEntryGapRangeFactor * advanceRange + PptxChartMetricRules.LegendHorizontalInterEntryGapBase
             : PptxChartMetricRules.LegendHorizontalEntryPadding;
+    }
+
+    // Per-series bottom inter answers to mean measured advance (five Office knots
+    // within 0.062); series-tagged fill-only entries take this arm so point/category
+    // and stroke-key entries keep the range law untouched.
+    private static double ResolveHorizontalLegendInterEntryGap(double fontSize, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer, bool bottomLegend)
+    {
+        if (bottomLegend && entries.Count > 0 && entries.All(entry => entry.SeriesName is not null && entry.Fill is not null && entry.Stroke is null))
+        {
+            return ComputePerSeriesHorizontalLegendInterEntryGap(fontSize, ComputeHorizontalLegendAdvanceMean(entries, style, textMeasurer));
+        }
+
+        return ComputeHorizontalLegendInterEntryGap(fontSize, ComputeHorizontalLegendAdvanceRange(entries, style, textMeasurer), bottomLegend);
+    }
+
+    // Pure per-series bottom-inter law for the reflection pin (five Office knots
+    // within 0.062 with two spare DOF).
+    private static double ComputePerSeriesHorizontalLegendInterEntryGap(double fontSize, double meanAdvance)
+    {
+        return PptxChartMetricRules.LegendPerSeriesInterEntryGapBase + PptxChartMetricRules.LegendPerSeriesInterEntryGapFontSizeFactor * fontSize + PptxChartMetricRules.LegendPerSeriesInterEntryGapMeanAdvanceFactor * meanAdvance;
+    }
+
+    private static double ComputeHorizontalLegendAdvanceMean(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
+    {
+        double totalAdvance = 0d;
+        foreach (ChartLegendEntry entry in entries)
+        {
+            totalAdvance += textMeasurer.Measure(entry.Name, style);
+        }
+
+        return entries.Count == 0 ? 0d : totalAdvance / entries.Count;
     }
 
     private static double ComputeHorizontalLegendAdvanceRange(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer)
