@@ -4500,11 +4500,11 @@ var tail = rendererType.GetMethod(
             "TryResolveTwentySecondRegimeLateSingleFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(lateSingle is not null, "Expected twenty-second-regime latesingle table to remain inspectable by the Office evidence guard.");
-        // Twenty-second-regime LateSingle (slot 131), dash132/dash133 agree bit-identical.
-        int[] lateSingleIdx = [130];
-        int[] lateSingleR = [205];
-        int[] lateSingleG = [225];
-        int[] lateSingleB = [233];
+        // Twenty-second-regime LateSingles (slot 131 dash132/dash133 agree, slot 132 dash132-136 agree quintuple).
+        int[] lateSingleIdx = [130, 131];
+        int[] lateSingleR = [205, 252];
+        int[] lateSingleG = [225, 219];
+        int[] lateSingleB = [233, 204];
         for (int slot = 0; slot < lateSingleIdx.Length; slot++)
         {
             object?[] lateSingleArgs = [lateSingleIdx[slot], null];

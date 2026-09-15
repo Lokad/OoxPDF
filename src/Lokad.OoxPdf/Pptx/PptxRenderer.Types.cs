@@ -1040,6 +1040,7 @@ internal sealed partial class PptxRenderer
         // Twenty-second variation regime at one-hundred-thirty-two-plus points (dash132/dash133 Office fills agree bit-identical on all one-hundred-thirty-two vectors; sixty-plus rows replay nineteenth/seventeenth/eighteenth/eleventh/tenth/sixth/overflow/fourth/fifth/twelfth/fourteenth rows, one late row takes a new fixed fill).
         public const int SingleSeriesVaryColorsTwentySecondRegimePointThreshold = 132;
         public static readonly RgbColor SingleSeriesVaryColorsTwentySecondRegimeSlot131Fill = new(205, 225, 233);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentySecondRegimeSlot132Fill = new(252, 219, 204);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
