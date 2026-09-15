@@ -470,7 +470,7 @@ internal sealed partial class PptxRenderer
         // agree on all twenty-four vectors): slots 1-6 take a fixed dark row (six byte-exact vectors near a 0.74 shade, no pure-linear fit within 2 units);
         // slots 7-12 shade at 0.88 (maxabs 2 over 18 channels); slots 13-18 go raw (byte-exact accents);
         // slots 19-24 replay the first-regime fixed tail byte-exact (steel/rose/green/lavender/teal/peach);
-        // slot-25-plus falls back to first-regime cycling (periwinkle-blue single sample).
+        // slot-25 periwinkle-blue is fixed with slot-26-plus on first-regime cycling fallback (rose single sample).
         public const int SingleSeriesVaryColorsFourthRegimePointThreshold = 24;
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot1Fill = new(57, 96, 142);
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot2Fill = new(144, 58, 56);
@@ -484,6 +484,10 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot22Fill = new(169, 155, 189);
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot23Fill = new(145, 195, 213);
         public static readonly RgbColor SingleSeriesVaryColorsFourthRegimeSlot24Fill = new(249, 181, 144);
+        // Post-replay fixed entry: Office paints the 25th point periwinkle-blue
+        // (188,200,223) (dash25/dash26 Office fills agree at 0.737/0.784/0.875); slot-26
+        // pale rose is a single sample, theme dependence and 27-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot25Fill = new(188, 200, 223);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
