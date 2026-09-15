@@ -407,14 +407,14 @@ internal sealed partial class PptxRenderer
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         // Second variation regime at twelve-plus points (dash12 twice plus dash13):
         // slots 1-6 shade at 0.82 (maxabs 1 over 18 channels) and slots 7-12 go raw
-        // (byte-exact accents); slot-13 pale teal, slot-14 dusty pink and slot-15 mint are fixed with slot-16-plus on
-        // shaded-cycling fallback (periwinkle single sample; confound noted: all probes share one frame).
+        // (byte-exact accents); slot-13 pale teal, slot-14 dusty pink, slot-15 mint and slot-16 periwinkle are fixed with slot-17-plus on
+        // shaded-cycling fallback (cyan single sample in the 12-17 window; eighteen-plus counts take the third-regime rows instead; confound noted: all probes share one frame).
         public const double SingleSeriesVaryColorsSecondRegimeShadeFactor = 0.82d;
         public const int SingleSeriesVaryColorsSecondRegimePointThreshold = 12;
         // Third variation regime at eighteen-plus points (dash18/dash19 Office fills
         // agree): slots 1-6 shade at 0.78, slots 7-12 at 0.93 (maxabs 2 and 1 over 18
         // channels each) and slots 13-18 take a fixed light row (six byte-exact vectors);
-        // slot-19-plus falls back to first-regime cycling (pale-sky single sample).
+        // slot-19 pale sky is fixed with slot-20-plus on first-regime cycling fallback (dusty-mauve single sample).
         public const double SingleSeriesVaryColorsThirdRegimeDarkShadeFactor = 0.78d;
         public const double SingleSeriesVaryColorsThirdRegimeMidShadeFactor = 0.93d;
         public const int SingleSeriesVaryColorsThirdRegimePointThreshold = 18;
@@ -447,13 +447,15 @@ internal sealed partial class PptxRenderer
         // (217,170,169) (dash14/dash15 Office fills agree at 0.851/0.667/0.663.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot14Fill = new(217, 170, 169);
         // Regime-2 fixed tail, third entry: Office paints the 15th point mint
-        // (198,214,172) (dash15/dash16 Office fills agree at 0.776/0.839/0.675); slot-16
-        // periwinkle is a single sample, theme dependence and 17-plus cycling unobserved).
+        // (198,214,172) (dash15/dash16 Office fills agree at 0.776/0.839/0.675.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot15Fill = new(198, 214, 172);
         // Regime-2 fixed tail, fourth entry: Office paints the 16th point periwinkle
-        // (186,176,201) (dash16/dash17 Office fills agree at 0.729/0.69/0.788); slot-17
-        // bright cyan is a single sample, theme dependence and 18-plus cycling unobserved).
+        // (186,176,201) (dash16/dash17 Office fills agree at 0.729/0.69/0.788.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot16Fill = new(186, 176, 201);
+        // Post-light-row fixed entry: Office paints the 19th point pale sky
+        // (182,195,220) (dash19/dash20 Office fills agree at 0.714/0.765/0.863); slot-20
+        // dusty mauve is a single sample, theme dependence and 21-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot19Fill = new(182, 195, 220);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

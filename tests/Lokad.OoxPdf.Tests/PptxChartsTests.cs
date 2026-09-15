@@ -1025,7 +1025,7 @@ internal static class PptxChartsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected vary-colors overflow helper to remain inspectable by the Office evidence guard.");
 
-        // Office dash7 through dash15 fills agree: slot7 light steel
+        // Office dash7 through dash20 fills agree: slot7 light steel
         // (0.576/0.663/0.812 to 147,169,207), slot8 dusty rose (0.82/0.576/0.573
         // to 209,147,146), slot9 light green (0.725/0.804/0.588 to 185,205,150),
         // slot10 lavender (0.663/0.608/0.741 to 169,155,189).
@@ -1055,8 +1055,9 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)189, (byte)rgbType.GetProperty("Blue")!.GetValue(tenth[1])!);
         // slot13 pale teal (0.667/0.729/0.843 to 170,186,215), slot14 dusty pink
         // (0.851/0.667/0.663 to 217,170,169), slot15 mint (0.776/0.839/0.675 to
-        // 198,214,172), slot16 periwinkle (0.729/0.69/0.788 to 186,176,201);
-        // slots 1-6 keep the 0.88 shade, slot-17-plus keeps shaded cycling (slot17 cyan single sample).
+        // 198,214,172), slot16 periwinkle (0.729/0.69/0.788 to 186,176,201),
+        // slot19 pale sky (0.714/0.765/0.863 to 182,195,220);
+        // slots 1-6 keep the 0.88 shade, slot-20-plus keeps shaded cycling (slot20 mauve single sample).
         object?[] eleventh = [10, null];
         TestAssert.Equal(false, (bool)method.Invoke(null, eleventh)!);
         object?[] thirteenth = [12, null];
@@ -1081,6 +1082,13 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)201, (byte)rgbType.GetProperty("Blue")!.GetValue(sixteenth[1])!);
         object?[] seventeenth = [16, null];
         TestAssert.Equal(false, (bool)method.Invoke(null, seventeenth)!);
+        object?[] nineteenth = [18, null];
+        TestAssert.Equal(true, (bool)method.Invoke(null, nineteenth)!);
+        TestAssert.Equal((byte)182, (byte)rgbType.GetProperty("Red")!.GetValue(nineteenth[1])!);
+        TestAssert.Equal((byte)195, (byte)rgbType.GetProperty("Green")!.GetValue(nineteenth[1])!);
+        TestAssert.Equal((byte)220, (byte)rgbType.GetProperty("Blue")!.GetValue(nineteenth[1])!);
+        object?[] twentieth = [19, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, twentieth)!);
     }
 
     public static void PptxSyntheticThirdVaryColorsRegime()

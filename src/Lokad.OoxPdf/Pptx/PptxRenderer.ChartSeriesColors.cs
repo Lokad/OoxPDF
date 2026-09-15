@@ -109,10 +109,10 @@ internal sealed partial class PptxRenderer
             (byte)System.Math.Round(color.Blue * PptxChartMetricRules.SingleSeriesVaryColorsShadeFactor, System.MidpointRounding.AwayFromZero));
     }
 
-    // Fixed overflow tints (dash7 through dash14 Office fills agree),
-    // also serving as the fallback past the second-regime raw window, the pale-teal
-    // slot-13 fix, the dusty-pink slot-14 fix and the mint slot-15 fix (dash14/dash15/dash16 agree);
-    // slot-16-plus keeps shaded cycling (cyan single sample).
+    // Fixed overflow tints (dash7 through dash20 Office fills agree),
+    // also serving as the fallback past the second-regime raw window and the third-regime light row: the pale-teal
+    // slot-13 fix, the dusty-pink slot-14 fix, the mint slot-15 fix and the periwinkle slot-16 fix (dash14/dash15/dash16/dash17 agree)
+    // plus the pale-sky slot-19 fix (dash19/dash20 agree); slot-20-plus keeps shaded cycling (mauve single sample).
     private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 6)
@@ -160,6 +160,12 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 15)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot16Fill;
+            return true;
+        }
+
+        if (categoryIndex == 18)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot19Fill;
             return true;
         }
 
@@ -249,7 +255,7 @@ internal sealed partial class PptxRenderer
     }
 
     // Regime router: eighteen-plus points take dark/mid/light rows, twelve-plus points
-    // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table and 0.88 cycling.
+    // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table (fixed through slot-19) and 0.88 cycling.
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
         if (UseThirdVaryColorsRegime(valuePointCount))
