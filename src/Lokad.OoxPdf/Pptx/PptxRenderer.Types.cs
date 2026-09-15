@@ -668,6 +668,45 @@ internal sealed partial class PptxRenderer
         // (212,206,220) (dash52/dash53 Office fills agree at 0.831/0.808/0.863); slot-53
         // pale sky is a single sample, theme dependence and 54-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot52Fill = new(212, 206, 220);
+        // Ninth variation regime at fifty-four-plus points (dash54/dash55 Office fills
+        // agree on all fifty-four vectors): slots 1-6 take a fixed dark row (six byte-exact vectors, no round linear fit within 2);
+        // slots 7-12, 13-18 and 19-24 shade at 0.76, 0.84 and 0.90 (maxabs 2 over 18 channels each); slots 25-30 reuse the 0.96 shade (maxabs 2);
+        // slots 31-36, 37-42 and 43-48 take fixed rows and slots 49-54 a fixed ninth row, all byte-exact;
+        // slot-55-plus falls back to first-regime cycling (periwinkle-blue single sample).
+        public const int SingleSeriesVaryColorsNinthRegimePointThreshold = 54;
+        public const double SingleSeriesVaryColorsNinthRegimeSecondRowShadeFactor = 0.76d;
+        public const double SingleSeriesVaryColorsNinthRegimeThirdRowShadeFactor = 0.84d;
+        public const double SingleSeriesVaryColorsNinthRegimeFourthRowShadeFactor = 0.90d;
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot1Fill = new(51, 86, 127);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot2Fill = new(130, 51, 49);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot3Fill = new(104, 126, 58);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot4Fill = new(85, 65, 109);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot5Fill = new(48, 116, 134);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot6Fill = new(168, 100, 45);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot31Fill = new(102, 141, 194);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot32Fill = new(197, 103, 101);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot33Fill = new(163, 192, 109);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot34Fill = new(140, 118, 170);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot35Fill = new(100, 178, 202);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot36Fill = new(247, 159, 96);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot37Fill = new(138, 163, 204);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot38Fill = new(206, 138, 137);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot39Fill = new(180, 202, 142);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot40Fill = new(163, 147, 185);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot41Fill = new(136, 192, 210);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot42Fill = new(249, 177, 134);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot43Fill = new(163, 181, 212);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot44Fill = new(214, 163, 162);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot45Fill = new(193, 211, 166);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot46Fill = new(180, 169, 197);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot47Fill = new(161, 203, 218);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot48Fill = new(250, 191, 160);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot49Fill = new(185, 198, 221);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot50Fill = new(223, 185, 184);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot51Fill = new(207, 220, 187);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot52Fill = new(197, 189, 210);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot53Fill = new(184, 214, 225);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot54Fill = new(251, 205, 183);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
