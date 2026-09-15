@@ -46,8 +46,8 @@ internal sealed partial class PptxRenderer
     }
 
     // First-regime fixed overflow tints (dash7 through dash11 Office fills agree),
-    // also serving as the fallback past the second-regime raw window (slot-13-plus,
-    // teal single sample, 13-plus otherwise unobserved).
+    // also serving as the fallback past the second-regime raw window and pale-teal
+    // slot-13 fix (dash13/dash14 agree); slot-14-plus falls back to shaded cycling
     private static bool TryResolveSingleSeriesVaryColorsOverflowFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 6)
@@ -71,6 +71,12 @@ internal sealed partial class PptxRenderer
         if (categoryIndex == 9)
         {
             fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot10Fill;
+            return true;
+        }
+
+        if (categoryIndex == 12)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsOverflowSlot13Fill;
             return true;
         }
 
@@ -160,7 +166,7 @@ internal sealed partial class PptxRenderer
     }
 
     // Regime router: twelve-plus points shade slots 1-6 at 0.82 and leave slots 7-12
-    // raw; slot-13-plus falls back to first-regime cycling (teal single sample).
+    // raw; slot-13 pale teal is fixed with slot-14-plus on shaded-cycling fallback (pink single sample).
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
         if (UseSecondVaryColorsRegime(valuePointCount))

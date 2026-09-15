@@ -433,6 +433,10 @@ internal sealed partial class PptxRenderer
         // agree at 0.663/0.608/0.741, killing shaded-accent and raw-accent rivals; slot-11
         // teal is a single sample, theme dependence and 12-plus cycling unobserved).
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot10Fill = new(169, 155, 189);
+        // Regime-2 fixed tail: Office paints the 13th point pale teal (170,186,215)
+        // (dash13/dash14 Office fills agree at 0.667/0.729/0.843); slot-14 pink is a
+        // single sample, theme dependence and 15-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot13Fill = new(170, 186, 215);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

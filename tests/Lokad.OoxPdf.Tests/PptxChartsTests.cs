@@ -1028,7 +1028,7 @@ internal static class PptxChartsTests
         // Office dash7 through dash11 fills agree: slot7 light steel
         // (0.576/0.663/0.812 to 147,169,207), slot8 dusty rose (0.82/0.576/0.573
         // to 209,147,146), slot9 light green (0.725/0.804/0.588 to 185,205,150),
-        // slot10 lavender (0.663/0.608/0.741 to 169,155,189); slots 1-6 keep the 0.88
+        // slot10 lavender (0.663/0.608/0.741 to 169,155,189).
         object?[] slot7 = [6, null];
         TestAssert.Equal(true, (bool)method!.Invoke(null, slot7)!);
         TestAssert.Equal((byte)147, (byte)rgbType!.GetProperty("Red")!.GetValue(slot7[1])!);
@@ -1053,8 +1053,17 @@ internal static class PptxChartsTests
         TestAssert.Equal((byte)169, (byte)rgbType.GetProperty("Red")!.GetValue(tenth[1])!);
         TestAssert.Equal((byte)155, (byte)rgbType.GetProperty("Green")!.GetValue(tenth[1])!);
         TestAssert.Equal((byte)189, (byte)rgbType.GetProperty("Blue")!.GetValue(tenth[1])!);
+        // slot13 pale teal (0.667/0.729/0.843 to 170,186,215); slots 1-6 keep the 0.88 shade, slot-14-plus
+        // keeps shaded cycling (slot14 pink single sample).
         object?[] eleventh = [10, null];
         TestAssert.Equal(false, (bool)method.Invoke(null, eleventh)!);
+        object?[] thirteenth = [12, null];
+        TestAssert.Equal(true, (bool)method.Invoke(null, thirteenth)!);
+        TestAssert.Equal((byte)170, (byte)rgbType.GetProperty("Red")!.GetValue(thirteenth[1])!);
+        TestAssert.Equal((byte)186, (byte)rgbType.GetProperty("Green")!.GetValue(thirteenth[1])!);
+        TestAssert.Equal((byte)215, (byte)rgbType.GetProperty("Blue")!.GetValue(thirteenth[1])!);
+        object?[] fourteenth = [13, null];
+        TestAssert.Equal(false, (bool)method.Invoke(null, fourteenth)!);
     }
 
     public static void PptxSyntheticSecondVaryColorsRegime()
