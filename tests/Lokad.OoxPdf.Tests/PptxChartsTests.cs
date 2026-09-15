@@ -2264,10 +2264,10 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
         // Tail singles (slots 83-84), second-sampled bit-identical in dash85.
-        int[] endR = [196, 251, 209];
-        int[] endG = [220, 213, 217];
-        int[] endB = [230, 196, 232];
-        for (int slot = 0; slot < 3; slot++)
+        int[] endR = [196, 251, 209, 233];
+        int[] endG = [220, 213, 217, 210];
+        int[] endB = [230, 196, 232, 209];
+        for (int slot = 0; slot < 4; slot++)
         {
             object?[] endArgs = [82 + slot, null];
             TestAssert.Equal(true, (bool)tail!.Invoke(null, endArgs)!);
@@ -2275,7 +2275,7 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)endG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(endArgs[1])!);
             TestAssert.Equal((byte)endB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(endArgs[1])!);
         }
-        object?[] past = [85, null];
+        object?[] past = [86, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
