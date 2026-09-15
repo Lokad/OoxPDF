@@ -4835,6 +4835,25 @@ var tail = rendererType.GetMethod(
         }
         object?[] twentySecondSinglePast = [135, null];
         TestAssert.Equal(false, (bool)twentySecondSingle!.Invoke(null, twentySecondSinglePast)!);
+        var midSingles = rendererType.GetMethod(
+            "TryResolveTwentyThirdRegimeMidSinglesFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(midSingles is not null, "Expected twenty-third-regime midsingles table to remain inspectable by the Office evidence guard.");
+        // Twenty-third-regime MidSingles (slots 73-78), dash138/dash139 agree bit-identical.
+        int[] midSinglesIdx = [72, 73, 74, 75, 76, 77];
+        int[] midSinglesR = [88, 194, 158, 132, 84, 247];
+        int[] midSinglesG = [133, 88, 189, 106, 174, 153];
+        int[] midSinglesB = [191, 86, 96, 165, 199, 80];
+        for (int slot = 0; slot < midSinglesIdx.Length; slot++)
+        {
+            object?[] midSinglesArgs = [midSinglesIdx[slot], null];
+            TestAssert.Equal(true, (bool)midSingles!.Invoke(null, midSinglesArgs)!);
+            TestAssert.Equal((byte)midSinglesR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(midSinglesArgs[1])!);
+            TestAssert.Equal((byte)midSinglesG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(midSinglesArgs[1])!);
+            TestAssert.Equal((byte)midSinglesB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(midSinglesArgs[1])!);
+        }
+        object?[] midSinglesPast = [71, null];
+        TestAssert.Equal(false, (bool)midSingles!.Invoke(null, midSinglesPast)!);
         // One-hundred-thirty-seven points and fewer keep earlier regimes; one-hundred-thirty-eight-plus take the twenty-third rows.
         TestAssert.Equal(false, (bool)gate!.Invoke(null, [137])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [138])!);

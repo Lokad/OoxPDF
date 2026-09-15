@@ -3358,6 +3358,48 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
+    private static bool TryResolveTwentyThirdRegimeMidSinglesFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 72)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentyThirdRegimeSlot73Fill;
+            return true;
+        }
+
+        if (categoryIndex == 73)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentyThirdRegimeSlot74Fill;
+            return true;
+        }
+
+        if (categoryIndex == 74)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentyThirdRegimeSlot75Fill;
+            return true;
+        }
+
+        if (categoryIndex == 75)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentyThirdRegimeSlot76Fill;
+            return true;
+        }
+
+        if (categoryIndex == 76)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentyThirdRegimeSlot77Fill;
+            return true;
+        }
+
+        if (categoryIndex == 77)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentyThirdRegimeSlot78Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
     private static bool TryResolveTwentyThirdRegimeSeventhSingleFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 30)
@@ -8570,6 +8612,11 @@ internal sealed partial class PptxRenderer
             if (TryResolveTwentyThirdRegimeTwentySecondSingleFill(categoryIndex, out RgbColor twentyThirdTwentySecondSingleFill))
             {
                 return twentyThirdTwentySecondSingleFill;
+            }
+
+            if (TryResolveTwentyThirdRegimeMidSinglesFill(categoryIndex, out RgbColor twentyThirdMidSinglesFill))
+            {
+                return twentyThirdMidSinglesFill;
             }
 
         }
