@@ -414,7 +414,7 @@ internal sealed partial class PptxRenderer
         // Third variation regime at eighteen-plus points (dash18/dash19 Office fills
         // agree): slots 1-6 shade at 0.78, slots 7-12 at 0.93 (maxabs 2 and 1 over 18
         // channels each) and slots 13-18 take a fixed light row (six byte-exact vectors);
-        // slots 19-21 (pale sky, dusty mauve, pistachio) are fixed with slot-22-plus on first-regime cycling fallback (lilac single sample).
+        // slots 19-22 (pale sky, dusty mauve, pistachio, lilac) are fixed with slot-23-plus on first-regime cycling fallback (cyan single sample).
         public const double SingleSeriesVaryColorsThirdRegimeDarkShadeFactor = 0.78d;
         public const double SingleSeriesVaryColorsThirdRegimeMidShadeFactor = 0.93d;
         public const int SingleSeriesVaryColorsThirdRegimePointThreshold = 18;
@@ -459,9 +459,12 @@ internal sealed partial class PptxRenderer
         // (221,182,181) (dash20/dash21 Office fills agree at 0.867/0.714/0.71.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot20Fill = new(221, 182, 181);
         // Post-light-row fixed entry, third point: Office paints the 21st point pale pistachio
-        // (205,219,184) (dash21/dash22 Office fills agree at 0.804/0.859/0.722); slot-22
-        // pale lilac is a single sample, theme dependence and 23-plus cycling unobserved).
+        // (205,219,184) (dash21/dash22 Office fills agree at 0.804/0.859/0.722.)
         public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot21Fill = new(205, 219, 184);
+        // Post-light-row fixed entry, fourth point: Office paints the 22nd point pale lilac
+        // (195,186,208) (dash22/dash23 Office fills agree at 0.765/0.729/0.816); slot-23
+        // pale cyan is a single sample, theme dependence and 24-plus cycling unobserved).
+        public static readonly RgbColor SingleSeriesVaryColorsOverflowSlot22Fill = new(195, 186, 208);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
