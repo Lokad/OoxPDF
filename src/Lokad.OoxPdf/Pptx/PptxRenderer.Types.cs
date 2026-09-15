@@ -807,7 +807,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot74Fill = new(232, 208, 208);
         public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot75Fill = new(222, 231, 209);
         public static readonly RgbColor SingleSeriesVaryColorsTwelfthRegimeSlot76Fill = new(216, 211, 224);
-        // Thirteenth variation regime at seventy-eight-plus points (dash78/dash79 Office fills agree on all seventy-eight vectors): slots 1-6 replay eleventh-regime slots 1-6 byte-exact; slots 7-12 take a fixed row (six byte-exact vectors, best round shade 0.71 at maxabs 3); slots 13-18 and 19-24 shade at 0.78 and 0.83 (maxabs 2 each, re-verified on the independent dash79 vectors); slots 25-30 reuse the 0.88 shade (maxabs 2); slots 31-36 and 37-42 shade at 0.93 and 0.98 (maxabs 1 each); slots 43-48 take a fixed row (six byte-exact vectors); slots 49-54 replay eighth-regime slots 31-36 byte-exact; slots 55-60 replay seventh-regime slots 31-36 byte-exact; slots 61-66 take a fixed row (six byte-exact vectors); slots 67-72 replay eighth-regime slots 43-48 byte-exact; slots 73-78 take a fixed row (six byte-exact vectors); slot-79-plus takes a fixed tail (two byte-exact vectors, 2/2 samples); slot-81-plus falls back to overflow/0.88 cycling (slot81 new single).
+        // Thirteenth variation regime at seventy-eight-plus points (dash78/dash79 Office fills agree on all seventy-eight vectors): slots 1-6 replay eleventh-regime slots 1-6 byte-exact; slots 7-12 take a fixed row (six byte-exact vectors, best round shade 0.71 at maxabs 3); slots 13-18 and 19-24 shade at 0.78 and 0.83 (maxabs 2 each, re-verified on the independent dash79 vectors); slots 25-30 reuse the 0.88 shade (maxabs 2); slots 31-36 and 37-42 shade at 0.93 and 0.98 (maxabs 1 each); slots 43-48 take a fixed row (six byte-exact vectors); slots 49-54 replay eighth-regime slots 31-36 byte-exact; slots 55-60 replay seventh-regime slots 31-36 byte-exact; slots 61-66 take a fixed row (six byte-exact vectors); slots 67-72 replay eighth-regime slots 43-48 byte-exact; slots 73-78 take a fixed row (six byte-exact vectors); slot-79-plus takes a fixed tail (three byte-exact vectors, 2/2/2 samples); slot-82-plus falls back to overflow/0.88 cycling (slot82 new single).
         public const int SingleSeriesVaryColorsThirteenthRegimePointThreshold = 78;
         public const double SingleSeriesVaryColorsThirteenthRegimeThirdRowShadeFactor = 0.78d;
         public const double SingleSeriesVaryColorsThirteenthRegimeFourthRowShadeFactor = 0.83d;
@@ -839,6 +839,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot78Fill = new(251, 212, 194);
         public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot79Fill = new(208, 216, 232);
         public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot80Fill = new(232, 208, 208);
+        public static readonly RgbColor SingleSeriesVaryColorsThirteenthRegimeSlot81Fill = new(222, 231, 209);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
