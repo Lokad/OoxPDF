@@ -1047,6 +1047,24 @@ internal static class PptxChartsTests
         TestAssert.Equal(false, (bool)method.Invoke(null, ninth)!);
     }
 
+    public static void PptxSyntheticNoTitleBottomLegendAnchoredTop()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var method = rendererType.GetMethod(
+            "ResolveNoTitleBottomLegendAnchoredTop",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected bottom-legend anchored top to remain inspectable by the Office evidence guard.");
+        var boxType = rendererType.GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic);
+        TestAssert.True(boxType is not null, "Expected chart frame box to remain resolvable for the anchor pin.");
+
+        // Office composite clips agree bit-identically base+tall (plot top 419.76
+        // under plus-100H downward growth); the 0.949H ratio top falls 5.1 per 100H.
+        object? baseFrame = System.Activator.CreateInstance(boxType!, 72d, 72d, 576d, 360d);
+        TestAssert.True(System.Math.Abs((double)method!.Invoke(null, [baseFrame])! - 419.76d) < 0.01d, "Expected base anchored top.");
+        object? tallFrame = System.Activator.CreateInstance(boxType!, 72d, -28d, 576d, 460d);
+        TestAssert.True(System.Math.Abs((double)method.Invoke(null, [tallFrame])! - 419.76d) < 0.01d, "Expected tall anchored top.");
+    }
+
     public static void PptxSyntheticMajorTickSegmentsScaleWithLabelSize()
     {
         var method = typeof(PptxRenderer).GetMethod(

@@ -307,7 +307,7 @@ internal sealed partial class PptxRenderer
         else if (!hasTitle && legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
         {
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarNoTitleBottomLegend);
-            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, colorMap, sceneChart, chartXml, barPlot, barChart);
+            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, colorMap, sceneChart, chartXml, barPlot, barChart, horizontalBars);
         }
         else if (horizontalBars && hasTitle && !hasLegend)
         {
@@ -1174,7 +1174,8 @@ internal sealed partial class PptxRenderer
         PptxSceneChart? sceneChart,
         XDocument chartXml,
         PptxSceneChartPlot? barPlot,
-        XElement barChart)
+        XElement barChart,
+        bool horizontalBars)
     {
         // Office keeps a content-sized bottom margin for untitled bottom-legend columns.
         // Four same-frame probes with varied fonts pin an additive plane (all within 0.06):
@@ -1188,7 +1189,20 @@ internal sealed partial class PptxRenderer
         double bottomReserve = ComputeNoTitleBottomLegendReserve(legendStyle.FontSize, tickStyle.FontSize);
         double presetTop = frame.Y + frame.Height * (PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio + PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
         double y = frame.Y + bottomReserve;
-        return new ChartPlotBox(plotBox.X, y, plotBox.Width, Math.Max(1d, presetTop - y));
+        double top = presetTop;
+        if (!horizontalBars)
+        {
+            top = System.Math.Max(top, ResolveNoTitleBottomLegendAnchoredTop(frame));
+        }
+
+        return new ChartPlotBox(plotBox.X, y, plotBox.Width, Math.Max(1d, top - y));
+    }
+
+    // Frame-top-anchored plot top for untitled bottom-legend columns: Office clips
+    // agree bit-identically base+tall, so the top answers only to the frame top edge.
+    private static double ResolveNoTitleBottomLegendAnchoredTop(ChartFrameBox frame)
+    {
+        return frame.Y + frame.Height - PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxTopInset;
     }
 
     // Regime gate for stacked value-axis reserves: the measured indent-plus-font-gap rule

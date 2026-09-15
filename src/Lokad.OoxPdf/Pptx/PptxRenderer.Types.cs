@@ -227,6 +227,11 @@ internal sealed partial class PptxRenderer
         public const double BarNoTitleBottomLegendPlotBoxYRatio = 0.213d;
         public const double BarNoTitleBottomLegendPlotBoxWidthRatio = 0.9406d;
         public const double BarNoTitleBottomLegendPlotBoxHeightRatio = 0.736d;
+        // Untitled bottom-legend plot-top anchor: Office holds the plot top fixed
+        // under downward frame growth (composite base+tall clips agree bit-identically
+        // at 419.76 with frame top 432), while the 0.949H ratio top falls 5.1 per 100H.
+        // Single-value inset with invariance proof; max-guarded so exact tops keep legacy.
+        public const double BarNoTitleBottomLegendPlotBoxTopInset = 12.24d;
         // Bottom reserve below the legend and tick rows for untitled bottom-legend columns,
         // calibrated as an additive plane over legend and tick font sizes (four same-frame
         // Office probes: 55.02, 47.77, 66.10 and 58.86; all four land within 0.06).
