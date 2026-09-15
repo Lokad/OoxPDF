@@ -707,6 +707,10 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot52Fill = new(197, 189, 210);
         public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot53Fill = new(184, 214, 225);
         public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeSlot54Fill = new(251, 205, 183);
+        // Ninth-regime +6 replay row at fifty-five-plus points (dash55 through dash58 Office fills agree): slots 55-57 replay the eighth-regime overflow singles at idx48-50 within maxabs 2 (4/3/2 samples, bit-identical repeats); dedicated consts carry the observed bytes. Slot-58-plus stays open.
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeReplaySlot55Fill = new(204, 213, 230);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeReplaySlot56Fill = new(231, 204, 204);
+        public static readonly RgbColor SingleSeriesVaryColorsNinthRegimeReplaySlot57Fill = new(219, 229, 205);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie

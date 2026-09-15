@@ -1120,6 +1120,29 @@ internal sealed partial class PptxRenderer
         fill = default;
         return false;
     }
+    private static bool TryResolveNinthRegimeReplayFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 54)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeReplaySlot55Fill;
+            return true;
+        }
+
+        if (categoryIndex == 55)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeReplaySlot56Fill;
+            return true;
+        }
+
+        if (categoryIndex == 56)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsNinthRegimeReplaySlot57Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
     private static RgbColor ShadeSecondRegimeSingleSeriesVaryColorsFill(RgbColor color)
     {
         return new RgbColor(
@@ -1468,6 +1491,11 @@ internal sealed partial class PptxRenderer
             if (TryResolveNinthRegimeNinthFill(categoryIndex, out RgbColor ninthNinthFill))
             {
                 return ninthNinthFill;
+            }
+
+            if (TryResolveNinthRegimeReplayFill(categoryIndex, out RgbColor ninthReplayFill))
+            {
+                return ninthReplayFill;
             }
         }
         if (UseEighthVaryColorsRegime(valuePointCount))

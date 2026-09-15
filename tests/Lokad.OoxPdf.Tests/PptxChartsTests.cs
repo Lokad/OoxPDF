@@ -1676,6 +1676,24 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)ninthG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
             TestAssert.Equal((byte)ninthB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
+        // +6 replay row fixed table: slots 55-57 replay eighth-regime overflow singles at idx48-50 within maxabs 2 (4/3/2 samples, bit-identical across dash55-dash58).
+        var replay = rendererType.GetMethod(
+            "TryResolveNinthRegimeReplayFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(replay is not null, "Expected ninth-regime replay table to remain inspectable by the Office evidence guard.");
+        int[] replayR = [204, 231, 219];
+        int[] replayG = [213, 204, 229];
+        int[] replayB = [230, 204, 205];
+        for (int slot = 0; slot < 3; slot++)
+        {
+            object?[] replayArgs = [54 + slot, null];
+            TestAssert.Equal(true, (bool)replay!.Invoke(null, replayArgs)!);
+            TestAssert.Equal((byte)replayR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(replayArgs[1])!);
+            TestAssert.Equal((byte)replayG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(replayArgs[1])!);
+            TestAssert.Equal((byte)replayB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(replayArgs[1])!);
+        }
+        object?[] replayPast = [57, null];
+        TestAssert.Equal(false, (bool)replay.Invoke(null, replayPast)!);
         object?[] past = [54, null];
         TestAssert.Equal(false, (bool)ninth.Invoke(null, past)!);
     }
