@@ -3567,11 +3567,11 @@ var tail = rendererType.GetMethod(
         }
         object?[] sixteenthSinglePast = [112, null];
         TestAssert.Equal(false, (bool)sixteenthSingle.Invoke(null, sixteenthSinglePast)!);
-        // Nineteenth-regime tail (slots 115-117), dash115/dash116 agree bit-identical.
-        int[] tailIdx = [114, 115, 116];
-        int[] tailR = [211, 234, 224];
-        int[] tailG = [218, 211, 232];
-        int[] tailB = [233, 211, 212];
+        // Nineteenth-regime tail (slots 115-118), dash115/dash116 agree bit-identical.
+        int[] tailIdx = [114, 115, 116, 117];
+        int[] tailR = [211, 234, 224, 218];
+        int[] tailG = [218, 211, 232, 213];
+        int[] tailB = [233, 211, 212, 226];
         for (int slot = 0; slot < tailIdx.Length; slot++)
         {
             object?[] tailArgs = [tailIdx[slot], null];
