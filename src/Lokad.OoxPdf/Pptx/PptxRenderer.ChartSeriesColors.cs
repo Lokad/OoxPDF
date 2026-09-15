@@ -3309,6 +3309,12 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        if (categoryIndex == 120)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsSixteenthRegimeSlot97Fill;
+            return true;
+        }
+
         fill = default;
         return false;
     }
