@@ -36,7 +36,7 @@ internal static class PptxTableStyleResolver
             if ((tableStyle.FirstColumn && columnIndex == 0) ||
                 (tableStyle.LastColumn && columnIndex == columnCount - 1))
             {
-                return new PptxSceneFillStyle(true, ShadeColor(accent, 0.6d), alpha);
+                return new PptxSceneFillStyle(true, LinearLightColor.ShadeTowardBlack(accent, 0.60d), alpha);
             }
 
             if (tableStyle.LastRow && rowIndex == rowCount - 1)
@@ -155,20 +155,4 @@ internal static class PptxTableStyleResolver
 
         return new PptxSceneTableCellTextStyle(color, bold);
     }
-
-    // Legacy sRGB-space shade for the unprobed DarkStyle1 firstCol/lastCol arm (Office
-    // evidence pending; band fills use LinearLightColor).
-    private static RgbColor ShadeColor(RgbColor color, double shade)
-    {
-        return new RgbColor(
-            ToByte(color.Red * shade),
-            ToByte(color.Green * shade),
-            ToByte(color.Blue * shade));
-    }
-
-    private static byte ToByte(double value)
-    {
-        return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
-    }
-
 }
