@@ -35,9 +35,9 @@ internal static class PptxTableStyleResolver
 
         if (tableStyle.Kind == PptxBuiltInTableStyleKind.DarkStyle1)
         {
-            if (tableStyle.FirstRow && rowIndex == 0 && theme.TryResolveColor("dk1", colorMap, out RgbColor dark))
+            if (tableStyle.FirstRow && rowIndex == 0)
             {
-                return new PptxSceneFillStyle(true, dark, alpha);
+                return new PptxSceneFillStyle(true, new RgbColor(0, 0, 0), alpha);
             }
 
             if ((tableStyle.FirstColumn && columnIndex == 0) ||
@@ -84,9 +84,11 @@ internal static class PptxTableStyleResolver
         {
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
+            // DarkStyle1 band fills are linear-light shades toward black (Office-calibrated
+            // exact weight 0.60 banded; unbanded rows keep the raw accent; see PLAN.md).
             RgbColor color = banded
-                ? ShadeColor(accent, 0.4d)
-                : ShadeColor(accent, 0.2d);
+                ? LinearShadeBlack(accent, 0.60d)
+                : accent;
             return new PptxSceneFillStyle(true, color, alpha);
         }
 
@@ -155,6 +157,15 @@ internal static class PptxTableStyleResolver
         double clamped = System.Math.Clamp(linear, 0d, 1d);
         double c = clamped <= 0.0031308d ? clamped * 12.92d : 1.055d * System.Math.Pow(clamped, 1d / 2.4d) - 0.055d;
         return ToByte(c * 255d);
+    }
+
+    // Linear-light shade toward black (Office-calibrated dark-band recipe).
+    private static RgbColor LinearShadeBlack(RgbColor color, double weight)
+    {
+        return new RgbColor(
+            LinearToSrgbByte(SrgbToLinear(color.Red) * weight),
+            LinearToSrgbByte(SrgbToLinear(color.Green) * weight),
+            LinearToSrgbByte(SrgbToLinear(color.Blue) * weight));
     }
 
     private static RgbColor ShadeColor(RgbColor color, double shade)

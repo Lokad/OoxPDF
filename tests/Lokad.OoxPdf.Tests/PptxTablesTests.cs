@@ -629,7 +629,7 @@ internal static class PptxTablesTests
         TestAssert.Contains("1 g", pdf);
         TestAssert.True(Regex.Matches(pdf, "0\\.2 0\\.4 0\\.6 rg").Count >= 3, "Expected header cells and first-column body cell to use the accent fill.");
         TestAssert.Contains("/GS40000F100000S gs", pdf);
-        TestAssert.Contains("0.078 0.161 0.239 rg", pdf);
+        TestAssert.Contains("0.153 0.314 0.475 rg", pdf);
     }
 
     public static void PptxSyntheticTableWrapsCellTextToColumnWidth()
