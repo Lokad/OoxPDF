@@ -60,6 +60,20 @@ internal static class PptxChartsFractionTests
             TestAssert.Equal((byte)era2G[s], (byte)rgbType!.GetProperty("Green")!.GetValue(eraArgs[2])!);
             TestAssert.Equal((byte)era2B[s], (byte)rgbType!.GetProperty("Blue")!.GetValue(eraArgs[2])!);
         }
+        // Era 3 (onset exactly at 204; dash192/dash198 bases bit-identical era2).
+        int[] era3R = [45, 116, 92, 75, 42, 150];
+        int[] era3G = [76, 45, 113, 58, 103, 89];
+        int[] era3B = [114, 43, 51, 97, 120, 39];
+        int era3N = 204;
+        for (int s = 0; s < eraIdx.Length; s++)
+        {
+            object?[] eraArgs = [eraIdx[s], era3N, null];
+            TestAssert.Equal(true, (bool)method!.Invoke(null, eraArgs)!);
+            TestAssert.Equal((byte)era3R[s], (byte)rgbType!.GetProperty("Red")!.GetValue(eraArgs[2])!);
+            TestAssert.Equal((byte)era3G[s], (byte)rgbType!.GetProperty("Green")!.GetValue(eraArgs[2])!);
+            TestAssert.Equal((byte)era3B[s], (byte)rgbType!.GetProperty("Blue")!.GetValue(eraArgs[2])!);
+        }
+
         // Spot cells where the engine reproduces the Office render bit-exactly
         // (every literal below is the Office-observed fill; engine output matched before pinning).
         int[] spotCat = [0, 26, 42, 53, 75, 1, 15, 32, 49, 59, 81, 105, 126, 4, 14, 24, 34, 50, 60, 70, 80, 90, 100, 116, 126, 136, 147, 16, 51, 63, 79, 106, 140, 0, 20, 42, 52, 62, 72, 83, 113, 137, 159, 169, 5, 51, 69, 89];

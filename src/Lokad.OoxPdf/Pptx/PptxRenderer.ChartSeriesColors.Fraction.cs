@@ -12,8 +12,8 @@ internal sealed partial class PptxRenderer
 
     private static int FractionCurveVaryColorsEra(int valuePointCount)
     {
-        // Office base anchors move at exactly two turns (132, 162); constant within eras.
-        return valuePointCount < 132 ? 0 : (valuePointCount < 162 ? 1 : 2);
+        // Office base anchors move at period-6 turns (132, 162, 204); constant within eras.
+        return valuePointCount < 132 ? 0 : (valuePointCount < 162 ? 1 : (valuePointCount < 204 ? 2 : 3));
     }
 
     // Era 0 base accents (Office-observed, constant within the era).
@@ -22,6 +22,8 @@ internal sealed partial class PptxRenderer
     private static readonly byte[] FractionCurveEra1Bases = [46, 78, 117, 119, 47, 45, 95, 116, 53, 78, 60, 100, 43, 106, 123, 155, 92, 40];
     // Era 2 base accents (Office-observed, constant within the era).
     private static readonly byte[] FractionCurveEra2Bases = [45, 77, 115, 117, 46, 44, 94, 114, 52, 77, 59, 98, 43, 105, 121, 152, 91, 40];
+    // Era 3 base accents (Office-observed at dash204; era begins exactly at 204).
+    private static readonly byte[] FractionCurveEra3Bases = [45, 76, 114, 116, 45, 43, 92, 113, 51, 75, 58, 97, 42, 103, 120, 150, 89, 39];
 
     // Accent 1 pooled fraction curve, 101 entries of R, G, B at fraction 0.00-1.00.
     private static readonly byte[] FractionCurveAccent1 = 
@@ -225,7 +227,8 @@ internal sealed partial class PptxRenderer
             {
                 0 => FractionCurveEra0Bases,
                 1 => FractionCurveEra1Bases,
-                _ => FractionCurveEra2Bases,
+                2 => FractionCurveEra2Bases,
+                _ => FractionCurveEra3Bases,
             };
             fill = new RgbColor(eraBases[accent * 3], eraBases[accent * 3 + 1], eraBases[accent * 3 + 2]);
             return true;
