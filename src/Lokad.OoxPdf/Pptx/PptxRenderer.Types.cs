@@ -1070,6 +1070,7 @@ internal sealed partial class PptxRenderer
         public const int SingleSeriesVaryColorsTwentyEighthRegimePointThreshold = 168;
         public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot169Fill = new(215, 222, 235);
         public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot170Fill = new(235, 215, 214);
+        public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot171Fill = new(227, 234, 216);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
