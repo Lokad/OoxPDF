@@ -6336,6 +6336,25 @@ var tail = rendererType.GetMethod(
         }
         object?[] lateSinglePast = [167, null];
         TestAssert.Equal(false, (bool)lateSingle!.Invoke(null, lateSinglePast)!);
+        var tail = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeTailFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tail is not null, "Expected twenty-eighth-regime tail table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Tail (slot 173), dash172/dash173 agree bit-identical.
+        int[] tailIdx = [171];
+        int[] tailR = [220];
+        int[] tailG = [216];
+        int[] tailB = [227];
+        for (int slot = 0; slot < tailIdx.Length; slot++)
+        {
+            object?[] tailArgs = [tailIdx[slot], null];
+            TestAssert.Equal(true, (bool)tail!.Invoke(null, tailArgs)!);
+            TestAssert.Equal((byte)tailR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(tailArgs[1])!);
+            TestAssert.Equal((byte)tailG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tailArgs[1])!);
+            TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
+        }
+        object?[] tailPast = [170, null];
+        TestAssert.Equal(false, (bool)tail.Invoke(null, tailPast)!);
         // One-hundred-sixty-seven points and fewer keep earlier regimes; one-hundred-sixty-eight-plus take the twenty-eighth rows.
         TestAssert.Equal(false, (bool)gate!.Invoke(null, [167])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [168])!);
