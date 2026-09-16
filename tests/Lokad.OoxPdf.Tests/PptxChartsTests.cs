@@ -6004,6 +6004,324 @@ var tail = rendererType.GetMethod(
         TestAssert.Equal(true, (bool)gate.Invoke(null, [162])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [163])!);
     }
+    public static void PptxSyntheticTwentyEighthVaryColorsRegime()
+    {
+        var rendererType = typeof(PptxRenderer);
+        var gate = rendererType.GetMethod(
+            "UseTwentyEighthVaryColorsRegime",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(gate is not null, "Expected twenty-eighth-regime gate to remain inspectable by the Office evidence guard.");
+        var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
+        TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable for the regime pin.");
+        var seventeenth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeSeventeenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(seventeenth28 is not null, "Expected twenty-eighth-regime seventeenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Seventeenth (slots 66, 84), dash168/dash169 agree bit-identical replays within 2.
+        int[] seventeenth28Idx = [65, 83];
+        int[] seventeenth28R = [225, 243];
+        int[] seventeenth28G = [136, 147];
+        int[] seventeenth28B = [63, 69];
+        for (int slot = 0; slot < seventeenth28Idx.Length; slot++)
+        {
+            object?[] seventeenth28Args = [seventeenth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)seventeenth28!.Invoke(null, seventeenth28Args)!);
+            TestAssert.Equal((byte)seventeenth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(seventeenth28Args[1])!);
+            TestAssert.Equal((byte)seventeenth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(seventeenth28Args[1])!);
+            TestAssert.Equal((byte)seventeenth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(seventeenth28Args[1])!);
+        }
+        object?[] seventeenth28Past = [64, null];
+        TestAssert.Equal(false, (bool)seventeenth28!.Invoke(null, seventeenth28Past)!);
+        var eighteenth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeEighteenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eighteenth28 is not null, "Expected twenty-eighth-regime eighteenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Eighteenth (slots 85-90, 161), dash168/dash169 agree bit-identical.
+        int[] eighteenth28Idx = [84, 85, 86, 87, 88, 89, 160];
+        int[] eighteenth28R = [79, 192, 155, 128, 75, 247, 202];
+        int[] eighteenth28G = [129, 80, 187, 100, 172, 150, 223];
+        int[] eighteenth28B = [189, 77, 89, 162, 198, 70, 232];
+        for (int slot = 0; slot < eighteenth28Idx.Length; slot++)
+        {
+            object?[] eighteenth28Args = [eighteenth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)eighteenth28!.Invoke(null, eighteenth28Args)!);
+            TestAssert.Equal((byte)eighteenth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eighteenth28Args[1])!);
+            TestAssert.Equal((byte)eighteenth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eighteenth28Args[1])!);
+            TestAssert.Equal((byte)eighteenth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eighteenth28Args[1])!);
+        }
+        object?[] eighteenth28Past = [82, null];
+        TestAssert.Equal(false, (bool)eighteenth28!.Invoke(null, eighteenth28Past)!);
+        var thirteenth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeThirteenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(thirteenth28 is not null, "Expected twenty-eighth-regime thirteenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Thirteenth (slots 91-96, 127-132, 151-156), dash168/dash169 agree bit-identical.
+        int[] thirteenth28Idx = [90, 91, 92, 93, 94, 95, 126, 127, 128, 129, 130, 131, 150, 151, 152, 153, 154, 155];
+        int[] thirteenth28R = [95, 195, 161, 136, 92, 247, 164, 215, 195, 182, 163, 250, 195, 227, 214, 206, 195, 251];
+        int[] thirteenth28G = [137, 96, 190, 112, 176, 156, 182, 165, 212, 171, 204, 192, 206, 196, 225, 199, 220, 212];
+        int[] thirteenth28B = [192, 94, 103, 167, 201, 89, 213, 164, 167, 198, 218, 162, 226, 195, 197, 216, 229, 194];
+        for (int slot = 0; slot < thirteenth28Idx.Length; slot++)
+        {
+            object?[] thirteenth28Args = [thirteenth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)thirteenth28!.Invoke(null, thirteenth28Args)!);
+            TestAssert.Equal((byte)thirteenth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(thirteenth28Args[1])!);
+            TestAssert.Equal((byte)thirteenth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(thirteenth28Args[1])!);
+            TestAssert.Equal((byte)thirteenth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(thirteenth28Args[1])!);
+        }
+        object?[] thirteenth28Past = [89, null];
+        TestAssert.Equal(false, (bool)thirteenth28!.Invoke(null, thirteenth28Past)!);
+        var twentyFirst28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeTwentyFirstFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(twentyFirst28 is not null, "Expected twenty-eighth-regime twentyfirst table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime TwentyFirst (slots 97-99, 101-102), dash168/dash169 agree bit-identical.
+        int[] twentyFirst28Idx = [96, 97, 98, 100, 101];
+        int[] twentyFirst28R = [112, 199, 167, 109, 248];
+        int[] twentyFirst28G = [147, 112, 194, 182, 163];
+        int[] twentyFirst28B = [196, 111, 118, 204, 107];
+        for (int slot = 0; slot < twentyFirst28Idx.Length; slot++)
+        {
+            object?[] twentyFirst28Args = [twentyFirst28Idx[slot], null];
+            TestAssert.Equal(true, (bool)twentyFirst28!.Invoke(null, twentyFirst28Args)!);
+            TestAssert.Equal((byte)twentyFirst28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(twentyFirst28Args[1])!);
+            TestAssert.Equal((byte)twentyFirst28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(twentyFirst28Args[1])!);
+            TestAssert.Equal((byte)twentyFirst28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(twentyFirst28Args[1])!);
+        }
+        object?[] twentyFirst28Past = [95, null];
+        TestAssert.Equal(false, (bool)twentyFirst28!.Invoke(null, twentyFirst28Past)!);
+        var fourteenthSingle = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeFourteenthSingleFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fourteenthSingle is not null, "Expected twenty-eighth-regime fourteenthsingle table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime FourteenthSingle (slot 100), dash168/dash169 agree bit-identical replays within 2.
+        int[] fourteenthSingleIdx = [99];
+        int[] fourteenthSingleR = [144];
+        int[] fourteenthSingleG = [123];
+        int[] fourteenthSingleB = [172];
+        for (int slot = 0; slot < fourteenthSingleIdx.Length; slot++)
+        {
+            object?[] fourteenthSingleArgs = [fourteenthSingleIdx[slot], null];
+            TestAssert.Equal(true, (bool)fourteenthSingle!.Invoke(null, fourteenthSingleArgs)!);
+            TestAssert.Equal((byte)fourteenthSingleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fourteenthSingleArgs[1])!);
+            TestAssert.Equal((byte)fourteenthSingleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fourteenthSingleArgs[1])!);
+            TestAssert.Equal((byte)fourteenthSingleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fourteenthSingleArgs[1])!);
+        }
+        object?[] fourteenthSinglePast = [98, null];
+        TestAssert.Equal(false, (bool)fourteenthSingle!.Invoke(null, fourteenthSinglePast)!);
+        var third28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeThirdFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(third28 is not null, "Expected twenty-eighth-regime third table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Third (slots 103-108), dash168/dash169 agree bit-identical.
+        int[] third28Idx = [102, 103, 104, 105, 106, 107];
+        int[] third28R = [126, 202, 174, 155, 124, 248];
+        int[] third28G = [155, 126, 198, 137, 187, 170];
+        int[] third28B = [200, 125, 131, 179, 207, 121];
+        for (int slot = 0; slot < third28Idx.Length; slot++)
+        {
+            object?[] third28Args = [third28Idx[slot], null];
+            TestAssert.Equal(true, (bool)third28!.Invoke(null, third28Args)!);
+            TestAssert.Equal((byte)third28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(third28Args[1])!);
+            TestAssert.Equal((byte)third28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(third28Args[1])!);
+            TestAssert.Equal((byte)third28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(third28Args[1])!);
+        }
+        object?[] third28Past = [101, null];
+        TestAssert.Equal(false, (bool)third28!.Invoke(null, third28Past)!);
+        var sixth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeSixthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(sixth28 is not null, "Expected twenty-eighth-regime sixth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Sixth (slots 109, 111-112), dash168/dash169 agree bit-identical replays within 2.
+        int[] sixth28Idx = [108, 110, 111];
+        int[] sixth28R = [133, 177, 160];
+        int[] sixth28G = [160, 201, 143];
+        int[] sixth28B = [202, 138, 182];
+        for (int slot = 0; slot < sixth28Idx.Length; slot++)
+        {
+            object?[] sixth28Args = [sixth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)sixth28!.Invoke(null, sixth28Args)!);
+            TestAssert.Equal((byte)sixth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(sixth28Args[1])!);
+            TestAssert.Equal((byte)sixth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(sixth28Args[1])!);
+            TestAssert.Equal((byte)sixth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(sixth28Args[1])!);
+        }
+        object?[] sixth28Past = [107, null];
+        TestAssert.Equal(false, (bool)sixth28!.Invoke(null, sixth28Past)!);
+        var ninth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeNinthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(ninth28 is not null, "Expected twenty-eighth-regime ninth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Ninth (slots 110, 113-114), dash168/dash169 agree bit-identical replays within 2.
+        int[] ninth28Idx = [109, 112, 113];
+        int[] ninth28R = [206, 136, 249];
+        int[] ninth28G = [138, 192, 177];
+        int[] ninth28B = [137, 210, 134];
+        for (int slot = 0; slot < ninth28Idx.Length; slot++)
+        {
+            object?[] ninth28Args = [ninth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)ninth28!.Invoke(null, ninth28Args)!);
+            TestAssert.Equal((byte)ninth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(ninth28Args[1])!);
+            TestAssert.Equal((byte)ninth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(ninth28Args[1])!);
+            TestAssert.Equal((byte)ninth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(ninth28Args[1])!);
+        }
+        object?[] ninth28Past = [108, null];
+        TestAssert.Equal(false, (bool)ninth28!.Invoke(null, ninth28Past)!);
+        var overflow28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeOverflowFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(overflow28 is not null, "Expected twenty-eighth-regime overflow table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Overflow (slots 115-118, 139-142, 145-148, 157-160), dash168/dash169 agree bit-identical.
+        int[] overflow28Idx = [114, 115, 116, 117, 138, 139, 140, 141, 144, 145, 146, 147, 156, 157, 158, 159];
+        int[] overflow28R = [147, 209, 185, 169, 182, 221, 205, 195, 188, 224, 209, 200, 203, 230, 218, 212];
+        int[] overflow28G = [169, 147, 205, 155, 195, 182, 219, 186, 200, 188, 222, 192, 212, 203, 228, 206];
+        int[] overflow28B = [207, 146, 150, 189, 220, 181, 184, 208, 223, 188, 190, 212, 229, 202, 204, 220];
+        for (int slot = 0; slot < overflow28Idx.Length; slot++)
+        {
+            object?[] overflow28Args = [overflow28Idx[slot], null];
+            TestAssert.Equal(true, (bool)overflow28!.Invoke(null, overflow28Args)!);
+            TestAssert.Equal((byte)overflow28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(overflow28Args[1])!);
+            TestAssert.Equal((byte)overflow28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(overflow28Args[1])!);
+            TestAssert.Equal((byte)overflow28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(overflow28Args[1])!);
+        }
+        object?[] overflow28Past = [113, null];
+        TestAssert.Equal(false, (bool)overflow28!.Invoke(null, overflow28Past)!);
+        var fourth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeFourthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(fourth28 is not null, "Expected twenty-eighth-regime fourth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Fourth (slots 119-120), dash168/dash169 agree bit-identical.
+        int[] fourth28Idx = [118, 119];
+        int[] fourth28R = [145, 249];
+        int[] fourth28G = [195, 181];
+        int[] fourth28B = [213, 144];
+        for (int slot = 0; slot < fourth28Idx.Length; slot++)
+        {
+            object?[] fourth28Args = [fourth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)fourth28!.Invoke(null, fourth28Args)!);
+            TestAssert.Equal((byte)fourth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(fourth28Args[1])!);
+            TestAssert.Equal((byte)fourth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(fourth28Args[1])!);
+            TestAssert.Equal((byte)fourth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(fourth28Args[1])!);
+        }
+        object?[] fourth28Past = [117, null];
+        TestAssert.Equal(false, (bool)fourth28!.Invoke(null, fourth28Past)!);
+        var eighth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeEighthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eighth28 is not null, "Expected twenty-eighth-regime eighth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Eighth (slots 121-126, 143-144), dash168/dash169 agree bit-identical.
+        int[] eighth28Idx = [120, 121, 122, 123, 124, 125, 142, 143];
+        int[] eighth28R = [157, 212, 190, 176, 156, 249, 181, 250];
+        int[] eighth28G = [177, 157, 209, 164, 200, 187, 212, 203];
+        int[] eighth28B = [210, 156, 160, 194, 216, 154, 224, 180];
+        for (int slot = 0; slot < eighth28Idx.Length; slot++)
+        {
+            object?[] eighth28Args = [eighth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)eighth28!.Invoke(null, eighth28Args)!);
+            TestAssert.Equal((byte)eighth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eighth28Args[1])!);
+            TestAssert.Equal((byte)eighth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eighth28Args[1])!);
+            TestAssert.Equal((byte)eighth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eighth28Args[1])!);
+        }
+        object?[] eighth28Past = [119, null];
+        TestAssert.Equal(false, (bool)eighth28!.Invoke(null, eighth28Past)!);
+        var eleventh28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeEleventhFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(eleventh28 is not null, "Expected twenty-eighth-regime eleventh table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Eleventh (slots 133-138), dash168/dash169 agree bit-identical.
+        int[] eleventh28Idx = [132, 133, 134, 135, 136, 137];
+        int[] eleventh28R = [173, 218, 200, 189, 172, 250];
+        int[] eleventh28G = [189, 173, 215, 179, 208, 198];
+        int[] eleventh28B = [217, 173, 176, 203, 221, 171];
+        for (int slot = 0; slot < eleventh28Idx.Length; slot++)
+        {
+            object?[] eleventh28Args = [eleventh28Idx[slot], null];
+            TestAssert.Equal(true, (bool)eleventh28!.Invoke(null, eleventh28Args)!);
+            TestAssert.Equal((byte)eleventh28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(eleventh28Args[1])!);
+            TestAssert.Equal((byte)eleventh28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(eleventh28Args[1])!);
+            TestAssert.Equal((byte)eleventh28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(eleventh28Args[1])!);
+        }
+        object?[] eleventh28Past = [125, null];
+        TestAssert.Equal(false, (bool)eleventh28!.Invoke(null, eleventh28Past)!);
+        var twelfth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeTwelfthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(twelfth28 is not null, "Expected twenty-eighth-regime twelfth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Twelfth (slots 163-166), dash168/dash169 agree bit-identical.
+        int[] twelfth28Idx = [162, 163, 164, 165];
+        int[] twelfth28R = [208, 232, 222, 216];
+        int[] twelfth28G = [216, 208, 231, 211];
+        int[] twelfth28B = [232, 208, 209, 224];
+        for (int slot = 0; slot < twelfth28Idx.Length; slot++)
+        {
+            object?[] twelfth28Args = [twelfth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)twelfth28!.Invoke(null, twelfth28Args)!);
+            TestAssert.Equal((byte)twelfth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(twelfth28Args[1])!);
+            TestAssert.Equal((byte)twelfth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(twelfth28Args[1])!);
+            TestAssert.Equal((byte)twelfth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(twelfth28Args[1])!);
+        }
+        object?[] twelfth28Past = [131, null];
+        TestAssert.Equal(false, (bool)twelfth28!.Invoke(null, twelfth28Past)!);
+        var sixteenthSingle = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeSixteenthSingleFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(sixteenthSingle is not null, "Expected twenty-eighth-regime sixteenthsingle table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime SixteenthSingle (slot 162), dash168/dash169 agree bit-identical replays within 2.
+        int[] sixteenthSingleIdx = [161];
+        int[] sixteenthSingleR = [251];
+        int[] sixteenthSingleG = [215];
+        int[] sixteenthSingleB = [199];
+        for (int slot = 0; slot < sixteenthSingleIdx.Length; slot++)
+        {
+            object?[] sixteenthSingleArgs = [sixteenthSingleIdx[slot], null];
+            TestAssert.Equal(true, (bool)sixteenthSingle!.Invoke(null, sixteenthSingleArgs)!);
+            TestAssert.Equal((byte)sixteenthSingleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(sixteenthSingleArgs[1])!);
+            TestAssert.Equal((byte)sixteenthSingleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(sixteenthSingleArgs[1])!);
+            TestAssert.Equal((byte)sixteenthSingleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(sixteenthSingleArgs[1])!);
+        }
+        object?[] sixteenthSinglePast = [147, null];
+        TestAssert.Equal(false, (bool)sixteenthSingle!.Invoke(null, sixteenthSinglePast)!);
+        var tenth28 = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeTenthFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(tenth28 is not null, "Expected twenty-eighth-regime tenth table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime Tenth (slots 149-150), dash168/dash169 agree bit-identical.
+        int[] tenth28Idx = [148, 149];
+        int[] tenth28R = [187, 251];
+        int[] tenth28G = [215, 207];
+        int[] tenth28B = [227, 186];
+        for (int slot = 0; slot < tenth28Idx.Length; slot++)
+        {
+            object?[] tenth28Args = [tenth28Idx[slot], null];
+            TestAssert.Equal(true, (bool)tenth28!.Invoke(null, tenth28Args)!);
+            TestAssert.Equal((byte)tenth28R[slot], (byte)rgbType.GetProperty("Red")!.GetValue(tenth28Args[1])!);
+            TestAssert.Equal((byte)tenth28G[slot], (byte)rgbType.GetProperty("Green")!.GetValue(tenth28Args[1])!);
+            TestAssert.Equal((byte)tenth28B[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tenth28Args[1])!);
+        }
+        object?[] tenth28Past = [147, null];
+        TestAssert.Equal(false, (bool)tenth28!.Invoke(null, tenth28Past)!);
+        var twentySixthSingle = rendererType.GetMethod(
+            "TryResolveTwentyEighthRegimeTwentySixthSingleFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(twentySixthSingle is not null, "Expected twenty-eighth-regime twentysixthsingle table to remain inspectable by the Office evidence guard.");
+        // Twenty-eighth-regime TwentySixthSingle (slot 167), dash168/dash169 agree bit-identical.
+        int[] twentySixthSingleIdx = [166];
+        int[] twentySixthSingleR = [208];
+        int[] twentySixthSingleG = [227];
+        int[] twentySixthSingleB = [234];
+        for (int slot = 0; slot < twentySixthSingleIdx.Length; slot++)
+        {
+            object?[] twentySixthSingleArgs = [twentySixthSingleIdx[slot], null];
+            TestAssert.Equal(true, (bool)twentySixthSingle!.Invoke(null, twentySixthSingleArgs)!);
+            TestAssert.Equal((byte)twentySixthSingleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(twentySixthSingleArgs[1])!);
+            TestAssert.Equal((byte)twentySixthSingleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(twentySixthSingleArgs[1])!);
+            TestAssert.Equal((byte)twentySixthSingleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(twentySixthSingleArgs[1])!);
+        }
+        object?[] twentySixthSinglePast = [165, null];
+        TestAssert.Equal(false, (bool)twentySixthSingle!.Invoke(null, twentySixthSinglePast)!);
+        // One-hundred-sixty-seven points and fewer keep earlier regimes; one-hundred-sixty-eight-plus take the twenty-eighth rows.
+        TestAssert.Equal(false, (bool)gate!.Invoke(null, [167])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [168])!);
+        TestAssert.Equal(true, (bool)gate.Invoke(null, [169])!);
+    }
     public static void PptxSyntheticSecondVaryColorsRegime()
     {
         var rendererType = typeof(PptxRenderer);
