@@ -5422,11 +5422,11 @@ var tail = rendererType.GetMethod(
             "TryResolveTwentyFifthRegimeTailFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(tail is not null, "Expected twenty-fifth-regime tail table to remain inspectable by the Office evidence guard.");
-        // Twenty-fifth-regime Tail (slot 152), dash151/dash152 agree bit-identical.
-        int[] tailIdx = [150];
-        int[] tailR = [211];
-        int[] tailG = [218];
-        int[] tailB = [233];
+        // Twenty-fifth-regime Tail (slots 152-153), dash151/dash152 and dash152/dash153 agree bit-identical.
+        int[] tailIdx = [150, 151];
+        int[] tailR = [211, 234];
+        int[] tailG = [218, 211];
+        int[] tailB = [233, 211];
         for (int slot = 0; slot < tailIdx.Length; slot++)
         {
             object?[] tailArgs = [tailIdx[slot], null];
@@ -5437,6 +5437,8 @@ var tail = rendererType.GetMethod(
         }
         object?[] tailPast = [149, null];
         TestAssert.Equal(false, (bool)tail.Invoke(null, tailPast)!);
+        object?[] tailFuture = [152, null];
+        TestAssert.Equal(false, (bool)tail.Invoke(null, tailFuture)!);
         // One-hundred-forty-nine points and fewer keep earlier regimes; one-hundred-fifty-plus take the twenty-fifth rows.
         TestAssert.Equal(false, (bool)gate!.Invoke(null, [149])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [150])!);
