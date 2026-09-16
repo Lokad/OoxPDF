@@ -80,8 +80,8 @@ internal static class PptxTableStyleResolver
             // MediumStyle2 band fills are linear-light tints toward white (Office-calibrated
             // exact weights 0.60 banded / 0.80 unbanded; see PLAN.md).
             RgbColor color = banded
-                ? LinearTintWhite(accent, 0.60d)
-                : LinearTintWhite(accent, 0.80d);
+                ? LinearLightColor.TintTowardWhite(accent, 0.60d)
+                : LinearLightColor.TintTowardWhite(accent, 0.80d);
             return new PptxSceneFillStyle(true, color, alpha);
         }
 
@@ -92,7 +92,7 @@ internal static class PptxTableStyleResolver
             // DarkStyle1 band fills are linear-light shades toward black (Office-calibrated
             // exact weight 0.60 banded; unbanded rows keep the raw accent; see PLAN.md).
             RgbColor color = banded
-                ? LinearShadeBlack(accent, 0.60d)
+                ? LinearLightColor.ShadeTowardBlack(accent, 0.60d)
                 : accent;
             return new PptxSceneFillStyle(true, color, alpha);
         }
@@ -146,37 +146,8 @@ internal static class PptxTableStyleResolver
         return new PptxSceneTableCellTextStyle(color, bold);
     }
 
-    // Linear-light tint toward white (Office-calibrated table band recipe).
-    private static RgbColor LinearTintWhite(RgbColor color, double weight)
-    {
-        return new RgbColor(
-            LinearToSrgbByte(SrgbToLinear(color.Red) + (1d - SrgbToLinear(color.Red)) * weight),
-            LinearToSrgbByte(SrgbToLinear(color.Green) + (1d - SrgbToLinear(color.Green)) * weight),
-            LinearToSrgbByte(SrgbToLinear(color.Blue) + (1d - SrgbToLinear(color.Blue)) * weight));
-    }
-
-    private static double SrgbToLinear(byte channel)
-    {
-        double c = channel / 255d;
-        return c <= 0.04045d ? c / 12.92d : System.Math.Pow((c + 0.055d) / 1.055d, 2.4d);
-    }
-
-    private static byte LinearToSrgbByte(double linear)
-    {
-        double clamped = System.Math.Clamp(linear, 0d, 1d);
-        double c = clamped <= 0.0031308d ? clamped * 12.92d : 1.055d * System.Math.Pow(clamped, 1d / 2.4d) - 0.055d;
-        return ToByte(c * 255d);
-    }
-
-    // Linear-light shade toward black (Office-calibrated dark-band recipe).
-    private static RgbColor LinearShadeBlack(RgbColor color, double weight)
-    {
-        return new RgbColor(
-            LinearToSrgbByte(SrgbToLinear(color.Red) * weight),
-            LinearToSrgbByte(SrgbToLinear(color.Green) * weight),
-            LinearToSrgbByte(SrgbToLinear(color.Blue) * weight));
-    }
-
+    // Legacy sRGB-space shade for the unprobed DarkStyle1 firstCol/lastCol arm (Office
+    // evidence pending; band fills use LinearLightColor).
     private static RgbColor ShadeColor(RgbColor color, double shade)
     {
         return new RgbColor(
@@ -185,52 +156,9 @@ internal static class PptxTableStyleResolver
             ToByte(color.Blue * shade));
     }
 
-    private static RgbColor TintColor(RgbColor color, double tint)
-    {
-        return new RgbColor(
-            ToByte(color.Red + (255d - color.Red) * tint),
-            ToByte(color.Green + (255d - color.Green) * tint),
-            ToByte(color.Blue + (255d - color.Blue) * tint));
-    }
-
     private static byte ToByte(double value)
     {
         return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
-    }
-
-    private static (double Hue, double Saturation, double Luminance) ToHsl(RgbColor color)
-    {
-        double red = color.Red / 255d;
-        double green = color.Green / 255d;
-        double blue = color.Blue / 255d;
-        double max = Math.Max(red, Math.Max(green, blue));
-        double min = Math.Min(red, Math.Min(green, blue));
-        double delta = max - min;
-        double luminance = (max + min) / 2d;
-        double saturation = delta == 0d ? 0d : delta / (1d - Math.Abs(2d * luminance - 1d));
-        double hue = 0d;
-        if (delta != 0d)
-        {
-            if (max == red)
-            {
-                hue = 60d * (((green - blue) / delta) % 6d);
-            }
-            else if (max == green)
-            {
-                hue = 60d * ((blue - red) / delta + 2d);
-            }
-            else
-            {
-                hue = 60d * ((red - green) / delta + 4d);
-            }
-
-            if (hue < 0d)
-            {
-                hue += 360d;
-            }
-        }
-
-        return (hue, saturation, luminance);
     }
 
 }
