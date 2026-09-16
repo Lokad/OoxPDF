@@ -72,9 +72,11 @@ internal static class PptxTableStyleResolver
         {
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
+            // MediumStyle2 band fills are linear-light tints toward white (Office-calibrated
+            // exact weights 0.60 banded / 0.80 unbanded; see PLAN.md).
             RgbColor color = banded
-                ? TintOfficeTableAccent(accent, 0.71d, 0.75d)
-                : TintOfficeTableAccent(accent, 0.86d, 0.75d);
+                ? LinearTintWhite(accent, 0.60d)
+                : LinearTintWhite(accent, 0.80d);
             return new PptxSceneFillStyle(true, color, alpha);
         }
 
@@ -133,39 +135,26 @@ internal static class PptxTableStyleResolver
         return new PptxSceneTableCellTextStyle(color, bold);
     }
 
-    private static RgbColor TintColor(RgbColor color, double tint)
+    // Linear-light tint toward white (Office-calibrated table band recipe).
+    private static RgbColor LinearTintWhite(RgbColor color, double weight)
     {
         return new RgbColor(
-            ToByte(color.Red + (255d - color.Red) * tint),
-            ToByte(color.Green + (255d - color.Green) * tint),
-            ToByte(color.Blue + (255d - color.Blue) * tint));
+            LinearToSrgbByte(SrgbToLinear(color.Red) + (1d - SrgbToLinear(color.Red)) * weight),
+            LinearToSrgbByte(SrgbToLinear(color.Green) + (1d - SrgbToLinear(color.Green)) * weight),
+            LinearToSrgbByte(SrgbToLinear(color.Blue) + (1d - SrgbToLinear(color.Blue)) * weight));
     }
 
-    private static RgbColor TintOfficeTableAccent(RgbColor color, double tint, double saturationFactor)
+    private static double SrgbToLinear(byte channel)
     {
-        (double hue, double saturation, double luminance) = ToHsl(color);
-        double tintedLuminance = luminance + (1d - luminance) * tint;
-        return FromHsl(hue, saturation * saturationFactor, tintedLuminance);
+        double c = channel / 255d;
+        return c <= 0.04045d ? c / 12.92d : System.Math.Pow((c + 0.055d) / 1.055d, 2.4d);
+    }
 
-        RgbColor FromHsl(double hue, double saturation, double luminance)
-        {
-            saturation = Math.Clamp(saturation, 0d, 1d);
-            luminance = Math.Clamp(luminance, 0d, 1d);
-            double chroma = (1d - Math.Abs(2d * luminance - 1d)) * saturation;
-            double segment = hue / 60d;
-            double second = chroma * (1d - Math.Abs(segment % 2d - 1d));
-            (double red, double green, double blue) = segment switch
-            {
-                >= 0d and < 1d => (chroma, second, 0d),
-                >= 1d and < 2d => (second, chroma, 0d),
-                >= 2d and < 3d => (0d, chroma, second),
-                >= 3d and < 4d => (0d, second, chroma),
-                >= 4d and < 5d => (second, 0d, chroma),
-                _ => (chroma, 0d, second)
-            };
-            double match = luminance - chroma / 2d;
-            return new RgbColor(ToByte((red + match) * 255d), ToByte((green + match) * 255d), ToByte((blue + match) * 255d));
-        }
+    private static byte LinearToSrgbByte(double linear)
+    {
+        double clamped = System.Math.Clamp(linear, 0d, 1d);
+        double c = clamped <= 0.0031308d ? clamped * 12.92d : 1.055d * System.Math.Pow(clamped, 1d / 2.4d) - 0.055d;
+        return ToByte(c * 255d);
     }
 
     private static RgbColor ShadeColor(RgbColor color, double shade)
@@ -174,6 +163,14 @@ internal static class PptxTableStyleResolver
             ToByte(color.Red * shade),
             ToByte(color.Green * shade),
             ToByte(color.Blue * shade));
+    }
+
+    private static RgbColor TintColor(RgbColor color, double tint)
+    {
+        return new RgbColor(
+            ToByte(color.Red + (255d - color.Red) * tint),
+            ToByte(color.Green + (255d - color.Green) * tint),
+            ToByte(color.Blue + (255d - color.Blue) * tint));
     }
 
     private static byte ToByte(double value)

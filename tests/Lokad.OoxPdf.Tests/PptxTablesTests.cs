@@ -624,8 +624,8 @@ internal static class PptxTablesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
-        TestAssert.Contains("0.761 0.827 0.89 rg", pdf);
-        TestAssert.Contains("0.886 0.918 0.949 rg", pdf);
+        TestAssert.Contains("0.804 0.827 0.871 rg", pdf);
+        TestAssert.Contains("0.91 0.918 0.937 rg", pdf);
         TestAssert.Contains("1 g", pdf);
         TestAssert.True(Regex.Matches(pdf, "0\\.2 0\\.4 0\\.6 rg").Count >= 3, "Expected header cells and first-column body cell to use the accent fill.");
         TestAssert.Contains("/GS40000F100000S gs", pdf);
