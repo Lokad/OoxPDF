@@ -26,13 +26,6 @@ internal static class PptxTableStyleResolver
             return new PptxSceneFillStyle(true, accent, alpha);
         }
 
-        if (tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1 &&
-            tableStyle.FirstRow &&
-            rowIndex == 0)
-        {
-            return new PptxSceneFillStyle(true, accent, alpha);
-        }
-
         if (tableStyle.Kind == PptxBuiltInTableStyleKind.DarkStyle1)
         {
             if (tableStyle.FirstRow && rowIndex == 0)
@@ -52,12 +45,24 @@ internal static class PptxTableStyleResolver
             }
         }
 
+        // LightStyle1 firstRow fills only without bandRow: with bandRow the Office header
+        // stays unfilled (dashboard probe); firstRow-only keeps the legacy accent fill.
+        if (tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1 &&
+            tableStyle.FirstRow &&
+            !tableStyle.BandRow &&
+            rowIndex == 0)
+        {
+            return new PptxSceneFillStyle(true, accent, alpha);
+        }
+
         int bodyRowIndex = rowIndex - (tableStyle.FirstRow ? 1 : 0);
         if (tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1)
         {
+            // LightStyle1 banded rows keep the raw accent (Office-calibrated: no alpha
+            // wash and no firstRow fill; see PLAN.md).
             if (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0)
             {
-                return new PptxSceneFillStyle(true, accent, 0.4d);
+                return new PptxSceneFillStyle(true, accent, alpha);
             }
 
             if (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0)
@@ -115,8 +120,12 @@ internal static class PptxTableStyleResolver
         bool lastCol = tableStyle.LastColumn &&
             columnCount > 0 &&
             columnIndex == columnCount - 1;
+        // With bandRow the LightStyle1 header stays unfilled, so firstRow text stays dark
+        // like the body (Office-calibrated: black header text); filled headers (Medium/Dark,
+        // and LightStyle1 firstRow-only) keep white text.
         if (supportedStyle &&
             firstRow &&
+            !(tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1 && tableStyle.BandRow) &&
             theme.TryResolveColor("lt1", colorMap, out RgbColor firstRowColor))
         {
             color = firstRowColor;
