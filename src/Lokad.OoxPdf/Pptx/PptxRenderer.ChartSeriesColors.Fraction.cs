@@ -3,12 +3,12 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     // Fraction-curve varyColors engine (recipe spike, slice A: standalone, no behavior change).
-    // Validated range: 120-plus points, single-series vertical bar/column varyColors fills.
+    // Validated range: 96-plus points, single-series vertical bar/column varyColors fills.
     // accent = categoryIndex % 6, level = categoryIndex / 6, cap = valuePointCount / 6,
     // fraction = level / cap; level 0 takes the era base, higher levels interpolate
     // the pooled Office fraction curves below (0.01 grid, byte triples).
     // Held-out-turn validation: worst 3, mean about 1 (see PLAN.md).
-    private const int FractionCurveVaryColorsPointThreshold = 120;
+    private const int FractionCurveVaryColorsPointThreshold = 96;
 
     private static int FractionCurveVaryColorsEra(int valuePointCount)
     {

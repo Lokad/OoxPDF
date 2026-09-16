@@ -13,11 +13,17 @@ internal static class PptxChartsFractionTests
         TestAssert.True(method is not null, "Expected fraction-curve engine to remain inspectable.");
         var rgbType = rendererType.Assembly.GetType("Lokad.OoxPdf.Pptx.RgbColor");
         TestAssert.True(rgbType is not null, "Expected RgbColor to remain resolvable.");
-        // Gate: below the 120-point validated range the engine stays out (ladder keeps those counts).
-        foreach (int count in new[] { 0, 6, 60, 114, 119 })
+        // Gate: below the 96-point validated range the engine stays out (ladder keeps those counts).
+        foreach (int count in new[] { 0, 6, 60, 90 })
         {
             object?[] pastArgs = [5, count, null];
             TestAssert.Equal(false, (bool)method!.Invoke(null, pastArgs)!);
+        // Gate: the 96-point floor takes the engine (end-to-end proven 96-119).
+        foreach (int floorCount in new[] { 96, 114, 119 })
+        {
+            object?[] floorArgs = [5, floorCount, null];
+            TestAssert.Equal(true, (bool)method!.Invoke(null, floorArgs)!);
+        }
         }
         // Era bases (Office-observed, constant within each era).
         int[] eraIdx = [0, 1, 2, 3, 4, 5];
