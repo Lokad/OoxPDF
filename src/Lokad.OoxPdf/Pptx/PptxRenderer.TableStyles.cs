@@ -132,6 +132,16 @@ internal static class PptxTableStyleResolver
             bold = true;
         }
 
+        // DarkStyle1 body text stays light on the dark fills (Office-calibrated: white
+        // unstyled text on banded and unbanded body rows; see PLAN.md).
+        if (color is null &&
+            supportedStyle &&
+            tableStyle.Kind == PptxBuiltInTableStyleKind.DarkStyle1 &&
+            theme.TryResolveColor("lt1", colorMap, out RgbColor darkBodyColor))
+        {
+            color = darkBodyColor;
+        }
+
         if (supportedStyle && (firstCol || lastRow || lastCol))
         {
             bold = true;
