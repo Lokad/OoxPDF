@@ -5942,6 +5942,25 @@ var tail = rendererType.GetMethod(
         }
         object?[] twentySixthSinglePast = [159, null];
         TestAssert.Equal(false, (bool)twentySixthSingle!.Invoke(null, twentySixthSinglePast)!);
+        var earlySingle = rendererType.GetMethod(
+            "TryResolveTwentySeventhRegimeEarlySingleFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(earlySingle is not null, "Expected twenty-seventh-regime earlysingle table to remain inspectable by the Office evidence guard.");
+        // Twenty-seventh-regime EarlySingle (slot 6), dash162/dash163 agree bit-identical.
+        int[] earlySingleIdx = [5];
+        int[] earlySingleR = [152];
+        int[] earlySingleG = [91];
+        int[] earlySingleB = [40];
+        for (int slot = 0; slot < earlySingleIdx.Length; slot++)
+        {
+            object?[] earlySingleArgs = [earlySingleIdx[slot], null];
+            TestAssert.Equal(true, (bool)earlySingle!.Invoke(null, earlySingleArgs)!);
+            TestAssert.Equal((byte)earlySingleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(earlySingleArgs[1])!);
+            TestAssert.Equal((byte)earlySingleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(earlySingleArgs[1])!);
+            TestAssert.Equal((byte)earlySingleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(earlySingleArgs[1])!);
+        }
+        object?[] earlySinglePast = [4, null];
+        TestAssert.Equal(false, (bool)earlySingle!.Invoke(null, earlySinglePast)!);
         // One-hundred-sixty-one points and fewer keep earlier regimes; one-hundred-sixty-two-plus take the twenty-seventh rows.
         TestAssert.Equal(false, (bool)gate!.Invoke(null, [161])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [162])!);

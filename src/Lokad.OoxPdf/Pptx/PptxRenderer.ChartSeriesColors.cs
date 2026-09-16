@@ -3560,6 +3560,18 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
+    private static bool TryResolveTwentySeventhRegimeEarlySingleFill(int categoryIndex, out RgbColor fill)
+    {
+        if (categoryIndex == 5)
+        {
+            fill = PptxChartMetricRules.SingleSeriesVaryColorsTwentySeventhRegimeSlot6Fill;
+            return true;
+        }
+
+        fill = default;
+        return false;
+    }
+
     private static bool TryResolveTwentySeventhRegimeSeventeenthFill(int categoryIndex, out RgbColor fill)
     {
         if (categoryIndex == 31)
@@ -11089,6 +11101,11 @@ internal sealed partial class PptxRenderer
             if (TryResolveTwentySeventhRegimeTwentySixthSingleFill(categoryIndex, out RgbColor twentySeventhTwentySixthSingleFill))
             {
                 return twentySeventhTwentySixthSingleFill;
+            }
+
+            if (TryResolveTwentySeventhRegimeEarlySingleFill(categoryIndex, out RgbColor twentySeventhEarlySingleFill))
+            {
+                return twentySeventhEarlySingleFill;
             }
 
         }
