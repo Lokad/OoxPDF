@@ -12371,6 +12371,15 @@ internal sealed partial class PptxRenderer
     // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table (fixed through slot-22) and 0.88 cycling.
     private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
     {
+        // Fraction-curve engine takes precedence at 120-plus points (recipe refactor slice B);
+        // the twentieth-to-twenty-ninth regime rows below are now unreachable and pending
+        // deletion, while earlier regimes keep serving counts under 120.
+        if (valuePointCount >= FractionCurveVaryColorsPointThreshold
+            && TryResolveFractionCurveVaryColorsFill(categoryIndex, valuePointCount, out RgbColor fractionCurveFill))
+        {
+            return fractionCurveFill;
+        }
+
         if (UseTwentyNinthVaryColorsRegime(valuePointCount))
         {
             if (TryResolveTwentyNinthRegimeNineteenthSingleFill(categoryIndex, out RgbColor twentyNinthNineteenthSingleFill))
