@@ -1016,64 +1016,6 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsNineteenthRegimeSlot46Fill = new(117, 91, 149);
         public static readonly RgbColor SingleSeriesVaryColorsNineteenthRegimeSlot48Fill = new(228, 138, 64);
         public static readonly RgbColor SingleSeriesVaryColorsNineteenthRegimeSlot54Fill = new(236, 143, 66);
-        // Twentieth variation regime at one-hundred-twenty-plus points (dash120/dash121 Office fills agree bit-identical on all one-hundred-twenty vectors; sixty-plus rows replay seventh/seventeenth/eighteenth/ninth/fifteenth/eleventh/fourth/overflow/twelfth rows, nine early rows take new fixed fills).
-        public const int SingleSeriesVaryColorsTwentiethRegimePointThreshold = 120;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot10Fill = new(85, 65, 109);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot17Fill = new(52, 124, 143);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot18Fill = new(180, 108, 48);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot22Fill = new(97, 75, 123);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot31Fill = new(65, 108, 159);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot33Fill = new(130, 157, 74);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot34Fill = new(107, 83, 136);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot35Fill = new(62, 144, 167);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentiethRegimeSlot120Fill = new(252, 218, 203);
-        // Twenty-first variation regime at one-hundred-twenty-six-plus points (dash126/dash127 Office fills agree bit-identical on all one-hundred-twenty-six vectors; sixty-plus rows replay seventh/seventeenth/eighteenth/ninth/fifteenth/eleventh/eighth/thirteenth/twelfth/ninth-replay rows, eight mid rows take new fixed fills).
-        public const int SingleSeriesVaryColorsTwentyFirstRegimePointThreshold = 126;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot49Fill = new(72, 119, 175);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot51Fill = new(143, 173, 82);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot53Fill = new(69, 159, 183);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot73Fill = new(112, 147, 196);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot74Fill = new(199, 112, 111);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot75Fill = new(167, 194, 118);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot77Fill = new(109, 182, 204);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyFirstRegimeSlot78Fill = new(248, 163, 107);
-        // Twenty-second variation regime at one-hundred-thirty-two-plus points (dash132/dash133 Office fills agree bit-identical on all one-hundred-thirty-two vectors; sixty-plus rows replay nineteenth/seventeenth/eighteenth/eleventh/tenth/sixth/overflow/fourth/fifth/twelfth/fourteenth rows, one late row takes a new fixed fill).
-        public const int SingleSeriesVaryColorsTwentySecondRegimePointThreshold = 132;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySecondRegimeSlot131Fill = new(205, 225, 233);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySecondRegimeSlot132Fill = new(252, 219, 204);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySecondRegimeSlot136Fill = new(220, 216, 227);
-        // Twenty-third variation regime at one-hundred-thirty-eight-plus points (dash138/dash139 Office fills agree bit-identical on all one-hundred-thirty-eight vectors; seventy-plus rows replay seventh/nineteenth/seventeenth/eighteenth/fourteenth/third/ninth/eleventh/fifth/overflow/eighth/sixth/fifteenth/tenth/twentysecond rows, six mid rows take new fixed fills).
-        public const int SingleSeriesVaryColorsTwentyThirdRegimePointThreshold = 138;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot73Fill = new(88, 133, 191);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot74Fill = new(194, 88, 86);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot75Fill = new(158, 189, 96);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot76Fill = new(132, 106, 165);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot77Fill = new(84, 174, 199);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot78Fill = new(247, 153, 80);
-        // Twenty-fourth variation regime at one-hundred-forty-four-plus points (dash144/dash145 Office fills agree bit-identical on all one-hundred-forty-four vectors; eighty-plus rows replay fifteenth/nineteenth/seventeenth/twentyfirst/eighteenth/eleventh/fifth/twelfth/thirteenth/fourteenth/twentysecond rows, no new fixed fills).
-        public const int SingleSeriesVaryColorsTwentyFourthRegimePointThreshold = 144;
-        // Twenty-fifth variation regime at one-hundred-fifty-plus points (dash150/dash151 Office fills agree bit-identical on all one-hundred-fifty vectors; seventy-plus rows replay nineteenth/seventeenth/twentythird/seventh/fifteenth/sixth/ninth/overflow/fourth/eighth/thirteenth/eleventh/twelfth/sixteenth/twentysecond rows, no new fixed fills).
-        public const int SingleSeriesVaryColorsTwentyFifthRegimePointThreshold = 150;
-        // Twenty-sixth variation regime at one-hundred-fifty-six-plus points (dash156/dash157 Office fills agree bit-identical on all one-hundred-fifty-six vectors; seventy-plus rows replay seventeenth/eighteenth/eleventh/fifth/sixteenth/twelfth/overflow/sixth/fifteenth rows, one late row takes a new fixed fill).
-        public const int SingleSeriesVaryColorsTwentySixthRegimePointThreshold = 156;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySixthRegimeSlot155Fill = new(208, 227, 234);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySixthRegimeSlot157Fill = new(215, 222, 235);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySixthRegimeSlot158Fill = new(235, 215, 214);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySixthRegimeSlot159Fill = new(227, 234, 216);
-        // Twenty-seventh variation regime at one-hundred-sixty-two-plus points (dash162/dash163 Office fills agree bit-identical on all one-hundred-sixty-two vectors; ninety-plus rows replay seventeenth/nineteenth/seventh/eighteenth/eleventh/twentythird/fifteenth/twelfth/sixth/ninth/overflow/eighth/sixteenth/twentysixth rows, one early row takes a new fixed fill).
-        public const int SingleSeriesVaryColorsTwentySeventhRegimePointThreshold = 162;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySeventhRegimeSlot6Fill = new(152, 91, 40);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySeventhRegimeSlot163Fill = new(215, 222, 235);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySeventhRegimeSlot164Fill = new(235, 215, 214);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentySeventhRegimeSlot165Fill = new(227, 234, 216);
-        // Twenty-eighth variation regime at one-hundred-sixty-eight-plus points (dash168/dash169 Office fills agree bit-identical on all one-hundred-sixty-eight vectors; eighty-plus rows replay seventeenth/eighteenth/thirteenth/twentyfirst/fourteenth/third/sixth/ninth/overflow/fourth/eighth/eleventh/twelfth/sixteenth/tenth/twentysixth rows, no new fixed fills).
-        public const int SingleSeriesVaryColorsTwentyEighthRegimePointThreshold = 168;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot169Fill = new(215, 222, 235);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot170Fill = new(235, 215, 214);
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot171Fill = new(227, 234, 216);
-        // Twenty-ninth variation regime at one-hundred-seventy-four-plus points (dash174/dash175 Office fills agree bit-identical on all one-hundred-seventy-four vectors; ninety rows replay nineteenth/seventeenth/twentythird/ninth/tenth/sixteenth/twelfth/overflow/fourth/fifth/thirteenth/seventh/eighth/eleventh/eighteenth/twentysixth rows, no new fixed fills).
-        public const int SingleSeriesVaryColorsTwentyNinthRegimePointThreshold = 174;
-        public static readonly RgbColor SingleSeriesVaryColorsTwentyNinthRegimeSlot175Fill = new(215, 222, 235);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
