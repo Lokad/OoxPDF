@@ -3902,13 +3902,13 @@ internal sealed partial class PptxRenderer
 
     // Regime router: forty-eight-plus points take dark/0.78/0.86/0.93/raw/light/fixed/palest rows, forty-two-plus points take dark/mid/0.88/0.96/fixed/replay/palest rows, thirty-six-plus points take dark/0.82/0.91/raw/fixed/replay rows, thirty-plus points take dark/0.85/0.95/fixed/palest rows, twenty-four-plus points take dark/0.88/raw/replay rows, eighteen-plus points take dark/mid/light rows, twelve-plus points
     // shade slots 1-6 at 0.82 and leave slots 7-12 raw; slot-13-plus falls back through the overflow table (fixed through slot-22) and 0.88 cycling.
-    private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, int categoryIndex, int valuePointCount)
+    private static RgbColor ResolveShadedSingleSeriesVaryColorsFill(RgbColor paletteColor, IReadOnlyList<RgbColor>? chartPalette, PptxTheme? theme, PptxColorMap colorMap, int categoryIndex, int valuePointCount)
     {
-        // Fraction-curve engine takes precedence at 120-plus points (recipe refactor slice B);
+        // Fraction-curve engine v3 (linear-light recipe) takes precedence at 96-plus points;
         // (the twentieth-to-twenty-ninth regime rows were deleted in the recipe refactor;
-        // earlier regimes below keep serving counts under 120).
+        // earlier regimes below keep serving counts under 96).
         if (valuePointCount >= FractionCurveVaryColorsPointThreshold
-            && TryResolveFractionCurveVaryColorsFill(categoryIndex, valuePointCount, out RgbColor fractionCurveFill))
+            && TryResolveFractionCurveVaryColorsFill(chartPalette, theme, colorMap, categoryIndex, valuePointCount, out RgbColor fractionCurveFill))
         {
             return fractionCurveFill;
         }
@@ -4585,7 +4585,7 @@ internal sealed partial class PptxRenderer
             RgbColor paletteColor = ChartPalette(chartPalette, theme, colorMap, categoryIndex);
             if (ShouldShadeSingleSeriesVaryColors(valuePointCount, shadeSingleSeriesVaryColors))
             {
-                paletteColor = ResolveShadedSingleSeriesVaryColorsFill(paletteColor, categoryIndex, valuePointCount);
+                paletteColor = ResolveShadedSingleSeriesVaryColorsFill(paletteColor, chartPalette, theme, colorMap, categoryIndex, valuePointCount);
             }
 
             return new ChartSeriesFill(paletteColor, 1d, null, null);
