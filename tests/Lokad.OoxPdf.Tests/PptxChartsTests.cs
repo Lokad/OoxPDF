@@ -5965,11 +5965,11 @@ var tail = rendererType.GetMethod(
             "TryResolveTwentySeventhRegimeLateSingleFill",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(lateSingle is not null, "Expected twenty-seventh-regime latesingle table to remain inspectable by the Office evidence guard.");
-        // Twenty-seventh-regime LateSingles (slot 163 dash163/dash164 agree, slot 164 dash164/dash165 agree).
-        int[] lateSingleIdx = [162, 163];
-        int[] lateSingleR = [215, 235];
-        int[] lateSingleG = [222, 215];
-        int[] lateSingleB = [235, 214];
+        // Twenty-seventh-regime LateSingles (slot 163 dash163/dash164 agree, slot 164 dash164/dash165 agree, slot 165 dash165/dash166 agree).
+        int[] lateSingleIdx = [162, 163, 164];
+        int[] lateSingleR = [215, 235, 227];
+        int[] lateSingleG = [222, 215, 234];
+        int[] lateSingleB = [235, 214, 216];
         for (int slot = 0; slot < lateSingleIdx.Length; slot++)
         {
             object?[] lateSingleArgs = [lateSingleIdx[slot], null];
