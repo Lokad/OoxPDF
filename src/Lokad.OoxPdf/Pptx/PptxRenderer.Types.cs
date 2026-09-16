@@ -1052,6 +1052,8 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsTwentyThirdRegimeSlot78Fill = new(247, 153, 80);
         // Twenty-fourth variation regime at one-hundred-forty-four-plus points (dash144/dash145 Office fills agree bit-identical on all one-hundred-forty-four vectors; eighty-plus rows replay fifteenth/nineteenth/seventeenth/twentyfirst/eighteenth/eleventh/fifth/twelfth/thirteenth/fourteenth/twentysecond rows, no new fixed fills).
         public const int SingleSeriesVaryColorsTwentyFourthRegimePointThreshold = 144;
+        // Twenty-fifth variation regime at one-hundred-fifty-plus points (dash150/dash151 Office fills agree bit-identical on all one-hundred-fifty vectors; seventy-plus rows replay nineteenth/seventeenth/twentythird/seventh/fifteenth/sixth/ninth/overflow/fourth/eighth/thirteenth/eleventh/twelfth/sixteenth/twentysecond rows, no new fixed fills).
+        public const int SingleSeriesVaryColorsTwentyFifthRegimePointThreshold = 150;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
