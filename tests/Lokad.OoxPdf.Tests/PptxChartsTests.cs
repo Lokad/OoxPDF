@@ -5624,6 +5624,25 @@ var tail = rendererType.GetMethod(
         }
         object?[] fifteenth26Past = [131, null];
         TestAssert.Equal(false, (bool)fifteenth26!.Invoke(null, fifteenth26Past)!);
+        var lateSingle = rendererType.GetMethod(
+            "TryResolveTwentySixthRegimeLateSingleFill",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(lateSingle is not null, "Expected twenty-sixth-regime latesingle table to remain inspectable by the Office evidence guard.");
+        // Twenty-sixth-regime LateSingle (slot 155), dash156/dash157 agree bit-identical.
+        int[] lateSingleIdx = [154];
+        int[] lateSingleR = [208];
+        int[] lateSingleG = [227];
+        int[] lateSingleB = [234];
+        for (int slot = 0; slot < lateSingleIdx.Length; slot++)
+        {
+            object?[] lateSingleArgs = [lateSingleIdx[slot], null];
+            TestAssert.Equal(true, (bool)lateSingle!.Invoke(null, lateSingleArgs)!);
+            TestAssert.Equal((byte)lateSingleR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(lateSingleArgs[1])!);
+            TestAssert.Equal((byte)lateSingleG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(lateSingleArgs[1])!);
+            TestAssert.Equal((byte)lateSingleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(lateSingleArgs[1])!);
+        }
+        object?[] lateSinglePast = [153, null];
+        TestAssert.Equal(false, (bool)lateSingle!.Invoke(null, lateSinglePast)!);
         // One-hundred-fifty-five points and fewer keep earlier regimes; one-hundred-fifty-six-plus take the twenty-sixth rows.
         TestAssert.Equal(false, (bool)gate!.Invoke(null, [155])!);
         TestAssert.Equal(true, (bool)gate.Invoke(null, [156])!);
