@@ -1068,6 +1068,7 @@ internal sealed partial class PptxRenderer
         public static readonly RgbColor SingleSeriesVaryColorsTwentySeventhRegimeSlot165Fill = new(227, 234, 216);
         // Twenty-eighth variation regime at one-hundred-sixty-eight-plus points (dash168/dash169 Office fills agree bit-identical on all one-hundred-sixty-eight vectors; eighty-plus rows replay seventeenth/eighteenth/thirteenth/twentyfirst/fourteenth/third/sixth/ninth/overflow/fourth/eighth/eleventh/twelfth/sixteenth/tenth/twentysixth rows, no new fixed fills).
         public const int SingleSeriesVaryColorsTwentyEighthRegimePointThreshold = 168;
+        public static readonly RgbColor SingleSeriesVaryColorsTwentyEighthRegimeSlot169Fill = new(215, 222, 235);
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;
         // Labeled pies (any visible data labels, no legend): Office centers the pie
