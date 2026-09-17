@@ -7,9 +7,11 @@ internal static class SafeXml
 {
     // Generous bounds: genuine Office parts nest shallowly (< 40 levels) and
     // arrive through the 64 MB package part cap. Anything beyond fails fast
-    // instead of amplifying a small input into a huge DOM.
+    // instead of amplifying a small input into a huge DOM. Element count is capped
+    // separately so broad shallow parts cannot inflate the object graph without bound.
     internal const long DefaultMaxCharacters = 64L * 1024L * 1024L;
     internal const int DefaultMaxDepth = 256;
+    internal const long DefaultMaxNodes = 2000000L;
 
     public static XmlReaderSettings CreateReaderSettings()
     {
@@ -30,16 +32,16 @@ internal static class SafeXml
 
     public static XDocument Load(Stream stream, CancellationToken cancellationToken)
     {
-        return Load(stream, cancellationToken, DefaultMaxCharacters, DefaultMaxDepth);
+        return Load(stream, cancellationToken, DefaultMaxCharacters, DefaultMaxDepth, DefaultMaxNodes);
     }
 
-    internal static XDocument Load(Stream stream, CancellationToken cancellationToken, long maxCharacters, int maxDepth)
+    internal static XDocument Load(Stream stream, CancellationToken cancellationToken, long maxCharacters, int maxDepth, long maxNodes = DefaultMaxNodes)
     {
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
             using XmlReader reader = XmlReader.Create(stream, CreateReaderSettings(maxCharacters));
-            using var bounded = new DepthBoundReader(reader, maxDepth, cancellationToken);
+            using var bounded = new DepthBoundReader(reader, maxDepth, maxNodes, cancellationToken);
             XDocument document = XDocument.Load(bounded, LoadOptions.None);
             OoxMarkupCompatibility.ResolveAlternateContent(document);
             cancellationToken.ThrowIfCancellationRequested();
@@ -53,10 +55,11 @@ internal static class SafeXml
 
     // XmlReaderSettings exposes no depth quota, so enforce it here while also
     // surfacing cancellation during long parses. All members delegate.
-    private sealed class DepthBoundReader(XmlReader inner, int maxDepth, CancellationToken cancellationToken) : XmlReader
+    private sealed class DepthBoundReader(XmlReader inner, int maxDepth, long maxNodes, CancellationToken cancellationToken) : XmlReader
     {
         private int depth;
         private long nodes;
+        private long elementCount;
 
         public override int AttributeCount => inner.AttributeCount;
         public override string BaseURI => inner.BaseURI;
@@ -83,6 +86,15 @@ internal static class SafeXml
             bool result = inner.Read();
             if (result)
             {
+                if (NodeType == XmlNodeType.Element)
+                {
+                    elementCount++;
+                    if (elementCount > maxNodes)
+                    {
+                        throw new InvalidDataException($"XML element count exceeds the maximum supported count of {maxNodes}.");
+                    }
+                }
+
                 if (NodeType == XmlNodeType.Element && !IsEmptyElement)
                 {
                     depth++;
