@@ -119,6 +119,13 @@ internal static class OoxmlBoundsTests
         TestAssert.Throws<InvalidDataException>(() => SafeXml.Load(stream, CancellationToken.None, 100, 256));
     }
 
+    public static void RejectsXmlBeyondNodeBudget()
+    {
+        string document = "<r>" + string.Concat(Enumerable.Repeat("<a/>", 20)) + "</r>";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(document));
+        TestAssert.Throws<InvalidDataException>(() => SafeXml.Load(stream, CancellationToken.None, 1024 * 1024, 256, 10));
+    }
+
     public static void RejectsMalformedXmlAsInvalidData()
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("<a><b></a>"));
