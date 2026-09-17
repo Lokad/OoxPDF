@@ -186,10 +186,15 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fonts;
     private readonly IFontResolver? fontResolver;
     private readonly Dictionary<(string StableId, int FaceIndex, string? PrimaryFamily, bool Bold, bool Italic), IReadOnlyList<OpenTypeFont?>> candidateChains = new();
+    private readonly Dictionary<DocxTextRun, DocxResolvedRunTypeface> runsByReference = new(ReferenceEqualityComparer.Instance);
 
     public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken, IFontResolver? fontResolver = null, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>? sharedFonts = null)
     {
         runs = plan.Runs;
+        foreach (DocxResolvedRunTypeface resolved in plan.Runs)
+        {
+            runsByReference.TryAdd(resolved.Run, resolved);
+        }
         this.fallbackResolution = fallbackResolution;
         this.cancellationToken = cancellationToken;
         this.fontResolver = fontResolver;
@@ -348,6 +353,12 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         if (run is null)
         {
             return null;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (runsByReference.TryGetValue(run, out DocxResolvedRunTypeface? fast))
+        {
+            return fast;
         }
 
         foreach (DocxResolvedRunTypeface resolved in runs)
