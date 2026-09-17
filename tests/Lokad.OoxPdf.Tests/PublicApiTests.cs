@@ -273,6 +273,56 @@ internal static class PublicApiTests
         ValidatePdfXref(inner.ToArray());
     }
 
+    public static void ConvertStreamWorksWithForwardOnlyInputForDocx()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>forward only input</w:t></w:r></w:p>");
+        using var inner = new MemoryStream(bytes, writable: false);
+        using var input = new ForwardOnlyReadStream(inner);
+        using var output = new MemoryStream();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+
+        TestAssert.True(input.CanRead, "Stream conversion should leave the input stream open.");
+        TestAssert.True(output.CanWrite, "Stream conversion should leave the output stream open.");
+        AssertPdfHeader(output);
+    }
+
+    public static void ConvertAsyncStreamWorksWithForwardOnlyInputForDocx()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>forward only input async</w:t></w:r></w:p>");
+        using var inner = new MemoryStream(bytes, writable: false);
+        using var input = new ForwardOnlyReadStream(inner);
+        using var output = new MemoryStream();
+
+        OoxPdfConverter.ConvertAsync(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }).GetAwaiter().GetResult();
+
+        AssertPdfHeader(output);
+    }
+
+    public static void ConvertStreamWorksWithForwardOnlyInputForPptx()
+    {
+        byte[] bytes = ReadMinimalPptxBytes();
+        using var inner = new MemoryStream(bytes, writable: false);
+        using var input = new ForwardOnlyReadStream(inner);
+        using var output = new MemoryStream();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+
+        ValidatePdfXref(output.ToArray());
+    }
+
+    public static void ConvertAsyncStreamWorksWithForwardOnlyInputForPptx()
+    {
+        byte[] bytes = ReadMinimalPptxBytes();
+        using var inner = new MemoryStream(bytes, writable: false);
+        using var input = new ForwardOnlyReadStream(inner);
+        using var output = new MemoryStream();
+
+        OoxPdfConverter.ConvertAsync(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx }).GetAwaiter().GetResult();
+
+        ValidatePdfXref(output.ToArray());
+    }
+
     public static void ConvertStreamRejectsIdenticalInputOutput()
     {
         byte[] bytes = ReadMinimalDocxBytes("<w:p/>");
@@ -383,6 +433,32 @@ internal static class PublicApiTests
         public override void SetLength(long value) => throw new NotSupportedException();
 
         public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+
+        protected override void Dispose(bool disposing)
+        {
+        }
+    }
+    private sealed class ForwardOnlyReadStream(MemoryStream inner) : Stream
+    {
+        public override bool CanRead => inner.CanRead;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
         protected override void Dispose(bool disposing)
         {
