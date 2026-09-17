@@ -104,6 +104,12 @@ if ($resolution.Outcome -eq "Miss") {
                 ExportSettings = $(if ($null -ne $workerStatus) { [string]$workerStatus.ExportSettings } else { "" })
             } $null
             Publish-ReferenceStagedDirectory $staging $resolution.CacheDirectory
+            $derivativeName = Get-ReferenceDerivativeName $Dpi
+            $derivativeDir = Join-Path (Join-Path $resolution.CacheDirectory "raster") $derivativeName
+            New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
+            foreach ($page in @(Get-ChildItem -LiteralPath $resolution.CacheDirectory -Filter "page-*.png" | Sort-Object Name)) {
+                Move-Item -LiteralPath $page.FullName -Destination (Join-Path $derivativeDir $page.Name) -Force
+            }
             Add-ReferenceDerivativeRecord $resolution.CacheDirectory $derivativeName $Dpi (Get-RasterizerId)
         }
         finally {
