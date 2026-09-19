@@ -1617,13 +1617,7 @@ internal static class PptxTextLayoutTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
-        Dictionary<double, int> buckets = glyphRuns
-            .GroupBy(run => Math.Round(run.PdfCharacterSpacing, 3))
-            .ToDictionary(group => group.Key, group => group.Count());
-
-        TestAssert.Equal(7, buckets[0d]);
-        TestAssert.Equal(12, buckets[-0.048d]);
-        TestAssert.Equal(16, buckets[-0.024d]);
+        AssertNumberedFrameCharacterSpacing(glyphRuns);
         TestAssert.True(
             glyphRuns.Where(run => Math.Abs(run.PdfCharacterSpacing) > 0.001d).All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
             "Expected numbered autofit character spacing to be an emission-only PDF text state.");
@@ -1646,13 +1640,7 @@ internal static class PptxTextLayoutTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
         PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
-        Dictionary<double, int> buckets = glyphRuns
-            .GroupBy(run => Math.Round(run.PdfCharacterSpacing, 3))
-            .ToDictionary(group => group.Key, group => group.Count());
-
-        TestAssert.Equal(7, buckets[0d]);
-        TestAssert.Equal(12, buckets[-0.048d]);
-        TestAssert.Equal(16, buckets[-0.024d]);
+        AssertNumberedFrameCharacterSpacing(glyphRuns);
         TestAssert.True(
             glyphRuns.Where(run => Math.Abs(run.PdfCharacterSpacing) > 0.001d).All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
             "Expected numbered noAutofit character spacing to be an emission-only PDF text state.");
@@ -1660,6 +1648,24 @@ internal static class PptxTextLayoutTests
             glyphRuns.Any(run => run.ParagraphBulletKind == "AutoNumber") &&
             glyphRuns.Any(run => run.FrameAutofitMode == "noAutofit"),
             "Expected the probe to expose noAutofit auto-numbered paragraph metadata to the emission layer.");
+    }
+
+    private static void AssertNumberedFrameCharacterSpacing(PptxTextGlyphRunSnapshot[] glyphRuns)
+    {
+        // These Aptos fixtures can wrap differently when the host substitutes a font.
+        // Check every emitted run in each frame instead of assuming a fixed line count.
+        IGrouping<int, PptxTextGlyphRunSnapshot>[] frames = glyphRuns.GroupBy(run => run.FrameIndex).OrderBy(frame => frame.Key).ToArray();
+        TestAssert.Equal(3, frames.Length);
+        double[] expectedSpacing = [0d, -0.048d, -0.024d];
+        int[] expectedParagraphCounts = [2, 4, 4];
+        for (int index = 0; index < frames.Length; index++)
+        {
+            TestAssert.Equal(index, frames[index].Key);
+            TestAssert.Equal(expectedParagraphCounts[index], frames[index].Select(run => run.ParagraphIndex).Distinct().Count());
+            TestAssert.True(
+                frames[index].All(run => Math.Abs(run.PdfCharacterSpacing - expectedSpacing[index]) < 0.001d),
+                $"Expected every glyph run in frame {index} to use PDF character spacing {expectedSpacing[index]}.");
+        }
     }
 
     public static void PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState()

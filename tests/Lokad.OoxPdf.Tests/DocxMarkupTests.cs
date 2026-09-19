@@ -631,6 +631,7 @@ internal static class DocxMarkupTests
         double wordVisibleFontSize = wordSegments.Where(segment => !segment.IsTerminalLineSpace).Max(segment => segment.PdfFontSize);
         DocxTextEmissionSegmentSnapshot preserveTerminal = preserveSegments.Single(segment => segment.IsTerminalLineSpace);
         DocxTextEmissionSegmentSnapshot wordTerminal = wordSegments.Single(segment => segment.IsTerminalLineSpace);
+        DocxTextEmissionSegmentSnapshot lastVisibleSegment = wordSegments.Last(segment => !segment.IsTerminalLineSpace);
 
         TestAssert.True(
             Math.Abs(wordVisibleFontSize - (22d * scale)) < 0.05d,
@@ -639,8 +640,9 @@ internal static class DocxMarkupTests
             wordTerminal.PdfFontSize < wordVisibleFontSize - 1d,
             "Word-compatible all-markup should emit terminal paragraph marks below the scaled heading size.");
         TestAssert.True(
-            wordTerminal.X < preserveTerminal.X - 25d,
-            "Word-compatible all-markup should place terminal paragraph marks at the scaled emitted text advance.");
+            wordTerminal.X < preserveTerminal.X &&
+            Math.Abs(wordTerminal.X - (lastVisibleSegment.X + lastVisibleSegment.AdvanceProfile.PlannedEmittedAdvance)) < 0.001d,
+            "Word-compatible all-markup should place terminal paragraph marks at the scaled emitted text advance, regardless of the installed font's width.");
     }
 
     public static void DocxWordCompatibleAllMarkupScalesBodySpacing()
@@ -1192,7 +1194,14 @@ internal static class DocxMarkupTests
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 rg", page.Content);
-        TestAssert.Contains("0.475 re f", page.Content);
+        Match[] decorations = Regex.Matches(
+            page.Content,
+            @"0\.82 0\.204 0\.22 rg\r?\n[-\d.]+ [-\d.]+ [\d.]+ (?<thickness>[\d.]+) re f")
+            .ToArray();
+        TestAssert.Equal(4, decorations.Length);
+        TestAssert.True(
+            decorations.All(decoration => double.Parse(decoration.Groups["thickness"].Value, CultureInfo.InvariantCulture) >= 0.475d),
+            "Revision decorations should use the Office review color and at least the Office minimum thickness; font metrics may require thicker strokes.");
     }
 
     public static void DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory()
