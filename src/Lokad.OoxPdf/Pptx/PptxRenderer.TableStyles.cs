@@ -41,7 +41,8 @@ internal static class PptxTableStyleResolver
 
             if (tableStyle.LastRow && rowIndex == rowCount - 1)
             {
-                return new PptxSceneFillStyle(true, accent, alpha);
+                // Office's built-in lastRow fill specifies accent shade 40000.
+                return new PptxSceneFillStyle(true, LinearLightColor.ShadeTowardBlack(accent, 0.40d), alpha);
             }
         }
 
