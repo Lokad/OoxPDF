@@ -552,6 +552,7 @@ internal sealed class PdfDocumentWriter
     internal static string EscapePdfUriString(string value)
     {
         var builder = new StringBuilder(value.Length);
+        Span<byte> utf8 = stackalloc byte[4];
         foreach (System.Text.Rune rune in value.EnumerateRunes())
         {
             if (rune.Value == 92 || rune.Value == 40 || rune.Value == 41)
@@ -560,7 +561,6 @@ internal sealed class PdfDocumentWriter
             }
             else if (rune.Value <= 32 || rune.Value > 126)
             {
-                Span<byte> utf8 = stackalloc byte[4];
                 int encodedLength = rune.EncodeToUtf8(utf8);
                 for (int i = 0; i < encodedLength; i++)
                 {

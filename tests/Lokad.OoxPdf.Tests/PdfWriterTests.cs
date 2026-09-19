@@ -6,6 +6,15 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PdfWriterTests
 {
+    public static void PdfWriterEscapesLongUnicodeUriWithoutStackGrowth()
+    {
+        const int count = 100_000;
+        string uri = "https://example.invalid/" + new string('\u00e9', count) + "\U0001f600 (x)\\y";
+        string expected = "https://example.invalid/" + string.Concat(Enumerable.Repeat("%C3%A9", count)) + "%F0%9F%98%80%20\\(x\\)\\\\y";
+
+        TestAssert.Equal(expected, PdfDocumentWriter.EscapePdfUriString(uri));
+    }
+
     public static void WritesSingleBlankPagePdfStructure()
     {
         string pdf = WritePdfText(new[] { new PdfPage(612, 792) });
