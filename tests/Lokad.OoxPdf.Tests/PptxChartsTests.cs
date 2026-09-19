@@ -1326,7 +1326,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)darkB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
         object?[] seventh = [6, null];
-        TestAssert.Equal(false, (bool)dark.Invoke(null, seventh)!);
+        TestAssert.Equal(false, (bool)dark!.Invoke(null, seventh)!);
         // Replay row: first-regime fixed tail byte-exact across both renders, slots 19-24.
         int[] reR = [147, 209, 185, 169, 145, 249];
         int[] reG = [169, 147, 205, 155, 195, 181];
@@ -1335,12 +1335,12 @@ internal static class PptxChartsTests
         {
             object?[] args = [18 + slot, null];
             TestAssert.Equal(true, (bool)replay!.Invoke(null, args)!);
-            TestAssert.Equal((byte)reR[slot], (byte)rgbType.GetProperty("Red")!.GetValue(args[1])!);
+            TestAssert.Equal((byte)reR[slot], (byte)rgbType!.GetProperty("Red")!.GetValue(args[1])!);
             TestAssert.Equal((byte)reG[slot], (byte)rgbType.GetProperty("Green")!.GetValue(args[1])!);
             TestAssert.Equal((byte)reB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
         object?[] past = [24, null];
-        TestAssert.Equal(false, (bool)replay.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)replay!.Invoke(null, past)!);
     }
     public static void PptxSyntheticFifthVaryColorsRegime()
     {
@@ -1408,7 +1408,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)paleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
         object?[] past = [30, null];
-        TestAssert.Equal(false, (bool)palest.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)palest!.Invoke(null, past)!);
     }
     public static void PptxSyntheticSixthVaryColorsRegime()
     {
@@ -1467,7 +1467,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)reB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
         object?[] past = [36, null];
-        TestAssert.Equal(false, (bool)replay.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)replay!.Invoke(null, past)!);
     }
     public static void PptxSyntheticSeventhVaryColorsRegime()
     {
@@ -1542,7 +1542,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)paleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
         object?[] past = [42, null];
-        TestAssert.Equal(false, (bool)palest.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)palest!.Invoke(null, past)!);
     }
     public static void PptxSyntheticEighthVaryColorsRegime()
     {
@@ -1601,7 +1601,7 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)paleB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(args[1])!);
         }
         object?[] past = [48, null];
-        TestAssert.Equal(false, (bool)palest.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)palest!.Invoke(null, past)!);
     }
 
     public static void PptxSyntheticNinthVaryColorsRegime()
@@ -1693,9 +1693,9 @@ internal static class PptxChartsTests
             TestAssert.Equal((byte)replayB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(replayArgs[1])!);
         }
         object?[] replayPast = [58, null];
-        TestAssert.Equal(false, (bool)replay.Invoke(null, replayPast)!);
+        TestAssert.Equal(false, (bool)replay!.Invoke(null, replayPast)!);
         object?[] past = [54, null];
-        TestAssert.Equal(false, (bool)ninth.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)ninth!.Invoke(null, past)!);
     }
     public static void PptxSyntheticTenthVaryColorsRegime()
     {
@@ -1928,7 +1928,7 @@ internal static class PptxChartsTests
         object?[] past70 = [70, null];
         TestAssert.Equal(false, (bool)tail67.Invoke(null, past70)!);
         object?[] past = [66, null];
-        TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)tail!.Invoke(null, past)!);
     }
     public static void PptxSyntheticTwelfthVaryColorsRegime()
     {
@@ -2027,7 +2027,7 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)tailB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(tailArgs[1])!);
         }
         object?[] past = [76, null];
-        TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)tail!.Invoke(null, past)!);
     }
     public static void PptxSyntheticThirteenthVaryColorsRegime()
     {
@@ -2169,7 +2169,7 @@ var tail = rendererType.GetMethod(
         object?[] past82 = [82, null];
         TestAssert.Equal(false, (bool)tail79.Invoke(null, past82)!);
         object?[] past = [78, null];
-        TestAssert.Equal(false, (bool)fixed73.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)fixed73!.Invoke(null, past)!);
     }
     public static void PptxSyntheticFourteenthVaryColorsRegime()
     {
@@ -2276,7 +2276,7 @@ var tail = rendererType.GetMethod(
             TestAssert.Equal((byte)endB[slot], (byte)rgbType.GetProperty("Blue")!.GetValue(endArgs[1])!);
         }
         object?[] past = [88, null];
-        TestAssert.Equal(false, (bool)tail.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)tail!.Invoke(null, past)!);
     }
     public static void PptxSyntheticFifteenthVaryColorsRegime()
     {
@@ -2394,7 +2394,7 @@ var tail = rendererType.GetMethod(
         object?[] past94 = [94, null];
         TestAssert.Equal(false, (bool)tail91.Invoke(null, past94)!);
         object?[] past = [90, null];
-        TestAssert.Equal(false, (bool)fixed85.Invoke(null, past)!);
+        TestAssert.Equal(false, (bool)fixed85!.Invoke(null, past)!);
     }
     public static void PptxSyntheticSecondVaryColorsRegime()
     {

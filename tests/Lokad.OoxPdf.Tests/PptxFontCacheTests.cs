@@ -96,7 +96,7 @@ internal static class PptxFontCacheTests
 
         private sealed class CountingProgramSource(string stableId, byte[] bytes, System.Collections.Concurrent.ConcurrentDictionary<string, int> counters) : IFontProgramSource
         {
-            public string StableId { get; } = stableId;
+            public string StableId => stableId;
 
             public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
             {
