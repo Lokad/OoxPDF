@@ -2,16 +2,16 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <PackageId>Lokad.OoxPdf</PackageId>
-    <Version>0.1.4</Version>
-    <AssemblyVersion>0.1.4</AssemblyVersion>
-    <FileVersion>0.1.4</FileVersion>
+    <Version>0.1.5</Version>
+    <AssemblyVersion>0.1.5</AssemblyVersion>
+    <FileVersion>0.1.5</FileVersion>
     <Authors>Lokad</Authors>
     <Company>Lokad</Company>
     <Description>Dependency-free OOXML to PDF renderer for PPTX and DOCX corporate documents.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>0.1.4 adds a built-in HTTP(S) font pack resolver for deterministic packaged font resolution outside local Windows font directories.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.1.5 fixes subset-font text and forward-only output streams, improves DOCX performance and rendering fidelity, corrects PPTX table and chart colors, and hardens document intake and output handling.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Lokad/OoxPDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Lokad/OoxPDF.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
