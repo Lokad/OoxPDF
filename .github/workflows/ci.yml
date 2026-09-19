@@ -1,17 +1,23 @@
 name: ci
 
-# Clean-checkout non-Office gate (T08): Release build, deterministic console
-# suite, visual manifest gate, text-content gate, allocation-probe self-test, package smoke test, and comparison/tokenizer adversarial checks. Needs no
-# Office/COM, no reference cache, and no private cases. Windows-only: the
-# tracked PDFium validation binary is win-x64 and several suites cover
-# Windows' installed fonts (missing fonts skip instead of failing).
+# Both platforms build the complete solution and run portable validation tools.
+# Windows also runs the full console suite, text-content gate, and PDFium probe.
+# Ubuntu intentionally uses the portable console groups: the remaining rendering
+# suites depend on Windows fonts, and the tracked PDFium binary is win-x64.
+# Neither job needs Office/COM, a reference cache, or private cases.
 on:
   push:
   pull_request:
 
 jobs:
   verify:
-    runs-on: windows-latest
+    name: verify (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     defaults:
       run:
         shell: pwsh
@@ -20,20 +26,39 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Install font for Ubuntu package smoke test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends fonts-dejavu-core
       - name: Build (Release)
         run: dotnet build Lokad.OoxPdf.slnx -c Release --nologo
-      - name: Console suite (skip slow)
-        run: >-
-          dotnet run --project tests/Lokad.OoxPdf.Tests
-          -c Release -- --skip-slow
+      - name: Full console suite (Windows, skip slow)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force artifacts/ci-tests | Out-Null
+          dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --skip-slow --report artifacts/ci-tests/full.json
+      - name: Portable console groups (Ubuntu, skip slow)
+        if: runner.os == 'Linux'
+        run: |
+          New-Item -ItemType Directory -Force artifacts/ci-tests | Out-Null
+          foreach ($group in @('api', 'ooxml', 'pdf', 'imaging', 'fonts')) {
+            dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Visual manifest gate
         run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
       - name: Text content gate
+        if: runner.os == 'Windows'
         run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1
       - name: Allocation probe self-test
         run: pwsh -NoProfile -File tools/MeasureAllocation.ps1 -SelfTest
       - name: Package smoke test
-        run: pwsh -NoProfile -File tools/TestPackageSmoke.ps1
+        run: |
+          $fontArguments = @{}
+          if ($IsLinux) { $fontArguments.FontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf' }
+          & ./tools/TestPackageSmoke.ps1 @fontArguments
       - name: Text comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestTextOperationComparison.ps1
       - name: Graphics comparison adversarial checks
@@ -47,4 +72,11 @@ jobs:
       - name: Chart classifier adversarial checks
         run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
       - name: VisualDiff metric probe
+        if: runner.os == 'Windows'
         run: pwsh -NoProfile -File tools/TestVisualDiffMetrics.ps1
+      - name: Publish console test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: console-tests-${{ matrix.os }}
+          path: artifacts/ci-tests/*.json

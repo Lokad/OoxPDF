@@ -230,4 +230,13 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --no-restore
 
 Packages are written to `artifacts/nuget/`.
 
+CI runs on Windows and Ubuntu. Both build the full solution and run the visual
+manifest, allocation, package, comparison, tokenizer, and chart-classifier gates.
+Windows runs the full console suite (excluding slow tests), the text-content
+gate, and the PDFium visual probe. Ubuntu intentionally runs the portable `api`,
+`ooxml`, `pdf`, `imaging`, and `fonts` console groups; tests requiring installed
+Windows fonts skip when those fonts are absent. Its package smoke test supplies
+DejaVu Sans through a custom font resolver and checks font embedding. Console
+test reports are uploaded separately for each operating system.
+
 `src/Lokad.OoxPdf` is the NuGet library and must remain free of package references. Office automation and PDFium are isolated under `tools/` for validation only.

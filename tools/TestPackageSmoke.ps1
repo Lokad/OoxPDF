@@ -1,14 +1,18 @@
 # Package smoke test (T08): packs the library as shipped, then converts a
 # document through the packed package only: no project references, no tools,
-# no Office/COM, and no reference cache. Windows-only like CI (the default
-# font resolver covers Windows installed fonts).
+# no Office/COM, and no reference cache. On hosts without Windows fonts,
+# pass an embeddable TrueType font through -FontPath to exercise a custom resolver.
 
 param(
-    [string] $Configuration = "Release"
+    [string] $Configuration = "Release",
+    [string] $FontPath = ""
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
+    $FontPath = (Resolve-Path -LiteralPath $FontPath).Path
+}
 
 $libraryProject = Join-Path $repoRoot "src/Lokad.OoxPdf/Lokad.OoxPdf.csproj"
 & dotnet pack $libraryProject -c $Configuration --nologo
@@ -62,10 +66,15 @@ Set-Content -LiteralPath (Join-Path $scratch "smoke.csproj") -Encoding UTF8 -Val
 $program = @'
 using System.Text;
 using Lokad.OoxPdf;
+using Lokad.OoxPdf.Fonts;
 
 string input = args[0];
 string output = args[1];
-OoxPdfConverter.Convert(input, output);
+var options = new OoxPdfOptions
+{
+    FontResolver = args.Length > 2 ? new SmokeFontResolver(args[2]) : null
+};
+OoxPdfConverter.Convert(input, output, options);
 byte[] header = new byte[5];
 using (FileStream stream = File.OpenRead(output))
 {
@@ -79,12 +88,31 @@ if (Encoding.ASCII.GetString(header) != "%PDF-")
     throw new InvalidDataException("Smoke output does not start with the PDF header.");
 }
 Console.WriteLine("Packed conversion produced " + new FileInfo(output).Length + " bytes.");
+string pdf = Encoding.ASCII.GetString(File.ReadAllBytes(output));
+if (!pdf.Contains("/FontFile2", StringComparison.Ordinal) || !pdf.Contains("/ToUnicode", StringComparison.Ordinal))
+{
+    throw new InvalidDataException("Smoke output must embed a TrueType font and its Unicode map.");
+}
+
+sealed class SmokeFontResolver(string path) : IFontResolver
+{
+    private readonly IFontProgramSource source = new MemoryFontProgramSource("smoke-font", File.ReadAllBytes(path));
+
+    public FontFaceResolution Resolve(FontRequest request) => new(
+        request.FamilyName,
+        "Smoke font",
+        new FontStyleKey(false, false, 400, 0, false),
+        source,
+        IsFallback: true);
+}
 '@
 Set-Content -LiteralPath (Join-Path $scratch "Program.cs") -Encoding UTF8 -Value $program
 
 $input = Join-Path $scratch "input.docx"
 $output = Join-Path $scratch "output.pdf"
-& dotnet run --project (Join-Path $scratch "smoke.csproj") -c $Configuration -- $input $output
+$smokeArguments = @($input, $output)
+if (-not [string]::IsNullOrWhiteSpace($FontPath)) { $smokeArguments += $FontPath }
+& dotnet run --project (Join-Path $scratch "smoke.csproj") -c $Configuration -- @smokeArguments
 if ($LASTEXITCODE -ne 0) {
     throw "Smoke conversion failed with exit code $LASTEXITCODE."
 }
