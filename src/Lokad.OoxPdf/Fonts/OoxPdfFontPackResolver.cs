@@ -34,7 +34,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         string packId,
         Uri sourceUri,
         HttpClient httpClient,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packId);
         ArgumentNullException.ThrowIfNull(sourceUri);

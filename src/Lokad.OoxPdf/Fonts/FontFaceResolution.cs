@@ -16,8 +16,8 @@ public sealed record FontFaceResolution(
 }
 
 public sealed record FontStyleKey(
-    bool Bold,
-    bool Italic,
-    int WeightClass,
-    int FaceIndex,
-    bool HasMathTable);
+    bool Bold = false,
+    bool Italic = false,
+    int WeightClass = 400,
+    int FaceIndex = 0,
+    bool HasMathTable = false);

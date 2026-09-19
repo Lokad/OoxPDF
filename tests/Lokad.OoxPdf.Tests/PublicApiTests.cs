@@ -1,11 +1,57 @@
 using System.Text;
 using Lokad.OoxPdf;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static class PublicApiTests
 {
+    public static void PublicApiPreservesOptionalRecordArguments()
+    {
+        // These public call forms compiled against NuGet 0.1.4. Keep named and
+        // omitted arguments working when internal signatures are refactored.
+        var request = new FontRequest(FamilyName: "Arial", Italic: true);
+        TestAssert.Equal(false, request.Bold);
+        TestAssert.Equal(true, request.Italic);
+        TestAssert.Equal(new FontStyleKey(false, false, 400, 0, false), new FontStyleKey());
+        TestAssert.Equal(new FontStyleKey(false, false, 400, 0, true), new FontStyleKey(HasMathTable: true));
+
+        var diagnostic = new OoxPdfDiagnostic("TEST", OoxPdfSeverity.Warning, "Message", Feature: "font");
+        TestAssert.Equal<string?>(null, diagnostic.PartName);
+        TestAssert.Equal<int?>(null, diagnostic.SlideIndex);
+        TestAssert.Equal<int?>(null, diagnostic.PageIndex);
+        TestAssert.Equal("font", diagnostic.Feature);
+        TestAssert.Equal<string?>(null, diagnostic.Fallback);
+    }
+
+    public static void PublicFontSourcesPreserveOptionalCancellationTokens()
+    {
+        byte[] bytes = [1, 2, 3];
+        var memory = new MemoryFontProgramSource("compatibility", bytes);
+        IFontProgramSource source = memory;
+        TestAssert.True(memory.GetBytesAsync().GetAwaiter().GetResult().Span.SequenceEqual(bytes), "Concrete memory source must accept an omitted token.");
+        TestAssert.True(source.GetBytesAsync().GetAwaiter().GetResult().Span.SequenceEqual(bytes), "Interface source must accept an omitted token.");
+
+        string path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, bytes);
+            var file = new FileFontProgramSource(path);
+            TestAssert.True(file.GetBytesAsync().GetAwaiter().GetResult().Span.SequenceEqual(bytes), "File source must accept an omitted token.");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+
+        using var client = new HttpClient();
+        // Invalid input exercises the public call without contacting a server.
+        var exception = TestAssert.Throws<ArgumentException>(() =>
+            OoxPdfFontPackResolver.CreateHttpAsync("", new Uri("https://example.invalid/"), client).GetAwaiter().GetResult());
+        TestAssert.Equal("packId", exception.ParamName);
+    }
+
     public static void PublicApiRejectsMissingInput()
     {
         string missingInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pptx");

@@ -4,8 +4,8 @@ public sealed record OoxPdfDiagnostic(
     string Id,
     OoxPdfSeverity Severity,
     string Message,
-    string? PartName,
-    int? SlideIndex,
-    int? PageIndex,
-    string? Feature,
-    string? Fallback);
+    string? PartName = null,
+    int? SlideIndex = null,
+    int? PageIndex = null,
+    string? Feature = null,
+    string? Fallback = null);

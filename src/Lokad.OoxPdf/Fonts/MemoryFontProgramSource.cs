@@ -13,7 +13,7 @@ public sealed class MemoryFontProgramSource : IFontProgramSource
 
     public string StableId { get; }
 
-    public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+    public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
         return ValueTask.FromResult(bytes);

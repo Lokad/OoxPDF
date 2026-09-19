@@ -4,5 +4,5 @@ public interface IFontProgramSource
 {
     string StableId { get; }
 
-    ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct);
+    ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default);
 }
