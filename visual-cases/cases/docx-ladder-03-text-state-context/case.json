@@ -3,7 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-text-state-context.docx",
   "dpi": 144,
-  "tags": ["docx", "text", "tables", "text-state", "ladder-03", "needs-review"],
+  "tags": [
+    "docx",
+    "text",
+    "tables",
+    "text-state",
+    "ladder-03",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

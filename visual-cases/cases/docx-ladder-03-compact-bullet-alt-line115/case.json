@@ -3,7 +3,15 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-compact-bullet-alt-line115.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "numbering", "paragraph-spacing", "font-table", "line-spacing", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "numbering",
+    "paragraph-spacing",
+    "font-table",
+    "line-spacing",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-font-table-alternate-wrapping.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "font", "wrapping", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "font",
+    "wrapping",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

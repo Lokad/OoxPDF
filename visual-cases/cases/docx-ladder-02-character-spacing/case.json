@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-character-spacing.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "text", "character-spacing", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "text",
+    "character-spacing",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

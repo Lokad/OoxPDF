@@ -10,7 +10,7 @@
     "terminal-table",
     "paragraph-mark",
     "text-state",
-    "needs-review"
+    "approximate"
   ],
   "expected": {
     "minAgentRating": 3,

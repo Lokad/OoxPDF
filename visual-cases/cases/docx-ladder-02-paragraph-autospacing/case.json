@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-paragraph-autospacing.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "paragraph", "spacing", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "paragraph",
+    "spacing",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

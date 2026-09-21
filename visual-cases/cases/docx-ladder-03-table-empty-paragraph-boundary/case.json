@@ -3,7 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-empty-paragraph-boundary.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "paragraph", "empty-paragraph", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "table",
+    "paragraph",
+    "empty-paragraph",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

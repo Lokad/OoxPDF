@@ -3,7 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-docgrid-use-fe-layout.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "pagination", "docgrid", "compat", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "pagination",
+    "docgrid",
+    "compat",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

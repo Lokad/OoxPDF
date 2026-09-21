@@ -3,7 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-pagination-margins.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "pagination", "margins", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "table",
+    "pagination",
+    "margins",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

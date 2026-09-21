@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-table-explicit-font.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "font-resources", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "table",
+    "font-resources",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

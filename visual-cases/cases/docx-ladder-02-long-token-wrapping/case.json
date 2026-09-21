@@ -3,7 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-long-token-wrapping.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "wrapping", "word-break", "table", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "wrapping",
+    "word-break",
+    "table",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

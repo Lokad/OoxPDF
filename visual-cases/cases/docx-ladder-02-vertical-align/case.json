@@ -7,7 +7,9 @@
     "maxMeanAbsoluteError": 2.0,
     "maxChangedPixelRatioAtThreshold16": 0.05
   },
-  "tags": ["needs-review"],
+  "tags": [
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
@@ -15,6 +17,6 @@
     "minForegroundColorHistogramCorrelation": 0.98,
     "maxMeanAbsoluteError": 2.0,
     "maxChangedPixelRatioAtThreshold16": 0.05,
-    "minForegroundRecall": 0.90
+    "minForegroundRecall": 0.9
   }
 }

@@ -3,7 +3,12 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-tables.docx",
   "dpi": 144,
-  "tags": ["docx", "tables", "smoke", "needs-review"],
+  "tags": [
+    "docx",
+    "tables",
+    "smoke",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

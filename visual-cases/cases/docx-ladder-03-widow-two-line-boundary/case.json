@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-widow-two-line-boundary.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "pagination", "widow-control", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "pagination",
+    "widow-control",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
@@ -11,7 +17,7 @@
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 3.5,
     "maxChangedPixelRatioAtThreshold16": 0.05,
-    "minForegroundRecall": 0.70
+    "minForegroundRecall": 0.7
   },
   "allowedUnsupportedFeatures": []
 }

@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-calibri-body-wrapping.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "wrapping", "typography", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "wrapping",
+    "typography",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

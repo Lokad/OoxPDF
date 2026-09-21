@@ -3,7 +3,14 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-paragraph-logical-indents.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "paragraph", "indent", "logical", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "paragraph",
+    "indent",
+    "logical",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

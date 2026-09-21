@@ -3,7 +3,13 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-02-table-cell-margins.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "margins", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "table",
+    "margins",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,
