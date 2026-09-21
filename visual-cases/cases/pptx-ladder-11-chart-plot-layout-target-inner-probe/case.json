@@ -3,20 +3,35 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-plot-layout-target-inner-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "manual-layout", "layout-target", "office-probe", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "manual-layout",
+    "layout-target",
+    "office-probe",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.25,
-    "minForegroundRecall": 0.97,
-    "maxChangedPixelRatioAtThreshold16": 0.006,
+    "maxMeanAbsoluteError": 0.2,
+    "minForegroundRecall": 0.99,
+    "maxChangedPixelRatioAtThreshold16": 0.005,
     "minForegroundColorHistogramCorrelation": 0.998,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotAreaClipBoxCandidate"],
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "PlotAreaClipBoxCandidate"
+    ],
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ChartTitleText", "ValueAxisTickLabel"],
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "ChartTitleText",
+      "ValueAxisTickLabel"
+    ],
     "maxChartTextStructurePositionDeltaByKind": {
       "CategoryAxisTickLabel": 0.2,
       "ChartTitleText": 1.0,

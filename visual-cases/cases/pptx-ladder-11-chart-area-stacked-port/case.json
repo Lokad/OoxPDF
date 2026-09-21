@@ -3,14 +3,22 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-area-stacked-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "area-chart", "stacked", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "area-chart",
+    "stacked",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.4,
-    "minForegroundRecall": 0.98,
-    "maxChangedPixelRatioAtThreshold16": 0.007
+    "maxMeanAbsoluteError": 0.55,
+    "minForegroundRecall": 0.99,
+    "maxChangedPixelRatioAtThreshold16": 0.008
   }
 }

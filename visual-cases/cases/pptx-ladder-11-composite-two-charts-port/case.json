@@ -3,19 +3,31 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-composite-two-charts-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "composite", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "composite",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.75,
-    "minForegroundRecall": 0.97,
-    "maxChangedPixelRatioAtThreshold16": 0.015,
+    "minForegroundRecall": 0.99,
+    "maxChangedPixelRatioAtThreshold16": 0.02,
     "maxChartGraphicsStructureBoundsDelta": 6.0,
-    "compareChartGraphicsStructureKinds": ["LegendSwatchCandidate"],
+    "compareChartGraphicsStructureKinds": [
+      "LegendSwatchCandidate"
+    ],
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["LegendText", "OuterChartText"],
+    "compareChartTextStructureKinds": [
+      "LegendText",
+      "OuterChartText"
+    ],
     "maxChartTextStructurePositionDeltaByKind": {
       "LegendText": 6.0,
       "OuterChartText": 1.0

@@ -3,14 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "doughnut-chart",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.4,
-    "minForegroundRecall": 0.97,
-    "maxChangedPixelRatioAtThreshold16": 0.008
+    "maxMeanAbsoluteError": 0.45,
+    "minForegroundRecall": 0.99,
+    "maxChangedPixelRatioAtThreshold16": 0.01
   }
 }

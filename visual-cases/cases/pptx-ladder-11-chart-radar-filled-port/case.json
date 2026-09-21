@@ -3,7 +3,15 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-radar-filled-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "radar-chart", "filled", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "radar-chart",
+    "filled",
+    "pptx-renderer-port",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,

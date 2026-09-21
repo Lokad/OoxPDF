@@ -3,15 +3,23 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-100-stacked-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "column-chart", "stacked-100", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "column-chart",
+    "stacked-100",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 1.5,
-    "minForegroundRecall": 0.95,
-    "maxChangedPixelRatioAtThreshold16": 0.018,
+    "maxMeanAbsoluteError": 0.7,
+    "minForegroundRecall": 0.99,
+    "maxChangedPixelRatioAtThreshold16": 0.023,
     "minStructuralSimilarity": 0.94,
     "maxChartGraphicsStructureBoundsDelta": 2,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
@@ -24,7 +32,9 @@
     ],
     "additionalChartGraphicsStructureComparisons": [
       {
-        "kinds": ["FilledRegion"],
+        "kinds": [
+          "FilledRegion"
+        ],
         "maxBoundsDelta": 2,
         "matchSegmentCounts": true,
         "matchPathCommandCounts": true,

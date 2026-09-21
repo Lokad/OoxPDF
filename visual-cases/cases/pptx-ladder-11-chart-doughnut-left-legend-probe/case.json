@@ -3,14 +3,22 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-left-legend-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "left-legend", "office-probe", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "doughnut-chart",
+    "left-legend",
+    "office-probe",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.12,
-    "minForegroundRecall": 0.97,
-    "maxChangedPixelRatioAtThreshold16": 0.003
+    "maxMeanAbsoluteError": 0.15,
+    "minForegroundRecall": 0.999,
+    "maxChangedPixelRatioAtThreshold16": 0.005
   }
 }

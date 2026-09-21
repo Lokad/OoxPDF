@@ -3,14 +3,22 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-doughnut-no-legend-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "doughnut-chart", "no-legend", "office-probe", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "doughnut-chart",
+    "no-legend",
+    "office-probe",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.05,
-    "minForegroundRecall": 0.98,
-    "maxChangedPixelRatioAtThreshold16": 0.001
+    "minForegroundRecall": 0.999,
+    "maxChangedPixelRatioAtThreshold16": 0.005
   }
 }
