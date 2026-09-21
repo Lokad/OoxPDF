@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -57,6 +57,29 @@ internal static class FontTests
         ushort glyph = font.MapCodePoint('A');
         TestAssert.True(glyph > 0, "Expected a glyph mapping for 'A'.");
         TestAssert.True(font.GetAdvanceWidth(glyph) > 0, "Expected a positive advance width for 'A'.");
+    }
+
+    public static void OpenTypeFontLoadObservesCancelledToken()
+    {
+        // Q01: table parsing must honor cancellation instead of expanding
+        // kerning tables for a conversion that already gave up.
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(
+            () => { OpenTypeFont.Load(bytes, 0, cancelled.Token); });
+    }
+
+    public static void FontProgramLoaderPropagatesParseCancellation()
+    {
+        // Q01: a cancelled token must surface as cancellation, not a silent
+        // fallback-font null, even when the bytes come from a synchronous source.
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        var resolution = new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), new MemoryFontProgramSource("cancel:test-font", bytes), IsFallback: false);
+        TestAssert.Throws<OperationCanceledException>(
+            () => { FontProgramLoader.Load(resolution, cancelled.Token); });
     }
 
     public static void PresentationFontResolverLoadsMemoryBackedFontSource()

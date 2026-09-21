@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
@@ -68,6 +68,17 @@ internal sealed partial class OpenTypeFont
 
     public static OpenTypeFont Load(byte[] bytes, int fontIndex)
     {
+        return Load(bytes, fontIndex, CancellationToken.None);
+    }
+
+    // PLAN Q01: font-table parsing (especially kern/GPOS expansion) is CPU work
+    // that previously ignored cancellation entirely. Checkpoints sit between parse
+    // phases so a cancelled conversion fails fast instead of expanding kerning
+    // tables first; OperationCanceledException is not in the malformed-font catch
+    // filters below, so it propagates instead of becoming a fallback-font null.
+    public static OpenTypeFont Load(byte[] bytes, int fontIndex, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         if (bytes.Length < 12)
         {
             throw new InvalidDataException("Font file is too small.");
@@ -82,10 +93,12 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         string scalerTag = ReadScalerTag(bytes);
         try
         {
         Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4), "font");
+        cancellationToken.ThrowIfCancellationRequested();
         RequireMinimumLength(tables, "head", 54);
         RequireMinimumLength(tables, "hhea", 36);
         RequireMinimumLength(tables, "maxp", 6);
@@ -103,11 +116,12 @@ internal sealed partial class OpenTypeFont
         FontBounds bounds = ReadBounds(bytes, tables);
         ushort glyphCount = ReadGlyphCount(bytes, tables);
         string familyName = ReadFamilyName(bytes, tables);
+        cancellationToken.ThrowIfCancellationRequested();
         Os2Metrics os2 = ReadOs2(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
-        IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables);
+        IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken);
         return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs, scalerTag);
 
         }
@@ -1047,7 +1061,7 @@ internal sealed partial class OpenTypeFont
         return advances;
     }
 
-    private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables)
+    private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, CancellationToken cancellationToken)
     {
         // Collect first so the map below allocates exactly once: kern-pair
         // expansion (especially class-based GPOS format 2) otherwise regrows the
@@ -1055,6 +1069,7 @@ internal sealed partial class OpenTypeFont
         // duplicate keys keep last-wins semantics.
         var collected = new List<(uint Key, short Value)>();
         ReadLegacyKerningPairs(bytes, tables, collected);
+        cancellationToken.ThrowIfCancellationRequested();
         long workRemaining = MaxKerningWorkSteps;
         ReadGposPairAdjustments(bytes, tables, collected, ref workRemaining);
         var pairs = new Dictionary<uint, short>(collected.Count);

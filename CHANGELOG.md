@@ -1,6 +1,8 @@
-# Changelog
+﻿# Changelog
 
 ## Unreleased
+
+- Made font-table parsing cancellable (Q01 increment): `OpenTypeFont.Load` takes an optional parse token with checkpoints between collection extraction, table-directory, header validation, metrics, and kerning phases (including between legacy-kern and GPOS expansion), threaded from `FontProgramLoader`; `OperationCanceledException` propagates instead of becoming a fallback-font null. Pinned by parse-cancellation and loader-propagation tests with unaffected-output parity. Remaining Q01 work: DOCX emission/shape-fill token threading, live-peak reservation reporting, bounded spooling, host admission limits, and cap tuning.
 
 - Typed static-story collection keys (T03 increment): `AddStaticStories` and the body story snapshot take `DocxStoryKind` instead of "Header"/"Footer"/"Body" literals (shared `ToKindString` rendering keeps inspection JSON byte-identical). Variant spellings intentionally stay raw strings: they double as document dictionary keys, so typing them would merge or drop unknown w:type spellings.
 - Sealed chart part record construction (T02 increment): external-data, color-style, and style-part records build only through Defined/Undefined factories (defined color/style parts require resolved part identity), collapsing three drifting hand-built undefined literals into one spelling each. Producer call sites updated; pinned by factory rejection tests with the full suite proving corpus validity.

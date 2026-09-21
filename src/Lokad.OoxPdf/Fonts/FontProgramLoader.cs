@@ -1,4 +1,4 @@
-namespace Lokad.OoxPdf.Fonts;
+﻿namespace Lokad.OoxPdf.Fonts;
 
 internal static class FontProgramLoader
 {
@@ -21,7 +21,7 @@ internal static class FontProgramLoader
                 ? pending.Result
                 : pending.AsTask().GetAwaiter().GetResult();
             cancellationToken.ThrowIfCancellationRequested();
-            return OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
+            return OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex, cancellationToken);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
         {
