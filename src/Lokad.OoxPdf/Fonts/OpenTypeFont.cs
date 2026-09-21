@@ -131,7 +131,102 @@ internal sealed partial class OpenTypeFont
         double ItalicAngle,
         bool HasMathTable);
 
+    // PLAN G02: discovery parses only the table directory plus the full extents of
+    // head, hhea, maxp, name, OS/2, post, cmap, and hmtx. The multi-megabyte outline
+    // (glyf), layout (GPOS/GSUB), and bitmap tables a full load retains are never
+    // touched here, so reading them during discovery is pure allocation churn.
+    // Given a file prefix, this computes the end offset through which discovery must
+    // read. It returns false when the prefix cannot determine the budget (truncated
+    // header/directory, collection, missing table, or an extent beyond the file);
+    // callers then read the whole file and the parser below renders the identical
+    // accept/reject verdict.
+    internal static bool IsTrueTypeCollectionHeader(byte[] prefix)
+    {
+        return prefix.Length >= 4 &&
+            prefix[0] == (byte)'t' &&
+            prefix[1] == (byte)'t' &&
+            prefix[2] == (byte)'c' &&
+            prefix[3] == (byte)'f';
+    }
+
+    internal static bool TryGetDiscoveryByteBudget(byte[] prefix, long fileLength, out long requiredEnd)
+    {
+        requiredEnd = 0;
+        try
+        {
+            if (prefix.Length < 12 || fileLength < 12 || IsTrueTypeCollectionHeader(prefix))
+            {
+                return false;
+            }
+
+            ushort tableCount = U16(prefix, 4);
+            if (tableCount == 0 || tableCount > 256)
+            {
+                return false;
+            }
+
+            long directoryEnd = checked(12L + (long)tableCount * 16L);
+            if (directoryEnd > prefix.Length)
+            {
+                return false;
+            }
+
+            long required = directoryEnd;
+            int found = 0;
+            for (int i = 0; i < tableCount; i++)
+            {
+                int record = 12 + i * 16;
+                string tag = Encoding.ASCII.GetString(prefix, record, 4);
+                uint offset = U32(prefix, record + 8);
+                uint length = U32(prefix, record + 12);
+                long end = checked((long)offset + (long)length);
+                if (end > fileLength)
+                {
+                    return false;
+                }
+
+                int flag = tag switch
+                {
+                    "head" => 1,
+                    "hhea" => 2,
+                    "maxp" => 4,
+                    "name" => 8,
+                    "OS/2" => 16,
+                    "post" => 32,
+                    "cmap" => 64,
+                    "hmtx" => 128,
+                    _ => 0
+                };
+                if (flag != 0 && (found & flag) == 0)
+                {
+                    required = Math.Max(required, end);
+                    found |= flag;
+                }
+            }
+
+            if (found != 255)
+            {
+                return false;
+            }
+
+            requiredEnd = required;
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
+        {
+            requiredEnd = 0;
+            return false;
+        }
+    }
+
     internal static FontDiscoveryHeaders ReadDiscoveryHeaders(byte[] bytes, int fontIndex)
+    {
+        return ReadDiscoveryHeaders(bytes, fontIndex, fileLength: null);
+    }
+
+    // fileLength carries the real file size when bytes is a leading span (G02); extent
+    // validation then matches whole-file reads exactly. Null keeps historical behavior.
+    internal static FontDiscoveryHeaders ReadDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength)
     {
         if (bytes.Length < 12)
         {
@@ -141,16 +236,76 @@ internal sealed partial class OpenTypeFont
         if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
         {
             bytes = ExtractCollectionFont(bytes, fontIndex);
+            fileLength = null;
         }
         else if (fontIndex != 0)
         {
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
-        ReadScalerTag(bytes);
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, what: "font", fileLength: fileLength);
+    }
+
+    // PLAN G02: TrueType collections fan one file out to many faces, and repackaging
+    // every face (ExtractCollectionFont) copies megabytes per face during discovery.
+    // Collection face directories already point at absolute file offsets, so faces can
+    // be parsed in place. Every validation below mirrors ExtractCollectionFont exactly,
+    // and the shared core runs the same directory/table/header reads, so in-place faces
+    // accept and reject precisely like repackaged ones.
+    internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex)
+    {
+        if (bytes.Length < 16)
+        {
+            throw new InvalidDataException("TrueType collection header is too small.");
+        }
+
+        uint fontCount = U32(bytes, 8);
+        if (fontCount > 256)
+        {
+            throw new InvalidDataException("TrueType collection declares too many faces.");
+        }
+
+        if (fontIndex < 0 || fontIndex >= fontCount)
+        {
+            throw new InvalidDataException("TrueType collection font index is out of range.");
+        }
+
+        uint fontOffset = U32(bytes, 12 + fontIndex * 4);
+        if (fontOffset > bytes.Length - 12)
+        {
+            throw new InvalidDataException("TrueType collection font offset is invalid.");
+        }
+
+        ushort faceTableCount = U16(bytes, (int)fontOffset + 4);
+        int directoryLength = 12 + faceTableCount * 16;
+        if ((ulong)fontOffset + (ulong)(uint)directoryLength > (ulong)bytes.Length)
+        {
+            throw new InvalidDataException("TrueType collection table directory is invalid.");
+        }
+
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, (int)fontOffset + 12, faceTableCount, "collection face");
+        long outputLength = directoryLength;
+        for (int i = 0; i < faceTableCount; i++)
+        {
+            uint length = U32(bytes, (int)fontOffset + 12 + i * 16 + 12);
+            outputLength = (outputLength + 3L) & ~3L;
+            outputLength = checked(outputLength + length);
+        }
+
+        if (outputLength > (long)bytes.Length + 3L * faceTableCount + 4L)
+        {
+            throw new InvalidDataException("TrueType collection face exceeds file length.");
+        }
+
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, what: "collection face", fileLength: null);
+    }
+
+    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, string what, long? fileLength)
+    {
+        ReadScalerTagAt(bytes, scalerOffset);
         try
         {
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4), "font");
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, directoryOffset, U16(bytes, scalerOffset + 4), what, fileLength);
         RequireMinimumLength(tables, "head", 54);
         RequireMinimumLength(tables, "hhea", 36);
         RequireMinimumLength(tables, "maxp", 6);
@@ -293,12 +448,21 @@ internal sealed partial class OpenTypeFont
         return kerningPairs.TryGetValue(key, out short value) ? value : (short)0;
     }
 
+    // PLAN M10: composite depth alone (16) does not bound expansion: nested compounds
+    // multiply contours across levels (branching^depth). A per-read point budget bounds
+    // the total expanded geometry; every nesting level re-counts its points, so the
+    // counted total always covers the live peak. Exhaustion returns false and callers
+    // fall back to ordinary glyph emission. Simple glyphs can hold at most 65,536
+    // points (u16), so legitimate outlines never approach the budget.
+    internal const int MaxGlyphOutlinePoints = 100_000;
+
     public bool TryReadGlyphOutline(ushort glyphId, out OpenTypeGlyphOutline outline)
     {
-        return TryReadGlyphOutline(glyphId, depth: 0, out outline);
+        int remainingPoints = MaxGlyphOutlinePoints;
+        return TryReadGlyphOutline(glyphId, depth: 0, ref remainingPoints, out outline);
     }
 
-    private bool TryReadGlyphOutline(ushort glyphId, int depth, out OpenTypeGlyphOutline outline)
+    private bool TryReadGlyphOutline(ushort glyphId, int depth, ref int remainingPoints, out OpenTypeGlyphOutline outline)
     {
         outline = default;
         if (depth > 16 ||
@@ -328,10 +492,10 @@ internal sealed partial class OpenTypeFont
 
         if (contourCount < 0)
         {
-            return TryReadCompoundGlyphOutline(glyphOffset + 10, glyphEnd, glyphBounds, depth, out outline);
+            return TryReadCompoundGlyphOutline(glyphOffset + 10, glyphEnd, glyphBounds, depth, ref remainingPoints, out outline);
         }
 
-        return TryReadSimpleGlyphOutline(glyphOffset + 10, glyphEnd, contourCount, glyphBounds, out outline);
+        return TryReadSimpleGlyphOutline(glyphOffset + 10, glyphEnd, contourCount, glyphBounds, ref remainingPoints, out outline);
     }
 
     private bool TryGetGlyphTableRange(
@@ -391,6 +555,7 @@ internal sealed partial class OpenTypeFont
         int glyphEnd,
         short contourCount,
         FontBounds bounds,
+        ref int remainingPoints,
         out OpenTypeGlyphOutline outline)
     {
         outline = default;
@@ -412,6 +577,12 @@ internal sealed partial class OpenTypeFont
         }
 
         int pointCount = contourEnds[^1] + 1;
+        if (pointCount > remainingPoints)
+        {
+            return false;
+        }
+
+        remainingPoints -= pointCount;
         int instructionLengthOffset = offset + contourCount * 2;
         ushort instructionLength = U16(bytes, instructionLengthOffset);
         int flagsOffset = instructionLengthOffset + 2 + instructionLength;
@@ -482,6 +653,7 @@ internal sealed partial class OpenTypeFont
         int glyphEnd,
         FontBounds bounds,
         int depth,
+        ref int remainingPoints,
         out OpenTypeGlyphOutline outline)
     {
         outline = default;
@@ -568,7 +740,7 @@ internal sealed partial class OpenTypeFont
                 cursor += 8;
             }
 
-            if (!TryReadGlyphOutline(componentGlyphId, depth + 1, out OpenTypeGlyphOutline component))
+            if (!TryReadGlyphOutline(componentGlyphId, depth + 1, ref remainingPoints, out OpenTypeGlyphOutline component))
             {
                 return false;
             }
@@ -657,7 +829,12 @@ internal sealed partial class OpenTypeFont
 
     private static string ReadScalerTag(byte[] bytes)
     {
-        string tag = Encoding.ASCII.GetString(bytes, 0, 4);
+        return ReadScalerTagAt(bytes, 0);
+    }
+
+    private static string ReadScalerTagAt(byte[] bytes, int offset)
+    {
+        string tag = Encoding.ASCII.GetString(bytes, offset, 4);
         if (tag is "\0\u0001\0\0" or "OTTO" or "true" or "typ1")
         {
             return tag;
@@ -666,13 +843,19 @@ internal sealed partial class OpenTypeFont
         throw new InvalidDataException("Font has an unrecognized sfnt version.");
     }
 
-    private static Dictionary<string, TableRecord> ReadTableDirectory(byte[] bytes, int directoryOffset, ushort tableCount, string what)
+    // PLAN G02: span discovery parses a leading slice of the file. Table extents are
+    // validated against extentLimit (the real file length) instead of the slice length,
+    // so late tables such as glyf do not fail validation merely for lying beyond the
+    // discovery span. Reads still come from bytes; anything actually touched beyond the
+    // slice throws and callers fall back to a full read.
+    private static Dictionary<string, TableRecord> ReadTableDirectory(byte[] bytes, int directoryOffset, ushort tableCount, string what, long? extentLimit = null)
     {
         if ((long)directoryOffset + (long)tableCount * 16L > bytes.Length)
         {
             throw new InvalidDataException("Font table directory exceeds file length.");
         }
 
+        long limit = extentLimit ?? bytes.Length;
         var tables = new Dictionary<string, TableRecord>(StringComparer.Ordinal);
         for (int i = 0; i < tableCount; i++)
         {
@@ -680,7 +863,7 @@ internal sealed partial class OpenTypeFont
             string tag = Encoding.ASCII.GetString(bytes, record, 4);
             uint tableOffset = U32(bytes, record + 8);
             uint length = U32(bytes, record + 12);
-            if ((ulong)tableOffset + length > (ulong)bytes.Length)
+            if ((ulong)tableOffset + length > (ulong)limit)
             {
                 throw new InvalidDataException("Font table exceeds file length.");
             }
@@ -872,7 +1055,8 @@ internal sealed partial class OpenTypeFont
         // duplicate keys keep last-wins semantics.
         var collected = new List<(uint Key, short Value)>();
         ReadLegacyKerningPairs(bytes, tables, collected);
-        ReadGposPairAdjustments(bytes, tables, collected);
+        long workRemaining = MaxKerningWorkSteps;
+        ReadGposPairAdjustments(bytes, tables, collected, ref workRemaining);
         var pairs = new Dictionary<uint, short>(collected.Count);
         foreach ((uint key, short value) in collected)
         {

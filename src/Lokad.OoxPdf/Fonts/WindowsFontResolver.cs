@@ -1,10 +1,34 @@
 namespace Lokad.OoxPdf.Fonts;
 
+/// <summary>
+/// Resolves installed system fonts with a process-static discovery snapshot per
+/// directory set.
+/// </summary>
+/// <remarks>
+/// PLAN M09 retention contract: the snapshot retains one lazy <see cref="FileFontProgramSource"/>
+/// per discovered face, and each source retains its full program bytes after first use
+/// (files are capped individually; see FileFontProgramSource). The retained population
+/// is bounded by the installed files, not by conversions: repeated conversions never
+/// re-read the disk. Hosts that rotate font directories or must release memory call
+/// <see cref="InvalidateDiscoveryCaches"/>; existing resolver instances keep their snapshot.
+/// </remarks>
 public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 {
     private static readonly object CacheLock = new();
-    private static readonly Dictionary<string, Lazy<IReadOnlyList<FontFaceResolution>>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Lazy<IReadOnlyList<FontFaceResolution>> cache;
+    private static readonly Dictionary<string, Lazy<DiscoverySnapshot>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lazy<DiscoverySnapshot> cache;
+
+    // PLAN G03: per-instance (usually per-conversion) resolution cache. Requests repeat
+    // per run; the static snapshot underneath is shared. Capped with clear-all so a
+    // long-lived directly-held resolver cannot grow without bound on adversarial
+    // distinct families; per-conversion instances never approach the cap.
+    internal const int MaxCachedResolutions = 4096;
+    private readonly Dictionary<FontRequest, FontFaceResolution> requestCache = new(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
+
+    private sealed record DiscoverySnapshot(
+        IReadOnlyList<FontFaceResolution> Faces,
+        Dictionary<string, FontFaceResolution[]> ByFamily,
+        FontFaceResolution[] TextFaces);
 
     public WindowsFontResolver()
         : this(GetDefaultFontDirectories())
@@ -20,7 +44,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     {
         cache = GetOrCreateCache();
 
-        Lazy<IReadOnlyList<FontFaceResolution>> GetOrCreateCache()
+        Lazy<DiscoverySnapshot> GetOrCreateCache()
         {
             string cacheKey = string.Join(
                 "|",
@@ -30,15 +54,15 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                     .Order(StringComparer.OrdinalIgnoreCase));
             lock (CacheLock)
             {
-                if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<IReadOnlyList<FontFaceResolution>>? cached))
+                if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<DiscoverySnapshot>? cached))
                 {
-                    cached = new Lazy<IReadOnlyList<FontFaceResolution>>(() => Discover());
+                    cached = new Lazy<DiscoverySnapshot>(() => Discover());
                     DiscoveryCaches[cacheKey] = cached;
                 }
 
                 return cached;
 
-            IReadOnlyList<FontFaceResolution> Discover()
+            DiscoverySnapshot Discover()
             {
                 var fonts = new List<FontFaceResolution>();
                 foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -54,12 +78,35 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                     {
                         try
                         {
-                            byte[] bytes = File.ReadAllBytes(path);
+                            // PLAN G02: discovery parses only the directory plus eight
+                            // table extents, never outlines or layout tables. Read exactly
+                            // those bytes instead of the whole program per file.
+                            (byte[] bytes, bool complete, long fileLength) = ReadDiscoveryBytes(path);
                             var source = new FileFontProgramSource(path);
+                            bool isCollection = OpenTypeFont.IsTrueTypeCollectionHeader(bytes);
                             int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
                             for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
                             {
-                                OpenTypeFont.FontDiscoveryHeaders headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
+                                OpenTypeFont.FontDiscoveryHeaders headers;
+                                try
+                                {
+                                    // Collections parse each face in place instead of
+                                    // repackaging per-face sfnt copies (G02).
+                                    headers = isCollection
+                                        ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex)
+                                        : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength);
+                                }
+                                catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
+                                {
+                                    // A span read can truncate bytes a malformed font's
+                                    // parser would otherwise touch. Re-parse the full file
+                                    // so accept/reject matches whole-program reads exactly.
+                                    // Malformed files pay one extra bounded read; valid
+                                    // fonts never take this path.
+                                    bytes = File.ReadAllBytes(path);
+                                    complete = true;
+                                    headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
+                                }
                                 if (!string.IsNullOrWhiteSpace(headers.FamilyName))
                                 {
                                     fonts.Add(new FontFaceResolution(
@@ -83,11 +130,85 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                     }
                 }
 
-                return fonts
+                FontFaceResolution[] faces = fonts
                     .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
+                var byFamily = new Dictionary<string, FontFaceResolution[]>(StringComparer.OrdinalIgnoreCase);
+                foreach (IGrouping<string, FontFaceResolution> group in faces.GroupBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase))
+                {
+                    byFamily[group.Key] = group.ToArray();
+                }
+
+                return new DiscoverySnapshot(faces, byFamily, faces.Where(f => !f.HasMathTable).ToArray());
             }
             }
+        }
+    }
+
+
+    private static (byte[] Bytes, bool Complete, long FileLength) ReadDiscoveryBytes(string path)
+    {
+        byte[] header = new byte[12];
+        long fileLength;
+        using (FileStream stream = File.OpenRead(path))
+        {
+            fileLength = stream.Length;
+            // Same per-font ceiling as first use (FileFontProgramSource): oversized
+            // files are skipped at stat time instead of buffered.
+            FileFontProgramSource.CheckLocalFontSize(fileLength, path);
+            if (fileLength < 12 || fileLength > int.MaxValue)
+            {
+                return (File.ReadAllBytes(path), true, fileLength);
+            }
+
+            ReadExactly(stream, header, 0, header.Length);
+            if (OpenTypeFont.IsTrueTypeCollectionHeader(header))
+            {
+                // Collections repackage per-face bytes at parse time, so span
+                // reads do not apply; keep the whole-program read.
+                return (File.ReadAllBytes(path), true, fileLength);
+            }
+
+            ushort tableCount = OpenTypeFont.U16(header, 4);
+            if (tableCount != 0 && tableCount <= 256)
+            {
+                int directoryLength = tableCount * 16;
+                var prefix = new byte[12 + directoryLength];
+                Buffer.BlockCopy(header, 0, prefix, 0, header.Length);
+                ReadExactly(stream, prefix, header.Length, directoryLength);
+                if (OpenTypeFont.TryGetDiscoveryByteBudget(prefix, fileLength, out long requiredEnd))
+                {
+                    if (requiredEnd <= prefix.Length)
+                    {
+                        return (prefix, false, fileLength);
+                    }
+
+                    if (requiredEnd <= fileLength)
+                    {
+                        var span = new byte[(int)requiredEnd];
+                        Buffer.BlockCopy(prefix, 0, span, 0, prefix.Length);
+                        ReadExactly(stream, span, prefix.Length, (int)requiredEnd - prefix.Length);
+                        return (span, false, fileLength);
+                    }
+                }
+            }
+        }
+
+        return (File.ReadAllBytes(path), true, fileLength);
+    }
+
+    private static void ReadExactly(Stream stream, byte[] buffer, int offset, int count)
+    {
+        while (count > 0)
+        {
+            int read = stream.Read(buffer, offset, count);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("Font file ended unexpectedly during discovery.");
+            }
+
+            offset += read;
+            count -= read;
         }
     }
 
@@ -106,24 +227,45 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     public FontFaceResolution Resolve(FontRequest request)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);
+        if (requestCache.TryGetValue(request, out FontFaceResolution? cached))
+        {
+            return RepopulateRequestedFamily(cached, request);
+        }
 
-        FontFaceResolution[] exact = cache.Value
-            .Where(f => f.FamilyName.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        if (exact.Length != 0)
+        FontFaceResolution resolved = ResolveCore(request);
+        if (requestCache.Count >= MaxCachedResolutions)
+        {
+            requestCache.Clear();
+        }
+
+        requestCache[request] = resolved;
+        return RepopulateRequestedFamily(resolved, request);
+    }
+
+    private static FontFaceResolution RepopulateRequestedFamily(FontFaceResolution cached, FontRequest request)
+    {
+        // Fallback results bake in the first-seen request spelling; re-stamp the current
+        // spelling so shared resolvers report deterministically per request. Exact hits
+        // already carry discovery spelling and return allocation-free.
+        return cached.IsFallback && !string.Equals(cached.RequestedFamily, request.FamilyName, StringComparison.Ordinal)
+            ? cached with { RequestedFamily = request.FamilyName }
+            : cached;
+    }
+
+    private FontFaceResolution ResolveCore(FontRequest request)
+    {
+        DiscoverySnapshot snapshot = cache.Value;
+        if (snapshot.ByFamily.TryGetValue(request.FamilyName, out FontFaceResolution[]? exact) && exact.Length != 0)
         {
             return SelectBest(exact, request);
         }
 
-        FontFaceResolution[] textFonts = cache.Value
-            .Where(f => !f.HasMathTable)
-            .ToArray();
-        if (textFonts.Length != 0)
+        if (snapshot.TextFaces.Length != 0)
         {
-            return SelectBest(textFonts, request) with { RequestedFamily = request.FamilyName, IsFallback = true };
+            return SelectBest(snapshot.TextFaces, request) with { RequestedFamily = request.FamilyName, IsFallback = true };
         }
 
-        return cache.Value.FirstOrDefault() is { } first
+        return snapshot.Faces.FirstOrDefault() is { } first
             ? first with { RequestedFamily = request.FamilyName, IsFallback = true }
             : new FontFaceResolution(
                 request.FamilyName,
@@ -140,7 +282,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     internal IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
-        return cache.Value;
+        return cache.Value.Faces;
     }
 
     IReadOnlyList<FontFaceResolution> IFontCatalog.GetDiscoveredFonts()
@@ -163,13 +305,49 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     private static FontFaceResolution SelectBest(IReadOnlyList<FontFaceResolution> candidates, FontRequest request)
     {
+        // PLAN G03: single-pass minimum instead of a five-key sort per resolve. OrderBy
+        // is stable and First takes the earliest minimum; a strict-less-than scan keeps
+        // the first minimal candidate, which is exactly equivalent.
+        if (candidates.Count == 0)
+        {
+            throw new InvalidOperationException("Sequence contains no elements.");
+        }
+
         int targetWeight = request.Bold ? 700 : 400;
-        return candidates
-            .OrderBy(f => f.Italic == request.Italic ? 0 : 1000)
-            .ThenBy(f => Math.Abs(f.WeightClass - targetWeight))
-            .ThenBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(f => f.Source.StableId, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(f => f.FontFaceIndex)
-            .First();
+        FontFaceResolution best = candidates[0];
+        for (int i = 1; i < candidates.Count; i++)
+        {
+            if (CompareCandidates(candidates[i], best, request, targetWeight) < 0)
+            {
+                best = candidates[i];
+            }
+        }
+
+        return best;
+    }
+
+    private static int CompareCandidates(FontFaceResolution left, FontFaceResolution right, FontRequest request, int targetWeight)
+    {
+        // D02: shared style/weight mechanics; family/source/face tie-breakers below
+        // stay Windows-specific.
+        int result = FontCandidateScoring.CompareStyleWeight(left.Italic, left.WeightClass, right.Italic, right.WeightClass, request.Italic, targetWeight);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = string.Compare(left.FamilyName, right.FamilyName, StringComparison.OrdinalIgnoreCase);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = string.Compare(left.Source.StableId, right.Source.StableId, StringComparison.OrdinalIgnoreCase);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        return left.FontFaceIndex.CompareTo(right.FontFaceIndex);
     }
 }

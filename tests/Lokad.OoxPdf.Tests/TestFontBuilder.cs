@@ -484,6 +484,79 @@ internal static class TestFontBuilder
         return glyf;
     }
 
+    // Rebuilds a font with one table swapped, keeping header and directory order.
+    // Used for hostile-structure probes (oversized GPOS class kerning, compound
+    // nesting) that Assemble cannot express.
+    public static byte[] ReplaceTable(byte[] font, string tag, byte[] replacement)
+    {
+        List<(string Tag, int Offset, int Length)> entries = GetDirectoryEntries(font);
+        var tables = new List<(string Tag, byte[] Data)>();
+        foreach ((string entryTag, int offset, int length) in entries)
+        {
+            if (entryTag == tag)
+            {
+                tables.Add((tag, replacement));
+                continue;
+            }
+
+            var data = new byte[length];
+            Array.Copy(font, offset, data, 0, length);
+            tables.Add((entryTag, data));
+        }
+
+        if (!tables.Any(table => table.Tag == tag))
+        {
+            throw new InvalidOperationException("Test font is missing table " + tag + ".");
+        }
+
+        int directoryLength = 12 + tables.Count * 16;
+        int dataOffset = directoryLength;
+        var directory = new List<byte>();
+        var blob = new List<byte>();
+        foreach ((string entryTag, byte[] data) in tables)
+        {
+            dataOffset = (dataOffset + 3) & ~3;
+            foreach (char c in entryTag)
+            {
+                directory.Add((byte)c);
+            }
+
+            directory.AddRange(new byte[] { 0, 0, 0, 0 });
+            directory.Add((byte)(dataOffset >> 24));
+            directory.Add((byte)(dataOffset >> 16));
+            directory.Add((byte)(dataOffset >> 8));
+            directory.Add((byte)dataOffset);
+            directory.Add((byte)(data.Length >> 24));
+            directory.Add((byte)(data.Length >> 16));
+            directory.Add((byte)(data.Length >> 8));
+            directory.Add((byte)data.Length);
+            while (blob.Count < dataOffset - directoryLength)
+            {
+                blob.Add(0);
+            }
+
+            blob.AddRange(data);
+            dataOffset += data.Length;
+        }
+
+        var output = new List<byte>();
+        // Table count is unchanged, so the sfnt header (searchRange and friends)
+        // stays byte-identical.
+        for (int i = 0; i < 12; i++)
+        {
+            output.Add(font[i]);
+        }
+
+        output.AddRange(directory);
+        while (output.Count < directoryLength)
+        {
+            output.Add(0);
+        }
+
+        output.AddRange(blob);
+        return output.ToArray();
+    }
+
     public static byte[] CreateCollection(string firstFamily, string secondFamily)
     {
         byte[] first = Assemble(scalerTag: new string(new[] { (char)0, (char)1, (char)0, (char)0 }), includeOutlines: true, familyName: firstFamily);

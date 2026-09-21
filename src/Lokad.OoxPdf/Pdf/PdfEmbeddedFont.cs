@@ -13,11 +13,13 @@ internal sealed class PdfEmbeddedFont
     private PdfEmbeddedFont(
         OpenTypeFont font,
         string baseFontName,
+        string codepointSetHash,
         IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
         OpenTypeFontSubset? subset)
     {
         Font = font;
         BaseFontName = baseFontName;
+        CodepointSetHash = codepointSetHash;
         UnicodeByOriginalGlyph = unicodeByOriginalGlyph;
         if (subset is not null)
         {
@@ -30,7 +32,10 @@ internal sealed class PdfEmbeddedFont
         }
 
         UnicodeByCid = BuildUnicodeByCid();
-        CodepointSetHash = ComputeCodepointSetHash(unicodeByOriginalGlyph);
+        // PLAN G06: ResourceKey is read on every writer lookup (grouping, object
+        // numbering, content emission), often in per-rune paths. Cache the key once
+        // instead of concatenating a fresh string per access.
+        ResourceKey = BaseFontName + "-U" + CodepointSetHash;
     }
 
     public OpenTypeFont Font { get; }
@@ -50,7 +55,7 @@ internal sealed class PdfEmbeddedFont
     // Keying resources by set keeps Merge to identical sets, where the remap agrees.
     public string CodepointSetHash { get; }
 
-    public string ResourceKey => BaseFontName + "-U" + CodepointSetHash;
+    public string ResourceKey { get; }
 
     public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken)
     {
@@ -78,6 +83,33 @@ internal sealed class PdfEmbeddedFont
         }
 
         if (items.Length == 1)
+        {
+            return items[0];
+        }
+
+        // PLAN G06: repeated slides/DOCX runs commonly reference the very same subset
+        // instance. Rebuilding its dictionary, re-hashing the font program, and
+        // re-subsetting on every merge is pure duplicate work: return it directly.
+        bool allIdentical = true;
+        for (int i = 1; i < items.Length; i++)
+        {
+            if (!ReferenceEquals(items[i], items[0]))
+            {
+                allIdentical = false;
+                break;
+            }
+        }
+
+        if (allIdentical)
+        {
+            return items[0];
+        }
+
+        // Distinct instances can still carry provably identical remaps: same font
+        // program plus equal glyph mappings subset to identical bytes. Merging those
+        // must not re-subset either. Anything else takes the union path below; equal
+        // ResourceKeys alone are not sufficient to conclude the remaps agree.
+        if (HasIdenticalMappings(items))
         {
             return items[0];
         }
@@ -133,11 +165,37 @@ internal sealed class PdfEmbeddedFont
             sortedGlyphs[glyph] = codePoint;
         }
 
-        string baseFontName = CreateBaseFontName(font, sortedGlyphs, subset is not null);
-        return new PdfEmbeddedFont(font, baseFontName, sortedGlyphs, subset);
+        // PLAN G06: the codepoint-set hash was computed twice per subset (once for the
+        // base-font tag, once in the constructor). Compute it once here and share it.
+        string setHash = ComputeCodepointSetHash(sortedGlyphs);
+        string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
+        return new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset);
     }
 
-    internal static string CreateBaseFontName(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, bool isSubset)
+    private static bool HasIdenticalMappings(PdfEmbeddedFont[] items)
+    {
+        IReadOnlyDictionary<ushort, int> first = items[0].UnicodeByOriginalGlyph;
+        for (int i = 1; i < items.Length; i++)
+        {
+            IReadOnlyDictionary<ushort, int> other = items[i].UnicodeByOriginalGlyph;
+            if (!ReferenceEquals(items[i].Font, items[0].Font) || other.Count != first.Count)
+            {
+                return false;
+            }
+
+            foreach ((ushort glyph, int codePoint) in first)
+            {
+                if (!other.TryGetValue(glyph, out int otherCodePoint) || otherCodePoint != codePoint)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    internal static string CreateBaseFontName(OpenTypeFont font, string codepointSetHash, bool isSubset)
     {
         string sanitizedFamily = SanitizeName(font.FamilyName);
         if (!isSubset)
@@ -146,8 +204,7 @@ internal sealed class PdfEmbeddedFont
         }
 
         string fontHash = Convert.ToHexString(SHA256.HashData(font.Bytes.Span)).Substring(0, 8);
-        string setHash = ComputeCodepointSetHash(unicodeByOriginalGlyph);
-        string tag = CreateSubsetTag(fontHash, setHash);
+        string tag = CreateSubsetTag(fontHash, codepointSetHash);
         return tag + "+" + sanitizedFamily;
     }
 

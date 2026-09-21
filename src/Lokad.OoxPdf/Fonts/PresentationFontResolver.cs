@@ -7,8 +7,12 @@ internal sealed class PresentationFontResolver
     private readonly IFontResolver primary;
     private readonly WindowsFontResolver windowsCatalog;
     private readonly IFontCatalog fontCatalog;
-    private readonly Dictionary<string, OpenTypeFont?> openTypeFonts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, PdfEmbeddedFont> subsets = new(StringComparer.Ordinal);
+    // T01: program identity is an ordinal (StableId, FaceIndex) tuple. StableIds are
+    // opaque resolver-scoped identities and must not be case-normalized (matching the
+    // DOCX font-plan keys and the IFontProgramSource ownership contract); family-name
+    // case-insensitivity lives one layer up in FontRequestKeyComparer.
+    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> openTypeFonts = new();
+    private readonly Dictionary<string, SubsetEntry> subsets = new(StringComparer.Ordinal);
 
     public PresentationFontResolver(IFontResolver? primary)
     {
@@ -45,12 +49,14 @@ internal sealed class PresentationFontResolver
     internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex);
         if (openTypeFonts.TryGetValue(key, out OpenTypeFont? cached))
         {
             return cached;
         }
 
+        // PLAN Q01: conversion-wide cumulative charge before font parsing allocates.
+        OoxConversionBudget.Current?.ChargeFontWork(1);
         cached = FontProgramLoader.Load(resolution, cancellationToken);
         openTypeFonts[key] = cached;
         return cached;
@@ -63,22 +69,34 @@ internal sealed class PresentationFontResolver
     internal PdfEmbeddedFont GetOrCreateSubset(FontFaceResolution resolution, OpenTypeFont font, IReadOnlyList<int> codePoints, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        // T01: the 64-bit set hash is a lookup shortcut, not an identity proof. Stored
+        // sets are compared on every hit so a hash collision can never corrupt output;
+        // a mismatch falls back to a fresh uncached subset instead of poisoning the cache.
         string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\u001f" + HashCodePointSet(codePoints);
-        if (subsets.TryGetValue(key, out PdfEmbeddedFont? cached))
+        int[] sorted = SortDeduplicate(codePoints);
+        if (subsets.TryGetValue(key, out SubsetEntry? cached) && cached.CodePoints.AsSpan().SequenceEqual(sorted))
         {
-            return cached;
+            return cached.Subset;
         }
 
-        cached = PdfEmbeddedFont.Create(font, codePoints, cancellationToken);
-        subsets[key] = cached;
-        return cached;
+        // PLAN Q01: conversion-wide cumulative charge before subsetting allocates.
+        OoxConversionBudget.Current?.ChargeFontWork(1);
+        PdfEmbeddedFont created = PdfEmbeddedFont.Create(font, codePoints, cancellationToken);
+        if (cached is null)
+        {
+            subsets[key] = new SubsetEntry(created, sorted);
+        }
+
+        return created;
     }
 
-    private static string HashCodePointSet(IReadOnlyList<int> codePoints)
+    private sealed record SubsetEntry(PdfEmbeddedFont Subset, int[] CodePoints);
+
+    private static int[] SortDeduplicate(IReadOnlyList<int> codePoints)
     {
         int[] sorted = codePoints.ToArray();
         Array.Sort(sorted);
-        ulong hash = 14695981039346656037ul;
+        int count = 0;
         int previous = 0;
         bool first = true;
         foreach (int codePoint in sorted)
@@ -90,6 +108,19 @@ internal sealed class PresentationFontResolver
 
             first = false;
             previous = codePoint;
+            sorted[count++] = codePoint;
+        }
+
+        Array.Resize(ref sorted, count);
+        return sorted;
+    }
+
+    private static string HashCodePointSet(IReadOnlyList<int> codePoints)
+    {
+        int[] sorted = SortDeduplicate(codePoints);
+        ulong hash = 14695981039346656037ul;
+        foreach (int codePoint in sorted)
+        {
             hash ^= (uint)codePoint;
             hash *= 1099511628211ul;
         }

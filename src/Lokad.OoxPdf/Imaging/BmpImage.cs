@@ -18,7 +18,8 @@ internal sealed class BmpImage
 
     public byte[]? Alpha { get; }
 
-    public static BmpImage Read(byte[] bytes)
+    // Q01: cooperative cancellation inside the pixel loop (see PngImage.Read).
+    public static BmpImage Read(byte[] bytes, CancellationToken cancellationToken = default)
     {
         if (bytes.Length < 54 || bytes[0] != (byte)'B' || bytes[1] != (byte)'M')
         {
@@ -62,6 +63,11 @@ internal sealed class BmpImage
         var rgb = new byte[width * height * 3];
         for (int y = 0; y < height; y++)
         {
+            if ((y & 255) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
             int sourceY = topDown ? y : height - 1 - y;
             int source = pixelOffset + sourceY * stride32;
             int target = y * width * 3;

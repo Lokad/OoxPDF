@@ -8,9 +8,20 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     internal const long MaxManifestBytes = 1024L * 1024L;
     internal const long MaxFontFileBytes = 64L * 1024L * 1024L;
+
+    // PLAN M09: downloaded programs persist for the resolver lifetime. The face
+    // population is manifest-finite, but retaining every downloaded face is still
+    // unbounded live memory for long-lived resolvers, so retained downloads are
+    // capped in aggregate with LRU eviction. Evicted sources re-download on demand
+    // (hash-verified every time, same retry/cancellation path); concurrently active
+    // conversions simply keep their already-handed-out array alive via GC.
+    internal const long MaxTotalFontPackBytes = 256L * 1024L * 1024L;
     private readonly FontPackFileSource fileSource;
     private readonly IReadOnlyList<FontPackFace> faces;
     private readonly IReadOnlyList<string> fallbackFamilies;
+    private readonly Dictionary<string, FontPackFace[]> facesByFamily;
+    private readonly FontPackFace[] textFaces;
+    private readonly Dictionary<FontRequest, FontFaceResolution> requestCache = new(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
 
     private OoxPdfFontPackResolver(
         string packId,
@@ -24,6 +35,41 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         fileSource = new FontPackFileSource(packId, packRootUri, httpClient);
         this.faces = faces;
         this.fallbackFamilies = fallbackFamilies;
+        facesByFamily = IndexFacesByFamily(faces);
+        textFaces = faces.Where(face => !face.Style.HasMathTable).ToArray();
+    }
+
+    private static Dictionary<string, FontPackFace[]> IndexFacesByFamily(IReadOnlyList<FontPackFace> faces)
+    {
+        var grouped = new Dictionary<string, List<FontPackFace>>(StringComparer.OrdinalIgnoreCase);
+        foreach (FontPackFace face in faces)
+        {
+            if (!grouped.TryGetValue(face.RequestedFamily, out List<FontPackFace>? requested))
+            {
+                requested = [];
+                grouped[face.RequestedFamily] = requested;
+            }
+
+            requested.Add(face);
+            if (!face.ResolvedFamily.Equals(face.RequestedFamily, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!grouped.TryGetValue(face.ResolvedFamily, out List<FontPackFace>? resolved))
+                {
+                    resolved = [];
+                    grouped[face.ResolvedFamily] = resolved;
+                }
+
+                resolved.Add(face);
+            }
+        }
+
+        var index = new Dictionary<string, FontPackFace[]>(StringComparer.OrdinalIgnoreCase);
+        foreach ((string family, List<FontPackFace> group) in grouped)
+        {
+            index[family] = group.ToArray();
+        }
+
+        return index;
     }
 
     public string PackId { get; }
@@ -86,31 +132,43 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
     public FontFaceResolution Resolve(FontRequest request)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);
+        if (requestCache.TryGetValue(request, out FontFaceResolution? cached))
+        {
+            return RepopulateRequestedFamily(cached, request);
+        }
 
-        FontPackFace[] exact = faces
-            .Where(face =>
-                face.RequestedFamily.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase) ||
-                face.ResolvedFamily.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        if (exact.Length != 0)
+        FontFaceResolution resolved = ResolveCore(request);
+        if (requestCache.Count >= WindowsFontResolver.MaxCachedResolutions)
+        {
+            requestCache.Clear();
+        }
+
+        requestCache[request] = resolved;
+        return RepopulateRequestedFamily(resolved, request);
+    }
+
+    private static FontFaceResolution RepopulateRequestedFamily(FontFaceResolution cached, FontRequest request)
+    {
+        return cached.IsFallback && !string.Equals(cached.RequestedFamily, request.FamilyName, StringComparison.Ordinal)
+            ? cached with { RequestedFamily = request.FamilyName }
+            : cached;
+    }
+
+    private FontFaceResolution ResolveCore(FontRequest request)
+    {
+        if (facesByFamily.TryGetValue(request.FamilyName, out FontPackFace[]? exact) && exact.Length != 0)
         {
             return SelectBest(exact, request, isFallback: false);
         }
 
         foreach (string fallback in fallbackFamilies)
         {
-            FontPackFace[] configuredFallbacks = faces
-                .Where(face =>
-                face.RequestedFamily.Equals(fallback, StringComparison.OrdinalIgnoreCase) ||
-                face.ResolvedFamily.Equals(fallback, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-            if (configuredFallbacks.Length != 0)
+            if (facesByFamily.TryGetValue(fallback, out FontPackFace[]? configuredFallbacks) && configuredFallbacks.Length != 0)
             {
                 return SelectBest(configuredFallbacks, request, isFallback: true);
             }
         }
 
-        FontPackFace[] textFaces = faces.Where(face => !face.Style.HasMathTable).ToArray();
         return SelectBest(textFaces.Length == 0 ? faces : textFaces, request, isFallback: true);
     }
 
@@ -121,19 +179,52 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
     private FontFaceResolution SelectBest(IReadOnlyList<FontPackFace> candidates, FontRequest request, bool isFallback)
     {
+        // PLAN G03: single-pass minimum instead of a five-key sort per resolve (see
+        // WindowsFontResolver.SelectBest for the equivalence argument).
+        if (candidates.Count == 0)
+        {
+            throw new InvalidOperationException("Sequence contains no elements.");
+        }
+
         int targetWeight = request.Bold ? 700 : 400;
-        FontPackFace face = candidates
-            .OrderBy(candidate => candidate.Style.Italic == request.Italic ? 0 : 1000)
-            .ThenBy(candidate => Math.Abs(candidate.Style.WeightClass - targetWeight))
-            .ThenBy(candidate => candidate.ResolvedFamily, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(candidate => candidate.RelativeFontFile, StringComparer.Ordinal)
-            .ThenBy(candidate => candidate.Style.FaceIndex)
-            .First();
+        FontPackFace face = candidates[0];
+        for (int i = 1; i < candidates.Count; i++)
+        {
+            if (CompareCandidates(candidates[i], face, request, targetWeight) < 0)
+            {
+                face = candidates[i];
+            }
+        }
 
         return face.ToResolution(fileSource, isFallback) with
         {
             RequestedFamily = request.FamilyName
         };
+    }
+
+    private static int CompareCandidates(FontPackFace left, FontPackFace right, FontRequest request, int targetWeight)
+    {
+        // D02: shared style/weight mechanics; family/file/face tie-breakers below
+        // stay pack-specific.
+        int result = FontCandidateScoring.CompareStyleWeight(left.Style.Italic, left.Style.WeightClass, right.Style.Italic, right.Style.WeightClass, request.Italic, targetWeight);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = string.Compare(left.ResolvedFamily, right.ResolvedFamily, StringComparison.OrdinalIgnoreCase);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = string.Compare(left.RelativeFontFile, right.RelativeFontFile, StringComparison.Ordinal);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        return left.Style.FaceIndex.CompareTo(right.Style.FaceIndex);
     }
 
     private static Uri NormalizeSourceUri(Uri sourceUri)
@@ -444,10 +535,30 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         return new OoxPdfFontPackException(OoxPdfFontPackDiagnosticIds.FontPackMissing, message);
     }
 
-    private sealed class FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient)
+    internal sealed class FontPackFileSource
     {
+        private readonly string packId;
+        private readonly Uri packRootUri;
+        private readonly HttpClient httpClient;
+        private readonly long maxTotalBytes;
         private readonly object sync = new();
         private readonly Dictionary<string, IFontProgramSource> sources = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, long> retainedSizes = new(StringComparer.Ordinal);
+        private readonly LinkedList<string> retainedOrder = new();
+        private long retainedBytes;
+
+        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient)
+            : this(packId, packRootUri, httpClient, MaxTotalFontPackBytes)
+        {
+        }
+
+        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes)
+        {
+            this.packId = packId;
+            this.packRootUri = packRootUri;
+            this.httpClient = httpClient;
+            this.maxTotalBytes = maxTotalBytes;
+        }
 
         public IFontProgramSource Create(FontPackFile file)
         {
@@ -455,11 +566,47 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             {
                 if (!sources.TryGetValue(file.RelativePath, out IFontProgramSource? source))
                 {
-                    source = new OoxPdfFontPackProgramSource(packId, packRootUri, httpClient, file);
+                    source = new OoxPdfFontPackProgramSource(packId, packRootUri, httpClient, file, this);
                     sources[file.RelativePath] = source;
                 }
 
                 return source;
+            }
+        }
+
+        internal void NoteDownloaded(string relativePath, long byteCount)
+        {
+            lock (sync)
+            {
+                if (retainedSizes.TryGetValue(relativePath, out long previous))
+                {
+                    retainedBytes -= previous;
+                    retainedOrder.Remove(relativePath);
+                }
+
+                retainedSizes[relativePath] = byteCount;
+                retainedOrder.AddLast(relativePath);
+                retainedBytes += byteCount;
+
+                while (retainedBytes > maxTotalBytes && retainedOrder.Count > 0)
+                {
+                    string eldest = retainedOrder.First!.Value;
+                    if (retainedOrder.Count == 1)
+                    {
+                        // Only the just-downloaded source is left; a single font always
+                        // fits by the per-font cap, so this is unreachable in practice.
+                        break;
+                    }
+
+                    retainedOrder.RemoveFirst();
+                    retainedBytes -= retainedSizes.GetValueOrDefault(eldest);
+                    retainedSizes.Remove(eldest);
+                    if (sources.TryGetValue(eldest, out IFontProgramSource? source) &&
+                        source is OoxPdfFontPackProgramSource programSource)
+                    {
+                        programSource.EvictCachedBytes();
+                    }
+                }
             }
         }
     }
@@ -468,7 +615,8 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         string packId,
         Uri packRootUri,
         HttpClient httpClient,
-        FontPackFile file) : IFontProgramSource
+        FontPackFile file,
+        FontPackFileSource owner) : IFontProgramSource
     {
         private readonly SemaphoreSlim gate = new(1, 1);
         private ReadOnlyMemory<byte>? cachedBytes;
@@ -499,12 +647,21 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
                 ValidateFontBytes(file, bytes);
                 cachedBytes = bytes;
+                owner.NoteDownloaded(file.RelativePath, bytes.LongLength);
                 return bytes;
             }
             finally
             {
                 gate.Release();
             }
+        }
+
+        // Clears retained bytes so the owner aggregate stays bounded. Arrays already
+        // handed out stay alive (and valid: every download is hash-verified) via GC;
+        // the next access simply downloads again through the per-source gate.
+        internal void EvictCachedBytes()
+        {
+            cachedBytes = null;
         }
 
         private static void ValidateFontBytes(FontPackFile file, byte[] bytes)
@@ -530,7 +687,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         IReadOnlyList<FontPackFace> Faces,
         IReadOnlyList<string> FallbackFamilies);
 
-    private sealed record FontPackFile(
+    internal sealed record FontPackFile(
         string RelativePath,
         long ByteSize,
         string Sha256);

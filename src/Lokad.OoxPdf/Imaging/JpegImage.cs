@@ -43,15 +43,17 @@ internal sealed class JpegImage
 
     public byte[] Rgb { get; }
 
-    public static JpegImage Read(byte[] bytes)
+    // Q01: cooperative cancellation inside MCU decoding (see PngImage.Read).
+    public static JpegImage Read(byte[] bytes, CancellationToken cancellationToken = default)
     {
-        var decoder = new Decoder(bytes);
+        var decoder = new Decoder(bytes, cancellationToken);
         return decoder.Decode();
     }
 
     private sealed class Decoder
     {
         private readonly byte[] bytes;
+        private readonly CancellationToken cancellationToken;
         private readonly int[][] quantizationTables = new int[4][];
         private readonly HuffmanEntry[][] dcTables = new HuffmanEntry[4][];
         private readonly HuffmanEntry[][] acTables = new HuffmanEntry[4][];
@@ -61,9 +63,10 @@ internal sealed class JpegImage
         private int maxHorizontal = 1;
         private int maxVertical = 1;
 
-        public Decoder(byte[] bytes)
+        public Decoder(byte[] bytes, CancellationToken cancellationToken = default)
         {
             this.bytes = bytes;
+            this.cancellationToken = cancellationToken;
         }
 
         public JpegImage Decode()
@@ -303,6 +306,8 @@ internal sealed class JpegImage
             int mcuRows = (height + maxVertical * 8 - 1) / (maxVertical * 8);
             for (int mcuY = 0; mcuY < mcuRows; mcuY++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 for (int mcuX = 0; mcuX < mcuColumns; mcuX++)
                 {
                     foreach (Component component in components)

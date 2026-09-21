@@ -26,7 +26,10 @@ internal sealed class PngImage
 
     public byte[]? Alpha { get; }
 
-    public static PngImage Read(byte[] bytes)
+    // Q01: cooperative cancellation inside the long decode loops. The token is
+    // optional so header-only probes and existing callers keep working; renderers
+    // pass the conversion token so huge images stay cancellable mid-decode.
+    public static PngImage Read(byte[] bytes, CancellationToken cancellationToken = default)
     {
         if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
         {
@@ -44,6 +47,7 @@ internal sealed class PngImage
         int offset = Signature.Length;
         while (offset + 8 <= bytes.Length)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int length = ReadInt32(bytes, offset);
             if (length < 0 || (long)offset + 8L + length + 4L > bytes.Length)
             {
@@ -89,12 +93,17 @@ internal sealed class PngImage
 
         int pngBitsPerPixel = colorType switch { 0 or 3 => bitDepth, 2 => 24, 4 => 16, 6 => 32, _ => 8 };
         long maxInflated = MaxInflatedBytes(width, height, pngBitsPerPixel, interlace);
-        using var input = new MemoryStream(idat.ToArray());
+        // PLAN M08: the IDAT accumulator already owns the compressed bytes; inflate
+        // from a read-only view instead of copying them into a second array.
+        using var input = new MemoryStream(idat.GetBuffer(), 0, (int)idat.Length, writable: false);
         using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
         using var output = new MemoryStream();
-        CopyInflated(zlib, output, maxInflated);
+        CopyInflated(zlib, output, maxInflated, cancellationToken);
 
-        return Decode(output.ToArray(), width, height, bitDepth, colorType, interlace, palette, transparency);
+        // PLAN M08: decode from the inflated buffer in place instead of trimming a
+        // second full-size copy. The truncation guards below throw the same exception
+        // types short input always produced, preserving crop-fallback behavior.
+        return Decode(output.GetBuffer(), (int)output.Length, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
     }
 
     private static long MaxInflatedBytes(int width, int height, int bitsPerPixel, int interlace)
@@ -120,11 +129,12 @@ internal sealed class PngImage
         return checked(((long)width * bitsPerPixel + 7L) / 8L + 1L) * height;
     }
 
-    private static void CopyInflated(System.IO.Compression.ZLibStream source, MemoryStream destination, long maxBytes)
+    private static void CopyInflated(System.IO.Compression.ZLibStream source, MemoryStream destination, long maxBytes, CancellationToken cancellationToken)
     {
         byte[] buffer = new byte[81920];
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int read = source.Read(buffer, 0, buffer.Length);
             if (read == 0)
             {
@@ -153,7 +163,7 @@ internal sealed class PngImage
         };
     }
 
-    private static PngImage Decode(byte[] decompressed, int width, int height, int bitDepth, int colorType, int interlace, byte[]? palette, byte[]? transparency)
+    private static PngImage Decode(byte[] decompressed, int length, int width, int height, int bitDepth, int colorType, int interlace, byte[]? palette, byte[]? transparency, CancellationToken cancellationToken)
     {
         if (colorType == 3 && (palette is null || palette.Length % 3 != 0))
         {
@@ -189,7 +199,22 @@ internal sealed class PngImage
         int source = 0;
         for (int y = 0; y < height; y++)
         {
+            if ((y & 63) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            if ((uint)source >= (uint)length)
+            {
+                throw new IndexOutOfRangeException("PNG pixel data is truncated.");
+            }
+
             byte filter = decompressed[source++];
+            if ((long)source + stride > length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(decompressed), "PNG pixel data is truncated.");
+            }
+
             decompressed.AsSpan(source, stride).CopyTo(current);
             source += stride;
             Unfilter(filter, current, previous, filterBytesPerPixel);
@@ -221,7 +246,22 @@ internal sealed class PngImage
                 var adam7Current = new byte[adam7Stride];
                 for (int row = 0; row < passHeight; row++)
                 {
+                    if ((row & 63) == 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
+                    if ((uint)adam7Source >= (uint)length)
+                    {
+                        throw new IndexOutOfRangeException("PNG pixel data is truncated.");
+                    }
+
                     byte filter = decompressed[adam7Source++];
+                    if ((long)adam7Source + adam7Stride > length)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(decompressed), "PNG pixel data is truncated.");
+                    }
+
                     decompressed.AsSpan(adam7Source, adam7Stride).CopyTo(adam7Current);
                     adam7Source += adam7Stride;
                     Unfilter(filter, adam7Current, adam7Previous, filterBytesPerPixel);

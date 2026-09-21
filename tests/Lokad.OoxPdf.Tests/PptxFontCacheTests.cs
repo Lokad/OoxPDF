@@ -1,4 +1,4 @@
-using Lokad.OoxPdf.Fonts;
+﻿using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -119,6 +119,68 @@ internal static class PptxFontCacheTests
         TestAssert.True(ReferenceEquals(first, same), "Identical codepoint sets must share one subset regardless of order or duplicates.");
         TestAssert.True(!ReferenceEquals(first, other), "Different codepoint sets must keep distinct subsets.");
     }
+    public static void CaseDistinctStableIdsDoNotAliasPrograms()
+    {
+        // T01: StableIds are opaque resolver-scoped identities compared ordinally.
+        // Two custom IDs differing only by case must load separately (the PPTX program
+        // cache previously used OrdinalIgnoreCase, aliasing them like family names).
+        byte[] fontBytes = TestFontBuilder.CreateTestFont();
+        var upper = new MemoryFontProgramSource("Case:Font", fontBytes);
+        var lower = new MemoryFontProgramSource("case:font", fontBytes);
+        var resolver = new PresentationFontResolver(null);
+        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFont(
+            new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), upper, IsFallback: false),
+            CancellationToken.None);
+        OpenTypeFont? second = resolver.GetOrLoadOpenTypeFont(
+            new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), lower, IsFallback: false),
+            CancellationToken.None);
+
+        TestAssert.NotNull(first);
+        TestAssert.NotNull(second);
+        TestAssert.True(!ReferenceEquals(first, second), "Case-distinct program IDs must load separately, not alias.");
+    }
+
+    public static void CollectionFaceIndexesCacheSeparately()
+    {
+        // T01: multiple TTC faces of one program resolve consistently through the
+        // ordinal (StableId, FaceIndex) program key.
+        byte[] collection = TestFontBuilder.CreateCollection("TestFontA", "TestFontB");
+        TestAssert.Equal(2, OpenTypeFont.GetCollectionFontCount(collection));
+        var source = new MemoryFontProgramSource("collection:test", collection);
+        var resolver = new PresentationFontResolver(null);
+        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFont(
+            new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), source, IsFallback: false),
+            CancellationToken.None);
+        OpenTypeFont? second = resolver.GetOrLoadOpenTypeFont(
+            new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 1, false), source, IsFallback: false),
+            CancellationToken.None);
+
+        TestAssert.NotNull(first);
+        TestAssert.NotNull(second);
+        TestAssert.True(!ReferenceEquals(first, second), "Distinct collection faces must keep distinct cache entries.");
+        TestAssert.True(ReferenceEquals(first, resolver.GetOrLoadOpenTypeFont(
+            new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), source, IsFallback: false),
+            CancellationToken.None)), "Repeated face lookups must reuse the cached program.");
+    }
+
+    public static void StyleVariantsShareProgramAndSubsetConsistently()
+    {
+        // T01: request style differences keep distinct resolutions but deterministically
+        // share one program and one subset per (program, codepoint set).
+        var program = new MemoryFontProgramSource("style-test", TestFontBuilder.CreateTestFont());
+        var resolver = new PresentationFontResolver(new SingleProgramResolver(program));
+        var plain = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", false, false), CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected test program resolution.");
+        var bold = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", true, false), CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected test program resolution.");
+
+        TestAssert.True(ReferenceEquals(plain.Font, bold.Font), "Style variants of one program must load once.");
+        PdfEmbeddedFont first = resolver.GetOrCreateSubset(plain.Resolution, plain.Font, [65, 66], CancellationToken.None);
+        PdfEmbeddedFont second = resolver.GetOrCreateSubset(bold.Resolution, bold.Font, [66, 65, 66], CancellationToken.None);
+
+        TestAssert.True(ReferenceEquals(first, second), "Same program and codepoint set must share one subset across style variants.");
+    }
+
     private sealed class SingleProgramResolver(MemoryFontProgramSource program) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)

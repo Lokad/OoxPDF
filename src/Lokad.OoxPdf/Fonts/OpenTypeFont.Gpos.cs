@@ -34,7 +34,7 @@ internal sealed partial class OpenTypeFont
                     short value = I16(bytes, pairOffset + 4);
                     if (value != 0)
                     {
-                        pairs.Add((((uint)left << 16) | right, value));
+                        AddKerningPair(pairs, ((uint)left << 16) | right, value);
                     }
 
                     pairOffset += 6;
@@ -50,7 +50,7 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, List<(uint Key, short Value)> pairs)
+    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, List<(uint Key, short Value)> pairs, ref long workRemaining)
     {
         if (!tables.TryGetValue("GPOS", out TableRecord gpos) || gpos.Length < 10)
         {
@@ -89,7 +89,7 @@ internal sealed partial class OpenTypeFont
             for (int j = 0; j < subtableCount && lookup + 6 + j * 2 + 2 <= tableEnd; j++)
             {
                 int subtable = lookup + U16(bytes, lookup + 6 + j * 2);
-                ReadGposPairAdjustmentLookupSubtable(bytes, subtable, lookupType, tableEnd, pairs);
+                ReadGposPairAdjustmentLookupSubtable(bytes, subtable, lookupType, tableEnd, pairs, ref workRemaining);
             }
         }
     }
@@ -101,6 +101,47 @@ internal sealed partial class OpenTypeFont
         "grek",
         "DFLT",
     };
+
+    // PLAN M10: compact OpenType structures expand into large runtime tables here.
+    // A 1,068-byte class-kern input with two 512-glyph sets produced 262,144 pairs;
+    // coverage/class ranges up to 65,535 glyphs each and class cross products up to
+    // 2^32 pairs are addressable from tiny tables. Caps below bound the expansion
+    // before allocation. Measured 2026-09-21 over installed Windows fonts
+    // (artifacts/kern-stats.txt, ignored): maximum 742,163 pairs in one face
+    // (Gabriola), 5.76M pairs across 364 faces. The pair cap keeps ~2.7x headroom
+    // over the observed maximum; coverage/class caps allow 2x the u16 glyph space
+    // to tolerate overlapping ranges. Exceeding fonts throw InvalidDataException so
+    // FontProgramLoader falls back to a substitute face, exactly like malformed
+    // fonts (deliberately not a budget-escape failure: font loading owns a fallback
+    // contract, and per-node catches only see method-local lists that die with the
+    // catch, so nothing accumulates).
+    internal const int MaxKerningPairs = 2_000_000;
+    internal const int MaxCoverageGlyphs = 131_072;
+    internal const int MaxClassGlyphs = 131_072;
+
+    // Bounds pure scan work with no allocation footprint: class-def linear scans per
+    // coverage glyph plus zero-advance candidate iterations. Real faces stay orders of
+    // magnitude below this; hostile cross products exhaust it in milliseconds.
+    internal const long MaxKerningWorkSteps = 67_108_864;
+
+    private static void AddKerningPair(List<(uint Key, short Value)> pairs, uint key, short value)
+    {
+        if (pairs.Count >= MaxKerningPairs)
+        {
+            throw new InvalidDataException($"Font declares more kerning pairs than the maximum supported count of {MaxKerningPairs}.");
+        }
+
+        pairs.Add((key, value));
+    }
+
+    private static void ConsumeKerningWork(ref long workRemaining, long steps)
+    {
+        workRemaining -= steps;
+        if (workRemaining < 0)
+        {
+            throw new InvalidDataException("Font kerning tables exceed the maximum supported lookup work.");
+        }
+    }
 
     private static HashSet<ushort> ReadGposKernLookupIndices(byte[] bytes, int gposOffset, int tableEnd)
     {
@@ -204,11 +245,12 @@ internal sealed partial class OpenTypeFont
         int subtable,
         ushort lookupType,
         int tableEnd,
-        List<(uint Key, short Value)> pairs)
+        List<(uint Key, short Value)> pairs,
+        ref long workRemaining)
     {
         if (lookupType == 2)
         {
-            ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs);
+            ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs, ref workRemaining);
             return;
         }
 
@@ -230,10 +272,10 @@ internal sealed partial class OpenTypeFont
             return;
         }
 
-        ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs);
+        ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs, ref workRemaining);
     }
 
-    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, List<(uint Key, short Value)> pairs)
+    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, List<(uint Key, short Value)> pairs, ref long workRemaining)
     {
         if (subtable + 10 > tableEnd)
         {
@@ -270,7 +312,7 @@ internal sealed partial class OpenTypeFont
                     short xAdvance = ReadXAdvance(bytes, pairValue + 2, valueFormat1);
                     if (xAdvance != 0)
                     {
-                        pairs.Add((((uint)coverageGlyphs[i] << 16) | rightGlyph, xAdvance));
+                        AddKerningPair(pairs, ((uint)coverageGlyphs[i] << 16) | rightGlyph, xAdvance);
                     }
 
                     pairValue += 2 + valueRecordSize1 + valueRecordSize2;
@@ -293,7 +335,7 @@ internal sealed partial class OpenTypeFont
             Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd);
             foreach (ushort leftGlyph in coverageGlyphs)
             {
-                ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, leftGlyph);
+                ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, leftGlyph, ref workRemaining);
                 if (leftClass >= class1Count)
                 {
                     continue;
@@ -317,7 +359,8 @@ internal sealed partial class OpenTypeFont
                     {
                         foreach (ushort rightGlyph in rightClassGlyphs.Value)
                         {
-                            pairs.Add((((uint)leftGlyph << 16) | rightGlyph, xAdvance));
+                            ConsumeKerningWork(ref workRemaining, 1);
+                            AddKerningPair(pairs, ((uint)leftGlyph << 16) | rightGlyph, xAdvance);
                         }
                     }
                 }
@@ -398,6 +441,11 @@ internal sealed partial class OpenTypeFont
             ushort end = U16(bytes, range + 2);
             for (int glyph = start; glyph <= end; glyph++)
             {
+                if (list.Count >= MaxCoverageGlyphs)
+                {
+                    throw new InvalidDataException($"Font coverage table expands beyond the maximum supported glyph count of {MaxCoverageGlyphs}.");
+                }
+
                 list.Add((ushort)glyph);
             }
         }
@@ -406,7 +454,7 @@ internal sealed partial class OpenTypeFont
         return true;
     }
 
-    private static ushort ReadGlyphClass(byte[] bytes, int offset, int tableEnd, ushort glyphId)
+    private static ushort ReadGlyphClass(byte[] bytes, int offset, int tableEnd, ushort glyphId, ref long workRemaining)
     {
         if (offset + 4 > tableEnd)
         {
@@ -440,6 +488,7 @@ internal sealed partial class OpenTypeFont
 
         for (int i = 0; i < rangeCount; i++)
         {
+            ConsumeKerningWork(ref workRemaining, 1);
             int range = offset + 4 + i * 6;
             ushort start = U16(bytes, range);
             ushort end = U16(bytes, range + 2);
@@ -455,6 +504,7 @@ internal sealed partial class OpenTypeFont
     private static Dictionary<ushort, ushort[]> ReadClassGlyphs(byte[] bytes, int offset, int tableEnd)
     {
         var classes = new Dictionary<ushort, List<ushort>>();
+        int totalGlyphs = 0;
         if (offset + 4 > tableEnd)
         {
             return [];
@@ -479,7 +529,7 @@ internal sealed partial class OpenTypeFont
                     continue;
                 }
 
-                AddClassGlyph(classes, classValue, (ushort)(start + i));
+                AddClassGlyph(classes, ref totalGlyphs, classValue, (ushort)(start + i));
             }
         }
         else if (format == 2)
@@ -503,7 +553,7 @@ internal sealed partial class OpenTypeFont
 
                 for (int glyph = start; glyph <= end; glyph++)
                 {
-                    AddClassGlyph(classes, classValue, (ushort)glyph);
+                    AddClassGlyph(classes, ref totalGlyphs, classValue, (ushort)glyph);
                 }
             }
         }
@@ -511,8 +561,13 @@ internal sealed partial class OpenTypeFont
         return classes.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
     }
 
-    private static void AddClassGlyph(Dictionary<ushort, List<ushort>> classes, ushort classValue, ushort glyphId)
+    private static void AddClassGlyph(Dictionary<ushort, List<ushort>> classes, ref int totalGlyphs, ushort classValue, ushort glyphId)
     {
+        if (totalGlyphs >= MaxClassGlyphs)
+        {
+            throw new InvalidDataException($"Font class definition expands beyond the maximum supported glyph count of {MaxClassGlyphs}.");
+        }
+
         if (!classes.TryGetValue(classValue, out List<ushort>? glyphs))
         {
             glyphs = [];
@@ -520,5 +575,6 @@ internal sealed partial class OpenTypeFont
         }
 
         glyphs.Add(glyphId);
+        totalGlyphs++;
     }
 }
