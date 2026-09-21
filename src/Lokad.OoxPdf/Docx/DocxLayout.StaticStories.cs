@@ -161,6 +161,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                var cellMemo = new DocxTableCellTextLinesMemo();
                 DocxTableLayoutFrame frame = CreateTableLayoutFrame(
                     tableElement.Table,
                     tableIndex++,
@@ -197,7 +198,8 @@ internal sealed partial class DocxLayoutEngine
                         FragmentReason: "None",
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         pageCount: pageCount,
-                        paragraphSpacingScale: paragraphSpacingScale));
+                        paragraphSpacingScale: paragraphSpacingScale,
+                        cellMemo: cellMemo));
                     cursorY -= rowHeight;
                 }
 

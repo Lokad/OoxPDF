@@ -192,7 +192,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         int? pageNumber,
         int? pageCount,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         if (textMeasurer is null)
         {
@@ -213,6 +214,47 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
+        bool pageStatic = !HasPageDynamicFields(bodyElements);
+        (List<DocxTextLineLayout> lines, double usedHeight) = ComputeTableCellTextLines(cell, cellX, cellWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale, cellMemo, bodyElements, paddingLeft, textWidth, startBaselineY, rowTopPadding, cellX, cellY + cellHeight, pageStatic);
+        if (lines.Count == 0)
+        {
+            return lines;
+        }
+        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
+        double extra = Math.Max(0d, availableHeight - usedHeight);
+        double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
+            ? extra
+            : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
+                ? extra / 2d
+                : 0d;
+        return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset, 0d);
+    }
+
+    private static (List<DocxTextLineLayout> Lines, double UsedHeight) ComputeTableCellTextLines(
+        DocxTableCell cell,
+        double cellX,
+        double cellWidth,
+        IDocxTextMeasurer textMeasurer,
+        double defaultTabStopPoints,
+        int? pageNumber,
+        int? pageCount,
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo,
+        IReadOnlyList<DocxBodyElement> bodyElements,
+        double paddingLeft,
+        double textWidth,
+        double startBaselineY,
+        double rowTopPadding,
+        double originX,
+        double originY,
+        bool pageStatic)
+    {
+        if (cellMemo is not null &&
+            cellMemo.TryGetRelativeLines(cell, cellWidth, textMeasurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, pageStatic, out IReadOnlyList<DocxTextLineLayout> cachedLines, out double cachedOriginX, out double cachedOriginY, out double cachedUsedHeight))
+        {
+            return (new List<DocxTextLineLayout>(DocxTableCellTextLinesMemo.ShiftLines(cachedLines, originX - cachedOriginX, originY - cachedOriginY)), cachedUsedHeight);
+        }
+
         double cursorY = startBaselineY;
         var lines = new List<DocxTextLineLayout>();
         double pendingSpacingAfter = 0d;
@@ -344,18 +386,17 @@ internal sealed partial class DocxLayoutEngine
         cursorY -= pendingSpacingAfter;
         if (lines.Count == 0)
         {
-            return lines;
+            return (lines, 0d);
         }
 
         double usedHeight = Math.Max(0d, startBaselineY - cursorY);
-        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
-        double extra = Math.Max(0d, availableHeight - usedHeight);
-        double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
-            ? extra
-            : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
-                ? extra / 2d
-                : 0d;
-        return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset, 0d);
+
+        if (cellMemo is not null)
+        {
+            cellMemo.StoreRelativeLines(cell, cellWidth, textMeasurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, pageStatic, DocxTableCellTextLinesMemo.ToRelativeLines(lines, originX, originY), originX, originY, usedHeight);
+        }
+
+        return (lines, usedHeight);
 
         DocxParagraphLineShape FitTableCellLineText(DocxParagraphLineShape lineShape, double targetWidth)
         {
@@ -404,6 +445,7 @@ internal sealed partial class DocxLayoutEngine
                 Segments = segments
             };
         }
+
     }
 
     private static (IReadOnlyList<DocxInlineImageLayout> Images, IReadOnlyList<DocxInlineTextBoxLayout> TextBoxes) LayoutTableCellInlineImages(
@@ -586,7 +628,8 @@ internal sealed partial class DocxLayoutEngine
         int pageIndex,
         int? pageNumber,
         int? pageCount,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (textMeasurer is null || !bodyElements.OfType<DocxTableElement>().Any())
@@ -645,7 +688,8 @@ internal sealed partial class DocxLayoutEngine
                         FragmentReason: "None",
                         Story: null,
                         pageCount: pageCount,
-                        paragraphSpacingScale: paragraphSpacingScale));
+                        paragraphSpacingScale: paragraphSpacingScale,
+                        cellMemo: cellMemo));
                     cursorY -= rowHeight;
                 }
 

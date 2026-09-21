@@ -1831,6 +1831,86 @@ internal static class DocxTableCellsTests
     }
 
 
+    public static void DocxTableCellPageFieldsEvaluatePerFragmentPage()
+    {
+        // W04: PAGE fields must evaluate against each fragment page. The static
+        // cell memo omits page args only for cells without dynamic field runs, so
+        // the two fragments below must resolve different page numbers.
+        DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph[] secondParagraphs = Enumerable.Range(1, 8)
+            .Select(index => DocxTests.CreateDocxLayoutParagraph(
+                index == 4 ? "Page {PAGE} mark" : "Line " + index.ToString(CultureInfo.InvariantCulture),
+                10d,
+                10d))
+            .ToArray();
+        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell("Second", secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var table = new DocxTable(null, [60d], [first, second]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        string firstFragmentText = string.Concat(layout.Pages[0].Items.OfType<DocxTableRowLayout>().Where(row => row.RowIndex == 1).SelectMany(row => row.Cells[0].TextLines).Select(line => line.Text));
+        string secondFragmentText = string.Concat(layout.Pages[1].Items.OfType<DocxTableRowLayout>().Where(row => row.RowIndex == 1).SelectMany(row => row.Cells[0].TextLines).Select(line => line.Text));
+        bool firstHasOwn = firstFragmentText.Contains("Page 1 mark", StringComparison.Ordinal);
+        bool secondHasOwn = secondFragmentText.Contains("Page 2 mark", StringComparison.Ordinal);
+        bool firstHasForeign = firstFragmentText.Contains("Page 2 mark", StringComparison.Ordinal);
+        bool secondHasForeign = secondFragmentText.Contains("Page 1 mark", StringComparison.Ordinal);
+        TestAssert.True(
+            (firstHasOwn && !firstHasForeign && !secondHasOwn && !secondHasForeign) ||
+            (!firstHasOwn && !firstHasForeign && secondHasOwn && !secondHasForeign),
+            "Exactly one split fragment must resolve PAGE against its own page. First: <" + firstFragmentText + "> Second: <" + secondFragmentText + ">");
+        TestAssert.True(!firstFragmentText.Contains("{PAGE}", StringComparison.Ordinal) && !secondFragmentText.Contains("{PAGE}", StringComparison.Ordinal), "Split fragments must not leak unresolved PAGE placeholders.");
+    }
+
+    public static void DocxTableCellTextLinesMemoSharesSplitCells()
+    {
+        // W04: the feasibility and final layouts of a split static cell must hit
+        // the shared memo instead of recomputing. A zero hit count means the key
+        // partitions every lookup and the memo is dead weight.
+        DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
+        DocxParagraph[] secondParagraphs = Enumerable.Range(1, 8)
+            .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
+        var second = new DocxTableRow([new DocxTableCell("Second", secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
+        var table = new DocxTable(null, [60d], [first, second]);
+        var document = new DocxDocument(
+            100d,
+            100d,
+            10d,
+            10d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayoutEngine.DocxTableCellTextLinesMemo.ResetTotals();
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.True(DocxLayoutEngine.DocxTableCellTextLinesMemo.TotalHits > 0, "Split static cells must share memoized text lines.");
+    }
+
     public static void DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault()
     {
         DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);

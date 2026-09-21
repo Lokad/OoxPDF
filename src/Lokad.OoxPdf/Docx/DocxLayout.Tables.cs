@@ -23,7 +23,8 @@ internal sealed partial class DocxLayoutEngine
         Func<bool> hasPageContent,
         Action markBoundaryContent,
         CancellationToken cancellationToken,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
             .Select((row, rowIndex) => (row, rowIndex))
@@ -49,12 +50,12 @@ internal sealed partial class DocxLayoutEngine
                     {
                         frame = resolveFrame();
                         rowHeights = frame.RowHeights;
-                        AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
+                        AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale, cellMemo);
                         markBoundaryContent();
                     }
                 }
 
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, explicitBreakBoundaries, "CellPageBreak", finishPage, paragraphSpacingScale);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, explicitBreakBoundaries, "CellPageBreak", finishPage, paragraphSpacingScale, cellMemo);
                 markBoundaryContent();
                 continue;
             }
@@ -64,7 +65,7 @@ internal sealed partial class DocxLayoutEngine
                 remainingPageHeight > 0.001d &&
                 CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight))
             {
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, remainingPageHeight, "PageBoundary", finishPage, paragraphSpacingScale);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, remainingPageHeight, "PageBoundary", finishPage, paragraphSpacingScale, cellMemo);
                 markBoundaryContent();
                 continue;
             }
@@ -76,14 +77,14 @@ internal sealed partial class DocxLayoutEngine
                 {
                     frame = resolveFrame();
                     rowHeights = frame.RowHeights;
-                    AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
+                    AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale, cellMemo);
                     markBoundaryContent();
                 }
             }
 
             frame = resolveFrame();
             rowHeights = frame.RowHeights;
-            AddTableRowLayout(table, frame.Context, row, rowIndex, rowHeights, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
+            AddTableRowLayout(table, frame.Context, row, rowIndex, rowHeights, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale, cellMemo);
             markBoundaryContent();
         }
 
@@ -105,7 +106,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale);
+                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo);
                 bool HasTableCellKeepRuleBoundaryViolation()
                 {
                     if (textLines.Count == 0)
@@ -658,7 +659,8 @@ internal sealed partial class DocxLayoutEngine
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         double x,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         double rowHeight = rowHeights[rowIndex];
         currentItems.Add(CreateTableRowLayout(
@@ -680,7 +682,8 @@ internal sealed partial class DocxLayoutEngine
             FragmentReason: "None",
             Story: null,
             pageCount: null,
-            paragraphSpacingScale: paragraphSpacingScale));
+            paragraphSpacingScale: paragraphSpacingScale,
+            cellMemo: cellMemo));
         cursorY -= rowHeight;
     }
 
@@ -698,7 +701,8 @@ internal sealed partial class DocxLayoutEngine
         double firstFragmentHeight,
         string fragmentReason,
         Action finishPage,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         AddSplitTableRowLayout(
             table,
@@ -714,7 +718,8 @@ internal sealed partial class DocxLayoutEngine
             [firstFragmentHeight],
             fragmentReason,
             finishPage,
-            paragraphSpacingScale);
+            paragraphSpacingScale,
+            cellMemo);
     }
 
     private static void AddSplitTableRowLayout(
@@ -731,7 +736,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<double> fragmentBoundariesFromRowTop,
         string fragmentReason,
         Action finishPage,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         DocxTableLayoutFrame initialFrame = resolveFrame();
         IReadOnlyList<double> initialRowHeights = initialFrame.RowHeights;
@@ -769,7 +775,8 @@ internal sealed partial class DocxLayoutEngine
                 FragmentReason: fragmentReason,
                 Story: null,
                 pageCount: null,
-                paragraphSpacingScale: paragraphSpacingScale));
+                paragraphSpacingScale: paragraphSpacingScale,
+                cellMemo: cellMemo));
             cursorY -= fragmentHeight;
             consumedHeight += fragmentHeight;
 
@@ -798,7 +805,8 @@ internal sealed partial class DocxLayoutEngine
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         double x,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
         {
@@ -1068,7 +1076,8 @@ internal sealed partial class DocxLayoutEngine
         string FragmentReason,
         DocxStoryId? Story,
         int? pageCount,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -1165,7 +1174,7 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
             IReadOnlyList<DocxTextLineLayout> textLines = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
-                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale)
+                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo)
                     .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, line, FragmentIndex, FragmentCount))
                     .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
@@ -1182,7 +1191,7 @@ internal sealed partial class DocxLayoutEngine
                     .ToArray();
             IReadOnlyList<DocxTableRowLayout> nestedTableRows = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
-                : LayoutTableCellNestedTables(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale)
+                : LayoutTableCellNestedTables(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo)
                     .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerNestedTableBoundaryIndex, cellPageBreakUpperNestedTableBoundaryIndex, rowLayout, FragmentCount))
                     .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cellPageBreakAlignsWithNestedTableBlock, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
