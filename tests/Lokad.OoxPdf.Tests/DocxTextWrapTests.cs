@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
@@ -907,5 +908,171 @@ internal static class DocxTextWrapTests
         // Word measures terminal spaces but does not wrap for them (width probe 2026-09-06: a 99.3pt token stays on one 100pt line despite its 2.03pt terminal space).
         TestAssert.Equal(1, lines.Length);
         TestAssert.Equal("aaaa bbbb cccc ", lines[0].Text);
+    }
+
+    // PLAN W03 count-based scaling tests: deterministic unit-width measurer, line
+    // width 10pt, emergency (allowOverwideTokenBreaks) wrapping. Pre-fix baselines
+    // measured 2026-09-21 on this code (artifacts/wrap-baseline.txt, ignored):
+    // L=128: 795 calls / 40,798 chars; L=256: 3,228 / 303,593; L=512: 13,008 /
+    // 2,334,038 (matching the PLAN probe table). Thresholds below pin the
+    // post-fix counts with headroom; golden starts pin identical line breaking.
+    internal sealed class CountingUnitMeasurer : IDocxTextMeasurer
+    {
+        public int MeasureCalls;
+        public long CharsMeasured;
+
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            MeasureCalls++;
+            CharsMeasured += text.Length;
+            return text.Length * 1d;
+        }
+    }
+
+    public static void EmergencyWrapLongUnbrokenTokenBoundsWork()
+    {
+        AssertWrapScaling(new string((char)97, 128), 780, new[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 8 });
+        AssertWrapScaling(new string((char)97, 256), 3200, null);
+        AssertWrapScaling(new string((char)97, 512), 12950, null);
+    }
+
+    public static void EmergencyWrapHyphenatedTokenBoundsWork()
+    {
+        var token = new System.Text.StringBuilder();
+        for (int i = 0; i < 512; i++)
+        {
+            token.Append(i % 8 == 7 ? (char)45 : (char)98);
+        }
+
+        // 64 eight-char hyphen groups break at group ends; counts must not regress.
+        AssertWrapScaling(token.ToString(), 2080, null);
+    }
+
+    public static void EmergencyWrapSoftHyphenTokenKeepsStarts()
+    {
+        var token = new System.Text.StringBuilder();
+        for (int i = 0; i < 256; i++)
+        {
+            token.Append(i % 16 == 15 ? (char)0xAD : (char)99);
+        }
+
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token.ToString(), 10d, true, out int calls);
+        TestAssert.True(calls <= 14000, $"Soft-hyphen token must stay bounded, saw {calls} measures.");
+        // 16-char soft-hyphen period breaks as 10+6 lines with the hyphen preserved
+        // visibly at each break; 15 visible hyphens + 240 base chars = 255 covered.
+        TestAssert.Equal(32, lines.Count);
+        int covered = 0;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            // The final line drops its terminal soft hyphen (no intra-token break).
+            TestAssert.Equal(i == 31 ? 5 : i % 2 == 0 ? 10 : 6, lines[i].Text.Length);
+            covered += lines[i].Text.Length;
+        }
+
+        TestAssert.Equal(255, covered);
+    }
+
+    public static void EmergencyWrapMultiRunTokenKeepsStarts()
+    {
+        string first = new string((char)97, 100);
+        string second = new string((char)98, 100);
+        string third = new string((char)99, 100);
+        var run1 = new DocxTextRun(first, 11d, null, false, false, false, null, "A");
+        var run2 = new DocxTextRun(second, 11d, null, false, false, false, null, "B");
+        var run3 = new DocxTextRun(third, 11d, null, false, false, false, null, "C");
+        var spans = new[]
+        {
+            new DocxTextSpan(first, run1, 0, 0),
+            new DocxTextSpan(second, run2, 1, 0),
+            new DocxTextSpan(third, run3, 2, 0),
+        };
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithCounting(first + second + third, spans, 10d, true, out int calls);
+        TestAssert.Equal(30, lines.Count);
+        foreach (DocxWrappedTextLine line in lines)
+        {
+            TestAssert.Equal(10, line.Text.Length);
+        }
+
+        TestAssert.True(calls <= 8600, $"Multi-run token must stay bounded, saw {calls} measures.");
+    }
+
+    public static void EmergencyWrapUnicodeBoundariesAreSafe()
+    {
+        // Surrogate pairs and combining marks must never split across lines.
+        string token = "ab\U0001F600cde\u0301f" + new string((char)97, 60);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token, 10d, true, out _);
+        int covered = 0;
+        foreach (DocxWrappedTextLine line in lines)
+        {
+            TestAssert.True(line.Text.Length > 0, "No empty lines.");
+            TestAssert.True(!char.IsLowSurrogate(line.Text[0]), "Line must not start inside a surrogate pair.");
+            TestAssert.True(!char.IsHighSurrogate(line.Text[^1]), "Line must not end inside a surrogate pair.");
+            covered += line.Text.Length;
+        }
+
+        TestAssert.Equal(token.Length, covered);
+    }
+
+    public static void EmergencyWrapCancelledTokenThrows()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        var measurer = new CountingUnitMeasurer();
+        string token = new string((char)97, 512);
+        var run = new DocxTextRun(token, 11d, null, false, false, false, null, "Test");
+        var spans = new[] { new DocxTextSpan(token, run, 0, 0) };
+        TestAssert.Throws<OperationCanceledException>(() => WrapSpans(token, spans, 10d, true, measurer, cancelled.Token));
+    }
+
+    private static void AssertWrapScaling(string token, int maxCalls, int[]? goldenLengths)
+    {
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token, 10d, true, out int calls);
+        TestAssert.True(calls <= maxCalls, $"Token length {token.Length} must stay within {maxCalls} measures, saw {calls}.");
+        if (goldenLengths is not null)
+        {
+            TestAssert.Equal(goldenLengths.Length, lines.Count);
+            for (int i = 0; i < goldenLengths.Length; i++)
+            {
+                TestAssert.Equal(goldenLengths[i], lines[i].Text.Length);
+            }
+        }
+
+        int covered = 0;
+        foreach (DocxWrappedTextLine line in lines)
+        {
+            covered += line.Text.Length;
+        }
+
+        TestAssert.Equal(token.Length, covered);
+    }
+
+    private static IReadOnlyList<DocxWrappedTextLine> WrapWithCounting(string token, double width, bool allowOverwide, out int calls)
+    {
+        var run = new DocxTextRun(token, 11d, null, false, false, false, null, "Test");
+        var spans = new[] { new DocxTextSpan(token, run, 0, 0) };
+        return WrapSpansWithCounting(token, spans, width, allowOverwide, out calls);
+    }
+
+    private static IReadOnlyList<DocxWrappedTextLine> WrapSpansWithCounting(string token, DocxTextSpan[] spans, double width, bool allowOverwide, out int calls)
+    {
+        var measurer = new CountingUnitMeasurer();
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpans(token, spans, width, allowOverwide, measurer, CancellationToken.None);
+        calls = measurer.MeasureCalls;
+        return lines;
+    }
+
+    private static IReadOnlyList<DocxWrappedTextLine> WrapSpans(string token, DocxTextSpan[] spans, double width, bool allowOverwide, IDocxTextMeasurer measurer, CancellationToken cancellationToken)
+    {
+        MethodInfo wrap = typeof(DocxLayoutEngine).GetMethod("WrapWords", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected WrapWords.");
+        try
+        {
+            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, (Func<int, double>)(_ => width), 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken]);
+            return ((System.Collections.IEnumerable)result!).Cast<DocxWrappedTextLine>().ToArray();
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
     }
 }

@@ -235,14 +235,15 @@ internal sealed partial class DocxRenderer
             {
                 string ResolveTextEmissionStoryKind()
                 {
-                    return string.IsNullOrWhiteSpace(line.StoryKind) ? fallbackStoryKind : line.StoryKind;
+                    // T03: unstoried lines take the enumeration-group fallback.
+                    return line.Story?.ToKindString() ?? fallbackStoryKind;
                 }
 
                 lines.Add(ToTextEmissionLineSnapshot(
                     pageIndex,
                     isStaticStory,
                     ResolveTextEmissionStoryKind(),
-                    line.StoryVariantType,
+                    line.Story?.VariantType,
                     containerStoryKind,
                     containerStoryVariantType,
                     line,
@@ -258,7 +259,7 @@ internal sealed partial class DocxRenderer
 
             foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page))
             {
-                AddLine(line, isStaticStory: true, "Static", line.StoryKind, line.StoryVariantType);
+                AddLine(line, isStaticStory: true, "Static", line.Story?.ToKindString(), line.Story?.VariantType);
             }
 
             foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
@@ -268,7 +269,7 @@ internal sealed partial class DocxRenderer
 
             foreach (DocxTextLineLayout line in EnumeratePlacedRelatedStoryTextLines(page))
             {
-                AddLine(line, isStaticStory: false, "RelatedStory", line.StoryKind, line.StoryVariantType);
+                AddLine(line, isStaticStory: false, "RelatedStory", line.Story?.ToKindString(), line.Story?.VariantType);
             }
 
             foreach (DocxTextEmissionLineSource source in EnumerateRenderedFloatingDrawingTextBoxTextLines(layout, page, pageIndex, effectiveMarkupContext, page.Height))

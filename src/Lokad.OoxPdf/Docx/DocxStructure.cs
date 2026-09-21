@@ -230,7 +230,7 @@ internal sealed partial record DocxStructureSnapshot(
         var stories = new List<DocxStructureStorySnapshot>
         {
             new(
-                "Body",
+                DocxStoryKind.Body.ToKindString(),
                 "document",
                 null,
                 null,
@@ -268,8 +268,8 @@ internal sealed partial record DocxStructureSnapshot(
                 null)
         };
 
-        AddStaticStories(stories, "Header", "document", null, document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, document.RelatedStories);
-        AddStaticStories(stories, "Footer", "document", null, document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, document.RelatedStories);
+        AddStaticStories(stories, DocxStoryKind.Header, "document", null, document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderFloatingDrawingsByType, document.RelatedStories);
+        AddStaticStories(stories, DocxStoryKind.Footer, "document", null, document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterFloatingDrawingsByType, document.RelatedStories);
         AddRelatedStories(stories, document.RelatedStories);
         for (int blockIndex = 0; blockIndex < document.BodyElements.Count; blockIndex++)
         {
@@ -279,8 +279,8 @@ internal sealed partial record DocxStructureSnapshot(
             }
 
             string scope = "section@" + blockIndex.ToString(CultureInfo.InvariantCulture);
-            AddStaticStories(stories, "Header", scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, document.RelatedStories);
-            AddStaticStories(stories, "Footer", scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, document.RelatedStories);
+            AddStaticStories(stories, DocxStoryKind.Header, scope, blockIndex, sectionBreak.PageSettings.HeaderBodyElementsByType, sectionBreak.PageSettings.HeaderParagraphsByType, sectionBreak.PageSettings.HeaderFloatingDrawingsByType, document.RelatedStories);
+            AddStaticStories(stories, DocxStoryKind.Footer, scope, blockIndex, sectionBreak.PageSettings.FooterBodyElementsByType, sectionBreak.PageSettings.FooterParagraphsByType, sectionBreak.PageSettings.FooterFloatingDrawingsByType, document.RelatedStories);
         }
 
         return stories;
@@ -289,7 +289,7 @@ internal sealed partial record DocxStructureSnapshot(
     // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static void AddStaticStories(
         List<DocxStructureStorySnapshot> stories,
-        string kind,
+        DocxStoryKind kind,
         string scope,
         int? sectionBreakBlockIndex,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
@@ -313,7 +313,7 @@ internal sealed partial record DocxStructureSnapshot(
                 ? drawingList
                 : [];
             stories.Add(new DocxStructureStorySnapshot(
-                kind,
+                kind.ToKindString(),
                 scope,
                 sectionBreakBlockIndex,
                 variantType,

@@ -165,8 +165,7 @@ internal sealed partial class DocxRenderer
     // comments; static header/footer floatings keep the legacy path (unprobed).
     internal static bool IsStaticStoryFloatingDrawing(DocxFloatingDrawingLayout drawing)
     {
-        return string.Equals(drawing.StoryKind, "Header", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(drawing.StoryKind, "Footer", StringComparison.OrdinalIgnoreCase);
+        return drawing.Story?.Kind is DocxStoryKind.Header or DocxStoryKind.Footer;
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateMarkupBalloonAnchorTextLines(
@@ -234,9 +233,9 @@ internal sealed partial class DocxRenderer
                     line,
                     isStaticStory,
                     "TextBox",
-                    line.StoryVariantType,
-                    drawing.StoryKind ?? "Body",
-                    drawing.StoryVariantType);
+                    line.Story?.VariantType,
+                    drawing.Story?.ToKindString() ?? "Body",
+                    drawing.Story?.VariantType);
             }
         }
 
@@ -248,7 +247,7 @@ internal sealed partial class DocxRenderer
                     line,
                     IsStaticStory: false,
                     "TextBox",
-                    line.StoryVariantType,
+                    line.Story?.VariantType,
                     story.StoryLayout.Story.Kind.ToValueString(),
                     story.StoryLayout.Story.Id);
             }
@@ -260,7 +259,7 @@ internal sealed partial class DocxRenderer
                 line,
                 IsStaticStory: false,
                 "TextBox",
-                line.StoryVariantType,
+                line.Story?.VariantType,
                 "Body",
                 null);
         }

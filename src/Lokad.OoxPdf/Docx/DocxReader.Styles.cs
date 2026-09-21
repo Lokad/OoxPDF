@@ -429,9 +429,19 @@ internal sealed partial class DocxReader
 
     private static double? ReadTwipsAttribute(XElement? element, XName name)
     {
-        return element?.Attribute(name) is { } value
-            ? OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture))
-            : null;
+        if (element?.Attribute(name) is not { } value)
+        {
+            return null;
+        }
+
+        try
+        {
+            return OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException)
+        {
+            throw new InvalidDataException("Malformed DOCX twips attribute [" + name.LocalName + "].", ex);
+        }
     }
 
     private static double? ReadSignedTwipsElement(XElement? element)

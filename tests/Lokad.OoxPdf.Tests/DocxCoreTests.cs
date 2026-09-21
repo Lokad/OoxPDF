@@ -12,6 +12,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCoreTests
 {
+    public static void DocxStoryIdPreservesLegacySpellings()
+    {
+        // T03: every layout story kind renders the exact string the layout
+        // strings previously carried, so inspection snapshots stay byte-identical.
+        TestAssert.Equal("Body", DocxStoryId.Body().ToKindString());
+        TestAssert.Equal("TableCell", DocxStoryId.TableCell().ToKindString());
+        TestAssert.Equal("Header", DocxStoryId.Header("default").ToKindString());
+        TestAssert.Equal("Footer", DocxStoryId.Footer("even").ToKindString());
+        TestAssert.Equal("Comment", DocxStoryId.Related(DocxRelatedStoryKind.Comment).ToKindString());
+        TestAssert.Equal("Footnote", DocxStoryId.Related(DocxRelatedStoryKind.Footnote).ToKindString());
+        TestAssert.Equal("Endnote", DocxStoryId.Related(DocxRelatedStoryKind.Endnote).ToKindString());
+        TestAssert.Equal("TextBox", DocxStoryId.Related(DocxRelatedStoryKind.TextBox).ToKindString());
+        TestAssert.Equal("first", DocxStoryId.HeaderOrFooter(true, "first").VariantType);
+        TestAssert.Equal(DocxStoryKind.Footer, DocxStoryId.HeaderOrFooter(false, null).Kind);
+        TestAssert.True(DocxStoryId.Header(null).IsHeaderOrFooter, "Headers must report header-or-footer.");
+        TestAssert.True(DocxStoryId.Footer("default").IsHeaderOrFooter, "Footers must report header-or-footer.");
+        TestAssert.True(!DocxStoryId.Body().IsHeaderOrFooter, "Body must not report header-or-footer.");
+        TestAssert.True(!DocxStoryId.Related(DocxRelatedStoryKind.Footnote).IsHeaderOrFooter, "Related stories must not report header-or-footer.");
+    }
+
     public static void DocxReaderParsesOnOffRunProperties()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

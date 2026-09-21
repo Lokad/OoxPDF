@@ -10,6 +10,57 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
+    // PLAN W04: header/footer body and drawing extraction loaded the same parts
+    // separately and repeated across references and sections. One entry per unique
+    // part per Read: XML comes from the shared package cache, body elements and
+    // drawings are each built once, and every referencing type reuses them. Results
+    // are deterministic functions of (part bytes, styles, numbering, markup mode),
+    // all constant within a Read, so sharing is exact. Diagnostics still fire once
+    // per part via the shared warned-parts set.
+    private sealed class RelatedStoryPartCache
+    {
+        private readonly Dictionary<string, ParsedRelatedStoryPart> parts = new(StringComparer.OrdinalIgnoreCase);
+
+        public ParsedRelatedStoryPart GetOrCreate(string partName)
+        {
+            if (!parts.TryGetValue(partName, out ParsedRelatedStoryPart? parsed))
+            {
+                parsed = new ParsedRelatedStoryPart();
+                parts[partName] = parsed;
+            }
+
+            return parsed;
+        }
+    }
+
+    private sealed class ParsedRelatedStoryPart
+    {
+        public XDocument? Xml;
+        public bool MustUnderstandVerdictRendered;
+        public IReadOnlyDictionary<string, OoxRelationship>? Relationships;
+        public IReadOnlyList<DocxBodyElement>? BodyElements;
+        public IReadOnlyList<DocxFloatingDrawing>? Drawings;
+    }
+
+    // Section-break page settings parse stories without a diagnostic sink while the
+    // document pass warns live. Firing the warning only on parse would let a sink-less
+    // first touch swallow it; firing per reference would rescan shared DOMs. Render the
+    // verdict once per part on the first touch carrying a live sink instead.
+    private static void WarnStoryMustUnderstandOnce(
+        ParsedRelatedStoryPart parsed,
+        string partName,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        HashSet<string>? warnedParts)
+    {
+        if (diagnosticSink is null || warnedParts is null || parsed.MustUnderstandVerdictRendered || parsed.Xml is null)
+        {
+            return;
+        }
+
+        parsed.MustUnderstandVerdictRendered = true;
+        OoxMarkupCompatibility.WarnMustUnderstandOnce(parsed.Xml, partName, diagnosticSink, warnedParts);
+    }
+
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ReadReferencedHeaderFooterBodyElementsByType(
         XContainer referenceRoot,
         OoxPackage package,
@@ -20,6 +71,7 @@ internal sealed partial class DocxReader
         string referenceElementName,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
+        RelatedStoryPartCache storyCache,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null)
     {
@@ -39,22 +91,27 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            using Stream stream = part.OpenRead();
-            XDocument partXml = SafeXml.Load(stream, cancellationToken);
-            OoxMarkupCompatibility.WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
-            string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
-            IReadOnlyDictionary<string, OoxRelationship> partRelationships = package.GetRelationships(part.Name, cancellationToken)
+            ParsedRelatedStoryPart parsed = storyCache.GetOrCreate(part.Name);
+            if (parsed.Xml is null)
+            {
+                parsed.Xml = package.LoadXml(part, cancellationToken);
+            }
+
+            WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
+            parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            bodyElementsByType[type] = ReadRelatedStoryBodyElements(
-                partXml.Root?.Elements() ?? [],
+            parsed.BodyElements ??= ReadRelatedStoryBodyElements(
+                parsed.Xml.Root?.Elements() ?? [],
                 styles,
                 numbering,
                 new Dictionary<(string NumId, int Level), int>(),
                 package,
-                partRelationships,
+                parsed.Relationships,
                 markupMode,
                 cancellationToken);
+            string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
+            bodyElementsByType[type] = parsed.BodyElements;
         }
 
         return bodyElementsByType;
@@ -79,6 +136,7 @@ internal sealed partial class DocxReader
         string referenceElementName,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
+        RelatedStoryPartCache storyCache,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null)
     {
@@ -98,14 +156,19 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            using Stream stream = part.OpenRead();
-            XDocument partXml = SafeXml.Load(stream, cancellationToken);
-            OoxMarkupCompatibility.WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
-            IReadOnlyDictionary<string, OoxRelationship> partRelationships = package.GetRelationships(part.Name, cancellationToken)
+            ParsedRelatedStoryPart parsed = storyCache.GetOrCreate(part.Name);
+            if (parsed.Xml is null)
+            {
+                parsed.Xml = package.LoadXml(part, cancellationToken);
+            }
+
+            WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
+            parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            parsed.Drawings ??= ReadFloatingDrawings(parsed.Xml, package, parsed.Relationships, styles, numbering, markupMode, cancellationToken);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
-            drawings[type] = ReadFloatingDrawings(partXml, package, partRelationships, styles, numbering, markupMode, cancellationToken);
+            drawings[type] = parsed.Drawings;
         }
 
         return drawings;

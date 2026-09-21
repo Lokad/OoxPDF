@@ -195,8 +195,7 @@ internal sealed partial class DocxLayoutEngine
                         FragmentIndex: 0,
                         FragmentCount: 1,
                         FragmentReason: "None",
-                        StoryKind: isHeader ? "Header" : "Footer",
-                        StoryVariantType: story.VariantType,
+                        Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         pageCount: pageCount,
                         paragraphSpacingScale: paragraphSpacingScale));
                     cursorY -= rowHeight;
@@ -292,8 +291,7 @@ internal sealed partial class DocxLayoutEngine
                         ContextualSpacingSuppressed: sourceLineIndex == 0 ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
                         SourceParagraphIndex: paragraphIndex,
-                        StoryKind: isHeader ? "Header" : "Footer",
-                        StoryVariantType: story.VariantType,
+                        Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         LineHeightSource: DocxLineHeightSource.StaticWindowsExtents, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
                     sourceLineIndex++;
                     cursorY -= staticLineHeight;
@@ -320,8 +318,7 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber,
                     SourceBlockIndex: null,
                     SourceParagraphIndex: paragraphIndex,
-                    StoryKind: isHeader ? "Header" : "Footer",
-                    StoryVariantType: story.VariantType));
+                    Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType)));
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
@@ -346,7 +343,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                boxes.Add(textBoxLayout with { StoryKind = isHeader ? "Header" : "Footer", StoryVariantType = story.VariantType });
+                boxes.Add(textBoxLayout with { Story = DocxStoryId.HeaderOrFooter(isHeader, story.VariantType) });
                 cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
             }
 

@@ -205,10 +205,29 @@ internal sealed partial class DocxReader
 
         if (columns.Count == 0)
         {
-            int inferredGridColumns = rows
-                .Select(row => row.Cells.Sum(cell => Math.Max(1, cell.GridSpan)))
-                .DefaultIfEmpty(0)
-                .Max();
+            int inferredGridColumns = 0;
+            foreach (DocxTableRow row in rows)
+            {
+                long rowTotal = 0;
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    rowTotal = checked(rowTotal + Math.Max(1, cell.GridSpan));
+                    if (rowTotal > MaxInferredGridColumns)
+                    {
+                        throw new OoxPdfLimitExceededException(
+                            "DOCX table inferred grid exceeds the maximum supported column count of " + MaxInferredGridColumns + ".");
+                    }
+                }
+
+                inferredGridColumns = Math.Max(inferredGridColumns, (int)rowTotal);
+            }
+
+            if (inferredGridColumns > MaxInferredGridColumns)
+            {
+                throw new OoxPdfLimitExceededException(
+                    "DOCX table inferred grid exceeds the maximum supported column count of " + MaxInferredGridColumns + ".");
+            }
+
             columns = Enumerable.Repeat(72d, inferredGridColumns).ToArray();
         }
 
@@ -247,14 +266,34 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
+    internal const int MaxTableGridSpan = 1024;
+
+    internal const int MaxInferredGridColumns = 1024;
+
     private static int ReadGridSpan(XElement? cellProperties)
     {
-        return cellProperties
+        if (cellProperties
             ?.Element(WordprocessingNamespace + "gridSpan")
-            ?.Attribute(WordprocessingNamespace + "val") is { } span &&
-            int.TryParse(span.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-                ? Math.Max(1, parsed)
-                : 1;
+            ?.Attribute(WordprocessingNamespace + "val") is not { } span)
+        {
+            return 1;
+        }
+
+        // Malformed spans fall back to 1 to preserve layout for Office-tolerated
+        // content; oversized spans are rejected before column allocation (M03).
+        if (!int.TryParse(span.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+        {
+            return 1;
+        }
+
+        int normalized = Math.Max(1, parsed);
+        if (normalized > MaxTableGridSpan)
+        {
+            throw new OoxPdfLimitExceededException(
+                "DOCX table gridSpan exceeds the maximum supported column span of " + MaxTableGridSpan + ".");
+        }
+
+        return normalized;
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
@@ -625,6 +664,13 @@ internal sealed partial class DocxReader
             return null;
         }
 
-        return OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture));
+        try
+        {
+            return OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException)
+        {
+            throw new InvalidDataException("Malformed DOCX table row height.", ex);
+        }
     }
 }

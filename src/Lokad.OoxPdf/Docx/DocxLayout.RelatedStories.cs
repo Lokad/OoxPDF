@@ -613,8 +613,7 @@ internal sealed partial class DocxLayoutEngine
                         FragmentIndex: 0,
                         FragmentCount: 1,
                         FragmentReason: "None",
-                        StoryKind: null,
-                        StoryVariantType: null,
+                        Story: null,
                         pageCount: pageCount,
                         paragraphSpacingScale: paragraphSpacingScale));
                     cursorY -= rowHeight;
@@ -637,7 +636,7 @@ internal sealed partial class DocxLayoutEngine
                 paragraphSpacingScale,
                 elementIndex,
                 paragraphIndex,
-                story.Kind.ToValueString(),
+                DocxStoryId.Related(story.Kind),
                 bodyWidth,
                 cursorY,
                 spacingProfile,
@@ -672,7 +671,7 @@ internal sealed partial class DocxLayoutEngine
                     imageHeight,
                     PageIndex: 0,
                     SourceBlockIndex: elementIndex,
-                    SourceParagraphIndex: paragraphIndex, StoryKind: null, StoryVariantType: null));
+                    SourceParagraphIndex: paragraphIndex, Story: null));
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 

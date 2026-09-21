@@ -312,7 +312,7 @@ internal sealed partial class DocxLayoutEngine
                         SourceBlockIndex: null,
                         SourceParagraphIndex: paragraphIndex,
                         SourceLineIndex: lineIndex,
-                        StoryKind: "TableCell",
+                        Story: DocxStoryId.TableCell(),
                         LineHeight: lineHeight,
                         AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: firstLine,
@@ -328,7 +328,7 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
-                        SourceParagraph: paragraph, StoryVariantType: null, EmitsTerminalParagraphMark: false));
+                        SourceParagraph: paragraph, EmitsTerminalParagraphMark: false));
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
@@ -507,7 +507,7 @@ internal sealed partial class DocxLayoutEngine
                     DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - imageWidth),
                     _ => paragraphX
                 };
-                images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex, null, SourceParagraphIndex: paragraphIndex, StoryKind: null, StoryVariantType: null));
+                images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex, null, SourceParagraphIndex: paragraphIndex, Story: null));
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
@@ -643,8 +643,7 @@ internal sealed partial class DocxLayoutEngine
                         FragmentIndex: 0,
                         FragmentCount: 1,
                         FragmentReason: "None",
-                        StoryKind: null,
-                        StoryVariantType: null,
+                        Story: null,
                         pageCount: pageCount,
                         paragraphSpacingScale: paragraphSpacingScale));
                     cursorY -= rowHeight;

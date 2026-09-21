@@ -71,8 +71,7 @@ internal sealed record DocxFloatingDrawingLayout(
     double? WrapExclusionTop,
     double? WrapExclusionWidth,
     double? WrapExclusionHeight,
-    string? StoryKind,
-    string? StoryVariantType,
+    DocxStoryId? Story,
     DocxRelatedStoryLayout? TextBoxLayout);
 
 internal sealed record DocxWrapExclusionFrame(
@@ -550,10 +549,10 @@ internal sealed partial class DocxLayoutEngine
                     SourceBlockIndex: elementIndex,
                     SourceParagraphIndex: 0,
                     SourceLineIndex: 0,
-                    StoryKind: "Body",
+                    Story: DocxStoryId.Body(),
                     LineHeight: markFontSize,
                     IsFirstParagraphLine: true,
-                    AppliedBeforeSpacing: null, EndsWithIntraTokenBreak: false, SingleLineHeight: null, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, PendingAfterSpacing: null, ParagraphBeforeSpacing: null, ParagraphAfterSpacing: null, ContextualSpacingSuppressed: null, SourceParagraph: null, StoryVariantType: null, LineHeightSource: DocxLineHeightSource.TerminalParagraphMark,
+                    AppliedBeforeSpacing: null, EndsWithIntraTokenBreak: false, SingleLineHeight: null, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, PendingAfterSpacing: null, ParagraphBeforeSpacing: null, ParagraphAfterSpacing: null, ContextualSpacingSuppressed: null, SourceParagraph: null, LineHeightSource: DocxLineHeightSource.TerminalParagraphMark,
                     EmitsTerminalParagraphMark: true));
                 activeColumnHasContent = true;
                 previousParagraph = null;
@@ -595,7 +594,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1).ToArray();
+                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken).ToArray();
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, CurrentFrameBottom(), HasCurrentColumnContent()))
                 {
                     AdvanceColumnOrPage();
@@ -682,7 +681,7 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
-                        StoryKind: "Body", StoryVariantType: null, EmitsTerminalParagraphMark: false));
+                        Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false));
                     activeColumnHasContent = true;
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
@@ -728,7 +727,7 @@ internal sealed partial class DocxLayoutEngine
                     imageHeight,
                     pages.Count + 1,
                     SourceBlockIndex: elementIndex,
-                    SourceParagraphIndex: 0, StoryKind: null, StoryVariantType: null));
+                    SourceParagraphIndex: 0, Story: null));
                 activeColumnHasContent = true;
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }

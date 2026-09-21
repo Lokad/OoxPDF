@@ -528,7 +528,7 @@ internal static class DocxTablesMarkupTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
         DocxTableRowLayout staticRow = layout.Pages[0].StaticTableRows.Single();
-        TestAssert.True(staticRow.StoryKind == "Header" && staticRow.StoryVariantType == "default", "Static header table rows should retain selected-story provenance.");
+        TestAssert.True(staticRow.Story?.Kind == DocxStoryKind.Header && staticRow.Story?.VariantType == "default", "Static header table rows should retain selected-story provenance.");
         TestAssert.Equal(10d, staticRow.Cells.Single().X);
         TestAssert.Equal(18d, staticRow.Height);
         TestAssert.Equal("HT", staticRow.Cells.Single().TextLines.Single().Text);

@@ -680,36 +680,17 @@ internal sealed partial class DocxRenderer
 
     private static PdfImageXObject? CreateImage(DocxInlineImage image, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex)
     {
+        // D02: shared content-image dispatch (unknown types throw with the same
+        // message the explicit branch below used to emit); diagnostics stay local.
         try
         {
-            if (image.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-                image.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
-            {
-                JpegInfo info = JpegInfo.Read(image.Bytes);
-                return PdfImageXObject.Jpeg(info.Width, info.Height, image.Bytes, info.ComponentCount, info.BitsPerComponent);
-            }
-
-            if (image.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
-            {
-                PngImage png = PngImage.Read(image.Bytes);
-                return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
-            }
-
-            if (image.ContentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
-                image.ContentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
-            {
-                BmpImage bmp = BmpImage.Read(image.Bytes);
-                return PdfImageXObject.RgbPng(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha);
-            }
+            return OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb);
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
             EmitImageDiagnostic(diagnosticSink, image, pageIndex, ex.Message);
             return null;
         }
-
-        EmitImageDiagnostic(diagnosticSink, image, pageIndex, "Unsupported image content type.");
-        return null;
     }
 
     private static void EmitImageDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, DocxInlineImage image, int pageIndex, string reason)

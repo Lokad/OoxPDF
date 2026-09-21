@@ -45,7 +45,7 @@ internal sealed record DocxTextLineLayout(
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
     int? SourceLineIndex,
-    string? StoryKind,
+    DocxStoryId? Story,
     double? LineHeight,
     double? AppliedBeforeSpacing,
     bool? IsFirstParagraphLine,
@@ -61,7 +61,6 @@ internal sealed record DocxTextLineLayout(
     double? ParagraphAfterSpacing,
     bool? ContextualSpacingSuppressed,
     DocxParagraph? SourceParagraph,
-    string? StoryVariantType,
     DocxLineHeightSource? LineHeightSource,
     bool EmitsTerminalParagraphMark) : DocxLayoutItem;
 
@@ -106,8 +105,7 @@ internal sealed record DocxInlineImageLayout(
     int PageIndex,
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
-    string? StoryKind,
-    string? StoryVariantType) : DocxLayoutItem;
+    DocxStoryId? Story) : DocxLayoutItem;
 
 // An inline textbox laid out as a body-flow block. Coordinates are absolute flow
 // space (the box origin is known at layout time), so consumers use them directly
@@ -123,8 +121,7 @@ internal sealed record DocxInlineTextBoxLayout(
     IReadOnlyList<DocxTableRowLayout> TableRows,
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
-    string? StoryKind,
-    string? StoryVariantType) : DocxLayoutItem;
+    DocxStoryId? Story) : DocxLayoutItem;
 
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
@@ -147,8 +144,7 @@ internal sealed record DocxTableRowLayout(
     string? CantSplitValue,
     int RevisionCount,
     IReadOnlyList<DocxRevisionInfo>? Revisions,
-    string? StoryKind,
-    string? StoryVariantType) : DocxLayoutItem;
+    DocxStoryId? Story) : DocxLayoutItem;
 
 internal sealed record DocxTableLayoutContext(
     int TableIndex,

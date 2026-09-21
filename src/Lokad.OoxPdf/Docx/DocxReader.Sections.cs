@@ -19,6 +19,7 @@ internal sealed partial class DocxReader
         XDocument? settings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
+        RelatedStoryPartCache storyCache,
         DocxRevisionInfo? inheritedRevision)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -34,7 +35,8 @@ internal sealed partial class DocxReader
                 styles,
                 numbering,
                 markupMode,
-                cancellationToken),
+                cancellationToken,
+                storyCache),
             DocxSectionBreakTypeExtensions.FromValue((string?)sectionProperties
                 .Element(WordprocessingNamespace + "type")
                 ?.Attribute(WordprocessingNamespace + "val")),

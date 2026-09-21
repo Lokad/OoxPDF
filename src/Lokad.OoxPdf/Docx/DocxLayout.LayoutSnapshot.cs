@@ -211,8 +211,8 @@ internal sealed partial record DocxLayoutSnapshot(
                     drawing.TextBoxLayout?.InlineImages.Count ?? 0,
                     drawing.TextBoxLayout?.TableRows.Count ?? 0,
                     drawing.TextBoxLayout?.ContentHeight ?? 0d,
-                    drawing.StoryKind,
-                    drawing.StoryVariantType);
+                    drawing.Story?.ToKindString(),
+                    drawing.Story?.VariantType);
             })
             .ToArray();
     }
@@ -518,10 +518,10 @@ internal sealed partial record DocxLayoutSnapshot(
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTextLineLayout text)
     {
-        string kind = text.StoryKind switch
+        string kind = text.Story?.Kind switch
         {
-            "Header" => "StaticHeaderTextLine",
-            "Footer" => "StaticFooterTextLine",
+            DocxStoryKind.Header => "StaticHeaderTextLine",
+            DocxStoryKind.Footer => "StaticFooterTextLine",
             _ => "StaticTextLine"
         };
         return ToSnapshot(text, []) with { Kind = kind };
@@ -529,10 +529,10 @@ internal sealed partial record DocxLayoutSnapshot(
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxInlineImageLayout image)
     {
-        string kind = image.StoryKind switch
+        string kind = image.Story?.Kind switch
         {
-            "Header" => "StaticHeaderInlineImage",
-            "Footer" => "StaticFooterInlineImage",
+            DocxStoryKind.Header => "StaticHeaderInlineImage",
+            DocxStoryKind.Footer => "StaticFooterInlineImage",
             _ => "StaticInlineImage"
         };
         return ToSnapshot(image, []) with { Kind = kind };
@@ -540,10 +540,10 @@ internal sealed partial record DocxLayoutSnapshot(
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxInlineTextBoxLayout box)
     {
-        string kind = box.StoryKind switch
+        string kind = box.Story?.Kind switch
         {
-            "Header" => "StaticHeaderInlineTextBox",
-            "Footer" => "StaticFooterInlineTextBox",
+            DocxStoryKind.Header => "StaticHeaderInlineTextBox",
+            DocxStoryKind.Footer => "StaticFooterInlineTextBox",
             _ => "StaticInlineTextBox"
         };
         return ToSnapshot(box, []) with { Kind = kind };
@@ -551,10 +551,10 @@ internal sealed partial record DocxLayoutSnapshot(
 
     private static DocxLayoutItemSnapshot ToStaticSnapshot(DocxTableRowLayout row)
     {
-        string kind = row.StoryKind switch
+        string kind = row.Story?.Kind switch
         {
-            "Header" => "StaticHeaderTableRow",
-            "Footer" => "StaticFooterTableRow",
+            DocxStoryKind.Header => "StaticHeaderTableRow",
+            DocxStoryKind.Footer => "StaticFooterTableRow",
             _ => "StaticTableRow"
         };
         return ToSnapshot(row, []) with { Kind = kind };
@@ -597,7 +597,7 @@ internal sealed partial record DocxLayoutSnapshot(
                 text.ParagraphBeforeSpacing,
                 text.ParagraphAfterSpacing,
                 text.ContextualSpacingSuppressed,
-                text.StoryVariantType,
+                text.Story?.VariantType,
                 TextLines: null,
                 ParagraphStyleId: text.SourceParagraph?.EffectiveProperties.StyleResolution.StyleId,
                 ParagraphStyleFound: text.SourceParagraph?.EffectiveProperties.StyleResolution.StyleFound,
@@ -643,7 +643,7 @@ internal sealed partial record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                image.StoryVariantType, TextLines: null, ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),
+                image.Story?.VariantType, TextLines: null, ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),
             DocxInlineTextBoxLayout box => new DocxLayoutItemSnapshot(
                 "InlineTextBox",
                 box.BoxX,
@@ -669,7 +669,7 @@ internal sealed partial record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                box.StoryVariantType, TextLines: box.TextLines.Select(line => ToSnapshot(line, [])).ToArray(), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),            DocxTableRowLayout row => new DocxLayoutItemSnapshot(
+                box.Story?.VariantType, TextLines: box.TextLines.Select(line => ToSnapshot(line, [])).ToArray(), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0),            DocxTableRowLayout row => new DocxLayoutItemSnapshot(
                 "TableRow",
                 row.Cells.Count == 0 ? 0d : row.Cells.Min(cell => cell.X),
                 row.Y,
@@ -694,7 +694,7 @@ internal sealed partial record DocxLayoutSnapshot(
                 ParagraphBeforeSpacingPoints: null,
                 ParagraphAfterSpacingPoints: null,
                 ContextualSpacingSuppressed: null,
-                row.StoryVariantType,
+                row.Story?.VariantType,
                 ToTableRowTextLineSnapshots(row), ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null,
                 RevisionCount: row.RevisionCount + TableRowParagraphs(row).Sum(CountRevisions),
                 InsertionRevisionCount: TableRowParagraphs(row).Sum(paragraph => CountRevisions(paragraph, DocxRevisionKind.Insertion)),
@@ -859,8 +859,8 @@ internal sealed partial record DocxLayoutSnapshot(
             row.HasTablePropertyExceptionCellMargins,
             row.CantSplit,
             row.CantSplitValue,
-            row.StoryKind,
-            row.StoryVariantType,
+            row.Story?.ToKindString(),
+            row.Story?.VariantType,
             cells);
     }
 

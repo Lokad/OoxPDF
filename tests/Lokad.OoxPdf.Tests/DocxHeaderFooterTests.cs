@@ -439,7 +439,7 @@ internal static class DocxHeaderFooterTests
 
         DocxInlineImageLayout staticImage = layout.Pages[0].StaticInlineImages.Single();
         TestAssert.True(staticImage.Image == headerImage && staticImage.Width == 36d && staticImage.Height == 18d, "Static header inline images should be first-class page layout items with image geometry.");
-        TestAssert.True(staticImage.SourceParagraphIndex == 0 && staticImage.StoryKind == "Header" && staticImage.StoryVariantType == "default", "Static header inline image layout should retain selected-story provenance.");
+        TestAssert.True(staticImage.SourceParagraphIndex == 0 && staticImage.Story?.Kind == DocxStoryKind.Header && staticImage.Story?.VariantType == "default", "Static header inline image layout should retain selected-story provenance.");
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
         TestAssert.Equal(1, snapshot.Pages[0].StaticInlineImageCount);
@@ -1242,7 +1242,7 @@ internal static class DocxHeaderFooterTests
             DocxParagraph body = BodyPara(bodyAfterPoints, bodyAfterValue);
             DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-            return layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").Single().BaselineY;
+            return layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).Single().BaselineY;
         }
 
         TestAssert.Equal(Math.Round(FootBaseline(0d, "0"), 4), Math.Round(FootBaseline(24d, "480"), 4));
@@ -1280,7 +1280,7 @@ internal static class DocxHeaderFooterTests
             };
             DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-            return layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").Single().BaselineY;
+            return layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).Single().BaselineY;
         }
 
         TestAssert.Equal(Math.Round(FootBaseline(0d, null), 4), Math.Round(FootBaseline(24d, "480"), 4));
@@ -1355,7 +1355,7 @@ internal static class DocxHeaderFooterTests
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        TestAssert.Equal(0, layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").Count());
+        TestAssert.Equal(0, layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).Count());
     }
 
     public static void DocxEvenPagesSuppressDefaultHeaderWithoutEvenStory()
@@ -1402,8 +1402,8 @@ internal static class DocxHeaderFooterTests
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.True(layout.Pages.Count > 1, "The long body should paginate.");
-        TestAssert.Equal(1, layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").Count());
-        TestAssert.Equal(0, layout.Pages[1].StaticTextLines.Where(line => line.StoryKind == "Header").Count());
+        TestAssert.Equal(1, layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).Count());
+        TestAssert.Equal(0, layout.Pages[1].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).Count());
     }
 
     public static void DocxOverflowingHeaderBottomIsExposedOnLayout()
@@ -1649,7 +1649,7 @@ internal static class DocxHeaderFooterTests
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").ToArray();
+        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);
         TestAssert.Equal(170.6, Math.Round(headerLines[0].BaselineY, 4));
         TestAssert.Equal(11.5833, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
@@ -1688,7 +1688,7 @@ internal static class DocxHeaderFooterTests
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").ToArray();
+        DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).ToArray();
         TestAssert.Equal(2, footerLines.Length);
         TestAssert.Equal(33.7667, Math.Round(footerLines[0].BaselineY, 4));
         TestAssert.Equal(11.5833, Math.Round(footerLines[0].BaselineY - footerLines[1].BaselineY, 4));
@@ -1726,7 +1726,7 @@ internal static class DocxHeaderFooterTests
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Footer").ToArray();
+        DocxTextLineLayout[] footerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Footer).ToArray();
         TestAssert.Equal(2, footerLines.Length);
         TestAssert.Equal(40.7167, Math.Round(footerLines[0].BaselineY, 4));
         TestAssert.Equal(23.4933, Math.Round(footerLines[1].BaselineY, 4));
@@ -1767,7 +1767,7 @@ internal static class DocxHeaderFooterTests
         var raw = new DocxTests.FamilyWidthTextMeasurer();
         var scaled = new DocxTests.ScaledLayoutTextMeasurer(raw, 0.76d, 0.79359971328d);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.76d).Create(document, scaled, CancellationToken.None, raw);
-        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").ToArray();
+        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);
         TestAssert.Equal(170.6, Math.Round(headerLines[0].BaselineY, 4));
         TestAssert.Equal(8.8033, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
@@ -1805,7 +1805,7 @@ internal static class DocxHeaderFooterTests
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.StoryKind == "Header").ToArray();
+        DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);
         TestAssert.Equal(170.6d, Math.Round(headerLines[0].BaselineY, 4));
         TestAssert.Equal(11.5d, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));

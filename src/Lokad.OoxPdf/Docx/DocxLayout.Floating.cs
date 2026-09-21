@@ -44,8 +44,7 @@ internal sealed partial class DocxLayoutEngine
                     anchorPageIndex: null,
                     anchorColumnIndex: sourceBlock?.FirstColumnIndex,
                     sourceBlock,
-                    storyKind: story.Kind.ToValueString(),
-                    storyVariantType: null,
+                    story: DocxStoryId.Related(story.Kind),
                     pageCount: pageCount,
                     textMeasurer: textMeasurer,
                     defaultTabStopPoints: defaultTabStopPoints,
@@ -86,7 +85,7 @@ internal sealed partial class DocxLayoutEngine
         double fixedScale,
         int sourceBlockIndex,
         int sourceParagraphIndex,
-        string storyKind,
+        DocxStoryId? story,
         double bodyWidth,
         double cursorY,
         DocxParagraphSpacingProfile spacingProfile,
@@ -151,7 +150,7 @@ internal sealed partial class DocxLayoutEngine
                 SourceBlockIndex: sourceBlockIndex,
                 SourceParagraphIndex: sourceParagraphIndex,
                 SourceLineIndex: lineIndex,
-                StoryKind: storyKind,
+                Story: story,
                 LineHeight: lineHeight,
                 AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                 IsFirstParagraphLine: firstLine,
@@ -167,7 +166,7 @@ internal sealed partial class DocxLayoutEngine
                 ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                 ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
-                SourceParagraph: paragraph, StoryVariantType: null, EmitsTerminalParagraphMark: false));
+                SourceParagraph: paragraph, EmitsTerminalParagraphMark: false));
             firstLine = false;
             paragraphX = continuationTextStartOffset;
             paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
@@ -205,8 +204,7 @@ internal sealed partial class DocxLayoutEngine
                 sourceBlock?.FirstPageIndex,
                 sourceBlock?.FirstColumnIndex,
                 sourceBlock,
-                storyKind: null,
-                storyVariantType: null,
+                story: null,
                 pageCount: null,
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
@@ -240,8 +238,8 @@ internal sealed partial class DocxLayoutEngine
                 page.PageSettings.FooterFloatingDrawingsByType,
                 page.PageSettings,
                 pageNumber);
-            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, "Header", page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
-            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, "Footer", page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
+            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, DocxStoryId.Header(selectedHeader.VariantType), page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
+            layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, DocxStoryId.Footer(selectedFooter.VariantType), page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
         }
 
         return layouts;
@@ -249,7 +247,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static IEnumerable<DocxFloatingDrawingLayout> CreateStaticFloatingDrawingLayouts(
         DocxSelectedStaticDrawings selectedDrawings,
-        string storyKind,
+        DocxStoryId story,
         DocxLayoutPage page,
         int pageIndex,
         int pageCount,
@@ -270,8 +268,7 @@ internal sealed partial class DocxLayoutEngine
                 anchorPageIndex: pageIndex,
                 anchorColumnIndex: null,
                 sourceBlock: null,
-                storyKind: storyKind,
-                storyVariantType: selectedDrawings.VariantType,
+                story: story,
                 pageCount: pageCount,
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
@@ -387,8 +384,7 @@ internal sealed partial class DocxLayoutEngine
             ShiftTableRows(storyLayout.TableRows, contentTop, contentX),
             sourceBlockIndex,
             SourceParagraphIndex: sourceParagraphIndex,
-            StoryKind: null,
-            StoryVariantType: null);
+            Story: null);
     }
     private static double ReadInsetEmuPoints(string? value, long defaultEmu)
     {
@@ -403,8 +399,7 @@ internal sealed partial class DocxLayoutEngine
         int? anchorPageIndex,
         int? anchorColumnIndex,
         DocxLayoutSourceBlockBounds? sourceBlock,
-        string? storyKind,
-        string? storyVariantType,
+        DocxStoryId? story,
         int? pageCount,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
@@ -457,8 +452,7 @@ internal sealed partial class DocxLayoutEngine
             wrapExclusion?.Top,
             wrapExclusion?.Width,
             wrapExclusion?.Height,
-            storyKind,
-            storyVariantType,
+            story,
             textBoxLayout);
 
         DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(int? pageNumber)

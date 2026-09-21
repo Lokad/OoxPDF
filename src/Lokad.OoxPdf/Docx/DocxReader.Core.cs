@@ -60,16 +60,19 @@ internal sealed partial class DocxReader
         DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         cancellationToken.ThrowIfCancellationRequested();
+        // PLAN W04: one related-story cache per Read, shared by document headers/footers,
+        // body section breaks, and every section's page settings.
+        var storyCache = new RelatedStoryPartCache();
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
             ? null
-            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, null);
-        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
+            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
+        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken, storyCache);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
         IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
         IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
         IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
@@ -85,7 +88,7 @@ internal sealed partial class DocxReader
                 72d,
                 72d,
                 72d,
-                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken),
+                ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
                 floatingDrawings,
                 headers,
                 footers,
@@ -130,7 +133,7 @@ internal sealed partial class DocxReader
             right,
             top,
             bottom,
-            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken),
+            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
             floatingDrawings,
             headers,
             footers,
@@ -495,7 +498,8 @@ internal sealed partial class DocxReader
         DocxStyleSet? styles,
         DocxNumberingSet? numbering,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        RelatedStoryPartCache storyCache)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? titlePage = sectionProperties?.Element(WordprocessingNamespace + "titlePg");
@@ -543,7 +547,8 @@ internal sealed partial class DocxReader
             HeaderRelationshipType,
             "headerReference",
             markupMode,
-            cancellationToken);
+            cancellationToken,
+            storyCache);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(
             sectionProperties,
             package,
@@ -553,7 +558,8 @@ internal sealed partial class DocxReader
             FooterRelationshipType,
             "footerReference",
             markupMode,
-            cancellationToken);
+            cancellationToken,
+            storyCache);
 
         return pageSettings with
         {
@@ -570,7 +576,8 @@ internal sealed partial class DocxReader
                 HeaderRelationshipType,
                 "headerReference",
                 markupMode,
-                cancellationToken),
+                cancellationToken,
+                storyCache),
             FooterFloatingDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(
                 sectionProperties,
                 package,
@@ -580,7 +587,8 @@ internal sealed partial class DocxReader
                 FooterRelationshipType,
                 "footerReference",
                 markupMode,
-                cancellationToken)
+                cancellationToken,
+                storyCache)
         };
     }
 

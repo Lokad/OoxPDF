@@ -20,7 +20,8 @@ internal sealed partial class DocxReader
         XDocument? settings,
         DocxDocumentSettings documentSettings,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        RelatedStoryPartCache storyCache)
     {
             bool IsRunPageBreakOnlyParagraph(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
             {
@@ -71,7 +72,7 @@ internal sealed partial class DocxReader
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, storyCache, inheritedRevision));
                     }
 
                     continue;
@@ -84,7 +85,7 @@ internal sealed partial class DocxReader
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
+                        elements.Add(ReadSectionBreak(breakParagraphSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, storyCache, inheritedRevision));
                     }
 
                     continue;
@@ -124,7 +125,7 @@ internal sealed partial class DocxReader
                     XElement? splitSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (splitSectionProperties is not null)
                     {
-                        elements.Add(ReadSectionBreak(splitSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
+                        elements.Add(ReadSectionBreak(splitSectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, storyCache, inheritedRevision));
                     }
 
                     continue;
@@ -139,7 +140,7 @@ internal sealed partial class DocxReader
                 XElement? sectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                 if (sectionProperties is not null)
                 {
-                    elements.Add(ReadSectionBreak(sectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, inheritedRevision));
+                    elements.Add(ReadSectionBreak(sectionProperties, package, relationships, styles, numbering, settings, markupMode, cancellationToken, storyCache, inheritedRevision));
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")

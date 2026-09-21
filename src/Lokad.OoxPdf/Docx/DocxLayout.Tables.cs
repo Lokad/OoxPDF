@@ -553,12 +553,28 @@ internal sealed partial class DocxLayoutEngine
 
         return maxWidth;
     }
+    internal const int MaxLayoutGridColumns = 1024;
+
     private static int GetMaxGridColumnCount(DocxTable table)
     {
-        return table.Rows
-            .Select(row => row.Cells.Sum(cell => Math.Max(1, cell.GridSpan)))
-            .DefaultIfEmpty(0)
-            .Max();
+        int max = 0;
+        foreach (DocxTableRow row in table.Rows)
+        {
+            long total = 0;
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                total = checked(total + Math.Max(1, cell.GridSpan));
+                if (total > MaxLayoutGridColumns)
+                {
+                    throw new OoxPdfLimitExceededException(
+                        "DOCX table layout grid exceeds the maximum supported column count of " + MaxLayoutGridColumns + ".");
+                }
+            }
+
+            max = Math.Max(max, (int)total);
+        }
+
+        return max;
     }
 
     // W6-a1: fixed table geometry joins scaled space; fixedScale reuses the layout
@@ -662,8 +678,7 @@ internal sealed partial class DocxLayoutEngine
             FragmentIndex: 0,
             FragmentCount: 1,
             FragmentReason: "None",
-            StoryKind: null,
-            StoryVariantType: null,
+            Story: null,
             pageCount: null,
             paragraphSpacingScale: paragraphSpacingScale));
         cursorY -= rowHeight;
@@ -752,8 +767,7 @@ internal sealed partial class DocxLayoutEngine
                 FragmentIndex: fragmentIndex,
                 FragmentCount: fragmentHeights.Count,
                 FragmentReason: fragmentReason,
-                StoryKind: null,
-                StoryVariantType: null,
+                Story: null,
                 pageCount: null,
                 paragraphSpacingScale: paragraphSpacingScale));
             cursorY -= fragmentHeight;
@@ -934,13 +948,37 @@ internal sealed partial class DocxLayoutEngine
         return ComputeTableRowFragmentHeights(rowHeight, [firstFragmentHeight], pageContentHeight);
     }
 
+    internal const int MaxTableRowFragments = 1000;
+
     private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, IReadOnlyList<double> fragmentBoundariesFromRowTop, double pageContentHeight)
     {
+        // PLAN M06: validate geometry before fragment expansion and require numeric
+        // progress so extreme authored heights cannot append unbounded fragments.
+        if (!double.IsFinite(rowHeight) || !double.IsFinite(pageContentHeight))
+        {
+            throw new OoxPdfLimitExceededException("DOCX table row geometry is not finite.");
+        }
+
+        if (rowHeight <= 0d || rowHeight > 100000d)
+        {
+            throw new OoxPdfLimitExceededException("DOCX table row height exceeds the maximum supported height.");
+        }
+
         var fragments = new List<double>();
         double consumedHeight = 0d;
         double fullPageHeight = Math.Max(1d, pageContentHeight);
+        if (!double.IsFinite(fullPageHeight) || fullPageHeight < 1d)
+        {
+            throw new OoxPdfLimitExceededException("DOCX table continuation height is invalid.");
+        }
+
         foreach (double boundary in fragmentBoundariesFromRowTop.Order())
         {
+            if (!double.IsFinite(boundary))
+            {
+                throw new OoxPdfLimitExceededException("DOCX table fragment boundary is not finite.");
+            }
+
             double clampedBoundary = Math.Min(rowHeight, Math.Max(0d, boundary));
             if (clampedBoundary <= consumedHeight + 0.001d)
             {
@@ -957,16 +995,57 @@ internal sealed partial class DocxLayoutEngine
 
     private static void AddTableRowFragmentSegmentHeights(List<double> fragments, double segmentHeight, double fullPageHeight)
     {
+        if (!double.IsFinite(segmentHeight) || !double.IsFinite(fullPageHeight))
+        {
+            throw new OoxPdfLimitExceededException("DOCX table fragment geometry is not finite.");
+        }
+
+        if (fullPageHeight < 1d)
+        {
+            throw new OoxPdfLimitExceededException("DOCX table continuation height is invalid.");
+        }
+
+        // Require numeric progress: extreme doubles can make subtraction stop
+        // changing the value and loop without bound (M06).
         double remainingHeight = segmentHeight;
+        double lastRemaining = double.PositiveInfinity;
         while (remainingHeight > fullPageHeight + 0.001d)
         {
+            if (fragments.Count >= MaxTableRowFragments)
+            {
+                throw new OoxPdfLimitExceededException(
+                    "DOCX table row exceeds the maximum supported fragment count of " + MaxTableRowFragments + ".");
+            }
+
+            if (!(remainingHeight < lastRemaining))
+            {
+                throw new OoxPdfLimitExceededException("DOCX table row fragmentation cannot progress.");
+            }
+
+            lastRemaining = remainingHeight;
             fragments.Add(fullPageHeight);
-            remainingHeight -= fullPageHeight;
+            // PLAN Q01: conversion-wide cumulative charge per constructed fragment.
+            OoxConversionBudget.Current?.ChargeTableFragments(1);
+            double next = remainingHeight - fullPageHeight;
+            if (!(next < remainingHeight))
+            {
+                throw new OoxPdfLimitExceededException("DOCX table row fragmentation cannot progress.");
+            }
+
+            remainingHeight = next;
         }
 
         if (remainingHeight > 0.001d)
         {
+            if (fragments.Count >= MaxTableRowFragments)
+            {
+                throw new OoxPdfLimitExceededException(
+                    "DOCX table row exceeds the maximum supported fragment count of " + MaxTableRowFragments + ".");
+            }
+
             fragments.Add(remainingHeight);
+            // PLAN Q01: conversion-wide cumulative charge per constructed fragment.
+            OoxConversionBudget.Current?.ChargeTableFragments(1);
         }
     }
 
@@ -987,8 +1066,7 @@ internal sealed partial class DocxLayoutEngine
         int FragmentIndex,
         int FragmentCount,
         string FragmentReason,
-        string? StoryKind,
-        string? StoryVariantType,
+        DocxStoryId? Story,
         int? pageCount,
         double paragraphSpacingScale)
     {
@@ -1150,7 +1228,6 @@ internal sealed partial class DocxLayoutEngine
             row.CantSplitValue,
             RevisionCount: CountTableRowSourceRevisions(row),
             Revisions: CollectTableRowSourceRevisions(row),
-            StoryKind: StoryKind,
-            StoryVariantType: StoryVariantType);
+            Story: Story);
     }
 }

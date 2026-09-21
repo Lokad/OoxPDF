@@ -19,7 +19,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         bool allowOverwideTokenBreaks,
-        int? dynamicFieldPageNumber)
+        int? dynamicFieldPageNumber,
+        CancellationToken cancellationToken = default)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
@@ -29,7 +30,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken))
             {
                 yielded = true;
                 yield return line;
@@ -67,9 +68,25 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         bool allowOverwideTokenBreaks,
-        int? dynamicFieldPageNumber)
+        int? dynamicFieldPageNumber,
+        CancellationToken cancellationToken)
     {
-        IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
+        // PLAN W03: slice widths are memoized by text coordinates for this segment so
+        // repeated measures of the same slice (whole-token checks, preferred/overwide
+        // overlap, re-examined tokens) shape once. A slice value depends only on its
+        // content here: every measure starts at width zero, and fontSize, tab stops,
+        // and field state are fixed for the call. Binary search is deliberately NOT
+        // used: prefix widths are not provably monotonic (kerning, negative tracking,
+        // dynamic fields), and emergency tokens structurally contain no tabs (they
+        // split tokens), which still does not certify shaping monotonicity.
+        var measureMemo = new Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double>();
+        // PLAN W03: per-measure normalization scans (soft-hyphen and NUMPAGES checks over
+        // every slice) cost O(slice) each with zero reuse. Hoist the absence checks to the
+        // segment once: slices inside a clean segment skip them exactly (both normalizers
+        // return their input unchanged when there is nothing to rewrite).
+        bool segmentHasHiddenBreaks = text.AsSpan(segmentStart, segmentLength).ContainsAny("\u00AD\u200B");
+        bool segmentHasDynamicFields = SpansOverlapDynamicField(spans, segmentStart, segmentLength);
+        List<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength).ToList();
         if (tokens.Count == 0)
         {
             yield break;
@@ -77,28 +94,35 @@ internal sealed partial class DocxLayoutEngine
 
         int lineStart = tokens[0].Start;
         int lineLength = 0;
+        // PLAN W03: HasNonWhitespace rescanned the whole line per token (quadratic
+        // char scans). Maintain it incrementally instead: each token extent is scanned
+        // once when added, and extents chain contiguously (lineStart always sits at a
+        // token boundary or inside the re-examined remainder token), so the running OR
+        // equals a fresh scan exactly.
+        bool lineHasNonWhitespace = false;
         int lineIndex = 0;
         for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             TextToken token = tokens[tokenIndex];
             int candidateLength = token.Start + token.Length - lineStart;
-            bool lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
             if (lineLength > 0 &&
                 lineHasNonWhitespace &&
                 !token.IsBreakableWhitespace &&
-                MeasureTextSpansForWrapping(SliceTextSpans(spans, lineStart, candidateLength), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber) > maxWidth(lineIndex))
+                MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, candidateLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber) > maxWidth(lineIndex))
             {
                 // Word also breaks an overlong token after a hyphen (or slash) when the prefix fits the remaining width; previously only line-leading overwide tokens used preferred breaks.
-                double usedWidth = MeasureTextSpansForWrapping(SliceTextSpans(spans, lineStart, lineLength), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
+                double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
                 double remainingWidth = maxWidth(lineIndex) - usedWidth;
                 if (remainingWidth > 0d &&
-                    TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, out int preferredBreakLength))
+                    TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, out int preferredBreakLength))
                 {
                     yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true);
                     lineIndex++;
                     lineStart = token.Start + preferredBreakLength;
                     lineLength = 0;
-                    tokens = ReplaceToken(tokens, tokenIndex, new TextToken(text.Substring(lineStart, token.Length - preferredBreakLength), lineStart, token.Length - preferredBreakLength));
+                    lineHasNonWhitespace = false;
+                    tokens[tokenIndex] = new TextToken(text.Substring(lineStart, token.Length - preferredBreakLength), lineStart, token.Length - preferredBreakLength);
                     tokenIndex--;
                     continue;
                 }
@@ -107,35 +131,40 @@ internal sealed partial class DocxLayoutEngine
                 lineIndex++;
                 lineStart = token.Start;
                 lineLength = 0;
+                lineHasNonWhitespace = false;
                 tokenIndex--;
                 continue;
             }
 
             if (lineLength == 0 &&
                 !token.IsBreakableWhitespace &&
-                TryFindPreferredTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, out int breakLength))
+                TryFindPreferredTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, out int breakLength))
             {
                 yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true);
                 lineIndex++;
                 lineStart = token.Start + breakLength;
                 lineLength = 0;
-                tokens = ReplaceToken(tokens, tokenIndex, new TextToken(text.Substring(lineStart, token.Length - breakLength), lineStart, token.Length - breakLength));
+                lineHasNonWhitespace = false;
+                tokens[tokenIndex] = new TextToken(text.Substring(lineStart, token.Length - breakLength), lineStart, token.Length - breakLength);
                 tokenIndex--;
             }
             else if (lineLength == 0 &&
                 allowOverwideTokenBreaks &&
                 !token.IsBreakableWhitespace &&
-                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, out breakLength))
+                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, out breakLength))
             {
                 yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true);
                 lineIndex++;
                 lineStart = token.Start + breakLength;
                 lineLength = 0;
-                tokens = ReplaceToken(tokens, tokenIndex, new TextToken(text.Substring(lineStart, token.Length - breakLength), lineStart, token.Length - breakLength));
+                lineHasNonWhitespace = false;
+                tokens[tokenIndex] = new TextToken(text.Substring(lineStart, token.Length - breakLength), lineStart, token.Length - breakLength);
                 tokenIndex--;
             }
             else
             {
+                int addedStart = Math.Max(token.Start, lineStart);
+                lineHasNonWhitespace = lineHasNonWhitespace || HasNonWhitespace(text, addedStart, token.Start + token.Length - addedStart);
                 lineLength = candidateLength;
             }
         }
@@ -156,14 +185,18 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         int? dynamicFieldPageNumber,
+        Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double> measureMemo,
+        bool segmentHasHiddenBreaks,
+        bool segmentHasDynamicFields,
+        CancellationToken cancellationToken,
         out int breakLength)
     {
-        if (TryFindPreferredTokenBreak(text, spans, token, maxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, out breakLength))
+        if (TryFindPreferredTokenBreak(text, spans, token, maxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, out breakLength))
         {
             return true;
         }
 
-        double tokenWidth = MeasureTextSpansForWrapping(SliceTextSpans(spans, token.Start, token.Length), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
+        double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
         if (tokenWidth <= maxWidth)
         {
             breakLength = 0;
@@ -172,13 +205,14 @@ internal sealed partial class DocxLayoutEngine
 
         for (int length = token.Length - 1; length > 0; length--)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!IsSafeEmergencyTokenBreak(length))
             {
                 continue;
             }
 
             bool preserveTerminalSoftHyphen = text[token.Start + length - 1] == '\u00AD';
-            double prefixWidth = MeasureTextSpansForWrapping(SliceTextSpans(spans, token.Start, length), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen, dynamicFieldPageNumber);
+            double prefixWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen, dynamicFieldPageNumber);
             if (prefixWidth <= maxWidth)
             {
                 breakLength = length;
@@ -228,10 +262,14 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
         int? dynamicFieldPageNumber,
+        Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double> measureMemo,
+        bool segmentHasHiddenBreaks,
+        bool segmentHasDynamicFields,
+        CancellationToken cancellationToken,
         out int breakLength)
     {
         breakLength = 0;
-        double tokenWidth = MeasureTextSpansForWrapping(SliceTextSpans(spans, token.Start, token.Length), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
+        double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber);
         if (tokenWidth <= maxWidth)
         {
             return false;
@@ -239,6 +277,7 @@ internal sealed partial class DocxLayoutEngine
 
         for (int length = token.Length - 1; length > 0; length--)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int absoluteIndex = token.Start + length - 1;
             if (!DocxLineBreakOpportunities.IsOpportunityAfter(text[absoluteIndex]))
             {
@@ -246,7 +285,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             bool preserveTerminalSoftHyphen = text[token.Start + length - 1] == '\u00AD';
-            double prefixWidth = MeasureTextSpansForWrapping(SliceTextSpans(spans, token.Start, length), fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen, dynamicFieldPageNumber);
+            double prefixWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen, dynamicFieldPageNumber);
             if (prefixWidth <= maxWidth)
             {
                 breakLength = length;
@@ -257,15 +296,58 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
-    private static IReadOnlyList<TextToken> ReplaceToken(IReadOnlyList<TextToken> tokens, int index, TextToken replacement)
+    private static double MeasureWrapSlice(
+        Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double> measureMemo,
+        bool segmentHasHiddenBreaks,
+        bool segmentHasDynamicFields,
+        IReadOnlyList<DocxTextSpan> spans,
+        int start,
+        int length,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops,
+        double defaultTabStopPoints,
+        bool preserveTerminalSoftHyphen,
+        int? dynamicFieldPageNumber)
     {
-        var result = new List<TextToken>(tokens.Count);
-        for (int i = 0; i < tokens.Count; i++)
+        var key = (start, length, preserveTerminalSoftHyphen);
+        if (measureMemo.TryGetValue(key, out double cached))
         {
-            result.Add(i == index ? replacement : tokens[i]);
+            return cached;
         }
 
-        return result;
+        IReadOnlyList<DocxTextSpan> sliced = SliceTextSpans(spans, start, length);
+        // Clean segments skip both normalizers exactly: each returns its input unchanged
+        // when there is nothing to rewrite, so slicing straight into field measurement
+        // computes the identical width without the per-slice scans.
+        double width = segmentHasHiddenBreaks || segmentHasDynamicFields
+            ? MeasureTextSpansForWrapping(sliced, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen, dynamicFieldPageNumber)
+            : MeasureTextSpans(sliced, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
+        measureMemo[key] = width;
+        return width;
+    }
+
+    private static bool SpansOverlapDynamicField(IReadOnlyList<DocxTextSpan> spans, int start, int length)
+    {
+        int spanStart = 0;
+        int end = start + length;
+        foreach (DocxTextSpan span in spans)
+        {
+            int spanEnd = spanStart + span.Text.Length;
+            if (spanEnd > start && spanStart < end && span.StyleRun.FieldKind == DocxFieldKind.NumPages)
+            {
+                return true;
+            }
+
+            if (spanEnd >= end)
+            {
+                break;
+            }
+
+            spanStart = spanEnd;
+        }
+
+        return false;
     }
 
     private static DocxWrappedTextLine CreateWrappedTextLine(

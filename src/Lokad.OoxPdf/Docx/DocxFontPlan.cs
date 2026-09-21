@@ -366,6 +366,11 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             cancellationToken.ThrowIfCancellationRequested();
             if (resolved.Run.Equals(run))
             {
+                // PLAN W04: cloned runs miss the reference-identity index and pay the
+                // linear record-equality fallback every measurement. Memoize confirmed
+                // matches so each distinct clone falls back once; the fallback stays as
+                // the correctness backstop for unseen runs.
+                runsByReference[run] = resolved;
                 return resolved;
             }
         }

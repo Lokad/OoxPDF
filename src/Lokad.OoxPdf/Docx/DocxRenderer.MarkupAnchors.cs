@@ -368,8 +368,8 @@ internal sealed partial class DocxRenderer
 
     private static string TableBalloonKey(DocxTableRowLayout row)
     {
-        return (row.StoryKind ?? string.Empty) +
-            ":" + (row.StoryVariantType ?? string.Empty) +
+        return (row.Story?.ToKindString() ?? string.Empty) +
+            ":" + (row.Story?.VariantType ?? string.Empty) +
             ":" + row.Table.SourceBlockIndex.ToString(CultureInfo.InvariantCulture) +
             ":" + row.Table.TableIndex.ToString(CultureInfo.InvariantCulture);
     }
