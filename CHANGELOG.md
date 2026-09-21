@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Triaged docx-layout starts (Q07 increment): 2 new locks with reviewed PNGs and tightened gates (ladder-01 line-height/paragraph-spacing). Conditional-run-precedence spot-check shows matching run formatting with a genuine column-width divergence that stays needs-review for column-width investigation rather than approximate. Manifests: 118 locked / 114 approximate / 93 needs-review.
+
 - Triaged typography and docx-layout families (Q07 increment): 5 new locks with reviewed PNGs and tightened gates (cambria highlight, vertical anchor/text, ladder-01 line-height/paragraph-spacing). 7 typography gate failures reproduce without related source changes and are recorded as environment-sensitive drift, gates untouched. Fragment-threshold pagination spot-check confirms correct fragmentation decisions with band-rhythm nuance only. Manifests: 121 locked / 114 approximate / 90 needs-review.
 
 - Triaged the typography family (Q07 increment): 3 new locks with reviewed PNGs and tightened gates (cambria-highlight-center, vertical-anchor-middle, vertical-text-port). 7 pre-existing gate failures in this environment (anchor-overflow, text-flow, mixed-paragraph-stack, ellipsis, tab-space, whitespace-controls, underline-single) reproduce without any related source change and with exact unit tests green - recorded as environment-sensitive (font/rasterization drift), not regressions; classifications and gates left untouched.
