@@ -3,9 +3,9 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-plot-layout-target-outer-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "manual-layout", "layout-target", "office-probe", "needs-review"],
+  "tags": ["pptx", "ladder", "chart", "manual-layout", "layout-target", "office-probe", "approximate"],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
