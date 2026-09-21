@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved plot-layout-outer-narrow and compact-stacked-secondary-axis probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (bar geometry, plot-box layout, stacked segments with pattern fills, dual value axes, trend lines and arrow all match; SSIM 0.997/0.991, recall 0.990/0.993, MAE 0.087/0.042, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 179 approximate / 29 needs-review.
+
 - Moved default and top-right axis-title probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (bars, default axis titles, tick labels, gridlines all match; axis-title text hashes match with positions inside structure tolerance; SSIM 0.997/0.996, recall 0.982/0.983, diagnostics empty) with the recorded sub-recall-bar positioning nuance keeping them below the lock bar. Manifests: 118 locked / 177 approximate / 31 needs-review.
 
 - Moved conditional-run-precedence to approximate (Q07 increment): direct PNG review shows correct conditional run formatting (bold-italic vs plain plus red, matching the reference) with the recorded font-advance gap class (fallback sans advances fit both columns while Word serif advances overflow the 108pt grid, so overflow and column geometry diverge; SSIM 0.507 and recall 0.415 on the loose placeholder gates, diagnostics empty, dimensions match). Manifests: 118 locked / 175 approximate / 33 needs-review.

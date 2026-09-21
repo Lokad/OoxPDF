@@ -3,9 +3,9 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-compact-stacked-secondary-axis-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "secondary-axis", "stacked", "compact", "bottom-up", "needs-review"],
+  "tags": ["pptx", "ladder", "chart", "secondary-axis", "stacked", "compact", "bottom-up", "approximate"],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
