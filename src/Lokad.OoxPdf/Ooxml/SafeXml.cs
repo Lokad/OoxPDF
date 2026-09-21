@@ -12,6 +12,7 @@ internal static class SafeXml
     internal const long DefaultMaxCharacters = 64L * 1024L * 1024L;
     internal const int DefaultMaxDepth = 256;
     internal const long DefaultMaxNodes = 2000000L;
+    internal const long DefaultMaxAttributes = 2000000L;
 
     public static XmlReaderSettings CreateReaderSettings()
     {
@@ -35,13 +36,13 @@ internal static class SafeXml
         return Load(stream, cancellationToken, DefaultMaxCharacters, DefaultMaxDepth, DefaultMaxNodes);
     }
 
-    internal static XDocument Load(Stream stream, CancellationToken cancellationToken, long maxCharacters, int maxDepth, long maxNodes = DefaultMaxNodes)
+    internal static XDocument Load(Stream stream, CancellationToken cancellationToken, long maxCharacters, int maxDepth, long maxNodes = DefaultMaxNodes, long maxAttributes = DefaultMaxAttributes)
     {
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
             using XmlReader reader = XmlReader.Create(stream, CreateReaderSettings(maxCharacters));
-            using var bounded = new DepthBoundReader(reader, maxDepth, maxNodes, cancellationToken);
+            using var bounded = new DepthBoundReader(reader, maxDepth, maxNodes, maxAttributes, cancellationToken);
             XDocument document = XDocument.Load(bounded, LoadOptions.None);
             OoxMarkupCompatibility.ResolveAlternateContent(document);
             cancellationToken.ThrowIfCancellationRequested();
@@ -55,11 +56,12 @@ internal static class SafeXml
 
     // XmlReaderSettings exposes no depth quota, so enforce it here while also
     // surfacing cancellation during long parses. All members delegate.
-    private sealed class DepthBoundReader(XmlReader inner, int maxDepth, long maxNodes, CancellationToken cancellationToken) : XmlReader
+    private sealed class DepthBoundReader(XmlReader inner, int maxDepth, long maxNodes, long maxAttributes, CancellationToken cancellationToken) : XmlReader
     {
         private int depth;
         private long nodes;
         private long elementCount;
+        private long attributeCount;
 
         public override int AttributeCount => inner.AttributeCount;
         public override string BaseURI => inner.BaseURI;
@@ -91,7 +93,30 @@ internal static class SafeXml
                     elementCount++;
                     if (elementCount > maxNodes)
                     {
-                        throw new InvalidDataException($"XML element count exceeds the maximum supported count of {maxNodes}.");
+                        throw new OoxPdfLimitExceededException($"XML element count exceeds the maximum supported count of {maxNodes}.");
+                    }
+
+                    // PLAN M07: the element cap alone misses attribute-driven object
+                    // amplification (one element with 1000 attributes passed with maxNodes=3).
+                    // Count attributes per element toward a separate object budget.
+                    int currentAttributes = inner.AttributeCount;
+                    if (currentAttributes > 0)
+                    {
+                        long next;
+                        try
+                        {
+                            next = checked(attributeCount + currentAttributes);
+                        }
+                        catch (OverflowException ex)
+                        {
+                            throw new OoxPdfLimitExceededException("XML attribute count overflows.", ex);
+                        }
+
+                        attributeCount = next;
+                        if (attributeCount > maxAttributes)
+                        {
+                            throw new OoxPdfLimitExceededException($"XML attribute count exceeds the maximum supported count of {maxAttributes}.");
+                        }
                     }
                 }
 
@@ -100,7 +125,7 @@ internal static class SafeXml
                     depth++;
                     if (depth > maxDepth)
                     {
-                        throw new InvalidDataException($"XML element nesting exceeds the maximum supported depth of {maxDepth}.");
+                        throw new OoxPdfLimitExceededException($"XML element nesting exceeds the maximum supported depth of {maxDepth}.");
                     }
                 }
                 else if (NodeType == XmlNodeType.EndElement)

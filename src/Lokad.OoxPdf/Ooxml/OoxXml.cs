@@ -18,14 +18,31 @@ internal static class OoxXml
             throw new InvalidDataException("Missing required " + feature + " attribute [" + name.LocalName + "].");
         }
 
-        return long.Parse(value, CultureInfo.InvariantCulture);
+        try
+        {
+            return long.Parse(value, CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException)
+        {
+            throw new InvalidDataException("Malformed " + feature + " attribute [" + name.LocalName + "].", ex);
+        }
     }
 
     public static long ParseOptionalLong(XElement element, string name, long defaultValue)
     {
-        return element.Attribute(name) is { } attribute
-            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
-            : defaultValue;
+        if (element.Attribute(name) is not { } attribute)
+        {
+            return defaultValue;
+        }
+
+        try
+        {
+            return long.Parse(attribute.Value, CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException)
+        {
+            throw new InvalidDataException("Malformed attribute [" + name + "].", ex);
+        }
     }
 
     public static long ReadOptionalLong(XElement? element, string name, long defaultValue)

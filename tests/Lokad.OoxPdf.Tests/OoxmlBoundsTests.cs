@@ -45,7 +45,7 @@ internal static class OoxmlBoundsTests
         }
 
         stream.Position = 0;
-        TestAssert.Throws<InvalidDataException>(() => OoxPackage.Open(stream, CancellationToken.None));
+        TestAssert.Throws<IOException>(() => OoxPackage.Open(stream, CancellationToken.None));
     }
 
     public static void RejectsTruncatedArchives()
@@ -102,14 +102,14 @@ internal static class OoxmlBoundsTests
     {
         string nested = "<r>" + string.Concat(Enumerable.Repeat("<a>", 40)) + "x" + string.Concat(Enumerable.Repeat("</a>", 40)) + "</r>";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(nested));
-        TestAssert.Throws<InvalidDataException>(() => SafeXml.Load(stream, CancellationToken.None, 1024 * 1024, 32));
+        TestAssert.Throws<IOException>(() => SafeXml.Load(stream, CancellationToken.None, 1024 * 1024, 32));
     }
 
     public static void RejectsDefaultDeepXmlNesting()
     {
         string nested = "<r>" + string.Concat(Enumerable.Repeat("<a>", 300)) + "x" + string.Concat(Enumerable.Repeat("</a>", 300)) + "</r>";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(nested));
-        TestAssert.Throws<InvalidDataException>(() => SafeXml.Load(stream, CancellationToken.None));
+        TestAssert.Throws<IOException>(() => SafeXml.Load(stream, CancellationToken.None));
     }
 
     public static void RejectsXmlBeyondCharacterBudget()
@@ -123,7 +123,7 @@ internal static class OoxmlBoundsTests
     {
         string document = "<r>" + string.Concat(Enumerable.Repeat("<a/>", 20)) + "</r>";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(document));
-        TestAssert.Throws<InvalidDataException>(() => SafeXml.Load(stream, CancellationToken.None, 1024 * 1024, 256, 10));
+        TestAssert.Throws<IOException>(() => SafeXml.Load(stream, CancellationToken.None, 1024 * 1024, 256, 10));
     }
 
     public static void RejectsMalformedXmlAsInvalidData()
