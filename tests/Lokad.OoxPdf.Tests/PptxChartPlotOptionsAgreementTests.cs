@@ -242,6 +242,35 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
+    public static void LegendOptionsAgreeBetweenSceneAndXml()
+    {
+        // Absent legends flow through the shared legend builder on both arms, so
+        // the absent spelling must agree exactly (this pins the no-divergence claim).
+        // Shape-style variants stay out: nested reference payloads never agree by
+        // identity across arms (same documented scope as title shape style).
+        string[] legends = new[]
+        {
+            "",
+            "<c:legend><c:legendPos val=\"r\"/><c:layout/><c:overlay val=\"0\"/></c:legend>",
+            "<c:legend><c:legendPos val=\"b\"/><c:layout/><c:overlay val=\"1\"/></c:legend>",
+            "<c:legend><c:legendPos val=\"bogus\"/><c:layout/></c:legend>",
+            "<c:legend><c:legendPos val=\"r\"/><c:layout/><c:overlay val=\"0\"/><c:delete val=\"1\"/></c:legend>",
+        };
+        foreach (string legend in legends)
+        {
+            string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", legend);
+            PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
+            TestAssert.NotNull(sceneChart);
+            XDocument xmlDoc = XDocument.Parse(xml);
+            object? xmlLayout = Invoke("ReadSceneOrXmlChartLegendLayout", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc });
+            object? sceneLayout = Invoke("ReadSceneOrXmlChartLegendLayout", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc });
+            TestAssert.True(Equals(xmlLayout, sceneLayout), "Legend layout must agree for: " + legend);
+            object? xmlStyle = Invoke("ReadSceneOrXmlChartLegendTextStyle", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc });
+            object? sceneStyle = Invoke("ReadSceneOrXmlChartLegendTextStyle", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc });
+            TestAssert.True(Equals(xmlStyle, sceneStyle), "Legend text style must agree for: " + legend);
+        }
+    }
+
     public static void ChartLevelOptionsAgreeBetweenSceneAndXml()
     {
         string[] blanks = new[] { "<c:dispBlanksAs val=\"span\"/>", "<c:dispBlanksAs val=\"zero\"/>", "<c:dispBlanksAs val=\"bogus\"/>", "" };
