@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
@@ -6,11 +7,47 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    // Q02: orphan image/chart-font registrations from rewound nodes are inert but
+    // would still serialize as unreferenced PDF objects. Prune each page to the
+    // names referenced by surviving content. References always emit "/{name} "
+    // (Do/Tf), so the trailing space guards prefix collisions (Im1 vs Im12).
+    // Conservative: a name that never appears is dropped; anything else stays.
+    internal static List<PdfImageResource> PruneUnreferencedImages(string content, List<PdfImageResource> images)
+    {
+        return PruneUnreferencedResources(content, images, static image => image.ResourceName);
+    }
+
+    internal static List<PdfFontResource> PruneUnreferencedChartFonts(string content, List<PdfFontResource> fonts)
+    {
+        return PruneUnreferencedResources(content, fonts, static font => font.ResourceName);
+    }
+
+    private static List<T> PruneUnreferencedResources<T>(string content, List<T> resources, Func<T, string> resourceName)
+    {
+        List<T>? pruned = null;
+        for (int i = 0; i < resources.Count; i++)
+        {
+            if (content.Contains('/' + PdfEmbeddedFont.SanitizeName(resourceName(resources[i])) + ' ', StringComparison.Ordinal))
+            {
+                if (pruned is not null)
+                {
+                    pruned.Add(resources[i]);
+                }
+
+                continue;
+            }
+
+            pruned ??= resources.Take(i).ToList();
+        }
+
+        return pruned ?? resources;
+    }
+
     private static void RenderOrderedSceneNodes(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
-        IReadOnlyDictionary<string, RenderedFont> fonts,
+        IReadOnlyDictionary<FontRequest, RenderedFont> fonts,
         List<PdfImageResource> images,
         List<PdfFontResource> chartFonts,
         List<PdfLinkAnnotation> linkAnnotations,
@@ -49,16 +86,20 @@ internal sealed partial class PptxRenderer
             {
                 graphics.TruncateContent(contentMark);
                 linkAnnotations.RemoveRange(annotationCount, linkAnnotations.Count - annotationCount);
-                EmitNodeRenderFailureDiagnostic(node);
+                EmitNodeRenderFailureDiagnostic(node, ex);
             }
         }
 
-        void EmitNodeRenderFailureDiagnostic(PptxSceneNode node)
+        // Q02: preserve the failure category (exception type only, never the message,
+        // which can carry document text) so repeated failures stay triageable without
+        // leaking content. Budget and cancellation failures never reach here: they are
+        // outside the recoverable whitelist below and abort the conversion.
+        void EmitNodeRenderFailureDiagnostic(PptxSceneNode node, Exception cause)
         {
             context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "PPTX_NODE_RENDER_FAILED",
                 OoxPdfSeverity.Warning,
-                "PPTX node rendering failed and the node was ignored while rendering continued.",
+                "PPTX node rendering failed and the node was ignored while rendering continued. Cause: " + cause.GetType().Name + ".",
                 sourcePartName ?? context.SlidePartName,
                 PageIndex: null,
                 SlideIndex: context.SlideNumber,
@@ -68,6 +109,11 @@ internal sealed partial class PptxRenderer
 
         bool IsRecoverableNodeRenderException(Exception exception)
         {
+            if (exception is OoxPdfLimitExceededException)
+            {
+                return false;
+            }
+
             return exception is FormatException or InvalidDataException or NotSupportedException or ArgumentException;
         }
     }
@@ -76,7 +122,7 @@ internal sealed partial class PptxRenderer
         PptxSceneNode node,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
-        IReadOnlyDictionary<string, RenderedFont> fonts,
+        IReadOnlyDictionary<FontRequest, RenderedFont> fonts,
         List<PdfImageResource> images,
         List<PdfFontResource> chartFonts,
         List<PdfLinkAnnotation> linkAnnotations,
@@ -235,7 +281,7 @@ internal sealed partial class PptxRenderer
         PptxSceneNode node,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
-        IReadOnlyDictionary<string, RenderedFont> fonts,
+        IReadOnlyDictionary<FontRequest, RenderedFont> fonts,
         PptxColorMap sourceColorMap,
         bool renderPlaceholders,
         List<PdfLinkAnnotation> linkAnnotations,
@@ -271,3 +317,4 @@ internal sealed partial class PptxRenderer
     }
 
 }
+

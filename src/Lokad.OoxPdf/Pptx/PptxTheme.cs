@@ -84,8 +84,7 @@ internal sealed class PptxTheme
             return Empty;
         }
 
-        using Stream stream = themePart.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = package.LoadXml(themePart, cancellationToken);
         var colors = new Dictionary<string, RgbColor>(StringComparer.Ordinal);
         XElement? colorScheme = document.Descendants(DrawingNamespace + "clrScheme").FirstOrDefault();
         if (colorScheme is not null)

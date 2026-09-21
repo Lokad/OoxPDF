@@ -221,7 +221,7 @@ internal sealed partial class PptxRenderer
         bool SyntheticBold,
         bool SyntheticItalic);
 
-    private readonly record struct RenderedFonts(IReadOnlyDictionary<string, RenderedFont> Fonts, IReadOnlyList<PdfFontResource> Resources);
+    private readonly record struct RenderedFonts(IReadOnlyDictionary<FontRequest, RenderedFont> Fonts, IReadOnlyList<PdfFontResource> Resources);
 
     private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
 

@@ -369,14 +369,18 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookNumericValue[] ReadNumericRange(string? formula)
         {
-            return ReadRangeCells(formula)
-                .Where(cell => double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-                .Select(cell =>
+            // PLAN W05: the previous Where+Select parsed every value twice. Single pass:
+            // TryParse is deterministic on identical input, so results are unchanged.
+            var values = new List<ChartWorkbookNumericValue>();
+            foreach (ChartWorkbookRangeCell cell in ReadRangeCells(formula))
+            {
+                if (double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
                 {
-                    double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
-                    return new ChartWorkbookNumericValue(cell, value);
-                })
-                .ToArray();
+                    values.Add(new ChartWorkbookNumericValue(cell, value));
+                }
+            }
+
+            return values.ToArray();
         }
 
         public ChartWorkbookTextValue[] ReadTextRange(string? formula)
@@ -387,8 +391,33 @@ internal sealed partial class PptxRenderer
                 .ToArray();
         }
 
+        // PLAN W05: numeric/category/title/label paths expand the same ranges repeatedly
+        // within one chart frame. Memoize expansions per frame (keyed by the raw formula;
+        // resolution is deterministic and visibility filtering happens downstream, so the
+        // cached cells are valid for every caller). Memo hits perform no work, so they
+        // do not consult the token; only expansions do. Callers never mutate the returned
+        // arrays; RenderChartFrame clears the memo when the frame completes, so nothing
+        // accumulates across frames.
+        private readonly Dictionary<string, ChartWorkbookRangeCell[]> rangeMemo = new(StringComparer.Ordinal);
+
+        internal void ClearRangeMemo()
+        {
+            rangeMemo.Clear();
+        }
+
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
+            return ReadRangeCells(formula, CancellationToken.None);
+        }
+
+        public ChartWorkbookRangeCell[] ReadRangeCells(string? formula, CancellationToken cancellationToken)
+        {
+            string key = formula ?? string.Empty;
+            if (rangeMemo.TryGetValue(key, out ChartWorkbookRangeCell[]? cached))
+            {
+                return cached;
+            }
+
             ChartWorkbookRangeResolution resolution = ResolveRangeFormula(formula);
             string[] rangeAreas = SplitRangeAreas(resolution.ResolvedFormula);
             if (rangeAreas.Length == 0)
@@ -396,14 +425,23 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
+            if (rangeAreas.Length > ChartWorkbookData.MaxChartRangeAreas)
+            {
+                throw new OoxPdfLimitExceededException(
+                    "Chart data range exceeds the maximum supported area count of " + ChartWorkbookData.MaxChartRangeAreas + ".");
+            }
+
             var values = new List<ChartWorkbookRangeCell>();
             int index = 0;
             for (int areaIndex = 0; areaIndex < rangeAreas.Length; areaIndex++)
             {
-                AddRangeAreaCells(values, resolution with { ResolvedFormula = rangeAreas[areaIndex] }, areaIndex, rangeAreas.Length, ref index);
+                cancellationToken.ThrowIfCancellationRequested();
+                AddRangeAreaCells(values, resolution with { ResolvedFormula = rangeAreas[areaIndex] }, areaIndex, rangeAreas.Length, ref index, cancellationToken);
             }
 
-            return values.ToArray();
+            ChartWorkbookRangeCell[] result = values.ToArray();
+            rangeMemo[key] = result;
+            return result;
         }
 
     }

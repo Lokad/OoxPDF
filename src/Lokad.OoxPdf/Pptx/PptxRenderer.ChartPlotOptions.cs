@@ -18,6 +18,8 @@ internal sealed partial class PptxRenderer
         double GapWidth,
         double Overlap);
 
+    // D01: chart-level scene is authoritative below the frame early-return; only the
+    // plot-level fallback (absent scene plot) is retained.
     private static ChartBarPlotOptions ReadSceneOrXmlChartBarOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
     {
         ChartBooleanOption ReadSceneOrXmlChartVaryColors()
@@ -33,31 +35,30 @@ internal sealed partial class PptxRenderer
 
         double ReadSceneOrXmlChartGapWidth()
         {
+            // D01: one interpretation - the scene arm normalizes exactly like the
+            // XML arm (the scene stores the raw parsed value for provenance).
             double ReadXmlChartGapWidth(XElement chartElement)
             {
                 (double? gapWidth, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "gapWidth");
-                return gapWidth is { } rawGapWidth
-                    ? Math.Clamp(rawGapWidth, 0d, 500d)
-                    : 150d;
+                return NormalizeGapWidth(gapWidth);
             }
     
             return plot is not null
-                ? plot.GapWidth ?? 150d
+                ? NormalizeGapWidth(plot.GapWidth)
                 : ReadXmlChartGapWidth(chartElement);
         }
 
         double ReadSceneOrXmlChartOverlap()
         {
+            // D01: one interpretation - see gap width above.
             double ReadXmlChartOverlap(XElement chartElement)
             {
                 (double? overlap, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "overlap");
-                return overlap is { } rawOverlap
-                    ? Math.Clamp(rawOverlap, -100d, 100d)
-                    : 0d;
+                return NormalizeOverlap(overlap);
             }
     
             return plot is not null
-                ? plot.Overlap ?? 0d
+                ? NormalizeOverlap(plot.Overlap)
                 : ReadXmlChartOverlap(chartElement);
         }
 
@@ -122,6 +123,23 @@ internal sealed partial class PptxRenderer
     private static ChartRadarPlotOptions ReadSceneOrXmlChartRadarOptions(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return new ChartRadarPlotOptions(ReadSceneOrXmlChartRadarStyle(plot, chartElement));
+    }
+
+    // D01: shared plot-scalar normalization - both the scene arm (raw parsed
+    // value stored at build time) and the XML arm (parsed at render time) resolve
+    // through these, so absent/out-of-range spellings have one interpretation.
+    private static double NormalizeGapWidth(double? rawGapWidth)
+    {
+        return rawGapWidth is { } value
+            ? Math.Clamp(value, 0d, 500d)
+            : 150d;
+    }
+
+    private static double NormalizeOverlap(double? rawOverlap)
+    {
+        return rawOverlap is { } value
+            ? Math.Clamp(value, -100d, 100d)
+            : 0d;
     }
 
     private static double NormalizeAngleDegrees(double angle)

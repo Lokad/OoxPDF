@@ -11,16 +11,16 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    internal static IReadOnlyList<PptxTextRunSnapshot> InspectTextRuns(PptxDocument document, OoxPackage package, int slideIndex)
+    internal static IReadOnlyList<PptxTextRunSnapshot> InspectTextRuns(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
-        return ReadSceneTextRunsForInspection(document, package, slideIndex)
+        return ReadSceneTextRunsForInspection(document, package, slideIndex, sharedScene)
             .Select(ToSnapshot)
             .ToArray();
     }
 
-    private static IReadOnlyList<TextRun> ReadSceneTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex)
+    private static IReadOnlyList<TextRun> ReadSceneTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
         if (context is null)
         {
             return [];
@@ -80,9 +80,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
         if (context is null)
         {
             return [];
@@ -95,9 +95,9 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex)
+    internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
         if (context is null)
         {
             return new PptxTextLayoutSnapshot([]);
@@ -119,9 +119,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex)
+    internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
         if (context is null)
         {
             return new PptxTextFlowSnapshot([]);
@@ -347,9 +347,9 @@ internal sealed partial class PptxRenderer
             glyph.AdjustmentBefore);
     }
 
-    internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex)
+    internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
-        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex);
+        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex, sharedScene);
         RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], new PresentationFontResolver(null), "F", CancellationToken.None);
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
@@ -361,7 +361,7 @@ internal sealed partial class PptxRenderer
             foreach (PptxPositionedTextSpan emissionSpan in SplitSpanByGlyphTypeface(span))
             {
                 TextRun run = emissionSpan.Run;
-                if (!renderedFonts.Fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                if (!renderedFonts.Fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }

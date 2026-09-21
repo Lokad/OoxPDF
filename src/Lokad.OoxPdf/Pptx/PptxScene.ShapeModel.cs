@@ -35,22 +35,145 @@ internal readonly record struct PptxSceneBackground(
     RgbColor Color,
     double Alpha);
 
-internal sealed record PptxSceneNode(
-    PptxSceneNodeKind Kind,
-    string Id,
-    string Name,
-    bool IsPlaceholder,
-    bool IsSmartArtGraphicFrame,
-    PptxSceneHyperlinkClick HyperlinkClick,
-    PptxSceneBounds? Bounds,
-    PptxSceneShape? Shape,
-    PptxSceneTextBody? TextBody,
-    PptxScenePicture? Picture,
-    PptxSceneTable? Table,
-    PptxSceneChart? Chart,
-    PptxSceneGroupTransform GroupTransform,
-    IReadOnlyList<PptxSceneNode> Children,
-    XElement Source);
+// T02: kind/payload combinations are validated at construction so impossible states
+// cannot arise through normal builders. The scene builder is the only producer;
+// TextBody stays unconstrained (read for every kind) as does Bounds (absent without
+// shape properties). Unknown kinds carry no payload and never reach here (skipped).
+internal sealed record PptxSceneNode
+{
+    public PptxSceneNodeKind Kind { get; }
+
+    public string Id { get; }
+
+    public string Name { get; }
+
+    public bool IsPlaceholder { get; }
+
+    public bool IsSmartArtGraphicFrame { get; }
+
+    public PptxSceneHyperlinkClick HyperlinkClick { get; }
+
+    public PptxSceneBounds? Bounds { get; }
+
+    public PptxSceneShape? Shape { get; }
+
+    public PptxSceneTextBody? TextBody { get; }
+
+    public PptxScenePicture? Picture { get; }
+
+    public PptxSceneTable? Table { get; }
+
+    public PptxSceneChart? Chart { get; }
+
+    public PptxSceneGroupTransform GroupTransform { get; }
+
+    public IReadOnlyList<PptxSceneNode> Children { get; }
+
+    public XElement Source { get; }
+
+    private PptxSceneNode(
+        PptxSceneNodeKind kind,
+        string id,
+        string name,
+        bool isPlaceholder,
+        bool isSmartArtGraphicFrame,
+        PptxSceneHyperlinkClick hyperlinksClick,
+        PptxSceneBounds? bounds,
+        PptxSceneShape? shape,
+        PptxSceneTextBody? textBody,
+        PptxScenePicture? picture,
+        PptxSceneTable? table,
+        PptxSceneChart? chart,
+        PptxSceneGroupTransform groupTransform,
+        IReadOnlyList<PptxSceneNode> children,
+        XElement source)
+    {
+        Kind = kind;
+        Id = id;
+        Name = name;
+        IsPlaceholder = isPlaceholder;
+        IsSmartArtGraphicFrame = isSmartArtGraphicFrame;
+        HyperlinkClick = hyperlinksClick;
+        Bounds = bounds;
+        Shape = shape;
+        TextBody = textBody;
+        Picture = picture;
+        Table = table;
+        Chart = chart;
+        GroupTransform = groupTransform;
+        Children = children;
+        Source = source;
+    }
+
+    public static PptxSceneNode Create(
+        PptxSceneNodeKind kind,
+        string id,
+        string name,
+        bool isPlaceholder,
+        bool isSmartArtGraphicFrame,
+        PptxSceneHyperlinkClick hyperlinksClick,
+        PptxSceneBounds? bounds,
+        PptxSceneShape? shape,
+        PptxSceneTextBody? textBody,
+        PptxScenePicture? picture,
+        PptxSceneTable? table,
+        PptxSceneChart? chart,
+        PptxSceneGroupTransform groupTransform,
+        IReadOnlyList<PptxSceneNode> children,
+        XElement source)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(children);
+        ArgumentNullException.ThrowIfNull(source);
+        if ((kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector) && shape is null)
+        {
+            throw new ArgumentException("Shape nodes require a shape payload.", nameof(shape));
+        }
+
+        if (kind == PptxSceneNodeKind.Picture && picture is null)
+        {
+            throw new ArgumentException("Picture nodes require a picture payload.", nameof(picture));
+        }
+
+        if (kind == PptxSceneNodeKind.Table && table is null)
+        {
+            throw new ArgumentException("Table nodes require a table payload.", nameof(table));
+        }
+
+        if (kind == PptxSceneNodeKind.Chart && chart is null)
+        {
+            throw new ArgumentException("Chart nodes require a chart payload.", nameof(chart));
+        }
+
+        if (shape is not null && kind is not (PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector))
+        {
+            throw new ArgumentException("Shape payloads belong to shape or connector nodes.", nameof(shape));
+        }
+
+        if (picture is not null && kind != PptxSceneNodeKind.Picture)
+        {
+            throw new ArgumentException("Picture payloads belong to picture nodes.", nameof(picture));
+        }
+
+        if (table is not null && kind != PptxSceneNodeKind.Table)
+        {
+            throw new ArgumentException("Table payloads belong to table nodes.", nameof(table));
+        }
+
+        if (chart is not null && kind != PptxSceneNodeKind.Chart)
+        {
+            throw new ArgumentException("Chart payloads belong to chart nodes.", nameof(chart));
+        }
+
+        if (children.Count != 0 && kind != PptxSceneNodeKind.Group)
+        {
+            throw new ArgumentException("Only group nodes carry children.", nameof(children));
+        }
+
+        return new PptxSceneNode(kind, id, name, isPlaceholder, isSmartArtGraphicFrame, hyperlinksClick, bounds, shape, textBody, picture, table, chart, groupTransform, children, source);
+    }
+}
 
 internal readonly record struct PptxSceneHyperlinkClick(
     bool IsDefined,

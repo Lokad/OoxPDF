@@ -16,6 +16,69 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxModelTests
 {
+    public static void PptxSceneChartPartRecordsEnforceDefinedUndefined()
+    {
+        // T02: chart part records build only through factories; the defined flag
+        // cannot disagree with construction and defined parts require identity.
+        PptxSceneChartExternalData undefinedExternal = PptxSceneChartExternalData.Undefined;
+        TestAssert.True(!undefinedExternal.IsDefined, "Undefined external data must clear the flag.");
+        PptxSceneChartExternalData definedExternal = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", null, null, string.Empty);
+        TestAssert.True(definedExternal.IsDefined, "Defined external data must set the flag.");
+
+        PptxSceneChartColorStyle undefinedColor = PptxSceneChartColorStyle.Undefined(null);
+        TestAssert.True(!undefinedColor.IsDefined, "Undefined color style must clear the flag.");
+        TestAssert.Equal(0, undefinedColor.Colors.Count);
+        PptxSceneChartColorStyle targetedColor = PptxSceneChartColorStyle.Undefined("/ppt/colors.xml");
+        TestAssert.Equal("/ppt/colors.xml", targetedColor.PartName);
+        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartColorStyle.Defined(null!, string.Empty, string.Empty, [], 0, [], [], [], null));
+
+        PptxSceneChartStyle undefinedStyle = PptxSceneChartStyle.Undefined(null);
+        TestAssert.True(!undefinedStyle.IsDefined, "Undefined style part must clear the flag.");
+        TestAssert.Equal(0, undefinedStyle.Entries.Count);
+        TestAssert.Throws<ArgumentNullException>(() => PptxSceneChartStyle.Defined(null!, string.Empty, null, []));
+    }
+
+    public static void PptxSceneNodeFactoriesRejectInvalidCombinations()
+    {
+        // T02: kind/payload mismatches cannot be built through normal builders.
+        PptxSceneNode leaf = PptxSceneNode.Create(
+            PptxSceneNodeKind.UnknownGraphicFrame, "1", "frame", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [], new XElement("frame"));
+        TestAssert.Equal(PptxSceneNodeKind.UnknownGraphicFrame, leaf.Kind);
+        TestAssert.Equal(0, leaf.Children.Count);
+
+        PptxSceneNode group = PptxSceneNode.Create(
+            PptxSceneNodeKind.Group, "2", "group", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [leaf], new XElement("group"));
+        TestAssert.Equal(1, group.Children.Count);
+        TestAssert.Throws<ArgumentException>(() => PptxSceneNode.Create(
+            PptxSceneNodeKind.Shape, "3", "shape", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [], new XElement("shape")));
+        TestAssert.Throws<ArgumentException>(() => PptxSceneNode.Create(
+            PptxSceneNodeKind.Connector, "4", "connector", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [], new XElement("connector")));
+        TestAssert.Throws<ArgumentException>(() => PptxSceneNode.Create(
+            PptxSceneNodeKind.Picture, "5", "picture", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [], new XElement("picture")));
+        TestAssert.Throws<ArgumentException>(() => PptxSceneNode.Create(
+            PptxSceneNodeKind.Table, "6", "table", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [], new XElement("table")));
+        TestAssert.Throws<ArgumentException>(() => PptxSceneNode.Create(
+            PptxSceneNodeKind.Chart, "7", "chart", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [], new XElement("chart")));
+        TestAssert.Throws<ArgumentException>(() => PptxSceneNode.Create(
+            PptxSceneNodeKind.UnknownGraphicFrame, "8", "frame", false, false,
+            default, null, null, null, null, null, null,
+            PptxSceneGroupTransform.Identity, [leaf], new XElement("frame")));
+    }
+
     public static void PptxSceneBuilderBuildsResolvedNodeLists()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

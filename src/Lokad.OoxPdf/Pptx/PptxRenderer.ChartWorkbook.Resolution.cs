@@ -15,12 +15,17 @@ internal sealed partial class PptxRenderer
     {
         internal const long MaxChartRangeCells = 100_000;
 
+        internal const int MaxChartRangeAreas = 256;
+
+        private static readonly IReadOnlyDictionary<string, string> EmptyFormulaAttributes = new Dictionary<string, string>();
+
         private void AddRangeAreaCells(
             List<ChartWorkbookRangeCell> values,
             ChartWorkbookRangeResolution resolution,
             int rangeAreaIndex,
             int rangeAreaCount,
-            ref int index)
+            ref int index,
+            CancellationToken cancellationToken)
         {
             if (!TryParseRange(resolution.ResolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
                 !sheets.TryGetValue(sheetName, out ChartWorksheetData? worksheet))
@@ -34,15 +39,48 @@ internal sealed partial class PptxRenderer
             int maxRow = Math.Max(firstRow, lastRow);
             int rangeRowCount = maxRow - minRow + 1;
             int rangeColumnCount = maxColumn - minColumn + 1;
-            if ((long)rangeRowCount * rangeColumnCount > MaxChartRangeCells)
+            long areaCells;
+            try
             {
-                throw new InvalidDataException("Chart data range exceeds the maximum supported cell count.");
+                areaCells = checked((long)rangeRowCount * rangeColumnCount);
             }
+            catch (OverflowException ex)
+            {
+                throw new OoxPdfLimitExceededException("Chart data range exceeds the maximum supported cell count.", ex);
+            }
+
+            if (areaCells > MaxChartRangeCells)
+            {
+                throw new OoxPdfLimitExceededException("Chart data range exceeds the maximum supported cell count.");
+            }
+
+            // PLAN M05: the per-area limit is not sufficient; repeated or overlapping
+            // areas share one union list. Charge the cumulative total before appending.
+            long cumulative;
+            try
+            {
+                cumulative = checked((long)values.Count + areaCells);
+            }
+            catch (OverflowException ex)
+            {
+                throw new OoxPdfLimitExceededException("Chart data range union exceeds the maximum supported cell count.", ex);
+            }
+
+            if (cumulative > MaxChartRangeCells)
+            {
+                throw new OoxPdfLimitExceededException("Chart data range union exceeds the maximum supported cell count.");
+            }
+
+            // PLAN Q01: conversion-wide cumulative charge before growing the union list.
+            OoxConversionBudget.Current?.ChargeChartRangeCells(areaCells);
+
+            values.EnsureCapacity(values.Count + (int)areaCells);
             ChartWorkbookTable sourceTable = default;
             bool hasSourceTable = !string.IsNullOrWhiteSpace(resolution.TableName) &&
                 tables.TryGetValue(resolution.TableName, out sourceTable);
             for (int row = minRow; row <= maxRow; row++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 for (int column = minColumn; column <= maxColumn; column++)
                 {
                     string reference = ToCellReference(column, row);
@@ -123,7 +161,7 @@ internal sealed partial class PptxRenderer
                         hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
                         hasCell ? cell.Formula : string.Empty,
                         hasCell ? cell.FormulaType : string.Empty,
-                        hasCell ? cell.FormulaAttributes : new Dictionary<string, string>(),
+                        hasCell ? cell.FormulaAttributes : EmptyFormulaAttributes,
                         format.NumberFormatId,
                         format.NumberFormatCode,
                         format.ApplyNumberFormat,

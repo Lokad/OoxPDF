@@ -16,8 +16,7 @@ internal sealed class PptxReader
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart presentationPart = FindPresentationPart();
-        using Stream stream = presentationPart.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = package.LoadXml(presentationPart, cancellationToken);
 
         // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
         // fail visibly once per document instead of converting silently empty (O02).
@@ -119,8 +118,7 @@ internal sealed class PptxReader
             return false;
         }
 
-        using Stream stream = part.OpenRead();
-        XDocument slideXml = SafeXml.Load(stream, cancellationToken);
+        XDocument slideXml = package.LoadXml(part, cancellationToken);
         return OoxBoolean.IsOff((string?)slideXml.Root?.Attribute("show"));
     }
 

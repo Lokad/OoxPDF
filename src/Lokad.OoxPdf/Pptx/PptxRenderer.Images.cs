@@ -132,25 +132,15 @@ internal sealed partial class PptxRenderer
             {
                 try
                 {
-                    if (contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+                    // D02: shared pixel decoding; unsupported types keep the silent
+                    // PDF-clipping fallback (no diagnostic), exactly as before.
+                    if (!OoxImageDecoder.IsSupportedContentType(contentType))
                     {
-                        PngImage png = PngImage.Read(bytes);
-                        return CreateCroppedRgbImage(png.Width, png.Height, png.Rgb, png.Alpha, recolor, crop);
+                        return null;
                     }
 
-                    if (contentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
-                        contentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
-                    {
-                        BmpImage bmp = BmpImage.Read(bytes);
-                        return CreateCroppedRgbImage(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha, recolor, crop);
-                    }
-
-                    if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-                        contentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
-                    {
-                        JpegImage jpeg = JpegImage.Read(bytes);
-                        return CreateCroppedRgbImage(jpeg.Width, jpeg.Height, jpeg.Rgb, alpha: null, recolor, crop);
-                    }
+                    (int croppedWidth, int croppedHeight, byte[] croppedRgb, byte[]? croppedAlpha) = OoxImageDecoder.DecodePixels(contentType, bytes, cancellationToken);
+                    return CreateCroppedRgbImage(croppedWidth, croppedHeight, croppedRgb, croppedAlpha, recolor, crop);
                 }
                 catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                 {
@@ -169,7 +159,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        image ??= GetOrCreateImage(imageResource, recolor, imageCache, diagnosticSink, slideIndex);
+        image ??= GetOrCreateImage(imageResource, recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
         if (image is null)
         {
             return;
@@ -386,9 +376,10 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor recolor,
         Dictionary<string, PdfImageXObject?>? imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex)
+        int slideIndex,
+        CancellationToken cancellationToken = default)
     {
-        return GetOrCreateImage(imageResource.PartName, imageResource.ContentType, imageResource.Bytes, recolor, imageCache, diagnosticSink, slideIndex);
+        return GetOrCreateImage(imageResource.PartName, imageResource.ContentType, imageResource.Bytes, recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
     }
 
     private static PdfImageXObject? GetOrCreateImage(
@@ -398,7 +389,8 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor recolor,
         Dictionary<string, PdfImageXObject?>? imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex)
+        int slideIndex,
+        CancellationToken cancellationToken = default)
     {
         string cacheKey = partName + "\u001f" + ImageRecolorCacheKey(recolor);
         if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
@@ -406,7 +398,7 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        PdfImageXObject? image = CreateImage(partName, contentType, bytes, recolor, diagnosticSink, slideIndex);
+        PdfImageXObject? image = CreateImage(partName, contentType, bytes, recolor, diagnosticSink, slideIndex, cancellationToken);
         imageCache?.TryAdd(cacheKey, image);
         return image;
     }
@@ -418,15 +410,21 @@ internal sealed partial class PptxRenderer
         byte[] bytes,
         PptxSceneImageRecolor recolor,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex)
+        int slideIndex,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-                contentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+            // D02: without recolor the dispatch is the shared decoder; the recolor
+            // fallback policy below stays PPTX-specific.
+            if (IsNoImageRecolor(recolor))
+            {
+                return OoxImageDecoder.Decode(contentType, bytes, static rgb => rgb, cancellationToken);
+            }
+
+            if (OoxImageDecoder.IsJpegContentType(contentType))
             {
                 JpegInfo info = JpegInfo.Read(bytes);
-                if (!IsNoImageRecolor(recolor))
                 {
                     if (info.IsBaselineDct && info.BitsPerComponent == 8 && info.ComponentCount is 1 or 3)
                     {
@@ -455,30 +453,11 @@ internal sealed partial class PptxRenderer
                 return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent);
             }
 
-            if (contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
-            {
-                PngImage png = PngImage.Read(bytes);
-                byte[] rgb = ApplyImageRecolor(png.Rgb, recolor);
-                return PdfImageXObject.RgbPng(png.Width, png.Height, rgb, png.Alpha);
-            }
-
-            if (contentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
-                contentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
-            {
-                BmpImage bmp = BmpImage.Read(bytes);
-                byte[] rgb = ApplyImageRecolor(bmp.Rgb, recolor);
-                return PdfImageXObject.RgbPng(bmp.Width, bmp.Height, rgb, bmp.Alpha);
-            }
-
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                "IMAGE_UNSUPPORTED_FORMAT",
-                OoxPdfSeverity.Error,
-                $"Image '{contentType}' could not be rendered and was ignored: Unsupported image content type.",
-                partName,
-                PageIndex: null,
-                SlideIndex: slideIndex,
-                Feature: contentType,
-                Fallback: "Ignored"));
+            // PNG/BMP share the common pixel decoder with the recolor map applied;
+            // unknown types throw with the same message the explicit branch used to
+            // emit, so the catch below reports byte-identical diagnostics.
+            (int decodedWidth, int decodedHeight, byte[] decodedRgb, byte[]? decodedAlpha) = OoxImageDecoder.DecodePixels(contentType, bytes, cancellationToken);
+            return PdfImageXObject.RgbPng(decodedWidth, decodedHeight, ApplyImageRecolor(decodedRgb, recolor), decodedAlpha);
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {

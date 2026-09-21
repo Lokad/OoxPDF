@@ -11,10 +11,16 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context, bool includeMasterNodes = true)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        AddSceneShapeTextSpans(context.SceneSlide.MasterNodes, context, textSpans, context.MasterColorMap, renderPlaceholders: false);
+        // PLAN W02: font preflight traversed master nodes even when the slide suppresses
+        // their paint, laying out invisible shapes and embedding orphan fonts. Honor
+        // visibility consistently with painting.
+        if (includeMasterNodes)
+        {
+            AddSceneShapeTextSpans(context.SceneSlide.MasterNodes, context, textSpans, context.MasterColorMap, renderPlaceholders: false);
+        }
         AddSceneShapeTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, context.LayoutColorMap, renderPlaceholders: false);
         AddSceneShapeTextSpans(context.SceneSlide.SlideNodes, context, textSpans, context.SlideColorMap, renderPlaceholders: true);
         return textSpans;

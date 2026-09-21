@@ -30,7 +30,10 @@ internal sealed record PptxRenderContext(
     PresentationFontResolver FontResolver,
     Dictionary<string, PdfImageXObject?> ImageCache,
     Action<OoxPdfDiagnostic>? DiagnosticSink,
-    CancellationToken CancellationToken)
+    CancellationToken CancellationToken,
+    Dictionary<string, object?>? WorkbookCache = null,
+    Dictionary<PptxTextSpanMemoKey, object?>? TextSpanMemo = null,
+    Dictionary<PptxTableFrameMemoKey, object?>? TableFrameMemo = null)
 {
     public IReadOnlyList<XDocument> InheritedXml { get; } = InheritedSources.Select(source => source.Xml).ToArray();
 

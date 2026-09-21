@@ -25,7 +25,7 @@ internal sealed partial class PptxRenderer
     {
         if (runs.Count == 0)
         {
-            return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
+            return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
         }
         runs = SplitRunsByResolvedTypeface(runs, fontResolver ?? new PresentationFontResolver(null), diagnosticSink, CancellationToken.None);
 
@@ -48,14 +48,17 @@ internal sealed partial class PptxRenderer
         CancellationToken cancellationToken)
     {
         var rewritten = new List<TextRun>(runs.Count);
-        var verdicts = new Dictionary<string, OpenTypeFont?>(StringComparer.OrdinalIgnoreCase);
-        var reported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // T01: family-name keys are typed FontRequests with explicit case-insensitive
+        // family comparison (opaque source IDs are never normalized; see
+        // FontRequestKeyComparer and PresentationFontResolver).
+        var verdicts = new Dictionary<FontRequest, OpenTypeFont?>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
+        var reported = new HashSet<FontRequest>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         TextAdvanceEstimator? estimator = null;
         foreach (TextRun run in runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
             string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
-            string familyKey = FontKey(requestedFamily, run.Bold, run.Italic);
+            FontRequest familyKey = new(requestedFamily, run.Bold, run.Italic);
             if (!verdicts.TryGetValue(familyKey, out OpenTypeFont? primary))
             {
                 primary = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(requestedFamily, run.Bold, run.Italic), cancellationToken)?.Font;
@@ -234,7 +237,7 @@ internal sealed partial class PptxRenderer
     {
         if (textRuns.Count == 0)
         {
-            return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
+            return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
         }
 
         textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
@@ -252,14 +255,14 @@ internal sealed partial class PptxRenderer
     {
         if (uses.Count == 0)
         {
-            return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
+            return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
         }
 
         uses = SubstituteUnembeddableFontUses(uses, fontResolver, diagnosticSink, cancellationToken);
 
-        var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
+        var fonts = new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         var resources = new List<PdfFontResource>();
-        foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
+        foreach (IGrouping<FontRequest, TextFontUse> group in uses.GroupBy(use => new FontRequest(use.FamilyName, use.Bold, use.Italic), FontRequestKeyComparer.OrdinalIgnoreCaseFamily))
         {
             cancellationToken.ThrowIfCancellationRequested();
             TextFontUse first = group.First();
@@ -294,9 +297,9 @@ internal sealed partial class PptxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken)
     {
-        var groupFonts = new Dictionary<string, OpenTypeFont?>(StringComparer.OrdinalIgnoreCase);
+        var groupFonts = new Dictionary<FontRequest, OpenTypeFont?>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         bool needsSubstitution = false;
-        foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
+        foreach (IGrouping<FontRequest, TextFontUse> group in uses.GroupBy(use => new FontRequest(use.FamilyName, use.Bold, use.Italic), FontRequestKeyComparer.OrdinalIgnoreCaseFamily))
         {
             cancellationToken.ThrowIfCancellationRequested();
             TextFontUse first = group.First();
@@ -314,12 +317,12 @@ internal sealed partial class PptxRenderer
         }
 
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
-        var reported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var reported = new HashSet<FontRequest>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         var substituted = new List<TextFontUse>(uses.Count);
         foreach (TextFontUse use in uses)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (groupFonts[FontKey(use.FamilyName, use.Bold, use.Italic)] is not { } font || font.HasTrueTypeOutlines)
+            if (groupFonts[new FontRequest(use.FamilyName, use.Bold, use.Italic)] is not { } font || font.HasTrueTypeOutlines)
             {
                 substituted.Add(use);
                 continue;
@@ -333,7 +336,7 @@ internal sealed partial class PptxRenderer
                 substituted.Add(new TextFontUse(split.Key, use.Bold, use.Italic, split.Select(resolved => resolved.CodePoint).ToArray()));
             }
 
-            if (reported.Add(FontKey(use.FamilyName, use.Bold, use.Italic)))
+            if (reported.Add(new FontRequest(use.FamilyName, use.Bold, use.Italic)))
             {
                 diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                     "FONT_UNSUPPORTED_OUTLINES",
@@ -350,14 +353,14 @@ internal sealed partial class PptxRenderer
         return substituted;
     }
 
-    private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
+    private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts)
     {
         DrawHighlightRunsWithFonts();
         textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
         foreach (TextRun run in textRuns)
         {
-            if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            if (fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
             {
                 DrawWrappedRun(rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
             }
@@ -417,7 +420,7 @@ internal sealed partial class PptxRenderer
         {
             foreach (TextRun run in CoalesceHighlightRuns())
             {
-                if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                if (run.HighlightColor is null || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
@@ -467,7 +470,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts, PptxTextHyperlinkScope? hyperlinkScope = null)
+    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts, PptxTextHyperlinkScope? hyperlinkScope = null)
     {
         DrawHighlightSpansWithFonts();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
@@ -479,7 +482,7 @@ internal sealed partial class PptxRenderer
             foreach (PptxPositionedTextSpan emissionSpan in SplitSpanByGlyphTypeface(span))
             {
                 TextRun run = emissionSpan.Run;
-                if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                if (fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     DrawWrappedSpan(rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
                     // Unresolved-font spans stay link-free: no glyphs are painted and the font layer reports the miss.
@@ -544,7 +547,7 @@ internal sealed partial class PptxRenderer
             foreach (PptxPositionedTextSpan span in CoalesceHighlightSpans())
             {
                 TextRun run = span.Run;
-                if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                if (run.HighlightColor is null || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
@@ -602,15 +605,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static string FontKey(TextRun run)
+    private static FontRequest FontRequestForRun(TextRun run)
     {
-        string familyName = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
-        return FontKey(familyName, run.Bold, run.Italic);
-    }
-
-    private static string FontKey(string familyName, bool bold, bool italic)
-    {
-        return familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
+        return new FontRequest(PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily), run.Bold, run.Italic);
     }
 
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)

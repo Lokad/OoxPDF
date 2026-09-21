@@ -26,13 +26,53 @@ internal sealed record PptxSceneChart(
     PptxSceneChartShapeStyle PlotAreaStyle,
     IReadOnlyDictionary<string, OoxRelationship>? Relationships = null);
 
-internal readonly record struct PptxSceneChartExternalData(
-    bool IsDefined,
-    string? RelationshipId,
-    string? TargetPartName,
-    PptxScenePackageResource? Resource,
-    bool? AutoUpdate,
-    string AutoUpdateValue);
+// T02: the defined/undefined states build only through the factories below, so the
+// IsDefined flag cannot disagree with construction. Undefined is the default value;
+// Defined carries whatever the package yielded (possibly-unresolved targets stay null
+// and read as missing downstream, exactly as before).
+internal readonly record struct PptxSceneChartExternalData
+{
+    public bool IsDefined { get; }
+
+    public string? RelationshipId { get; }
+
+    public string? TargetPartName { get; }
+
+    public PptxScenePackageResource? Resource { get; }
+
+    public bool? AutoUpdate { get; }
+
+    public string AutoUpdateValue { get; }
+
+    public static PptxSceneChartExternalData Undefined => default;
+
+    private PptxSceneChartExternalData(
+        bool isDefined,
+        string? relationshipId,
+        string? targetPartName,
+        PptxScenePackageResource? resource,
+        bool? autoUpdate,
+        string autoUpdateValue)
+    {
+        IsDefined = isDefined;
+        RelationshipId = relationshipId;
+        TargetPartName = targetPartName;
+        Resource = resource;
+        AutoUpdate = autoUpdate;
+        AutoUpdateValue = autoUpdateValue;
+    }
+
+    public static PptxSceneChartExternalData Defined(
+        string? relationshipId,
+        string? targetPartName,
+        PptxScenePackageResource? resource,
+        bool? autoUpdate,
+        string autoUpdateValue)
+    {
+        ArgumentNullException.ThrowIfNull(autoUpdateValue);
+        return new PptxSceneChartExternalData(true, relationshipId, targetPartName, resource, autoUpdate, autoUpdateValue);
+    }
+}
 
 internal readonly record struct PptxSceneChartOptions(
     bool? Date1904,
@@ -54,17 +94,76 @@ internal enum PptxSceneChartDisplayBlanksAs
     Zero
 }
 
-internal readonly record struct PptxSceneChartColorStyle(
-    bool IsDefined,
-    string? PartName,
-    string Method,
-    string Id,
-    IReadOnlyList<RgbColor> Colors,
-    int VariationCount,
-    IReadOnlyList<PptxSceneChartColorDeclaration> Declarations,
-    IReadOnlyList<PptxSceneChartColorDeclaration> RootDeclarations,
-    IReadOnlyList<PptxSceneChartColorVariation> Variations,
-    XDocument? ColorStyleXml);
+// T02: defined color styles always resolve a part (producers pass the loaded part
+// name); undefined carries an optional known target for diagnostics. Both states build
+// only through the factories, so three drifting hand-built undefined literals collapse
+// to one spelling.
+internal readonly record struct PptxSceneChartColorStyle
+{
+    public bool IsDefined { get; }
+
+    public string? PartName { get; }
+
+    public string Method { get; }
+
+    public string Id { get; }
+
+    public IReadOnlyList<RgbColor> Colors { get; }
+
+    public int VariationCount { get; }
+
+    public IReadOnlyList<PptxSceneChartColorDeclaration> Declarations { get; }
+
+    public IReadOnlyList<PptxSceneChartColorDeclaration> RootDeclarations { get; }
+
+    public IReadOnlyList<PptxSceneChartColorVariation> Variations { get; }
+
+    public XDocument? ColorStyleXml { get; }
+
+    private PptxSceneChartColorStyle(
+        bool isDefined,
+        string? partName,
+        string method,
+        string id,
+        IReadOnlyList<RgbColor> colors,
+        int variationCount,
+        IReadOnlyList<PptxSceneChartColorDeclaration> declarations,
+        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations,
+        IReadOnlyList<PptxSceneChartColorVariation> variations,
+        XDocument? colorStyleXml)
+    {
+        IsDefined = isDefined;
+        PartName = partName;
+        Method = method;
+        Id = id;
+        Colors = colors;
+        VariationCount = variationCount;
+        Declarations = declarations;
+        RootDeclarations = rootDeclarations;
+        Variations = variations;
+        ColorStyleXml = colorStyleXml;
+    }
+
+    public static PptxSceneChartColorStyle Undefined(string? partName)
+    {
+        return new PptxSceneChartColorStyle(false, partName, string.Empty, string.Empty, [], 0, [], [], [], null);
+    }
+
+    public static PptxSceneChartColorStyle Defined(
+        string partName,
+        string method,
+        string id,
+        IReadOnlyList<RgbColor> colors,
+        int variationCount,
+        IReadOnlyList<PptxSceneChartColorDeclaration> declarations,
+        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations,
+        IReadOnlyList<PptxSceneChartColorVariation> variations,
+        XDocument? colorStyleXml)
+    {
+        ArgumentNullException.ThrowIfNull(partName);
+        return new PptxSceneChartColorStyle(true, partName, method, id, colors, variationCount, declarations, rootDeclarations, variations, colorStyleXml);
+    }
+}
 
 internal readonly record struct PptxSceneChartColorVariation(
     int Index,
@@ -79,12 +178,49 @@ internal readonly record struct PptxSceneChartColorDeclaration(
     RgbColor? Color,
     double Alpha);
 
-internal sealed record PptxSceneChartStyle(
-    bool IsDefined,
-    string? PartName,
-    string Id,
-    XDocument? StyleXml,
-    IReadOnlyList<PptxSceneChartStyleEntry> Entries);
+// T02: same defined/undefined discipline as the color style above.
+internal sealed record PptxSceneChartStyle
+{
+    public bool IsDefined { get; }
+
+    public string? PartName { get; }
+
+    public string Id { get; }
+
+    public XDocument? StyleXml { get; }
+
+    public IReadOnlyList<PptxSceneChartStyleEntry> Entries { get; }
+
+    private PptxSceneChartStyle(
+        bool isDefined,
+        string? partName,
+        string id,
+        XDocument? styleXml,
+        IReadOnlyList<PptxSceneChartStyleEntry> entries)
+    {
+        IsDefined = isDefined;
+        PartName = partName;
+        Id = id;
+        StyleXml = styleXml;
+        Entries = entries;
+    }
+
+    public static PptxSceneChartStyle Undefined(string? partName)
+    {
+        return new PptxSceneChartStyle(false, partName, string.Empty, null, []);
+    }
+
+    public static PptxSceneChartStyle Defined(
+        string partName,
+        string id,
+        XDocument? styleXml,
+        IReadOnlyList<PptxSceneChartStyleEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(partName);
+        ArgumentNullException.ThrowIfNull(entries);
+        return new PptxSceneChartStyle(true, partName, id, styleXml, entries);
+    }
+}
 
 internal readonly record struct PptxSceneChartStyleEntry(
     string Role,

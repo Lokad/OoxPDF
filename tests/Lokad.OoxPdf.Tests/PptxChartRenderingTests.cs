@@ -788,7 +788,7 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
     }
 
-    public static void PptxChartWorkbookHydrationPreservesRangePointIndices()
+    public static void PptxChartWorkbookParsingPreservesRangeMetadata()
     {
         Type workbookType = typeof(PptxRenderer).GetNestedType(
             "ChartWorkbookData",
@@ -825,7 +825,7 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal("hidden", (string?)parsedSheet.GetType().GetProperty("State")?.GetValue(parsedSheet) ?? string.Empty);
         TestAssert.True((int?)parsedSheet.GetType().GetProperty("Index")?.GetValue(parsedSheet) == 0, "Expected workbook sheet order to survive parsing.");
         TestAssert.Equal("/xl/worksheets/sheet1.xml", (string?)parsedSheet.GetType().GetProperty("TargetPartName")?.GetValue(parsedSheet) ?? string.Empty);
-        var readRangeCells = workbookType.GetMethod("ReadRangeCells") ?? throw new InvalidOperationException("Expected range-cell reader.");
+        var readRangeCells = workbookType.GetMethod("ReadRangeCells", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, [typeof(string)], null) ?? throw new InvalidOperationException("Expected range-cell reader.");
         Array parsedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed workbook range cells."));
         object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
         System.Reflection.PropertyInfo sheetNameProperty = firstParsedCell.GetType().GetProperty("SheetName") ?? throw new InvalidOperationException("Expected range-cell sheet name.");
@@ -1097,78 +1097,9 @@ internal static class PptxChartRenderingTests
         object escapedColumn = salesTableColumns[2];
         TestAssert.True((int?)escapedColumn.GetType().GetProperty("Id")?.GetValue(escapedColumn) == 3, "Expected escaped table column id metadata to survive workbook parsing.");
         TestAssert.Equal("Quoted ] Amount", (string?)escapedColumn.GetType().GetProperty("Name")?.GetValue(escapedColumn) ?? string.Empty);
-        var chartXml = XDocument.Parse("""
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:doughnutChart><c:ser>
-                <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
-                <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:formatCode>0.0</c:formatCode><c:ptCount val="0"/></c:numCache></c:numRef></c:val>
-              </c:ser></c:doughnutChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        var hydrate = typeof(PptxRenderer).GetMethod(
-            "HydrateChartReferenceCaches",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected cache hydration helper.");
-
-        hydrate.Invoke(null, [workbook, chartXml]);
-
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement numCache = chartXml.Descendants(c + "numCache").Single();
-        TestAssert.Equal("0.0", numCache.Element(c + "formatCode")?.Value ?? string.Empty);
-        TestAssert.Equal("3", numCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("0", numCache.Elements(c + "pt").First().Attribute("idx")?.Value ?? string.Empty);
-        TestAssert.Equal("2", numCache.Elements(c + "pt").Last().Attribute("idx")?.Value ?? string.Empty);
-        XElement strCache = chartXml.Descendants(c + "strCache").Single();
-        TestAssert.Equal("3", strCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("0", strCache.Elements(c + "pt").First().Attribute("idx")?.Value ?? string.Empty);
-        TestAssert.Equal("2", strCache.Elements(c + "pt").Last().Attribute("idx")?.Value ?? string.Empty);
-        var definedNameChartXml = XDocument.Parse("""
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:doughnutChart><c:ser>
-                <c:cat><c:strRef><c:f>SalesLabels</c:f></c:strRef></c:cat>
-                <c:val><c:numRef><c:f>SalesValues</c:f></c:numRef></c:val>
-              </c:ser></c:doughnutChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-
-        hydrate.Invoke(null, [parsedWorkbook, definedNameChartXml]);
-
-        XElement definedNameNumCache = definedNameChartXml.Descendants(c + "numCache").Single();
-        TestAssert.Equal("3", definedNameNumCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("8.2", definedNameNumCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
-        XElement definedNameStrCache = definedNameChartXml.Descendants(c + "strCache").Single();
-        TestAssert.Equal("3", definedNameStrCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("North", definedNameStrCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
-        var tableChartXml = XDocument.Parse("""
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:doughnutChart><c:ser>
-                <c:cat><c:strRef><c:f>SalesTable[Region]</c:f></c:strRef></c:cat>
-                <c:val><c:numRef><c:f>SalesTable[Amount]</c:f></c:numRef></c:val>
-              </c:ser></c:doughnutChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-
-        hydrate.Invoke(null, [parsedWorkbook, tableChartXml]);
-
-        XElement tableNumCache = tableChartXml.Descendants(c + "numCache").Single();
-        TestAssert.Equal("3", tableNumCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("8.2", tableNumCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
-        XElement tableStrCache = tableChartXml.Descendants(c + "strCache").Single();
-        TestAssert.Equal("3", tableStrCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("North", tableStrCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
-        var totalsTableChartXml = XDocument.Parse("""
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:doughnutChart><c:ser>
-                <c:cat><c:strRef><c:f>SalesTotalsTable[Region]</c:f></c:strRef></c:cat>
-                <c:val><c:numRef><c:f>SalesTotalsTable[Amount]</c:f></c:numRef></c:val>
-              </c:ser></c:doughnutChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-
-        hydrate.Invoke(null, [parsedWorkbook, totalsTableChartXml]);
-
-        XElement totalsTableNumCache = totalsTableChartXml.Descendants(c + "numCache").Single();
-        TestAssert.Equal("2", totalsTableNumCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("3.2", totalsTableNumCache.Elements(c + "pt").Last().Element(c + "v")?.Value ?? string.Empty);
+        // D01: reference-cache hydration was retired with its only production
+        // caller (the unconstructible XML-only render retry). Workbook range reading
+        // stays live and covered above plus the sidecar test below.
     }
 
     public static void PptxChartIndexedVectorsPreserveWorkbookSidecarPoints()

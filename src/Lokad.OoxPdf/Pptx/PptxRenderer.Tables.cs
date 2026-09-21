@@ -6,6 +6,31 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
+// PLAN W02: table font collection rebuilds fills, borders, row metrics, frames, and
+// spans that painting rebuilds again. Keyed by node identity, resolved frame bounds,
+// and color map; the layout computation is a pure function of those inputs.
+internal readonly record struct PptxTableFrameMemoKey(PptxSceneNode Node, PptxRenderer.ShapeBounds? Bounds, PptxColorMap ColorMap);
+
+internal sealed class PptxTableFrameMemoKeyComparer : IEqualityComparer<PptxTableFrameMemoKey>
+{
+    public static readonly PptxTableFrameMemoKeyComparer Instance = new();
+
+    public bool Equals(PptxTableFrameMemoKey left, PptxTableFrameMemoKey right)
+    {
+        return ReferenceEquals(left.Node, right.Node) &&
+            Nullable.Equals(left.Bounds, right.Bounds) &&
+            ReferenceEquals(left.ColorMap, right.ColorMap);
+    }
+
+    public int GetHashCode(PptxTableFrameMemoKey key)
+    {
+        return HashCode.Combine(
+            System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(key.Node),
+            key.Bounds,
+            System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(key.ColorMap));
+    }
+}
+
 internal sealed partial class PptxRenderer
 {
     private const double OfficeTableRowContentExpansionSlackFactor = 1.05d;
@@ -39,10 +64,14 @@ internal sealed partial class PptxRenderer
         bool[,] SkippedVerticalSegments,
         bool[,] SkippedHorizontalSegments);
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context, bool includeMasterNodes = true)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap);
+        // PLAN W02: same visibility rule as shape preflight (see ReadSceneShapeTextSpans).
+        if (includeMasterNodes)
+        {
+            AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap);
+        }
         AddSceneTableTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.LayoutColorMap);
         AddSceneTableTextSpans(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SlideColorMap);
 
@@ -95,7 +124,7 @@ internal sealed partial class PptxRenderer
                 ShapeBounds? bounds = node.Bounds is { } rawBounds
                     ? transform.Apply(ToShapeBounds(rawBounds))
                     : null;
-                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap)?.TextFrames ?? [];
+                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = GetOrBuildTableFrameLayout(context, bounds, node, colorMap)?.TextFrames ?? [];
                 textFrames.AddRange(tableTextFrames);
                 continue;
             }
@@ -112,7 +141,50 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap)?.TextSpans ?? [];
+        return GetOrBuildTableFrameLayout(context, bounds, node, colorMap)?.TextSpans ?? [];
+    }
+
+    // PLAN W02: font collection rebuilt fills, borders, row metrics, frames, and spans
+    // that painting rebuilds again. The layout is a pure function of (node, bounds,
+    // color map) within a slide render; the style diagnostic rides separately so its
+    // paint-order emission count is preserved exactly.
+    private static TableFrameLayout? GetOrBuildTableFrameLayout(
+        PptxRenderContext context,
+        ShapeBounds? bounds,
+        PptxSceneNode node,
+        PptxColorMap colorMap)
+    {
+        if (context.TableFrameMemo is null || node.Table is null)
+        {
+            return BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap);
+        }
+
+        var key = new PptxTableFrameMemoKey(node, bounds, colorMap);
+        if (context.TableFrameMemo.TryGetValue(key, out object? cached))
+        {
+            return (TableFrameLayout?)cached;
+        }
+
+        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap);
+        context.TableFrameMemo[key] = layout;
+        return layout;
+    }
+
+    private static void EmitUnsupportedTableStyleDiagnostic(PptxRenderContext context, PptxSceneTable table)
+    {
+        PptxSceneTableStyle style = table.Style;
+        if (style.HasStyle && !style.IsSupported)
+        {
+            context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "PPTX_UNSUPPORTED_TABLE_STYLE",
+                OoxPdfSeverity.Warning,
+                "Table style is not in the supported built-in style subset and was rendered without Office table-style cascade formatting.",
+                context.SlidePartName,
+                context.SlideNumber,
+                null,
+                "table style",
+                "DefaultStyle"));
+        }
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform, PptxColorMap colorMap)
@@ -120,7 +192,14 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: true, colorMap);
+        // The style diagnostic keeps its paint-order emission (once per painted table);
+        // the layout itself comes from the shared per-slide computation.
+        if (bounds is not null && node.Table is not null)
+        {
+            EmitUnsupportedTableStyleDiagnostic(context, node.Table);
+        }
+
+        TableFrameLayout? layout = GetOrBuildTableFrameLayout(context, bounds, node, colorMap);
         if (layout is null)
         {
             return [];
@@ -140,22 +219,13 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
+        if (emitUnsupportedStyleDiagnostic && sceneTable is not null)
+        {
+            EmitUnsupportedTableStyleDiagnostic(context, sceneTable);
+        }
+
         IReadOnlyList<double> rawColumnWidths = sceneTable.ColumnWidths;
         PptxSceneTableStyle tableStyle = sceneTable.Style;
-        if (emitUnsupportedStyleDiagnostic &&
-            tableStyle.HasStyle &&
-            !tableStyle.IsSupported)
-        {
-            context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                "PPTX_UNSUPPORTED_TABLE_STYLE",
-                OoxPdfSeverity.Warning,
-                "Table style is not in the supported built-in style subset and was rendered without Office table-style cascade formatting.",
-                context.SlidePartName,
-                context.SlideNumber,
-                null,
-                "table style",
-                "DefaultStyle"));
-        }
 
         IReadOnlyList<PptxSceneTableRow> rows = sceneTable.Rows;
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
@@ -180,6 +250,28 @@ internal sealed partial class PptxRenderer
         double tableHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, declaredTableHeight);
         double rowScale = frameHeight / rawRowHeights.Sum();
         double[] rowHeights = ResolveTableRowHeights(context, sceneTable, rawColumnWidths, rawRowHeights, columnScale, rowScale, frameHeight, colorMap);
+
+        // PLAN M04: bound row/column products before allocating dense border grids.
+        // Declared grid columns and rows can both be numerous while actual cells
+        // are sparse; their product is not bounded by XML element count.
+        const long MaxTableGridSegments = 100_000;
+        long verticalSegments;
+        long horizontalSegments;
+        try
+        {
+            verticalSegments = checked((long)(rawColumnWidths.Count + 1) * rows.Count);
+            horizontalSegments = checked((long)(rows.Count + 1) * rawColumnWidths.Count);
+        }
+        catch (OverflowException ex)
+        {
+            throw new OoxPdfLimitExceededException("PPTX table grid exceeds the maximum supported size.", ex);
+        }
+
+        if (verticalSegments > MaxTableGridSegments || horizontalSegments > MaxTableGridSegments)
+        {
+            throw new OoxPdfLimitExceededException(
+                "PPTX table grid exceeds the maximum supported cell count of " + MaxTableGridSegments + ".");
+        }
 
         double yTop = frameTop;
         var rowTops = new double[rows.Count + 1];

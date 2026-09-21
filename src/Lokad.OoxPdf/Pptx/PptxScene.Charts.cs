@@ -27,18 +27,18 @@ internal sealed partial class PptxSceneBuilder
             ? relationship.ResolvedTarget
             : null;
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
-        XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart, cancellationToken);
+        XDocument? chartXml = chartPart is null ? null : LoadXml(package, chartPart, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         PptxSceneChartExternalData externalData = chartPart is null
             ? default
             : ReadChartExternalData(package, chartPart.Name, chartXml, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         PptxSceneChartColorStyle colorStyle = chartPart is null
-            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], 0, [], [], [], null)
+            ? PptxSceneChartColorStyle.Undefined(null)
             : ReadChartColorStyle(package, chartPart.Name, theme, colorMap, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         PptxSceneChartStyle stylePart = chartPart is null
-            ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
+            ? PptxSceneChartStyle.Undefined(null)
             : ReadChartStylePart(package, chartPart.Name, theme, colorMap, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;

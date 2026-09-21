@@ -9,7 +9,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private readonly record struct ShapeBounds(
+    internal readonly record struct ShapeBounds(
         long X,
         long Y,
         long Width,

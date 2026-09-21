@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
@@ -100,34 +100,93 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(sceneChart?.ExternalData ?? default, context.CancellationToken);
+        // D01: the scene chart is always present below the missing-part return (both
+        // derive from the same scene node payload), so render paths below resolve chart
+        // options from the scene model. The guard documents the invariant for flow
+        // analysis; the pairing proof test guards the builder side.
+        if (sceneChart is null)
+        {
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame was missing from the scene model and was ignored.", chartPartName, context.SlideNumber, "Ignored");
+            return;
+        }
+
+        // PLAN W05: one bounded workbook model per embedded part, shared by every chart
+        // frame of this conversion through the render context cache. The per-frame range
+        // memo on the shared model is cleared below so nothing accumulates across frames.
+        ChartWorkbookData? chartWorkbook = GetOrCreateChartWorkbook(context.WorkbookCache, sceneChart?.ExternalData ?? default, context.CancellationToken);
         context.CancellationToken.ThrowIfCancellationRequested();
 
+        try
+        {
+            RenderChartFrameWithWorkbook(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, resolvedChartPalette, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds);
+        }
+        finally
+        {
+            chartWorkbook?.ClearRangeMemo();
+        }
+    }
+
+    // PLAN W05: one bounded workbook model per embedded part, shared by every chart
+    // frame of this conversion. The cache holds boxed models (the workbook type stays
+    // private to the renderer); the per-conversion instance rides on the render context
+    // (like the image cache) and dies with the conversion. Each model is already capped
+    // (workbook totals, range unions) and the key space is bounded by package entries.
+    private static ChartWorkbookData? GetOrCreateChartWorkbook(
+        Dictionary<string, object?>? cache,
+        PptxSceneChartExternalData externalData,
+        CancellationToken cancellationToken)
+    {
+        if (!externalData.IsDefined || externalData.Resource is null)
+        {
+            return null;
+        }
+
+        // A null cache (inspection contexts) disables sharing without changing behavior.
+        if (cache is null)
+        {
+            return ReadEmbeddedChartWorkbookData(externalData, cancellationToken);
+        }
+
+        string key = externalData.TargetPartName ?? externalData.Resource.PartName;
+        if (cache.TryGetValue(key, out object? boxed))
+        {
+            return (ChartWorkbookData?)boxed;
+        }
+
+        ChartWorkbookData? model = ReadEmbeddedChartWorkbookData(externalData, cancellationToken);
+        cache[key] = model;
+        return model;
+    }
+
+    private static void RenderChartFrameWithWorkbook(
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PdfFontResource> fonts,
+        ShapeBounds bounds,
+        string chartPartName,
+        XDocument resolvedChartXml,
+        IReadOnlyList<RgbColor>? resolvedChartPalette,
+        PptxSceneChart? sceneChart,
+        ChartWorkbookData? chartWorkbook,
+        List<PdfLinkAnnotation> linkAnnotations,
+        HashSet<string> reportedHyperlinkIds)
+    {
         PptxColorMap chartColorMap = sceneChart?.ColorMap ?? context.SlideColorMap;
-        if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
+
+        if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
-            RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
-            RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
+            RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
+            RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
             return;
         }
 
-        if (chartWorkbook is not null && sceneChart is null)
-        {
-            HydrateChartReferenceCaches(chartWorkbook, resolvedChartXml);
-            if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, workbook: null, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
-            {
-                EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
-                EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
-            EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
-                RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
-                RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
-                return;
-            }
-        }
-
+        // D01: the XML-only retry used to live here (workbook present without a scene
+        // chart), but that state is unconstructible - a non-null workbook requires defined
+        // external data, which requires a non-null scene chart. The branch is deleted
+        // rather than kept as a second interpretation path.
         bool HasSupportedSceneChartWithoutRenderableCachedValues()
         {
             bool IsSupportedNativeChartPlot(PptxSceneChartPlotKind kind)
@@ -164,7 +223,8 @@ internal sealed partial class PptxRenderer
         }
 
         EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
-    }
+        }
+
 
     private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, PptxSceneChartPlotKind kind, int index)
     {
@@ -479,6 +539,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // D01: scene-authoritative. Render paths always carry a scene chart below the
+    // frame early-return (a missing chart part returns before any option reads), so
+    // the XML re-parse arm is deleted; the agreement harness pins the unified reading.
     private static PptxSceneChartDisplayBlanksAs ReadSceneOrXmlChartDisplayBlanksAs(PptxSceneChart? sceneChart, XDocument chartXml)
     {
         if (sceneChart is not null)
@@ -620,6 +683,12 @@ internal sealed partial class PptxRenderer
             return new ScatterSeries([], series);
         }
 
+        // PLAN W05: workbook lookups below ran a visibility filter plus linear scan per
+        // point (quadratic in series length). Index once per vector instead; first-wins
+        // insertion matches the linear scan exactly (range indices are unique).
+        Dictionary<int, ChartIndexedNumberPoint> xWorkbook = BuildWorkbookPointIndex(series.XValues);
+        Dictionary<int, ChartIndexedNumberPoint> yWorkbook = BuildWorkbookPointIndex(series.YValues);
+        Dictionary<int, ChartIndexedNumberPoint> bubbleWorkbook = series.ReadBubbleSize ? BuildWorkbookPointIndex(series.BubbleSizes) : new Dictionary<int, ChartIndexedNumberPoint>();
         var points = new List<ScatterPoint>(count);
         for (int i = 0; i < count; i++)
         {
@@ -640,14 +709,28 @@ internal sealed partial class PptxRenderer
                 xPoint.Value,
                 yPoint.Value,
                 bubbleSizePoint,
-                series.XValues.WorkbookPointForIndex(xPoint.Value.Index),
-                series.YValues.WorkbookPointForIndex(yPoint.Value.Index),
-                bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null,
+                xWorkbook.TryGetValue(xPoint.Value.Index, out ChartIndexedNumberPoint xWorkbookPoint) ? xWorkbookPoint : null,
+                yWorkbook.TryGetValue(yPoint.Value.Index, out ChartIndexedNumberPoint yWorkbookPoint) ? yWorkbookPoint : null,
+                bubbleSizePoint is { } point && bubbleWorkbook.TryGetValue(point.Index, out ChartIndexedNumberPoint bubbleWorkbookPoint) ? bubbleWorkbookPoint : null,
                 series.YValues.FormatCode,
                 series.BubbleSizes.FormatCode));
         }
 
         return new ScatterSeries(points, series);
+    }
+
+    private static Dictionary<int, ChartIndexedNumberPoint> BuildWorkbookPointIndex(ChartIndexedNumberVector vector)
+    {
+        var index = new Dictionary<int, ChartIndexedNumberPoint>();
+        foreach (ChartIndexedNumberPoint point in vector.WorkbookPointsForPlotVisibility(vector.PlotVisibleOnly))
+        {
+            if (!index.ContainsKey(point.Index))
+            {
+                index.Add(point.Index, point);
+            }
+        }
+
+        return index;
     }
 
     private static ChartIndexedNumberVector BuildChartIndexedNumberVector(
@@ -760,12 +843,64 @@ internal sealed partial class PptxRenderer
 
     private static int? InferPointCount(IReadOnlyList<ChartIndexedNumberPoint> points)
     {
-        return points.Count == 0 ? null : points.Max(point => point.Index) + 1;
+        if (points.Count == 0)
+        {
+            return null;
+        }
+
+        long max = long.MinValue;
+        foreach (ChartIndexedNumberPoint point in points)
+        {
+            max = Math.Max(max, (long)point.Index);
+        }
+
+        long inferred;
+        try
+        {
+            inferred = checked(max + 1);
+        }
+        catch (OverflowException ex)
+        {
+            throw new OoxPdfLimitExceededException("Chart point index overflows.", ex);
+        }
+
+        if (inferred < 0 || inferred > int.MaxValue)
+        {
+            throw new OoxPdfLimitExceededException("Chart point index is out of range.");
+        }
+
+        return (int)inferred;
     }
 
     private static int? InferPointCount(IReadOnlyList<ChartIndexedTextPoint> points)
     {
-        return points.Count == 0 ? null : points.Max(point => point.Index) + 1;
+        if (points.Count == 0)
+        {
+            return null;
+        }
+
+        long max = long.MinValue;
+        foreach (ChartIndexedTextPoint point in points)
+        {
+            max = Math.Max(max, (long)point.Index);
+        }
+
+        long inferred;
+        try
+        {
+            inferred = checked(max + 1);
+        }
+        catch (OverflowException ex)
+        {
+            throw new OoxPdfLimitExceededException("Chart point index overflows.", ex);
+        }
+
+        if (inferred < 0 || inferred > int.MaxValue)
+        {
+            throw new OoxPdfLimitExceededException("Chart point index is out of range.");
+        }
+
+        return (int)inferred;
     }
 
     private static IReadOnlyList<ChartSeriesFill?> ReadSceneOrXmlSeriesFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)

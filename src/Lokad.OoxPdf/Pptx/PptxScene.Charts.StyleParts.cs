@@ -28,8 +28,7 @@ internal sealed partial class PptxSceneBuilder
         }
 
         (bool? autoUpdate, string autoUpdateValue) = ReadOptionalOoxmlBooleanElementWithValue(externalData, "autoUpdate");
-        return new PptxSceneChartExternalData(
-            true,
+        return PptxSceneChartExternalData.Defined(
             relationshipId,
             targetPartName,
             ReadPackageResource(package, targetPartName),
@@ -46,16 +45,16 @@ internal sealed partial class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (colorRelationship?.ResolvedTarget is null)
         {
-            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], 0, [], [], [], null);
+            return PptxSceneChartColorStyle.Undefined(null);
         }
 
         OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
         if (colorPart is null)
         {
-            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], 0, [], [], [], null);
+            return PptxSceneChartColorStyle.Undefined(colorRelationship.ResolvedTarget);
         }
 
-        XDocument document = LoadXml(colorPart, cancellationToken);
+        XDocument document = LoadXml(package, colorPart, cancellationToken);
         IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations = ReadChartColorStyleRootDeclarations(document, theme, colorMap);
         IReadOnlyList<PptxSceneChartColorDeclaration> declarations = ReadChartColorStyleDeclarations(document, theme, colorMap, rootDeclarations);
         IReadOnlyList<PptxSceneChartColorVariation> variations = ReadChartColorStyleVariations(document, theme, colorMap);
@@ -70,8 +69,7 @@ internal sealed partial class PptxSceneBuilder
             }
         }
 
-        return new PptxSceneChartColorStyle(
-            true,
+        return PptxSceneChartColorStyle.Defined(
             colorPart.Name,
             (string?)document.Root?.Attribute("meth") ?? string.Empty,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
@@ -173,18 +171,17 @@ internal sealed partial class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (styleRelationship?.ResolvedTarget is null)
         {
-            return new PptxSceneChartStyle(false, null, string.Empty, null, []);
+            return PptxSceneChartStyle.Undefined(null);
         }
 
         OoxPart? stylePart = package.GetPart(styleRelationship.ResolvedTarget);
         if (stylePart is null)
         {
-            return new PptxSceneChartStyle(false, styleRelationship.ResolvedTarget, string.Empty, null, []);
+            return PptxSceneChartStyle.Undefined(styleRelationship.ResolvedTarget);
         }
 
-        XDocument document = LoadXml(stylePart, cancellationToken);
-        return new PptxSceneChartStyle(
-            true,
+        XDocument document = LoadXml(package, stylePart, cancellationToken);
+        return PptxSceneChartStyle.Defined(
             stylePart.Name,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
             document,

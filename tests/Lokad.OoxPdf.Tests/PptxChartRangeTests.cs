@@ -10,7 +10,7 @@ internal static class PptxChartRangeTests
     public static void FullColumnFormulaThrowsPromptly()
     {
         object workbook = CreateWorkbook();
-        TestAssert.Throws<InvalidDataException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$XFD$1048576"));
+        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$XFD$1048576"));
     }
 
     public static void FullRowFormulaReadsWithoutExpansion()
@@ -57,7 +57,7 @@ internal static class PptxChartRangeTests
     public static void RangeBeyondCellBudgetThrows()
     {
         object workbook = CreateWorkbook();
-        TestAssert.Throws<InvalidDataException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$A$100001"));
+        TestAssert.Throws<IOException>(() => ReadCellCount(workbook, "Sheet1!$A$1:$A$100001"));
     }
 
     private static object CreateWorkbook()
@@ -78,7 +78,7 @@ internal static class PptxChartRangeTests
 
     private static int ReadCellCount(object workbook, string formula)
     {
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells") ?? throw new InvalidOperationException("Expected range reader.");
+        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null) ?? throw new InvalidOperationException("Expected range reader.");
         try
         {
             return ((Array)read.Invoke(workbook, [formula])!).Length;
@@ -127,7 +127,7 @@ internal static class PptxChartRangeTests
     public static void RepeatedFullWidthHiddenColumnRunsFailPromptly()
     {
         string runs = string.Concat(Enumerable.Repeat("<col min=\"1\" max=\"14000\" hidden=\"1\"/>", 8));
-        TestAssert.Throws<InvalidDataException>(() => ReadWorkbookFromSheetXml(
+        TestAssert.Throws<IOException>(() => ReadWorkbookFromSheetXml(
             "<cols>" + runs + "</cols><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>"));
     }
 
@@ -146,14 +146,14 @@ internal static class PptxChartRangeTests
             strings.Append("<si><t>x</t></si>");
         }
 
-        TestAssert.Throws<InvalidDataException>(() => ReadWorkbookFromSheetXml(
+        TestAssert.Throws<IOException>(() => ReadWorkbookFromSheetXml(
             "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData>",
             strings.ToString()));
     }
 
     public static void WorksheetCellsBeyondBudgetThrow()
     {
-        TestAssert.Throws<InvalidDataException>(() => ReadWorkbookFromSheetXml(BuildManyCellSheet(100001)));
+        TestAssert.Throws<IOException>(() => ReadWorkbookFromSheetXml(BuildManyCellSheet(100001)));
     }
     public static void WorkbookDefinedNamesBeyondBudgetThrow()
     {
@@ -163,7 +163,7 @@ internal static class PptxChartRangeTests
             names.Append("<definedName name=\"N" + i + "\">Sheet1!$A$1</definedName>");
         }
 
-        TestAssert.Throws<InvalidDataException>(() => ReadWorkbookPackage(
+        TestAssert.Throws<IOException>(() => ReadWorkbookPackage(
             "<sheets><sheet name=\"Sheet1\" sheetId=\"1\" r:id=\"rId1\"/></sheets><definedNames>" + names.ToString() + "</definedNames>",
             "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>",
             new Dictionary<string, string>
@@ -190,7 +190,7 @@ internal static class PptxChartRangeTests
             rels.Append("<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet" + i + ".xml\"/>");
         }
 
-        TestAssert.Throws<InvalidDataException>(() => ReadWorkbookPackage(
+        TestAssert.Throws<IOException>(() => ReadWorkbookPackage(
             "<sheets>" + sheets.ToString() + "</sheets>",
             rels.ToString(),
             new Dictionary<string, string>(),
@@ -206,7 +206,7 @@ internal static class PptxChartRangeTests
         }
 
         formats.Append("</cellXfs>");
-        TestAssert.Throws<InvalidDataException>(() => ReadWorkbookPackage(
+        TestAssert.Throws<IOException>(() => ReadWorkbookPackage(
             "<sheets><sheet name=\"Sheet1\" sheetId=\"1\" r:id=\"rId1\"/></sheets>",
             "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>",
             new Dictionary<string, string>
@@ -320,7 +320,7 @@ internal static class PptxChartRangeTests
 
     private static Array ReadRangeCells(object workbook, string formula)
     {
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells") ?? throw new InvalidOperationException("Expected range reader.");
+        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null) ?? throw new InvalidOperationException("Expected range reader.");
         try
         {
             return (Array)read.Invoke(workbook, [formula])!;

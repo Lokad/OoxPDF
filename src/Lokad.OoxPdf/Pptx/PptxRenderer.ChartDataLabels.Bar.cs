@@ -88,6 +88,10 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        // PLAN W05: index workbook points once per series instead of filtering plus
+        // linear-scanning per rendered label below.
+        Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
+
         int categoryCount = Math.Max(1, densePointSeries.Max(values => values.Count));
         double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
@@ -139,7 +143,7 @@ internal sealed partial class PptxRenderer
                     double x = ResolveHorizontalBarDataLabelX(labelPosition, barBaseX, barEndX, labelWidth);
                     double y = categoryY + (stacked ? (barSlot - labelHeight) / 2d : seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d);
                     ChartIndexedNumberPoint point = points[category] ?? default;
-                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
+                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
                         ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
@@ -213,7 +217,7 @@ internal sealed partial class PptxRenderer
                         y = barEndY + ComputeBarLegendKeyOutEndGap(fontSize);
                     }
                     ChartIndexedNumberPoint point = points[category] ?? default;
-                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
+                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
                         double legendKeyWidth = effectiveOptions.ShowLegendKey

@@ -9,6 +9,34 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
+// PLAN W02: font collection and painting computed identical text layouts per shape
+// node. Keyed by node identity plus the traversal context (color map, placeholder
+// mode) that feeds the layout; nodes compare by reference because record value
+// equality would deep-compare whole subtrees per lookup. Color maps ride the render
+// context, so the same instances flow through both passes and reference equality is
+// exact.
+internal readonly record struct PptxTextSpanMemoKey(PptxSceneNode Node, PptxColorMap ColorMap, bool IncludePlaceholders);
+
+internal sealed class PptxTextSpanMemoKeyComparer : IEqualityComparer<PptxTextSpanMemoKey>
+{
+    public static readonly PptxTextSpanMemoKeyComparer Instance = new();
+
+    public bool Equals(PptxTextSpanMemoKey left, PptxTextSpanMemoKey right)
+    {
+        return ReferenceEquals(left.Node, right.Node) &&
+            ReferenceEquals(left.ColorMap, right.ColorMap) &&
+            left.IncludePlaceholders == right.IncludePlaceholders;
+    }
+
+    public int GetHashCode(PptxTextSpanMemoKey key)
+    {
+        return HashCode.Combine(
+            System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(key.Node),
+            System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(key.ColorMap),
+            key.IncludePlaceholders);
+    }
+}
+
 internal sealed partial class PptxRenderer
 {
     private static bool ShouldUseOfficeOverflowColumnBalance(PptxTextFrameLayout layout)
@@ -315,9 +343,34 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
-        return node.TextBody is null
-            ? []
-            : ReadTextSpansForShape(node.Source, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
+        if (node.TextBody is null)
+        {
+            return [];
+        }
+
+        // PLAN W02: font collection and painting computed this full layout per node.
+        // The layout is a pure function of (node, color map, placeholder mode) within
+        // a slide render, so compute once and share the instance between both passes.
+        Dictionary<PptxTextSpanMemoKey, object?>? memo = context.TextSpanMemo;
+        if (memo is null)
+        {
+            return ComputeTextSpansForSceneNode(node, context, colorMap, includePlaceholders);
+        }
+
+        var key = new PptxTextSpanMemoKey(node, colorMap, includePlaceholders);
+        if (memo.TryGetValue(key, out object? cached))
+        {
+            return (IReadOnlyList<PptxPositionedTextSpan>)cached!;
+        }
+
+        IReadOnlyList<PptxPositionedTextSpan> spans = ComputeTextSpansForSceneNode(node, context, colorMap, includePlaceholders);
+        memo[key] = spans;
+        return spans;
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ComputeTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
+    {
+        return ReadTextSpansForShape(node.Source, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(

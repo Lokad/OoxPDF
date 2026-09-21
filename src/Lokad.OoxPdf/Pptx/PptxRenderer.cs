@@ -38,6 +38,15 @@ internal sealed partial class PptxRenderer
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxTheme theme = scene.Theme;
         var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
+        // PLAN W05: one bounded workbook model per embedded part, shared by every chart
+        // frame of this conversion (like the image cache above). Each model is already
+        // capped (workbook totals, range unions); the dictionary itself is bounded by
+        // the package entry count and dies with this conversion.
+        var chartWorkbookCache = new Dictionary<string, object?>(StringComparer.Ordinal);
+        // PLAN W02: per-slide layout memoization shared by font collection (below) and
+        // node painting. Owned per slide, dies with the conversion.
+        var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, object?>(PptxTextSpanMemoKeyComparer.Instance);
+        var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, object?>(PptxTableFrameMemoKeyComparer.Instance);
         var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
         for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
@@ -53,7 +62,7 @@ internal sealed partial class PptxRenderer
 
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts);
             var graphics = new PdfGraphicsBuilder();
-            PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken);
+            PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
 
             bool masterBackgroundPainted = RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
             bool layoutBackgroundPainted = RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
@@ -68,9 +77,9 @@ internal sealed partial class PptxRenderer
             var reportedHyperlinkIds = new HashSet<string>(StringComparer.Ordinal);
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;
-            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context);
+            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes);
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
+            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes);
             cancellationToken.ThrowIfCancellationRequested();
             RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink);
             // Hidden master shapes stay unpainted when the slide opts out (S01).
@@ -80,7 +89,13 @@ internal sealed partial class PptxRenderer
             }
             RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
             RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken);
-            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations));
+            // Q02: drop orphan image/chart-font registrations left by rewound nodes so
+            // failed nodes cannot accumulate uncharged serialized resources. Surviving
+            // references are name-based, so pruning unreferenced names keeps them valid.
+            string content = graphics.ToString();
+            List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages);
+            List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts);
+            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations));
 
         }
 
@@ -93,7 +108,8 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        PptxScene? sharedScene = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (slideIndex < 0 || slideIndex >= document.Slides.Count)
@@ -102,7 +118,9 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSlide slide = document.Slides[slideIndex];
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
+        // PLAN Q06: inspection sessions share one scene per conversion instead of
+        // rebuilding it per slide per entry point. Rendering still builds its own.
+        PptxScene scene = sharedScene ?? new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxSceneSlide sceneSlide = scene.Slides[slideIndex];
         XDocument slideXml = sceneSlide.SlideXml;
         if (slideXml.Root is null)
@@ -122,7 +140,10 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver fontResolver,
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Dictionary<string, object?>? chartWorkbookCache = null,
+        Dictionary<PptxTextSpanMemoKey, object?>? textSpanMemo = null,
+        Dictionary<PptxTableFrameMemoKey, object?>? tableFrameMemo = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         PptxRenderSource slideSource = new(
@@ -131,7 +152,7 @@ internal sealed partial class PptxRenderer
             slideXml,
             sceneSlide.SlideRelationships,
             sceneSlide.SlideColorMap);
-        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken);
+        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache ?? new Dictionary<string, object?>(StringComparer.Ordinal), textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, object?>(PptxTextSpanMemoKeyComparer.Instance), tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, object?>(PptxTableFrameMemoKeyComparer.Instance));
 
         IReadOnlyList<PptxRenderSource> BuildInheritedSources()
         {

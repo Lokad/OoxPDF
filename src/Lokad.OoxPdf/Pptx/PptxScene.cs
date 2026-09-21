@@ -255,11 +255,11 @@ internal sealed partial class PptxSceneBuilder
                 continue;
             }
 
-            XDocument slideXml = LoadXml(slidePart, cancellationToken);
+            XDocument slideXml = LoadXml(package, slidePart, cancellationToken);
             OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType, cancellationToken);
             OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType, cancellationToken);
-            XDocument? masterXml = masterPart is null ? null : LoadXml(masterPart, cancellationToken);
-            XDocument? layoutXml = layoutPart is null ? null : LoadXml(layoutPart, cancellationToken);
+            XDocument? masterXml = masterPart is null ? null : LoadXml(package, masterPart, cancellationToken);
+            XDocument? layoutXml = layoutPart is null ? null : LoadXml(package, layoutPart, cancellationToken);
             IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name, cancellationToken);
             IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name, cancellationToken);
             IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName, cancellationToken);
@@ -320,10 +320,9 @@ internal sealed partial class PptxSceneBuilder
         }
     }
 
-    private static XDocument LoadXml(OoxPart part, CancellationToken cancellationToken)
+    private static XDocument LoadXml(OoxPackage package, OoxPart part, CancellationToken cancellationToken)
     {
-        using Stream stream = part.OpenRead();
-        return SafeXml.Load(stream, cancellationToken);
+        return package.LoadXml(part, cancellationToken);
     }
 
     private static PptxColorMap ReadMasterColorMap(XDocument? xml)
@@ -352,9 +351,11 @@ internal sealed partial class PptxSceneBuilder
         cancellationToken.ThrowIfCancellationRequested();
         // External hyperlink targets are retained so shape-level hlinkClick entries can resolve;
         // all other external relationships stay excluded from resource resolution.
-        return package.GetRelationships(sourcePartName, cancellationToken)
-            .Where(r => (!r.IsExternal && r.ResolvedTarget is not null) || (r.IsExternal && r.Type.Equals(HyperlinkRelationshipType, StringComparison.Ordinal)))
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        // The package dictionary is shared (parsed once); the filtered view is rebuilt per
+        // caller cheaply without reparsing.
+        return package.GetRelationshipDictionary(sourcePartName, cancellationToken)
+            .Where(pair => (!pair.Value.IsExternal && pair.Value.ResolvedTarget is not null) || (pair.Value.IsExternal && pair.Value.Type.Equals(HyperlinkRelationshipType, StringComparison.Ordinal)))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
     }
 
     private static IReadOnlyList<PptxSceneNode> ReadNodes(
@@ -407,7 +408,7 @@ internal sealed partial class PptxSceneBuilder
             }
 
             XElement? nonVisualProperties = ReadNonVisualProperties(child);
-            nodes.Add(new PptxSceneNode(
+            nodes.Add(PptxSceneNode.Create(
                 kind,
                 ReadNonVisualId(nonVisualProperties),
                 ReadNonVisualName(nonVisualProperties),
