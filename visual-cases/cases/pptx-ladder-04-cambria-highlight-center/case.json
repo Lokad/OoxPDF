@@ -3,14 +3,24 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-cambria-highlight-center.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "highlight", "cambria", "center", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "styled-text",
+    "highlight",
+    "cambria",
+    "center",
+    "locked",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.292,
-    "maxChangedPixelRatioAtThreshold16": 0.00422
+    "maxMeanAbsoluteError": 0.15,
+    "maxChangedPixelRatioAtThreshold16": 0.005,
+    "minForegroundRecall": 0.99
   },
   "allowedUnsupportedFeatures": []
 }

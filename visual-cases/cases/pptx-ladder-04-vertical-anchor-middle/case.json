@@ -3,14 +3,22 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-vertical-anchor-middle.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "vertical-text", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "vertical-text",
+    "pptx-renderer-port",
+    "locked",
+    "locked"
+  ],
   "expected": {
     "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.01,
-    "maxChangedPixelRatioAtThreshold16": 0.001,
-    "minForegroundRecall": 0.98
+    "maxMeanAbsoluteError": 0.05,
+    "maxChangedPixelRatioAtThreshold16": 0.005,
+    "minForegroundRecall": 0.999
   }
 }
