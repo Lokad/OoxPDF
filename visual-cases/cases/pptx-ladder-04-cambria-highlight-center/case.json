@@ -10,9 +10,7 @@
     "highlight",
     "cambria",
     "center",
-    "locked",
-    "locked",
-    "approximate"
+    "locked"
   ],
   "expected": {
     "minAgentRating": 4,
