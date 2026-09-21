@@ -635,6 +635,126 @@ internal static class OoxLimitsTests
             }));
     }
 
+    public static void ConversionBudgetLiveReservationBelowAtAboveLimits()
+    {
+        // Q01: live reservations pass below/at cap, throw above it, and leave the
+        // current level unchanged on failure while the peak records attempts.
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(
+            new OoxConversionLimits { MaxLiveImageBytesPerConversion = 10 }))
+        {
+            OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
+            using (budget.ReserveLiveImageBytes(6))
+            {
+                TestAssert.Equal(6, budget.LiveImageBytes);
+                using (budget.ReserveLiveImageBytes(4))
+                {
+                    TestAssert.Equal(10, budget.LiveImageBytes);
+                    TestAssert.Equal(10, budget.PeakLiveImageBytes);
+                }
+
+                TestAssert.Equal(6, budget.LiveImageBytes);
+                TestAssert.Throws<OoxPdfLimitExceededException>(() =>
+                {
+                    budget.ReserveLiveImageBytes(5);
+                });
+                TestAssert.Equal(6, budget.LiveImageBytes);
+            }
+
+            TestAssert.Equal(0, budget.LiveImageBytes);
+            TestAssert.Equal(10, budget.PeakLiveImageBytes);
+        }
+    }
+
+    public static void ConversionBudgetLiveReservationRejectsNegative()
+    {
+        // Q01: negative live reservations are rejected before touching levels.
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null))
+        {
+            OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
+            TestAssert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                budget.ReserveLiveImageBytes(-1);
+            });
+            TestAssert.Equal(0, budget.LiveImageBytes);
+            TestAssert.Equal(0, budget.PeakLiveImageBytes);
+        }
+    }
+
+    public static void ConversionResourceSummaryIncludesLivePeak()
+    {
+        // Q01: the summary reports the peak live image reservation (the 2x1 PNG pins
+        // the width-by-height-by-4 estimate at 8 bytes) deterministically.
+        string input = DocxWithInlinePng();
+        var first = new List<OoxPdfDiagnostic>();
+        var second = new List<OoxPdfDiagnostic>();
+        string firstPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string secondPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, firstPdf, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = first.Add,
+        });
+        OoxPdfConverter.Convert(input, secondPdf, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = second.Add,
+        });
+
+        OoxPdfDiagnostic summary = first.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.Equal(second.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY").Message, summary.Message);
+        TestAssert.Contains("peakLiveImageBytes=8", summary.Message);
+    }
+
+    public static void ConversionBudgetLiveCapEnforcedEndToEnd()
+    {
+        // Q01: a live cap at the 8-byte estimate converts; one byte below fails
+        // before allocation without publishing a partial PDF.
+        string input = DocxWithInlinePng();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 8 },
+        });
+        TestAssert.True(new FileInfo(output).Length > 0, "At-limit live byte budget must convert.");
+
+        string failing = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        try
+        {
+            OoxPdfConverter.Convert(input, failing, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 7 },
+            });
+        }
+        catch (IOException ex) when (ex is OoxPdfLimitExceededException)
+        {
+            TestAssert.True(!File.Exists(failing), "Budget failure must not publish a partial PDF.");
+            return;
+        }
+
+        throw new InvalidOperationException("Expected the conversion live image byte budget to trip.");
+    }
+
+    public static void ConversionLiveCapRejectsNegative()
+    {
+        // Q01: a negative live image byte cap is rejected at option validation.
+        string input = DocxWithInlinePng();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(
+            input,
+            output,
+            new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = -1 },
+            }));
+    }
+
     private static string PptxWithChartPtCount(int? declaredCount, IReadOnlyList<(int Index, string Value)> points)
     {
         string ptCountXml = declaredCount is { } count

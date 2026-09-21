@@ -36,6 +36,18 @@ public sealed class OoxConversionLimits
     /// </summary>
     public long MaxFontWorkPerConversion { get; init; } = 5_000;
 
+    /// <summary>
+    /// Maximum live image decode bytes reserved per conversion at any one time
+    /// (default 536,870,912, i.e. 512 MiB). Renderers are single-threaded and hold
+    /// at most one image decode transient at a time, so this bounds the live working
+    /// set while <see cref="MaxImagesDecodedPerConversion"/> bounds how many
+    /// individually legal images one conversion may carry. Reservations use a
+    /// conservative width-by-height-by-4 estimate and fail with
+    /// <see cref="OoxPdfLimitExceededException"/> before the decode allocates.
+    /// JPEG passthrough retains the already-owned input bytes and holds no reservation.
+    /// </summary>
+    public long MaxLiveImageBytesPerConversion { get; init; } = 536_870_912;
+
     internal void Validate()
     {
         if (MaxChartRangeCellsPerConversion < 0)
@@ -56,6 +68,11 @@ public sealed class OoxConversionLimits
         if (MaxFontWorkPerConversion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxFontWorkPerConversion), "Conversion font work budget must be non-negative.");
+        }
+
+        if (MaxLiveImageBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxLiveImageBytesPerConversion), "Conversion live image byte budget must be non-negative.");
         }
     }
 }

@@ -60,6 +60,12 @@ internal sealed class BmpImage
 
         int stride32 = checked((int)stride);
 
+        // PLAN Q01: reserve the live pixel working set (conservative width-by-height-by-4
+        // estimate) before allocating; released on return, peak reported in the summary.
+        // Outside a conversion scope this is a null no-op.
+        long liveEstimate = checked((long)width * height * 4L);
+        using var liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
+
         var rgb = new byte[width * height * 3];
         for (int y = 0; y < height; y++)
         {

@@ -116,6 +116,11 @@ internal sealed class JpegImage
 
             ImagePixelBudget.Check(width, height, "JPEG");
 
+            // PLAN Q01: reserve the live RGB working set (conservative width-by-height-by-4
+            // estimate) before building pixels; released on return, peak in the summary.
+            long liveEstimate = checked((long)width * height * 4L);
+            using var liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
+
             return new JpegImage(width, height, BuildRgb());
         }
 

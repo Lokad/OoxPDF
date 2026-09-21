@@ -19,6 +19,12 @@ namespace Lokad.OoxPdf;
 /// holds its own budget, so charge sites need no synchronization; concurrent
 /// conversions hold separate budgets, which scoping guarantees.
 /// </para>
+/// <para>Live reservations (image decode scratch plus pixel planes) are tracked
+/// separately from cumulative work: <see cref="ReserveLiveImageBytes"/> fails before
+/// allocation when the live level would exceed its cap and releases on dispose, while
+/// <see cref="PeakLiveImageBytes"/> records the high-water mark reported in the
+/// CONVERSION_RESOURCE_SUMMARY diagnostic.
+/// </para>
 /// </remarks>
 internal sealed class OoxConversionBudget
 {
@@ -44,7 +50,18 @@ internal sealed class OoxConversionBudget
 
     public long FontWork { get; private set; }
 
-    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork);
+    /// <summary>
+    /// Currently reserved live image decode bytes. Returns to zero when every
+    /// reservation is disposed; single-threaded renderers hold at most one.
+    /// </summary>
+    public long LiveImageBytes { get; private set; }
+
+    /// <summary>
+    /// High-water mark of <see cref="LiveImageBytes"/> for this conversion scope.
+    /// </summary>
+    public long PeakLiveImageBytes { get; private set; }
+
+    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, PeakLiveImageBytes);
 
     public static Scope BeginScope(OoxConversionLimits? limits)
     {
@@ -118,6 +135,71 @@ internal sealed class OoxConversionBudget
         FontWork += count;
     }
 
+    /// <summary>
+    /// Reserves live image decode bytes before the decode allocates, tracking the
+    /// conversion peak. The returned reservation releases exactly once on dispose;
+    /// callers hold it (typically via <c>using</c>) across the allocating work so the
+    /// peak reflects attempted work while the current level always returns to
+    /// baseline, including on failures. Outside a conversion scope image readers skip
+    /// reservation entirely and per-image pixel caps still apply.
+    /// </summary>
+    public LiveReservation ReserveLiveImageBytes(long byteCount)
+    {
+        if (byteCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(byteCount));
+        }
+
+        if (byteCount > limits.MaxLiveImageBytesPerConversion - LiveImageBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the live image byte budget of {limits.MaxLiveImageBytesPerConversion} bytes.");
+        }
+
+        LiveImageBytes += byteCount;
+        if (LiveImageBytes > PeakLiveImageBytes)
+        {
+            PeakLiveImageBytes = LiveImageBytes;
+        }
+
+        return new LiveReservation(this, byteCount);
+    }
+
+    private void ReleaseLiveImageBytes(long byteCount)
+    {
+        LiveImageBytes -= byteCount;
+        if (LiveImageBytes < 0)
+        {
+            throw new InvalidOperationException("Unbalanced live image byte release.");
+        }
+    }
+
+    /// <summary>
+    /// An outstanding live image byte reservation. Disposing releases exactly once;
+    /// double dispose is a no-op.
+    /// </summary>
+    internal sealed class LiveReservation : IDisposable
+    {
+        private OoxConversionBudget? budget;
+        private readonly long byteCount;
+
+        internal LiveReservation(OoxConversionBudget budget, long byteCount)
+        {
+            this.budget = budget;
+            this.byteCount = byteCount;
+        }
+
+        public void Dispose()
+        {
+            if (budget is not null)
+            {
+                OoxConversionBudget owner = budget;
+                budget = null;
+                owner.ReleaseLiveImageBytes(byteCount);
+            }
+        }
+    }
+
     internal sealed class Scope : IDisposable
     {
         private readonly OoxConversionBudget? prior;
@@ -143,20 +225,21 @@ internal sealed class OoxConversionBudget
 }
 
 /// <summary>
-/// Snapshot of a conversion's cumulative work counters, reported through the
-/// informational CONVERSION_RESOURCE_SUMMARY diagnostic when
-/// <see cref="OoxPdfOptions.ReportResourceUsage"/> is set.
+/// Snapshot of a conversion's cumulative work counters plus the peak live image
+/// reservation, reported through the informational CONVERSION_RESOURCE_SUMMARY
+/// diagnostic when <see cref="OoxPdfOptions.ReportResourceUsage"/> is set.
 /// </summary>
 internal readonly record struct OoxConversionTotals(
     long ChartRangeCells,
     long TableFragments,
     long ImagesDecoded,
-    long FontWork)
+    long FontWork,
+    long PeakLiveImageBytes)
 {
     public OoxPdfDiagnostic ToSummaryDiagnostic(int pageCount)
     {
         string message = FormattableString.Invariant(
-            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}.");
+            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; peakLiveImageBytes={PeakLiveImageBytes}.");
         return new OoxPdfDiagnostic(
             "CONVERSION_RESOURCE_SUMMARY",
             OoxPdfSeverity.Info,

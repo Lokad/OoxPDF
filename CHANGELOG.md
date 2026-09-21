@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reported live image decode peaks alongside cumulative budgets (Q01 increment): `OoxConversionLimits.MaxLiveImageBytesPerConversion` (default 512 MiB) bounds transient decode scratch plus pixel planes while the image count bounds cumulative work; PNG/BMP/JPEG pixel decodes reserve a conservative width-by-height-by-4 estimate before allocating and release on return (JPEG passthrough holds no reservation), crossings throw the limit-exceeded failure before allocation with no partial PDF, and `CONVERSION_RESOURCE_SUMMARY` now carries `peakLiveImageBytes` so hosts can size admission limits. Pinned by below/at/above, release/peak, end-to-end cap (the 2x1 PNG pins the 8-byte estimate), and determinism tests with the affected suites proving byte-identical output.
+
 - Render unstyled filled-radar series solid (fidelity fix): the 0.40/0.18 translucency defaults (unprovenanced, oldest history) contradicted two live Office references (single-series ladder fixture and a new two-series probe); every other chart kind already defaulted to solid. Single-series SSIM 0.858 to 0.954. Remaining radar gaps: chart-style-18 fill variants and value-axis geometry. New held-out visual case pins multi-series solid fills.
 
 - Triaged the typography tail (Q07 increment): 21 passing needs-review cases moved to approximate with the recorded font-advance positioning gap class (sampled PNG reviews show complete correct content including distinct typefaces, line spacing, and auto-number quirks matching the reference; 7 pre-existing environment gate failures left untouched). Manifests: 118 locked / 176 approximate / 31 needs-review.

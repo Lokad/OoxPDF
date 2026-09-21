@@ -53,9 +53,9 @@ public sealed class OoxPdfOptions
     /// <summary>
     /// When true, a successful conversion emits one informational
     /// CONVERSION_RESOURCE_SUMMARY diagnostic reporting cumulative work counters
-    /// (pages, chart cells, table fragments, images, font operations) so hosts can
-    /// account concurrent conversions. Informational diagnostics never affect CLI
-    /// strict exit codes. Disabled by default.
+    /// (pages, chart cells, table fragments, images, font operations) plus the peak
+    /// live image decode reservation so hosts can account concurrent conversions.
+    /// Informational diagnostics never affect CLI strict exit codes. Disabled by default.
     /// </summary>
     public bool ReportResourceUsage { get; init; }
 

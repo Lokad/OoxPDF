@@ -93,6 +93,13 @@ internal sealed class PngImage
 
         int pngBitsPerPixel = colorType switch { 0 or 3 => bitDepth, 2 => 24, 4 => 16, 6 => 32, _ => 8 };
         long maxInflated = MaxInflatedBytes(width, height, pngBitsPerPixel, interlace);
+        // PLAN Q01: reserve the live decode working set (conservative width-by-height-by-4
+        // estimate) before inflating; the reservation releases when this method returns and
+        // the peak is reported in CONVERSION_RESOURCE_SUMMARY. Zero when the header is
+        // missing (existing validation still throws below); outside a conversion scope this
+        // is a null no-op and pixel caps still apply.
+        long liveEstimate = width <= 0 || height <= 0 ? 0 : checked((long)width * height * 4L);
+        using var liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
         // PLAN M08: the IDAT accumulator already owns the compressed bytes; inflate
         // from a read-only view instead of copying them into a second array.
         using var input = new MemoryStream(idat.GetBuffer(), 0, (int)idat.Length, writable: false);
