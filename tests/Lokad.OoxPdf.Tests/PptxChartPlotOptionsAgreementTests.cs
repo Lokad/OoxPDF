@@ -100,8 +100,8 @@ internal static class PptxChartPlotOptionsAgreementTests
             "<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:tx>",
             "<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f></c:strRef></c:tx>",
         };
-        Type? workbookType = typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData");
-        TestAssert.NotNull(workbookType);
+        Type workbookType = TestAssert.NotNull(typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData"));
+        
         foreach (string name in names)
         {
             (object? plot, XElement element) = LoadPlot("barChart", name);
@@ -122,8 +122,8 @@ internal static class PptxChartPlotOptionsAgreementTests
             "<c:dPt><c:idx val=\"0\"/><c:explosion val=\"50\"/></c:dPt>",
             "<c:dPt><c:idx val=\"bogus\"/><c:explosion val=\"50\"/></c:dPt>",
         };
-        Type? workbookType = typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData");
-        TestAssert.NotNull(workbookType);
+        Type workbookType = TestAssert.NotNull(typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData"));
+        
         foreach (string explosion in explosions)
         {
             (object? plot, XElement element) = LoadPlot("pieChart", explosion);
