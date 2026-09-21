@@ -71,16 +71,40 @@ internal readonly record struct PdfPage
 
 internal readonly record struct PdfLinkDestination(int PageIndex, double? Left, double? Top, double? Zoom);
 
-internal readonly record struct PdfLinkAnnotation(
-    double X,
-    double Y,
-    double Width,
-    double Height,
-    string? Uri,
-    PdfLinkDestination? Destination)
+// T02: exactly one target is always set. The constructor is private so the
+// both/neither combinations cannot be built through normal builders; only the
+// validated factories below can construct values.
+internal readonly record struct PdfLinkAnnotation
 {
+    public double X { get; }
+
+    public double Y { get; }
+
+    public double Width { get; }
+
+    public double Height { get; }
+
+    public string? Uri { get; }
+
+    public PdfLinkDestination? Destination { get; }
+
+    public bool IsUri => Uri is not null && Destination is null;
+
+    public bool IsDestination => Destination is not null && Uri is null;
+
+    private PdfLinkAnnotation(double x, double y, double width, double height, string? uri, PdfLinkDestination? destination)
+    {
+        X = x;
+        Y = y;
+        Width = width;
+        Height = height;
+        Uri = uri;
+        Destination = destination;
+    }
+
     internal static PdfLinkAnnotation ToUri(double x, double y, double width, double height, string uri)
     {
+        ArgumentException.ThrowIfNullOrEmpty(uri);
         return new PdfLinkAnnotation(x, y, width, height, uri, null);
     }
 

@@ -254,7 +254,7 @@ internal static class PdfWriterTests
             [],
             [],
             [],
-            [new PdfLinkAnnotation(10, 20, 30, 40, "https://example.invalid/a?b=(c)\\d", Destination: null)]);
+            [PdfLinkAnnotation.ToUri(10, 20, 30, 40, "https://example.invalid/a?b=(c)\\d")]);
 
         string pdf = WritePdfText([page]);
 
@@ -263,6 +263,21 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Rect [10 20 40 60]", pdf);
         TestAssert.Contains("/Border [0 0 0]", pdf);
         TestAssert.Contains(@"/A << /S /URI /URI (https://example.invalid/a?b=\(c\)\\d) >>", pdf);
+    }
+
+    public static void LinkAnnotationFactoriesEnforceSingleTarget()
+    {
+        // T02: normal builders cannot produce both/neither target combinations.
+        PdfLinkAnnotation uri = PdfLinkAnnotation.ToUri(1, 2, 3, 4, "https://example.invalid");
+        TestAssert.True(uri.IsUri, "URI factory must set exactly the URI target.");
+        TestAssert.True(!uri.IsDestination, "URI factory must leave the destination target unset.");
+        TestAssert.Equal("https://example.invalid", uri.Uri);
+
+        PdfLinkAnnotation destination = PdfLinkAnnotation.ToDestination(1, 2, 3, 4, new PdfLinkDestination(0, null, null, null));
+        TestAssert.True(destination.IsDestination, "Destination factory must set exactly the destination target.");
+        TestAssert.True(!destination.IsUri, "Destination factory must leave the URI target unset.");
+
+        TestAssert.Throws<ArgumentException>(() => PdfLinkAnnotation.ToUri(1, 2, 3, 4, string.Empty));
     }
 
     public static void WritesInternalLinkDestinations()

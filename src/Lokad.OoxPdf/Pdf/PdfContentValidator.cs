@@ -29,7 +29,6 @@ internal static class PdfContentValidator
             new HashSet<string>(page.Patterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)), StringComparer.Ordinal),
             cancellationToken);
 
-        RequireAscii(page.Content, $"PDF page {pageIndex + 1} content");
         foreach (PdfTilingPatternResource pattern in page.Patterns)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -40,7 +39,6 @@ internal static class PdfContentValidator
     private static void ValidatePattern(PdfTilingPatternResource pattern, int pageIndex, CancellationToken cancellationToken)
     {
         string context = $"PDF page {pageIndex + 1} pattern '{pattern.ResourceName}'";
-        RequireAscii(pattern.Pattern.Content, context);
         ValidateContent(
             pattern.Pattern.Content,
             context,
@@ -50,17 +48,6 @@ internal static class PdfContentValidator
             new HashSet<string>(StringComparer.Ordinal),
             new HashSet<string>(StringComparer.Ordinal),
             cancellationToken);
-    }
-
-    private static void RequireAscii(string content, string context)
-    {
-        foreach (char c in content)
-        {
-            if (c != '\t' && c != '\n' && c != '\r' && (c < ' ' || c > '~'))
-            {
-                throw new InvalidDataException($"{context} contains a non-ASCII character that ASCII encoding would silently corrupt.");
-            }
-        }
     }
 
     private static void RequireUniqueNames(IEnumerable<string> resourceNames, string category, int pageIndex)
@@ -76,7 +63,66 @@ internal static class PdfContentValidator
         }
     }
 
-    private readonly record struct ContentToken(bool IsName, bool IsOperator, string Text);
+    // PLAN G05: tokens retain content offsets instead of substrings. The scan keeps at
+    // most four, and only operator classification plus resource-name operands read them:
+    // operators classify by length and leading characters, names resolve through span
+    // lookups, and strings materialize solely for failure messages. Allocation stays
+    // proportional to resource names rather than token count.
+    private readonly record struct ContentToken(bool IsName, ContentOperator Operator, int Start, int Length);
+
+    private enum ContentOperator
+    {
+        Unknown,
+        SaveState,
+        RestoreState,
+        BeginText,
+        EndText,
+        SetFont,
+        DrawImage,
+        SetGraphicsState,
+        FillShading,
+        SetPattern,
+    }
+
+    private static ContentOperator ClassifyOperator(string content, int start, int length)
+    {
+        // Operator characters are ASCII letters plus *, ', " (see IsOperatorChar), so
+        // length plus leading characters discriminate the checked set exactly.
+        return length switch
+        {
+            1 => content[start] switch
+            {
+                'q' => ContentOperator.SaveState,
+                'Q' => ContentOperator.RestoreState,
+                _ => ContentOperator.Unknown,
+            },
+            2 when content[start] == 'B' && content[start + 1] == 'T' => ContentOperator.BeginText,
+            2 when content[start] == 'E' && content[start + 1] == 'T' => ContentOperator.EndText,
+            2 when content[start] == 'T' && content[start + 1] == 'f' => ContentOperator.SetFont,
+            2 when content[start] == 'D' && content[start + 1] == 'o' => ContentOperator.DrawImage,
+            2 when content[start] == 'g' && content[start + 1] == 's' => ContentOperator.SetGraphicsState,
+            2 when content[start] == 's' && content[start + 1] == 'h' => ContentOperator.FillShading,
+            3 when content[start] == 's' && content[start + 1] == 'c' && content[start + 2] == 'n' => ContentOperator.SetPattern,
+            _ => ContentOperator.Unknown,
+        };
+    }
+
+    private static void RequireAsciiChar(string content, int position, string context)
+    {
+        char value = content[position];
+        if (value != '\t' && value != '\n' && value != '\r' && (value < ' ' || value > '~'))
+        {
+            throw new InvalidDataException($"{context} contains a non-ASCII character that ASCII encoding would silently corrupt.");
+        }
+    }
+
+    private static void RequireAsciiSpan(string content, int start, int end, string context)
+    {
+        for (int i = start; i < end; i++)
+        {
+            RequireAsciiChar(content, i, context);
+        }
+    }
 
     private static void ValidateContent(
         string content,
@@ -104,17 +150,21 @@ internal static class PdfContentValidator
             char current = content[position];
             if (char.IsWhiteSpace(current))
             {
+                RequireAsciiChar(content, position, context);
                 position++;
                 continue;
             }
 
             if (current == '%')
             {
-                while (position < content.Length && content[position] != '\n')
+                int commentEnd = position;
+                while (commentEnd < content.Length && content[commentEnd] != '\n')
                 {
-                    position++;
+                    commentEnd++;
                 }
 
+                RequireAsciiSpan(content, position, commentEnd, context);
+                position = commentEnd;
                 continue;
             }
 
@@ -127,6 +177,7 @@ internal static class PdfContentValidator
                 }
 
                 int end = content.IndexOf('>', position + 1);
+                RequireAsciiSpan(content, position + 1, end < 0 ? content.Length : end, context);
                 position = end < 0 ? content.Length : end + 1;
                 continue;
             }
@@ -139,7 +190,9 @@ internal static class PdfContentValidator
 
             if (current == '(')
             {
-                position = SkipLiteralString(content, position);
+                int literalEnd = SkipLiteralString(content, position);
+                RequireAsciiSpan(content, position, literalEnd, context);
+                position = literalEnd;
                 continue;
             }
 
@@ -149,10 +202,11 @@ internal static class PdfContentValidator
                 int end = start;
                 while (end < content.Length && !IsTokenDelimiter(content[end]))
                 {
+                    RequireAsciiChar(content, end, context);
                     end++;
                 }
 
-                PushToken(new ContentToken(IsName: true, IsOperator: false, content.Substring(start, end - start)), recent, ref tokenCount);
+                PushToken(new ContentToken(IsName: true, ContentOperator.Unknown, start, end - start), recent, ref tokenCount);
                 position = end;
                 continue;
             }
@@ -160,25 +214,28 @@ internal static class PdfContentValidator
             if (IsOperatorStart(current))
             {
                 int start = position;
+                // Operator characters are ASCII by construction (see IsOperatorChar);
+                // the leading character was checked above.
                 while (position < content.Length && IsOperatorChar(content[position]))
                 {
                     position++;
                 }
 
-                PushToken(new ContentToken(IsName: false, IsOperator: true, content.Substring(start, position - start)), recent, ref tokenCount);
-                ApplyOperator(recent, context, ref graphicsDepth, ref inText, fonts, images, states, shadings, patterns);
+                PushToken(new ContentToken(IsName: false, ClassifyOperator(content, start, position - start), start, position - start), recent, ref tokenCount);
+                ApplyOperator(content, recent, context, ref graphicsDepth, ref inText, fonts, images, states, shadings, patterns);
                 continue;
             }
 
             int valueEnd = position;
             while (valueEnd < content.Length && !IsTokenDelimiter(content[valueEnd]) && content[valueEnd] != '/')
             {
+                RequireAsciiChar(content, valueEnd, context);
                 valueEnd++;
             }
 
             if (valueEnd != position)
             {
-                PushToken(new ContentToken(IsName: false, IsOperator: false, content.Substring(position, valueEnd - position)), recent, ref tokenCount);
+                PushToken(new ContentToken(IsName: false, ContentOperator.Unknown, position, valueEnd - position), recent, ref tokenCount);
             }
             position = valueEnd == position ? position + 1 : valueEnd;
         }
@@ -206,6 +263,7 @@ internal static class PdfContentValidator
     }
 
     private static void ApplyOperator(
+        string content,
         List<ContentToken> recent,
         string context,
         ref int graphicsDepth,
@@ -216,13 +274,12 @@ internal static class PdfContentValidator
         HashSet<string> shadings,
         HashSet<string> patterns)
     {
-        string op = recent[^1].Text;
-        switch (op)
+        switch (recent[^1].Operator)
         {
-            case "q":
+            case ContentOperator.SaveState:
                 graphicsDepth++;
                 return;
-            case "Q":
+            case ContentOperator.RestoreState:
                 if (graphicsDepth == 0)
                 {
                     throw new InvalidDataException($"{context} restores graphics state without a matching save (stray Q).");
@@ -230,7 +287,7 @@ internal static class PdfContentValidator
 
                 graphicsDepth--;
                 return;
-            case "BT":
+            case ContentOperator.BeginText:
                 if (inText)
                 {
                     throw new InvalidDataException($"{context} nests text objects (BT inside BT).");
@@ -238,7 +295,7 @@ internal static class PdfContentValidator
 
                 inText = true;
                 return;
-            case "ET":
+            case ContentOperator.EndText:
                 if (!inText)
                 {
                     throw new InvalidDataException($"{context} ends a text object without opening one (stray ET).");
@@ -246,22 +303,22 @@ internal static class PdfContentValidator
 
                 inText = false;
                 return;
-            case "Tf":
-                RequireNameOperand(recent, 3, fonts, "font", "Tf", context);
+            case ContentOperator.SetFont:
+                RequireNameOperand(content, recent, 3, fonts, "font", "Tf", context);
                 return;
-            case "Do":
-                RequireNameOperand(recent, 2, images, "image", "Do", context);
+            case ContentOperator.DrawImage:
+                RequireNameOperand(content, recent, 2, images, "image", "Do", context);
                 return;
-            case "gs":
-                RequireNameOperand(recent, 2, states, "graphics-state", "gs", context);
+            case ContentOperator.SetGraphicsState:
+                RequireNameOperand(content, recent, 2, states, "graphics-state", "gs", context);
                 return;
-            case "sh":
-                RequireNameOperand(recent, 2, shadings, "shading", "sh", context);
+            case ContentOperator.FillShading:
+                RequireNameOperand(content, recent, 2, shadings, "shading", "sh", context);
                 return;
-            case "scn":
+            case ContentOperator.SetPattern:
                 if (recent.Count >= 2 && recent[^2].IsName)
                 {
-                    RequireNameOperand(recent, 2, patterns, "pattern", "scn", context);
+                    RequireNameOperand(content, recent, 2, patterns, "pattern", "scn", context);
                 }
 
                 return;
@@ -270,16 +327,19 @@ internal static class PdfContentValidator
         }
     }
 
-    private static void RequireNameOperand(List<ContentToken> recent, int lookback, HashSet<string> names, string category, string op, string context)
+    private static void RequireNameOperand(string content, List<ContentToken> recent, int lookback, HashSet<string> names, string category, string op, string context)
     {
         if (recent.Count < lookback || !recent[^lookback].IsName)
         {
             throw new InvalidDataException($"{context} has a malformed {op} operator without a resource name.");
         }
 
-        string name = recent[^lookback].Text;
-        if (!names.Contains(name))
+        ContentToken operand = recent[^lookback];
+        // Span lookup: resource uses resolve without materializing names. The string
+        // form exists only for the failure message below.
+        if (!names.GetAlternateLookup<ReadOnlySpan<char>>().Contains(content.AsSpan(operand.Start, operand.Length)))
         {
+            string name = content.Substring(operand.Start, operand.Length);
             throw new InvalidDataException($"{context} references an unlisted {category} resource '{name}' in {op}.");
         }
     }

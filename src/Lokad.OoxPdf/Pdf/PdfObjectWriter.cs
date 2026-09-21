@@ -45,6 +45,22 @@ internal sealed class PdfObjectWriter
         WriteAscii("endobj\n");
     }
 
+    // PLAN G04: page content streams are written from a single ASCII encoding of the
+    // content. The byte count comes from the encoded span, so no second whole-page
+    // string interpolation plus re-encoding is needed merely to measure the length.
+    // Output bytes match the previous WriteObject encoding exactly.
+    public void WriteContentStreamObject(int objectNumber, ReadOnlySpan<byte> contentBytes)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        offsets.Add(position);
+        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+        WriteAscii(FormattableString.Invariant($"<< /Length {contentBytes.Length} >>\nstream\n"));
+        cancellationToken.ThrowIfCancellationRequested();
+        stream.Write(contentBytes);
+        position += contentBytes.Length;
+        WriteAscii("endstream\nendobj\n");
+    }
+
     public void WriteStreamObject(int objectNumber, string dictionaryEntries, ReadOnlySpan<byte> streamBytes)
     {
         cancellationToken.ThrowIfCancellationRequested();

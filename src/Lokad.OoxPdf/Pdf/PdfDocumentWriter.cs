@@ -141,8 +141,7 @@ internal sealed class PdfDocumentWriter
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(annotationObjectsByPage[i])} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
-            writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
-                $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
+            writer.WriteContentStreamObject(contentObjectNumber, contentBytes);
         }
 
         foreach (PdfEmbeddedFont font in fonts)
