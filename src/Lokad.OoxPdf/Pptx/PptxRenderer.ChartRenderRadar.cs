@@ -51,7 +51,10 @@ internal sealed partial class PptxRenderer
 
             if (layout.IsFilled)
             {
-                ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, series.Count == 1 ? 0.40d : 0.18d);
+                // Office renders unstyled filled-radar series solid (single-series ladder
+                // reference; two-series probe with opaque red over blue): the series color
+                // carries no translucency unless an explicit fill says so.
+                ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
                 graphics.SaveState();
                 graphics.SetAlpha(fill.Alpha, 1d);
                 graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);

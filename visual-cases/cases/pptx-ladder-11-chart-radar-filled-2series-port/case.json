@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-11-chart-radar-filled-2series-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-radar-filled-2series-port.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "radar-chart",
+    "filled",
+    "pptx-renderer-port",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 4.0,
+    "minForegroundRecall": 0.95,
+    "maxChangedPixelRatioAtThreshold16": 0.15
+  },
+  "allowedUnsupportedFeatures": []
+}
