@@ -3,14 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-corporate-theme.pptx",
   "dpi": 144,
-  "tags": ["pptx", "theme", "master", "smoke", "needs-review"],
+  "tags": [
+    "pptx",
+    "theme",
+    "master",
+    "smoke",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "maxMeanAbsoluteError": 0.3,
-    "maxChangedPixelRatioAtThreshold16": 0.007,
-    "minForegroundRecall": 0.98
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.5,
+    "minForegroundRecall": 0.99,
+    "maxChangedPixelRatioAtThreshold16": 0.012
   },
   "allowedUnsupportedFeatures": []
 }

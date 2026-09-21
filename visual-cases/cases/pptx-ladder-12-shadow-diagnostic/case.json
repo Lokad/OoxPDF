@@ -3,12 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-shadow-diagnostic.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "effects", "shadow", "diagnostic", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "effects",
+    "shadow",
+    "diagnostic",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 2,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "minForegroundRecall": 1
+    "maxMeanAbsoluteError": 0.25,
+    "minForegroundRecall": 1,
+    "maxChangedPixelRatioAtThreshold16": 0.008
   }
 }

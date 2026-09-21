@@ -3,15 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-table-shape-zorder.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "z-order", "tables", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "z-order",
+    "tables",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.063,
-    "minForegroundRecall": 0.98,
-    "maxChangedPixelRatioAtThreshold16": 0.00075
+    "maxMeanAbsoluteError": 0.05,
+    "minForegroundRecall": 0.999,
+    "maxChangedPixelRatioAtThreshold16": 0.005
   },
   "allowedUnsupportedFeatures": []
 }

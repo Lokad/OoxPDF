@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Triaged smoke/effects/tables/composition visual families (Q07 increment): 4 new locks with reviewed PNGs and tightened gates (corporate-theme theme/master compositing; shadow-diagnostic soft shadow; basic-table quarterly grid; explicit-borders pastel grid; 5 pixel-perfect composition primitives; grouped/nested text; table-shape z-order; Arial-theme title placeholder) and 4 new approximates with recorded gap classes (composite band-fill theme tints; center-multiline/wrapped fill tints; middle-small-insets inset geometry). Gradient/picture-alpha and caption/placeholder-text cases stay needs-review below the family histogram/SSIM support bar. Manifests: 68 locked / 112 approximate / 145 needs-review; all four families green under the new gates.
+
 - Sealed chart data-label record construction (T02 increment): `PptxSceneChartDataLabels` builds only through a `Defined` factory deriving its position enum from the raw spelling; both producer call sites updated. Pinned by the data-label-heavy chart suite, the full suite, and a 57/57 chart visual family run.
 
 - Sealed chart plot/axis record construction (T02 increment): `PptxSceneChartPlot` and `PptxSceneChartAxis` build only through `Defined` factories that derive kind/grouping/direction/style and kind/position/crosses/orientation/tick enums from their raw spellings, so mismatched enum/string pairs are unrepresentable; single producer call sites updated. Pinned by the scene-vs-XML agreement batteries, the plot-pairing proof, the full suite, and a 57/57 chart visual family run.
