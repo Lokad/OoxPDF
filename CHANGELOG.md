@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved composite-chart port to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (clustered columns across four categories and three series with axes and legend all matching; SSIM 0.993, recall 0.992, histogram correlation 0.999, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 185 approximate / 23 needs-review.
+
 - Moved doughnut-square and doughnut-portrait probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (doughnut segments, legend swatches and title all match; SSIM 0.993/0.991, recall 0.996/0.994, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 184 approximate / 24 needs-review.
 
 - Moved pie-leader-lines probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (pie slices with data labels including the Gamma leader line; SSIM 0.992, recall 0.997, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance shared with its offset sibling. Manifests: 118 locked / 182 approximate / 26 needs-review.
