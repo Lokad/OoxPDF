@@ -23,6 +23,14 @@ internal sealed class PngImage
 
     public static PngImage Load(string path)
     {
+        // PLAN Q06: fail fast on absurd inputs before buffering the whole file.
+        // Legitimate rasterizer/diff PNGs fit well under this (67M pixels cap).
+        const long MaxPngInputBytes = 512L * 1024L * 1024L;
+        if (new FileInfo(path).Length > MaxPngInputBytes)
+        {
+            throw new InvalidDataException($"PNG input exceeds the maximum inspectable size of {MaxPngInputBytes} bytes.");
+        }
+
         byte[] bytes = File.ReadAllBytes(path);
         if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
         {
@@ -37,10 +45,22 @@ internal sealed class PngImage
         byte[]? palette = null;
         byte[]? transparency = null;
 
+        // PLAN Q06: chunk framing is untrusted. Bounds-check every slice so truncated
+        // files fail with InvalidDataException instead of runtime slicing errors.
         int offset = Signature.Length;
         while (offset < bytes.Length)
         {
+            if (offset + 8 > bytes.Length)
+            {
+                throw new InvalidDataException("PNG chunk header is truncated.");
+            }
+
             int length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
+            if (length < 0 || (long)offset + 8L + length + 4L > bytes.Length)
+            {
+                throw new InvalidDataException("PNG chunk extends beyond the end of the data.");
+            }
+
             offset += 4;
             string type = Encoding.ASCII.GetString(bytes, offset, 4);
             offset += 4;
@@ -77,12 +97,31 @@ internal sealed class PngImage
             }
         }
 
-        if (width <= 0 || height <= 0)
+        // PLAN Q06: shared pixel/dimension budget with the rasterizer so its output
+        // always fits here (67M pixels, 32768 per side).
+        const int MaxDimension = 32768;
+        const long MaxPixels = 67_108_864L;
+        if (width <= 0 || height <= 0 || width > MaxDimension || height > MaxDimension)
         {
-            throw new InvalidDataException("PNG image is missing IHDR dimensions.");
+            throw new InvalidDataException($"PNG dimensions are out of range: {width}x{height}.");
         }
 
-        byte[] decompressed = Inflate(idat.ToArray());
+        long pixelCount;
+        try
+        {
+            pixelCount = checked((long)width * height);
+        }
+        catch (OverflowException ex)
+        {
+            throw new InvalidDataException("PNG dimensions overflow.", ex);
+        }
+
+        if (pixelCount > MaxPixels)
+        {
+            throw new InvalidDataException($"PNG pixel count {pixelCount} exceeds the maximum of {MaxPixels}.");
+        }
+
+        byte[] decompressed = Inflate(idat.ToArray(), width, height, colorType == 6 ? 32 : colorType == 2 ? 24 : bitDepth);
         return new PngImage(width, height, DecodeScanlines(decompressed, width, height, bitDepth, colorType, palette, transparency));
     }
 
@@ -98,13 +137,39 @@ internal sealed class PngImage
         };
     }
 
-    private static byte[] Inflate(byte[] compressed)
+    private static byte[] Inflate(byte[] compressed, int width, int height, int bitsPerPixel)
     {
+        // PLAN Q06: capped inflation instead of CopyTo: the exact inflated size is
+        // stride+filter per row, so anything beyond it is hostile.
+        long maxInflated;
+        try
+        {
+            maxInflated = checked(((long)width * bitsPerPixel + 7L) / 8L + 1L) * height;
+        }
+        catch (OverflowException ex)
+        {
+            throw new InvalidDataException("PNG dimensions overflow.", ex);
+        }
+
         using var input = new MemoryStream(compressed);
         using var zlib = new ZLibStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
-        zlib.CopyTo(output);
-        return output.ToArray();
+        byte[] buffer = new byte[81920];
+        while (true)
+        {
+            int read = zlib.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                return output.ToArray();
+            }
+
+            if (checked(output.Length + read) > maxInflated)
+            {
+                throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
+            }
+
+            output.Write(buffer, 0, read);
+        }
     }
 
     private static byte[] DecodeScanlines(byte[] decompressed, int width, int height, int bitDepth, int colorType, byte[]? palette, byte[]? transparency)
@@ -118,16 +183,37 @@ internal sealed class PngImage
             _ => throw new NotSupportedException($"Unsupported PNG color type {colorType}.")
         };
         int filterBytesPerPixel = Math.Max(1, (bitsPerPixel + 7) / 8);
-        int stride = (width * bitsPerPixel + 7) / 8;
+        int stride;
+        long pixelBytes;
+        try
+        {
+            stride = checked((width * bitsPerPixel + 7) / 8);
+            pixelBytes = checked((long)width * height * 4L);
+        }
+        catch (OverflowException ex)
+        {
+            throw new InvalidDataException("PNG dimensions overflow.", ex);
+        }
+
         var previous = new byte[stride];
         var current = new byte[stride];
-        var rgba = new byte[width * height * 4];
+        var rgba = new byte[pixelBytes];
         int sourceOffset = 0;
         int targetOffset = 0;
 
         for (int y = 0; y < height; y++)
         {
+            if ((uint)sourceOffset >= (uint)decompressed.Length)
+            {
+                throw new InvalidDataException("PNG pixel data is truncated.");
+            }
+
             byte filter = decompressed[sourceOffset++];
+            if ((long)sourceOffset + stride > decompressed.Length)
+            {
+                throw new InvalidDataException("PNG pixel data is truncated.");
+            }
+
             decompressed.AsSpan(sourceOffset, stride).CopyTo(current);
             sourceOffset += stride;
             Unfilter(filter, current, previous, filterBytesPerPixel);

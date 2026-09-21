@@ -17,11 +17,28 @@ string outputDirectory = Path.GetFullPath(args[1]);
 bool includeText = args.Any(arg => string.Equals(arg, "--include-text", StringComparison.Ordinal));
 HashSet<int>? slideFilter = ReadSlideFilter(args);
 
+// PLAN Q06: inspection inputs are bounded independently of library safety.
+const long MaxInspectInputBytes = 512L * 1024L * 1024L;
+if (!File.Exists(inputPath))
+{
+    Console.Error.WriteLine($"Input presentation was not found: {inputPath}");
+    return 1;
+}
+
+if (new FileInfo(inputPath).Length > MaxInspectInputBytes)
+{
+    Console.Error.WriteLine($"Input presentation exceeds the maximum inspectable size of {MaxInspectInputBytes} bytes.");
+    return 1;
+}
+
 Directory.CreateDirectory(outputDirectory);
 
 using FileStream stream = File.OpenRead(inputPath);
 OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
 PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+// PLAN Q06: one shared inspection scene per conversion. Each Inspect* entry point
+// used to rebuild the whole scene per slide, multiplying master/layout parses by
+// the number of inspection passes.
 IEnumerable<PptxSlide> slides = document.Slides;
 if (slideFilter is not null)
 {
@@ -34,10 +51,26 @@ var tableFrameRecords = new List<PptxTextFrameRecord>();
 var paragraphRecords = new List<PptxTextParagraphRecord>();
 var tableParagraphRecords = new List<PptxTextParagraphRecord>();
 var lineRecords = new List<PptxTextLineRecord>();
+PptxScene scene;
+try
+{
+    scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+}
+catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or OutOfMemoryException)
+{
+    Console.Error.WriteLine($"Cannot build inspection scene: {ex.Message}");
+    return 1;
+}
+
+int failedSlides = 0;
 foreach (PptxSlide slide in slides)
 {
+    // PLAN Q06: isolate slides for managed failures so one oversized slide does
+    // not discard the rest.
+    try
+    {
     int slideNumber = slide.Index + 1;
-    IReadOnlyList<PptxTextFrameModelSnapshot> frameModels = PptxRenderer.InspectTextFrameModels(document, package, slide.Index);
+    IReadOnlyList<PptxTextFrameModelSnapshot> frameModels = PptxRenderer.InspectTextFrameModels(document, package, slide.Index, scene);
     for (int frameIndex = 0; frameIndex < frameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = frameModels[frameIndex];
@@ -49,7 +82,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index);
+    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index, scene);
     for (int frameIndex = 0; frameIndex < tableFrameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = tableFrameModels[frameIndex];
@@ -60,7 +93,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index);
+    PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index, scene);
     for (int frameIndex = 0; frameIndex < textLayout.Frames.Count; frameIndex++)
     {
         PptxTextFrameLayoutSnapshot frame = textLayout.Frames[frameIndex];
@@ -124,7 +157,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index))
+    foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index, scene))
     {
         GlyphCategoryCounts categories = CountGlyphCategories(run.Text);
         records.Add(new PptxGlyphRunRecord(
@@ -244,6 +277,12 @@ foreach (PptxSlide slide in slides)
             categories.SpaceCount,
             categories.OtherCount));
     }
+    }
+    catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or OutOfMemoryException)
+    {
+        Console.Error.WriteLine($"Slide {slide.Index + 1} failed: {ex.Message}");
+        failedSlides++;
+    }
 }
 
 var options = new JsonSerializerOptions
@@ -273,8 +312,14 @@ Console.WriteLine(FormattableString.Invariant($"Table frame output: {tableFrameO
 Console.WriteLine(FormattableString.Invariant($"Paragraph output: {paragraphOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Table paragraph output: {tableParagraphOutputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Layout output: {lineOutputPath}"));
+if (failedSlides != 0)
+{
+    Console.Error.WriteLine($"{failedSlides} slides failed inspection.");
+}
 
-return 0;
+// PLAN Q06: tool peaks are recorded separately from converter peaks.
+Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
+return failedSlides == 0 ? 0 : 1;
 
 static PptxTextFrameRecord ToFrameRecord(int slideNumber, int frameIndex, PptxTextFrameModelSnapshot frame)
 {

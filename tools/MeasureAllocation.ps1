@@ -15,7 +15,12 @@ param(
 
     [switch] $Stages,
 
-    [switch] $SelfTest
+    [switch] $SelfTest,
+
+    [ValidateSet("buffer", "file")]
+    [string] $OutputMode = "buffer",
+
+    [switch] $Isolate
 )
 
 $ErrorActionPreference = "Stop"
@@ -70,9 +75,12 @@ foreach ($entry in $Corpus) {
 }
 
 $outFull = if ([System.IO.Path]::IsPathRooted($Out)) { $Out } else { Join-Path $repoRoot $Out }
-$probeArgs = @("--out", $outFull, "--warmup", $Warmup, "--iterations", $Iterations)
+$probeArgs = @("--out", $outFull, "--warmup", $Warmup, "--iterations", $Iterations, "--output-mode", $OutputMode)
 if ($Stages) {
     $probeArgs += "--stages"
+}
+if ($Isolate) {
+    $probeArgs += "--isolate"
 }
 $probeArgs += $inputs
 & dotnet $probeDll $probeArgs

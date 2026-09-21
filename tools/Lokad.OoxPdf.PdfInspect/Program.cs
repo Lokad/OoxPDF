@@ -21,7 +21,33 @@ if (outputDirectory is not null)
     Directory.CreateDirectory(outputDirectory);
 }
 
-byte[] bytes = File.ReadAllBytes(inputPath);
+// PLAN Q06: inspection inputs are bounded independently of library safety. Real
+// converter/reference PDFs are megabytes; anything beyond fails fast.
+const long MaxInspectInputBytes = 512L * 1024L * 1024L;
+if (!File.Exists(inputPath))
+{
+    Console.Error.WriteLine($"Input PDF was not found: {inputPath}");
+    return 1;
+}
+
+long inputLength = new FileInfo(inputPath).Length;
+if (inputLength > MaxInspectInputBytes)
+{
+    Console.Error.WriteLine($"Input PDF exceeds the maximum inspectable size of {MaxInspectInputBytes} bytes.");
+    return 1;
+}
+
+byte[] bytes;
+try
+{
+    bytes = File.ReadAllBytes(inputPath);
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+{
+    Console.Error.WriteLine($"Cannot read '{inputPath}': {ex.Message}");
+    return 1;
+}
+
 string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
@@ -118,6 +144,8 @@ if (outputDirectory is not null)
     File.WriteAllText(fontResourcesPath, JsonSerializer.Serialize(fontResources, jsonOptions), Encoding.UTF8);
 }
 
+// PLAN Q06: tool peaks are recorded separately from converter peaks.
+Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
 
 static HashSet<int>? ReadPageFilter(string[] args)
@@ -897,30 +925,82 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
         return filter.Success ? filter.Groups["filter"].Value : "none";
     }
 
+    private const long MaxDecodedStreamBytes = 256L * 1024L * 1024L;
+
     private static DecodeResult TryInflate(byte[] raw)
     {
+        // A null inflate result means valid framing over the byte cap: keep raw bytes
+        // with a status note instead of expanding. Invalid framing falls through to
+        // the raw-deflate retry, exactly like the previous CopyTo pipeline.
         try
         {
-            using var input = new MemoryStream(raw);
-            using var zlib = new ZLibStream(input, CompressionMode.Decompress);
-            using var output = new MemoryStream();
-            zlib.CopyTo(output);
-            return new DecodeResult(output.ToArray(), "decoded");
+            byte[]? zlib = CopyInflateCapped(raw, useZlibHeader: true);
+            if (zlib is not null)
+            {
+                return new DecodeResult(zlib, "decoded");
+            }
         }
         catch (InvalidDataException)
         {
             try
             {
-                using var input = new MemoryStream(raw);
-                using var deflate = new DeflateStream(input, CompressionMode.Decompress);
-                using var output = new MemoryStream();
-                deflate.CopyTo(output);
-                return new DecodeResult(output.ToArray(), "decoded raw deflate");
+                byte[]? rawDeflate = CopyInflateCapped(raw, useZlibHeader: false);
+                if (rawDeflate is not null)
+                {
+                    return new DecodeResult(rawDeflate, "decoded raw deflate");
+                }
             }
             catch (InvalidDataException ex)
             {
                 return new DecodeResult(raw, "decode failed: " + ex.Message);
             }
+        }
+
+        return new DecodeResult(raw, $"decode skipped (over {MaxDecodedStreamBytes} bytes)");
+    }
+
+    // PLAN Q06: bounded inflation per stream instead of CopyTo.
+    private static byte[]? CopyInflateCapped(byte[] raw, bool useZlibHeader)
+    {
+        using var input = new MemoryStream(raw, writable: false);
+        using var output = new MemoryStream();
+        byte[] buffer = new byte[81920];
+        if (useZlibHeader)
+        {
+            using var zlib = new ZLibStream(input, CompressionMode.Decompress);
+            if (!CopyBounded(zlib, output, buffer))
+            {
+                return null;
+            }
+        }
+        else
+        {
+            using var deflate = new DeflateStream(input, CompressionMode.Decompress);
+            if (!CopyBounded(deflate, output, buffer))
+            {
+                return null;
+            }
+        }
+
+        return output.ToArray();
+    }
+
+    private static bool CopyBounded(Stream source, MemoryStream destination, byte[] buffer)
+    {
+        while (true)
+        {
+            int read = source.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                return true;
+            }
+
+            if (checked(destination.Length + read) > MaxDecodedStreamBytes)
+            {
+                return false;
+            }
+
+            destination.Write(buffer, 0, read);
         }
     }
 }

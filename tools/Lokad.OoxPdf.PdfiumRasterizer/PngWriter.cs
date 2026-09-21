@@ -20,29 +20,31 @@ internal static class PngWriter
         ihdr[9] = 6;
         WriteChunk(output, "IHDR", ihdr);
 
-        byte[] raw = new byte[height * (1 + width * 4)];
-        int source = 0;
-        int target = 0;
-        for (int y = 0; y < height; y++)
-        {
-            raw[target++] = 0;
-            for (int x = 0; x < width; x++)
-            {
-                byte blue = bgra[source++];
-                byte green = bgra[source++];
-                byte red = bgra[source++];
-                byte alpha = bgra[source++];
-                raw[target++] = red;
-                raw[target++] = green;
-                raw[target++] = blue;
-                raw[target++] = alpha;
-            }
-        }
-
+        // PLAN Q06: stream rows into the compressor instead of staging a second
+        // full-size raw buffer next to the bitmap.
         using var compressed = new MemoryStream();
         using (var zlib = new ZLibStream(compressed, CompressionLevel.Fastest, leaveOpen: true))
         {
-            zlib.Write(raw);
+            var row = new byte[1 + checked(width * 4)];
+            int source = 0;
+            for (int y = 0; y < height; y++)
+            {
+                row[0] = 0;
+                for (int x = 0; x < width; x++)
+                {
+                    byte blue = bgra[source++];
+                    byte green = bgra[source++];
+                    byte red = bgra[source++];
+                    byte alpha = bgra[source++];
+                    int target = 1 + x * 4;
+                    row[target] = red;
+                    row[target + 1] = green;
+                    row[target + 2] = blue;
+                    row[target + 3] = alpha;
+                }
+
+                zlib.Write(row);
+            }
         }
 
         WriteChunk(output, "IDAT", compressed.ToArray());
@@ -57,11 +59,14 @@ internal static class PngWriter
         output.Write(header);
         output.Write(data);
 
-        var crcInput = new byte[4 + data.Length];
-        Encoding.ASCII.GetBytes(type, crcInput.AsSpan(0, 4));
-        data.CopyTo(crcInput.AsSpan(4));
+        // PLAN Q06: incremental CRC instead of concatenating a second full-size copy.
+        uint crc = Crc32.Init();
+        Span<byte> typeBytes = stackalloc byte[4];
+        Encoding.ASCII.GetBytes(type, typeBytes);
+        crc = Crc32.Update(crc, typeBytes);
+        crc = Crc32.Update(crc, data);
         Span<byte> crcBytes = stackalloc byte[4];
-        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, Crc32.Compute(crcInput));
+        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, Crc32.Finish(crc));
         output.Write(crcBytes);
     }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,6 +20,9 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
 {
     Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] <input...> | --self-test | --font-breadth <n,...> --out <report.json>");
     Console.WriteLine("  Measures one cold plus N warm conversions per input and writes a JSON report.");
+    Console.WriteLine("  --output-mode buffer (default) keeps converter output in a MemoryStream;");
+    Console.WriteLine("  --output-mode file writes converter output to a temp file (no output buffering attributed).");
+    Console.WriteLine("  --isolate measures each input in a fresh child process (independent cold, per-input process peaks).");
     Console.WriteLine("  Allocation scope is the calling thread; see report/allocationScope.");
     return 2;
 }
@@ -37,11 +41,25 @@ string? reportPath = ReadOption("--out");
 int warmup = ReadOption("--warmup") is null ? 1 : ReadIntOption("--warmup") ?? -1;
 int iterations = ReadOption("--iterations") is null ? 3 : ReadIntOption("--iterations") ?? -1;
 bool measureStages = args.Any(arg => string.Equals(arg, "--stages", StringComparison.Ordinal));
+bool isolate = args.Any(arg => string.Equals(arg, "--isolate", StringComparison.Ordinal))
+    && !args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal));
+string outputMode = ReadOption("--output-mode") ?? "buffer";
+if (outputMode != "buffer" && outputMode != "file")
+{
+    Console.Error.WriteLine($"Invalid --output-mode '{outputMode}': expected buffer or file.");
+    return 2;
+}
+
 string[] inputs = args.Where(arg => !arg.StartsWith("--", StringComparison.Ordinal) && !IsOptionValue(arg)).ToArray();
 if (reportPath is null || inputs.Length == 0 || warmup < 0 || iterations < 1)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] <input...>");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--output-mode buffer|file] [--isolate] <input...>");
     return 2;
+}
+
+if (isolate)
+{
+    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode);
 }
 
 var reports = new List<object>();
@@ -60,7 +78,10 @@ foreach (string input in inputs)
 
     try
     {
-        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages));
+        string? peakNote = args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal))
+            ? "single-input isolated child process: peak is per-input"
+            : null;
+        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote));
     }
     catch (Exception ex)
     {
@@ -69,30 +90,159 @@ foreach (string input in inputs)
     }
 }
 
-var report = new
-{
-    tool = "Lokad.OoxPdf.AllocProbe",
-    createdAtUtc = DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
-    framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-#if DEBUG
-    buildConfiguration = "Debug",
-#else
-    buildConfiguration = "Release",
-#endif
-    processBits = Environment.Is64BitProcess ? 64 : 32,
-    serverGc = System.Runtime.GCSettings.IsServerGC,
-    allocationScope = "calling-thread (GC.GetAllocatedBytesForCurrentThread); I/O buffers and background loaders outside this thread are not attributed",
-    inputs = reports.ToArray(),
-};
+var report = BuildReport(reports, outputMode, isolation: "in-process (cold is process-first; later inputs reuse static caches; process peak is a lifetime high-water mark)");
 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
 File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine($"Wrote {reportPath} ({reports.Count} inputs).");
 return 0;
 
+static object BuildReport(List<object> reports, string outputMode, string isolation)
+{
+    return new
+    {
+        tool = "Lokad.OoxPdf.AllocProbe",
+        createdAtUtc = DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+        framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+#if DEBUG
+        buildConfiguration = "Debug",
+#else
+        buildConfiguration = "Release",
+#endif
+        processBits = Environment.Is64BitProcess ? 64 : 32,
+        serverGc = System.Runtime.GCSettings.IsServerGC,
+        gcLatencyMode = System.Runtime.GCSettings.LatencyMode.ToString(),
+        os = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+        processorCount = Environment.ProcessorCount,
+        sourceRevision = GetSourceRevision(),
+        outputMode,
+        isolation,
+        allocationScope = "calling-thread (GC.GetAllocatedBytesForCurrentThread); hashing, page-count checks, and report serialization run outside the counters; I/O buffers and background loaders outside this thread are not attributed",
+        fontInventory = DescribeFontInventory(),
+        inputs = reports.ToArray(),
+    };
+}
+
+static string GetSourceRevision()
+{
+    // SourceLink stamps the library informational version in CI builds; local builds report unknown.
+    string? version = typeof(OoxPdfConverter).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    return string.IsNullOrWhiteSpace(version) ? "unknown (local build)" : version;
+}
+
+static object DescribeFontInventory()
+{
+    // Counted after all measurements so inventory enumeration never warms the
+    // static discovery cache ahead of a cold conversion in this process.
+    try
+    {
+        int faces = new WindowsFontResolver().GetDiscoveredFonts().Count;
+        return new { resolver = "default WindowsFontResolver", discoveredFaces = faces };
+    }
+    catch (Exception ex)
+    {
+        return new { resolver = "default WindowsFontResolver", discoveredFaces = -1, error = ex.GetType().Name };
+    }
+}
+
+static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode)
+{
+    // PLAN Q05: cold inputs run independently in fresh child processes so static
+    // caches cannot leak across inputs and each child reports its own process peak.
+    string? entry = Assembly.GetEntryAssembly()?.Location;
+    bool useDotnet = entry?.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) == true;
+    bool useExe = entry?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true;
+    if (!useDotnet && !useExe)
+    {
+        Console.Error.WriteLine("Cannot determine probe binary for --isolate.");
+        return 1;
+    }
+
+    var merged = new List<object>();
+    foreach (string input in inputs)
+    {
+        string childReport = Path.Combine(Path.GetTempPath(), "allocprobe-" + Guid.NewGuid().ToString("N") + ".json");
+        var psi = new ProcessStartInfo(useDotnet ? "dotnet" : entry!)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        if (useDotnet)
+        {
+            psi.ArgumentList.Add(entry!);
+        }
+
+        psi.ArgumentList.Add("--out");
+        psi.ArgumentList.Add(childReport);
+        psi.ArgumentList.Add("--warmup");
+        psi.ArgumentList.Add(warmup.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("--iterations");
+        psi.ArgumentList.Add(iterations.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (measureStages)
+        {
+            psi.ArgumentList.Add("--stages");
+        }
+
+        psi.ArgumentList.Add("--output-mode");
+        psi.ArgumentList.Add(outputMode);
+        psi.ArgumentList.Add("--isolated-child");
+        psi.ArgumentList.Add(input);
+        try
+        {
+            using Process child = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start probe child process.");
+            string childOut = child.StandardOutput.ReadToEnd();
+            string childErr = child.StandardError.ReadToEnd();
+            child.WaitForExit();
+            if (child.ExitCode != 0)
+            {
+                Console.Error.WriteLine($"Isolated child failed for '{input}' (exit {child.ExitCode}): {childErr}{childOut}");
+                return 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Isolated child failed for '{input}': {ex.Message}");
+            return 1;
+        }
+
+        try
+        {
+            using JsonDocument childDoc = JsonDocument.Parse(File.ReadAllText(childReport));
+            if (!childDoc.RootElement.TryGetProperty("inputs", out JsonElement childInputs) ||
+                childInputs.GetArrayLength() != 1)
+            {
+                Console.Error.WriteLine($"Isolated child report is malformed for '{input}'.");
+                return 1;
+            }
+
+            foreach (JsonElement element in childInputs.EnumerateArray())
+            {
+                merged.Add(element.Clone());
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Cannot read isolated child report for '{input}': {ex.Message}");
+            return 1;
+        }
+        finally
+        {
+            try { File.Delete(childReport); } catch (IOException) { }
+        }
+    }
+
+    object report = BuildReport(merged, outputMode, isolation: "per-input child processes (independent cold conversions; per-input peakWorkingSetBytes is that child's process peak)");
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
+    File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine($"Wrote {reportPath} ({merged.Count} inputs, isolated).");
+    return 0;
+}
+
 bool IsOptionValue(string arg)
 {
     int index = Array.IndexOf(args, arg);
-    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations");
+    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode");
 }
 
 string? ReadOption(string name)
@@ -118,7 +268,7 @@ int? ReadIntOption(string name)
     return value;
 }
 
-static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages)
+static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null)
 {
     string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
         : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
@@ -128,16 +278,23 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
     var pageCounts = new List<int>();
 
     var options = new OoxPdfOptions { InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx };
-    object cold = MeasureOnce(inputBytes, options, recordOutput: true, outputShas, outputLengths, pageCounts);
+    (object cold, string coldSha, int coldLength, int coldPages) = MeasureOnce(inputBytes, options, inputExtension: kind == "docx" ? ".docx" : ".pptx", outputMode, recordOutput: true);
+    outputShas.Add(coldSha);
+    outputLengths.Add(coldLength);
+    pageCounts.Add(coldPages);
     for (int i = 0; i < warmup; i++)
     {
-        MeasureOnce(inputBytes, options, recordOutput: false, outputShas, outputLengths, pageCounts);
+        MeasureOnce(inputBytes, options, inputExtension: kind == "docx" ? ".docx" : ".pptx", outputMode, recordOutput: false);
     }
 
     var warm = new List<object>();
     for (int i = 0; i < iterations; i++)
     {
-        warm.Add(MeasureOnce(inputBytes, options, recordOutput: true, outputShas, outputLengths, pageCounts));
+        (object measured, string sha, int length, int pages) = MeasureOnce(inputBytes, options, inputExtension: kind == "docx" ? ".docx" : ".pptx", outputMode, recordOutput: true);
+        warm.Add(measured);
+        outputShas.Add(sha);
+        outputLengths.Add(length);
+        pageCounts.Add(pages);
     }
 
     bool stable = outputShas.Distinct(StringComparer.Ordinal).Count() == 1;
@@ -157,14 +314,21 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
         outputStable = stable,
         pageCount = pageCounts[0],
         fontResolver = "default",
+        outputMode,
         cold,
         warm = warm.ToArray(),
-        stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0]) : null,
+        stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0], outputMode) : null,
         peakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64,
+        peakWorkingSetNote = peakNoteOverride ?? "process lifetime high-water mark, including earlier inputs and stage probes; pass --isolate for per-input peaks",
     };
 }
 
-static (T Value, object Metrics) MeasureStep<T>(Func<T> produce)
+// PLAN Q05: stage metrics attribute only the stage lambda. Verification output
+// (hashes, page counts) is produced by callers outside these counters, and stage
+// prerequisites are rebuilt by callers beforehand. Per-stage retained memory is not
+// reported: stage outputs stay alive for downstream stages, so no isolated retained
+// delta exists here; see whole-conversion retainedDeltaBytes instead.
+static (T Value, object Metrics) MeasureStep<T>(Func<T> produce, string scope)
 {
     GC.Collect();
     GC.WaitForPendingFinalizers();
@@ -176,15 +340,14 @@ static (T Value, object Metrics) MeasureStep<T>(Func<T> produce)
     var watch = Stopwatch.StartNew();
     T value = produce();
     watch.Stop();
-    long retainedBytes = GC.GetTotalMemory(forceFullCollection: false);
     object metrics = new
     {
+        scope,
         allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - startAllocated,
         gen0Collections = GC.CollectionCount(0) - startGen0,
         gen1Collections = GC.CollectionCount(1) - startGen1,
         gen2Collections = GC.CollectionCount(2) - startGen2,
         elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
-        retainedBytes,
     };
     return (value, metrics);
 }
@@ -194,42 +357,48 @@ static (T Value, object Metrics) MeasureStep<T>(Func<T> produce)
 // whole-pipeline measurements, so shared static caches are warm; the whole
 // control stays the cold/warm reference. Prerequisite objects are left for
 // GC like the converter itself (no disposal).
-static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha)
+static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha, string outputMode)
 {
     bool isDocx = string.Equals(kind, "docx", StringComparison.OrdinalIgnoreCase);
     var markupMode = OoxPdfDocxMarkupMode.Final;
     var geometryMode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
 
     OoxPackage BuildPackage() => OoxPackage.Open(new MemoryStream(inputBytes, writable: false), CancellationToken.None);
-    (_, object openMetrics) = MeasureStep(() => BuildPackage());
+    (_, object openMetrics) = MeasureStep(() => BuildPackage(), "exclusive: package open only");
 
+    // Read prerequisites are built outside the measured lambda so only the read
+    // itself is attributed (Q05: previously BuildPackage ran inside the counter).
+    OoxPackage readPackage = BuildPackage();
     object? sceneMetrics = null;
     object readMetrics;
     if (isDocx)
     {
-        (_, readMetrics) = MeasureStep(() => new DocxReader().Read(BuildPackage(), diagnosticSink: null, CancellationToken.None, markupMode));
+        (_, readMetrics) = MeasureStep(() => new DocxReader().Read(readPackage, diagnosticSink: null, CancellationToken.None, markupMode), "exclusive: document read from prebuilt package");
     }
     else
     {
-        (_, readMetrics) = MeasureStep(() => new PptxReader().Read(BuildPackage(), CancellationToken.None));
+        (_, readMetrics) = MeasureStep(() => new PptxReader().Read(readPackage, CancellationToken.None), "exclusive: document read from prebuilt package");
         OoxPackage scenePackage = BuildPackage();
         PptxDocument sceneDocument = new PptxReader().Read(scenePackage, CancellationToken.None);
-        (_, sceneMetrics) = MeasureStep(() => new PptxSceneBuilder().Build(sceneDocument, scenePackage, CancellationToken.None));
+        (_, sceneMetrics) = MeasureStep(() => new PptxSceneBuilder().Build(sceneDocument, scenePackage, CancellationToken.None), "exclusive: scene build from prebuilt package and document (pptx only)");
     }
 
     System.Collections.Generic.IReadOnlyList<Lokad.OoxPdf.Pdf.PdfPage> pages;
     object renderMetrics;
+    string renderScope;
     {
         OoxPackage renderPackage = BuildPackage();
         if (isDocx)
         {
             DocxDocument renderDocument = new DocxReader().Read(renderPackage, diagnosticSink: null, CancellationToken.None, markupMode);
-            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: null, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None));
+            renderScope = "exclusive: layout and emission from prebuilt package and document";
+            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: null, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None), renderScope);
         }
         else
         {
             PptxDocument renderDocument = new PptxReader().Read(renderPackage, CancellationToken.None);
-            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: null).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None));
+            renderScope = "INCLUSIVE: PptxRenderer.RenderPages rebuilds the scene internally; package and document prerequisites are prebuilt";
+            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: null).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None), renderScope);
         }
     }
 
@@ -238,13 +407,13 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         using var output = new MemoryStream();
         Lokad.OoxPdf.Pdf.PdfDocumentWriter.WriteBlank(output, pages, CancellationToken.None, creationDate: null);
         return output.ToArray();
-    });
+    }, "exclusive: PDF serialization of prebuilt pages into a memory buffer");
     string stagedSha = Convert.ToHexString(SHA256.HashData(stagedBytes)).ToLowerInvariant();
 
     return new
     {
         stageSet = isDocx ? "open/read/render/write" : "open/read/scene/render/write",
-        stageOrderNote = "Stages run after whole-pipeline cold+warm; each stage rebuilds prerequisites unmeasured. Static caches are warm.",
+        stageOrderNote = "Stages run after whole-pipeline cold+warm; each stage rebuilds prerequisites unmeasured. Static caches are warm. PPTX render is inclusive of a scene rebuild; subtract scene.allocatedBytes for an approximate exclusive render figure.",
         open = openMetrics,
         read = readMetrics,
         scene = sceneMetrics,
@@ -255,42 +424,95 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
     };
 }
 
-static object MeasureOnce(byte[] inputBytes, OoxPdfOptions options, bool recordOutput, List<string> outputShas, List<int> outputLengths, List<int> pageCounts)
+// PLAN Q05: the timer and allocation counters stop before output verification
+// (hashing, page-count decoding) so verification work is never attributed to the
+// conversion. retainedDeltaBytes is the post-full-GC heap delta against a pre-run
+// baseline with the output released, i.e. surviving caches rather than live output.
+static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] inputBytes, OoxPdfOptions options, string inputExtension, string outputMode, bool recordOutput)
 {
-    GC.Collect();
-    GC.WaitForPendingFinalizers();
-    GC.Collect();
-    long startAllocated = GC.GetAllocatedBytesForCurrentThread();
-    int startGen0 = GC.CollectionCount(0);
-    int startGen1 = GC.CollectionCount(1);
-    int startGen2 = GC.CollectionCount(2);
-    var watch = Stopwatch.StartNew();
-    byte[] outputBytes;
-    using (var input = new MemoryStream(inputBytes, writable: false))
-    using (var output = new MemoryStream())
+    string? stageDirectory = null;
+    string? fileInput = null;
+    string? fileOutput = null;
+    if (outputMode == "file")
     {
-        OoxPdfConverter.Convert(input, output, options);
-        outputBytes = output.ToArray();
+        stageDirectory = Path.Combine(Path.GetTempPath(), "allocprobe-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(stageDirectory);
+        fileInput = Path.Combine(stageDirectory, "input" + inputExtension);
+        fileOutput = Path.Combine(stageDirectory, "output.pdf");
+        File.WriteAllBytes(fileInput, inputBytes);
     }
 
-    watch.Stop();
-    long retainedBytes = GC.GetTotalMemory(forceFullCollection: false);
-    if (recordOutput)
+    try
     {
-        outputShas.Add(Convert.ToHexString(SHA256.HashData(outputBytes)).ToLowerInvariant());
-        outputLengths.Add(outputBytes.Length);
-        pageCounts.Add(ReadPageCount(outputBytes));
-    }
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long baselineRetained = GC.GetTotalMemory(forceFullCollection: false);
+        long startAllocated = GC.GetAllocatedBytesForCurrentThread();
+        int startGen0 = GC.CollectionCount(0);
+        int startGen1 = GC.CollectionCount(1);
+        int startGen2 = GC.CollectionCount(2);
+        var watch = Stopwatch.StartNew();
+        byte[]? bufferedOutput = outputMode == "file"
+            ? null
+            : ConvertToBuffer(inputBytes, options);
+        if (outputMode == "file")
+        {
+            ConvertToFile(fileInput!, fileOutput!, options);
+        }
 
-    return new
+        watch.Stop();
+        long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - startAllocated;
+        int gen0 = GC.CollectionCount(0) - startGen0;
+        int gen1 = GC.CollectionCount(1) - startGen1;
+        int gen2 = GC.CollectionCount(2) - startGen2;
+
+        // Verification runs outside the counters: hashing and page-count decoding
+        // previously inflated the attributed conversion allocation.
+        byte[] outputBytes = bufferedOutput ?? File.ReadAllBytes(fileOutput!);
+        string sha = recordOutput ? Convert.ToHexString(SHA256.HashData(outputBytes)).ToLowerInvariant() : string.Empty;
+        int pages = recordOutput ? ReadPageCount(outputBytes) : 0;
+        int length = outputBytes.Length;
+        bufferedOutput = null;
+        outputBytes = null!;
+        long retainedDeltaBytes = RetainedAfterFullGc() - baselineRetained;
+
+        object metrics = new
+        {
+            outputMode,
+            allocatedBytes,
+            gen0Collections = gen0,
+            gen1Collections = gen1,
+            gen2Collections = gen2,
+            elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
+            retainedDeltaBytes,
+        };
+        return (metrics, sha, length, pages);
+    }
+    finally
     {
-        allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - startAllocated,
-        gen0Collections = GC.CollectionCount(0) - startGen0,
-        gen1Collections = GC.CollectionCount(1) - startGen1,
-        gen2Collections = GC.CollectionCount(2) - startGen2,
-        elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
-        retainedBytes,
-    };
+        if (stageDirectory is not null)
+        {
+            try { Directory.Delete(stageDirectory, recursive: true); } catch (IOException) { }
+        }
+    }
+}
+
+// NoInlining scopes the conversion's short-lived buffers so the post-run full GC
+// can actually release them and retainedDeltaBytes reflects surviving ownership.
+[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+static byte[] ConvertToBuffer(byte[] inputBytes, OoxPdfOptions options)
+{
+    using var input = new MemoryStream(inputBytes, writable: false);
+    using var output = new MemoryStream();
+    OoxPdfConverter.Convert(input, output, options);
+    return output.ToArray();
+}
+
+[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+static void ConvertToFile(string inputPath, string outputPath, OoxPdfOptions options)
+{
+    OoxPdfConverter.Convert(inputPath, outputPath, options);
 }
 
 static int ReadPageCount(byte[] pdfBytes)
@@ -312,7 +534,7 @@ static int RunSelfTest()
     {
         try
         {
-            dynamic report = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: false);
+            dynamic report = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer");
             bool stable = report.outputStable;
             int pages = report.pageCount;
             int bytes = report.outputBytes;
@@ -329,7 +551,42 @@ static int RunSelfTest()
         }
     }
 
+    // PLAN Q05: a deliberately allocating fake stage validates attribution: phase
+    // counters must capture the planted allocation (no under-count from misplaced
+    // boundaries) without wild over-count.
+    try
+    {
+        const int planted = 8 * 1024 * 1024;
+        (_, object first) = MeasureStep(() => PlantAllocation(planted), "self-test fake stage");
+        (_, object second) = MeasureStep(() => PlantAllocation(planted), "self-test fake stage");
+        long firstBytes = ((dynamic)first).allocatedBytes;
+        long secondBytes = ((dynamic)second).allocatedBytes;
+        Console.WriteLine($"self-test attribution: first={firstBytes} second={secondBytes} planted={planted}");
+        if (firstBytes < planted || secondBytes < planted || firstBytes > planted + 16L * 1024 * 1024 || Math.Abs(firstBytes - secondBytes) > 4L * 1024 * 1024)
+        {
+            Console.WriteLine("FAIL self-test attribution: planted allocation not attributed within tolerance.");
+            ok = false;
+        }
+        else
+        {
+            Console.WriteLine("PASS self-test attribution.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"FAIL self-test attribution: {ex.GetType().Name}: {ex.Message}");
+        ok = false;
+    }
+
     return ok ? 0 : 1;
+}
+
+[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+static int PlantAllocation(int bytes)
+{
+    var planted = new byte[bytes];
+    planted[bytes - 1] = 1;
+    return planted[bytes - 1];
 }
 
 static byte[] BuildMinimalPptx()
