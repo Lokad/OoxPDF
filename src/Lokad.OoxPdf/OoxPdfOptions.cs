@@ -41,6 +41,24 @@ public sealed class OoxPdfOptions
 
     public Action<OoxPdfDiagnostic>? DiagnosticSink { get; init; }
 
+    /// <summary>
+    /// Cumulative per-conversion work budgets (PLAN Q01). When null, generous
+    /// built-in defaults apply (see <see cref="OoxConversionLimits"/>). Set tighter
+    /// values to enforce a shared-process memory/work limit; budget crossings fail
+    /// with <see cref="OoxPdfLimitExceededException"/> before further expansion and
+    /// never produce a partial PDF.
+    /// </summary>
+    public OoxConversionLimits? ConversionLimits { get; init; }
+
+    /// <summary>
+    /// When true, a successful conversion emits one informational
+    /// CONVERSION_RESOURCE_SUMMARY diagnostic reporting cumulative work counters
+    /// (pages, chart cells, table fragments, images, font operations) so hosts can
+    /// account concurrent conversions. Informational diagnostics never affect CLI
+    /// strict exit codes. Disabled by default.
+    /// </summary>
+    public bool ReportResourceUsage { get; init; }
+
 
     internal void Validate()
     {
@@ -58,5 +76,7 @@ public sealed class OoxPdfOptions
         {
             throw new ArgumentOutOfRangeException(nameof(DocxMarkupGeometryMode), "Unsupported DOCX markup geometry mode.");
         }
+
+        ConversionLimits?.Validate();
     }
 }

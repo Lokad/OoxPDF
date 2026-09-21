@@ -644,6 +644,147 @@ internal static class PublicApiTests
         });
     }
 
+    public static void ConvertObservesCancellationAfterWorkBegins()
+    {
+        // Q08: the token is cancelled by the font source during conversion work, not
+        // before Convert is called. The conversion must still fail fast with no PDF.
+        string input = WriteMinimalDocx("<w:p><w:r><w:t>mid-work cancel</w:t></w:r></w:p>");
+        string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
+        using var cancellation = new CancellationTokenSource();
+        var source = new CancellingFontProgramSource(cancellation);
+
+        TestAssert.Throws<OperationCanceledException>(
+            () => OoxPdfConverter.Convert(
+                input,
+                output,
+                new OoxPdfOptions { FontResolver = new ObservingFontResolver(source) },
+                cancellation.Token));
+
+        TestAssert.True(!File.Exists(output), "Mid-work cancellation must not publish a partial PDF.");
+    }
+
+    public static void ConcurrentConversionsSharingOneResolverStayByteIdentical()
+    {
+        // Q08: parallel conversions may share one resolver instance.
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>shared resolver</w:t></w:r></w:p>");
+        var options = new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont()) };
+        byte[][] outputs = new byte[8][];
+        System.Threading.Tasks.Parallel.For(0, outputs.Length, index =>
+        {
+            using var input = new MemoryStream(bytes, writable: false);
+            using var output = new MemoryStream();
+            OoxPdfConverter.Convert(input, output, options);
+            outputs[index] = output.ToArray();
+        });
+
+        for (int i = 1; i < outputs.Length; i++)
+        {
+            TestAssert.True(outputs[0].AsSpan().SequenceEqual(outputs[i]), "Shared-resolver conversions must stay byte-identical.");
+        }
+    }
+
+    public static void DiagnosticCollectorBoundsSamplesWithTotals()
+    {
+        // Q02: retained samples are bounded while occurrence totals keep counting.
+        var collector = new DiagnosticCollector();
+        for (int i = 0; i < DiagnosticCollector.MaxRetainedDiagnostics + 100; i++)
+        {
+            collector.Add(new OoxPdfDiagnostic(
+                "PPTX_NODE_RENDER_FAILED",
+                OoxPdfSeverity.Warning,
+                "node failed",
+                PartName: "slide1",
+                SlideIndex: 1,
+                PageIndex: null,
+                Feature: "Picture",
+                Fallback: "Ignored"));
+        }
+
+        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics, collector.Diagnostics.Count);
+        TestAssert.Equal(100, collector.DroppedCount);
+        TestAssert.Equal(
+            DiagnosticCollector.MaxRetainedDiagnostics + 100,
+            collector.OccurrenceCounts["PPTX_NODE_RENDER_FAILED"]);
+
+        IReadOnlyList<OoxPdfDiagnostic> serialized = collector.DiagnosticsWithOverflow();
+        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics + 1, serialized.Count);
+        TestAssert.Equal("DIAGNOSTIC_OVERFLOW", serialized[^1].Id);
+        TestAssert.Equal(OoxPdfSeverity.Error, serialized[^1].Severity);
+    }
+
+    public static void ConvertPptxObservesCancellationAfterWorkBegins()
+    {
+        // Q01/Q02: cancellation during PPTX conversion work aborts the conversion
+        // instead of becoming node recovery; no partial PDF is published.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:nvPr/></p:nvSpPr>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>cancel me</a:t></a:r></a:p></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+        });
+        string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
+        using var cancellation = new CancellationTokenSource();
+        var source = new CancellingFontProgramSource(cancellation);
+
+        TestAssert.Throws<OperationCanceledException>(
+            () => OoxPdfConverter.Convert(
+                input,
+                output,
+                new OoxPdfOptions { FontResolver = new ObservingFontResolver(source) },
+                cancellation.Token));
+
+        TestAssert.True(!File.Exists(output), "Mid-work PPTX cancellation must not publish a partial PDF.");
+    }
+
+    private sealed class CancellingFontProgramSource(CancellationTokenSource cancellation) : IFontProgramSource
+    {
+        public string StableId => "test:cancelling-font";
+
+        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+        {
+            // Cancel mid-conversion, then observe it on the converter's own token.
+            cancellation.Cancel();
+            ct.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(ReadOnlyMemory<byte>.Empty);
+        }
+    }
+
+    private sealed class FixedFontResolver(byte[] fontBytes) : IFontResolver
+    {
+        private readonly FixedFontSource source = new(fontBytes);
+
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return new FontFaceResolution(
+                request.FamilyName,
+                request.FamilyName,
+                new FontStyleKey(request.Bold, request.Italic, 400, 0, false),
+                source,
+                IsFallback: false);
+        }
+
+        private sealed class FixedFontSource(byte[] bytes) : IFontProgramSource
+        {
+            public string StableId => "test:fixed-font";
+
+            public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+            {
+                return ValueTask.FromResult((ReadOnlyMemory<byte>)bytes);
+            }
+        }
+    }
+
     private sealed class ObservingFontResolver(IFontProgramSource source) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)

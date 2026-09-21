@@ -5,6 +5,31 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf;
 
+/// <summary>
+/// Dependency-free PPTX/DOCX to PDF conversion entry points.
+/// </summary>
+/// <remarks>
+/// <para>Operational contracts for hosting services:</para>
+/// <list type="bullet">
+/// <item>Synchronous and asynchronous overloads perform the same conversion. The Async
+/// variants offload the synchronous pipeline to the thread pool and perform no true
+/// asynchronous I/O; awaiting one yields byte-identical output to the matching sync
+/// overload for the same inputs.</item>
+/// <item>Caller-owned streams are never closed or disposed. Input is read sequentially
+/// and output needs only forward writes; non-seekable host streams are supported.
+/// File outputs publish atomically: any failure, including cancellation, leaves a
+/// pre-existing destination untouched and removes only the staging file.</item>
+/// <item>Cancellation is observed cooperatively at stage boundaries and inside bounded
+/// expansion loops. A cancelled conversion throws <see cref="OperationCanceledException"/>
+/// and never produces a partial PDF.</item>
+/// <item>Resolvers and font sources must be safe for concurrent use. Parallel
+/// conversions may share one resolver instance and observe byte-identical output;
+/// font-program bytes are treated as immutable once published.</item>
+/// <item>Strict affects CLI exit policy, not library refusal to emit a PDF;
+/// Deterministic is accepted for compatibility and output is deterministic by
+/// construction (see <see cref="OoxPdfOptions"/>).</item>
+/// </list>
+/// </remarks>
 public static class OoxPdfConverter
 {
     public static void Convert(string inputPath, string outputPath)
@@ -90,7 +115,16 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
 
         using FileStream input = File.OpenRead(inputPath);
-        IReadOnlyList<PdfPage> pages = RenderPages(input, inputKind, options, cancellationToken);
+        // PLAN Q01: one explicitly scoped conversion budget per Convert call.
+        // Totals are snapshotted before publication; the summary below only
+        // emits after the atomic move succeeds, never for partial output.
+        IReadOnlyList<PdfPage> pages;
+        OoxConversionTotals totals;
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
+        {
+            pages = RenderPages(input, inputKind, options, cancellationToken);
+            totals = scope.Budget.Totals;
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
         string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
@@ -113,6 +147,7 @@ public static class OoxPdfConverter
 
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(stagingPath, outputPath, overwrite: true);
+            ReportResourceUsage(options, totals, pages.Count);
         }
         finally
         {
@@ -167,9 +202,25 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
 
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
-        IReadOnlyList<PdfPage> pages = RenderPages(input, inputKind, options, cancellationToken);
+        IReadOnlyList<PdfPage> pages;
+        OoxConversionTotals totals;
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
+        {
+            pages = RenderPages(input, inputKind, options, cancellationToken);
+            totals = scope.Budget.Totals;
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+        ReportResourceUsage(options, totals, pages.Count);
+    }
+
+    private static void ReportResourceUsage(OoxPdfOptions options, OoxConversionTotals totals, int pageCount)
+    {
+        if (options.ReportResourceUsage)
+        {
+            options.DiagnosticSink?.Invoke(totals.ToSummaryDiagnostic(pageCount));
+        }
     }
 
     private static IReadOnlyList<PdfPage> RenderPages(Stream input, OoxPdfInputKind inputKind, OoxPdfOptions options, CancellationToken cancellationToken)

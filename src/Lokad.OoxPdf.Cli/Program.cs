@@ -92,6 +92,12 @@ static int Run(string[] args)
             return 2;
         }
 
+        if (diagnosticsPath is not null && (AreSamePath(diagnosticsPath, inputPath) || AreSamePath(diagnosticsPath, outputPath)))
+        {
+            Console.Error.WriteLine("Diagnostics output path must be different from input and output paths.");
+            return 2;
+        }
+
         OoxPdfConverter.Convert(inputPath, outputPath, new OoxPdfOptions
         {
             Strict = strict,
@@ -100,13 +106,28 @@ static int Run(string[] args)
             DiagnosticSink = collector.Add
         });
 
-        WriteDiagnostics(diagnosticsPath, collector.Diagnostics);
+        try
+        {
+            WriteDiagnostics(diagnosticsPath, collector.DiagnosticsWithOverflow());
+        }
+        catch (Exception diagEx) when (diagEx is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            Console.Error.WriteLine(diagEx.Message);
+            return 1;
+        }
         return strict && collector.HasWarningsOrErrors ? 3 : 0;
     }
-    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or FormatException or OverflowException or InvalidDataException)
     {
         collector.Add(new OoxPdfDiagnostic("OOXML_CONVERSION_FAILED", OoxPdfSeverity.Error, ex.Message, PartName: null, SlideIndex: null, PageIndex: null, Feature: null, Fallback: null));
-        WriteDiagnostics(diagnosticsPath, collector.Diagnostics);
+        try
+        {
+            WriteDiagnostics(diagnosticsPath, collector.DiagnosticsWithOverflow());
+        }
+        catch (Exception diagEx) when (diagEx is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            Console.Error.WriteLine(diagEx.Message);
+        }
         Console.Error.WriteLine(ex.Message);
         return 1;
     }
@@ -170,6 +191,18 @@ static bool TryParseDocxMarkupGeometryMode(string value, out OoxPdfDocxMarkupGeo
     }
 }
 
+static bool AreSamePath(string first, string second)
+{
+    try
+    {
+        return string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), StringComparison.OrdinalIgnoreCase);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+    {
+        return false;
+    }
+}
+
 static void WriteDiagnostics(string? diagnosticsPath, IReadOnlyList<OoxPdfDiagnostic> diagnostics)
 {
     if (diagnosticsPath is null)
@@ -186,3 +219,8 @@ static void WriteDiagnostics(string? diagnosticsPath, IReadOnlyList<OoxPdfDiagno
     var options = new JsonSerializerOptions { WriteIndented = true };
     File.WriteAllText(diagnosticsPath, JsonSerializer.Serialize(diagnostics, options));
 }
+
+
+
+
+
