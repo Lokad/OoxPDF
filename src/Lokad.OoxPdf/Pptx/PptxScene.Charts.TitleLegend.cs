@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -48,7 +48,7 @@ internal sealed partial class PptxSceneBuilder
                     OverlayValue: string.Empty,
                     default,
                     new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
-                    default,
+                    ReadChartTextBodyProperties(null),
                     default);
         }
 
@@ -96,6 +96,8 @@ internal sealed partial class PptxSceneBuilder
         }
     }
 
+    // D01: absent titles parse through the same body-properties reader as the XML arm,
+    // so the scene and XML interpretations agree on the absent spelling.
     private static PptxSceneChartTitle EmptyChartTitle(bool? IsAutoDeleted, string IsAutoDeletedValue)
     {
         return new PptxSceneChartTitle(
@@ -108,7 +110,7 @@ internal sealed partial class PptxSceneBuilder
             OverlayValue: string.Empty,
             default,
             new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
-            default,
+            ReadChartTextBodyProperties(null),
             default);
     }
 

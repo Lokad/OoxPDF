@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extended the chart options agreement harness to title properties (D01 increment): title text, body properties, text style, and text runs agree between scene and XML arms. The battery found a real divergence where absent titles built scene body properties from `default` (null strings) while the XML arm parses absent as empty strings; absent/auto-generated titles now parse through the shared body-properties reader (downstream consumers are null/empty-agnostic, chart family 57/57 green). Legend absent-paths share the shape and are recorded follow-up.
+
 - Extended the chart options agreement harness to value-axis properties (D01 increment): orientation, major/minor gridlines, units (incl. bogus spellings), number formats, and tick marks agree between scene and XML arms across the battery with no divergences found. Test-only addition; renderer unchanged.
 
 - Extended the chart options agreement harness to series properties (D01 increment): smooth flags, line-hidden detection, series-name records (literal/padded/ref/cache/no-cache, workbook-aware with structural point comparison), and point explosions (series/out-of-range/bogus/per-point, pie plots) agree between scene and XML arms across the batteries with no divergences found. Test-only addition; renderer unchanged.

@@ -209,6 +209,39 @@ internal static class PptxChartPlotOptionsAgreementTests
         return (sceneChart.Axes[0], element);
     }
 
+    public static void TitleOptionsAgreeBetweenSceneAndXml()
+    {
+        // Shape-style arms carry nested reference payloads (list identity never
+        // agrees across arms), so the battery pins text, body properties, text
+        // style, and text runs; style equality is covered by renderer families.
+        string[] titles = new[]
+        {
+            "",
+            "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Sales</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val=\"0\"/></c:title>",
+            "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr b=\"1\" sz=\"1400\"/><a:t>Q1 </a:t></a:r><a:r><a:rPr i=\"1\"/><a:t>rev</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val=\"1\"/></c:title>",
+            "<c:title><c:txPr><a:bodyPr rot=\"5400000\"/></c:txPr><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Spun</a:t></a:r></a:p></c:rich></c:tx><c:layout/></c:title>",
+        };
+        foreach (string title in titles)
+        {
+            string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", title);
+            PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
+            TestAssert.NotNull(sceneChart);
+            XDocument xmlDoc = XDocument.Parse(xml);
+            object? xmlText = Invoke("ReadSceneOrXmlChartTitleText", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
+            object? sceneText = Invoke("ReadSceneOrXmlChartTitleText", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
+            TestAssert.True(Equals(xmlText, sceneText), "Title text must agree for: " + title);
+            object? xmlBody = Invoke("ReadSceneOrXmlChartTitleTextBodyProperties", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
+            object? sceneBody = Invoke("ReadSceneOrXmlChartTitleTextBodyProperties", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
+            TestAssert.True(Equals(xmlBody, sceneBody), "Title body properties must agree for: " + title);
+            object? xmlStyle = Invoke("ReadSceneOrXmlChartTitleTextStyle", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument), typeof(bool) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc, false });
+            object? sceneStyle = Invoke("ReadSceneOrXmlChartTitleTextStyle", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument), typeof(bool) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc, false });
+            TestAssert.True(Equals(xmlStyle, sceneStyle), "Title text style must agree for: " + title);
+            object? xmlRuns = Invoke("ReadSceneOrXmlChartTitleTextRuns", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc });
+            object? sceneRuns = Invoke("ReadSceneOrXmlChartTitleTextRuns", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc });
+            TestAssert.True(SequenceEqual(xmlRuns, sceneRuns), "Title text runs must agree for: " + title);
+        }
+    }
+
     public static void ChartLevelOptionsAgreeBetweenSceneAndXml()
     {
         string[] blanks = new[] { "<c:dispBlanksAs val=\"span\"/>", "<c:dispBlanksAs val=\"zero\"/>", "<c:dispBlanksAs val=\"bogus\"/>", "" };
