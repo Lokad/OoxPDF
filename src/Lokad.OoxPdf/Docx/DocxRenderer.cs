@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -893,6 +893,7 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
+                cancellationToken,
                 ref imageIndex,
                 layoutPage.Height);
             RenderFloatingDrawings(
@@ -906,6 +907,7 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
+                cancellationToken,
                 ref imageIndex,
                 layoutPage.Height);
 
@@ -916,7 +918,7 @@ internal sealed partial class DocxRenderer
                 DocxLayoutItem staticItem = staticItems[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? staticItems[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < staticItems.Count ? staticItems[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
+                RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, ref imageIndex);
             }
 
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
@@ -925,10 +927,10 @@ internal sealed partial class DocxRenderer
                 DocxLayoutItem item = layoutPage.Items[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageIndex + 1, layout.Pages.Count, ref imageIndex);
+                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageIndex + 1, layout.Pages.Count, cancellationToken, ref imageIndex);
             }
 
-            RenderWordCompatibleRevisionBar(layout, layoutPage, pageIndex, graphics, markupContext);
+            RenderWordCompatibleRevisionBar(layout, layoutPage, pageIndex, graphics, markupContext, cancellationToken);
             RenderMarkupBalloons(
                 layoutPage,
                 layout.RelatedStories,
@@ -936,14 +938,15 @@ internal sealed partial class DocxRenderer
                 graphics,
                 fontResources,
                 markupContext,
-                balloonTextResource);
+                balloonTextResource,
+                cancellationToken);
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, ref imageIndex, layoutPage.Height);
-                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, ref imageIndex);
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, ref imageIndex, layoutPage.Height);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, ref imageIndex, layoutPage.Height);
+                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, ref imageIndex);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, ref imageIndex, layoutPage.Height);
             }
 
             RenderFloatingDrawings(
@@ -957,6 +960,7 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
+                cancellationToken,
                 ref imageIndex,
                 layoutPage.Height);
             RenderFloatingDrawings(
@@ -970,6 +974,7 @@ internal sealed partial class DocxRenderer
                 pageNumber,
                 layout.Pages.Count,
                 diagnosticSink,
+                cancellationToken,
                 ref imageIndex,
                 layoutPage.Height);
 
@@ -1005,7 +1010,7 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
 
-                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile)
+                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken)
                         .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
                         .ToArray();
                     if (segments.Count == 0)
@@ -1052,7 +1057,7 @@ internal sealed partial class DocxRenderer
                 }
 
                 IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
-                foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile))
+                foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)
@@ -1183,23 +1188,26 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageNumber,
         int pageCount,
+        CancellationToken cancellationToken,
         ref int imageIndex)
     {
+        // PLAN Q01: emission helpers observe the conversion token so a
+        // cancelled conversion fails fast inside large pages, not just between them.
         switch (item)
         {
             case DocxTextLineLayout textLine:
-                RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount);
+                RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken);
                 break;
             case DocxInlineImageLayout image:
                 double imageXOffset = ResolveTextEmissionXOffset(markupContext);
                 double imageYOffset = ResolveTextEmissionBaselineOffset(markupContext);
-                RenderInlineImage(imageXOffset == 0d && imageYOffset == 0d ? image : image with { X = image.X + imageXOffset, Y = image.Y - imageYOffset }, graphics, pageImages, diagnosticSink, ref imageIndex);
+                RenderInlineImage(imageXOffset == 0d && imageYOffset == 0d ? image : image with { X = image.X + imageXOffset, Y = image.Y - imageYOffset }, graphics, pageImages, diagnosticSink, cancellationToken, ref imageIndex);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
                 break;
             case DocxInlineTextBoxLayout textBox:
-                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
                 break;
         }
     }

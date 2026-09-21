@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -135,7 +135,8 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
-        DocxRunFontResource? balloonTextResource)
+        DocxRunFontResource? balloonTextResource,
+        CancellationToken cancellationToken)
     {
         DocxRunFontResource? labelResource = balloonTextResource ?? ResolveMarkupLabelFontResource(fontResources);
         if (labelResource is null)
@@ -146,6 +147,7 @@ internal sealed partial class DocxRenderer
         DocxRunFontResource bodyResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
         foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, labelResource.Embedded, bodyResource.Embedded))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             RenderMarkupBalloonPlacement(placement, graphics, labelResource, bodyResource, markupContext);
         }
     }

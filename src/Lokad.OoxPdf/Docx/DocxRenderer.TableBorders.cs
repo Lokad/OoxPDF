@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -19,10 +19,12 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout row,
         DocxTableRowLayout? previousRow,
         DocxTableRowLayout? nextRow,
-        PdfGraphicsBuilder graphics)
+        PdfGraphicsBuilder graphics,
+        CancellationToken cancellationToken)
     {
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
             if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
             {
@@ -61,7 +63,7 @@ internal sealed partial class DocxRenderer
 
         if (nextRow is not null && nextRow.RowIndex != row.RowIndex)
         {
-            RenderSharedHorizontalTableBorders(row, nextRow, graphics);
+            RenderSharedHorizontalTableBorders(row, nextRow, graphics, cancellationToken);
         }
     }
 
@@ -78,10 +80,12 @@ internal sealed partial class DocxRenderer
     private static void RenderSharedHorizontalTableBorders(
         DocxTableRowLayout row,
         DocxTableRowLayout nextRow,
-        PdfGraphicsBuilder graphics)
+        PdfGraphicsBuilder graphics,
+        CancellationToken cancellationToken)
     {
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow: null))
             {
                 continue;

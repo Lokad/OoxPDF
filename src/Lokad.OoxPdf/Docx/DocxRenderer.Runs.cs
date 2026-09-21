@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -678,13 +678,13 @@ internal sealed partial class DocxRenderer
             (byte)Math.Round(source.Blue * sourceWeight + target.Blue * clampedTargetWeight));
     }
 
-    private static PdfImageXObject? CreateImage(DocxInlineImage image, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex)
+    private static PdfImageXObject? CreateImage(DocxInlineImage image, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, CancellationToken cancellationToken)
     {
         // D02: shared content-image dispatch (unknown types throw with the same
         // message the explicit branch below used to emit); diagnostics stay local.
         try
         {
-            return OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb);
+            return OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {

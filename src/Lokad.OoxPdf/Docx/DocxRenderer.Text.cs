@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -90,9 +90,11 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
         ref int imageIndex)
     {
-        PdfImageXObject? xObject = CreateImage(image.Image, diagnosticSink, image.PageIndex);
+        cancellationToken.ThrowIfCancellationRequested();
+        PdfImageXObject? xObject = CreateImage(image.Image, diagnosticSink, image.PageIndex, cancellationToken);
         if (xObject is null)
         {
             return;
@@ -106,7 +108,8 @@ internal sealed partial class DocxRenderer
     private static void AddEmissionSegmentWithFontFallback(
         List<DocxTextEmissionSegment> emissionSegments,
         DocxTextEmissionSegment segment,
-        DocxFontResources fontResources)
+        DocxFontResources fontResources,
+        CancellationToken cancellationToken)
     {
         if (segment.IsTerminalLineSpace ||
             string.IsNullOrEmpty(segment.Text) ||
@@ -123,7 +126,7 @@ internal sealed partial class DocxRenderer
             fonts[i] = chain[i].Font;
         }
 
-        IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage(segment.Text, fonts, CancellationToken.None);
+        IReadOnlyList<FontCoverageSpan> spans = FontCoverageFallback.SplitByCoverage(segment.Text, fonts, cancellationToken);
         bool needsFallback = false;
         foreach (FontCoverageSpan span in spans)
         {
@@ -192,7 +195,8 @@ internal sealed partial class DocxRenderer
         double baselineOffsetY,
         double xOffset,
         bool suppressCommentReferenceSpacer,
-        bool useWordCompatibleTextProfile)
+        bool useWordCompatibleTextProfile,
+        CancellationToken cancellationToken = default)
     {
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
             ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text)]
@@ -201,6 +205,7 @@ internal sealed partial class DocxRenderer
         double substitutedFieldXAdjustment = 0d;
         foreach (DocxTextSegmentLayout segment in segments)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
             if (resource is null)
             {
@@ -258,7 +263,7 @@ internal sealed partial class DocxRenderer
                     IsTerminalLineSpace: false,
                     segment.SourceTextRunIndex,
                     currentPartSourceTextOffset,
-                    segment.Role), fontResources);
+                    segment.Role), fontResources, cancellationToken);
                 substitutedFieldXAdjustment += emittedWidth - part.Width;
             }
         }
@@ -292,7 +297,7 @@ internal sealed partial class DocxRenderer
                 segment.StyleRun,
                 resource,
                 ReadColor(effective.ColorHex),
-                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile),
+                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile, cancellationToken),
                 baselineY,
                 0d,
                 fontSize,
@@ -342,7 +347,7 @@ internal sealed partial class DocxRenderer
                 segment.StyleRun,
                 resource,
                 color,
-                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile),
+                ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile, cancellationToken),
                 baselineY,
                 0d,
                 fontSize,
@@ -529,7 +534,8 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         double fontScale,
         double xOffset,
-        bool useWordCompatibleTextProfile)
+        bool useWordCompatibleTextProfile,
+        CancellationToken cancellationToken)
     {
         if (segments.Count == 0)
         {
@@ -548,7 +554,8 @@ internal sealed partial class DocxRenderer
             fontResources,
             fontScale,
             xOffset,
-            useWordCompatibleTextProfile);
+            useWordCompatibleTextProfile,
+            cancellationToken);
         return emittedEndX ?? terminalSegment.X + terminalSegment.Width + xOffset;
     }
 
@@ -558,11 +565,13 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         double fontScale,
         double xOffset,
-        bool useWordCompatibleTextProfile)
+        bool useWordCompatibleTextProfile,
+        CancellationToken cancellationToken)
     {
         double emittedEndX = double.NegativeInfinity;
         foreach (DocxTextSegmentLayout segment in segments)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
             if (resource is null)
             {
@@ -622,7 +631,8 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         int pageNumber,
-        int pageCount)
+        int pageCount,
+        CancellationToken cancellationToken)
     {
         RenderMarkupIndicators(line, graphics, fontResources, markupContext);
         foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(
@@ -634,8 +644,9 @@ internal sealed partial class DocxRenderer
             ResolveTextEmissionBaselineOffset(markupContext),
             ResolveTextEmissionXOffset(markupContext),
             ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext),
-            UsesWordCompatibleAllMarkupTextProfile(markupContext)))
+            UsesWordCompatibleAllMarkupTextProfile(markupContext), cancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             RenderTextEmissionSegment(segment, graphics, markupContext);
         }
     }

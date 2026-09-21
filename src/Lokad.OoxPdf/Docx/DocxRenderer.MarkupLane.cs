@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -58,7 +58,8 @@ internal sealed partial class DocxRenderer
         DocxLayoutPage page,
         int pageIndex,
         PdfGraphicsBuilder graphics,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        CancellationToken cancellationToken)
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(markupContext) ||
             !markupContext.DrawsChangeBars)
@@ -76,6 +77,7 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex, markupContext, page.Height))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!HasTextLineRevision(line))
             {
                 continue;
@@ -90,6 +92,7 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, EnumeratePageFloatingDrawings(layout, pageIndex).ToArray()))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!HasTableRowRevision(row))
             {
                 continue;

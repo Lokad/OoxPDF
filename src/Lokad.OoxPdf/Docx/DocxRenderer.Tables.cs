@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -24,6 +24,7 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageNumber,
         int pageCount,
+        CancellationToken cancellationToken,
         ref int imageIndex)
     {
         // Office A/B (comment-table and w6-celltuckborders probes, Word-COM rendered):
@@ -37,6 +38,7 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout? geometryNextRow = nextRow is null || (geometryXOffset == 0d && geometryYOffset == 0d) ? nextRow : ShiftTableRowGeometry(nextRow, geometryXOffset, geometryYOffset);
         foreach (DocxTableCellLayout cellLayout in geometryRow.Cells)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!ShouldRenderTableCellVisualFragment(cellLayout, geometryPreviousRow))
             {
                 continue;
@@ -46,12 +48,13 @@ internal sealed partial class DocxRenderer
             RenderShadingFill(cell.FillHex, cell.ShadingValue, cell.ShadingColor, graphics, cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
         }
 
-        RenderTableRowBorders(geometryRow, geometryPreviousRow, geometryNextRow, graphics);
-        RenderTableBorderJunctions(geometryRow, geometryPreviousRow, geometryNextRow, graphics);
+        RenderTableRowBorders(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken);
+        RenderTableBorderJunctions(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken);
         RenderTableRowMarkupIndicators(row, graphics, markupContext);
 
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
             if (!ShouldRenderTableCellContentFragment(cellLayout, previousRow))
             {
@@ -65,17 +68,18 @@ internal sealed partial class DocxRenderer
                 graphics.ClipRectangle(geometryCell.X, geometryCell.Y, geometryCell.Width, geometryCell.Height);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
-                    RenderTextLine(line, graphics, fontResources, markupContext, pageNumber, pageCount);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    RenderTextLine(line, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken);
                 }
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
-                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image with { X = image.X + geometryXOffset, Y = image.Y - geometryYOffset }, graphics, pageImages, diagnosticSink, ref imageIndex);
+                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image with { X = image.X + geometryXOffset, Y = image.Y - geometryYOffset }, graphics, pageImages, diagnosticSink, cancellationToken, ref imageIndex);
                 }
 
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
                 {
-                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
                 }
 
                 for (int nestedRowIndex = 0; nestedRowIndex < cellLayout.NestedRows.Count; nestedRowIndex++)
@@ -94,6 +98,7 @@ internal sealed partial class DocxRenderer
                         diagnosticSink,
                         pageNumber,
                         pageCount,
+                        cancellationToken,
                         ref imageIndex);
                 }
 
@@ -132,9 +137,10 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout row,
         DocxTableRowLayout? previousRow,
         DocxTableRowLayout? nextRow,
-        PdfGraphicsBuilder graphics)
+        PdfGraphicsBuilder graphics,
+        CancellationToken cancellationToken)
     {
-        DocxTableBorderBoundary[] rowBoundaries = ResolveVisibleVerticalBoundaries(row, previousRow);
+        DocxTableBorderBoundary[] rowBoundaries = ResolveVisibleVerticalBoundaries(row, previousRow, cancellationToken);
         if (rowBoundaries.Length == 0)
         {
             return;
@@ -143,6 +149,7 @@ internal sealed partial class DocxRenderer
         var emittedJunctions = new HashSet<(double X, double Y)>();
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
             {
                 continue;
@@ -171,7 +178,7 @@ internal sealed partial class DocxRenderer
 
         if (nextRow is not null && nextRow.RowIndex != row.RowIndex)
         {
-            RenderSharedHorizontalBorderJunctions(row, nextRow, rowBoundaries, graphics, emittedJunctions);
+            RenderSharedHorizontalBorderJunctions(row, nextRow, rowBoundaries, graphics, emittedJunctions, cancellationToken);
         }
     }
 
@@ -213,11 +220,13 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout nextRow,
         IReadOnlyList<DocxTableBorderBoundary> rowBoundaries,
         PdfGraphicsBuilder graphics,
-        HashSet<(double X, double Y)> emittedJunctions)
+        HashSet<(double X, double Y)> emittedJunctions,
+        CancellationToken cancellationToken)
     {
-        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(nextRow, row);
+        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(nextRow, row, cancellationToken);
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow: null))
             {
                 continue;
@@ -312,11 +321,12 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static DocxTableBorderBoundary[] ResolveVisibleVerticalBoundaries(DocxTableRowLayout row, DocxTableRowLayout? previousRow)
+    private static DocxTableBorderBoundary[] ResolveVisibleVerticalBoundaries(DocxTableRowLayout row, DocxTableRowLayout? previousRow, CancellationToken cancellationToken)
     {
         var boundaries = new List<DocxTableBorderBoundary>();
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxTableCellLayout cellLayout = row.Cells[cellIndex];
             if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow))
             {

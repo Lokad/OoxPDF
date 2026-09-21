@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -22,6 +22,7 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageNumber,
         int pageCount,
+        CancellationToken cancellationToken,
         ref int imageIndex)
     {
         if (story.SeparatorY is { } separatorY)
@@ -40,10 +41,11 @@ internal sealed partial class DocxRenderer
             .ToArray();
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
         }
 
         graphics.RestoreState();
@@ -60,6 +62,7 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
         ref int imageIndex,
         double pageHeight)
     {
@@ -67,7 +70,8 @@ internal sealed partial class DocxRenderer
             .Where(drawing => drawing.AnchorPageIndex == pageIndex && IsBehindDocument(drawing.Drawing) == behindDocument)
             .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
         {
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex, pageHeight);
+            cancellationToken.ThrowIfCancellationRequested();
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, ref imageIndex, pageHeight);
         }
     }
 
@@ -81,6 +85,7 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
         ref int imageIndex,
         double pageHeight)
     {
@@ -97,7 +102,8 @@ internal sealed partial class DocxRenderer
         graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex, pageHeight);
+            cancellationToken.ThrowIfCancellationRequested();
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, ref imageIndex, pageHeight);
         }
 
         graphics.RestoreState();
@@ -112,6 +118,7 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
         ref int imageIndex,
         double pageHeight)
     {
@@ -125,7 +132,7 @@ internal sealed partial class DocxRenderer
 
         if (drawing.Drawing.Image is { } image)
         {
-            PdfImageXObject? xObject = CreateImage(image, diagnosticSink, drawing.AnchorPageIndex ?? 0);
+            PdfImageXObject? xObject = CreateImage(image, diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken);
             if (xObject is not null)
             {
                 string imageName = "Im" + imageIndex++;
@@ -136,7 +143,7 @@ internal sealed partial class DocxRenderer
 
         if (drawing.TextBoxLayout is { } textBoxLayout)
         {
-            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, ref imageIndex, pageHeight);
+            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, ref imageIndex, pageHeight);
         }
     }
 
@@ -154,6 +161,7 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
         ref int imageIndex,
         double pageHeight)
     {
@@ -205,10 +213,11 @@ internal sealed partial class DocxRenderer
             .ToArray();
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
         }
 
         graphics.RestoreState();
@@ -223,6 +232,7 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageNumber,
         int pageCount,
+        CancellationToken cancellationToken,
         ref int imageIndex)
     {
         if (box.TextLines.Count == 0 &&
@@ -248,10 +258,11 @@ internal sealed partial class DocxRenderer
             .ToArray();
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, ref imageIndex);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
         }
 
         graphics.RestoreState();

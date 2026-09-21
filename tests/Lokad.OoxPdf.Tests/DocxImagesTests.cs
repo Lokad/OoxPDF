@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
@@ -133,6 +133,75 @@ internal static class DocxImagesTests
         TestAssert.Contains("/Subtype /Image", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
         TestAssert.Contains("/Width 2 /Height 1", pdf);
+    }
+
+    public static void DocxEmissionObservesMidConversionCancellation()
+    {
+        // Q01: cancelling while DOCX emission is underway must fail fast with no
+        // partial PDF. The sink cancels when the mid-document unsupported image
+        // reports during emission; trailing paragraphs guarantee a checkpoint fires.
+        var body = new StringBuilder();
+        for (int i = 0; i < 150; i++)
+        {
+            body.Append("<w:p><w:r><w:t>para ").Append(i).Append("</w:t></w:r></w:p>");
+        }
+
+        body.Append("<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"914400\" cy=\"914400\"/><a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic><pic:blipFill><a:blip r:embed=\"rIdImage1\"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
+        for (int i = 0; i < 150; i++)
+        {
+            body.Append("<w:p><w:r><w:t>tail ").Append(i).Append("</w:t></w:r></w:p>");
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
+                + " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\""
+                + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""
+                + " xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\""
+                + " xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+                + "<w:body>" + body.ToString()
+                + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>"
+                + "</w:body></w:document>"),
+            ["word/media/image1.png"] = TestFixtures.CreateUnsupportedHighBitDepthPng()
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        using var cancellation = new CancellationTokenSource();
+        var options = new OoxPdfOptions
+        {
+            DiagnosticSink = diagnostic =>
+            {
+                if (diagnostic.Id == "IMAGE_UNSUPPORTED_FORMAT")
+                {
+                    cancellation.Cancel();
+                }
+            }
+        };
+        TestAssert.Throws<OperationCanceledException>(
+            () => { OoxPdfConverter.Convert(input, output, options, cancellation.Token); });
+        TestAssert.True(!File.Exists(output), "Mid-emission cancellation must not publish a partial PDF.");
     }
 
     public static void DocxUnsupportedPngImageEmitsDiagnostic()
