@@ -11,10 +11,10 @@
     "data-labels",
     "auto-layout",
     "office-probe",
-    "needs-review"
+    "approximate"
   ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
