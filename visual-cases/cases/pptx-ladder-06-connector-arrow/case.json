@@ -3,13 +3,22 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-connector-arrow.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "connector", "arrow", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "shapes",
+    "connector",
+    "arrow",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "minForegroundRecall": 0.98
+    "minForegroundRecall": 0.999,
+    "maxMeanAbsoluteError": 0.05,
+    "maxChangedPixelRatioAtThreshold16": 0.005
   },
   "allowedUnsupportedFeatures": []
 }

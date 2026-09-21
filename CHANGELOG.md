@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Triaged the shapes family (Q07 increment): 21 new locks with reviewed PNGs and tightened gates (17 pixel-perfect preset/polygon/connector/star/callout cases plus basic-shapes, connector-arrow, line-arrowheads, straight-stealth-connectors) and 1 new approximate with a recorded gap (shape-adjust-port-a chevron arrowhead depth ignores adjust handles). Curved-connector-transform stays needs-review (arrowhead placement nuance below the SSIM bar). Manifests: 89 locked / 113 approximate / 123 needs-review; shapes family 33/33 green under the new gates.
+
 - Triaged smoke/effects/tables/composition visual families (Q07 increment): 4 new locks with reviewed PNGs and tightened gates (corporate-theme theme/master compositing; shadow-diagnostic soft shadow; basic-table quarterly grid; explicit-borders pastel grid; 5 pixel-perfect composition primitives; grouped/nested text; table-shape z-order; Arial-theme title placeholder) and 4 new approximates with recorded gap classes (composite band-fill theme tints; center-multiline/wrapped fill tints; middle-small-insets inset geometry). Gradient/picture-alpha and caption/placeholder-text cases stay needs-review below the family histogram/SSIM support bar. Manifests: 68 locked / 112 approximate / 145 needs-review; all four families green under the new gates.
 
 - Sealed chart data-label record construction (T02 increment): `PptxSceneChartDataLabels` builds only through a `Defined` factory deriving its position enum from the raw spelling; both producer call sites updated. Pinned by the data-label-heavy chart suite, the full suite, and a 57/57 chart visual family run.

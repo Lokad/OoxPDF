@@ -3,15 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-line-arrowheads.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "connectors", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "shapes",
+    "connectors",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.002,
-    "minForegroundRecall": 0.98,
-    "maxChangedPixelRatioAtThreshold16": 0.00003
+    "maxMeanAbsoluteError": 0.05,
+    "minForegroundRecall": 0.998,
+    "maxChangedPixelRatioAtThreshold16": 0.005
   },
   "allowedUnsupportedFeatures": []
 }

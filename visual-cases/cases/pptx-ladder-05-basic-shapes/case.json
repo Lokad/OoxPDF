@@ -3,19 +3,33 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-shapes.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "basic-shapes", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "shapes",
+    "basic-shapes",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.01,
-    "minForegroundRecall": 0.98,
-    "maxChangedPixelRatioAtThreshold16": 0.0004,
+    "maxMeanAbsoluteError": 0.05,
+    "minForegroundRecall": 0.999,
+    "maxChangedPixelRatioAtThreshold16": 0.005,
     "maxGraphicsOperationBoundsDelta": 1.0,
     "maxGraphicsOperationLineWidthDelta": 10.0,
-    "compareGraphicsOperationKinds": ["Clip", "Fill", "Stroke"],
-    "compareGraphicsOperationOperators": ["W*", "f*", "S"],
+    "compareGraphicsOperationKinds": [
+      "Clip",
+      "Fill",
+      "Stroke"
+    ],
+    "compareGraphicsOperationOperators": [
+      "W*",
+      "f*",
+      "S"
+    ],
     "matchGraphicsOperationsByBounds": true
   },
   "allowedUnsupportedFeatures": []

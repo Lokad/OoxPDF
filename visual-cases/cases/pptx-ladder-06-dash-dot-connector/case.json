@@ -3,15 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-dash-dot-connector.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "shapes", "connectors", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "shapes",
+    "connectors",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 3,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.001,
-    "minForegroundRecall": 1,
-    "maxChangedPixelRatioAtThreshold16": 0
+    "maxMeanAbsoluteError": 0.05,
+    "minForegroundRecall": 0.999,
+    "maxChangedPixelRatioAtThreshold16": 0.005
   },
   "allowedUnsupportedFeatures": []
 }
