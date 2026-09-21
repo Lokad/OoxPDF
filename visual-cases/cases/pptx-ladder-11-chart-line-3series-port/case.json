@@ -3,7 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-3series-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "line-chart", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "line-chart",
+    "pptx-renderer-port",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,

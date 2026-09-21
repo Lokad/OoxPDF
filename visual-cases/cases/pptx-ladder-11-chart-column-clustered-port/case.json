@@ -3,20 +3,34 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-clustered-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "column-chart", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "column-chart",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 16.4,
-    "minForegroundRecall": 0.97,
-    "maxChangedPixelRatioAtThreshold16": 0.220,
+    "maxMeanAbsoluteError": 0.75,
+    "minForegroundRecall": 0.995,
+    "maxChangedPixelRatioAtThreshold16": 0.015,
     "maxChartGraphicsStructureBoundsDelta": 1,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "PlotAreaClipBoxCandidate"],
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "HorizontalGridlineGroupCandidate",
+      "PlotAreaClipBoxCandidate"
+    ],
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "ValueAxisTickLabel"
+    ],
     "maxChartTextStructurePositionDeltaByKind": {
       "CategoryAxisTickLabel": 0.1,
       "ValueAxisTickLabel": 0.1

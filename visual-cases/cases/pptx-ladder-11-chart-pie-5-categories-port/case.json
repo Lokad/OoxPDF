@@ -3,9 +3,16 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-5-categories-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "pie-chart", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "pie-chart",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,

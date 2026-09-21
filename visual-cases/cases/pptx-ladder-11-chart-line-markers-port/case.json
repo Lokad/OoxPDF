@@ -3,7 +3,15 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-markers-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "line-chart", "markers", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "line-chart",
+    "markers",
+    "pptx-renderer-port",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,

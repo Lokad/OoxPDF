@@ -3,14 +3,22 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-bar-stacked-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "bar-chart", "stacked", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "bar-chart",
+    "stacked",
+    "pptx-renderer-port",
+    "locked"
+  ],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 4,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.25,
-    "minForegroundRecall": 0.97,
+    "minForegroundRecall": 0.99,
     "maxChangedPixelRatioAtThreshold16": 0.005,
     "maxChartGraphicsStructureBoundsDelta": 2.0,
     "compareChartGraphicsStructureKinds": [
@@ -21,7 +29,10 @@
       "VerticalLine"
     ],
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "ValueAxisTickLabel"
+    ],
     "maxChartTextStructurePositionDeltaByKind": {
       "CategoryAxisTickLabel": 0.2,
       "ValueAxisTickLabel": 0.3

@@ -56,6 +56,47 @@ Pixel metrics are advisory. Office and PDFium can differ in antialiasing, font h
 
 Do not commit generated visual artifacts unless they are intentionally small fixtures.
 
+## Family Parity Targets (Q07 triage, 2026-09-22)
+
+Each family has an explicit target classification so needs-review triage has a
+destination. Counts below are the 2026-09-22 manifest state (53 locked, 8
+locked-text-ops, 107 approximate, 165 needs-review across 333 cases).
+
+| Family | Cases | Target | Rationale |
+|---|---|---|---|
+| pptx-images | 13 / 0 / 1 / 0 | Locked except known-approx effects | Pixel-faithful embedding; effectively there |
+| pptx-charts | 4 / 0 / 2 / 51 | Tier-1 ports lock; Tier-2 approximate; polar tripwires stay needs-review | Matches the Tier-1/Tier-2 split in Capabilities.md; Tier-1 locks landing since 2026-09-22 |
+| pptx-typography | 12 / 8 / 51 / 22 | Approximate by default; exact ports lock | Font-metric approximations are structural; text-ops locks pin emission |
+| pptx-tables | 7 / 0 / 1 / 7 | Mixed; first-pass built-ins lock, rich styles approximate | Per Capabilities table-style scope |
+| pptx-shapes | 0 / 0 / 10 / 23 | Approximate; small preset geometry only | Preset-geometry scope in Capabilities.md |
+| pptx-composition | 1 / 0 / 1 / 11 | Mixed; master/layout inheritance locks case by case | Triage ongoing |
+| pptx-effects | 4 / 0 / 2 / 3 | Approximate; shadows/gradients/transparency unsupported | Unsupported-effects scope in Capabilities.md |
+| pptx-smoke | 5 / 0 / 0 / 1 | Locked | Blank/size discovery must stay exact |
+| docx-layout | 9 / 0 / 40 / 44 | Mixed; greedy-wrap approximations stay approximate | Latin greedy wrapping scope in Capabilities.md |
+| docx-markup | (gated via reference cache) | Approximate with margin modes tracked | Reference-cache workflow below |
+
+Columns are locked / locked-text-ops / approximate / needs-review.
+
+### Lock policy
+
+- New locks require a reviewed agent rating of 4 or 5, tight pixel gates at
+  roughly 2-3x observed headroom (MAE, changed-pixel ratio, foreground recall),
+  empty diagnostics where the manifest demands it, and passing family support
+  gates (SSIM/histogram correlation where the family defines them).
+- The 2026-09-21 corpus predates this bar (uniform rating 3, recall thresholds
+  often absent); those locks are grandfathered because their pixel gates do the
+  real work. A 2026-09-22 audit confirmed all 59 then-locked cases reference
+  committed inputs.
+- Promotions in this round: `pptx-ladder-11-chart-bar-clustered-port`,
+  `pptx-ladder-11-chart-pie-5-categories-port`,
+  `pptx-ladder-11-chart-column-clustered-port`, and
+  `pptx-ladder-11-chart-bar-stacked-port` to locked (indistinguishable renders,
+  all metrics tight including family gates, empty diagnostics);
+  `pptx-ladder-11-chart-line-markers-port` to approximate (marker-fill shade
+  gap from the documented 0.975x unstyled-series approximation; fails family
+  histogram correlation at 0.77); `pptx-ladder-11-chart-line-3series-port` to
+  approximate (same unstyled-series shade family, no markers; histcorr 0.79).
+
 ## Cached DOCX Markup References
 
 DOCX markup parity work uses cache-only reference comparisons so autonomous runs do not launch Word or COM. Generate a reference request for the public DOCX markup cases:

@@ -29,7 +29,7 @@ Supported:
 Partial or approximated:
 
 - Text boxes support paragraphs, runs, font size, color, bold, italic, underline, and left, center, or right alignment, with simple Latin greedy wrapping.
-- Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (agreed PLAN.md policy).
+- Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Table rendering honors merges and explicit borders with vertical-anchor approximations, but per-edge border styles, rich table styles beyond the first-pass built-ins, and fine vertical metrics remain approximate.
 - Shape rendering supports only a small preset geometry set.
 - Chart number formats keep invariant separators and English names (locale-specific rules warn instead), and axis labels use chart-side formats rather than linked workbook formats.
@@ -65,7 +65,7 @@ Supported:
 Partial or approximated:
 
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
-- Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (agreed PLAN.md policy).
+- Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Advanced numbering formats, character-unit list indents, and complex bidirectional list layout are approximate.
 - Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
 - Floating drawing wrap effects on nearby body text are still approximate even when anchor placement and exclusion geometry are inspected.
