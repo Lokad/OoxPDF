@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved bar-default-axis-titles and bar-shifted-frame probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (horizontal bars with default axis titles and gridlines; shifted frame geometry matches; SSIM 0.994/0.994, recall 0.983/0.979, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 189 approximate / 19 needs-review.
+
 - Moved plot-layout-outer and dashboard-table-chart probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (bar geometry with plot-box layout; KPI table plus Visits chart with axes, labels and legend; SSIM 0.994/0.989, recall 0.991/0.991, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 187 approximate / 21 needs-review.
 
 - Moved composite-chart port to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (clustered columns across four categories and three series with axes and legend all matching; SSIM 0.993, recall 0.992, histogram correlation 0.999, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 185 approximate / 23 needs-review.

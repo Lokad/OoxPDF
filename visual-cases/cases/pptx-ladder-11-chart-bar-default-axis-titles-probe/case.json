@@ -3,9 +3,9 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-bar-default-axis-titles-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "bar-chart", "axis-title", "default-layout", "office-probe", "needs-review"],
+  "tags": ["pptx", "ladder", "chart", "bar-chart", "axis-title", "default-layout", "office-probe", "approximate"],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
