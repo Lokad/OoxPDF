@@ -133,6 +133,82 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
+    public static void AxisOptionsAgreeBetweenSceneAndXml()
+    {
+        string[] scalings = new[] { "", "<c:scaling><c:orientation val=\"minMax\"/></c:scaling>", "<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>", "<c:scaling><c:orientation val=\"bogus\"/></c:scaling>" };
+        string[] gridlines = new[] { "", "<c:majorGridlines/>", "<c:minorGridlines/>", "<c:majorGridlines/><c:minorGridlines/>" };
+        string[] units = new[] { "", "<c:majorUnit val=\"10\"/>", "<c:minorUnit val=\"5\"/>", "<c:majorUnit val=\"bogus\"/>" };
+        string[] formats = new[] { "", "<c:numFmt formatCode=\"0.0\" sourceLinked=\"1\"/>", "<c:numFmt formatCode=\"General\" sourceLinked=\"0\"/>" };
+        string[] ticks = new[] { "", "<c:majorTickMark val=\"out\"/>", "<c:majorTickMark val=\"bogus\"/>" };
+        foreach (string axisInner in AllAxisForms(scalings, gridlines, units, formats, ticks))
+        {
+            (object? axis, XElement element) = LoadAxis(axisInner);
+            AssertAxisReaderAgrees("ReadSceneOrXmlValueAxisReversed", axis, element, axisInner);
+            AssertAxisReaderAgrees("ReadSceneOrXmlMajorGridlines", axis, element, axisInner);
+            AssertAxisReaderAgrees("ReadSceneOrXmlMinorGridlines", axis, element, axisInner);
+            AssertAxisReaderAgrees("ReadSceneOrXmlChartValueAxisUnits", axis, element, axisInner);
+            AssertAxisReaderAgrees("ReadSceneOrXmlChartAxisMajorTickMark", axis, element, axisInner);
+            AssertAxisReaderAgrees("ReadSceneOrXmlChartAxisNumberFormat", axis, element, axisInner);
+        }
+    }
+
+    private static IEnumerable<string> AllAxisForms(string[] scalings, string[] gridlines, string[] units, string[] formats, string[] ticks)
+    {
+        foreach (string scaling in scalings)
+        {
+            yield return scaling;
+        }
+
+        foreach (string gridline in gridlines)
+        {
+            if (gridline.Length != 0)
+            {
+                yield return gridline;
+            }
+        }
+
+        foreach (string unit in units)
+        {
+            if (unit.Length != 0)
+            {
+                yield return unit;
+            }
+        }
+
+        foreach (string format in formats)
+        {
+            if (format.Length != 0)
+            {
+                yield return format;
+            }
+        }
+
+        foreach (string tick in ticks)
+        {
+            if (tick.Length != 0)
+            {
+                yield return tick;
+            }
+        }
+    }
+
+    private static void AssertAxisReaderAgrees(string name, object? axis, XElement element, string axisInner)
+    {
+        object? xml = Invoke(name, new[] { typeof(PptxSceneChartAxis), typeof(XElement) }, new object?[] { null, element });
+        object? scene = Invoke(name, new[] { typeof(PptxSceneChartAxis), typeof(XElement) }, new object?[] { axis, element });
+        TestAssert.True(Equals(xml, scene), name + " must agree for axis XML: " + axisInner);
+    }
+
+    private static (object? Axis, XElement Element) LoadAxis(string axisInner)
+    {
+        string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart><c:valAx><c:axId val=\"10\"/>" + axisInner + "</c:valAx>", "");
+        PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
+        TestAssert.NotNull(sceneChart);
+        TestAssert.Equal(1, sceneChart.Axes.Count);
+        XElement element = XDocument.Parse(xml).Descendants(C + "valAx").First();
+        return (sceneChart.Axes[0], element);
+    }
+
     public static void ChartLevelOptionsAgreeBetweenSceneAndXml()
     {
         string[] blanks = new[] { "<c:dispBlanksAs val=\"span\"/>", "<c:dispBlanksAs val=\"zero\"/>", "<c:dispBlanksAs val=\"bogus\"/>", "" };

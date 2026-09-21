@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extended the chart options agreement harness to value-axis properties (D01 increment): orientation, major/minor gridlines, units (incl. bogus spellings), number formats, and tick marks agree between scene and XML arms across the battery with no divergences found. Test-only addition; renderer unchanged.
+
 - Extended the chart options agreement harness to series properties (D01 increment): smooth flags, line-hidden detection, series-name records (literal/padded/ref/cache/no-cache, workbook-aware with structural point comparison), and point explosions (series/out-of-range/bogus/per-point, pie plots) agree between scene and XML arms across the batteries with no divergences found. Test-only addition; renderer unchanged.
 
 - Threaded the conversion token through DOCX emission (Q01 increment): layout-item dispatch, per-segment text emission (including segment building, terminal-space resolution, and coverage-fallback splitting), per-cell table/border/junction rendering with nested recursion, inline/floating images (decode token now forwarded), text boxes, placed stories, floating drawings, markup balloons, and revision bars all observe cancellation at item/segment/cell/drawing granularity. Snapshot/inspection segment building keeps an optional token default. Pinned by a mid-emission cancellation test (sink-cancel on a mid-document image diagnostic with trailing content, no partial PDF) with the full suite proving byte-identical output. Remaining Q01 work: live-peak reservation reporting, bounded spooling, host admission limits, and cap tuning.
