@@ -3,14 +3,21 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-line-spacing-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "line-spacing", "pptx-renderer-port", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "line-spacing",
+    "pptx-renderer-port",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 1.7,
-    "maxChangedPixelRatioAtThreshold16": 0.0200,
+    "maxChangedPixelRatioAtThreshold16": 0.02,
     "maxTextOperationPositionDelta": 0.35,
     "maxTextOperationFontSizeDelta": 0.05,
     "matchTextOperationsByPosition": true

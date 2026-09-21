@@ -11,7 +11,8 @@
     "cambria",
     "center",
     "locked",
-    "locked"
+    "locked",
+    "approximate"
   ],
   "expected": {
     "minAgentRating": 4,

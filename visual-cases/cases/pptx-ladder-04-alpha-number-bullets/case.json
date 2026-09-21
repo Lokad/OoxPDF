@@ -3,7 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-alpha-number-bullets.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "numbering", "bullet", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "styled-text",
+    "numbering",
+    "bullet",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

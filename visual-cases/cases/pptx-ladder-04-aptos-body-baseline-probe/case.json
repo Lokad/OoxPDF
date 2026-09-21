@@ -3,7 +3,15 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-aptos-body-baseline-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "baseline", "aptos", "office-authored", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "baseline",
+    "aptos",
+    "office-authored",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

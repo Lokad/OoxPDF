@@ -10,7 +10,8 @@
     "vertical-text",
     "pptx-renderer-port",
     "locked",
-    "locked"
+    "locked",
+    "approximate"
   ],
   "expected": {
     "minAgentRating": 4,

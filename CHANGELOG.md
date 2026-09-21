@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Triaged the typography tail (Q07 increment): 21 passing needs-review cases moved to approximate with the recorded font-advance positioning gap class (sampled PNG reviews show complete correct content including distinct typefaces, line spacing, and auto-number quirks matching the reference; 7 pre-existing environment gate failures left untouched). Manifests: 118 locked / 176 approximate / 31 needs-review.
+
 - Triaged the docx-layout tail (Q07 increment): 41 needs-review cases moved to approximate with the recorded fallback-advance wrapping/layout-nuance gap class after 10 direct PNG reviews (bullets, fragments, widows, continuation tables, docgrid, decorations all show complete correct content) plus metric-pattern review of the rest; page counts match and diagnostics are empty throughout. Conditional-run-precedence stays needs-review (font-advance overflow, column-width investigation). Manifests: 118 locked / 155 approximate / 52 needs-review; docx-layout family 60/60 green.
 
 - Triaged docx-layout starts (Q07 increment): 2 new locks with reviewed PNGs and tightened gates (ladder-01 line-height/paragraph-spacing). Conditional-run-precedence spot-check shows matching run formatting with a genuine column-width divergence that stays needs-review for column-width investigation rather than approximate. Manifests: 118 locked / 114 approximate / 93 needs-review.

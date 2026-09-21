@@ -3,7 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-section-baseline-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "baseline", "public-probe", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "baseline",
+    "public-probe",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

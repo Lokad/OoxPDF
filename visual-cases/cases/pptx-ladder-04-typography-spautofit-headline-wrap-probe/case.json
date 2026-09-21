@@ -3,7 +3,15 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-spautofit-headline-wrap-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "spautofit", "wrap", "probe", "needs-review"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "spautofit",
+    "wrap",
+    "probe",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
