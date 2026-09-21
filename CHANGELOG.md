@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved conditional-run-precedence to approximate (Q07 increment): direct PNG review shows correct conditional run formatting (bold-italic vs plain plus red, matching the reference) with the recorded font-advance gap class (fallback sans advances fit both columns while Word serif advances overflow the 108pt grid, so overflow and column geometry diverge; SSIM 0.507 and recall 0.415 on the loose placeholder gates, diagnostics empty, dimensions match). Manifests: 118 locked / 175 approximate / 33 needs-review.
+
 - Reported live image decode peaks alongside cumulative budgets (Q01 increment): `OoxConversionLimits.MaxLiveImageBytesPerConversion` (default 512 MiB) bounds transient decode scratch plus pixel planes while the image count bounds cumulative work; PNG/BMP/JPEG pixel decodes reserve a conservative width-by-height-by-4 estimate before allocating and release on return (JPEG passthrough holds no reservation), crossings throw the limit-exceeded failure before allocation with no partial PDF, and `CONVERSION_RESOURCE_SUMMARY` now carries `peakLiveImageBytes` so hosts can size admission limits. Pinned by below/at/above, release/peak, end-to-end cap (the 2x1 PNG pins the 8-byte estimate), and determinism tests with the affected suites proving byte-identical output.
 
 - Render unstyled filled-radar series solid (fidelity fix): the 0.40/0.18 translucency defaults (unprovenanced, oldest history) contradicted two live Office references (single-series ladder fixture and a new two-series probe); every other chart kind already defaulted to solid. Single-series SSIM 0.858 to 0.954. Remaining radar gaps: chart-style-18 fill variants and value-axis geometry. New held-out visual case pins multi-series solid fills.

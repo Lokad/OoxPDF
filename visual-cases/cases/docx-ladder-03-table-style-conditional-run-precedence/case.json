@@ -3,9 +3,16 @@
   "kind": "docx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-03-table-style-conditional-run-precedence.docx",
   "dpi": 144,
-  "tags": ["docx", "ladder", "table", "style", "text-precedence", "needs-review"],
+  "tags": [
+    "docx",
+    "ladder",
+    "table",
+    "style",
+    "text-precedence",
+    "approximate"
+  ],
   "expected": {
-    "minAgentRating": 2,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "maxMeanAbsoluteError": 0.54,
