@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved column-negative and doughnut-top-legend probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (columns including below-axis negatives with month labels; doughnut segments with top legend swatches; SSIM 0.995/0.984, recall 0.974/0.993, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 193 approximate / 15 needs-review.
+
 - Moved pie-auto-radius and bubble-port to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (pie slices with auto-radius geometry and data labels, recall 0.9998; bubble positions and size scaling with axes, title and legend, tight graphics/text structure gates passing; diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 191 approximate / 17 needs-review.
 
 - Moved bar-default-axis-titles and bar-shifted-frame probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (horizontal bars with default axis titles and gridlines; shifted frame geometry matches; SSIM 0.994/0.994, recall 0.983/0.979, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 189 approximate / 19 needs-review.
