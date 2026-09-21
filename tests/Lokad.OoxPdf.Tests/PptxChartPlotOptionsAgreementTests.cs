@@ -14,6 +14,7 @@ namespace Lokad.OoxPdf.Tests;
 internal static class PptxChartPlotOptionsAgreementTests
 {
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+    private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
     public static void BarScalarOptionsAgreeBetweenSceneAndXml()
     {
@@ -62,6 +63,73 @@ internal static class PptxChartPlotOptionsAgreementTests
             object? xml = Invoke("ReadSceneOrXmlChartRadarStyle", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { null, element });
             object? scene = Invoke("ReadSceneOrXmlChartRadarStyle", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { plot, element });
             TestAssert.True(Equals(xml, scene), "Radar style must agree for plot XML: " + style);
+        }
+    }
+
+    public static void SeriesSmoothAgreesBetweenSceneAndXml()
+    {
+        string[] smooths = new[] { "<c:smooth/>", "<c:smooth val=\"0\"/>", "<c:smooth val=\"1\"/>", "<c:smooth val=\"bogus\"/>", "" };
+        foreach (string smooth in smooths)
+        {
+            (object? plot, XElement element) = LoadPlot("barChart", smooth);
+            object? xml = Invoke("ReadSceneOrXmlSmoothSeries", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { null, element });
+            object? scene = Invoke("ReadSceneOrXmlSmoothSeries", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { plot, element });
+            TestAssert.True(SequenceEqual(xml, scene), "Smooth must agree for ser XML: " + smooth);
+        }
+    }
+
+    public static void SeriesLineHiddenAgreesBetweenSceneAndXml()
+    {
+        string[] lineForms = new[] { "", "<c:spPr><a:ln w=\"12700\"/></c:spPr>", "<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>" };
+        foreach (string lineForm in lineForms)
+        {
+            (object? plot, XElement element) = LoadPlot("barChart", lineForm);
+            object? xml = Invoke("ReadSceneOrXmlSeriesLineHidden", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { null, element });
+            object? scene = Invoke("ReadSceneOrXmlSeriesLineHidden", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { plot, element });
+            TestAssert.True(SequenceEqual(xml, scene), "LineHidden must agree for ser XML: " + lineForm);
+        }
+    }
+
+    public static void SeriesNamesAgreeBetweenSceneAndXml()
+    {
+        string[] names = new[]
+        {
+            "",
+            "<c:tx><c:v>Solo</c:v></c:tx>",
+            "<c:tx><c:v>  Padded  </c:v></c:tx>",
+            "<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:tx>",
+            "<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f></c:strRef></c:tx>",
+        };
+        Type? workbookType = typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData");
+        TestAssert.NotNull(workbookType);
+        foreach (string name in names)
+        {
+            (object? plot, XElement element) = LoadPlot("barChart", name);
+            object? xml = Invoke("ReadSceneOrXmlChartSeriesNameRecords", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { null, element, null });
+            object? scene = Invoke("ReadSceneOrXmlChartSeriesNameRecords", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { plot, element, null });
+            TestAssert.True(SeriesNamesEqual(xml, scene), "Series names must agree for ser XML: " + name);
+        }
+    }
+
+    public static void SeriesExplosionsAgreeBetweenSceneAndXml()
+    {
+        string[] explosions = new[]
+        {
+            "",
+            "<c:explosion val=\"25\"/>",
+            "<c:explosion val=\"150\"/>",
+            "<c:explosion val=\"bogus\"/>",
+            "<c:dPt><c:idx val=\"0\"/><c:explosion val=\"50\"/></c:dPt>",
+            "<c:dPt><c:idx val=\"bogus\"/><c:explosion val=\"50\"/></c:dPt>",
+        };
+        Type? workbookType = typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData");
+        TestAssert.NotNull(workbookType);
+        foreach (string explosion in explosions)
+        {
+            (object? plot, XElement element) = LoadPlot("pieChart", explosion);
+            object? xml = Invoke("ReadSceneOrXmlChartPointExplosions", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { null, element, null });
+            object? scene = Invoke("ReadSceneOrXmlChartPointExplosions", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { plot, element, null });
+            TestAssert.True(DictionariesEqual(xml, scene), "Explosions must agree for ser XML: " + explosion);
         }
     }
 
@@ -195,6 +263,83 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
+    private static bool SequenceEqual(object? xml, object? scene)
+    {
+        if (xml is System.Collections.IEnumerable xmlItems && scene is System.Collections.IEnumerable sceneItems)
+        {
+            var xmlList = xmlItems.Cast<object?>().ToList();
+            var sceneList = sceneItems.Cast<object?>().ToList();
+            return xmlList.Count == sceneList.Count && xmlList.SequenceEqual(sceneList);
+        }
+
+        return Equals(xml, scene);
+    }
+
+    private static bool DictionariesEqual(object? xml, object? scene)
+    {
+        if (xml is System.Collections.IDictionary xmlMap && scene is System.Collections.IDictionary sceneMap)
+        {
+            if (xmlMap.Count != sceneMap.Count)
+            {
+                return false;
+            }
+
+            foreach (object? key in xmlMap.Keys)
+            {
+                if (!sceneMap.Contains(key) || !Equals(xmlMap[key], sceneMap[key]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return Equals(xml, scene);
+    }
+
+    private static bool SeriesNamesEqual(object? xml, object? scene)
+    {
+        if (xml is System.Collections.IEnumerable xmlItems && scene is System.Collections.IEnumerable sceneItems)
+        {
+            List<object?> xmlList = xmlItems.Cast<object?>().ToList();
+            List<object?> sceneList = sceneItems.Cast<object?>().ToList();
+            return xmlList.Count == sceneList.Count && xmlList.Zip(sceneList).All(pair => SeriesNameEqual(pair.First, pair.Second));
+        }
+
+        return Equals(xml, scene);
+    }
+
+    private static bool SeriesNameEqual(object? xml, object? scene)
+    {
+        if (xml is null || scene is null)
+        {
+            return xml is null && scene is null;
+        }
+
+        // WorkbookPoints is a fresh list per arm, so compare its contents rather
+        // than the record (list identity would never agree across arms).
+        return Prop(xml, "ActiveName") == Prop(scene, "ActiveName") &&
+            Prop(xml, "CacheName") == Prop(scene, "CacheName") &&
+            Prop(xml, "ActiveNameSource") == Prop(scene, "ActiveNameSource") &&
+            PointsText(xml, "WorkbookPoints").SequenceEqual(PointsText(scene, "WorkbookPoints"));
+    }
+
+    private static string? Prop(object record, string name)
+    {
+        return record.GetType().GetProperty(name)?.GetValue(record)?.ToString();
+    }
+
+    private static List<string?> PointsText(object record, string name)
+    {
+        if (record.GetType().GetProperty(name)?.GetValue(record) is System.Collections.IEnumerable points)
+        {
+            return points.Cast<object?>().Select(point => point?.ToString()).ToList();
+        }
+
+        return new List<string?>();
+    }
+
     private static (object? Plot, XElement Element) LoadPlot(string plotKind, string plotInner)
     {
         string xml = ChartSpace("<c:" + plotKind + ">" + plotInner + "<c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:" + plotKind + ">", "");
@@ -208,7 +353,7 @@ internal static class PptxChartPlotOptionsAgreementTests
     private static string ChartSpace(string plotAreaInner, string options)
     {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-            + "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">"
+            + "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
             + "<c:chart><c:plotArea>" + plotAreaInner + "</c:plotArea>"
             + options
             + "</c:chart></c:chartSpace>";
