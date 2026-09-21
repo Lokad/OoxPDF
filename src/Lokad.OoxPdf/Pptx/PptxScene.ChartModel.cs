@@ -471,34 +471,180 @@ internal enum PptxSceneChartPlotKind
     Unknown
 }
 
-internal sealed record PptxSceneChartDataLabels(
-    bool? ShowValue,
-    string ShowValueValue,
-    bool? ShowPercent,
-    string ShowPercentValue,
-    bool? ShowCategoryName,
-    string ShowCategoryNameValue,
-    bool? ShowSeriesName,
-    string ShowSeriesNameValue,
-    bool? ShowLeaderLines,
-    string ShowLeaderLinesValue,
-    bool? ShowLegendKey,
-    string ShowLegendKeyValue,
-    bool? ShowBubbleSize,
-    string ShowBubbleSizeValue,
-    PptxSceneChartLeaderLines LeaderLines,
-    PptxSceneChartDataLabelPosition PositionKind,
-    string Position,
-    string Separator,
-    string NumberFormat,
-    PptxSceneChartNumberFormat NumberFormatInfo,
-    PptxSceneChartManualLayout Layout,
-    PptxSceneChartTextStyleOverride TextStyle,
-    PptxSceneChartTextBodyProperties TextBodyProperties,
-    PptxSceneChartShapeStyle ShapeStyle,
-    IReadOnlyList<string> RejectedOverrideIndexValues,
-    IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides,
-    bool IsDefined);
+// T02: the position enum derives from its raw spelling inside Defined, so labels
+// cannot carry a position enum that disagrees with the stored spelling.
+internal sealed record PptxSceneChartDataLabels
+{
+    public bool? ShowValue { get; }
+
+    public string ShowValueValue { get; }
+
+    public bool? ShowPercent { get; }
+
+    public string ShowPercentValue { get; }
+
+    public bool? ShowCategoryName { get; }
+
+    public string ShowCategoryNameValue { get; }
+
+    public bool? ShowSeriesName { get; }
+
+    public string ShowSeriesNameValue { get; }
+
+    public bool? ShowLeaderLines { get; }
+
+    public string ShowLeaderLinesValue { get; }
+
+    public bool? ShowLegendKey { get; }
+
+    public string ShowLegendKeyValue { get; }
+
+    public bool? ShowBubbleSize { get; }
+
+    public string ShowBubbleSizeValue { get; }
+
+    public PptxSceneChartLeaderLines LeaderLines { get; }
+
+    public PptxSceneChartDataLabelPosition PositionKind { get; }
+
+    public string Position { get; }
+
+    public string Separator { get; }
+
+    public string NumberFormat { get; }
+
+    public PptxSceneChartNumberFormat NumberFormatInfo { get; }
+
+    public PptxSceneChartManualLayout Layout { get; }
+
+    public PptxSceneChartTextStyleOverride TextStyle { get; }
+
+    public PptxSceneChartTextBodyProperties TextBodyProperties { get; }
+
+    public PptxSceneChartShapeStyle ShapeStyle { get; }
+
+    public IReadOnlyList<string> RejectedOverrideIndexValues { get; }
+
+    public IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides { get; }
+
+    public bool IsDefined { get; }
+
+    private PptxSceneChartDataLabels(
+        bool? showValue,
+        string showValueValue,
+        bool? showPercent,
+        string showPercentValue,
+        bool? showCategoryName,
+        string showCategoryNameValue,
+        bool? showSeriesName,
+        string showSeriesNameValue,
+        bool? showLeaderLines,
+        string showLeaderLinesValue,
+        bool? showLegendKey,
+        string showLegendKeyValue,
+        bool? showBubbleSize,
+        string showBubbleSizeValue,
+        PptxSceneChartLeaderLines leaderLines,
+        PptxSceneChartDataLabelPosition positionKind,
+        string position,
+        string separator,
+        string numberFormat,
+        PptxSceneChartNumberFormat numberFormatInfo,
+        PptxSceneChartManualLayout layout,
+        PptxSceneChartTextStyleOverride textStyle,
+        PptxSceneChartTextBodyProperties textBodyProperties,
+        PptxSceneChartShapeStyle shapeStyle,
+        IReadOnlyList<string> rejectedOverrideIndexValues,
+        IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
+        bool isDefined)
+    {
+        ShowValue = showValue;
+        ShowValueValue = showValueValue;
+        ShowPercent = showPercent;
+        ShowPercentValue = showPercentValue;
+        ShowCategoryName = showCategoryName;
+        ShowCategoryNameValue = showCategoryNameValue;
+        ShowSeriesName = showSeriesName;
+        ShowSeriesNameValue = showSeriesNameValue;
+        ShowLeaderLines = showLeaderLines;
+        ShowLeaderLinesValue = showLeaderLinesValue;
+        ShowLegendKey = showLegendKey;
+        ShowLegendKeyValue = showLegendKeyValue;
+        ShowBubbleSize = showBubbleSize;
+        ShowBubbleSizeValue = showBubbleSizeValue;
+        LeaderLines = leaderLines;
+        PositionKind = positionKind;
+        Position = position;
+        Separator = separator;
+        NumberFormat = numberFormat;
+        NumberFormatInfo = numberFormatInfo;
+        Layout = layout;
+        TextStyle = textStyle;
+        TextBodyProperties = textBodyProperties;
+        ShapeStyle = shapeStyle;
+        RejectedOverrideIndexValues = rejectedOverrideIndexValues;
+        Overrides = overrides;
+        IsDefined = isDefined;
+    }
+
+    public static PptxSceneChartDataLabels Defined(
+        bool? showValue,
+        string showValueValue,
+        bool? showPercent,
+        string showPercentValue,
+        bool? showCategoryName,
+        string showCategoryNameValue,
+        bool? showSeriesName,
+        string showSeriesNameValue,
+        bool? showLeaderLines,
+        string showLeaderLinesValue,
+        bool? showLegendKey,
+        string showLegendKeyValue,
+        bool? showBubbleSize,
+        string showBubbleSizeValue,
+        PptxSceneChartLeaderLines leaderLines,
+        string position,
+        string separator,
+        string numberFormat,
+        PptxSceneChartNumberFormat numberFormatInfo,
+        PptxSceneChartManualLayout layout,
+        PptxSceneChartTextStyleOverride textStyle,
+        PptxSceneChartTextBodyProperties textBodyProperties,
+        PptxSceneChartShapeStyle shapeStyle,
+        IReadOnlyList<string> rejectedOverrideIndexValues,
+        IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
+        bool isDefined)
+    {
+        return new PptxSceneChartDataLabels(
+            showValue,
+            showValueValue,
+            showPercent,
+            showPercentValue,
+            showCategoryName,
+            showCategoryNameValue,
+            showSeriesName,
+            showSeriesNameValue,
+            showLeaderLines,
+            showLeaderLinesValue,
+            showLegendKey,
+            showLegendKeyValue,
+            showBubbleSize,
+            showBubbleSizeValue,
+            leaderLines,
+            PptxSceneBuilder.ParseChartDataLabelPosition(position),
+            position,
+            separator,
+            numberFormat,
+            numberFormatInfo,
+            layout,
+            textStyle,
+            textBodyProperties,
+            shapeStyle,
+            rejectedOverrideIndexValues,
+            overrides,
+            isDefined);
+    }
+}
 
 internal sealed record PptxSceneChartDataLabelOverride(
     int Index,

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Sealed chart data-label record construction (T02 increment): `PptxSceneChartDataLabels` builds only through a `Defined` factory deriving its position enum from the raw spelling; both producer call sites updated. Pinned by the data-label-heavy chart suite, the full suite, and a 57/57 chart visual family run.
+
 - Sealed chart plot/axis record construction (T02 increment): `PptxSceneChartPlot` and `PptxSceneChartAxis` build only through `Defined` factories that derive kind/grouping/direction/style and kind/position/crosses/orientation/tick enums from their raw spellings, so mismatched enum/string pairs are unrepresentable; single producer call sites updated. Pinned by the scene-vs-XML agreement batteries, the plot-pairing proof, the full suite, and a 57/57 chart visual family run.
 
 - Share DOCX table-cell text layouts across measurement passes (W04 cell increment): a per-table memo keyed by cell identity, width, measurer, tab stops, row padding, spacing scale, and page args serves split-feasibility, break-resolution, final-fragment, and nested-table layouts with caller-side re-offsetting; cells with PAGE/NUMPAGES runs keep full page keys (dynamic tier) while all other cells share across pages (static tier), and height-dependent vertical-alignment shifts stay outside the memo. First-hand duplicate-rate evidence (779 corpus layouts fully distinct; sharing concentrates in split-heavy tables) plus per-fragment PAGE evaluation and memo-hit tests; full suite and docx-layout family (60/60) prove byte-identical output.

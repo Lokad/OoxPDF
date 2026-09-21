@@ -167,34 +167,33 @@ internal sealed partial class PptxSceneBuilder
                 .FirstOrDefault(element => element is not null);
         if (labels is null)
         {
-            return new PptxSceneChartDataLabels(
-                ShowValue: null,
-                ShowValueValue: string.Empty,
-                ShowPercent: null,
-                ShowPercentValue: string.Empty,
-                ShowCategoryName: null,
-                ShowCategoryNameValue: string.Empty,
-                ShowSeriesName: null,
-                ShowSeriesNameValue: string.Empty,
-                ShowLeaderLines: null,
-                ShowLeaderLinesValue: string.Empty,
-                ShowLegendKey: null,
-                ShowLegendKeyValue: string.Empty,
-                ShowBubbleSize: null,
-                ShowBubbleSizeValue: string.Empty,
-                LeaderLines: default,
-                PositionKind: PptxSceneChartDataLabelPosition.Unknown,
-                Position: string.Empty,
-                Separator: string.Empty,
-                NumberFormat: string.Empty,
-                NumberFormatInfo: default,
-                Layout: default,
-                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
-                TextBodyProperties: default,
-                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
-                RejectedOverrideIndexValues: [],
-                Overrides: [],
-                IsDefined: false);
+            return PptxSceneChartDataLabels.Defined(
+                showValue: null,
+                showValueValue: string.Empty,
+                showPercent: null,
+                showPercentValue: string.Empty,
+                showCategoryName: null,
+                showCategoryNameValue: string.Empty,
+                showSeriesName: null,
+                showSeriesNameValue: string.Empty,
+                showLeaderLines: null,
+                showLeaderLinesValue: string.Empty,
+                showLegendKey: null,
+                showLegendKeyValue: string.Empty,
+                showBubbleSize: null,
+                showBubbleSizeValue: string.Empty,
+                leaderLines: default,
+                position: string.Empty,
+                separator: string.Empty,
+                numberFormat: string.Empty,
+                numberFormatInfo: default,
+                layout: default,
+                textStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
+                textBodyProperties: default,
+                shapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
+                rejectedOverrideIndexValues: [],
+                overrides: [],
+                isDefined: false);
         }
 
         PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(labels);
@@ -205,7 +204,7 @@ internal sealed partial class PptxSceneBuilder
         (bool? showLeaderLines, string showLeaderLinesValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showLeaderLines");
         (bool? showLegendKey, string showLegendKeyValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showLegendKey");
         (bool? showBubbleSize, string showBubbleSizeValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showBubbleSize");
-        return new PptxSceneChartDataLabels(
+        return PptxSceneChartDataLabels.Defined(
                 showValue,
                 showValueValue,
                 showPercent,
@@ -221,7 +220,6 @@ internal sealed partial class PptxSceneBuilder
                 showBubbleSize,
                 showBubbleSizeValue,
                 ReadChartLeaderLines(labels, theme, colorMap),
-                ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 numberFormat.FormatCode,
@@ -232,7 +230,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
                 ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
-                IsDefined: true);
+                isDefined: true);
     }
 
     private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme)
