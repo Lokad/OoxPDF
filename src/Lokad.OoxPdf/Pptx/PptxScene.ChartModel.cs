@@ -240,36 +240,188 @@ internal readonly record struct PptxSceneChartStyleEntry(
     PptxSceneLineStyle ShapeLine,
     PptxSceneChartTextStyleOverride TextStyle);
 
-internal sealed record PptxSceneChartPlot(
-    PptxSceneChartPlotKind PlotKind,
-    string Kind,
-    int PlotAreaIndex,
-    int KindIndex,
-    int SeriesCount,
-    IReadOnlyList<string> AxisIds,
-    IReadOnlyList<PptxSceneChartSeries> Series,
-    PptxSceneChartGrouping GroupingKind,
-    string Grouping,
-    PptxSceneChartBarDirection BarDirectionKind,
-    string BarDirection,
-    PptxSceneChartScatterStyle ScatterStyleKind,
-    string ScatterStyle,
-    PptxSceneChartRadarStyle RadarStyleKind,
-    string RadarStyle,
-    bool? MarkersEnabled,
-    string MarkersEnabledValue,
-    bool? VaryColors,
-    string VaryColorsValue,
-    double? GapWidth,
-    string GapWidthValue,
-    double? Overlap,
-    string OverlapValue,
-    double? HoleSize,
-    string HoleSizeValue,
-    double? FirstSliceAngle,
-    string FirstSliceAngleValue,
-    PptxSceneChartDataLabels DataLabels,
-    XElement Source);
+// T02: kind enums derive from their raw spellings inside Defined, so a plot cannot
+// carry a grouping/direction/style enum that disagrees with its stored spelling.
+internal sealed record PptxSceneChartPlot
+{
+    public PptxSceneChartPlotKind PlotKind { get; }
+
+    public string Kind { get; }
+
+    public int PlotAreaIndex { get; }
+
+    public int KindIndex { get; }
+
+    public int SeriesCount { get; }
+
+    public IReadOnlyList<string> AxisIds { get; }
+
+    public IReadOnlyList<PptxSceneChartSeries> Series { get; }
+
+    public PptxSceneChartGrouping GroupingKind { get; }
+
+    public string Grouping { get; }
+
+    public PptxSceneChartBarDirection BarDirectionKind { get; }
+
+    public string BarDirection { get; }
+
+    public PptxSceneChartScatterStyle ScatterStyleKind { get; }
+
+    public string ScatterStyle { get; }
+
+    public PptxSceneChartRadarStyle RadarStyleKind { get; }
+
+    public string RadarStyle { get; }
+
+    public bool? MarkersEnabled { get; }
+
+    public string MarkersEnabledValue { get; }
+
+    public bool? VaryColors { get; }
+
+    public string VaryColorsValue { get; }
+
+    public double? GapWidth { get; }
+
+    public string GapWidthValue { get; }
+
+    public double? Overlap { get; }
+
+    public string OverlapValue { get; }
+
+    public double? HoleSize { get; }
+
+    public string HoleSizeValue { get; }
+
+    public double? FirstSliceAngle { get; }
+
+    public string FirstSliceAngleValue { get; }
+
+    public PptxSceneChartDataLabels DataLabels { get; }
+
+    public XElement Source { get; }
+
+    private PptxSceneChartPlot(
+        PptxSceneChartPlotKind plotKind,
+        string kind,
+        int plotAreaIndex,
+        int kindIndex,
+        int seriesCount,
+        IReadOnlyList<string> axisIds,
+        IReadOnlyList<PptxSceneChartSeries> series,
+        PptxSceneChartGrouping groupingKind,
+        string grouping,
+        PptxSceneChartBarDirection barDirectionKind,
+        string barDirection,
+        PptxSceneChartScatterStyle scatterStyleKind,
+        string scatterStyle,
+        PptxSceneChartRadarStyle radarStyleKind,
+        string radarStyle,
+        bool? markersEnabled,
+        string markersEnabledValue,
+        bool? varyColors,
+        string varyColorsValue,
+        double? gapWidth,
+        string gapWidthValue,
+        double? overlap,
+        string overlapValue,
+        double? holeSize,
+        string holeSizeValue,
+        double? firstSliceAngle,
+        string firstSliceAngleValue,
+        PptxSceneChartDataLabels dataLabels,
+        XElement source)
+    {
+        PlotKind = plotKind;
+        Kind = kind;
+        PlotAreaIndex = plotAreaIndex;
+        KindIndex = kindIndex;
+        SeriesCount = seriesCount;
+        AxisIds = axisIds;
+        Series = series;
+        GroupingKind = groupingKind;
+        Grouping = grouping;
+        BarDirectionKind = barDirectionKind;
+        BarDirection = barDirection;
+        ScatterStyleKind = scatterStyleKind;
+        ScatterStyle = scatterStyle;
+        RadarStyleKind = radarStyleKind;
+        RadarStyle = radarStyle;
+        MarkersEnabled = markersEnabled;
+        MarkersEnabledValue = markersEnabledValue;
+        VaryColors = varyColors;
+        VaryColorsValue = varyColorsValue;
+        GapWidth = gapWidth;
+        GapWidthValue = gapWidthValue;
+        Overlap = overlap;
+        OverlapValue = overlapValue;
+        HoleSize = holeSize;
+        HoleSizeValue = holeSizeValue;
+        FirstSliceAngle = firstSliceAngle;
+        FirstSliceAngleValue = firstSliceAngleValue;
+        DataLabels = dataLabels;
+        Source = source;
+    }
+
+    public static PptxSceneChartPlot Defined(
+        string kind,
+        int plotAreaIndex,
+        int kindIndex,
+        int seriesCount,
+        IReadOnlyList<string> axisIds,
+        IReadOnlyList<PptxSceneChartSeries> series,
+        string grouping,
+        string barDirection,
+        string scatterStyle,
+        string radarStyle,
+        bool? markersEnabled,
+        string markersEnabledValue,
+        bool? varyColors,
+        string varyColorsValue,
+        double? gapWidth,
+        string gapWidthValue,
+        double? overlap,
+        string overlapValue,
+        double? holeSize,
+        string holeSizeValue,
+        double? firstSliceAngle,
+        string firstSliceAngleValue,
+        PptxSceneChartDataLabels dataLabels,
+        XElement source)
+    {
+        return new PptxSceneChartPlot(
+            PptxSceneBuilder.ParseChartPlotKind(kind),
+            kind,
+            plotAreaIndex,
+            kindIndex,
+            seriesCount,
+            axisIds,
+            series,
+            PptxSceneBuilder.ParseChartGrouping(grouping),
+            grouping,
+            PptxSceneBuilder.ParseChartBarDirection(barDirection),
+            barDirection,
+            PptxSceneBuilder.ParseChartScatterStyle(scatterStyle),
+            scatterStyle,
+            PptxSceneBuilder.ParseChartRadarStyle(radarStyle),
+            radarStyle,
+            markersEnabled,
+            markersEnabledValue,
+            varyColors,
+            varyColorsValue,
+            gapWidth,
+            gapWidthValue,
+            overlap,
+            overlapValue,
+            holeSize,
+            holeSizeValue,
+            firstSliceAngle,
+            firstSliceAngleValue,
+            dataLabels,
+            source);
+    }
+}
 
 internal enum PptxSceneChartGrouping
 {
@@ -620,60 +772,329 @@ internal sealed record PptxSceneChartPointStyle(
     double? Explosion,
     string ExplosionValue);
 
-internal sealed record PptxSceneChartAxis(
-    string Id,
-    PptxSceneChartAxisKind AxisKind,
-    string Kind,
-    PptxSceneChartAxisPosition PositionKind,
-    string Position,
-    string CrossAxisId,
-    PptxSceneChartAxisCrosses CrossesKind,
-    string Crosses,
-    double? CrossesAt,
-    string CrossesAtValue,
-    PptxSceneChartAxisCrossBetween CrossBetweenKind,
-    string CrossBetween,
-    PptxSceneChartAxisOrientation OrientationKind,
-    string Orientation,
-    bool IsReversed,
-    bool? IsDeleted,
-    string IsDeletedValue,
-    bool HasScaling,
-    double? Minimum,
-    string MinimumValue,
-    double? Maximum,
-    string MaximumValue,
-    double? MajorUnit,
-    string MajorUnitValue,
-    double? MinorUnit,
-    string MinorUnitValue,
-    bool HasMajorGridlines,
-    bool HasMinorGridlines,
-    bool HasMajorGridlineElement,
-    bool HasMinorGridlineElement,
-    PptxSceneLineStyle Line,
-    PptxSceneLineStyle MajorGridlineLine,
-    PptxSceneLineStyle MinorGridlineLine,
-    PptxSceneLineStyle MajorGridlineStyleLine,
-    PptxSceneLineStyle MinorGridlineStyleLine,
-    PptxSceneChartTextStyleOverride TextStyle,
-    PptxSceneChartTickLabelPosition TickLabelPositionKind,
-    string TickLabelPosition,
-    PptxSceneChartAxisTickMark MajorTickMarkKind,
-    string MajorTickMark,
-    PptxSceneChartAxisTickMark MinorTickMarkKind,
-    string MinorTickMark,
-    int? LabelOffset,
-    string LabelOffsetValue,
-    int? TickLabelSkip,
-    string TickLabelSkipValue,
-    int? TickMarkSkip,
-    string TickMarkSkipValue,
-    bool? NoMultiLevelLabels,
-    string NoMultiLevelLabelsValue,
-    string? NumberFormat,
-    PptxSceneChartNumberFormat NumberFormatInfo,
-    PptxSceneChartTitle Title);
+// T02: axis kind/position/crossing/orientation/tick enums derive from their raw
+// spellings inside Defined, so an axis cannot carry an enum that disagrees with
+// its stored spelling.
+internal sealed record PptxSceneChartAxis
+{
+    public string Id { get; }
+
+    public PptxSceneChartAxisKind AxisKind { get; }
+
+    public string Kind { get; }
+
+    public PptxSceneChartAxisPosition PositionKind { get; }
+
+    public string Position { get; }
+
+    public string CrossAxisId { get; }
+
+    public PptxSceneChartAxisCrosses CrossesKind { get; }
+
+    public string Crosses { get; }
+
+    public double? CrossesAt { get; }
+
+    public string CrossesAtValue { get; }
+
+    public PptxSceneChartAxisCrossBetween CrossBetweenKind { get; }
+
+    public string CrossBetween { get; }
+
+    public PptxSceneChartAxisOrientation OrientationKind { get; }
+
+    public string Orientation { get; }
+
+    public bool IsReversed { get; }
+
+    public bool? IsDeleted { get; }
+
+    public string IsDeletedValue { get; }
+
+    public bool HasScaling { get; }
+
+    public double? Minimum { get; }
+
+    public string MinimumValue { get; }
+
+    public double? Maximum { get; }
+
+    public string MaximumValue { get; }
+
+    public double? MajorUnit { get; }
+
+    public string MajorUnitValue { get; }
+
+    public double? MinorUnit { get; }
+
+    public string MinorUnitValue { get; }
+
+    public bool HasMajorGridlines { get; }
+
+    public bool HasMinorGridlines { get; }
+
+    public bool HasMajorGridlineElement { get; }
+
+    public bool HasMinorGridlineElement { get; }
+
+    public PptxSceneLineStyle Line { get; }
+
+    public PptxSceneLineStyle MajorGridlineLine { get; }
+
+    public PptxSceneLineStyle MinorGridlineLine { get; }
+
+    public PptxSceneLineStyle MajorGridlineStyleLine { get; }
+
+    public PptxSceneLineStyle MinorGridlineStyleLine { get; }
+
+    public PptxSceneChartTextStyleOverride TextStyle { get; }
+
+    public PptxSceneChartTickLabelPosition TickLabelPositionKind { get; }
+
+    public string TickLabelPosition { get; }
+
+    public PptxSceneChartAxisTickMark MajorTickMarkKind { get; }
+
+    public string MajorTickMark { get; }
+
+    public PptxSceneChartAxisTickMark MinorTickMarkKind { get; }
+
+    public string MinorTickMark { get; }
+
+    public int? LabelOffset { get; }
+
+    public string LabelOffsetValue { get; }
+
+    public int? TickLabelSkip { get; }
+
+    public string TickLabelSkipValue { get; }
+
+    public int? TickMarkSkip { get; }
+
+    public string TickMarkSkipValue { get; }
+
+    public bool? NoMultiLevelLabels { get; }
+
+    public string NoMultiLevelLabelsValue { get; }
+
+    public string? NumberFormat { get; }
+
+    public PptxSceneChartNumberFormat NumberFormatInfo { get; }
+
+    public PptxSceneChartTitle Title { get; }
+
+    private PptxSceneChartAxis(
+        string id,
+        PptxSceneChartAxisKind axisKind,
+        string kind,
+        PptxSceneChartAxisPosition positionKind,
+        string position,
+        string crossAxisId,
+        PptxSceneChartAxisCrosses crossesKind,
+        string crosses,
+        double? crossesAt,
+        string crossesAtValue,
+        PptxSceneChartAxisCrossBetween crossBetweenKind,
+        string crossBetween,
+        PptxSceneChartAxisOrientation orientationKind,
+        string orientation,
+        bool isReversed,
+        bool? isDeleted,
+        string isDeletedValue,
+        bool hasScaling,
+        double? minimum,
+        string minimumValue,
+        double? maximum,
+        string maximumValue,
+        double? majorUnit,
+        string majorUnitValue,
+        double? minorUnit,
+        string minorUnitValue,
+        bool hasMajorGridlines,
+        bool hasMinorGridlines,
+        bool hasMajorGridlineElement,
+        bool hasMinorGridlineElement,
+        PptxSceneLineStyle line,
+        PptxSceneLineStyle majorGridlineLine,
+        PptxSceneLineStyle minorGridlineLine,
+        PptxSceneLineStyle majorGridlineStyleLine,
+        PptxSceneLineStyle minorGridlineStyleLine,
+        PptxSceneChartTextStyleOverride textStyle,
+        PptxSceneChartTickLabelPosition tickLabelPositionKind,
+        string tickLabelPosition,
+        PptxSceneChartAxisTickMark majorTickMarkKind,
+        string majorTickMark,
+        PptxSceneChartAxisTickMark minorTickMarkKind,
+        string minorTickMark,
+        int? labelOffset,
+        string labelOffsetValue,
+        int? tickLabelSkip,
+        string tickLabelSkipValue,
+        int? tickMarkSkip,
+        string tickMarkSkipValue,
+        bool? noMultiLevelLabels,
+        string noMultiLevelLabelsValue,
+        string? numberFormat,
+        PptxSceneChartNumberFormat numberFormatInfo,
+        PptxSceneChartTitle title)
+    {
+        Id = id;
+        AxisKind = axisKind;
+        Kind = kind;
+        PositionKind = positionKind;
+        Position = position;
+        CrossAxisId = crossAxisId;
+        CrossesKind = crossesKind;
+        Crosses = crosses;
+        CrossesAt = crossesAt;
+        CrossesAtValue = crossesAtValue;
+        CrossBetweenKind = crossBetweenKind;
+        CrossBetween = crossBetween;
+        OrientationKind = orientationKind;
+        Orientation = orientation;
+        IsReversed = isReversed;
+        IsDeleted = isDeleted;
+        IsDeletedValue = isDeletedValue;
+        HasScaling = hasScaling;
+        Minimum = minimum;
+        MinimumValue = minimumValue;
+        Maximum = maximum;
+        MaximumValue = maximumValue;
+        MajorUnit = majorUnit;
+        MajorUnitValue = majorUnitValue;
+        MinorUnit = minorUnit;
+        MinorUnitValue = minorUnitValue;
+        HasMajorGridlines = hasMajorGridlines;
+        HasMinorGridlines = hasMinorGridlines;
+        HasMajorGridlineElement = hasMajorGridlineElement;
+        HasMinorGridlineElement = hasMinorGridlineElement;
+        Line = line;
+        MajorGridlineLine = majorGridlineLine;
+        MinorGridlineLine = minorGridlineLine;
+        MajorGridlineStyleLine = majorGridlineStyleLine;
+        MinorGridlineStyleLine = minorGridlineStyleLine;
+        TextStyle = textStyle;
+        TickLabelPositionKind = tickLabelPositionKind;
+        TickLabelPosition = tickLabelPosition;
+        MajorTickMarkKind = majorTickMarkKind;
+        MajorTickMark = majorTickMark;
+        MinorTickMarkKind = minorTickMarkKind;
+        MinorTickMark = minorTickMark;
+        LabelOffset = labelOffset;
+        LabelOffsetValue = labelOffsetValue;
+        TickLabelSkip = tickLabelSkip;
+        TickLabelSkipValue = tickLabelSkipValue;
+        TickMarkSkip = tickMarkSkip;
+        TickMarkSkipValue = tickMarkSkipValue;
+        NoMultiLevelLabels = noMultiLevelLabels;
+        NoMultiLevelLabelsValue = noMultiLevelLabelsValue;
+        NumberFormat = numberFormat;
+        NumberFormatInfo = numberFormatInfo;
+        Title = title;
+    }
+
+    public static PptxSceneChartAxis Defined(
+        string id,
+        string kind,
+        string position,
+        string crossAxisId,
+        string crosses,
+        double? crossesAt,
+        string crossesAtValue,
+        string crossBetween,
+        string orientation,
+        bool? isDeleted,
+        string isDeletedValue,
+        bool hasScaling,
+        double? minimum,
+        string minimumValue,
+        double? maximum,
+        string maximumValue,
+        double? majorUnit,
+        string majorUnitValue,
+        double? minorUnit,
+        string minorUnitValue,
+        bool hasMajorGridlines,
+        bool hasMinorGridlines,
+        bool hasMajorGridlineElement,
+        bool hasMinorGridlineElement,
+        PptxSceneLineStyle line,
+        PptxSceneLineStyle majorGridlineLine,
+        PptxSceneLineStyle minorGridlineLine,
+        PptxSceneLineStyle majorGridlineStyleLine,
+        PptxSceneLineStyle minorGridlineStyleLine,
+        PptxSceneChartTextStyleOverride textStyle,
+        string tickLabelPosition,
+        string majorTickMark,
+        string minorTickMark,
+        int? labelOffset,
+        string labelOffsetValue,
+        int? tickLabelSkip,
+        string tickLabelSkipValue,
+        int? tickMarkSkip,
+        string tickMarkSkipValue,
+        bool? noMultiLevelLabels,
+        string noMultiLevelLabelsValue,
+        string? numberFormat,
+        PptxSceneChartNumberFormat numberFormatInfo,
+        PptxSceneChartTitle title)
+    {
+        return new PptxSceneChartAxis(
+            id,
+            PptxSceneBuilder.ParseChartAxisKind(kind),
+            kind,
+            PptxSceneBuilder.ParseChartAxisPosition(position),
+            position,
+            crossAxisId,
+            PptxSceneBuilder.ParseChartAxisCrosses(crosses),
+            crosses,
+            crossesAt,
+            crossesAtValue,
+            PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween),
+            crossBetween,
+            PptxSceneBuilder.ParseChartAxisOrientation(orientation),
+            orientation,
+            PptxSceneBuilder.ParseChartAxisOrientation(orientation) == PptxSceneChartAxisOrientation.MaximumMinimum,
+            isDeleted,
+            isDeletedValue,
+            hasScaling,
+            minimum,
+            minimumValue,
+            maximum,
+            maximumValue,
+            majorUnit,
+            majorUnitValue,
+            minorUnit,
+            minorUnitValue,
+            hasMajorGridlines,
+            hasMinorGridlines,
+            hasMajorGridlineElement,
+            hasMinorGridlineElement,
+            line,
+            majorGridlineLine,
+            minorGridlineLine,
+            majorGridlineStyleLine,
+            minorGridlineStyleLine,
+            textStyle,
+            PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition),
+            tickLabelPosition,
+            PptxSceneBuilder.ParseChartAxisTickMark(majorTickMark),
+            majorTickMark,
+            PptxSceneBuilder.ParseChartAxisTickMark(minorTickMark),
+            minorTickMark,
+            labelOffset,
+            labelOffsetValue,
+            tickLabelSkip,
+            tickLabelSkipValue,
+            tickMarkSkip,
+            tickMarkSkipValue,
+            noMultiLevelLabels,
+            noMultiLevelLabelsValue,
+            numberFormat,
+            numberFormatInfo,
+            title);
+    }
+}
 
 internal enum PptxSceneChartAxisKind
 {

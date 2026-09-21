@@ -129,21 +129,16 @@ internal sealed partial class PptxSceneBuilder
                 .Select(ReadChartValueAttribute)
                 .Where(value => value.Length != 0)
                 .ToArray();
-            plots.Add(new PptxSceneChartPlot(
-                plotKind,
+            plots.Add(PptxSceneChartPlot.Defined(
                 kind,
                 plots.Count,
                 kindIndex,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
                 ReadChartSeries(plot, theme, colorMap, plotKind, markersEnabled == true),
-                ParseChartGrouping(grouping),
                 grouping,
-                ParseChartBarDirection(barDirection),
                 barDirection,
-                ParseChartScatterStyle(scatterStyle),
                 scatterStyle,
-                ParseChartRadarStyle(radarStyle),
                 radarStyle,
                 markersEnabled,
                 markersEnabledValue,
@@ -490,7 +485,6 @@ internal sealed partial class PptxSceneBuilder
             string crosses = ReadChartElementValue(axis, "crosses");
             string crossBetween = ReadChartElementValue(axis, "crossBetween");
             string orientation = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), "orientation");
-            PptxSceneChartAxisOrientation orientationKind = ParseChartAxisOrientation(orientation);
             string tickLabelPosition = ReadChartElementValue(axis, "tickLblPos");
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
             string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
@@ -506,22 +500,16 @@ internal sealed partial class PptxSceneBuilder
             (bool? noMultiLevelLabels, string noMultiLevelLabelsValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "noMultiLvlLbl");
             XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
             XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
-            axes.Add(new PptxSceneChartAxis(
+            axes.Add(PptxSceneChartAxis.Defined(
                 id,
-                ParseChartAxisKind(axis.Name.LocalName),
                 axis.Name.LocalName,
-                ParseChartAxisPosition(axisPosition),
                 axisPosition,
                 ReadChartElementValue(axis, "crossAx"),
-                ParseChartAxisCrosses(crosses),
                 crosses,
                 crossesAt,
                 crossesAtValue,
-                ParseChartAxisCrossBetween(crossBetween),
                 crossBetween,
-                orientationKind,
                 orientation,
-                orientationKind == PptxSceneChartAxisOrientation.MaximumMinimum,
                 isDeleted,
                 isDeletedValue,
                 axis.Element(ChartNamespace + "scaling") is not null,
@@ -543,11 +531,8 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartStyleRoleLine(stylePart, "gridlineMajor"),
                 ReadChartStyleRoleLine(stylePart, "gridlineMinor"),
                 ReadChartTextStyleOverride(axis, theme, colorMap),
-                ParseChartTickLabelPosition(tickLabelPosition),
                 tickLabelPosition,
-                ParseChartAxisTickMark(majorTickMark),
                 majorTickMark,
-                ParseChartAxisTickMark(minorTickMark),
                 minorTickMark,
                 labelOffset,
                 labelOffsetValue,
