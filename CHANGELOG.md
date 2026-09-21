@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved pie-leader-lines probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (pie slices with data labels including the Gamma leader line; SSIM 0.992, recall 0.997, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance shared with its offset sibling. Manifests: 118 locked / 182 approximate / 26 needs-review.
+
 - Moved radar-2series and pie-leader-lines-offset probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (two-series radar web with value rings and category axes; pie slices with data labels including the West leader line; SSIM 0.997/0.995, recall 0.986/0.996, diagnostics empty) with the recorded sub-lock-bar geometry nuance (radar value-axis geometry per the filled-radar fidelity note). Manifests: 118 locked / 181 approximate / 27 needs-review.
 
 - Moved plot-layout-outer-narrow and compact-stacked-secondary-axis probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (bar geometry, plot-box layout, stacked segments with pattern fills, dual value axes, trend lines and arrow all match; SSIM 0.997/0.991, recall 0.990/0.993, MAE 0.087/0.042, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 179 approximate / 29 needs-review.
