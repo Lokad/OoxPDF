@@ -36,7 +36,7 @@ only, never gates.
 | R19 telemetry scope | closed | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md` |
 | R20 severity and publication | closed | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api) |
 | R21 tool budgets | closed | `5cf3e1c9`; spawn-based tools group (7 tests), ps1 timeout |
-| R22 closure evidence | partial | `90095d5b` pointer removal + scaling test; this audit; audit-doc records |
+| R22 closure evidence | partial | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records |
 
 ## R12 profiling evidence
 
