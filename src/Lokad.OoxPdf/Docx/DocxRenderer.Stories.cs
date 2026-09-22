@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -52,9 +52,7 @@ internal sealed partial class DocxRenderer
     }
 
     private static void RenderFloatingDrawings(
-        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
-        int pageIndex,
-        bool behindDocument,
+        IReadOnlyList<DocxFloatingDrawingLayout> pageDrawings,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
@@ -66,9 +64,9 @@ internal sealed partial class DocxRenderer
         ref int imageIndex,
         double pageHeight)
     {
-        foreach (DocxFloatingDrawingLayout drawing in floatingDrawings
-            .Where(drawing => drawing.AnchorPageIndex == pageIndex && IsBehindDocument(drawing.Drawing) == behindDocument)
-            .OrderBy(drawing => ReadZOrder(drawing.Drawing.RelativeHeightValue)))
+        // R12: pageDrawings arrives pre-filtered by page/layer and pre-sorted by
+        // z-order from the once-per-render page index.
+        foreach (DocxFloatingDrawingLayout drawing in pageDrawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
             RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, ref imageIndex, pageHeight);

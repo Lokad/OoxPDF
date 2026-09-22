@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -54,7 +54,7 @@ internal sealed partial class DocxRenderer
     }
 
     private static void RenderWordCompatibleRevisionBar(
-        DocxLayout layout,
+        FloatingDrawingPageIndex.PageIndexPair drawingPages,
         DocxLayoutPage page,
         int pageIndex,
         PdfGraphicsBuilder graphics,
@@ -75,7 +75,7 @@ internal sealed partial class DocxRenderer
             top = top is null ? y + height : Math.Max(top.Value, y + height);
         }
 
-        foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(layout, page, pageIndex, markupContext, page.Height))
+        foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!HasTextLineRevision(line))
@@ -90,7 +90,7 @@ internal sealed partial class DocxRenderer
             IncludeRevisionBounds(y, height);
         }
 
-        foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, EnumeratePageFloatingDrawings(layout, pageIndex).ToArray()))
+        foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, drawingPages.PageAll(pageIndex)))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!HasTableRowRevision(row))

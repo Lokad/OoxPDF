@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
@@ -1072,5 +1072,118 @@ internal static class DocxImagesTests
         DocxTextLineLayout line = box.TextLines.Single();
         TestAssert.True(Math.Abs(line.Width - 90d) < 0.001d, "Static box content should measure raw at unit scale. Width=" + line.Width.ToString(CultureInfo.InvariantCulture));
         TestAssert.True(Math.Abs(line.X - (box.BoxX + 7.2d)) < 0.001d, "Static box content should start at the file inset. X=" + line.X.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void FloatingDrawingPageIndexMatchesLegacyFiltering()
+    {
+        // R12: the once-per-render page index returns exactly the legacy per-page
+        // sequences: document order for All, stable z-order per layer, null anchors
+        // excluded, missing pages empty. Markers keep value-equal records distinct.
+        DocxFloatingDrawingLayout a = MakePageDrawing("A", 0, behind: false, z: "2");
+        DocxFloatingDrawingLayout b = MakePageDrawing("B", 0, behind: true, z: "5");
+        DocxFloatingDrawingLayout c = MakePageDrawing("C", 0, behind: true, z: "5");
+        DocxFloatingDrawingLayout d = MakePageDrawing("D", 0, behind: false, z: "1");
+        DocxFloatingDrawingLayout e = MakePageDrawing("E", 1, behind: true, z: "9");
+        DocxFloatingDrawingLayout f = MakePageDrawing("F", null, behind: false, z: "0");
+        var floating = new List<DocxFloatingDrawingLayout> { a, b, c, d, e, f };
+        DocxFloatingDrawingLayout g = MakePageDrawing("G", 0, behind: false, z: "7");
+        DocxFloatingDrawingLayout h = MakePageDrawing("H", 2, behind: true, z: "3");
+        var staticDrawings = new List<DocxFloatingDrawingLayout> { g, h };
+
+        DocxRenderer.FloatingDrawingPageIndex floatingIndex = DocxRenderer.FloatingDrawingPageIndex.Build(floating, CancellationToken.None);
+        DocxRenderer.FloatingDrawingPageIndex staticIndex = DocxRenderer.FloatingDrawingPageIndex.Build(staticDrawings, CancellationToken.None);
+        var pair = new DocxRenderer.FloatingDrawingPageIndex.PageIndexPair(floatingIndex, staticIndex);
+
+        TestAssert.True(SequenceEqual([a, b, c, d], floatingIndex.Get(0).All), "Page 0 All must keep document order.");
+        TestAssert.True(SequenceEqual([b, c], floatingIndex.Get(0).Behind), "Page 0 Behind must sort stably by z-order.");
+        TestAssert.True(SequenceEqual([d, a], floatingIndex.Get(0).Ahead), "Page 0 Ahead must sort stably by z-order.");
+        TestAssert.True(SequenceEqual([e], floatingIndex.Get(1).All), "Page 1 All must hold its drawing.");
+        TestAssert.True(SequenceEqual([e], floatingIndex.Get(1).Behind), "Page 1 Behind must hold its drawing.");
+        TestAssert.True(SequenceEqual([], floatingIndex.Get(1).Ahead), "Page 1 Ahead must be empty.");
+        TestAssert.True(SequenceEqual([], floatingIndex.Get(99).All), "Missing pages must yield empty sets.");
+        TestAssert.True(SequenceEqual([], floatingIndex.Get(99).Behind), "Missing pages must yield empty sets.");
+        TestAssert.True(SequenceEqual([g], staticIndex.Get(0).All), "Static page 0 must hold its drawing.");
+        TestAssert.True(SequenceEqual([h], staticIndex.Get(2).Behind), "Static page 2 must hold its drawing.");
+        TestAssert.True(SequenceEqual([a, b, c, d, g], pair.PageAll(0)), "PageAll must concatenate floating then static in document order.");
+        TestAssert.True(SequenceEqual([e], pair.PageAll(1)), "PageAll must hold single-list pages.");
+        TestAssert.True(SequenceEqual([h], pair.PageAll(2)), "PageAll must hold static-only pages.");
+        TestAssert.True(SequenceEqual([], pair.PageAll(99)), "PageAll must be empty for missing pages.");
+    }
+
+    private static DocxFloatingDrawingLayout MakePageDrawing(string marker, int? page, bool behind, string z)
+    {
+        var drawing = new DocxFloatingDrawing(
+            DistanceTopValue: null,
+            DistanceBottomValue: null,
+            DistanceLeftValue: null,
+            DistanceRightValue: null,
+            SimplePositionValue: null,
+            RelativeHeightValue: z,
+            BehindDocumentValue: behind ? "1" : null,
+            LockedValue: null,
+            LayoutInCellValue: null,
+            AllowOverlapValue: null,
+            ExtentCxValue: null,
+            ExtentCyValue: null,
+            HorizontalRelativeFromValue: null,
+            HorizontalAlignValue: marker,
+            HorizontalOffsetValue: null,
+            VerticalRelativeFromValue: null,
+            VerticalAlignValue: null,
+            VerticalOffsetValue: null,
+            WrapKind: null,
+            WrapTextValue: null,
+            ImageRelationshipId: null,
+            Image: null,
+            SourceParagraphIndex: null,
+            SourceBlockIndex: null);
+        return new DocxFloatingDrawingLayout(
+            Drawing: drawing,
+            PageStartIndex: null,
+            PageEndIndex: null,
+            AnchorPageIndex: page,
+            AnchorColumnIndex: null,
+            AnchorBlockVerticalTop: null,
+            AnchorBlockVerticalBottom: null,
+            ExtentWidthPoints: null,
+            ExtentHeightPoints: null,
+            HorizontalOffsetPoints: null,
+            VerticalOffsetPoints: null,
+            DistanceTopPoints: null,
+            DistanceBottomPoints: null,
+            DistanceLeftPoints: null,
+            DistanceRightPoints: null,
+            HorizontalReferenceX: null,
+            HorizontalReferenceWidth: null,
+            VerticalReferenceTop: null,
+            VerticalReferenceBottom: null,
+            PlacedX: null,
+            PlacedTop: null,
+            HorizontalPlacementSource: null,
+            VerticalPlacementSource: null,
+            WrapExclusionX: null,
+            WrapExclusionTop: null,
+            WrapExclusionWidth: null,
+            WrapExclusionHeight: null,
+            Story: null,
+            TextBoxLayout: null);
+    }
+
+    private static bool SequenceEqual(IReadOnlyList<DocxFloatingDrawingLayout> expected, IReadOnlyList<DocxFloatingDrawingLayout> actual)
+    {
+        if (expected.Count != actual.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < expected.Count; i++)
+        {
+            if (!ReferenceEquals(expected[i], actual[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

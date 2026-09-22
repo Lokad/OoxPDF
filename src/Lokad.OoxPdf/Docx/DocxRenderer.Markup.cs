@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -66,6 +66,9 @@ internal sealed partial class DocxRenderer
             return null;
         }
 
+        // R12: page drawings come from the once-per-pass page index instead of
+        // re-filtering both drawing lists for every page.
+        FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         var codepoints = new HashSet<int>();
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -74,7 +77,7 @@ internal sealed partial class DocxRenderer
             foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
-                EnumeratePageFloatingDrawings(layout, pageIndex).ToArray(),
+                drawingPages.PageAll(pageIndex),
                 markupContext,
                 labelResource.Embedded,
                 bodyCoverageResource.Embedded))
@@ -161,13 +164,6 @@ internal sealed partial class DocxRenderer
     {
         return fontResources.RunResources.Values.FirstOrDefault(resource => !resource.Resolution.Bold) ??
             fontResources.Fallback;
-    }
-
-    private static IEnumerable<DocxFloatingDrawingLayout> EnumeratePageFloatingDrawings(DocxLayout layout, int pageIndex)
-    {
-        return layout.FloatingDrawings
-            .Concat(layout.StaticFloatingDrawings)
-            .Where(drawing => drawing.AnchorPageIndex == pageIndex);
     }
 
     private static IReadOnlyList<DocxMarkupBalloonPlacement> BuildMarkupBalloonPlacements(

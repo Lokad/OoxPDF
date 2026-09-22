@@ -34,18 +34,20 @@ internal sealed partial class DocxRenderer
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateRenderedPageTextLines(
-        DocxLayout layout,
+        FloatingDrawingPageIndex.PageIndexPair drawingPages,
         DocxLayoutPage page,
         int pageIndex,
         DocxMarkupContext markupContext,
         double pageHeight)
     {
+        // R12: page drawings arrive from the once-per-pass page index instead of
+        // re-filtering both drawing lists for every page.
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumeratePlacedRelatedStoryTextLines(page))
             .Concat(EnumerateInlineTextBoxTextLines(page))
-            .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(EnumeratePageFloatingDrawings(layout, pageIndex), map))
+            .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(drawingPages.PageAll(pageIndex), map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
     }
 
@@ -217,14 +219,14 @@ internal sealed partial class DocxRenderer
         string? ContainerStoryVariantType);
 
     private static IEnumerable<DocxTextEmissionLineSource> EnumerateRenderedFloatingDrawingTextBoxTextLines(
-        DocxLayout layout,
+        FloatingDrawingPageIndex.PageIndexPair drawingPages,
         DocxLayoutPage page,
         int pageIndex,
         DocxMarkupContext markupContext,
         double pageHeight)
     {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        foreach (DocxFloatingDrawingLayout drawing in EnumeratePageFloatingDrawings(layout, pageIndex))
+        foreach (DocxFloatingDrawingLayout drawing in drawingPages.PageAll(pageIndex))
         {
             bool isStaticStory = IsStaticStoryFloatingDrawing(drawing);
             foreach (DocxTextLineLayout line in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], map))
