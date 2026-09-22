@@ -1,0 +1,30 @@
+{
+  "id": "pptx-ladder-11-chart-pattern-phase-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pattern-phase-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "secondary-axis", "connector", "bottom-up", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.9,
+    "minForegroundRecall": 0.94,
+    "maxChangedPixelRatioAtThreshold16": 0.024,
+    "maxChartGraphicsStructureBoundsDelta": 4.6,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": [
+      "GridlineAxisPlotBoxCandidate",
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate"
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 3.8,
+      "ValueAxisTickLabel": 3.5
+    }
+  },
+  "allowedUnsupportedFeatures": []
+}
