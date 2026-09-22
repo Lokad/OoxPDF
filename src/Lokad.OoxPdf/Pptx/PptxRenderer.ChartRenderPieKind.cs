@@ -37,7 +37,7 @@ internal sealed partial class PptxRenderer
             if (pieSlices.Count != 0)
             {
                 ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(piePlot, pieChart, workbook, plotVisibleOnly);
-                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(piePlot, pieChart, workbook);
+                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(piePlot, pieChart, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
                     ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
             if (doughnutSlices.Count != 0)
             {
                 ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(doughnutPlot, doughnutChart, workbook, plotVisibleOnly);
-                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(doughnutPlot, doughnutChart, workbook);
+                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(doughnutPlot, doughnutChart, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
                     ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),

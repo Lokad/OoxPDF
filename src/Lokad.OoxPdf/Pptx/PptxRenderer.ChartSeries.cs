@@ -696,6 +696,25 @@ internal sealed partial class PptxRenderer
             () => ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly).DensePoints());
     }
 
+    // R15: per-frame shared series names behind one call shape, mirroring shared
+    // category labels. Workbook-less charts read directly.
+    private static IReadOnlyList<ChartSeriesNameRecord> ReadSharedChartSeriesNames(
+        PptxSceneChartPlot? plot,
+        XElement chartElement,
+        ChartWorkbookData? workbook)
+    {
+        if (workbook is null)
+        {
+            return ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
+        }
+
+        object? source = plot is not null ? plot : null;
+        return workbook.GetOrAddSeriesNames(
+            source,
+            chartElement,
+            () => ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook));
+    }
+
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();

@@ -237,7 +237,7 @@ internal sealed partial class PptxRenderer
                 if (titleLegendPlotElement is not null)
                 {
                     PptxSceneChartPlot? titleLegendPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
-                    IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSceneOrXmlChartSeriesNameRecords(titleLegendPlot, titleLegendPlotElement, workbook);
+                    IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, titleLegendPlotElement, workbook);
                     ChartRightLegendReserve titleLegendReserve = ResolveRightLegendReserve(frame, titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d);
                     right = ResolveTitledRightLegendPlotRight(presetRight, frame.X + frame.Width, titleLegendReserve.Width);
                 }
@@ -353,7 +353,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind, 0);
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(plot, plotElement, workbook);
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(plot, plotElement, workbook);
         double lastCategoryLabelWidth = plotKind == PptxSceneChartPlotKind.Area
             ? MeasureLastCategoryLabelWidth(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver)
             : 0d;

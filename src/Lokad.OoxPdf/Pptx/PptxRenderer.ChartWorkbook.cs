@@ -408,10 +408,29 @@ internal sealed partial class PptxRenderer
         // nothing accumulates across frames or charts.
         private readonly Dictionary<(object? Source, XElement? ChartElement, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedTextPoint?>> labelMemo = new();
 
+        private readonly Dictionary<(object? Source, XElement? ChartElement), IReadOnlyList<ChartSeriesNameRecord>> seriesNameMemo = new();
+
         internal void ClearRangeMemo()
         {
             rangeMemo.Clear();
             labelMemo.Clear();
+            seriesNameMemo.Clear();
+        }
+
+        internal IReadOnlyList<ChartSeriesNameRecord> GetOrAddSeriesNames(
+            object? source,
+            XElement? chartElement,
+            Func<IReadOnlyList<ChartSeriesNameRecord>> factory)
+        {
+            var key = (source, chartElement);
+            if (seriesNameMemo.TryGetValue(key, out IReadOnlyList<ChartSeriesNameRecord>? cached))
+            {
+                return cached;
+            }
+
+            IReadOnlyList<ChartSeriesNameRecord> names = factory();
+            seriesNameMemo[key] = names;
+            return names;
         }
 
         internal IReadOnlyList<ChartIndexedTextPoint?> GetOrAddCategoryLabels(

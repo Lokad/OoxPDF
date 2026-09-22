@@ -592,14 +592,15 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 
-    private enum ChartSeriesNameSource
+    internal enum ChartSeriesNameSource
     {
         Default,
         Cache,
         Workbook
     }
 
-    private readonly record struct ChartSeriesNameRecord(
+    // R16: internal so the per-frame shared series-name memo carries the record type.
+    internal readonly record struct ChartSeriesNameRecord(
         string ActiveName,
         string CacheName,
         ChartSeriesNameSource ActiveNameSource,

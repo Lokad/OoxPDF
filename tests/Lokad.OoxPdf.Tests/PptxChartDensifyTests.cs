@@ -194,6 +194,54 @@ internal static class PptxChartDensifyTests
         TestAssert.True(ReferenceEquals(third, denseB), "Cleared memo must recompute on next access.");
     }
 
+    public static void SeriesNameMemoSharesResultsWithinFrame()
+    {
+        // R15: one series-name list per (source, element) per frame; clearing the
+        // frame memo recomputes on next access.
+        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected workbook type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets])
+            ?? throw new InvalidOperationException("Expected workbook instance.");
+        MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesNames", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Expected series-name memo.");
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayA = [];
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayB = [];
+        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryA = () => arrayA;
+        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryB = () => arrayB;
+        object first = InvokeUntyped(memo, workbook, "k", null, factoryA);
+        object second = InvokeUntyped(memo, workbook, "k", null, factoryB);
+        TestAssert.True(ReferenceEquals(first, second), "Same key must share one name list.");
+        TestAssert.True(ReferenceEquals(first, arrayA), "First computation must win.");
+        try
+        {
+            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        object third = InvokeUntyped(memo, workbook, "k", null, factoryB);
+        TestAssert.True(ReferenceEquals(third, arrayB), "Cleared memo must recompute on next access.");
+    }
+
+    private static object InvokeUntyped(MethodInfo memo, object workbook, object? first, object? second, object factory)
+    {
+        try
+        {
+            return memo.Invoke(workbook, [first, second, factory])
+                ?? throw new InvalidOperationException("Expected shared list.");
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
     private static object InvokeMemo(MethodInfo memo, object workbook, object? source, object? chartElement, bool visibleOnly, object factory)
     {
         try
