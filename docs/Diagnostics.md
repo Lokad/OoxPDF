@@ -95,6 +95,42 @@ Exit codes:
 - `2`: invalid arguments.
 - `3`: conversion succeeded, but `--strict` saw at least one warning or error diagnostic.
 
+## Resource Budgets and Host Admission
+
+Per-conversion cumulative budgets (`OoxPdfOptions.ConversionLimits`, PLAN Q01)
+bound total work so many individually legal expansions cannot jointly exhaust a
+shared process. Defaults are generous multiples of the per-site caps:
+
+- `MaxChartRangeCellsPerConversion` (default 2,000,000): total chart workbook
+  range cells expanded, including blank cells materialized during union expansion.
+- `MaxTableFragmentsPerConversion` (default 20,000): total DOCX table row
+  fragments constructed.
+- `MaxImagesDecodedPerConversion` (default 500): total content images decoded
+  (each image is still individually pixel-capped).
+- `MaxFontWorkPerConversion` (default 5,000): total font program loads and
+  subset builds.
+- `MaxLiveImageBytesPerConversion` (default 512 MiB): peak transient image
+  decode scratch plus pixel planes reserved at any one time (conservative
+  width-by-height-by-4 estimate per pixel decode; JPEG passthrough holds none).
+
+Crossing any budget throws `OoxPdfLimitExceededException` before further
+expansion: no partial PDF is published (file output stays atomic) and the
+failure escapes per-node recovery, so it always aborts the conversion.
+
+With `OoxPdfOptions.ReportResourceUsage`, each successful conversion emits one
+informational `CONVERSION_RESOURCE_SUMMARY` diagnostic reporting cumulative
+counters plus the peak live reservation
+(`pages`, `chartRangeCells`, `tableFragments`, `imagesDecoded`, `fontWork`,
+`peakLiveImageBytes`). Informational diagnostics never affect CLI `--strict`
+exit codes.
+
+Host admission recipe: run a representative corpus with `ReportResourceUsage`
+enabled, take the maximum observed `peakLiveImageBytes` plus headroom for the
+per-image pixel cap, and size concurrent conversions as
+`maxConcurrent ≈ hostByteBudget / perConversionPeak`. Set tighter
+`ConversionLimits` for shared processes and tune them against measured
+corpora; `ConvertAsync` offloading to `Task.Run` is not admission control.
+
 ## Code Conventions
 
 Use stable prefixes by subsystem:
