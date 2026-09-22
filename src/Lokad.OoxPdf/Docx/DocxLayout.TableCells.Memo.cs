@@ -1,13 +1,19 @@
-﻿namespace Lokad.OoxPdf.Docx;
+using System.Runtime.CompilerServices;
 
-// PLAN W04: cell text-line memo. One table layout pass measures each cell up to three
+namespace Lokad.OoxPdf.Docx;
+
+// Cell text-line memo. One table layout pass measures each cell up to three
 // times (split-feasibility, break resolution, final fragments) plus nested-table
 // remeasurement; keys capture every layout input so hits reproduce the computed lines
-// exactly after caller-side re-offsetting. Cells carrying PAGE/NUMPAGES runs keep
-// their page args in the key (dynamic tier); all other cells omit them (static tier),
-// which is sound because page inputs only reach text spans and wrap measurement
+// exactly after caller-side re-offsetting by the new origin. Stored lines are
+// origin-relative (absolute minus store origin); callers reconstruct absolute lines
+// by shifting relative lines by the lookup origin. Cells carrying PAGE/NUMPAGES runs
+// keep their page args in the key (dynamic tier); all other cells omit them (static
+// tier), which is sound because page inputs only reach text spans and wrap measurement
 // through dynamic field runs. Vertical-alignment shifts stay outside the memo: every
 // caller applies its own height-dependent shift to the shared unshifted lines.
+// Cell identity is explicit reference identity: equal-valued distinct cell instances
+// must not share entries.
 internal sealed partial class DocxLayoutEngine
 {
     internal static bool HasPageDynamicFields(IReadOnlyList<DocxBodyElement> bodyElements)
@@ -44,8 +50,6 @@ internal sealed partial class DocxLayoutEngine
 
     internal sealed class DocxTableCellTextLinesMemo
     {
-
-        // W01 precedent: structural counters proving the memo fires on real corpus.
         public long Hits { get; private set; }
 
         public long Misses { get; private set; }
@@ -72,9 +76,7 @@ internal sealed partial class DocxLayoutEngine
             int? pageNumber,
             int? pageCount,
             bool pageStatic,
-            out IReadOnlyList<DocxTextLineLayout> lines,
-            out double originX,
-            out double originY,
+            out IReadOnlyList<DocxTextLineLayout> relativeLines,
             out double usedHeight)
         {
             if (entries.TryGetValue(
@@ -83,17 +85,14 @@ internal sealed partial class DocxLayoutEngine
             {
                 Hits++;
                 TotalHits++;
-                lines = stored.Lines;
-                originX = stored.OriginX;
-                originY = stored.OriginY;
+                relativeLines = stored.Lines;
                 usedHeight = stored.UsedHeight;
+                return true;
             }
 
             Misses++;
             TotalMisses++;
-            lines = [];
-            originX = 0d;
-            originY = 0d;
+            relativeLines = [];
             usedHeight = 0d;
             return false;
         }
@@ -108,12 +107,13 @@ internal sealed partial class DocxLayoutEngine
             int? pageNumber,
             int? pageCount,
             bool pageStatic,
-            IReadOnlyList<DocxTextLineLayout> lines,
+            IReadOnlyList<DocxTextLineLayout> absoluteLines,
             double originX,
             double originY,
             double usedHeight)
         {
-            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(lines, originX, originY, usedHeight);
+            IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
+            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(relative, usedHeight);
         }
 
         internal static IReadOnlyList<DocxTextLineLayout> ToRelativeLines(
@@ -175,28 +175,74 @@ internal sealed partial class DocxLayoutEngine
             return shifted;
         }
 
-        // Object-typed cells compare by reference through the default comparer
-        // (records would compare by value); reference sharing is the always-sound
-        // subset since every other layout input sits in the key.
-        private readonly record struct MemoKey(
-            object Cell,
-            double CellWidth,
-            object? Measurer,
-            double DefaultTabStopPoints,
-            double RowTopPadding,
-            double ParagraphSpacingScale,
-            int? PageNumber,
-            int? PageCount);
+        private readonly struct MemoKey : IEquatable<MemoKey>
+        {
+            private readonly DocxTableCell cell;
+            private readonly double cellWidth;
+            private readonly IDocxTextMeasurer? measurer;
+            private readonly double defaultTabStopPoints;
+            private readonly double rowTopPadding;
+            private readonly double paragraphSpacingScale;
+            private readonly int? pageNumber;
+            private readonly int? pageCount;
 
-        private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, double originX, double originY, double usedHeight)
+            public MemoKey(
+                DocxTableCell cell,
+                double cellWidth,
+                IDocxTextMeasurer? measurer,
+                double defaultTabStopPoints,
+                double rowTopPadding,
+                double paragraphSpacingScale,
+                int? pageNumber,
+                int? pageCount)
+            {
+                this.cell = cell;
+                this.cellWidth = cellWidth;
+                this.measurer = measurer;
+                this.defaultTabStopPoints = defaultTabStopPoints;
+                this.rowTopPadding = rowTopPadding;
+                this.paragraphSpacingScale = paragraphSpacingScale;
+                this.pageNumber = pageNumber;
+                this.pageCount = pageCount;
+            }
+
+            public bool Equals(MemoKey other)
+            {
+                return ReferenceEquals(cell, other.cell)
+                    && cellWidth.Equals(other.cellWidth)
+                    && ReferenceEquals(measurer, other.measurer)
+                    && defaultTabStopPoints.Equals(other.defaultTabStopPoints)
+                    && rowTopPadding.Equals(other.rowTopPadding)
+                    && paragraphSpacingScale.Equals(other.paragraphSpacingScale)
+                    && pageNumber == other.pageNumber
+                    && pageCount == other.pageCount;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is MemoKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                var hash = new HashCode();
+                hash.Add(RuntimeHelpers.GetHashCode(cell));
+                hash.Add(cellWidth);
+                hash.Add(measurer is null ? 0 : RuntimeHelpers.GetHashCode(measurer));
+                hash.Add(defaultTabStopPoints);
+                hash.Add(rowTopPadding);
+                hash.Add(paragraphSpacingScale);
+                hash.Add(pageNumber);
+                hash.Add(pageCount);
+                return hash.ToHashCode();
+            }
+        }
+
+        private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, double usedHeight)
         {
             public IReadOnlyList<DocxTextLineLayout> Lines { get; } = lines;
 
-            public double OriginX { get; } = originX;
-
-            public double OriginY { get; } = originY;
-
-        public double UsedHeight { get; } = usedHeight;
+            public double UsedHeight { get; } = usedHeight;
         }
     }
 }

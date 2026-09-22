@@ -250,9 +250,9 @@ internal sealed partial class DocxLayoutEngine
         bool pageStatic)
     {
         if (cellMemo is not null &&
-            cellMemo.TryGetRelativeLines(cell, cellWidth, textMeasurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, pageStatic, out IReadOnlyList<DocxTextLineLayout> cachedLines, out double cachedOriginX, out double cachedOriginY, out double cachedUsedHeight))
+            cellMemo.TryGetRelativeLines(cell, cellWidth, textMeasurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, pageStatic, out IReadOnlyList<DocxTextLineLayout> cachedRelative, out double cachedUsedHeight))
         {
-            return (new List<DocxTextLineLayout>(DocxTableCellTextLinesMemo.ShiftLines(cachedLines, originX - cachedOriginX, originY - cachedOriginY)), cachedUsedHeight);
+            return (new List<DocxTextLineLayout>(DocxTableCellTextLinesMemo.ShiftLines(cachedRelative, originX, originY)), cachedUsedHeight);
         }
 
         double cursorY = startBaselineY;
@@ -393,7 +393,7 @@ internal sealed partial class DocxLayoutEngine
 
         if (cellMemo is not null)
         {
-            cellMemo.StoreRelativeLines(cell, cellWidth, textMeasurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, pageStatic, DocxTableCellTextLinesMemo.ToRelativeLines(lines, originX, originY), originX, originY, usedHeight);
+            cellMemo.StoreRelativeLines(cell, cellWidth, textMeasurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, pageStatic, lines, originX, originY, usedHeight);
         }
 
         return (lines, usedHeight);
