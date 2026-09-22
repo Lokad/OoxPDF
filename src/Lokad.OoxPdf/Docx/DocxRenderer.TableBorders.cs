@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,7 +20,8 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout? previousRow,
         DocxTableRowLayout? nextRow,
         PdfGraphicsBuilder graphics,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        RowPairBorderPlan? sharedPlan)
     {
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
@@ -61,9 +62,9 @@ internal sealed partial class DocxRenderer
             RenderSharedVerticalTableBorder(cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.Height, right, nextLeft, graphics);
         }
 
-        if (nextRow is not null && nextRow.RowIndex != row.RowIndex)
+        if (sharedPlan is not null)
         {
-            RenderSharedHorizontalTableBorders(row, nextRow, graphics, cancellationToken);
+            RenderSharedHorizontalTableBorders(sharedPlan, graphics, cancellationToken);
         }
     }
 
@@ -78,31 +79,28 @@ internal sealed partial class DocxRenderer
     }
 
     private static void RenderSharedHorizontalTableBorders(
-        DocxTableRowLayout row,
-        DocxTableRowLayout nextRow,
+        RowPairBorderPlan plan,
         PdfGraphicsBuilder graphics,
         CancellationToken cancellationToken)
     {
-        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        int pairIndex = 0;
+        for (int cellIndex = 0; cellIndex < plan.Row.Cells.Count; cellIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow: null))
+            if (!plan.CurrentVisible[cellIndex])
             {
                 continue;
             }
 
-            DocxTableCellLayout[] overlappingNextCells = nextRow.Cells
-                .Where(nextCell => ShouldRenderTableCellVisualFragment(nextCell, row) && HorizontalOverlap(cellLayout, nextCell) > 0d)
-                .ToArray();
-            if (overlappingNextCells.Length == 0)
+            if (plan.OverlapCounts[cellIndex] == 0)
             {
-                RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
+                RenderHorizontalTableCellBorder(plan.Row.Cells[cellIndex], "bottom", graphics);
                 continue;
             }
 
-            foreach (DocxTableCellLayout nextRowCell in overlappingNextCells)
+            for (int k = 0; k < plan.OverlapCounts[cellIndex]; k++, pairIndex++)
             {
-                RenderSharedHorizontalTableBorderSegment(cellLayout, nextRowCell, graphics);
+                RenderSharedHorizontalTableBorderSegment(plan.Overlaps[pairIndex].Current, plan.Overlaps[pairIndex].Next, graphics);
             }
         }
     }
@@ -699,6 +697,305 @@ internal sealed partial class DocxRenderer
             HorizontalOverlap(previousCell, cellLayout) > 0d &&
             previousCell.Y <= cellLayout.Y + 0.001d &&
             previousCell.Y + previousCell.Height >= cellLayout.Y + cellLayout.Height - 0.001d);
+    }
+
+    // R11: one ordered row-pair overlap plan shared by the horizontal stroke and
+    // junction painters. Both painters previously rescanned next-row cells per
+    // current-row cell (O(C^2) overlap searches plus a per-cell overlap allocation),
+    // re-evaluating merge-visibility scans inside every pair test. The sweep evaluates
+    // each cell visibility once with the exact predicates both painters use, discovers
+    // every overlapping pair with binary searches, and emits pairs in nested-loop
+    // order so shared output is unchanged.
+    internal sealed class RowPairBorderPlan
+    {
+        public DocxTableRowLayout Row { get; }
+
+        public DocxTableRowLayout NextRow { get; }
+
+        public bool[] CurrentVisible { get; }
+
+        public int[] OverlapCounts { get; }
+
+        public (DocxTableCellLayout Current, DocxTableCellLayout Next, double X, double Right)[] Overlaps { get; }
+
+        private RowPairBorderPlan(
+            DocxTableRowLayout row,
+            DocxTableRowLayout nextRow,
+            bool[] currentVisible,
+            int[] overlapCounts,
+            (DocxTableCellLayout Current, DocxTableCellLayout Next, double X, double Right)[] overlaps)
+        {
+            Row = row;
+            NextRow = nextRow;
+            CurrentVisible = currentVisible;
+            OverlapCounts = overlapCounts;
+            Overlaps = overlaps;
+        }
+
+        public static RowPairBorderPlan? TryBuild(DocxTableRowLayout row, DocxTableRowLayout? nextRow, CancellationToken cancellationToken)
+        {
+            if (nextRow is null || nextRow.RowIndex == row.RowIndex)
+            {
+                return null;
+            }
+
+            bool[] currentVisible = new bool[row.Cells.Count];
+            for (int i = 0; i < row.Cells.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                currentVisible[i] = ShouldRenderTableCellVisualFragment(row.Cells[i], previousRow: null);
+            }
+
+            bool[] nextVisible = new bool[nextRow.Cells.Count];
+            for (int j = 0; j < nextRow.Cells.Count; j++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                nextVisible[j] = ShouldRenderTableCellVisualFragment(nextRow.Cells[j], row);
+            }
+
+            double[] nextLefts = new double[nextRow.Cells.Count];
+            double[] nextRights = new double[nextRow.Cells.Count];
+            bool boundsFinite = true;
+            for (int j = 0; j < nextRow.Cells.Count; j++)
+            {
+                double left = nextRow.Cells[j].X;
+                double right = left + nextRow.Cells[j].Width;
+                nextLefts[j] = left;
+                nextRights[j] = right;
+                boundsFinite &= double.IsFinite(left) && double.IsFinite(right);
+            }
+
+            var pairs = new List<(int CurrentIndex, int NextIndex, double X, double Right)>();
+            if (boundsFinite)
+            {
+                int[] nextOrder = new int[nextRow.Cells.Count];
+                for (int j = 0; j < nextOrder.Length; j++)
+                {
+                    nextOrder[j] = j;
+                }
+
+                Array.Sort(nextOrder, (a, b) => nextLefts[a].CompareTo(nextLefts[b]));
+                for (int i = 0; i < row.Cells.Count; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!currentVisible[i])
+                    {
+                        continue;
+                    }
+
+                    double left = row.Cells[i].X;
+                    double right = left + row.Cells[i].Width;
+                    if (!double.IsFinite(left) || !double.IsFinite(right))
+                    {
+                        AddNestedPairs(row, nextRow, currentVisible, nextVisible, i, pairs);
+                        continue;
+                    }
+
+                    int lo = 0;
+                    int hi = nextOrder.Length;
+                    while (lo < hi)
+                    {
+                        int mid = lo + ((hi - lo) >> 1);
+                        if (nextRights[nextOrder[mid]] > left)
+                        {
+                            hi = mid;
+                        }
+                        else
+                        {
+                            lo = mid + 1;
+                        }
+                    }
+
+                    for (int k = lo; k < nextOrder.Length && nextLefts[nextOrder[k]] < right; k++)
+                    {
+                        int j = nextOrder[k];
+                        if (!nextVisible[j])
+                        {
+                            continue;
+                        }
+
+                        double overlapLeft = Math.Max(left, nextLefts[j]);
+                        double overlapRight = Math.Min(right, nextRights[j]);
+                        if (overlapRight > overlapLeft)
+                        {
+                            pairs.Add((i, j, overlapLeft, overlapRight));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < row.Cells.Count; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    AddNestedPairs(row, nextRow, currentVisible, nextVisible, i, pairs);
+                }
+            }
+
+            pairs.Sort((a, b) =>
+            {
+                int order = a.CurrentIndex.CompareTo(b.CurrentIndex);
+                return order != 0 ? order : a.NextIndex.CompareTo(b.NextIndex);
+            });
+
+            int[] overlapCounts = new int[row.Cells.Count];
+            var overlaps = new (DocxTableCellLayout Current, DocxTableCellLayout Next, double X, double Right)[pairs.Count];
+            for (int k = 0; k < pairs.Count; k++)
+            {
+                overlapCounts[pairs[k].CurrentIndex]++;
+                overlaps[k] = (row.Cells[pairs[k].CurrentIndex], nextRow.Cells[pairs[k].NextIndex], pairs[k].X, pairs[k].Right);
+            }
+
+            return new RowPairBorderPlan(row, nextRow, currentVisible, overlapCounts, overlaps);
+        }
+
+        private static void AddNestedPairs(
+            DocxTableRowLayout row,
+            DocxTableRowLayout nextRow,
+            bool[] currentVisible,
+            bool[] nextVisible,
+            int currentIndex,
+            List<(int CurrentIndex, int NextIndex, double X, double Right)> pairs)
+        {
+            if (!currentVisible[currentIndex])
+            {
+                return;
+            }
+
+            DocxTableCellLayout current = row.Cells[currentIndex];
+            for (int j = 0; j < nextRow.Cells.Count; j++)
+            {
+                if (!nextVisible[j])
+                {
+                    continue;
+                }
+
+                double overlapLeft = Math.Max(current.X, nextRow.Cells[j].X);
+                double overlapRight = Math.Min(current.X + current.Width, nextRow.Cells[j].X + nextRow.Cells[j].Width);
+                if (overlapRight > overlapLeft)
+                {
+                    pairs.Add((currentIndex, j, overlapLeft, overlapRight));
+                }
+            }
+        }
+    }
+
+    // R11: X-ordered index over concatenated vertical-boundary arrays. Grouping and
+    // junction emission keep concat order, so per-pair slices reproduce the original
+    // filter/group output exactly with binary searches instead of full scans.
+    private sealed class OrderedBoundaryIndex
+    {
+        private readonly DocxTableBorderBoundary[] ordered;
+        private readonly int[] byX;
+
+        private OrderedBoundaryIndex(DocxTableBorderBoundary[] ordered, int[] byX)
+        {
+            this.ordered = ordered;
+            this.byX = byX;
+        }
+
+        public static OrderedBoundaryIndex Build(IReadOnlyList<DocxTableBorderBoundary> first, IReadOnlyList<DocxTableBorderBoundary>? second = null)
+        {
+            int firstCount = first.Count;
+            int secondCount = second is null ? 0 : second.Count;
+            var ordered = new DocxTableBorderBoundary[firstCount + secondCount];
+            for (int i = 0; i < firstCount; i++)
+            {
+                ordered[i] = first[i];
+            }
+
+            if (second is not null)
+            {
+                for (int j = 0; j < secondCount; j++)
+                {
+                    ordered[firstCount + j] = second[j];
+                }
+            }
+
+            int[] byX = new int[ordered.Length];
+            for (int i = 0; i < byX.Length; i++)
+            {
+                byX[i] = i;
+            }
+
+            Array.Sort(byX, (a, b) => ordered[a].X.CompareTo(ordered[b].X));
+            return new OrderedBoundaryIndex(ordered, byX);
+        }
+
+        public DocxTableBorderBoundary[] SliceRaw(double x, double right, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int lo = LowerBound(x - 0.001d);
+            int hi = UpperBound(right + 0.001d);
+            if (hi <= lo)
+            {
+                return [];
+            }
+
+            int[] positions = new int[hi - lo];
+            for (int k = lo; k < hi; k++)
+            {
+                positions[k - lo] = byX[k];
+            }
+
+            Array.Sort(positions);
+            var slice = new DocxTableBorderBoundary[positions.Length];
+            for (int k = 0; k < positions.Length; k++)
+            {
+                slice[k] = ordered[positions[k]];
+            }
+
+            return slice;
+        }
+
+        public DocxTableBorderBoundary[] SliceGrouped(double x, double right, CancellationToken cancellationToken)
+        {
+            return SliceRaw(x, right, cancellationToken)
+                .Where(boundary => boundary.X >= x - 0.001d && boundary.X <= right + 0.001d)
+                .GroupBy(boundary => Math.Round(boundary.X, 3))
+                .Select(group => group.OrderByDescending(boundary => boundary.Width).First())
+                .ToArray();
+        }
+
+        private int LowerBound(double value)
+        {
+            int lo = 0;
+            int hi = byX.Length;
+            while (lo < hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                if (ordered[byX[mid]].X >= value)
+                {
+                    hi = mid;
+                }
+                else
+                {
+                    lo = mid + 1;
+                }
+            }
+
+            return lo;
+        }
+
+        private int UpperBound(double value)
+        {
+            int lo = 0;
+            int hi = byX.Length;
+            while (lo < hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                if (ordered[byX[mid]].X > value)
+                {
+                    hi = mid;
+                }
+                else
+                {
+                    lo = mid + 1;
+                }
+            }
+
+            return lo;
+        }
     }
 
     private sealed record DocxTableBorderBoundary(double X, double Width, DocxTableCellBorder Border);

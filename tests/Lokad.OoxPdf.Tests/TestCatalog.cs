@@ -30,6 +30,7 @@ internal static class TestCatalog
         .. FromType("docx-tables", typeof(DocxTablesTests)),
         .. FromType("docx-tables", typeof(DocxTableCellsTests)),
         .. FromType("docx-tables", typeof(DocxCellMemoTests)),
+        .. FromType("docx-tables", typeof(DocxBorderPlanTests)),
         .. FromType("docx-tables", typeof(DocxTablesLayoutTests)),
         .. FromType("docx-tables", typeof(DocxTablesMarkupTests)),
         .. FromType("docx-core", typeof(DocxCoreTests)),

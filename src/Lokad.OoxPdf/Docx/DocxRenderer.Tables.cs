@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -48,8 +48,9 @@ internal sealed partial class DocxRenderer
             RenderShadingFill(cell.FillHex, cell.ShadingValue, cell.ShadingColor, graphics, cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
         }
 
-        RenderTableRowBorders(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken);
-        RenderTableBorderJunctions(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken);
+        RowPairBorderPlan? sharedBorderPlan = RowPairBorderPlan.TryBuild(geometryRow, geometryNextRow, cancellationToken);
+        RenderTableRowBorders(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken, sharedBorderPlan);
+        RenderTableBorderJunctions(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken, sharedBorderPlan);
         RenderTableRowMarkupIndicators(row, graphics, markupContext);
 
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
@@ -138,7 +139,8 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout? previousRow,
         DocxTableRowLayout? nextRow,
         PdfGraphicsBuilder graphics,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        RowPairBorderPlan? sharedPlan)
     {
         DocxTableBorderBoundary[] rowBoundaries = ResolveVisibleVerticalBoundaries(row, previousRow, cancellationToken);
         if (rowBoundaries.Length == 0)
@@ -146,6 +148,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
+        OrderedBoundaryIndex rowBoundaryIndex = OrderedBoundaryIndex.Build(rowBoundaries);
         var emittedJunctions = new HashSet<(double X, double Y)>();
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
@@ -157,12 +160,12 @@ internal sealed partial class DocxRenderer
 
             if (previousRow is null && IsFirstTableRowFragment(row))
             {
-                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaries, graphics, emittedJunctions);
+                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
 
             if (nextRow is null && IsLastTableRowFragment(row))
             {
-                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaries, graphics, emittedJunctions);
+                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
         }
 
@@ -176,9 +179,9 @@ internal sealed partial class DocxRenderer
             RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "bottom", graphics);
         }
 
-        if (nextRow is not null && nextRow.RowIndex != row.RowIndex)
+        if (sharedPlan is not null)
         {
-            RenderSharedHorizontalBorderJunctions(row, nextRow, rowBoundaries, graphics, emittedJunctions, cancellationToken);
+            RenderSharedHorizontalBorderJunctions(sharedPlan, rowBoundaries, rowBoundaryIndex, graphics, emittedJunctions, cancellationToken);
         }
     }
 
@@ -216,53 +219,47 @@ internal sealed partial class DocxRenderer
     }
 
     private static void RenderSharedHorizontalBorderJunctions(
-        DocxTableRowLayout row,
-        DocxTableRowLayout nextRow,
+        RowPairBorderPlan plan,
         IReadOnlyList<DocxTableBorderBoundary> rowBoundaries,
+        OrderedBoundaryIndex rowBoundaryIndex,
         PdfGraphicsBuilder graphics,
         HashSet<(double X, double Y)> emittedJunctions,
         CancellationToken cancellationToken)
     {
-        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(nextRow, row, cancellationToken);
-        foreach (DocxTableCellLayout cellLayout in row.Cells)
+        DocxTableBorderBoundary[] nextRowBoundaries = ResolveVisibleVerticalBoundaries(plan.NextRow, plan.Row, cancellationToken);
+        OrderedBoundaryIndex mergedBoundaries = OrderedBoundaryIndex.Build(rowBoundaries, nextRowBoundaries);
+        int pairIndex = 0;
+        for (int cellIndex = 0; cellIndex < plan.Row.Cells.Count; cellIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!ShouldRenderTableCellVisualFragment(cellLayout, previousRow: null))
+            if (!plan.CurrentVisible[cellIndex])
             {
                 continue;
             }
 
-            DocxTableCellLayout[] overlappingNextCells = nextRow.Cells
-                .Where(nextCell => ShouldRenderTableCellVisualFragment(nextCell, row) && HorizontalOverlap(cellLayout, nextCell) > 0d)
-                .ToArray();
-            if (overlappingNextCells.Length == 0)
+            DocxTableCellLayout cellLayout = plan.Row.Cells[cellIndex];
+            if (plan.OverlapCounts[cellIndex] == 0)
             {
-                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaries, graphics, emittedJunctions);
+                RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
                 continue;
             }
 
-            foreach (DocxTableCellLayout nextRowCell in overlappingNextCells)
+            for (int k = 0; k < plan.OverlapCounts[cellIndex]; k++, pairIndex++)
             {
-                DocxTableCellBorder? horizontal = ResolveSharedHorizontalBorder(cellLayout, nextRowCell);
+                (DocxTableCellLayout current, DocxTableCellLayout nextRowCell, double x, double right) = plan.Overlaps[pairIndex];
+                DocxTableCellBorder? horizontal = ResolveSharedHorizontalBorder(current, nextRowCell);
                 if (horizontal is null)
                 {
                     continue;
                 }
 
-                double x = Math.Max(cellLayout.X, nextRowCell.X);
-                double right = Math.Min(cellLayout.X + cellLayout.Width, nextRowCell.X + nextRowCell.Width);
                 if (right <= x)
                 {
                     continue;
                 }
 
-                DocxTableBorderBoundary[] boundaries = rowBoundaries
-                    .Concat(nextRowBoundaries)
-                    .Where(boundary => boundary.X >= x - 0.001d && boundary.X <= right + 0.001d)
-                    .GroupBy(boundary => Math.Round(boundary.X, 3))
-                    .Select(group => group.OrderByDescending(boundary => boundary.Width).First())
-                    .ToArray();
-                RenderBorderJunctions(boundaries, cellLayout.Y - DocxTableBorderGeometry.ResolveVisibleWidth(horizontal) / 2d, horizontal, graphics, emittedJunctions);
+                DocxTableBorderBoundary[] boundaries = mergedBoundaries.SliceGrouped(x, right, cancellationToken);
+                RenderBorderJunctions(boundaries, current.Y - DocxTableBorderGeometry.ResolveVisibleWidth(horizontal) / 2d, horizontal, graphics, emittedJunctions);
             }
         }
     }
