@@ -25,8 +25,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="21" name="Probe21"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800" b="1"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>Alpha </a:t></a:r><a:r><a:rPr sz="1200" i="1"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:rPr><a:t>Beta</a:t></a:r></a:p>
@@ -93,8 +92,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6400800" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="22" name="Probe22"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6400800" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800" cap="allCaps" spc="200"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>A</a:t></a:r><a:r><a:rPr sz="1800" baseline="30000" u="dbl"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>B</a:t></a:r><a:r><a:rPr sz="1800" strike="dblStrike"><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>C</a:t></a:r><a:r><a:rPr sz="1800"><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>D</a:t></a:r><a:r><a:rPr sz="1800"><a:solidFill><a:srgbClr val="112233"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:rPr><a:t>E</a:t></a:r></a:p>
@@ -160,8 +158,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="23" name="Probe23"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800"/><a:t>One</a:t></a:r><a:br/><a:r><a:rPr sz="1800"/><a:t>Two</a:t></a:r></a:p>
@@ -215,8 +212,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="24" name="Probe24"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800"/><a:t>Page </a:t></a:r><a:fld type="slidenum"><a:rPr sz="1800"/><a:t>1</a:t></a:fld><a:r><a:rPr sz="1800"/><a:t> end</a:t></a:r></a:p>
@@ -278,8 +274,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="25" name="Probe25"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1800"/><a:t>Centered</a:t></a:r></a:p>
@@ -337,7 +332,7 @@ internal static class PptxSceneTextAgreementTests
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <p:cSld><p:spTree><p:sp>
-                <p:nvSpPr><p:cNvPr id="2" name="Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+                <p:nvSpPr><p:cNvPr id="2" name="Body"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
                 <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                 <p:txBody>
                   <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
@@ -439,7 +434,7 @@ internal static class PptxSceneTextAgreementTests
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <p:cSld><p:spTree><p:sp>
-                <p:nvSpPr><p:cNvPr id="2" name="Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+                <p:nvSpPr><p:cNvPr id="2" name="Body"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
                 <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                 <p:txBody>
                   <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
@@ -458,7 +453,7 @@ internal static class PptxSceneTextAgreementTests
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <p:cSld><p:spTree><p:sp>
-                <p:nvSpPr><p:cNvPr id="2" name="Body Placeholder"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+                <p:nvSpPr><p:cNvPr id="2" name="Body Placeholder"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
                 <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                 <p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr><a:defRPr sz="2600"/></a:lvl1pPr></a:lstStyle><a:p/></p:txBody>
               </p:sp></p:spTree></p:cSld>
@@ -558,8 +553,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="26" name="Probe26"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Link</a:t></a:r><a:r><a:rPr sz="1800"/><a:t>Plain</a:t></a:r></a:p>
@@ -611,8 +605,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="27" name="Probe27"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:pPr><a:defRPr sz="2000"><a:solidFill><a:srgbClr val="993366"/></a:solidFill></a:defRPr></a:pPr><a:r><a:t>Bare</a:t></a:r></a:p>
@@ -661,8 +654,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="28" name="Probe28"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle><a:lvl1pPr><a:defRPr sz="2200"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:defRPr></a:lvl1pPr></a:lstStyle>
                       <a:p><a:r><a:t>Styled</a:t></a:r></a:p>
@@ -746,8 +738,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="29" name="Probe29"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:t>Defaulted</a:t></a:r></a:p>
@@ -805,8 +796,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = $"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="30" name="Probe30"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       {bodyPara1}
@@ -907,7 +897,7 @@ internal static class PptxSceneTextAgreementTests
                   <p:cSld><p:spTree><p:grpSp>
                     <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:nvPr/></p:nvGrpSpPr>
                     <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="2743200" cy="1828800"/></a:xfrm></p:grpSpPr>
-                    <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:nvPr/></p:nvSpPr>
+                    <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
                       <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                       <p:txBody>
                         <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
@@ -1103,8 +1093,7 @@ internal static class PptxSceneTextAgreementTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="31" name="Probe31"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800"><a:solidFill><a:schemeClr val="accent6"/></a:solidFill></a:rPr><a:t>Acc</a:t></a:r><a:r><a:rPr sz="1800"><a:solidFill><a:schemeClr val="dk1"/></a:solidFill></a:rPr><a:t>Dark</a:t></a:r></a:p>
