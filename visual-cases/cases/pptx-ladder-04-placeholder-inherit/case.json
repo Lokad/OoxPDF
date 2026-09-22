@@ -1,0 +1,26 @@
+{
+  "id": "pptx-ladder-04-placeholder-inherit",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-placeholder-inherit.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "styled-text",
+    "placeholder",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.16,
+    "maxChangedPixelRatioAtThreshold16": 0.002,
+    "maxTextOperationPositionDelta": 1.5,
+    "maxTextOperationFontSizeDelta": 0.03,
+    "maxTextOperationCharacterSpacingDelta": 0.05,
+    "compareDecodedTextOperations": true
+  },
+  "allowedUnsupportedFeatures": []
+}
