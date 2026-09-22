@@ -181,6 +181,79 @@ internal static class OoxResourceGuaranteeTests
         return packageStream.ToArray();
     }
 
+    public static void PdfPagesRespectPageBudget()
+    {
+        // R06: page serialization charges against the conversion budget (previously
+        // the writer ran outside every budget). A zero page budget trips even a
+        // one-page document without publishing output.
+        string input = FindCase("docx-tables.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxPagesPerConversion = 0 },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+
+        string ample = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, ample, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxPagesPerConversion = 100 },
+        });
+        TestAssert.True(new FileInfo(ample).Length > 0, "Ample page budget must convert.");
+    }
+
+    public static void PdfContentRespectContentBudget()
+    {
+        // R06: encoded content bytes charge up front during serialization. A zero
+        // content budget trips conversions that previously sailed through.
+        string input = FindCase("docx-tables.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxPdfContentBytesPerConversion = 0 },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void PdfOutputRespectOutputBudget()
+    {
+        // R06: measured output bytes charge while the scope is still open, after
+        // writing but before atomic publication.
+        string input = FindCase("docx-tables.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = 0 },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void ConversionLimitsRejectSerializationNegativeCaps()
+    {
+        // R06 (plus the R04 Validate gap): negative aggregate caps fail fast at
+        // option validation instead of tripping spuriously mid-conversion.
+        foreach (Func<OoxConversionLimits> capped in new Func<OoxConversionLimits>[]
+        {
+            () => new OoxConversionLimits { MaxXmlNodesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxWorkbookCellsPerConversion = -1 },
+            () => new OoxConversionLimits { MaxPagesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxPdfContentBytesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxOutputBytesPerConversion = -1 },
+        })
+        {
+            string input = FindCase("docx-tables.docx");
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(
+                input,
+                output,
+                new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, ConversionLimits = capped() }));
+        }
+    }
+
     private static string FindCase(string name)
     {
         string[] candidates = new[]

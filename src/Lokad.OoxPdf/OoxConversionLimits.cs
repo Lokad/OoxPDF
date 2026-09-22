@@ -6,9 +6,10 @@ namespace Lokad.OoxPdf;
 /// (per chart union, per table row, per image) that bound individual allocations.
 /// Covered work includes chart range cells plus dense slots, table fragments,
 /// XML nodes, workbook cells, content images (including crop/recolor variants and
-/// effect rasters), font loads and subsets, and the live image reservation peak
-/// (R01-R04). Nested packages, pages/resources/output bytes, and writer work
-/// are not yet bounded (R04-R06); the live peak is a reservation peak, not total
+/// effect rasters), font loads and subsets, serialized pages/content/output bytes,
+/// and the live image reservation peak (R01-R06). Nested packages, retained models,
+/// and remaining writer work (fonts/images already count at decode) are not yet
+/// bounded; the live peak is a reservation peak, not total
 /// memory (R19). Defaults are generous multiples of the per-site caps; hosts with
 /// a claimed memory/work limit should set tighter values and watch
 /// <see cref="OoxPdfOptions.ReportResourceUsage"/> output while tuning.
@@ -44,6 +45,27 @@ public sealed class OoxConversionLimits
     /// while cached workbook models do not recharge (R04).
     /// </summary>
     public long MaxWorkbookCellsPerConversion { get; init; } = 1_000_000;
+
+    /// <summary>
+    /// Maximum PDF pages serialized per conversion (default 10,000). Counts every
+    /// page once up front during serialization, bounding per-page writer overhead
+    /// for repagination-heavy documents (R06).
+    /// </summary>
+    public long MaxPagesPerConversion { get; init; } = 10_000;
+
+    /// <summary>
+    /// Maximum PDF page-content bytes serialized per conversion (default
+    /// 1,073,741,824, i.e. 1 GiB). Counts encoded content-stream bytes across all
+    /// pages once up front during serialization (R06).
+    /// </summary>
+    public long MaxPdfContentBytesPerConversion { get; init; } = 1073741824;
+
+    /// <summary>
+    /// Maximum PDF output bytes published per conversion (default 2,147,483,648,
+    /// i.e. 2 GiB). Charged from the measured serialized size after writing, while
+    /// the conversion scope is still open (R06).
+    /// </summary>
+    public long MaxOutputBytesPerConversion { get; init; } = 2147483648;
 
     /// <summary>
     /// Maximum content images decoded per conversion (default 500), including PPTX
@@ -102,6 +124,31 @@ public sealed class OoxConversionLimits
         if (MaxLiveImageBytesPerConversion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxLiveImageBytesPerConversion), "Conversion live image byte budget must be non-negative.");
+        }
+
+        if (MaxXmlNodesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxXmlNodesPerConversion), "Conversion XML node budget must be non-negative.");
+        }
+
+        if (MaxWorkbookCellsPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxWorkbookCellsPerConversion), "Conversion workbook cell budget must be non-negative.");
+        }
+
+        if (MaxPagesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxPagesPerConversion), "Conversion page budget must be non-negative.");
+        }
+
+        if (MaxPdfContentBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxPdfContentBytesPerConversion), "Conversion PDF content byte budget must be non-negative.");
+        }
+
+        if (MaxOutputBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxOutputBytesPerConversion), "Conversion output byte budget must be non-negative.");
         }
     }
 }

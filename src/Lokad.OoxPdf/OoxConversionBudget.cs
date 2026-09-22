@@ -61,6 +61,12 @@ internal sealed class OoxConversionBudget
 
     public long WorkbookCells { get; private set; }
 
+    public long PdfPages { get; private set; }
+
+    public long PdfContentBytes { get; private set; }
+
+    public long PdfOutputBytes { get; private set; }
+
     public long ImagesDecoded { get; private set; }
 
     public long FontWork { get; private set; }
@@ -181,6 +187,54 @@ internal sealed class OoxConversionBudget
         }
 
         WorkbookCells += count;
+    }
+
+    public void ChargePdfPages(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxPagesPerConversion - PdfPages)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the page budget of {limits.MaxPagesPerConversion} pages.");
+        }
+
+        PdfPages += count;
+    }
+
+    public void ChargePdfContentBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxPdfContentBytesPerConversion - PdfContentBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the PDF content byte budget of {limits.MaxPdfContentBytesPerConversion} bytes.");
+        }
+
+        PdfContentBytes += count;
+    }
+
+    public void ChargePdfOutputBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxOutputBytesPerConversion - PdfOutputBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the output byte budget of {limits.MaxOutputBytesPerConversion} bytes.");
+        }
+
+        PdfOutputBytes += count;
     }
 
     /// <summary>

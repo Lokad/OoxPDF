@@ -31,13 +31,25 @@ internal sealed class PdfDocumentWriter
         }
         return deduped;
     }
-    public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
+    // R06: returns the exact serialized byte count so the conversion scope (still open
+    // at the call site) can charge output bytes after writing. Pages and encoded
+    // content bytes charge up front, bounding serialization before it allocates.
+    public static long WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (pages.Count == 0)
         {
             throw new ArgumentException("A PDF document must contain at least one page.", nameof(pages));
         }
+
+        OoxConversionBudget.Current?.ChargePdfPages(pages.Count);
+        long contentByteTotal = 0;
+        foreach (PdfPage page in pages)
+        {
+            contentByteTotal = checked(contentByteTotal + page.Content.Length);
+        }
+
+        OoxConversionBudget.Current?.ChargePdfContentBytes(contentByteTotal);
 
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
@@ -233,6 +245,8 @@ internal sealed class PdfDocumentWriter
 
         writer.WriteAscii(FormattableString.Invariant(
             $"trailer\n<< /Size {objectCount + 1} /Root 1 0 R{(infoObjectNumber is null ? string.Empty : FormattableString.Invariant($" /Info {infoObjectNumber.Value} 0 R"))} >>\nstartxref\n{xrefOffset}\n%%EOF\n"));
+
+        return writer.Position;
 
         string BuildPagesObject()
         {

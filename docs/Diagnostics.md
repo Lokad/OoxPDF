@@ -110,6 +110,11 @@ shared process. Defaults are generous multiples of the per-site caps:
   attributes parsed across every part; cached parses do not recharge (R04).
 - `MaxWorkbookCellsPerConversion` (default 1,000,000): total chart workbook
   cells read across every embedded workbook; cached models do not recharge (R04).
+- `MaxPagesPerConversion` (default 10,000): total PDF pages serialized (R06).
+- `MaxPdfContentBytesPerConversion` (default 1 GiB): total encoded page-content
+  bytes serialized (R06).
+- `MaxOutputBytesPerConversion` (default 2 GiB): total PDF output bytes measured
+  after writing, charged while the conversion scope is still open (R06).
 - `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
   including PPTX crop/recolor variants and effect rasters, through the shared
   decoder boundary (R03). Each image is still individually pixel-capped; cache
@@ -140,7 +145,8 @@ or process memory. It covers per-format working-set estimates held across
 decode/transform/compress (R02) but omits pixels retained outside any live
 operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
 work. Covered budgets do not yet bound nested-package bytes, scene nodes,
-retained models, page/resource/output bytes, or serialization (R04-R06).
+retained models, or remaining writer work such as fonts and images (already
+counted at decode); the page/content/output summary fields are a follow-up.
 Do not size hosts from `peakLiveImageBytes` plus image headroom alone.
 
 Host admission: measure conversion-only live/process peaks across

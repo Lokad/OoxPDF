@@ -122,15 +122,11 @@ public static class OoxPdfConverter
         // Totals are snapshotted before publication; the summary below emits before the
         // atomic move succeeds, so a throwing observer fails the conversion while the
         // pre-existing destination is still untouched (R20).
+        // R06: the conversion scope stays open through serialization so page, content,
+        // and output budgets bind the writer; the summary still reports pre-write
+        // totals and callbacks still run before the atomic move (R20).
         IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
-        {
-            pages = RenderPages(input, inputKind, options, cancellationToken);
-            totals = scope.Budget.Totals;
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
         string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
         if (!string.IsNullOrEmpty(outputDirectory))
         {
@@ -144,9 +140,17 @@ public static class OoxPdfConverter
         string stagingPath = Path.Combine(outputDirectory!, Path.GetFileName(outputPath) + ".tmp-" + Guid.NewGuid().ToString("N"));
         try
         {
-            using (FileStream output = File.Create(stagingPath))
+            using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
             {
-                PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+                pages = RenderPages(input, inputKind, options, cancellationToken);
+                totals = scope.Budget.Totals;
+                long outputBytes;
+                using (FileStream output = File.Create(stagingPath))
+                {
+                    outputBytes = PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+                }
+
+                scope.Budget.ChargePdfOutputBytes(outputBytes);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -208,15 +212,18 @@ public static class OoxPdfConverter
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
         IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
+        // R06: like the file path, the scope stays open through serialization; the
+        // summary still reports pre-write totals so a throwing observer leaves stream
+        // output untouched (R20).
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
         {
             pages = RenderPages(input, inputKind, options, cancellationToken);
             totals = scope.Budget.Totals;
+            cancellationToken.ThrowIfCancellationRequested();
+            ReportResourceUsage(options, totals, pages.Count);
+            long outputBytes = PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+            scope.Budget.ChargePdfOutputBytes(outputBytes);
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        ReportResourceUsage(options, totals, pages.Count);
-        PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
     }
 
     private static void ReportResourceUsage(OoxPdfOptions options, OoxConversionTotals totals, int pageCount)
