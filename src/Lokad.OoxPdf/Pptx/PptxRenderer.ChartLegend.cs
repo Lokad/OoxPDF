@@ -47,8 +47,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0)
     {
-        ChartIndexedTextVector labels = ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly);
-        IReadOnlyList<ChartIndexedTextPoint> points = labels.DensePoints()
+        IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, chartElement, workbook, plotVisibleOnly)
             .OfType<ChartIndexedTextPoint>()
             .ToArray();
         var entries = new List<ChartLegendEntry>(points.Count);

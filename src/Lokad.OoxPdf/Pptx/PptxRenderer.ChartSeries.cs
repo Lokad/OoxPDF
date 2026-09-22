@@ -674,6 +674,28 @@ internal sealed partial class PptxRenderer
         return ReadChartCategoryLabelVector(chartElement, workbook, plotVisibleOnly);
     }
 
+    // R15: per-frame shared dense category labels behind one call shape. Workbook-less
+    // (literal-only) charts densify directly; workbook-backed charts share one dense
+    // array across the reserve, emission, and legend passes of a frame.
+    private static IReadOnlyList<ChartIndexedTextPoint?> ReadSharedCategoryLabels(
+        PptxSceneChartPlot? plot,
+        XElement chartElement,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly)
+    {
+        if (workbook is null)
+        {
+            return ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly).DensePoints();
+        }
+
+        object? source = plot is not null ? plot : null;
+        return workbook.GetOrAddCategoryLabels(
+            source,
+            chartElement,
+            plotVisibleOnly,
+            () => ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly).DensePoints());
+    }
+
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();

@@ -532,7 +532,7 @@ internal sealed partial class PptxRenderer
     {
         ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, plotElement);
         ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-        IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSceneOrXmlCategoryLabelVector(plot, plotElement, workbook, plotVisibleOnly).DensePoints();
+        IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, plotElement, workbook, plotVisibleOnly);
         int skip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
         int last = -1;
         for (int i = labels.Count - 1; i >= 0; i--)

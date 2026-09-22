@@ -165,12 +165,11 @@ internal sealed partial class PptxRenderer
         PptxSceneChart? sceneChart,
         PptxSceneChartAxis? sceneAxis,
         XElement? categoryAxis,
-        ChartIndexedTextVector labelVector,
+        IReadOnlyList<ChartIndexedTextPoint?> labels,
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
         Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        IReadOnlyList<ChartIndexedTextPoint?> labels = labelVector.DensePoints();
         if (labels.Count == 0)
         {
             return;

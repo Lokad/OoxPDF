@@ -401,9 +401,34 @@ internal sealed partial class PptxRenderer
         // accumulates across frames.
         private readonly Dictionary<string, ChartWorkbookRangeCell[]> rangeMemo = new(StringComparer.Ordinal);
 
+        // R15: per-frame shared dense category labels. Keyed by the originating plot
+        // (or chart element when sceneless) plus visibility, so reserve, emission, and
+        // legend passes within one frame densify once; literal-only charts without a
+        // workbook keep the direct path. Cleared with the range memo per frame, so
+        // nothing accumulates across frames or charts.
+        private readonly Dictionary<(object? Source, XElement? ChartElement, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedTextPoint?>> labelMemo = new();
+
         internal void ClearRangeMemo()
         {
             rangeMemo.Clear();
+            labelMemo.Clear();
+        }
+
+        internal IReadOnlyList<ChartIndexedTextPoint?> GetOrAddCategoryLabels(
+            object? source,
+            XElement? chartElement,
+            bool plotVisibleOnly,
+            Func<IReadOnlyList<ChartIndexedTextPoint?>> factory)
+        {
+            var key = (source, chartElement, plotVisibleOnly);
+            if (labelMemo.TryGetValue(key, out IReadOnlyList<ChartIndexedTextPoint?>? cached))
+            {
+                return cached;
+            }
+
+            IReadOnlyList<ChartIndexedTextPoint?> dense = factory();
+            labelMemo[key] = dense;
+            return dense;
         }
 
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)

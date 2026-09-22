@@ -299,11 +299,6 @@ internal sealed partial class PptxRenderer
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
-        // R15: category labels densify once per plot-layout computation and are shared
-        // by the reserve passes below (lazy so frames that need no labels never
-        // materialize or charge the array).
-        IReadOnlyList<ChartIndexedTextPoint?>? categoryLabels = null;
-        IReadOnlyList<ChartIndexedTextPoint?> CategoryLabels() => categoryLabels ??= ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints();
         ChartPlotBox defaultPlotBox;
         if (!hasTitle && !hasLegend)
         {
@@ -357,7 +352,7 @@ internal sealed partial class PptxRenderer
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
         }
 
-        return ResolveBarManualPlotLayoutTarget(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver, categoryLabels);
+        return ResolveBarManualPlotLayoutTarget(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver);
 
         ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartPlotBox defaultPlotBox)
         {
@@ -574,7 +569,7 @@ internal sealed partial class PptxRenderer
             ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
-            foreach (ChartIndexedTextPoint? label in CategoryLabels())
+            foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
             {
                 string? labelText = label?.Text;
                 if (!string.IsNullOrWhiteSpace(labelText))
@@ -953,8 +948,7 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
-        PresentationFontResolver? fontResolver,
-        IReadOnlyList<ChartIndexedTextPoint?>? categoryLabels = null)
+        PresentationFontResolver? fontResolver)
     {
         if (!horizontalBars || layout.ManualLayoutTargetKind != PptxSceneChartManualLayoutTarget.Outer)
         {
@@ -1001,8 +995,7 @@ internal sealed partial class PptxRenderer
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double maxCategoryWidth = 0d;
                 int labelIndex = 0;
-                IReadOnlyList<ChartIndexedTextPoint?> manualLabels = categoryLabels ?? ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints();
-                foreach (ChartIndexedTextPoint? label in manualLabels)
+                foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
                 {
                     // Mirror the emission skip logic in RenderChartCategoryLabels so the
                     // reserve covers rendered labels only.

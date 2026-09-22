@@ -330,14 +330,15 @@ internal sealed partial class PptxRenderer
         return !cell.RowHidden && !cell.ColumnHidden;
     }
 
-    private readonly record struct ChartIndexedTextPoint(
+    // R16: internal so the per-frame shared dense label memo carries the point type.
+    internal readonly record struct ChartIndexedTextPoint(
         int Index,
         ChartPointIndexSource IndexSource,
         string Text,
         bool HasText,
         ChartWorkbookRangeCell WorkbookCell);
 
-    private enum ChartPointIndexSource
+    internal enum ChartPointIndexSource
     {
         OrdinalFallback,
         OoxmlIndex,

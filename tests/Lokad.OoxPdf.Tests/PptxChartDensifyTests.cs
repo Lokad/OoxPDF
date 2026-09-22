@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Reflection;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
@@ -148,6 +149,68 @@ internal static class PptxChartDensifyTests
             TestAssert.Equal(1, built.Count);
             TestAssert.Equal(1, scope.Budget.ChartRangeCells);
         }
+    }
+
+    public static void CategoryLabelMemoSharesDenseResultsWithinFrame()
+    {
+        // R15: one dense array per (source, visibility) per frame; clearing the
+        // frame memo recomputes on next access.
+        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected workbook type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets])
+            ?? throw new InvalidOperationException("Expected workbook instance.");
+        MethodInfo memo = workbookType.GetMethod("GetOrAddCategoryLabels", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Expected label memo.");
+        Type factoryType = memo.GetParameters()[3].ParameterType;
+
+        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected text vector type.");
+        object vector = BuildTextVector(vectorType, [(0, "a", true)], null);
+        MethodInfo dense = vectorType.GetMethod("DensePoints")
+            ?? throw new InvalidOperationException("Expected densify method.");
+        object denseA = dense.Invoke(vector, null) ?? throw new InvalidOperationException("Expected dense array.");
+        object denseB = dense.Invoke(vector, null) ?? throw new InvalidOperationException("Expected dense array.");
+        TestAssert.True(!ReferenceEquals(denseA, denseB), "DensePoints must allocate per call (precondition).");
+
+        object first = InvokeMemo(memo, workbook, "k", null, false, ConstantFactory(factoryType, denseA));
+        object second = InvokeMemo(memo, workbook, "k", null, false, ConstantFactory(factoryType, denseB));
+        TestAssert.True(ReferenceEquals(first, second), "Same key must share one dense array.");
+        TestAssert.True(ReferenceEquals(first, denseA), "First computation must win.");
+
+        try
+        {
+            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        object third = InvokeMemo(memo, workbook, "k", null, false, ConstantFactory(factoryType, denseB));
+        TestAssert.True(ReferenceEquals(third, denseB), "Cleared memo must recompute on next access.");
+    }
+
+    private static object InvokeMemo(MethodInfo memo, object workbook, object? source, object? chartElement, bool visibleOnly, object factory)
+    {
+        try
+        {
+            return memo.Invoke(workbook, [source, chartElement, visibleOnly, factory])
+                ?? throw new InvalidOperationException("Expected shared dense array.");
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static object ConstantFactory(Type factoryType, object value)
+    {
+        Type returnType = factoryType.GetGenericArguments()[0];
+        return Expression.Lambda(factoryType, Expression.Constant(value, returnType)).Compile();
     }
 
     private static Type NumberVectorType()
