@@ -11,7 +11,7 @@ This audit tracks the shift to Office-PDF-first fidelity work. Unit tests remain
 
 - Exact renderer text coordinates such as `Tm` assertions.
 - Exact shape path coordinates when the feature already has or should have a public visual case.
-- Candidate-specific text operators such as `Tj` when Office uses `TJ` or different text grouping.
+- Candidate-specific text operators such as `Tj` when Office uses `TJ` or different text grouping (one instance closed 2026-09-22: same-style source runs now merge into Office-compatible operations, migrating `PptxSyntheticTextBoxMergesSameStyleEmphasisSourceRuns` and the para-0 glyph-run assertions; hyperlink/math/autofit guards and hidden-advance asserts unchanged).
 - Candidate-specific clipping rectangles and synthetic stroke/fill placement when Office PDF inspection shows a different composition strategy.
 
 ## Initial Evidence
@@ -24,7 +24,7 @@ This audit tracks the shift to Office-PDF-first fidelity work. Unit tests remain
 
 Implication: the public visual gate is the right lock for this feature. Unit tests should verify that text renders and fonts are embedded, but should avoid treating the candidate's current exact text matrix as the source of truth.
 
-## Quantified Inventory (refreshed 2026-09-21, Release binary 1546 passed / 0 failed / 9 skipped with --skip-slow)
+## Quantified Inventory (refreshed 2026-09-22, Release binary 1592 passed / 0 failed / 9 skipped with --skip-slow)
 
 - `PptxTests.cs`: 63 ` Tm`/`Tj`/`TJ` assertion hits; `DocxTests.cs`: 12 (2026-09-03 survey; recount before scheduling rewrites). These are the freeze-risk surface.
 - Pilot conversion pattern (do not bulk-rewrite yet): replace `AssertContainsTextMatrixAtX(pdf, 72d)`-style exact-matrix checks with smoke assertions (page count, media box, `Tf` font resource present, `Tj`/`TJ` text drawn, diagnostics empty) and rely on the matching `visual-cases/` lock (e.g. ladder typography ports, `pptx-ladder-02-plain-text` MAE 0.028749 precedent).
