@@ -454,7 +454,11 @@ internal static class PptxTypographyTests
         TestAssert.Contains(" TJ", pdf);
     }
 
-    public static void PptxSyntheticTextBoxPreservesSameStyleEmphasisSourceRunBoundaries()
+    // Office merges adjacent same-style source runs into one text operation;
+    // the whitespace-controls visual probe pins 13 Office ops where the old
+    // boundary rule emitted 15. Same-style runs merge; hyperlink, math/autofit,
+    // alignment, and PreventCoalesce guards are unchanged.
+    public static void PptxSyntheticTextBoxMergesSameStyleEmphasisSourceRuns()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -498,7 +502,7 @@ internal static class PptxTypographyTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(3, PptxTests.CountOccurrences(pdf, " TJ"));
+        TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, " TJ"));
     }
 
     public static void PptxSyntheticTextBoxPreservesFractionalFontSize()

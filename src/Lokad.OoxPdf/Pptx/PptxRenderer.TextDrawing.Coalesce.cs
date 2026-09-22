@@ -151,12 +151,13 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        return !HasTrailingWhitespaceBoundary(left.Run.Text);
-
-        bool HasTrailingWhitespaceBoundary(string text)
-        {
-            return text.Length > 0 && char.IsWhiteSpace(text[^1]);
-        }
+        // Office merges adjacent same-style source runs into one text operation.
+        // The previous trailing-whitespace veto kept runs like Left/Tab/Spaces as
+        // three operations (whitespace-controls probe: 15 vs 13 ops with identical
+        // decoded text and pixels). Merge whenever styles match; hyperlink,
+        // math/autofit, and alignment guards elsewhere stay intact, as do the
+        // PreventCoalesce vetoes from control segments and glyph-typeface splits.
+        return false;
     }
 
     private static bool UsesMathTypeface(string? typeface)

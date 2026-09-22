@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Merged adjacent same-style source runs into one Office-compatible text operation (fidelity fix): the trailing-whitespace run-boundary veto emitted 15 ops where Office emits 13 on the whitespace-controls probe (identical decoded text and pixels either way); fixture forensics plus the CoalesceAdjacentTextSpans guards show hyperlink, math/autofit, alignment, and PreventCoalesce boundaries are unchanged, and hidden-advance accounting for style boundaries is pinned by the surviving layout assertions. Probe text-op gate now passes 13v13 with zero deltas; full Release suite 1592/0/9 with two contract tests migrated to the merged behavior. Manifests: 118 locked / 207 approximate / 1 needs-review.
+
 - Moved scatter-clusters and scatter-smooth ports to approximate (Q07 increment): fixture inspection proves unstyled marker fills (clusters series carry only ln/noFill with no marker element; smooth series has no spPr at all), so the same-hue shade difference is the documented unstyled-series approximation gap already recorded for the line family; direct PNG review shows matching marker positions, curve geometry, axes, and legend with empty diagnostics (histogram correlation 0.503/0.815, the strongest magnitudes in this class, honestly recorded). Manifests: 118 locked / 206 approximate / 2 needs-review.
 
 - Moved curved-connector-transform probe to approximate (Q07 increment): direct PNG review shows all four curved connectors with correctly directed arrowheads and matching curve paths (SSIM 0.988, recall 0.974, histogram correlation 1.0, diagnostics empty) with the recorded arrowhead-placement nuance below the lock bar. Manifests: 118 locked / 204 approximate / 4 needs-review.
