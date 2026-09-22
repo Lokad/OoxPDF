@@ -157,7 +157,70 @@ internal static class PublicApiTests
         TestAssert.True(resolver.ResolveCalls > 0, "DOCX conversion should use the supplied font resolver for text embedding.");
     }
 
-    public static void ConvertWithCancelledTokenThrowsBeforeInputValidation()
+    public static void RepeatedConversionsReuseRetainedFontBytes()
+    {
+        // R13/M09: repeated conversions reuse snapshot-retained program bytes instead
+        // of re-reading the disk. Overwriting the font file after the first conversion
+        // leaves subsequent outputs byte-identical.
+        string directory = Path.Combine(Path.GetTempPath(), "oox-retain-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string fontPath = Path.Combine(directory, "retain.ttf");
+            File.WriteAllBytes(fontPath, TestFontBuilder.CreateTestFont());
+            var source = new FileFontProgramSource(fontPath);
+            var resolution = new FontFaceResolution(
+                "RetainFamily",
+                "RetainFamily",
+                new FontStyleKey(),
+                source,
+                IsFallback: false);
+            var resolver = new RetainedFileFontResolver(resolution);
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body>
+                        <w:p><w:r><w:t>retained bytes probe</w:t></w:r></w:p>
+                        <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                      </w:body>
+                    </w:document>
+                    """,
+            });
+            string output1 = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output1, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, Deterministic = true });
+            File.WriteAllBytes(fontPath, TestFontBuilder.CreateCffKindFont("OtherFamily"));
+            string output2 = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output2, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, Deterministic = true });
+            TestAssert.True(
+                File.ReadAllText(output1, Encoding.Latin1).Contains("TestFont", StringComparison.Ordinal),
+                "The custom font must actually embed for the retention check to mean anything.");
+            TestAssert.True(
+                File.ReadAllBytes(output1).SequenceEqual(File.ReadAllBytes(output2)),
+                "Repeated conversions must reuse retained font bytes instead of re-reading the disk.");
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
+        }
+    }
+
+        public static void ConvertWithCancelledTokenThrowsBeforeInputValidation()
     {
         string missingInput = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".docx");
         string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
@@ -757,6 +820,14 @@ internal static class PublicApiTests
             cancellation.Cancel();
             ct.ThrowIfCancellationRequested();
             return ValueTask.FromResult(ReadOnlyMemory<byte>.Empty);
+        }
+    }
+
+    private sealed class RetainedFileFontResolver(FontFaceResolution resolution) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return resolution;
         }
     }
 

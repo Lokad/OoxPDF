@@ -24,7 +24,7 @@ This audit tracks the shift to Office-PDF-first fidelity work. Unit tests remain
 
 Implication: the public visual gate is the right lock for this feature. Unit tests should verify that text renders and fonts are embedded, but should avoid treating the candidate's current exact text matrix as the source of truth.
 
-## Quantified Inventory (refreshed 2026-09-22, Release binary 1592 passed / 0 failed / 9 skipped with --skip-slow)
+## Quantified Inventory (refreshed 2026-09-22, Release binary 1672 passed / 0 failed / 9 skipped with --skip-slow)
 
 - `PptxTests.cs`: 63 ` Tm`/`Tj`/`TJ` assertion hits; `DocxTests.cs`: 12 (2026-09-03 survey; recount before scheduling rewrites). These are the freeze-risk surface.
 - Pilot conversion pattern (do not bulk-rewrite yet): replace `AssertContainsTextMatrixAtX(pdf, 72d)`-style exact-matrix checks with smoke assertions (page count, media box, `Tf` font resource present, `Tj`/`TJ` text drawn, diagnostics empty) and rely on the matching `visual-cases/` lock (e.g. ladder typography ports, `pptx-ladder-02-plain-text` MAE 0.028749 precedent).
@@ -36,3 +36,32 @@ Implication: the public visual gate is the right lock for this feature. Unit tes
 - PPTX text layout tests with exact `Tm` expectations: body insets, line breaks, tabs, explicit tab stops, large-text baseline, mixed-run centering/wrapping, list-style defaults, empty paragraphs, vertical anchoring, placeholder bounds.
 - DOCX layout tests with exact `Tm` or rectangle expectations: exact line height, row heights, table geometry, paragraph styling.
 - Shape/table tests with exact path coordinates should remain only until equivalent public visual cases are created or tightened.
+
+## Resource-Budget Test Coverage (PLAN R01-R06, R13, R21)
+
+- Budget boundaries close on observable evidence, not counters alone: zero-budget
+  conversions trip end to end without publishing (images, fonts, dense slots, pages,
+  content, output, scene nodes, nested packages, workbook models, XML nodes, cells),
+  and re-access after eviction re-reads byte-identical programs (image pixels, font
+  programs, pack downloads, snapshot files).
+- Aggregate accounting scales linearly by assertion (N/2N/4N XML documents charge
+  5N objects), and reserved-versus-retained lifetimes are pinned (live image bytes
+  held across owner lifetime, released on dispose and on decode failure).
+- Allocation observations (Windows, .NET 10, Release, 64-bit, workstation GC, not
+  gates): synthetic directory discovery (1 TTC with trailing dead space + 1 TTF,
+  3 faces) allocates ~40 KB; one warm minimal-DOCX conversion allocates ~4.7 MB
+  with no growth across repeats (4,705,856 then 4,681,448 then 4,680,112 bytes) and
+  byte-stable output.
+- Repeated conversions reuse snapshot-retained font bytes: overwriting the font
+  file after the first conversion leaves subsequent outputs byte-identical (the
+  custom font is proven embedded, so the check is not vacuous).
+- The 9 skips are environmental preconditions (Windows fonts, Office-free
+  assertions, slow gates), unchanged by this work.
+
+## Remaining Gaps
+
+- Office-provenance visual runs still need Office/COM renders for new held-out
+  geometry/font/page variations; manifest validation here verifies inventory only.
+- The page/content/output budget counters enforce limits but do not yet report in
+  CONVERSION_RESOURCE_SUMMARY; staged page/resource emission stays open.
+- Exact-matrix/path freeze-risk surface above is unchanged by the budget work.
