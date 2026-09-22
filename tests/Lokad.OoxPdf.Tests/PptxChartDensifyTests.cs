@@ -320,12 +320,62 @@ internal static class PptxChartDensifyTests
         TestAssert.True(ReferenceEquals(third, arrayB), "Cleared memo must recompute on next access.");
     }
 
+    public static void ValueExtentsMemoSharesResultsWithinFrame()
+    {
+        // R15: one extent result per (source, element, grouping, visibility) per
+        // frame; clearing the frame memo recomputes on next access.
+        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected workbook type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets])
+            ?? throw new InvalidOperationException("Expected workbook instance.");
+        MethodInfo memo = workbookType.GetMethod("GetOrAddValueExtents", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Expected extent memo.");
+        PptxRenderer.ChartValueExtents extentsA = new(0d, 10d);
+        PptxRenderer.ChartValueExtents extentsB = new(0d, 99d);
+        Func<PptxRenderer.ChartValueExtents> factoryA = () => extentsA;
+        Func<PptxRenderer.ChartValueExtents> factoryB = () => extentsB;
+        object first = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Clustered, false, factoryA);
+        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)first);
+        object second = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Clustered, false, factoryB);
+        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)second);
+        object other = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Stacked, false, factoryB);
+        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)other);
+        try
+        {
+            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        object third = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Clustered, false, factoryB);
+        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)third);
+    }
+
     private static object InvokeUntyped4(MethodInfo memo, object workbook, object? first, object? second, bool visibleOnly, object factory)
     {
         try
         {
             return memo.Invoke(workbook, [first, second, visibleOnly, factory])
                 ?? throw new InvalidOperationException("Expected shared list.");
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static object InvokeUntyped5(MethodInfo memo, object workbook, object? source, object? chartElement, object grouping, bool visibleOnly, object factory)
+    {
+        try
+        {
+            return memo.Invoke(workbook, [source, chartElement, grouping, visibleOnly, factory])
+                ?? throw new InvalidOperationException("Expected shared extents.");
         }
         catch (TargetInvocationException ex)
         {

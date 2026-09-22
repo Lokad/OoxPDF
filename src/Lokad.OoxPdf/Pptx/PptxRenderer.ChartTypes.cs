@@ -500,7 +500,8 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private readonly record struct ChartValueExtents(double Min, double Max);
+    // R15: internal so the per-frame shared extent memo carries the type.
+    internal readonly record struct ChartValueExtents(double Min, double Max);
 
     private enum ChartAxisScalingBound
     {

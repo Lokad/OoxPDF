@@ -749,6 +749,31 @@ internal sealed partial class PptxRenderer
             () => ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly));
     }
 
+    // R15: per-frame shared bar value extents behind one call shape, mirroring
+    // shared series vectors. Extents densify every series; reserve, emission, and
+    // crossing passes within one frame share one result. Workbook-less charts
+    // compute directly.
+    private static ChartValueExtents GetSharedBarChartValueExtents(
+        PptxSceneChartPlot? plot,
+        XElement chartElement,
+        PptxSceneChartGrouping grouping,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly)
+    {
+        if (workbook is null)
+        {
+            return GetBarChartValueExtents(ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), grouping);
+        }
+
+        object? source = plot is not null ? plot : null;
+        return workbook.GetOrAddValueExtents(
+            source,
+            chartElement,
+            grouping,
+            plotVisibleOnly,
+            () => GetBarChartValueExtents(ReadSharedChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), grouping));
+    }
+
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();

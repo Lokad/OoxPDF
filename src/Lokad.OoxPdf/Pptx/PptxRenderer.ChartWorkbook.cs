@@ -412,12 +412,19 @@ internal sealed partial class PptxRenderer
 
         private readonly Dictionary<(object? Source, XElement? ChartElement, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedNumberVector>> seriesVectorsMemo = new();
 
+        // R15: per-frame shared bar value extents. Keyed by the originating plot
+        // (or chart element when sceneless) plus grouping and visibility, so the
+        // reserve, emission, and crossing passes within one frame densify once.
+        // Cleared with the range memo per frame.
+        private readonly Dictionary<(object? Source, XElement? ChartElement, PptxSceneChartGrouping Grouping, bool PlotVisibleOnly), ChartValueExtents> valueExtentsMemo = new();
+
         internal void ClearRangeMemo()
         {
             rangeMemo.Clear();
             labelMemo.Clear();
             seriesNameMemo.Clear();
             seriesVectorsMemo.Clear();
+            valueExtentsMemo.Clear();
         }
 
         internal IReadOnlyList<ChartSeriesNameRecord> GetOrAddSeriesNames(
@@ -451,6 +458,24 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartIndexedNumberVector> vectors = factory();
             seriesVectorsMemo[key] = vectors;
             return vectors;
+        }
+
+        internal ChartValueExtents GetOrAddValueExtents(
+            object? source,
+            XElement? chartElement,
+            PptxSceneChartGrouping grouping,
+            bool plotVisibleOnly,
+            Func<ChartValueExtents> factory)
+        {
+            var key = (source, chartElement, grouping, plotVisibleOnly);
+            if (valueExtentsMemo.TryGetValue(key, out ChartValueExtents cached))
+            {
+                return cached;
+            }
+
+            ChartValueExtents extents = factory();
+            valueExtentsMemo[key] = extents;
+            return extents;
         }
 
         internal IReadOnlyList<ChartIndexedTextPoint?> GetOrAddCategoryLabels(
