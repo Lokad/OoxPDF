@@ -69,8 +69,9 @@ index bounds the worst case rather than shifting the median.
 - R14-deeper: migrate layout to scene-resolved text one family at a time with
   agreement gates; share context-independent inherited nodes behind (node, slide) keys.
   Entry: ComputeTextSpansForSceneNode re-clones node.Source instead of consuming
-  node.TextBody; first battery is plain-shape run text/styles (scene TextBody runs
-  versus positioned spans from a synthetic single-shape package).
+  node.TextBody; batteries gate plain runs, breaks, fields, paragraph alignment, and
+  placeholder text. Leaf readers are shared but cascade inputs diverge for unmatched
+  placeholders (see placeholder gate); unifying cascade inputs is the migration core.
 - R15-remainder: closed (bar/line extents shared; area/radar single-evaluation need
   no memo; frame context and arm consolidation analyzed above, not planned).
 - R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
