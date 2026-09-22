@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private sealed partial class ChartWorkbookData
+    internal sealed partial class ChartWorkbookData
     {
         internal const long MaxChartRangeCells = 100_000;
 

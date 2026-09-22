@@ -9,7 +9,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private readonly record struct TextRun(
+    internal readonly record struct TextRun(
         string Text,
         double X,
         double Y,
@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextDecorationRectangle(double X, double Y, double Width, double Height);
 
-    private sealed record PptxPositionedTextSpan(
+    internal sealed record PptxPositionedTextSpan(
         PptxTextRunModel? SourceRun,
         PptxTextLineBoxLayout? LineBox,
         int FrameIndex,
@@ -164,7 +164,7 @@ internal sealed partial class PptxRenderer
         double Advance,
         double AdjustmentBefore);
 
-    private readonly record struct TextOutline(RgbColor Color, double Alpha, double Width);
+    internal readonly record struct TextOutline(RgbColor Color, double Alpha, double Width);
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
@@ -196,7 +196,7 @@ internal sealed partial class PptxRenderer
         bool Bold,
         bool Italic);
 
-    private readonly record struct ResolvedRunTextStyle(
+    internal readonly record struct ResolvedRunTextStyle(
         double NominalFontSize,
         double FontSize,
         double CharacterSpacing,
@@ -220,7 +220,7 @@ internal sealed partial class PptxRenderer
         PptxThemeTypefaceSource TypefaceSource,
         string? Typeface);
 
-    private enum PptxRunTextColorSource
+    internal enum PptxRunTextColorSource
     {
         RunNoFill,
         RunSolidFill,
@@ -274,7 +274,7 @@ internal sealed partial class PptxRenderer
         RgbColor? ShapeFontColor,
         IReadOnlyList<PptxTextParagraphModel> Paragraphs);
 
-    private sealed record PptxTableCellTextFrame(
+    internal sealed record PptxTableCellTextFrame(
         XElement TextBody,
         double X,
         double Y,
@@ -339,7 +339,7 @@ internal sealed partial class PptxRenderer
         PptxTextBodyPropertySource RotationDegreesSource,
         double? ExplicitWrapWidth);
 
-    private enum PptxTextBodyPropertySource
+    internal enum PptxTextBodyPropertySource
     {
         DirectBodyPr,
         InheritedBodyPr,
@@ -348,13 +348,13 @@ internal sealed partial class PptxRenderer
         DefaultValue
     }
 
-    private readonly record struct TextInsetSources(
+    internal readonly record struct TextInsetSources(
         PptxTextBodyPropertySource Left,
         PptxTextBodyPropertySource Right,
         PptxTextBodyPropertySource Top,
         PptxTextBodyPropertySource Bottom);
 
-    private readonly record struct TextInsetValues(
+    internal readonly record struct TextInsetValues(
         string? Left,
         string? Right,
         string? Top,
@@ -437,7 +437,7 @@ internal sealed partial class PptxRenderer
         PptxParagraphStyleLayerKind Kind,
         XElement? Source);
 
-    private sealed record PptxTextRunModel(
+    internal sealed record PptxTextRunModel(
         int RunIndex,
         PptxTextRunKind Kind,
         XElement Source,
@@ -446,7 +446,7 @@ internal sealed partial class PptxRenderer
         string Text,
         ResolvedRunTextStyle Style);
 
-    private sealed record PptxRunStyleCascade(
+    internal sealed record PptxRunStyleCascade(
         IReadOnlyList<PptxRunStyleLayer> Layers,
         XElement? ResolvedDefaultProperties)
     {
@@ -455,7 +455,7 @@ internal sealed partial class PptxRenderer
         public XElement? DirectProperties => Layers.FirstOrDefault(layer => layer.Kind == PptxRunStyleLayerKind.RunProperties)?.Source;
     }
 
-    private enum PptxRunStyleLayerKind
+    internal enum PptxRunStyleLayerKind
     {
         RunProperties,
         ParagraphDefaultRunProperties,
@@ -468,7 +468,7 @@ internal sealed partial class PptxRenderer
         DefaultTextStyleDefaultRunProperties
     }
 
-    private sealed record PptxRunStyleLayer(
+    internal sealed record PptxRunStyleLayer(
         string Name,
         PptxRunStyleLayerKind Kind,
         XElement? Source);

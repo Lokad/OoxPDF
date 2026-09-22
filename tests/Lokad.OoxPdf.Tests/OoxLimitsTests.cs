@@ -1631,10 +1631,10 @@ internal static class OoxLimitsTests
         byte[] xlsx = MinimalEmbeddedWorkbook();
         var resource = new PptxScenePackageResource("/xl/embed.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx);
         var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource, null, string.Empty);
-        var cache = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var cache = new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal);
         MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .First(method => method.Name == "GetOrCreateChartWorkbook");
-        object? Invoke(Dictionary<string, object?>? shared, PptxSceneChartExternalData data)
+        object? Invoke(Dictionary<string, PptxRenderer.ChartWorkbookData?>? shared, PptxSceneChartExternalData data)
         {
             try
             {

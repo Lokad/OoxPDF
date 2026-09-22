@@ -351,16 +351,16 @@ internal sealed partial class PptxRenderer
         // PLAN W02: font collection and painting computed this full layout per node.
         // The layout is a pure function of (node, color map, placeholder mode) within
         // a slide render, so compute once and share the instance between both passes.
-        Dictionary<PptxTextSpanMemoKey, object?>? memo = context.TextSpanMemo;
+        Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? memo = context.TextSpanMemo;
         if (memo is null)
         {
             return ComputeTextSpansForSceneNode(node, context, colorMap, includePlaceholders);
         }
 
         var key = new PptxTextSpanMemoKey(node, colorMap, includePlaceholders);
-        if (memo.TryGetValue(key, out object? cached))
+        if (memo.TryGetValue(key, out IReadOnlyList<PptxPositionedTextSpan>? cached))
         {
-            return (IReadOnlyList<PptxPositionedTextSpan>)cached!;
+            return cached;
         }
 
         IReadOnlyList<PptxPositionedTextSpan> spans = ComputeTextSpansForSceneNode(node, context, colorMap, includePlaceholders);

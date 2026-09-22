@@ -31,9 +31,11 @@ internal sealed record PptxRenderContext(
     Dictionary<string, PdfImageXObject?> ImageCache,
     Action<OoxPdfDiagnostic>? DiagnosticSink,
     CancellationToken CancellationToken,
-    Dictionary<string, object?>? WorkbookCache = null,
-    Dictionary<PptxTextSpanMemoKey, object?>? TextSpanMemo = null,
-    Dictionary<PptxTableFrameMemoKey, object?>? TableFrameMemo = null)
+    // R16: caches ride as typed dictionaries with explicit null-negative contracts
+    // (a hit carrying null already resolved as absent; only a miss recomputes).
+    Dictionary<string, PptxRenderer.ChartWorkbookData?>? WorkbookCache = null,
+    Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>? TextSpanMemo = null,
+    Dictionary<PptxTableFrameMemoKey, PptxRenderer.TableFrameLayout?>? TableFrameMemo = null)
 {
     public IReadOnlyList<XDocument> InheritedXml { get; } = InheritedSources.Select(source => source.Xml).ToArray();
 

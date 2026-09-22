@@ -513,7 +513,7 @@ internal sealed partial class PptxRenderer
         ];
     }
 
-    private enum TextVerticalAnchor
+    internal enum TextVerticalAnchor
     {
         Unknown,
         Top,

@@ -126,7 +126,7 @@ internal static class OoxResourceGuaranteeTests
         var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource, null, string.Empty);
         MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .First(method => method.Name == "GetOrCreateChartWorkbook");
-        object? Invoke(Dictionary<string, object?>? shared)
+        object? Invoke(Dictionary<string, PptxRenderer.ChartWorkbookData?>? shared)
         {
             try
             {
@@ -140,13 +140,13 @@ internal static class OoxResourceGuaranteeTests
 
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxWorkbookCellsPerConversion = 0 }))
         {
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => Invoke(new Dictionary<string, object?>(StringComparer.Ordinal)));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => Invoke(new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal)));
             TestAssert.Equal(0, scope.Budget.WorkbookCells);
         }
 
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null))
         {
-            Invoke(new Dictionary<string, object?>(StringComparer.Ordinal));
+            Invoke(new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal));
             TestAssert.Equal(1, scope.Budget.WorkbookCells);
         }
     }

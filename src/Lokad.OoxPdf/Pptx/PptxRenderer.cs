@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
         // frame of this conversion (like the image cache above). Each model is already
         // capped (workbook totals, range unions); the dictionary itself is bounded by
         // the package entry count and dies with this conversion.
-        var chartWorkbookCache = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var chartWorkbookCache = new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal);
         // R09: per-slide layout memoization shared by font collection (below) and
         // node painting. Owned inside the slide iteration so previous-slide glyph/layout
         // graphs become eligible for collection each slide; cross-slide Node references
@@ -63,8 +63,8 @@ internal sealed partial class PptxRenderer
 
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts);
             var graphics = new PdfGraphicsBuilder();
-            var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, object?>(PptxTextSpanMemoKeyComparer.Instance);
-            var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, object?>(PptxTableFrameMemoKeyComparer.Instance);
+            var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance);
+            var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
             PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
 
             bool masterBackgroundPainted = RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
@@ -144,9 +144,9 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
-        Dictionary<string, object?>? chartWorkbookCache = null,
-        Dictionary<PptxTextSpanMemoKey, object?>? textSpanMemo = null,
-        Dictionary<PptxTableFrameMemoKey, object?>? tableFrameMemo = null)
+        Dictionary<string, ChartWorkbookData?>? chartWorkbookCache = null,
+        Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? textSpanMemo = null,
+        Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>? tableFrameMemo = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         PptxRenderSource slideSource = new(
@@ -155,7 +155,7 @@ internal sealed partial class PptxRenderer
             slideXml,
             sceneSlide.SlideRelationships,
             sceneSlide.SlideColorMap);
-        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache ?? new Dictionary<string, object?>(StringComparer.Ordinal), textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, object?>(PptxTextSpanMemoKeyComparer.Instance), tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, object?>(PptxTableFrameMemoKeyComparer.Instance));
+        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache ?? new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal), textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance), tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance));
 
         IReadOnlyList<PptxRenderSource> BuildInheritedSources()
         {

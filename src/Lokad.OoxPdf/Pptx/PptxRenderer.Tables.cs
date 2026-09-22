@@ -39,7 +39,7 @@ internal sealed partial class PptxRenderer
     private const double OfficeMiddleAnchoredTableCellDefaultTopInsetAdjustment = 0.54d;
     private const double OfficeBottomAnchoredTableCellDefaultBottomInsetAdjustment = 0.6d;
 
-    private sealed record TableFrameLayout(
+    internal sealed record TableFrameLayout(
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
         IReadOnlyList<PptxTableCellTextFrame> TextFrames,
         IReadOnlyList<TableCellFill> CellFills,
@@ -50,9 +50,9 @@ internal sealed partial class PptxRenderer
         TableDefaultGrid? DefaultGrid,
         IReadOnlyList<TableBorderLine> ExplicitBorders);
 
-    private readonly record struct TableCellFill(double X, double Y, double Width, double Height, RgbColor Color, double Alpha);
+    internal readonly record struct TableCellFill(double X, double Y, double Width, double Height, RgbColor Color, double Alpha);
 
-    private sealed record TableDefaultGrid(
+    internal sealed record TableDefaultGrid(
         double X,
         double YTop,
         double Width,
@@ -160,9 +160,9 @@ internal sealed partial class PptxRenderer
         }
 
         var key = new PptxTableFrameMemoKey(node, bounds, colorMap);
-        if (context.TableFrameMemo.TryGetValue(key, out object? cached))
+        if (context.TableFrameMemo.TryGetValue(key, out TableFrameLayout? cached))
         {
-            return (TableFrameLayout?)cached;
+            return cached;
         }
 
         TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap);

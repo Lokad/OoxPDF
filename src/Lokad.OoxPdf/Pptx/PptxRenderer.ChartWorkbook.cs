@@ -13,7 +13,7 @@ namespace Lokad.OoxPdf.Pptx;
 // First split from the chart renderer file: pure data types, no drawing.
 internal sealed partial class PptxRenderer
 {
-    private readonly record struct ChartWorkbookCell(
+    internal readonly record struct ChartWorkbookCell(
         string Text,
         string RawValue,
         bool HasValue,
@@ -37,7 +37,7 @@ internal sealed partial class PptxRenderer
         bool HasPhoneticText,
         bool PreserveSpace);
 
-    private enum ChartWorkbookCellValueKind
+    internal enum ChartWorkbookCellValueKind
     {
         Blank,
         Number,
@@ -49,7 +49,7 @@ internal sealed partial class PptxRenderer
         Other
     }
 
-    private sealed class ChartWorksheetData
+    internal sealed class ChartWorksheetData
     {
         public ChartWorksheetData(
             Dictionary<string, ChartWorkbookCell> cells,
@@ -68,13 +68,13 @@ internal sealed partial class PptxRenderer
         public IReadOnlySet<int> HiddenColumns { get; }
     }
 
-    private readonly record struct ChartWorkbookCellFormat(
+    internal readonly record struct ChartWorkbookCellFormat(
         int? NumberFormatId,
         string NumberFormatCode,
         bool? ApplyNumberFormat,
         bool NumberFormatIsDateLike);
 
-    private readonly record struct ChartWorkbookTable(
+    internal readonly record struct ChartWorkbookTable(
         string Name,
         string DisplayName,
         string SheetName,
@@ -91,7 +91,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<int> FilterColumnIds,
         IReadOnlyList<ChartWorkbookTableFilterColumn> FilterColumns);
 
-    private readonly record struct ChartWorkbookTableFilterColumn(
+    internal readonly record struct ChartWorkbookTableFilterColumn(
         int? ColumnId,
         bool? HiddenButton,
         bool? ShowButton,
@@ -103,11 +103,11 @@ internal sealed partial class PptxRenderer
         bool? Top10Top,
         IReadOnlyList<ChartWorkbookTableCustomFilter> CustomFilters);
 
-    private readonly record struct ChartWorkbookTableCustomFilter(
+    internal readonly record struct ChartWorkbookTableCustomFilter(
         string Operator,
         string Value);
 
-    private readonly record struct ChartWorkbookTableColumn(
+    internal readonly record struct ChartWorkbookTableColumn(
         int? Id,
         string Name,
         string TotalsRowFunction,
@@ -122,19 +122,19 @@ internal sealed partial class PptxRenderer
         bool OnlyTotals,
         bool WholeTable);
 
-    private readonly record struct ChartWorkbookCalculationProperties(
+    internal readonly record struct ChartWorkbookCalculationProperties(
         string CalculationMode,
         string CalculationId,
         bool FullCalculationOnLoad,
         bool ForceFullCalculation);
 
-    private readonly record struct ChartWorkbookDefinedName(
+    internal readonly record struct ChartWorkbookDefinedName(
         string Name,
         string Formula,
         int? LocalSheetId,
         string SheetName);
 
-    private readonly record struct ChartWorkbookSheet(
+    internal readonly record struct ChartWorkbookSheet(
         string Name,
         string SheetId,
         string RelationshipId,
@@ -142,7 +142,7 @@ internal sealed partial class PptxRenderer
         int Index,
         string TargetPartName);
 
-    private sealed class ChartWorkbookStyles
+    internal sealed class ChartWorkbookStyles
     {
         public ChartWorkbookStyles(
             IReadOnlyDictionary<int, string> customNumberFormats,
@@ -166,7 +166,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private readonly record struct ChartWorkbookRangeCell(
+    internal readonly record struct ChartWorkbookRangeCell(
         int Index,
         int RangeAreaIndex,
         int RangeAreaCount,
@@ -224,7 +224,7 @@ internal sealed partial class PptxRenderer
         bool RowHidden,
         bool ColumnHidden);
 
-    private enum ChartWorkbookRangeSourceKind
+    internal enum ChartWorkbookRangeSourceKind
     {
         Unknown,
         DirectRange,
@@ -248,15 +248,16 @@ internal sealed partial class PptxRenderer
         string TableLastColumnName,
         int? TableLastColumnId);
 
-    private readonly record struct ChartWorkbookNumericValue(
+    internal readonly record struct ChartWorkbookNumericValue(
         ChartWorkbookRangeCell Cell,
         double Value);
 
-    private readonly record struct ChartWorkbookTextValue(
+    internal readonly record struct ChartWorkbookTextValue(
         ChartWorkbookRangeCell Cell,
         string Text);
 
-    private sealed partial class ChartWorkbookData
+    // R16: internal so the render-context workbook cache carries the model type; members stay as-is.
+    internal sealed partial class ChartWorkbookData
     {
         private readonly IReadOnlyDictionary<string, ChartWorksheetData> sheets;
         private readonly ChartWorkbookStyles styles;

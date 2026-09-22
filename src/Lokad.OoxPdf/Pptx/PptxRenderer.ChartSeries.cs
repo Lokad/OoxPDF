@@ -132,7 +132,7 @@ internal sealed partial class PptxRenderer
     // (like the image cache) and dies with the conversion. Each model is already capped
     // (workbook totals, range unions) and the key space is bounded by package entries.
     private static ChartWorkbookData? GetOrCreateChartWorkbook(
-        Dictionary<string, object?>? cache,
+        Dictionary<string, ChartWorkbookData?>? cache,
         PptxSceneChartExternalData externalData,
         CancellationToken cancellationToken)
     {
@@ -148,9 +148,9 @@ internal sealed partial class PptxRenderer
         }
 
         string key = externalData.TargetPartName ?? externalData.Resource.PartName;
-        if (cache.TryGetValue(key, out object? boxed))
+        if (cache.TryGetValue(key, out ChartWorkbookData? boxed))
         {
-            return (ChartWorkbookData?)boxed;
+            return boxed;
         }
 
         ChartWorkbookData? model = ReadEmbeddedChartWorkbookData(externalData, cancellationToken);

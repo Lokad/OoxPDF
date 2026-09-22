@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
         TextAlignment Alignment,
         IReadOnlyList<PptxTextSpanLayout> Spans);
 
-    private sealed record PptxTextLineBoxLayout(
+    internal sealed record PptxTextLineBoxLayout(
         double TopY,
         double BaselineY,
         double Advance,
@@ -67,7 +67,7 @@ internal sealed partial class PptxRenderer
         LineSpacing LineSpacing,
         PptxTextBaselineMetricLayout BaselineMetric);
 
-    private sealed record PptxTextBaselineMetricLayout(
+    internal sealed record PptxTextBaselineMetricLayout(
         string Source,
         string? Typeface,
         bool Bold,
@@ -88,7 +88,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextAtomLayout> Atoms,
         PptxTextGlyphSpanLayout GlyphSpan);
 
-    private sealed record PptxTextGlyphSpanLayout(
+    internal sealed record PptxTextGlyphSpanLayout(
         string Text,
         string? Typeface,
         bool Bold,
@@ -118,7 +118,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private sealed record PptxTextGlyphLayout(
+    internal sealed record PptxTextGlyphLayout(
         int CodePoint,
         string? Typeface,
         PptxGlyphTypefaceResolutionSource TypefaceResolutionSource,
@@ -126,14 +126,14 @@ internal sealed partial class PptxRenderer
         double Advance,
         double AdjustmentBefore);
 
-    private sealed record PptxTextAtomLayout(
+    internal sealed record PptxTextAtomLayout(
         PptxTextAtomKind Kind,
         string Text,
         double X,
         double Width,
         bool Draw);
 
-    private enum PptxTextAtomKind
+    internal enum PptxTextAtomKind
     {
         Word,
         Space,
@@ -151,7 +151,7 @@ internal sealed partial class PptxRenderer
         Break
     }
 
-    private enum PptxTextRunKind
+    internal enum PptxTextRunKind
     {
         Text,
         Break,
@@ -205,7 +205,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom)
+    internal readonly record struct TextInsets(double Left, double Right, double Top, double Bottom)
     {
         public static TextInsets Empty { get; } = new(0d, 0d, 0d, 0d);
 
@@ -225,7 +225,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
 
-    private readonly record struct LineSpacing(double Value, bool IsAbsolute, bool IsExplicit, bool UseNormalLineAdvance)
+    internal readonly record struct LineSpacing(double Value, bool IsAbsolute, bool IsExplicit, bool UseNormalLineAdvance)
     {
         public static LineSpacing Absolute(double points) => new(points, true, true, false);
 
@@ -466,13 +466,13 @@ internal sealed partial class PptxRenderer
         OpenTypeFont Font,
         bool SyntheticBold);
 
-    private enum PptxGlyphTypefaceResolutionSource
+    internal enum PptxGlyphTypefaceResolutionSource
     {
         Primary,
         Fallback
     }
 
-    private enum TextAlignment
+    internal enum TextAlignment
     {
         Left,
         Center,
