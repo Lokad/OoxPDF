@@ -910,12 +910,13 @@ internal static class DocxTextWrapTests
         TestAssert.Equal("aaaa bbbb cccc ", lines[0].Text);
     }
 
-    // PLAN W03 count-based scaling tests: deterministic unit-width measurer, line
+    // PLAN W03 count-based scaling tests plus R07 linear gate: deterministic unit-width measurer, line
     // width 10pt, emergency (allowOverwideTokenBreaks) wrapping. Pre-fix baselines
     // measured 2026-09-21 on this code (artifacts/wrap-baseline.txt, ignored):
     // L=128: 795 calls / 40,798 chars; L=256: 3,228 / 303,593; L=512: 13,008 /
-    // 2,334,038 (matching the PLAN probe table). Thresholds below pin the
-    // post-fix counts with headroom; golden starts pin identical line breaking.
+    // 2,334,038 (matching the PLAN probe table). R07 estimates fit via average char width
+    // plus local grow/shrink among safe breaks, so 128/256/512 thresholds below enforce linear
+    // growth (2x per doubling, not 4x); golden lengths pin identical line breaking.
     internal sealed class CountingUnitMeasurer : IDocxTextMeasurer
     {
         public int MeasureCalls;
@@ -931,9 +932,9 @@ internal static class DocxTextWrapTests
 
     public static void EmergencyWrapLongUnbrokenTokenBoundsWork()
     {
-        AssertWrapScaling(new string((char)97, 128), 780, new[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 8 });
-        AssertWrapScaling(new string((char)97, 256), 3200, null);
-        AssertWrapScaling(new string((char)97, 512), 12950, null);
+        AssertWrapScaling(new string((char)97, 128), 200, new[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 8 });
+        AssertWrapScaling(new string((char)97, 256), 400, null);
+        AssertWrapScaling(new string((char)97, 512), 800, null);
     }
 
     public static void EmergencyWrapHyphenatedTokenBoundsWork()
