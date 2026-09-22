@@ -5,6 +5,32 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfDocumentWriter
 {
+    // R18: image deduplication groups by the full content identity and verifies byte
+    // equality on every key match. A same-key content mismatch (only reachable through
+    // a full-digest collision) fails loudly instead of silently emitting one image
+    // under two names. The keySelector seam lets tests force collisions that SHA-256
+    // makes unconstructible in production.
+    internal static List<PdfImageXObject> DeduplicateImages(IEnumerable<PdfImageXObject> images, Func<PdfImageXObject, string> keySelector, CancellationToken cancellationToken)
+    {
+        var byKey = new Dictionary<string, PdfImageXObject>(StringComparer.Ordinal);
+        var deduped = new List<PdfImageXObject>();
+        foreach (PdfImageXObject image in images)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string key = keySelector(image);
+            if (!byKey.TryGetValue(key, out PdfImageXObject? existing))
+            {
+                byKey[key] = image;
+                deduped.Add(image);
+                continue;
+            }
+            if (!existing.HasIdenticalContent(image))
+            {
+                throw new InvalidDataException($"PDF image identity collision for '{key}': distinct pixel content shares one resource identity.");
+            }
+        }
+        return deduped;
+    }
     public static void WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
@@ -34,13 +60,13 @@ internal sealed class PdfDocumentWriter
             .Select(group => PdfEmbeddedFont.Merge(group, cancellationToken))
             .ToList();
         cancellationToken.ThrowIfCancellationRequested();
-        List<PdfImageXObject> images = pages
+        List<PdfImageXObject> images = DeduplicateImages(pages
             .SelectMany(p => p.Images
                 .Select(i => i.Image)
                 .Concat(p.ExtGStates.Select(s => s.SoftMask?.Image).OfType<PdfImageXObject>())
-                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image))))
-            .DistinctBy(i => i.ResourceKey)
-            .ToList();
+                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image)))),
+            static image => image.ResourceKey,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         List<PdfAxialShading> shadings = pages
             .SelectMany(p => p.Shadings.Select(s => s.Shading))

@@ -29,7 +29,11 @@ internal sealed class PdfImageXObject
 
     public byte[]? Alpha { get; }
 
-    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{ColorSpace}:{BitsPerComponent}:{Bytes.Length}:{HashPrefix(Bytes)}:{Alpha?.Length ?? 0}:{(Alpha is null ? "none" : HashPrefix(Alpha))}";
+    // R18: the identity carries full SHA-256 digests, not truncated prefixes, and
+    // writer deduplication verifies byte equality on every key match (see
+    // PdfDocumentWriter.DeduplicateImages). PDF names (Im1, ...) stay deterministic
+    // per-page counters, separate from these lookup identities.
+    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{ColorSpace}:{BitsPerComponent}:{Bytes.Length}:{ContentDigest(Bytes)}:{Alpha?.Length ?? 0}:{(Alpha is null ? "none" : ContentDigest(Alpha))}";
 
     public static PdfImageXObject Jpeg(int width, int height, byte[] bytes, int componentCount, int bitsPerComponent)
     {
@@ -58,8 +62,21 @@ internal sealed class PdfImageXObject
         return output.ToArray();
     }
 
-    private static string HashPrefix(byte[] bytes)
+    public bool HasIdenticalContent(PdfImageXObject? other)
     {
-        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))[..16];
+        return other is not null &&
+            Width == other.Width &&
+            Height == other.Height &&
+            Filter.Equals(other.Filter, StringComparison.Ordinal) &&
+            ColorSpace.Equals(other.ColorSpace, StringComparison.Ordinal) &&
+            BitsPerComponent == other.BitsPerComponent &&
+            Bytes.AsSpan().SequenceEqual(other.Bytes) &&
+            ((Alpha is null && other.Alpha is null) ||
+                (Alpha is not null && other.Alpha is not null && Alpha.AsSpan().SequenceEqual(other.Alpha)));
+    }
+
+    private static string ContentDigest(byte[] bytes)
+    {
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
     }
 }
