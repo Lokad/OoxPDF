@@ -133,6 +133,68 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.True(lines[1].Line > lines[0].Line, "Expected the scene break run to surface as a span line boundary at the same position.");
     }
 
+    public static void FieldRunsAgreeBetweenSceneAndSpans()
+    {
+        // R14: field-run agreement probe. Slide-number fields must resolve to the
+        // same text and style in the scene model and the renderer spans.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"/><a:t>Page </a:t></a:r><a:fld type="slidenum"><a:rPr sz="1800"/><a:t>1</a:t></a:fld><a:r><a:rPr sz="1800"/><a:t> end</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        PptxSceneTextRun[] sceneRuns = body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .ToArray();
+        TestAssert.Equal(3, sceneRuns.Length);
+        TestAssert.Equal(PptxSceneTextRunKind.Field, sceneRuns[1].Kind);
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadSpans(node, document, scene);
+        var chunks = new List<(PptxRenderer.PptxTextRunModel Model, StringBuilder Text)>();
+        foreach (PptxRenderer.PptxPositionedTextSpan span in positioned)
+        {
+            TestAssert.True(span.SourceRun is not null, "Expected every span of the probe shape to carry its source run.");
+            PptxRenderer.PptxTextRunModel model = span.SourceRun!;
+            if (chunks.Count > 0 && ReferenceEquals(chunks[^1].Model, model))
+            {
+                chunks[^1].Text.Append(span.Run.Text);
+            }
+            else
+            {
+                chunks.Add((model, new StringBuilder(span.Run.Text)));
+            }
+        }
+
+        TestAssert.Equal(3, chunks.Count);
+        TestAssert.Equal(PptxRenderer.PptxTextRunKind.Field, chunks[1].Model.Kind);
+        for (int i = 0; i < sceneRuns.Length; i++)
+        {
+            TestAssert.Equal(sceneRuns[i].Text, chunks[i].Text.ToString());
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.FontSize, chunks[i].Model.Style.FontSize);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Color, chunks[i].Model.Style.Color);
+        }
+    }
+
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
         PptxSceneNode node,
         PptxDocument document,
