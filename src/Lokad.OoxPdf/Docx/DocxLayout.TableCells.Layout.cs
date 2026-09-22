@@ -247,11 +247,7 @@ internal sealed partial class DocxLayoutEngine
         }
         double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
         double extra = Math.Max(0d, availableHeight - usedHeight);
-        double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
-            ? extra
-            : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
-                ? extra / 2d
-                : 0d;
+        double verticalOffset = ResolveVerticalContentOffset(cell, extra);
         return verticalOffset == 0d ? lines : ShiftTextLines(lines, -verticalOffset, 0d);
     }
 
@@ -633,11 +629,7 @@ internal sealed partial class DocxLayoutEngine
         double usedHeight = Math.Max(0d, startBaselineY - cursorY);
         double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
         double extra = Math.Max(0d, availableHeight - usedHeight);
-        double verticalOffset = cell.VerticalAlignmentValue?.Equals("bottom", StringComparison.OrdinalIgnoreCase) == true
-            ? extra
-            : cell.VerticalAlignmentValue?.Equals("center", StringComparison.OrdinalIgnoreCase) == true
-                ? extra / 2d
-                : 0d;
+        double verticalOffset = ResolveVerticalContentOffset(cell, extra);
         return verticalOffset == 0d
             ? (images, boxes)
             : (images.Select(image => image with { Y = image.Y - verticalOffset }).ToArray(),
@@ -748,6 +740,19 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return nestedRows;
+    }
+
+    // R17: single vertical-alignment execution point. The parsed enum keeps the
+    // two content shifters (text lines, images/boxes) consistent; unknown spellings
+    // ride the Top fallback from parsing.
+    private static double ResolveVerticalContentOffset(DocxTableCell cell, double extra)
+    {
+        return cell.VerticalAlignment switch
+        {
+            DocxTableCellVerticalAlignment.Bottom => extra,
+            DocxTableCellVerticalAlignment.Center => extra / 2d,
+            _ => 0d,
+        };
     }
 
     private static double ResolveTableCellTextWrapWidth(DocxTableCell cell, double width)

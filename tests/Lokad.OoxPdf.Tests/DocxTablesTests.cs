@@ -2945,4 +2945,20 @@ internal static class DocxTablesTests
 
         TestAssert.True(Math.Abs(row.Height - 10.96d) < 0.000001d, "Exact last row should hang the bottom width below the declared height. Height=" + row.Height.ToString(CultureInfo.InvariantCulture));
     }
+
+    public static void CellVerticalAlignmentParsesKnownSpellings()
+    {
+        // R17: bottom/center parse case-insensitively; everything else (including
+        // "both", empty, and unknown spellings) falls back to Top like the legacy
+        // comparisons, which only special-cased bottom and center.
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Bottom, DocxTableCell.ParseVerticalAlignment("bottom"));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Bottom, DocxTableCell.ParseVerticalAlignment("BOTTOM"));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Center, DocxTableCell.ParseVerticalAlignment("center"));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Center, DocxTableCell.ParseVerticalAlignment("Center"));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment("top"));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment("both"));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment(string.Empty));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment(null));
+        TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment("justified"));
+    }
 }

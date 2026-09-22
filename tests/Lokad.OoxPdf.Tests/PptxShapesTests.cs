@@ -1548,4 +1548,52 @@ internal static class PptxShapesTests
         TestAssert.True(y0 > y1, "A 90-degree linear gradient must place the first stop at the top in y-up PDF space.");
         TestAssert.Contains("0.184 0.502 0.929", pdf);
     }
+
+    public static void GroupTransformIdentityRoundTripsBounds()
+    {
+        // R17: the identity transform preserves bounds exactly (finite/range
+        // contract baseline).
+        var bounds = new PptxRenderer.ShapeBounds(10, 20, 300, 400, 0d, false, false);
+        PptxRenderer.ShapeBounds applied = PptxRenderer.GroupTransform.Identity.Apply(bounds);
+        TestAssert.Equal(bounds, applied);
+    }
+
+    public static void GroupTransformAppliesOffsetAndScale()
+    {
+        // R17: offsets and scales compose in the legacy order (local origin scaled
+        // after subtracting the child offset, then shifted by the group origin).
+        var transform = new PptxRenderer.GroupTransform(100, 200, 1000, 2000, 10, 20, 2d, 3d, 0d, false, false);
+        var bounds = new PptxRenderer.ShapeBounds(20, 30, 30, 40, 0d, false, false);
+        PptxRenderer.ShapeBounds applied = transform.Apply(bounds);
+        TestAssert.Equal(120, applied.X);
+        TestAssert.Equal(230, applied.Y);
+        TestAssert.Equal(60, applied.Width);
+        TestAssert.Equal(120, applied.Height);
+    }
+
+    public static void GroupTransformRejectsOverflowingCoordinates()
+    {
+        // R17: hostile EMU inputs fail as malformed geometry instead of overflowing
+        // long math or wrapping offsets.
+        var transform = new PptxRenderer.GroupTransform(long.MaxValue, 0, 1, 1, 0, 0, 1d, 1d, 0d, false, false);
+        var bounds = new PptxRenderer.ShapeBounds(1, 0, 1, 1, 0d, false, false);
+        TestAssert.Throws<InvalidDataException>(() => transform.Apply(bounds));
+    }
+
+    public static void GroupTransformRejectsNonFiniteInputs()
+    {
+        // R17: infinite scales and NaN rotations fail instead of carrying NaN into layout.
+        var infinite = new PptxRenderer.GroupTransform(0, 0, 100, 100, 0, 0, double.PositiveInfinity, 1d, 0d, false, false);
+        TestAssert.Throws<InvalidDataException>(() => infinite.Apply(new PptxRenderer.ShapeBounds(0, 0, 10, 10, 0d, false, false)));
+        var nanRotation = new PptxRenderer.GroupTransform(0, 0, 100, 100, 0, 0, 1d, 1d, double.NaN, false, false);
+        TestAssert.Throws<InvalidDataException>(() => nanRotation.Apply(new PptxRenderer.ShapeBounds(0, 0, 10, 10, 0d, false, false)));
+    }
+
+    public static void GroupTransformCombineRejectsExtremeChild()
+    {
+        // R17: nested composition inherits the same contract through Apply.
+        var parent = new PptxRenderer.GroupTransform(0, 0, 100, 100, 0, 0, 1d, 1d, 0d, false, false);
+        var child = new PptxRenderer.GroupTransform(long.MaxValue, long.MaxValue, long.MaxValue, long.MaxValue, 0, 0, 4d, 4d, 0d, false, false);
+        TestAssert.Throws<InvalidDataException>(() => parent.Combine(child));
+    }
 }

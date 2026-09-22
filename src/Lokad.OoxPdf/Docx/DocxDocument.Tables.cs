@@ -68,6 +68,18 @@ internal sealed record DocxTableRow(
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }
 
+// R17: parsed cell vertical alignment. The raw w:val spelling stays on
+// VerticalAlignmentValue as provenance (snapshots and inspection read it); execution
+// switches on the parsed enum instead of re-comparing strings per layout. Unknown
+// spellings (including "both") fall back to Top, matching the legacy comparisons,
+// which only special-cased bottom and center.
+internal enum DocxTableCellVerticalAlignment
+{
+    Top,
+    Center,
+    Bottom
+}
+
 internal sealed record DocxTableCell(
     string Text,
     IReadOnlyList<DocxParagraph> Paragraphs,
@@ -108,6 +120,23 @@ internal sealed record DocxTableCell(
     }
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+
+    public DocxTableCellVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
+
+    public static DocxTableCellVerticalAlignment ParseVerticalAlignment(string? value)
+    {
+        if (string.Equals(value, "bottom", StringComparison.OrdinalIgnoreCase))
+        {
+            return DocxTableCellVerticalAlignment.Bottom;
+        }
+
+        if (string.Equals(value, "center", StringComparison.OrdinalIgnoreCase))
+        {
+            return DocxTableCellVerticalAlignment.Center;
+        }
+
+        return DocxTableCellVerticalAlignment.Top;
+    }
 }
 
 internal sealed record DocxTableCellConditionalFormat(

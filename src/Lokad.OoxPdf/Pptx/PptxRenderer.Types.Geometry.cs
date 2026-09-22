@@ -18,7 +18,8 @@ internal sealed partial class PptxRenderer
         bool FlipHorizontal,
         bool FlipVertical);
 
-    private readonly record struct GroupTransform(
+    // R17: internal so geometry boundary tests pin the finite/range contract directly.
+    internal readonly record struct GroupTransform(
         long OffsetX,
         long OffsetY,
         long Width,
@@ -35,42 +36,85 @@ internal sealed partial class PptxRenderer
 
         public ShapeBounds Apply(ShapeBounds bounds)
         {
-            long width = (long)Math.Round(bounds.Width * ScaleX);
-            long height = (long)Math.Round(bounds.Height * ScaleY);
-            long localX = (long)Math.Round((bounds.X - ChildOffsetX) * ScaleX);
-            long localY = (long)Math.Round((bounds.Y - ChildOffsetY) * ScaleY);
-            long x = FlipHorizontal
-                ? OffsetX + Width - localX - width
-                : OffsetX + localX;
-            long y = FlipVertical
-                ? OffsetY + Height - localY - height
-                : OffsetY + localY;
-            double rotationDegrees = NormalizeRotationDegrees(bounds.RotationDegrees + RotationDegrees);
-            if (Math.Abs(RotationDegrees) > PptxTextMetricRules.TextStateTolerance && Width > 0 && Height > 0)
+            // R17: one finite/range contract at the transform boundary. Hostile EMU
+            // inputs and non-finite scales/rotations fail as malformed geometry (the
+            // per-node renderer treats InvalidDataException as a skipped node with a
+            // diagnostic) instead of overflowing long math, wrapping offsets, or
+            // carrying NaN into layout. Long differences widen to double before
+            // scaling so the subtraction itself cannot wrap; every narrowing cast is
+            // range-checked and every long sum runs checked. In-range inputs follow
+            // the exact legacy rounding order, so rendered output is unchanged.
+            if (!double.IsFinite(RotationDegrees) || !double.IsFinite(ScaleX) || !double.IsFinite(ScaleY))
             {
-                double groupCenterX = OffsetX + Width / 2d;
-                double groupCenterY = OffsetY + Height / 2d;
-                double boundsCenterX = x + width / 2d;
-                double boundsCenterY = y + height / 2d;
-                double radians = RotationDegrees * Math.PI / 180d;
-                double cos = Math.Cos(radians);
-                double sin = Math.Sin(radians);
-                double dx = boundsCenterX - groupCenterX;
-                double dy = boundsCenterY - groupCenterY;
-                double rotatedCenterX = groupCenterX + dx * cos - dy * sin;
-                double rotatedCenterY = groupCenterY + dx * sin + dy * cos;
-                x = (long)Math.Round(rotatedCenterX - width / 2d);
-                y = (long)Math.Round(rotatedCenterY - height / 2d);
+                throw new InvalidDataException("Group transform scale or rotation is not finite.");
             }
 
-            return new ShapeBounds(
-                x,
-                y,
-                width,
-                height,
-                rotationDegrees,
-                bounds.FlipHorizontal ^ FlipHorizontal,
-                bounds.FlipVertical ^ FlipVertical);
+            double rotationSum = bounds.RotationDegrees + RotationDegrees;
+            if (!double.IsFinite(rotationSum))
+            {
+                throw new InvalidDataException("Group transform rotation is not finite.");
+            }
+
+            try
+            {
+                checked
+                {
+                    long width = ToEmu(bounds.Width * ScaleX, "width");
+                    long height = ToEmu(bounds.Height * ScaleY, "height");
+                    long localX = ToEmu(((double)bounds.X - ChildOffsetX) * ScaleX, "x");
+                    long localY = ToEmu(((double)bounds.Y - ChildOffsetY) * ScaleY, "y");
+                    long x = FlipHorizontal
+                        ? OffsetX + Width - localX - width
+                        : OffsetX + localX;
+                    long y = FlipVertical
+                        ? OffsetY + Height - localY - height
+                        : OffsetY + localY;
+                    double rotationDegrees = NormalizeRotationDegrees(rotationSum);
+                    if (Math.Abs(RotationDegrees) > PptxTextMetricRules.TextStateTolerance && Width > 0 && Height > 0)
+                    {
+                        double groupCenterX = OffsetX + Width / 2d;
+                        double groupCenterY = OffsetY + Height / 2d;
+                        double boundsCenterX = x + width / 2d;
+                        double boundsCenterY = y + height / 2d;
+                        double radians = RotationDegrees * Math.PI / 180d;
+                        double cos = Math.Cos(radians);
+                        double sin = Math.Sin(radians);
+                        double dx = boundsCenterX - groupCenterX;
+                        double dy = boundsCenterY - groupCenterY;
+                        double rotatedCenterX = groupCenterX + dx * cos - dy * sin;
+                        double rotatedCenterY = groupCenterY + dx * sin + dy * cos;
+                        x = ToEmu(rotatedCenterX - width / 2d, "x");
+                        y = ToEmu(rotatedCenterY - height / 2d, "y");
+                    }
+
+                    return new ShapeBounds(
+                        x,
+                        y,
+                        width,
+                        height,
+                        rotationDegrees,
+                        bounds.FlipHorizontal ^ FlipHorizontal,
+                        bounds.FlipVertical ^ FlipVertical);
+                }
+            }
+            catch (OverflowException ex)
+            {
+                throw new InvalidDataException("Group transform coordinates overflow.", ex);
+            }
+        }
+
+        private static long ToEmu(double value, string what)
+        {
+            // R17: the upper bound is exactly 2^63, not (double)long.MaxValue (which
+            // rounds up to 2^63): doubles between long.MaxValue and 2^63 pass a naive
+            // check but overflow the cast below. Doubles are integral past 2^52, so
+            // Math.Round cannot push an accepted value back out of range.
+            if (!double.IsFinite(value) || value >= -(double)long.MinValue || value < long.MinValue)
+            {
+                throw new InvalidDataException($"Group transform {what} is out of range.");
+            }
+
+            return (long)Math.Round(value);
         }
 
         public GroupTransform Combine(GroupTransform child)
