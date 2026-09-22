@@ -77,6 +77,75 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void PlainShapeFullRunStyleAgrees()
+    {
+        // R14: full run-style agreement gate. Every scene run-style field must
+        // resolve identically in the renderer run models: caps, spacing, baseline,
+        // highlight, explicit and fallback typefaces, underline/strike variants,
+        // and fill alpha. This widens the migration-safe surface to the whole
+        // PptxSceneRunStyle record.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6400800" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800" cap="allCaps" spc="200"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>A</a:t></a:r><a:r><a:rPr sz="1800" baseline="30000" u="dbl"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>B</a:t></a:r><a:r><a:rPr sz="1800" strike="dblStrike"><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>C</a:t></a:r><a:r><a:rPr sz="1800"><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>D</a:t></a:r><a:r><a:rPr sz="1800"><a:solidFill><a:srgbClr val="112233"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:rPr><a:t>E</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        PptxSceneTextRun[] sceneRuns = body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
+            .ToArray();
+        TestAssert.Equal(5, sceneRuns.Length);
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadSpans(node, document, scene);
+        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
+            .Select(span => span.SourceRun)
+            .Where(run => run is not null)
+            .Select(run => run!)
+            .Distinct()
+            .ToArray();
+        TestAssert.Equal(5, spanRuns.Length);
+        for (int i = 0; i < sceneRuns.Length; i++)
+        {
+            TestAssert.Equal(sceneRuns[i].Text, spanRuns[i].Text);
+            // Size agrees at the nominal level: raised/lowered runs render scaled
+            // (superscript/subscript rule), so emission FontSize differs by design.
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.FontSize, spanRuns[i].Style.NominalFontSize);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Color, spanRuns[i].Style.Color);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Alpha, spanRuns[i].Style.Alpha);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Typeface, spanRuns[i].Style.Typeface);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.TypefaceSource, spanRuns[i].Style.TypefaceSource);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Bold, spanRuns[i].Style.Bold);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Italic, spanRuns[i].Style.Italic);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Underline, spanRuns[i].Style.Underline);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.UnderlineValue, spanRuns[i].Style.UnderlineValue);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Strike, spanRuns[i].Style.Strike);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.StrikeValue, spanRuns[i].Style.StrikeValue);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.CapsValue, spanRuns[i].Style.CapsValue);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.BaselineOffset, spanRuns[i].Style.BaselineOffset);
+            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Highlight, spanRuns[i].Style.Highlight);
+        }
+    }
+
     public static void BreakRunsAgreeBetweenSceneAndSpans()
     {
         // R14: break-run agreement probe. The scene model carries an explicit Break
