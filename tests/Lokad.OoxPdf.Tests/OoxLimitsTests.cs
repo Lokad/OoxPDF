@@ -620,6 +620,46 @@ internal static class OoxLimitsTests
         TestAssert.True(quiet.All(d => d.Id != "CONVERSION_RESOURCE_SUMMARY"), "Summary must stay off by default.");
     }
 
+    public static void ConversionResourceSummaryIncludesWriterStageOnFilePath()
+    {
+        // R22: the file path snapshots after serialization into its staging file
+        // (still before the atomic move), so writer-stage fields are nonzero.
+        string input = DocxWithInlinePng();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.Contains("pdfPages=1", summary.Message);
+        TestAssert.Contains("pdfContentBytes=", summary.Message);
+        TestAssert.Contains("pdfOutputBytes=", summary.Message);
+        TestAssert.True(!summary.Message.Contains("pdfContentBytes=0", StringComparison.Ordinal), "Writer content bytes must be reported, got: " + summary.Message);
+        TestAssert.True(!summary.Message.Contains("pdfOutputBytes=0", StringComparison.Ordinal), "Writer output bytes must be reported, got: " + summary.Message);
+    }
+
+    public static void ConversionResourceSummaryOmitsWriterStageOnStreamPath()
+    {
+        // R22: the stream path keeps the pre-write snapshot so a throwing observer
+        // leaves stream output untouched (R20); writer-stage fields stay zero.
+        string input = DocxWithInlinePng();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        using FileStream inputStream = File.OpenRead(input);
+        using var outputStream = new MemoryStream();
+        OoxPdfConverter.Convert(inputStream, outputStream, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.Contains("pdfPages=0", summary.Message);
+        TestAssert.Contains("pdfOutputBytes=0", summary.Message);
+    }
+
     public static void ConversionLimitsRejectNegativeCaps()
     {
         // Q01: negative cumulative caps are rejected at option validation.

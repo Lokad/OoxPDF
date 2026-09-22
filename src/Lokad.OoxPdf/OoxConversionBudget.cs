@@ -93,7 +93,7 @@ internal sealed class OoxConversionBudget
     /// </summary>
     public long PeakLiveImageBytes { get; private set; }
 
-    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes);
+    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes);
 
     public static Scope BeginScope(OoxConversionLimits? limits)
     {
@@ -428,12 +428,15 @@ internal readonly record struct OoxConversionTotals(
     long FontWork,
     long XmlNodes,
     long WorkbookCells,
-    long PeakLiveImageBytes)
+    long PeakLiveImageBytes,
+    long PdfPages,
+    long PdfContentBytes,
+    long PdfOutputBytes)
 {
     public OoxPdfDiagnostic ToSummaryDiagnostic(int pageCount)
     {
         string message = FormattableString.Invariant(
-            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}.");
+            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}.");
         return new OoxPdfDiagnostic(
             "CONVERSION_RESOURCE_SUMMARY",
             OoxPdfSeverity.Info,
