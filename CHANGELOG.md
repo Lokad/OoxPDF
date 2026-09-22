@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed cell-memo debug output from library stdout and fixed its double-counted hit counter (hygiene fix found during cap-tuning probes: every memo hit wrote a W04HIT line to the host console and incremented Hits twice; TotalHits-gated tests and memoized behavior are unchanged). Pinned by the full suite with byte-identical outputs.
+
 - Added pattern-phase probe as weave-calibration held-out evidence (Q07 increment): a shifted copy of the overlay chart (+1.3pt) renders dotted-band crops pixel-identical (MAE 0.0) between Office and candidate, proving both sides anchor the pct70 weave to the page and closing the pattern-phase question; the probe carries the same bottom-reserve box-shift gap class as its parent (SSIM 0.950, recall 0.970, diagnostics empty). Manifests: 118 locked / 209 approximate / 0 needs-review (335 cases).
 
 - Moved secondary-axis-overlay probe to approximate (Q07 increment): exhaustive forensics (structure boxes, raw path commands, pixel-identical dotted-band crops, full-page diff mapping, stderr-instrumented layout run) prove complete correct content with a single characterized +0.217pt plot-box Y residual from the bottom-reserve rule (23.317 vs Office 23.1 at 9pt ticks, inside the constant documented 0.3 tolerance; a shared-formula retune is contraindicated by green Tier-1 locks on the same preset). SSIM 0.949, recall 0.966, diagnostics empty. This closes the needs-review triage: all 334 visual cases dispositioned (118 locked / 208 approximate, 8 locked-text-ops). Manifests: 118 locked / 208 approximate / 0 needs-review.

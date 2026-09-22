@@ -82,13 +82,11 @@ internal sealed partial class DocxLayoutEngine
                 out StoredLines? stored) && stored is not null)
             {
                 Hits++;
-                System.Console.WriteLine("W04HIT w=" + cellWidth + " ox=" + stored.OriginX + " oy=" + stored.OriginY + " n=" + stored.Lines.Count);
                 TotalHits++;
                 lines = stored.Lines;
                 originX = stored.OriginX;
                 originY = stored.OriginY;
                 usedHeight = stored.UsedHeight;
-                Hits++;
             }
 
             Misses++;
