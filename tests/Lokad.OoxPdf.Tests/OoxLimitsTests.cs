@@ -1568,6 +1568,42 @@ internal static class OoxLimitsTests
         TestAssert.Equal(1, handler.Hits["/pack/b.ttf"]);
     }
 
+    public static void FontPackEvictionRespectsAccessRecency()
+    {
+        // R13: cache hits refresh LRU recency. The two largest fonts are retained
+        // together; touching the eldest before downloading the smallest must evict
+        // the middle font, not the touched one.
+        byte[][] bySize = [TestFontBuilder.CreateTestFont(), TestFontBuilder.CreateCffKindFont("OtherFamily"), TestFontBuilder.CreateCffKindFont("Z")];
+        Array.Sort(bySize, (left, right) => right.Length.CompareTo(left.Length));
+        byte[] fontA = bySize[0];
+        byte[] fontB = bySize[1];
+        byte[] fontC = bySize[2];
+        var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["/pack/a.ttf"] = fontA,
+            ["/pack/b.ttf"] = fontB,
+            ["/pack/c.ttf"] = fontC,
+        };
+        var handler = new CountingFontHandler(responses);
+        var httpClient = new HttpClient(handler);
+        long maxTotal = (long)fontA.Length + fontB.Length;
+        var files = new OoxPdfFontPackResolver.FontPackFileSource("test-pack", new Uri("https://example.test/pack/"), httpClient, maxTotal);
+        IFontProgramSource sourceA = files.Create(PackFile("a.ttf", fontA));
+        IFontProgramSource sourceB = files.Create(PackFile("b.ttf", fontB));
+        IFontProgramSource sourceC = files.Create(PackFile("c.ttf", fontC));
+
+        sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        sourceB.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        sourceC.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+
+        // C evicted B (least recently used); A must still be retained.
+        sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        TestAssert.Equal(1, handler.Hits["/pack/a.ttf"]);
+        TestAssert.Equal(1, handler.Hits["/pack/b.ttf"]);
+        TestAssert.Equal(1, handler.Hits["/pack/c.ttf"]);
+    }
+
     private static OoxPdfFontPackResolver.FontPackFile PackFile(string relativePath, byte[] bytes)
     {
         return new OoxPdfFontPackResolver.FontPackFile(relativePath, bytes.Length, Convert.ToHexString(SHA256.HashData(bytes)));

@@ -574,6 +574,21 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             }
         }
 
+        // R13: cache hits refresh recency so the order evicts least-recently-used
+        // files instead of least-recently-downloaded ones. Entries missing from
+        // the retained set (never downloaded or already evicted) are ignored.
+        internal void NoteAccessed(string relativePath)
+        {
+            lock (sync)
+            {
+                if (retainedSizes.ContainsKey(relativePath))
+                {
+                    retainedOrder.Remove(relativePath);
+                    retainedOrder.AddLast(relativePath);
+                }
+            }
+        }
+
         internal void NoteDownloaded(string relativePath, long byteCount)
         {
             lock (sync)
@@ -627,6 +642,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         {
             if (cachedBytes is ReadOnlyMemory<byte> cached)
             {
+                owner.NoteAccessed(file.RelativePath);
                 return cached;
             }
 
@@ -635,6 +651,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             {
                 if (cachedBytes is ReadOnlyMemory<byte> rechecked)
                 {
+                    owner.NoteAccessed(file.RelativePath);
                     return rechecked;
                 }
 
