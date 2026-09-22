@@ -69,12 +69,12 @@ index bounds the worst case rather than shifting the median.
 - R14-deeper: migrate layout to scene-resolved text one family at a time with
   agreement gates; share context-independent inherited nodes behind (node, slide) keys.
   Entry: ComputeTextSpansForSceneNode re-clones node.Source instead of consuming
-  node.TextBody; batteries gate plain runs, breaks, fields, paragraph alignment,
-  placeholder text, matched-placeholder inheritance, full 15-field run styles at
-  nominal size, and hyperlink color/underline (click identity lives only in renderer
-  models, a migration prerequisite). Migration design: build run models from TextBody
-  runs (which keep rPr/Source provenance) reusing layout and measuring unchanged;
-  needs slideNumber/fontScale/shapeFontColor from context. Validation bar: agreement
+  node.TextBody; ten agreement batteries gate runs, breaks, fields, alignment,
+  placeholders, full styles, hyperlinks, and every inheritance layer (paragraph
+  defRPr, shape lstStyle, layout bodies, master txStyles, master defaultTextStyle).
+  Known migration prerequisites: click identity lives only in renderer models; table
+  cells carry unresolved XML (no scene text model). Migration design: build run models
+  from TextBody runs reusing layout and measuring unchanged. Validation bar: agreement
   batteries plus byte-identical full suite and visual manifests before Office-gated
   variations.
 - R15-remainder: closed (bar/line extents shared; area/radar single-evaluation need
