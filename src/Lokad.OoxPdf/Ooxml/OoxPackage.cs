@@ -10,6 +10,7 @@ internal sealed class OoxPackage
     internal const long MaxTotalBytes = 256L * 1024L * 1024L;
     internal const long MaxContentTypesBytes = 4L * 1024L * 1024L;
     internal const long MaxCompressedBytes = 512L * 1024L * 1024L;
+    internal const long MaxCentralDirectoryBytes = 32L * 1024L * 1024L;
 
     private readonly Dictionary<string, OoxPart> parts;
 
@@ -73,6 +74,7 @@ internal sealed class OoxPackage
             }
             else
             {
+                bool stageSeekable = false;
                 try
                 {
                     long length = stream.Length;
@@ -83,16 +85,28 @@ internal sealed class OoxPackage
                 }
                 catch (Exception ex) when (ex is NotSupportedException or IOException)
                 {
-                    // Length unavailable: fall through to bounded per-part enforcement below.
-                    // Limit failures must propagate; only length-query failures are ignored here.
+                    // Limit failures must propagate; only length-query failures are handled here.
                     if (ex is OoxPdfLimitExceededException)
                     {
                         throw;
                     }
+
+                    // R05: a seekable stream that cannot report length is staged like
+                    // forward-only input under the same compressed-size quota, since
+                    // ZipArchive itself requires Length. Caller retains ownership of
+                    // the original stream; the staging buffer is disposed below.
+                    stageSeekable = true;
+                }
+
+                if (stageSeekable)
+                {
+                    stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, cancellationToken);
+                    archiveStream = stagedBytes;
                 }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            PreflightCentralDirectory(archiveStream, scratch, cancellationToken);
             using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
             if (archive.Entries.Count > MaxEntryCount)
             {
@@ -225,6 +239,244 @@ internal sealed class OoxPackage
         {
             stagedBytes?.Dispose();
         }
+    }
+
+    // R05: bound central-directory metadata before ZipArchive materializes one entry
+    // object per record. The End-of-Central-Directory carries the entry count and
+    // directory size, so rejecting from those bytes alone avoids allocating millions
+    // of entry objects for a hostile directory. Non-seekable input is already staged
+    // to memory above, so this covers both intake paths; streams that cannot seek or
+    // report length, multi-disk archives, and Zip64 shapes the reader does not parse
+    // fall through to the existing post-construction checks. The stream position is
+    // restored. Limit failures always propagate; only metadata-query failures fall
+    // through (OoxPdfLimitExceededException derives from IOException, so every catch
+    // below rethrows it explicitly).
+    private static void PreflightCentralDirectory(Stream archiveStream, byte[] scratch, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!archiveStream.CanSeek)
+        {
+            return;
+        }
+
+        long length;
+        try
+        {
+            length = archiveStream.Length;
+        }
+        catch (Exception ex) when (ex is NotSupportedException or IOException)
+        {
+            if (ex is OoxPdfLimitExceededException)
+            {
+                throw;
+            }
+
+            return;
+        }
+
+        const int EndOfCentralDirectorySize = 22;
+        if (length < EndOfCentralDirectorySize)
+        {
+            return;
+        }
+
+        long savedPosition;
+        try
+        {
+            savedPosition = archiveStream.Position;
+        }
+        catch (Exception ex) when (ex is NotSupportedException or IOException)
+        {
+            if (ex is OoxPdfLimitExceededException)
+            {
+                throw;
+            }
+
+            return;
+        }
+
+        try
+        {
+            // The record hides behind at most a 65,535-byte comment; the scratch
+            // buffer rented for the whole open call fits the scan window.
+            long scanSize = Math.Min(length, 65_535 + EndOfCentralDirectorySize);
+            long scanStart = length - scanSize;
+            int scanLength = checked((int)scanSize);
+            if (scratch.Length < scanLength)
+            {
+                return;
+            }
+
+            archiveStream.Seek(scanStart, SeekOrigin.Begin);
+            int read = 0;
+            while (read < scanLength)
+            {
+                int chunk = archiveStream.Read(scratch, read, scanLength - read);
+                if (chunk == 0)
+                {
+                    return;
+                }
+
+                read += chunk;
+            }
+
+            // The true record is the last signature whose comment length reaches the end.
+            long recordOffset = -1;
+            for (long candidate = scanLength - EndOfCentralDirectorySize; candidate >= 0; candidate--)
+            {
+                if (scratch[candidate] == 0x50 && scratch[candidate + 1] == 0x4B &&
+                    scratch[candidate + 2] == 0x05 && scratch[candidate + 3] == 0x06)
+                {
+                    int commentLength = scratch[candidate + 20] | (scratch[candidate + 21] << 8);
+                    if (candidate + EndOfCentralDirectorySize + commentLength == scanLength)
+                    {
+                        recordOffset = scanStart + candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (recordOffset < 0)
+            {
+                return;
+            }
+
+            int recordBase = checked((int)(recordOffset - scanStart));
+            int diskNumber = scratch[recordBase + 4] | (scratch[recordBase + 5] << 8);
+            int directoryDisk = scratch[recordBase + 6] | (scratch[recordBase + 7] << 8);
+            if (diskNumber != 0 || directoryDisk != 0)
+            {
+                return;
+            }
+
+            long entryCount = (long)(scratch[recordBase + 10] | (scratch[recordBase + 11] << 8));
+            long directorySize = (long)scratch[recordBase + 12] | ((long)scratch[recordBase + 13] << 8) |
+                ((long)scratch[recordBase + 14] << 16) | ((long)scratch[recordBase + 15] << 24);
+            if (entryCount == 0xFFFF || directorySize == 0xFFFFFFFF)
+            {
+                if (!TryReadZip64Counts(archiveStream, recordOffset, scratch, out entryCount, out directorySize))
+                {
+                    return;
+                }
+            }
+
+            if (entryCount > MaxEntryCount)
+            {
+                throw new OoxPdfLimitExceededException($"OOXML package has too many ZIP entries: {entryCount}.");
+            }
+
+            if (directorySize > MaxCentralDirectoryBytes)
+            {
+                throw new OoxPdfLimitExceededException("OOXML package central directory exceeds the maximum supported size.");
+            }
+        }
+        catch (Exception ex) when (ex is NotSupportedException or IOException)
+        {
+            if (ex is OoxPdfLimitExceededException)
+            {
+                throw;
+            }
+
+            return;
+        }
+        finally
+        {
+            try
+            {
+                archiveStream.Seek(savedPosition, SeekOrigin.Begin);
+            }
+            catch (Exception ex) when (ex is NotSupportedException or IOException)
+            {
+                if (ex is OoxPdfLimitExceededException)
+                {
+                    throw;
+                }
+            }
+        }
+    }
+
+    private static bool TryReadZip64Counts(Stream archiveStream, long recordOffset, byte[] scratch, out long entryCount, out long directorySize)
+    {
+        entryCount = 0;
+        directorySize = 0;
+        // The Zip64 locator sits 20 bytes before the End-of-Central-Directory.
+        if (recordOffset < 20 || scratch.Length < 56)
+        {
+            return false;
+        }
+
+        try
+        {
+            archiveStream.Seek(recordOffset - 20, SeekOrigin.Begin);
+            int read = 0;
+            while (read < 20)
+            {
+                int chunk = archiveStream.Read(scratch, read, 20 - read);
+                if (chunk == 0)
+                {
+                    return false;
+                }
+
+                read += chunk;
+            }
+        }
+        catch (Exception ex) when (ex is NotSupportedException or IOException)
+        {
+            if (ex is OoxPdfLimitExceededException)
+            {
+                throw;
+            }
+
+            return false;
+        }
+
+        if (!(scratch[0] == 0x50 && scratch[1] == 0x4B && scratch[2] == 0x06 && scratch[3] == 0x07))
+        {
+            return false;
+        }
+
+        long zip64Offset = (long)scratch[8] | ((long)scratch[9] << 8) | ((long)scratch[10] << 16) | ((long)scratch[11] << 24) |
+            ((long)scratch[12] << 32) | ((long)scratch[13] << 40) | ((long)scratch[14] << 48) | ((long)scratch[15] << 56);
+        if (zip64Offset < 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            archiveStream.Seek(zip64Offset, SeekOrigin.Begin);
+            int got = 0;
+            while (got < 56)
+            {
+                int chunk = archiveStream.Read(scratch, got, 56 - got);
+                if (chunk == 0)
+                {
+                    return false;
+                }
+
+                got += chunk;
+            }
+        }
+        catch (Exception ex) when (ex is NotSupportedException or IOException)
+        {
+            if (ex is OoxPdfLimitExceededException)
+            {
+                throw;
+            }
+
+            return false;
+        }
+
+        if (!(scratch[0] == 0x50 && scratch[1] == 0x4B && scratch[2] == 0x06 && scratch[3] == 0x06))
+        {
+            return false;
+        }
+
+        entryCount = (long)scratch[32] | ((long)scratch[33] << 8) | ((long)scratch[34] << 16) | ((long)scratch[35] << 24) |
+            ((long)scratch[36] << 32) | ((long)scratch[37] << 40) | ((long)scratch[38] << 48) | ((long)scratch[39] << 56);
+        directorySize = (long)scratch[40] | ((long)scratch[41] << 8) | ((long)scratch[42] << 16) | ((long)scratch[43] << 24) |
+            ((long)scratch[44] << 32) | ((long)scratch[45] << 40) | ((long)scratch[46] << 48) | ((long)scratch[47] << 56);
+        return entryCount >= 0 && directorySize >= 0;
     }
 
     public OoxPart? GetPart(string partName)

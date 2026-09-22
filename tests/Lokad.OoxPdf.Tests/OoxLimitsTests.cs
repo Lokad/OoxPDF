@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Reflection;
 using Lokad.OoxPdf.Diagnostics;
 using System.Text;
@@ -922,6 +922,95 @@ internal static class OoxLimitsTests
             return;
         }
         throw new InvalidOperationException("Expected small-quota staging to throw.");
+    }
+
+    public static void IntakeEntryCountPreflightRejectsBeforeMaterialization()
+    {
+        // R05: the entry count is enforced from the End-of-Central-Directory bytes
+        // before ZipArchive materializes an entry object per record. The patched
+        // count exceeds the cap while the directory itself holds 3 records, so only
+        // the preflight can reject it.
+        byte[] bytes = MinimalPackageBytes();
+        PatchEndOfCentralDirectory(bytes, 10, BitConverter.GetBytes((ushort)60_000));
+        using var stream = new MemoryStream(bytes, writable: false);
+        OoxPdfLimitExceededException rejected = TestAssert.Throws<OoxPdfLimitExceededException>(
+            () => OoxPackage.Open(stream, CancellationToken.None));
+        TestAssert.Contains("too many ZIP entries", rejected.Message);
+    }
+
+    public static void IntakeCentralDirectorySizePreflightRejects()
+    {
+        // R05: the central-directory size is enforced from the
+        // End-of-Central-Directory bytes before ZipArchive parses the directory.
+        byte[] bytes = MinimalPackageBytes();
+        PatchEndOfCentralDirectory(bytes, 12, BitConverter.GetBytes(64 * 1024 * 1024));
+        using var stream = new MemoryStream(bytes, writable: false);
+        OoxPdfLimitExceededException rejected = TestAssert.Throws<OoxPdfLimitExceededException>(
+            () => OoxPackage.Open(stream, CancellationToken.None));
+        TestAssert.Contains("central directory", rejected.Message);
+    }
+
+    public static void IntakeManyTinyEntriesExceedEntryCap()
+    {
+        // R05: 10,001 individually trivial entries exceed the entry cap end to end.
+        var entries = new Dictionary<string, string> { ["[Content_Types].xml"] = DocxContentTypes() };
+        for (int i = 0; i < 10_000; i++)
+        {
+            entries[$"parts/p{i}.xml"] = "<x/>";
+        }
+
+        using MemoryStream package = TestFixtures.CreateZipPackage(entries);
+        byte[] bytes = package.ToArray();
+        using var stream = new MemoryStream(bytes, writable: false);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPackage.Open(stream, CancellationToken.None));
+    }
+
+    public static void IntakeLengthThrowingSeekableStreamStillOpens()
+    {
+        // R05: a seekable stream that cannot report length is staged like
+        // forward-only input under the compressed-size quota instead of failing
+        // inside ZipArchive, which requires Length.
+        byte[] bytes = MinimalPackageBytes();
+        using var stream = new LengthThrowingReadStream(bytes);
+        OoxPackage opened = OoxPackage.Open(stream, CancellationToken.None);
+        TestAssert.NotNull(opened.GetPart("/word/document.xml"));
+    }
+
+    private static byte[] MinimalPackageBytes()
+    {
+        using MemoryStream package = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = DocxContentTypes(),
+            ["_rels/.rels"] = DocxPackageRels(),
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body><w:p><w:r><w:t>Hi</w:t></w:r></w:p>
+                  <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body>
+                </w:document>
+                """,
+        });
+        return package.ToArray();
+    }
+
+    private static void PatchEndOfCentralDirectory(byte[] bytes, int fieldOffset, byte[] field)
+    {
+        // The true record is the last signature whose comment length reaches the end.
+        for (long candidate = bytes.Length - 22; candidate >= 0; candidate--)
+        {
+            if (bytes[candidate] == 0x50 && bytes[candidate + 1] == 0x4B &&
+                bytes[candidate + 2] == 0x05 && bytes[candidate + 3] == 0x06)
+            {
+                int commentLength = bytes[candidate + 20] | (bytes[candidate + 21] << 8);
+                if (candidate + 22 + commentLength == bytes.Length)
+                {
+                    Buffer.BlockCopy(field, 0, bytes, (int)(candidate + fieldOffset), field.Length);
+                    return;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("Expected an End-of-Central-Directory record.");
     }
 
     public static void XmlAttributesBelowLimitPass()
@@ -2056,6 +2145,12 @@ internal static class OoxLimitsTests
         PdfContentValidator.ValidatePage(page, 0, CancellationToken.None);
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         TestAssert.True(allocated <= 1024 * 1024, $"Validation of 400k tokens must not allocate per token, allocated {allocated} bytes.");
+    }
+
+    private sealed class LengthThrowingReadStream : MemoryStream
+    {
+        public LengthThrowingReadStream(byte[] buffer) : base(buffer, writable: false) { }
+        public override long Length => throw new NotSupportedException("Length unavailable.");
     }
 
     private sealed class NonSeekableReadStream : MemoryStream
