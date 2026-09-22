@@ -3,9 +3,9 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-trend-port.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "line-chart", "trend", "pptx-renderer-port", "needs-review"],
+  "tags": ["pptx", "ladder", "chart", "line-chart", "trend", "pptx-renderer-port", "approximate"],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,

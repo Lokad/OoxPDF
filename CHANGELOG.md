@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved line-trend port to approximate (Q07 increment): text-operation comparison (34 reference vs 34 candidate ops, no missing or extra text) pins the recall shortfall to fallback advance accumulation (title glyph drift to -0.20pt along the run, tick labels +0.35pt, legend within 0.13pt) with direct PNG review showing matching line geometry; SSIM 0.983, histogram correlation 0.924, diagnostics empty. Recorded as the measured font-advance positioning gap class. Manifests: 118 locked / 196 approximate / 12 needs-review.
+
 - Moved data-label-legend-keys probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (columns with data labels including legend-key glyphs all matching; SSIM 0.991, histogram correlation 0.999, diagnostics empty) with the recorded sub-lock-bar label-positioning nuance (recall 0.958). Manifests: 118 locked / 195 approximate / 13 needs-review.
 
 - Moved doughnut-top-legend-exploded probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (exploded segments with matching offsets, top legend swatches; SSIM 0.977, recall 0.990, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 194 approximate / 14 needs-review.
