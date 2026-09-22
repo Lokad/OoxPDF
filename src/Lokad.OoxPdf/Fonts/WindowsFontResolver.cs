@@ -6,11 +6,15 @@ namespace Lokad.OoxPdf.Fonts;
 /// </summary>
 /// <remarks>
 /// PLAN M09 retention contract: the snapshot retains one lazy <see cref="FileFontProgramSource"/>
-/// per discovered face, and each source retains its full program bytes after first use
-/// (files are capped individually; see FileFontProgramSource). The retained population
-/// is bounded by the installed files, not by conversions: repeated conversions never
-/// re-read the disk. Hosts that rotate font directories or must release memory call
-/// <see cref="InvalidateDiscoveryCaches"/>; existing resolver instances keep their snapshot.
+/// per discovered file (shared by all its faces), and each source retains its full
+/// program bytes after first use (files are capped individually; see
+/// FileFontProgramSource). R13 ownership: the process-static snapshot owns the
+/// sources, resolver instances share them, and conversions only borrow the arrays;
+/// discovery spans (R13) bound the initial read but not retention. The retained
+/// population is bounded by the installed files, not by conversions: repeated
+/// conversions never re-read the disk. Hosts that rotate font directories or must
+/// release memory call <see cref="InvalidateDiscoveryCaches"/>; existing resolver
+/// instances keep their snapshot.
 /// </remarks>
 public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 {

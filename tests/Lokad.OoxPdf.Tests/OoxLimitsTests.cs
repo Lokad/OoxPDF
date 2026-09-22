@@ -1604,9 +1604,71 @@ internal static class OoxLimitsTests
         TestAssert.Equal(1, handler.Hits["/pack/c.ttf"]);
     }
 
+    public static void FontPackConcurrentDownloadsStayBounded()
+    {
+        // R13: at most MaxConcurrentFontDownloads font downloads overlap process-wide;
+        // all eight complete with byte-identical programs.
+        byte[] font = TestFontBuilder.CreateTestFont();
+        var responses = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        for (int i = 0; i < 8; i++)
+        {
+            responses[$"/pack/f{i}.ttf"] = font;
+        }
+
+        var handler = new GatedFontHandler(responses, delayMilliseconds: 100);
+        var httpClient = new HttpClient(handler);
+        var files = new OoxPdfFontPackResolver.FontPackFileSource("test-pack", new Uri("https://example.test/pack/"), httpClient);
+        IFontProgramSource[] sources = Enumerable.Range(0, 8)
+            .Select(i => files.Create(PackFile($"f{i}.ttf", font)))
+            .ToArray();
+        ReadOnlyMemory<byte>[] results = Task.WhenAll(sources.Select(source => source.GetBytesAsync(CancellationToken.None).AsTask())).GetAwaiter().GetResult();
+        foreach (ReadOnlyMemory<byte> result in results)
+        {
+            TestAssert.True(result.Span.SequenceEqual(font), "Concurrent downloads must stay byte-identical.");
+        }
+
+        TestAssert.True(handler.PeakActive > 1, "Downloads must actually overlap to exercise the bound.");
+        TestAssert.True(
+            handler.PeakActive <= OoxPdfFontPackResolver.MaxConcurrentFontDownloads,
+            $"Peak concurrent downloads {handler.PeakActive} must stay within the bound.");
+    }
+
     private static OoxPdfFontPackResolver.FontPackFile PackFile(string relativePath, byte[] bytes)
     {
         return new OoxPdfFontPackResolver.FontPackFile(relativePath, bytes.Length, Convert.ToHexString(SHA256.HashData(bytes)));
+    }
+
+    private sealed class GatedFontHandler(Dictionary<string, byte[]> responses, int delayMilliseconds) : HttpMessageHandler
+    {
+        private int active;
+
+        public int PeakActive;
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            int current = Interlocked.Increment(ref active);
+            int peak = PeakActive;
+            while (current > peak && Interlocked.CompareExchange(ref PeakActive, current, peak) != peak)
+            {
+                peak = PeakActive;
+            }
+
+            try
+            {
+                await Task.Delay(delayMilliseconds, cancellationToken);
+                string path = request.RequestUri!.AbsolutePath;
+                if (!responses.TryGetValue(path, out byte[]? bytes))
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NotFound);
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+            }
+            finally
+            {
+                Interlocked.Decrement(ref active);
+            }
+        }
     }
 
     private sealed class CountingFontHandler(Dictionary<string, byte[]> responses) : HttpMessageHandler

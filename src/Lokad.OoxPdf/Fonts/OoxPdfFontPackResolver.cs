@@ -15,6 +15,9 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
     // capped in aggregate with LRU eviction. Evicted sources re-download on demand
     // (hash-verified every time, same retry/cancellation path); concurrently active
     // conversions simply keep their already-handed-out array alive via GC.
+    // R13 ownership: the resolver owns retained downloads, conversions borrow the
+    // arrays, and in-flight download memory is bounded separately by the process-wide
+    // MaxConcurrentFontDownloads throttle (each slot holds at most MaxFontFileBytes).
     internal const long MaxTotalFontPackBytes = 256L * 1024L * 1024L;
     private readonly FontPackFileSource fileSource;
     private readonly IReadOnlyList<FontPackFace> faces;
@@ -254,6 +257,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         }
     }
 
+    // R13: process-wide bound on concurrent font downloads. Each download holds up
+    // to MaxFontFileBytes in flight, so the semaphore caps aggregate in-flight
+    // download memory separately from the retained-download total. Retries run
+    // inside one slot; cancellation always throws.
+    internal const int MaxConcurrentFontDownloads = 4;
+    private static readonly SemaphoreSlim DownloadConcurrency = new(MaxConcurrentFontDownloads, MaxConcurrentFontDownloads);
+
     private static async Task<byte[]> DownloadBytesAsync(
         HttpClient httpClient,
         Uri uri,
@@ -264,6 +274,24 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         // Transient transport failures retry immediately and bounded.
         // Server answers (status, declared size, over-cap bodies) fail fast;
         // cancellation always throws.
+        await DownloadConcurrency.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await DownloadWithRetriesAsync(httpClient, uri, description, maxBytes, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            DownloadConcurrency.Release();
+        }
+    }
+
+    private static async Task<byte[]> DownloadWithRetriesAsync(
+        HttpClient httpClient,
+        Uri uri,
+        string description,
+        long maxBytes,
+        CancellationToken cancellationToken)
+    {
         const int maxAttempts = 3;
         for (int attempt = 1; ; attempt++)
         {
