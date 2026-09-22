@@ -72,6 +72,12 @@ index bounds the worst case rather than shifting the median.
   node.TextBody; batteries gate plain runs, breaks, fields, paragraph alignment, placeholder text,
   and matched-placeholder inheritance (layout lstStyle beats master txStyles); an
   earlier apparent divergence was a fixture bug (a:ph matches nothing Office-shaped).
+  Full 15-field run-style agreement holds at nominal size (emission scaling for
+  raised/lowered runs stays renderer-side by design). Migration design: build run
+  models from TextBody runs (which keep rPr/Source provenance) reusing layout and
+  measuring unchanged; needs slideNumber/fontScale/shapeFontColor from context.
+  Validation bar: agreement batteries plus byte-identical full suite and visual
+  manifests before Office-gated variations.
 - R15-remainder: closed (bar/line extents shared; area/radar single-evaluation need
   no memo; frame context and arm consolidation analyzed above, not planned).
 - R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
