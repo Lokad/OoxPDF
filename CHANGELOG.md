@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved gradient-diagnostic and picture-alpha to approximate (Q07 increment): direct PNG reviews show pixel-perfect geometry (recall 1.0, SSIM 0.9998, picture-alpha changed-pixel 0.0, diagnostics empty) with recorded color-math nuances below the family histogram bar (gradient stop interpolation histcorr 0.974, alpha-blending histcorr 0.950 vs the 0.98 bar). Manifests: 118 locked / 200 approximate / 8 needs-review.
+
 - Moved sparse-blank-points probe to approximate (Q07 increment): direct PNG review shows the missing-cache fallback rendering identical gaps to Office (line dip and area start match; the required PPTX_CHART_MISSING_CACHED_DATA diagnostic fires as the manifest already gates); SSIM 0.963, recall 0.960, histogram correlation 1.0. Recorded as the designed missing-data fallback gap class. Manifests: 118 locked / 198 approximate / 10 needs-review.
 
 - Moved line-stacked port to approximate (Q07 increment): fixture inspection proves both series are unstyled (no spPr; colors resolve through the theme accent sequence), so the same-hue shade difference is the documented unstyled-series approximation gap already recorded for line-markers and line-3series; direct PNG review shows matching line geometry, axes, and legend with SSIM 0.990 and empty diagnostics (histogram correlation 0.675). Manifests: 118 locked / 197 approximate / 11 needs-review.

@@ -3,9 +3,9 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-gradient-diagnostic.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "effects", "gradient", "diagnostic", "needs-review"],
+  "tags": ["pptx", "ladder", "effects", "gradient", "diagnostic", "approximate"],
   "expected": {
-    "minAgentRating": 2,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
