@@ -698,6 +698,95 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
     }
 
+    public static void UnstyledRunsInheritMasterDefaultStyle()
+    {
+        // R14: default-style agreement probe. With no shape, inherited, txStyles,
+        // or paragraph defaults anywhere, runs inherit the master defaultTextStyle
+        // identically on both pipelines.
+        string slideRels = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+            </Relationships>
+            """;
+        string layout = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sldLayout>
+            """;
+        string layoutRels = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+            </Relationships>
+            """;
+        string master = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+              <p:defaultTextStyle><a:lvl1pPr><a:defRPr sz="2300"><a:solidFill><a:srgbClr val="556677"/></a:solidFill></a:defRPr></a:lvl1pPr></p:defaultTextStyle>
+            </p:sldMaster>
+            """;
+        string types = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+              <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+            </Types>
+            """;
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = types,
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:t>Defaulted</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
+            ["ppt/slideLayouts/slideLayout1.xml"] = layout,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = layoutRels,
+            ["ppt/slideMasters/slideMaster1.xml"] = master,
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        PptxSceneTextRun[] sceneRuns = body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
+            .ToArray();
+        TestAssert.Equal(1, sceneRuns.Length);
+        TestAssert.Equal(23d, sceneRuns[0].ResolvedStyle.FontSize);
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadSpans(node, document, scene);
+        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
+            .Select(span => span.SourceRun)
+            .Where(run => run is not null)
+            .Select(run => run!)
+            .Distinct()
+            .ToArray();
+        TestAssert.Equal(1, spanRuns.Length);
+        TestAssert.Equal("Defaulted", spanRuns[0].Text);
+        TestAssert.Equal(23d, spanRuns[0].Style.NominalFontSize);
+        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+    }
+
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
         PptxSceneNode node,
         PptxDocument document,
