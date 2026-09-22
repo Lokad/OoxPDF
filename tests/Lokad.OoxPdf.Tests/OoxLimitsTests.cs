@@ -683,7 +683,7 @@ internal static class OoxLimitsTests
     public static void ConversionResourceSummaryIncludesLivePeak()
     {
         // Q01: the summary reports the peak live image reservation (the 2x1 PNG pins
-        // the width-by-height-by-4 estimate at 8 bytes) deterministically.
+        // the inflated-plus-RGB working set at 13 bytes) deterministically.
         string input = DocxWithInlinePng();
         var first = new List<OoxPdfDiagnostic>();
         var second = new List<OoxPdfDiagnostic>();
@@ -705,12 +705,12 @@ internal static class OoxLimitsTests
 
         OoxPdfDiagnostic summary = first.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
         TestAssert.Equal(second.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY").Message, summary.Message);
-        TestAssert.Contains("peakLiveImageBytes=8", summary.Message);
+        TestAssert.Contains("peakLiveImageBytes=13", summary.Message);
     }
 
     public static void ConversionBudgetLiveCapEnforcedEndToEnd()
     {
-        // Q01: a live cap at the 8-byte estimate converts; one byte below fails
+        // Q01: a live cap at the 13-byte working-set estimate converts; one byte below fails
         // before allocation without publishing a partial PDF.
         string input = DocxWithInlinePng();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -718,7 +718,7 @@ internal static class OoxLimitsTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
-            ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 8 },
+            ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 13 },
         });
         TestAssert.True(new FileInfo(output).Length > 0, "At-limit live byte budget must convert.");
 
@@ -728,7 +728,7 @@ internal static class OoxLimitsTests
             OoxPdfConverter.Convert(input, failing, new OoxPdfOptions
             {
                 InputKind = OoxPdfInputKind.Docx,
-                ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 7 },
+                ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 12 },
             });
         }
         catch (IOException ex) when (ex is OoxPdfLimitExceededException)

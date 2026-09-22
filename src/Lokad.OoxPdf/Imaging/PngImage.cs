@@ -29,7 +29,16 @@ internal sealed class PngImage
     // Q01: cooperative cancellation inside the long decode loops. The token is
     // optional so header-only probes and existing callers keep working; renderers
     // pass the conversion token so huge images stay cancellable mid-decode.
+    // Read keeps release-on-return lifetime for header probes, tests, and callers
+    // without downstream transforms. Production image paths use ReadOwned and hold
+    // the reservation across crop/recolor/compress work (R02).
     public static PngImage Read(byte[] bytes, CancellationToken cancellationToken = default)
+    {
+        using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
+        return new PngImage(owned.Width, owned.Height, owned.Rgb, owned.Alpha);
+    }
+
+    public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
         if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
         {
@@ -93,24 +102,36 @@ internal sealed class PngImage
 
         int pngBitsPerPixel = colorType switch { 0 or 3 => bitDepth, 2 => 24, 4 => 16, 6 => 32, _ => 8 };
         long maxInflated = MaxInflatedBytes(width, height, pngBitsPerPixel, interlace);
-        // PLAN Q01: reserve the live decode working set (conservative width-by-height-by-4
-        // estimate) before inflating; the reservation releases when this method returns and
-        // the peak is reported in CONVERSION_RESOURCE_SUMMARY. Zero when the header is
-        // missing (existing validation still throws below); outside a conversion scope this
-        // is a null no-op and pixel caps still apply.
-        long liveEstimate = width <= 0 || height <= 0 ? 0 : checked((long)width * height * 4L);
-        using var liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
-        // PLAN M08: the IDAT accumulator already owns the compressed bytes; inflate
-        // from a read-only view instead of copying them into a second array.
-        using var input = new MemoryStream(idat.GetBuffer(), 0, (int)idat.Length, writable: false);
-        using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-        using var output = new MemoryStream();
-        CopyInflated(zlib, output, maxInflated, cancellationToken);
-
-        // PLAN M08: decode from the inflated buffer in place instead of trimming a
-        // second full-size copy. The truncation guards below throw the same exception
-        // types short input always produced, preserving crop-fallback behavior.
-        return Decode(output.GetBuffer(), (int)output.Length, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+        // R02: reserve the true simultaneous working set (inflated scanlines plus
+        // output planes) before inflating. Ownership transfers to the caller, which
+        // holds it across crop/recolor/compress work; the peak is reported in
+        // CONVERSION_RESOURCE_SUMMARY. Zero when the header is missing (existing
+        // validation still throws below); outside a conversion scope this is a null
+        // no-op and pixel caps still apply.
+        bool hasAlpha = colorType is 3 or 4 or 6 || (colorType == 0 && transparency is { Length: >= 2 });
+        long liveEstimate = width <= 0 || height <= 0
+            ? 0
+            : checked(maxInflated + checked((long)width * height * 3L) + (hasAlpha ? checked((long)width * height) : 0));
+        OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
+        try
+        {
+            // PLAN M08: the IDAT accumulator already owns the compressed bytes; inflate
+            // from a read-only view instead of copying them into a second array.
+            using var input = new MemoryStream(idat.GetBuffer(), 0, (int)idat.Length, writable: false);
+            using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
+            using var output = new MemoryStream();
+            CopyInflated(zlib, output, maxInflated, cancellationToken);
+            // PLAN M08: decode from the inflated buffer in place instead of trimming a
+            // second full-size copy. The truncation guards below throw the same exception
+            // types short input always produced, preserving crop-fallback behavior.
+            PngImage decoded = Decode(output.GetBuffer(), (int)output.Length, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+            return new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, liveReservation);
+        }
+        catch
+        {
+            liveReservation?.Dispose();
+            throw;
+        }
     }
 
     private static long MaxInflatedBytes(int width, int height, int bitsPerPixel, int interlace)

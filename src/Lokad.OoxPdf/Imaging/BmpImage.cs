@@ -19,7 +19,17 @@ internal sealed class BmpImage
     public byte[]? Alpha { get; }
 
     // Q01: cooperative cancellation inside the pixel loop (see PngImage.Read).
+
+    // Read keeps release-on-return lifetime for header probes, tests, and callers
+    // without downstream transforms. Production image paths use ReadOwned and hold
+    // the reservation across crop/recolor/compress work (R02).
     public static BmpImage Read(byte[] bytes, CancellationToken cancellationToken = default)
+    {
+        using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
+        return new BmpImage(owned.Width, owned.Height, owned.Rgb, owned.Alpha);
+    }
+
+    public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
         if (bytes.Length < 54 || bytes[0] != (byte)'B' || bytes[1] != (byte)'M')
         {
@@ -60,33 +70,37 @@ internal sealed class BmpImage
 
         int stride32 = checked((int)stride);
 
-        // PLAN Q01: reserve the live pixel working set (conservative width-by-height-by-4
-        // estimate) before allocating; released on return, peak reported in the summary.
-        // Outside a conversion scope this is a null no-op.
-        long liveEstimate = checked((long)width * height * 4L);
-        using var liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
-
-        var rgb = new byte[width * height * 3];
-        for (int y = 0; y < height; y++)
+        // R02: BMP decodes in place from caller-owned input, so the working set is
+        // exactly the output plane. Ownership transfers to the caller (see PngImage).
+        long liveEstimate = checked((long)width * height * 3L);
+        OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
+        try
         {
-            if ((y & 255) == 0)
+            var rgb = new byte[width * height * 3];
+            for (int y = 0; y < height; y++)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                if ((y & 255) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                int sourceY = topDown ? y : height - 1 - y;
+                int source = pixelOffset + sourceY * stride32;
+                int target = y * width * 3;
+                for (int x = 0; x < width; x++)
+                {
+                    rgb[target++] = bytes[source + 2];
+                    rgb[target++] = bytes[source + 1];
+                    rgb[target++] = bytes[source];
+                    source += bytesPerPixel;
+                }
             }
-
-            int sourceY = topDown ? y : height - 1 - y;
-            int source = pixelOffset + sourceY * stride32;
-            int target = y * width * 3;
-            for (int x = 0; x < width; x++)
-            {
-                rgb[target++] = bytes[source + 2];
-                rgb[target++] = bytes[source + 1];
-                rgb[target++] = bytes[source];
-                source += bytesPerPixel;
-            }
+            return new DecodedPixels(width, height, rgb, alpha: null, liveReservation);
         }
-
-        return new BmpImage(width, height, rgb, alpha: null);
+        catch
+        {
+            liveReservation?.Dispose();
+            throw;
+        }
     }
 
     private static ushort U16(byte[] bytes, int offset)

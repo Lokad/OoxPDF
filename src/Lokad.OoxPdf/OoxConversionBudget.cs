@@ -23,8 +23,11 @@ namespace Lokad.OoxPdf;
 /// process memory (R19): <see cref="ReserveLiveImageBytes"/> fails before
 /// allocation when the live level would exceed its cap and releases on dispose, while
 /// <see cref="PeakLiveImageBytes"/> records the high-water mark reported in the
-/// CONVERSION_RESOURCE_SUMMARY diagnostic. The width-by-height-by-4 estimate omits
-/// simultaneous buffers, retained pixels/variants, and non-image work.
+/// CONVERSION_RESOURCE_SUMMARY diagnostic. Decoded-pixel ownership (R02) reserves
+/// the simultaneous working set (PNG inflated bytes plus output planes, JPEG sample
+/// planes plus RGB, BMP output planes, crop/recolor/effect transients) before
+/// allocation and holds it until the owner disposes; pixels retained outside any
+/// live operation scope and non-image work remain outside.
 /// </para>
 /// <para>Shared allocating boundaries (R03-R04): content images charge once in
 /// <see cref="Imaging.OoxImageDecoder"/> (including crop/recolor/effect variants),

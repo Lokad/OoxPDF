@@ -115,8 +115,9 @@ shared process. Defaults are generous multiples of the per-site caps:
   PPTX (R03). Ordinary conversions resolve dozens; thousands indicate reference
   churn. Cache hits do not recharge.
 - `MaxLiveImageBytesPerConversion` (default 512 MiB): peak image-decode
-  reservation using a width-by-height-by-4 estimate per pixel decode (R01
-  reserves before component-plane allocation; JPEG passthrough holds none).
+  reservation using per-format working-set estimates held across
+  decode/transform/compress by decoded-pixel ownership (R02; R01 reserves
+  before component-plane allocation; JPEG passthrough holds none).
 
 Crossing any budget throws `OoxPdfLimitExceededException` before further
 expansion: no partial PDF is published (file output stays atomic) and the

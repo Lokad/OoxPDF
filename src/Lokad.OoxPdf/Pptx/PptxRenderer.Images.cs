@@ -139,8 +139,8 @@ internal sealed partial class PptxRenderer
                         return null;
                     }
 
-                    (int croppedWidth, int croppedHeight, byte[] croppedRgb, byte[]? croppedAlpha) = OoxImageDecoder.DecodePixels(contentType, bytes, cancellationToken);
-                    return CreateCroppedRgbImage(croppedWidth, croppedHeight, croppedRgb, croppedAlpha, recolor, crop);
+                    using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
+                    return CreateCroppedRgbImage(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, recolor, crop);
                 }
                 catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                 {
@@ -430,9 +430,12 @@ internal sealed partial class PptxRenderer
                     {
                         try
                         {
-                            (int recolorWidth, int recolorHeight, byte[] recolorRgb, byte[]? _) = OoxImageDecoder.DecodePixels(contentType, bytes, cancellationToken);
-                            byte[] rgb = ApplyImageRecolor(recolorRgb, recolor);
-                            return PdfImageXObject.RgbPng(recolorWidth, recolorHeight, rgb, alpha: null);
+                            using DecodedPixels recolorSource = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
+                            using (OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)recolorSource.Rgb.Length)))
+                            {
+                                byte[] rgb = ApplyImageRecolor(recolorSource.Rgb, recolor);
+                                return PdfImageXObject.RgbPng(recolorSource.Width, recolorSource.Height, rgb, alpha: null);
+                            }
                         }
                         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                         {
@@ -456,8 +459,12 @@ internal sealed partial class PptxRenderer
             // PNG/BMP share the common pixel decoder with the recolor map applied;
             // unknown types throw with the same message the explicit branch used to
             // emit, so the catch below reports byte-identical diagnostics.
-            (int decodedWidth, int decodedHeight, byte[] decodedRgb, byte[]? decodedAlpha) = OoxImageDecoder.DecodePixels(contentType, bytes, cancellationToken);
-            return PdfImageXObject.RgbPng(decodedWidth, decodedHeight, ApplyImageRecolor(decodedRgb, recolor), decodedAlpha);
+            using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
+            using (OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)decoded.Rgb.Length)))
+            {
+                byte[] recoloredRgb = ApplyImageRecolor(decoded.Rgb, recolor);
+                return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recoloredRgb, decoded.Alpha);
+            }
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
@@ -512,20 +519,33 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        byte[] croppedRgb = new byte[croppedWidth * croppedHeight * 3];
-        byte[]? croppedAlpha = alpha is null ? null : new byte[croppedWidth * croppedHeight];
-        for (int y = 0; y < croppedHeight; y++)
+        // R02: the cropped copy lives alongside the full source pixels, and the
+        // recolor transform copies once more; both transients are reserved before
+        // allocating and held through PDF compression. The identity recolor performs
+        // no copy and takes no additional reservation.
+        using (OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)croppedWidth * croppedHeight * 4L)))
         {
-            int sourceY = top + y;
-            Buffer.BlockCopy(rgb, (sourceY * width + left) * 3, croppedRgb, y * croppedWidth * 3, croppedWidth * 3);
-            if (alpha is not null && croppedAlpha is not null)
+            byte[] croppedRgb = new byte[croppedWidth * croppedHeight * 3];
+            byte[]? croppedAlpha = alpha is null ? null : new byte[croppedWidth * croppedHeight];
+            for (int y = 0; y < croppedHeight; y++)
             {
-                Buffer.BlockCopy(alpha, sourceY * width + left, croppedAlpha, y * croppedWidth, croppedWidth);
+                int sourceY = top + y;
+                Buffer.BlockCopy(rgb, (sourceY * width + left) * 3, croppedRgb, y * croppedWidth * 3, croppedWidth * 3);
+                if (alpha is not null && croppedAlpha is not null)
+                {
+                    Buffer.BlockCopy(alpha, sourceY * width + left, croppedAlpha, y * croppedWidth, croppedWidth);
+                }
+            }
+            if (IsNoImageRecolor(recolor))
+            {
+                return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, croppedRgb, croppedAlpha);
+            }
+            using (OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)croppedRgb.Length)))
+            {
+                byte[] recoloredRgb = ApplyImageRecolor(croppedRgb, recolor);
+                return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, recoloredRgb, croppedAlpha);
             }
         }
-
-        byte[] recoloredRgb = ApplyImageRecolor(croppedRgb, recolor);
-        return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, recoloredRgb, croppedAlpha);
     }
 
     private static byte[] ApplyImageRecolor(byte[] rgb, PptxSceneImageRecolor recolor)

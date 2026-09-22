@@ -1,3 +1,4 @@
+using Lokad.OoxPdf;
 using Lokad.OoxPdf.Imaging;
 
 namespace Lokad.OoxPdf.Tests;
@@ -374,6 +375,66 @@ internal static class ImagingTests
         byte[] payload = [0, 10, 20, 30];
         byte[] png = BuildStoredPng(1, 1, 8, 6, 1, payload);
         TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.Read(png));
+    }
+
+    public static void OwnedPixelsHoldReservationAcrossOwnerLifetime()
+    {
+        // R02: the working-set reservation stays live while the decoded-pixel owner
+        // is alive and releases on dispose, with the peak recorded. The 2x1 RGB PNG
+        // pins the inflated-plus-RGB estimate at 13 bytes.
+        byte[] png = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255]);
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
+        OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
+        using (DecodedPixels owned = PngImage.ReadOwned(png))
+        {
+            TestAssert.Equal(2, owned.Width);
+            TestAssert.Equal(1, owned.Height);
+            TestAssert.Equal(13, budget.LiveImageBytes);
+        }
+
+        TestAssert.Equal(0, budget.LiveImageBytes);
+        TestAssert.Equal(13, budget.PeakLiveImageBytes);
+    }
+
+    public static void OwnedPixelsReleaseReservationOnDecodeFailure()
+    {
+        // R02: a decode that fails after reserving still releases back to baseline
+        // instead of leaking the live level. The short payload throws from pixel
+        // decoding, after the working-set reservation was taken.
+        byte[] png = BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60]);
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
+        OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
+        TestAssert.Throws<IndexOutOfRangeException>(() => PngImage.ReadOwned(png));
+        TestAssert.Equal(0, budget.LiveImageBytes);
+        TestAssert.True(budget.PeakLiveImageBytes > 0, "The failed decode must have reserved before failing.");
+    }
+
+    public static void ExactFourBytePerPixelBudgetRejectsRgbaPngBeforeInflate()
+    {
+        // R02 (probe defect): a valid 128x128 RGBA PNG passes the old 65,536-byte
+        // 4bpp estimate while actually holding 65,664 inflated bytes plus output
+        // planes. The working-set estimate must reject it before inflating.
+        byte[] png = TestFixtures.CreateRgbaPng(128, 128, new byte[128 * 128 * 4]);
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(
+            new OoxConversionLimits { MaxLiveImageBytesPerConversion = 128 * 128 * 4 });
+        OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => PngImage.ReadOwned(png));
+        TestAssert.Equal(0, budget.LiveImageBytes);
+        TestAssert.Equal(0, budget.PeakLiveImageBytes);
+    }
+
+    public static void ZeroLiveBudgetRejectsJpegPixelsWithZeroPeak()
+    {
+        // R02: a zero-byte live budget rejects the JPEG working-set reservation
+        // (sample planes plus RGB) before allocating, leaving a zero peak.
+        byte[] jpeg = Convert.FromBase64String(
+            "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD+Rb4g/wDI++N/+xv8S/8Ap5vaKKK/7o/An/kyHg3/ANmq8PP/AFkcoPyHxn/5PD4r/wDZyuOv/WozQ//Z");
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(
+            new OoxConversionLimits { MaxLiveImageBytesPerConversion = 0 });
+        OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => JpegImage.ReadOwned(jpeg));
+        TestAssert.Equal(0, budget.LiveImageBytes);
+        TestAssert.Equal(0, budget.PeakLiveImageBytes);
     }
 
     private static byte[] BuildStoredPng(int width, int height, int bitDepth, int colorType, int interlace, byte[] rawRows)

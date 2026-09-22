@@ -47,12 +47,14 @@ public sealed class OoxConversionLimits
 
     /// <summary>
     /// Maximum live image decode bytes reserved per conversion at any one time
-    /// (default 536,870,912, i.e. 512 MiB). This is a reservation peak using a
-    /// width-by-height-by-4 estimate per pixel decode (R01 reserves before JPEG
-    /// component-plane allocation); it is not total live or process memory (R19).
-    /// Simultaneous buffers (PNG inflated bytes plus planes, JPEG planes plus RGB,
-    /// compression scratch), retained pixels/variants, and non-image work are outside
-    /// this reservation. <see cref="MaxImagesDecodedPerConversion"/> bounds how many
+    /// (default 536,870,912, i.e. 512 MiB). This is a reservation peak using
+    /// per-format working-set estimates held by decoded-pixel ownership across
+    /// decode/transform/compress work (R02): PNG reserves inflated bytes plus
+    /// output planes, JPEG reserves sample planes plus RGB (R01 reserves before
+    /// plane allocation), BMP reserves the output plane, and crop/recolor/effect
+    /// transients reserve alongside the source pixels. It is not total live or
+    /// process memory (R19). Pixels retained outside any live operation scope
+    /// and non-image work are outside this reservation. <see cref="MaxImagesDecodedPerConversion"/> bounds how many
     /// individually legal images one conversion may carry. Reservations fail with
     /// <see cref="OoxPdfLimitExceededException"/> before the decode allocates.
     /// JPEG passthrough retains the already-owned input bytes and holds no reservation.

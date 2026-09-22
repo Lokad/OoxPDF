@@ -70,9 +70,11 @@ internal sealed partial class PptxRenderer
         int pixelWidth = Math.Clamp((int)Math.Ceiling(shadowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
         int pixelHeight = Math.Clamp((int)Math.Ceiling(shadowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
         double scaleX = pixelWidth / shadowWidth;
+        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
         double scaleY = pixelHeight / shadowHeight;
 
-        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
+        // R02: effect rasters hold decoded-size planes plus compression scratch; reserve across rasterization and PDF compression.
+        using var effectReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)pixelWidth * pixelHeight * 4L));
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
@@ -182,6 +184,8 @@ internal sealed partial class PptxRenderer
         double scaleY = pixelHeight / glowHeight;
 
         OoxConversionBudget.Current?.ChargeImagesDecoded(1);
+        // R02: effect rasters hold decoded-size planes plus compression scratch; reserve across rasterization and PDF compression.
+        using var effectReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)pixelWidth * pixelHeight * 4L));
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
