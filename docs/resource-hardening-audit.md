@@ -77,7 +77,7 @@ index bounds the worst case rather than shifting the median.
 - R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
   (cell vertical alignment done).
 - R22-closeout: Office-gated visual runs for new held-out variations (needs Office/COM);
-  post-write/pre-move resource snapshot with writer page/content/output byte fields
-  (summary tests use Contains, so additive fields are safe; R20 throw-before-move
-  tests gate ordering); staged page/resource emission (writer holds all pages before
-  emitting; incremental staging is a design slice, not started).
+  `e3f292dd` post-write/pre-move snapshot with writer page/content/output fields
+  (file path; stream path keeps pre-write zeros under R20); staged page/resource
+  emission (writer holds all pages before emitting; incremental staging is a design
+  slice, not started).
