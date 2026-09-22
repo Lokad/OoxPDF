@@ -43,10 +43,11 @@ internal sealed partial class PptxRenderer
         // capped (workbook totals, range unions); the dictionary itself is bounded by
         // the package entry count and dies with this conversion.
         var chartWorkbookCache = new Dictionary<string, object?>(StringComparer.Ordinal);
-        // PLAN W02: per-slide layout memoization shared by font collection (below) and
-        // node painting. Owned per slide, dies with the conversion.
-        var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, object?>(PptxTextSpanMemoKeyComparer.Instance);
-        var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, object?>(PptxTableFrameMemoKeyComparer.Instance);
+        // R09: per-slide layout memoization shared by font collection (below) and
+        // node painting. Owned inside the slide iteration so previous-slide glyph/layout
+        // graphs become eligible for collection each slide; cross-slide Node references
+        // never hit (fresh master/layout instances per slide), so per-slide ownership
+        // preserves compute-once within a slide without retaining the whole deck.
         var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
         for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
@@ -62,6 +63,8 @@ internal sealed partial class PptxRenderer
 
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts);
             var graphics = new PdfGraphicsBuilder();
+            var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, object?>(PptxTextSpanMemoKeyComparer.Instance);
+            var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, object?>(PptxTableFrameMemoKeyComparer.Instance);
             PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
 
             bool masterBackgroundPainted = RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
