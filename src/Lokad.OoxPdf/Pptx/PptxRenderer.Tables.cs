@@ -248,8 +248,7 @@ internal sealed partial class PptxRenderer
 
         double declaredTableHeight = rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
         double tableHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, declaredTableHeight);
-        double rowScale = frameHeight / rawRowHeights.Sum();
-        double[] rowHeights = ResolveTableRowHeights(context, sceneTable, rawColumnWidths, rawRowHeights, columnScale, rowScale, frameHeight, colorMap);
+        double[] rowHeights = ResolveTableRowHeights(context, sceneTable, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap);
 
         // bound row/column products before allocating dense border grids.
         // Declared grid columns and rows can both be numerous while actual cells
@@ -390,11 +389,13 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> rawColumnWidths,
         IReadOnlyList<double> rawRowHeights,
         double columnScale,
-        double rowScale,
         double frameHeight,
         PptxColorMap colorMap)
     {
-        double[] rowHeights = rawRowHeights.Select(height => height * rowScale).ToArray();
+        // Large frame slack keeps declared heights (Office keeps declared rows at
+        // 1.2x-3x frame slack); content minimums below can still expand rows, and
+        // overflow shrinking is unchanged.
+        double[] rowHeights = rawRowHeights.Select(height => height * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch).ToArray();
         double rowHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch);
         if (rowHeightSlackFactor <= OfficeTableRowContentExpansionSlackFactor)
         {

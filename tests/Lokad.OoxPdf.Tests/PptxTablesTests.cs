@@ -191,6 +191,50 @@ internal static class PptxTablesTests
         TestAssert.DoesNotContain("72 457.412 144 10.588 re f", pdf);
     }
 
+    public static void PptxSyntheticTableKeepsDeclaredRowsUnderLargeFrameSlack()
+    {
+        // Office keeps declared row heights when the frame carries large slack
+        // (probed at 1.2x-3x frame-to-declared ratios); rows must not stretch to fill
+        // the frame. Single row declared at 72pt inside a 144pt frame stays 72pt.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                        <a:tbl>
+                          <a:tblGrid><a:gridCol w="1828800"/><a:gridCol w="1828800"/></a:tblGrid>
+                          <a:tr h="914400">
+                            <a:tc>
+                              <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>One</a:t></a:r></a:p></a:txBody>
+                              <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
+                            </a:tc>
+                            <a:tc>
+                              <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>Two</a:t></a:r></a:p></a:txBody>
+                              <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
+                            </a:tc>
+                          </a:tr>
+                        </a:tbl>
+                      </a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        Match declaredFill = Regex.Matches(pdf, "([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+) re f").Cast<Match>().FirstOrDefault(match => double.Parse(match.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture) > 100d && double.Parse(match.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture) >= 70d && double.Parse(match.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture) <= 74d) ?? Match.Empty;
+        TestAssert.True(declaredFill.Success, "Expected a cell fill rect at declared 72pt row height under 2x frame slack.");
+    }
+
     public static void PptxSyntheticTableKeepsDeclaredRowsWithoutMaterialSlack()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
