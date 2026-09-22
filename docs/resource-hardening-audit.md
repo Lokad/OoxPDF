@@ -29,7 +29,7 @@ only, never gates.
 | R12 document/page indexes | closed | `daec0208` drawings, `dc8f1987` related stories, `b404bde3` reference pages; equivalence tests; before/after probes in this audit |
 | R13 font byte ownership | closed | `ac57c794` spans, `0a9ee59d` recency, `17c5484a` in-flight throttle, `266ff97f` retained LRU, `c56b247d` retention proof + measurements |
 | R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; chart tri-state readers verified distinct |
-| R15 chart data resolution | partial | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, and series-vector memos; sparse tick-edge max counts and shared bar/line extents + mechanics tests; suite 1683/0/9 |
+| R15 chart data resolution | closed | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, series-vector, and bar/line extent memos; sparse tick-edge max counts + mechanics tests; area/radar extents single-evaluation (no repeat); suite 1683/0/9 |
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
 | R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
 | R18 resource identity | closed | `ee8e6372`; full-digest/ exact-equality/collision tests (`PdfIdentityTests`, pdf) |
@@ -56,13 +56,20 @@ index bounds the worst case rather than shifting the median.
   keys first.
 - Disk spooling for intake/output: the explicit policy is bounded in-memory staging
   with disposal; spooling stays open.
+- Area/radar extent memoization: one extent evaluation per frame, so a memo stores
+  without removing any densification.
+- ReadSceneOrXml arm consolidation: 14 scene/xml branches with heterogeneous bodies;
+  a generic dispatch trades 3-line branches for lambda plumbing with no resource effect.
+- Explicit chart-frame context: per-frame workbook memos already scope sharing to a
+  frame with clear-between-frames pins; a token object adds indirection without
+  removing work.
 
 ## Residual work
 
 - R14-deeper: migrate layout to scene-resolved text one family at a time with
   agreement gates; share context-independent inherited nodes behind (node, slide) keys.
-- R15-remainder: chart-frame context for shared dense/label results; ReadSceneOrXml
-  arm consolidation; extent memoization.
+- R15-remainder: closed (bar/line extents shared; area/radar single-evaluation need
+  no memo; frame context and arm consolidation analyzed above, not planned).
 - R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
   (cell vertical alignment done).
 - R22-closeout: Office-gated visual runs for new held-out variations (needs Office/COM);
