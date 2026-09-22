@@ -357,6 +357,43 @@ internal static class PptxChartDensifyTests
         TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)third);
     }
 
+    public static void LineValueExtentsMemoSharesResultsWithinFrame()
+    {
+        // R15: one line extent result per (source, element, flags, visibility) per
+        // frame; clearing the frame memo recomputes on next access.
+        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected workbook type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets])
+            ?? throw new InvalidOperationException("Expected workbook instance.");
+        MethodInfo memo = workbookType.GetMethod("GetOrAddLineValueExtents", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Expected line extent memo.");
+        PptxRenderer.ChartValueExtents extentsA = new(0d, 10d);
+        PptxRenderer.ChartValueExtents extentsB = new(0d, 99d);
+        Func<PptxRenderer.ChartValueExtents> factoryA = () => extentsA;
+        Func<PptxRenderer.ChartValueExtents> factoryB = () => extentsB;
+        object first = InvokeUntyped6(memo, workbook, "k", null, false, false, false, factoryA);
+        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)first);
+        object second = InvokeUntyped6(memo, workbook, "k", null, false, false, false, factoryB);
+        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)second);
+        object other = InvokeUntyped6(memo, workbook, "k", null, true, false, false, factoryB);
+        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)other);
+        try
+        {
+            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        object third = InvokeUntyped6(memo, workbook, "k", null, false, false, false, factoryB);
+        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)third);
+    }
+
     private static object InvokeUntyped4(MethodInfo memo, object workbook, object? first, object? second, bool visibleOnly, object factory)
     {
         try
@@ -376,6 +413,19 @@ internal static class PptxChartDensifyTests
         {
             return memo.Invoke(workbook, [source, chartElement, grouping, visibleOnly, factory])
                 ?? throw new InvalidOperationException("Expected shared extents.");
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static object InvokeUntyped6(MethodInfo memo, object workbook, object? source, object? chartElement, object stacked, object percentStacked, bool visibleOnly, object factory)
+    {
+        try
+        {
+            return memo.Invoke(workbook, [source, chartElement, stacked, percentStacked, visibleOnly, factory])
+                ?? throw new InvalidOperationException("Expected shared line extents.");
         }
         catch (TargetInvocationException ex)
         {

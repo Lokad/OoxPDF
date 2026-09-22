@@ -774,6 +774,31 @@ internal sealed partial class PptxRenderer
             () => GetBarChartValueExtents(ReadSharedChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), grouping));
     }
 
+    // R15: per-frame shared line value extents behind one call shape, mirroring
+    // shared bar extents. Workbook-less charts compute directly.
+    private static ChartValueExtents GetSharedLineChartValueExtents(
+        PptxSceneChartPlot? plot,
+        XElement chartElement,
+        bool stacked,
+        bool percentStacked,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly)
+    {
+        if (workbook is null)
+        {
+            return GetLineChartValueExtents(ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), stacked, percentStacked);
+        }
+
+        object? source = plot is not null ? plot : null;
+        return workbook.GetOrAddLineValueExtents(
+            source,
+            chartElement,
+            stacked,
+            percentStacked,
+            plotVisibleOnly,
+            () => GetLineChartValueExtents(ReadSharedChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), stacked, percentStacked));
+    }
+
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();

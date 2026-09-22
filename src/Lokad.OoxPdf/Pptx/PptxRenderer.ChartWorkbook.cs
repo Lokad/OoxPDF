@@ -417,6 +417,7 @@ internal sealed partial class PptxRenderer
         // reserve, emission, and crossing passes within one frame densify once.
         // Cleared with the range memo per frame.
         private readonly Dictionary<(object? Source, XElement? ChartElement, PptxSceneChartGrouping Grouping, bool PlotVisibleOnly), ChartValueExtents> valueExtentsMemo = new();
+        private readonly Dictionary<(object? Source, XElement? ChartElement, bool Stacked, bool PercentStacked, bool PlotVisibleOnly), ChartValueExtents> lineValueExtentsMemo = new();
 
         internal void ClearRangeMemo()
         {
@@ -425,6 +426,7 @@ internal sealed partial class PptxRenderer
             seriesNameMemo.Clear();
             seriesVectorsMemo.Clear();
             valueExtentsMemo.Clear();
+            lineValueExtentsMemo.Clear();
         }
 
         internal IReadOnlyList<ChartSeriesNameRecord> GetOrAddSeriesNames(
@@ -475,6 +477,25 @@ internal sealed partial class PptxRenderer
 
             ChartValueExtents extents = factory();
             valueExtentsMemo[key] = extents;
+            return extents;
+        }
+
+        internal ChartValueExtents GetOrAddLineValueExtents(
+            object? source,
+            XElement? chartElement,
+            bool stacked,
+            bool percentStacked,
+            bool plotVisibleOnly,
+            Func<ChartValueExtents> factory)
+        {
+            var key = (source, chartElement, stacked, percentStacked, plotVisibleOnly);
+            if (lineValueExtentsMemo.TryGetValue(key, out ChartValueExtents cached))
+            {
+                return cached;
+            }
+
+            ChartValueExtents extents = factory();
+            lineValueExtentsMemo[key] = extents;
             return extents;
         }
 
