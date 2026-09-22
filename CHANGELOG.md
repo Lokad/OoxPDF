@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved border-alpha to approximate (Q07 increment): direct PNG review shows identical table geometry and fills with only border-blending shade nuance (reference borders fractionally darker; SSIM 0.885 on border coverage, recall 1.0, histogram correlation 0.998, diagnostics empty). Recorded as the alpha-blending gap class shared with picture-alpha. Manifests: 118 locked / 203 approximate / 5 needs-review.
+
 - Moved grouped-picture-caption and title-placeholder to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (grouped picture with caption text; themed title placeholder with exact text; SSIM 0.990/0.991, recall 0.991/1.0, histogram correlation 1.0, diagnostics empty) with only sub-lock-bar positioning nuance. Manifests: 118 locked / 202 approximate / 6 needs-review.
 
 - Moved gradient-diagnostic and picture-alpha to approximate (Q07 increment): direct PNG reviews show pixel-perfect geometry (recall 1.0, SSIM 0.9998, picture-alpha changed-pixel 0.0, diagnostics empty) with recorded color-math nuances below the family histogram bar (gradient stop interpolation histcorr 0.974, alpha-blending histcorr 0.950 vs the 0.98 bar). Manifests: 118 locked / 200 approximate / 8 needs-review.
