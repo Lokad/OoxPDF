@@ -55,6 +55,14 @@ Implication: the public visual gate is the right lock for this feature. Unit tes
 - Repeated conversions reuse snapshot-retained font bytes: overwriting the font
   file after the first conversion leaves subsequent outputs byte-identical (the
   custom font is proven embedded, so the check is not vacuous).
+- Layout/render index profiling (Windows, Release, medians of 3, not gates):
+  footnote placement over synthetic note decks measured 57/106/174 ms pre-index
+  versus 17/45/67 ms indexed (500/1000/2000 notes, identical placement counts);
+  full-DOCX conversion over drawing decks measured ~164/270/325 ms pre-index
+  versus ~154/196/424 ms indexed (400/800/1600 anchored drawings, byte-identical
+  PDFs), i.e. layout-dominated noise with the index bounding the worst case rather
+  than shifting the median. The reference-to-rendered-page index then removed the
+  remaining per-check all-pages scans.
 - The 9 skips are environmental preconditions (Windows fonts, Office-free
   assertions, slow gates), unchanged by this work.
 
