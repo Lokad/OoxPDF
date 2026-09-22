@@ -71,7 +71,7 @@ internal sealed partial class OpenTypeFont
         return Load(bytes, fontIndex, CancellationToken.None);
     }
 
-    // PLAN Q01: font-table parsing (especially kern/GPOS expansion) is CPU work
+    // font-table parsing (especially kern/GPOS expansion) is CPU work
     // that previously ignored cancellation entirely. Checkpoints sit between parse
     // phases so a cancelled conversion fails fast instead of expanding kerning
     // tables first; OperationCanceledException is not in the malformed-font catch
@@ -145,7 +145,7 @@ internal sealed partial class OpenTypeFont
         double ItalicAngle,
         bool HasMathTable);
 
-    // PLAN G02: discovery parses only the table directory plus the full extents of
+    // discovery parses only the table directory plus the full extents of
     // head, hhea, maxp, name, OS/2, post, cmap, and hmtx. The multi-megabyte outline
     // (glyf), layout (GPOS/GSUB), and bitmap tables a full load retains are never
     // touched here, so reading them during discovery is pure allocation churn.
@@ -275,7 +275,7 @@ internal sealed partial class OpenTypeFont
         return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, what: "font", fileLength: fileLength);
     }
 
-    // PLAN G02: TrueType collections fan one file out to many faces, and repackaging
+    // TrueType collections fan one file out to many faces, and repackaging
     // every face (ExtractCollectionFont) copies megabytes per face during discovery.
     // Collection face directories already point at absolute file offsets, so faces can
     // be parsed in place. Every validation below mirrors ExtractCollectionFont exactly,
@@ -485,7 +485,7 @@ internal sealed partial class OpenTypeFont
         return kerningPairs.TryGetValue(key, out short value) ? value : (short)0;
     }
 
-    // PLAN M10: composite depth alone (16) does not bound expansion: nested compounds
+    // composite depth alone (16) does not bound expansion: nested compounds
     // multiply contours across levels (branching^depth). A per-read point budget bounds
     // the total expanded geometry; every nesting level re-counts its points, so the
     // counted total always covers the live peak. Exhaustion returns false and callers
@@ -880,7 +880,7 @@ internal sealed partial class OpenTypeFont
         throw new InvalidDataException("Font has an unrecognized sfnt version.");
     }
 
-    // PLAN G02: span discovery parses a leading slice of the file. Table extents are
+    // span discovery parses a leading slice of the file. Table extents are
     // validated against extentLimit (the real file length) instead of the slice length,
     // so late tables such as glyf do not fail validation merely for lying beyond the
     // discovery span. Reads still come from bytes; anything actually touched beyond the

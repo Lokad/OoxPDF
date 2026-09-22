@@ -44,7 +44,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // PLAN W05: index workbook points once per series instead of filtering plus
+        // index workbook points once per series instead of filtering plus
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
 

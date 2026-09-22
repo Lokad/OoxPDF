@@ -14,7 +14,7 @@ internal sealed class OoxPackage
 
     private readonly Dictionary<string, OoxPart> parts;
 
-    // PLAN W01: conversion-local immutable parse indexes. Shared masters, layouts, and
+    // conversion-local immutable parse indexes. Shared masters, layouts, and
     // relationship parts were reparsed per slide (and visibility discovery reparsed
     // slides the scene later parsed again). Each unique part now parses once; every
     // consumer shares the resulting DOM/dictionary. Entries are immutable parse results:
@@ -60,14 +60,14 @@ internal sealed class OoxPackage
     public static OoxPackage Open(Stream stream, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        // PLAN M01: bound archive intake before ZipArchive buffers it. For forward-only
+        // bound archive intake before ZipArchive buffers it. For forward-only
         // (non-seekable) input, ZipArchive would otherwise consume an unbounded or
         // never-ending stream without observing cancellation. Stage non-seekable input
         // through a bounded, cancellation-aware copy first; seekable inputs are checked
         // by length and read directly to avoid an extra full copy. Caller retains ownership.
         MemoryStream? stagedBytes = null;
         Stream archiveStream = stream;
-        // PLAN G01: one scratch buffer is rented for the whole open call instead of
+        // one scratch buffer is rented for the whole open call instead of
         // allocating an 81,920-byte array per retained part plus staging.
         byte[] scratch = new byte[81920];
         try

@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf.Fonts;
 
 public sealed class FileFontProgramSource : IFontProgramSource
 {
-    // PLAN M09: local files had no size guard while HTTP pack fonts are capped at
+    // local files had no size guard while HTTP pack fonts are capped at
     // 64 MiB per file. Parity cap here: installed fonts peak at 35.4 MiB on the
     // reference machine (mingliub.ttc, measured 2026-09-21), so 64 MiB keeps ~1.8x
     // headroom. Oversized files fail with InvalidDataException and fall back to a

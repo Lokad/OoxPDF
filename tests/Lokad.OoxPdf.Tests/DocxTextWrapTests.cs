@@ -910,11 +910,11 @@ internal static class DocxTextWrapTests
         TestAssert.Equal("aaaa bbbb cccc ", lines[0].Text);
     }
 
-    // PLAN W03 count-based scaling tests plus R07 linear gate: deterministic unit-width measurer, line
+    // count-based scaling tests plus R07 linear gate: deterministic unit-width measurer, line
     // width 10pt, emergency (allowOverwideTokenBreaks) wrapping. Pre-fix baselines
     // measured 2026-09-21 on this code (artifacts/wrap-baseline.txt, ignored):
     // L=128: 795 calls / 40,798 chars; L=256: 3,228 / 303,593; L=512: 13,008 /
-    // 2,334,038 (matching the PLAN probe table). R07 estimates fit via average char width
+    // 2,334,038 (matching the pre-fix probe baselines above). R07 estimates fit via average char width
     // plus local grow/shrink among safe breaks, so 128/256/512 thresholds below enforce linear
     // growth (2x per doubling, not 4x); golden lengths pin identical line breaking.
     internal sealed class CountingUnitMeasurer : IDocxTextMeasurer

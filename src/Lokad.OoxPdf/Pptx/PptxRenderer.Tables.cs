@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
-// PLAN W02: table font collection rebuilds fills, borders, row metrics, frames, and
+// table font collection rebuilds fills, borders, row metrics, frames, and
 // spans that painting rebuilds again. Keyed by node identity, resolved frame bounds,
 // and color map; the layout computation is a pure function of those inputs.
 internal readonly record struct PptxTableFrameMemoKey(PptxSceneNode Node, PptxRenderer.ShapeBounds? Bounds, PptxColorMap ColorMap);
@@ -67,7 +67,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context, bool includeMasterNodes = true)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        // PLAN W02: same visibility rule as shape preflight (see ReadSceneShapeTextSpans).
+        // same visibility rule as shape preflight (see ReadSceneShapeTextSpans).
         if (includeMasterNodes)
         {
             AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap);
@@ -144,7 +144,7 @@ internal sealed partial class PptxRenderer
         return GetOrBuildTableFrameLayout(context, bounds, node, colorMap)?.TextSpans ?? [];
     }
 
-    // PLAN W02: font collection rebuilt fills, borders, row metrics, frames, and spans
+    // font collection rebuilt fills, borders, row metrics, frames, and spans
     // that painting rebuilds again. The layout is a pure function of (node, bounds,
     // color map) within a slide render; the style diagnostic rides separately so its
     // paint-order emission count is preserved exactly.
@@ -251,7 +251,7 @@ internal sealed partial class PptxRenderer
         double rowScale = frameHeight / rawRowHeights.Sum();
         double[] rowHeights = ResolveTableRowHeights(context, sceneTable, rawColumnWidths, rawRowHeights, columnScale, rowScale, frameHeight, colorMap);
 
-        // PLAN M04: bound row/column products before allocating dense border grids.
+        // bound row/column products before allocating dense border grids.
         // Declared grid columns and rows can both be numerous while actual cells
         // are sparse; their product is not bounded by XML element count.
         const long MaxTableGridSegments = 100_000;

@@ -45,7 +45,7 @@ internal sealed class PdfObjectWriter
         WriteAscii("endobj\n");
     }
 
-    // PLAN G04: page content streams are written from a single ASCII encoding of the
+    // page content streams are written from a single ASCII encoding of the
     // content. The byte count comes from the encoded span, so no second whole-page
     // string interpolation plus re-encoding is needed merely to measure the length.
     // Output bytes match the previous WriteObject encoding exactly.

@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // PLAN W04: header/footer body and drawing extraction loaded the same parts
+    // header/footer body and drawing extraction loaded the same parts
     // separately and repeated across references and sections. One entry per unique
     // part per Read: XML comes from the shared package cache, body elements and
     // drawings are each built once, and every referencing type reuses them. Results

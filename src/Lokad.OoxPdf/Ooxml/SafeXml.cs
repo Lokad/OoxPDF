@@ -115,7 +115,7 @@ internal static class SafeXml
                         throw new OoxPdfLimitExceededException($"XML element count exceeds the maximum supported count of {maxNodes}.");
                     }
 
-                    // PLAN M07: the element cap alone misses attribute-driven object
+                    // the element cap alone misses attribute-driven object
                     // amplification (one element with 1000 attributes passed with maxNodes=3).
                     // Count attributes per element toward a separate object budget.
                     int currentAttributes = inner.AttributeCount;

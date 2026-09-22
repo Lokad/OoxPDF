@@ -966,7 +966,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, IReadOnlyList<double> fragmentBoundariesFromRowTop, double pageContentHeight)
     {
-        // PLAN M06: validate geometry before fragment expansion and require numeric
+        // validate geometry before fragment expansion and require numeric
         // progress so extreme authored heights cannot append unbounded fragments.
         if (!double.IsFinite(rowHeight) || !double.IsFinite(pageContentHeight))
         {
@@ -1038,7 +1038,7 @@ internal sealed partial class DocxLayoutEngine
 
             lastRemaining = remainingHeight;
             fragments.Add(fullPageHeight);
-            // PLAN Q01: conversion-wide cumulative charge per constructed fragment.
+            // conversion-wide cumulative charge per constructed fragment.
             OoxConversionBudget.Current?.ChargeTableFragments(1);
             double next = remainingHeight - fullPageHeight;
             if (!(next < remainingHeight))
@@ -1058,7 +1058,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             fragments.Add(remainingHeight);
-            // PLAN Q01: conversion-wide cumulative charge per constructed fragment.
+            // conversion-wide cumulative charge per constructed fragment.
             OoxConversionBudget.Current?.ChargeTableFragments(1);
         }
     }

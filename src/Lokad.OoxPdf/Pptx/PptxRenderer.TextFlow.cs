@@ -14,7 +14,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context, bool includeMasterNodes = true)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        // PLAN W02: font preflight traversed master nodes even when the slide suppresses
+        // font preflight traversed master nodes even when the slide suppresses
         // their paint, laying out invisible shapes and embedding orphan fonts. Honor
         // visibility consistently with painting.
         if (includeMasterNodes)

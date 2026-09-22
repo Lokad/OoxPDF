@@ -9,7 +9,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
     internal const long MaxManifestBytes = 1024L * 1024L;
     internal const long MaxFontFileBytes = 64L * 1024L * 1024L;
 
-    // PLAN M09: downloaded programs persist for the resolver lifetime. The face
+    // downloaded programs persist for the resolver lifetime. The face
     // population is manifest-finite, but retaining every downloaded face is still
     // unbounded live memory for long-lived resolvers, so retained downloads are
     // capped in aggregate with LRU eviction. Evicted sources re-download on demand
@@ -182,7 +182,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
     private FontFaceResolution SelectBest(IReadOnlyList<FontPackFace> candidates, FontRequest request, bool isFallback)
     {
-        // PLAN G03: single-pass minimum instead of a five-key sort per resolve (see
+        // single-pass minimum instead of a five-key sort per resolve (see
         // WindowsFontResolver.SelectBest for the equivalence argument).
         if (candidates.Count == 0)
         {

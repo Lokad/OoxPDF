@@ -20,7 +20,7 @@ internal static class PngWriter
         ihdr[9] = 6;
         WriteChunk(output, "IHDR", ihdr);
 
-        // PLAN Q06: stream rows into the compressor instead of staging a second
+        // stream rows into the compressor instead of staging a second
         // full-size raw buffer next to the bitmap.
         using var compressed = new MemoryStream();
         using (var zlib = new ZLibStream(compressed, CompressionLevel.Fastest, leaveOpen: true))
@@ -59,7 +59,7 @@ internal static class PngWriter
         output.Write(header);
         output.Write(data);
 
-        // PLAN Q06: incremental CRC instead of concatenating a second full-size copy.
+        // incremental CRC instead of concatenating a second full-size copy.
         uint crc = Crc32.Init();
         Span<byte> typeBytes = stackalloc byte[4];
         Encoding.ASCII.GetBytes(type, typeBytes);

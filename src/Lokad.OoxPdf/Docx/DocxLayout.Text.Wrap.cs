@@ -71,7 +71,7 @@ internal sealed partial class DocxLayoutEngine
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken)
     {
-        // PLAN W03: slice widths are memoized by text coordinates for this segment so
+        // slice widths are memoized by text coordinates for this segment so
         // repeated measures of the same slice (whole-token checks, preferred/overwide
         // overlap, re-examined tokens) shape once. A slice value depends only on its
         // content here: every measure starts at width zero, and fontSize, tab stops,
@@ -80,7 +80,7 @@ internal sealed partial class DocxLayoutEngine
         // dynamic fields), and emergency tokens structurally contain no tabs (they
         // split tokens), which still does not certify shaping monotonicity.
         var measureMemo = new Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double>();
-        // PLAN W03: per-measure normalization scans (soft-hyphen and NUMPAGES checks over
+        // per-measure normalization scans (soft-hyphen and NUMPAGES checks over
         // every slice) cost O(slice) each with zero reuse. Hoist the absence checks to the
         // segment once: slices inside a clean segment skip them exactly (both normalizers
         // return their input unchanged when there is nothing to rewrite).
@@ -94,7 +94,7 @@ internal sealed partial class DocxLayoutEngine
 
         int lineStart = tokens[0].Start;
         int lineLength = 0;
-        // PLAN W03: HasNonWhitespace rescanned the whole line per token (quadratic
+        // HasNonWhitespace rescanned the whole line per token (quadratic
         // char scans). Maintain it incrementally instead: each token extent is scanned
         // once when added, and extents chain contiguously (lineStart always sits at a
         // token boundary or inside the re-examined remainder token), so the running OR

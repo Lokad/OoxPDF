@@ -370,7 +370,7 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookNumericValue[] ReadNumericRange(string? formula)
         {
-            // PLAN W05: the previous Where+Select parsed every value twice. Single pass:
+            // the previous Where+Select parsed every value twice. Single pass:
             // TryParse is deterministic on identical input, so results are unchanged.
             var values = new List<ChartWorkbookNumericValue>();
             foreach (ChartWorkbookRangeCell cell in ReadRangeCells(formula))
@@ -392,7 +392,7 @@ internal sealed partial class PptxRenderer
                 .ToArray();
         }
 
-        // PLAN W05: numeric/category/title/label paths expand the same ranges repeatedly
+        // numeric/category/title/label paths expand the same ranges repeatedly
         // within one chart frame. Memoize expansions per frame (keyed by the raw formula;
         // resolution is deterministic and visibility filtering happens downstream, so the
         // cached cells are valid for every caller). Memo hits perform no work, so they

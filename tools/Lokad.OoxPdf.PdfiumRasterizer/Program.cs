@@ -38,7 +38,7 @@ if (positional.Count is < 2 or > 3)
 
 string inputPdf = Path.GetFullPath(positional[0]);
 string outputDirectory = Path.GetFullPath(positional[1]);
-// PLAN Q06: unbounded DPI turns page size into a giant pinned bitmap. Cap the range
+// unbounded DPI turns page size into a giant pinned bitmap. Cap the range
 // generously (all tracked manifests use 144) and fail with usage text, not a crash.
 const int MinDpi = 36;
 const int MaxDpi = 600;
@@ -81,7 +81,7 @@ try
         int failedPages = 0;
         for (int pageIndex = 0; pageIndex < pageCount; pageIndex++)
         {
-            // PLAN Q06: isolate pages for managed failures so one oversized page does
+            // isolate pages for managed failures so one oversized page does
             // not discard the rest; native crashes remain process-fatal (documented).
             // R21: an exhausted aggregate pixel quota aborts the run instead, since
             // every further page would fail the same check.
@@ -117,7 +117,7 @@ finally
     PdfiumNative.FPDF_DestroyLibrary();
 }
 
-// PLAN Q06: tool peaks are recorded separately from converter peaks.
+// tool peaks are recorded separately from converter peaks.
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
 
@@ -131,7 +131,7 @@ static void RenderPage(IntPtr document, int pageIndex, string outputPath, int dp
 
     try
     {
-        // PLAN Q06: checked dimension math plus explicit pixel/byte caps before the
+        // checked dimension math plus explicit pixel/byte caps before the
         // pinned bitmap exists. Mirrors the library pixel budget so rasterizer output
         // always fits what VisualDiff accepts.
         const int MaxRasterDimension = 32768;

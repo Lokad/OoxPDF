@@ -102,7 +102,7 @@ internal sealed partial class OpenTypeFont
         "DFLT",
     };
 
-    // PLAN M10: compact OpenType structures expand into large runtime tables here.
+    // compact OpenType structures expand into large runtime tables here.
     // A 1,068-byte class-kern input with two 512-glyph sets produced 262,144 pairs;
     // coverage/class ranges up to 65,535 glyphs each and class cross products up to
     // 2^32 pairs are addressable from tiny tables. Caps below bound the expansion

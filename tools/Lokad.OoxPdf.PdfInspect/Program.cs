@@ -21,7 +21,7 @@ if (outputDirectory is not null)
     Directory.CreateDirectory(outputDirectory);
 }
 
-// PLAN Q06: inspection inputs are bounded independently of library safety. Real
+// inspection inputs are bounded independently of library safety. Real
 // converter/reference PDFs are megabytes; anything beyond fails fast.
 const long MaxInspectInputBytes = 512L * 1024L * 1024L;
 if (!File.Exists(inputPath))
@@ -155,7 +155,7 @@ if (outputDirectory is not null)
     File.WriteAllText(fontResourcesPath, JsonSerializer.Serialize(fontResources, jsonOptions), Encoding.UTF8);
 }
 
-// PLAN Q06: tool peaks are recorded separately from converter peaks.
+// tool peaks are recorded separately from converter peaks.
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
 
@@ -1036,7 +1036,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
         return new DecodeResult(raw, $"decode skipped (over {MaxDecodedStreamBytes} bytes)");
     }
 
-    // PLAN Q06: bounded inflation per stream instead of CopyTo.
+    // bounded inflation per stream instead of CopyTo.
     private static byte[]? CopyInflateCapped(byte[] raw, bool useZlibHeader)
     {
         using var input = new MemoryStream(raw, writable: false);

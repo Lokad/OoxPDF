@@ -90,7 +90,7 @@ if (regionSpecsPath is not null)
 File.WriteAllText(Path.Combine(outputDirectory, "index.html"), BuildIndexHtml(metrics, referenceDirectory, candidateDirectory, outputDirectory));
 
 Console.WriteLine($"Wrote {metrics.Count} visual comparison entries to {outputDirectory}");
-// PLAN Q06: tool peaks are recorded separately from converter peaks.
+// tool peaks are recorded separately from converter peaks.
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
 

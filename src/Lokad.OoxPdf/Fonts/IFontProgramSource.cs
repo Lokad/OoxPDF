@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Fonts;
 /// </summary>
 /// <remarks>
 /// <para>
-/// PLAN M09 ownership contract, relied upon by concurrent conversions:
+/// Font program ownership contract, relied upon by concurrent conversions:
 /// </para>
 /// <list type="bullet">
 /// <item>Returned bytes are immutable after publication. Sources must return byte-identical

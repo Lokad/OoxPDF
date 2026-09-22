@@ -147,7 +147,7 @@ static object DescribeFontInventory()
 
 static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode)
 {
-    // PLAN Q05: cold inputs run independently in fresh child processes so static
+    // cold inputs run independently in fresh child processes so static
     // caches cannot leak across inputs and each child reports its own process peak.
     string? entry = Assembly.GetEntryAssembly()?.Location;
     bool useDotnet = entry?.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) == true;
@@ -323,7 +323,7 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
     };
 }
 
-// PLAN Q05: stage metrics attribute only the stage lambda. Verification output
+// stage metrics attribute only the stage lambda. Verification output
 // (hashes, page counts) is produced by callers outside these counters, and stage
 // prerequisites are rebuilt by callers beforehand. Per-stage retained memory is not
 // reported: stage outputs stay alive for downstream stages, so no isolated retained
@@ -424,7 +424,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
     };
 }
 
-// PLAN Q05: the timer and allocation counters stop before output verification
+// the timer and allocation counters stop before output verification
 // (hashing, page-count decoding) so verification work is never attributed to the
 // conversion. retainedDeltaBytes is the post-full-GC heap delta against a pre-run
 // baseline with the output released, i.e. surviving caches rather than live output.
@@ -551,7 +551,7 @@ static int RunSelfTest()
         }
     }
 
-    // PLAN Q05: a deliberately allocating fake stage validates attribution: phase
+    // a deliberately allocating fake stage validates attribution: phase
     // counters must capture the planted allocation (no under-count from misplaced
     // boundaries) without wild over-count.
     try

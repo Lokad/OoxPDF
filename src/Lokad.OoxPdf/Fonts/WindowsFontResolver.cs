@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Fonts;
 /// directory set.
 /// </summary>
 /// <remarks>
-/// PLAN M09 retention contract: the snapshot retains one lazy <see cref="FileFontProgramSource"/>
+/// Retention contract: the snapshot retains one lazy <see cref="FileFontProgramSource"/>
 /// per discovered file (shared by all its faces), and each source retains its full
 /// program bytes after first use (files are capped individually; see
 /// FileFontProgramSource). R13 ownership: the process-static snapshot owns the
@@ -22,7 +22,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     private static readonly Dictionary<string, Lazy<DiscoverySnapshot>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lazy<DiscoverySnapshot> cache;
 
-    // PLAN G03: per-instance (usually per-conversion) resolution cache. Requests repeat
+    // per-instance (usually per-conversion) resolution cache. Requests repeat
     // per run; the static snapshot underneath is shared. Capped with clear-all so a
     // long-lived directly-held resolver cannot grow without bound on adversarial
     // distinct families; per-conversion instances never approach the cap.
@@ -158,7 +158,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                     {
                         try
                         {
-                            // PLAN G02: discovery parses only the directory plus eight
+                            // discovery parses only the directory plus eight
                             // table extents, never outlines or layout tables. Read exactly
                             // those bytes instead of the whole program per file.
                             (byte[] bytes, bool complete, long fileLength) = ReadDiscoveryBytes(path);
@@ -468,7 +468,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     private static FontFaceResolution SelectBest(IReadOnlyList<FontFaceResolution> candidates, FontRequest request)
     {
-        // PLAN G03: single-pass minimum instead of a five-key sort per resolve. OrderBy
+        // single-pass minimum instead of a five-key sort per resolve. OrderBy
         // is stable and First takes the earliest minimum; a strict-less-than scan keeps
         // the first minimal candidate, which is exactly equivalent.
         if (candidates.Count == 0)

@@ -1031,7 +1031,7 @@ internal static class OoxLimitsTests
 
     public static void XmlAttributesAboveLimitThrow()
     {
-        // PLAN M07 probe: maxNodes=3 accepted one element with 1000 attributes.
+        // probe: maxNodes=3 accepted one element with 1000 attributes.
         // Attributes must now be counted toward their own budget.
         string xml = "<r " + string.Join(" ", Enumerable.Range(1, 20).Select(i => "a" + i + "=\"1\"")) + "/>";
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(xml));
@@ -1297,7 +1297,7 @@ internal static class OoxLimitsTests
 
     public static void ClassKerningBelowCapLoads()
     {
-        // PLAN M10 probe scale: two 512-glyph sets densify to 262,144 pairs and must
+        // probe scale: two 512-glyph sets densify to 262,144 pairs and must
         // keep loading well under the pair cap.
         byte[] font = TestFontBuilder.CreateTestFont();
         byte[] gpos = BuildClassKernGpos(512, 512, rangeCoverage: false);
@@ -1956,7 +1956,7 @@ internal static class OoxLimitsTests
 
     public static void SharedMasterLayoutParseOnceAcrossSlides()
     {
-        // PLAN W01: three slides sharing one layout/master must parse shared parts once.
+        // three slides sharing one layout/master must parse shared parts once.
         // Expected part-XML parses: presentation + 3 slides (visibility reuses scene
         // parses) + layout + master + 6 relationship parts = 12, each exactly once.
         // Expected relationship-dictionary builds: root + presentation + 3 slide parts
@@ -2268,7 +2268,7 @@ internal static class OoxLimitsTests
 
     public static void SharedHeaderParsedOnceAcrossSections()
     {
-        // PLAN W04: document headers and section headers referencing the same part
+        // document headers and section headers referencing the same part
         // must share one parsed body/drawing result.
         string input = W04SharedHeaderPackage();
         DocxDocument document;
@@ -2365,7 +2365,7 @@ internal static class OoxLimitsTests
 
     public static void ContentValidationScalesWithResourcesNotTokens()
     {
-        // PLAN G05: ~400k tokens of balanced valid content referencing a single font.
+        // ~400k tokens of balanced valid content referencing a single font.
         // Per-token substrings would allocate megabytes here; offset tokens plus span
         // lookups keep validation proportional to resource names.
         OpenTypeFont font = TestFontBuilder.LoadTestFont();

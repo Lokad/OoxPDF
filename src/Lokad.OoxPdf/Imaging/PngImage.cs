@@ -115,13 +115,13 @@ internal sealed class PngImage
         OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
         try
         {
-            // PLAN M08: the IDAT accumulator already owns the compressed bytes; inflate
+            // the IDAT accumulator already owns the compressed bytes; inflate
             // from a read-only view instead of copying them into a second array.
             using var input = new MemoryStream(idat.GetBuffer(), 0, (int)idat.Length, writable: false);
             using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
             using var output = new MemoryStream();
             CopyInflated(zlib, output, maxInflated, cancellationToken);
-            // PLAN M08: decode from the inflated buffer in place instead of trimming a
+            // decode from the inflated buffer in place instead of trimming a
             // second full-size copy. The truncation guards below throw the same exception
             // types short input always produced, preserving crop-fallback behavior.
             PngImage decoded = Decode(output.GetBuffer(), (int)output.Length, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);

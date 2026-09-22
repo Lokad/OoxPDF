@@ -32,7 +32,7 @@ internal sealed class PdfEmbeddedFont
         }
 
         UnicodeByCid = BuildUnicodeByCid();
-        // PLAN G06: ResourceKey is read on every writer lookup (grouping, object
+        // ResourceKey is read on every writer lookup (grouping, object
         // numbering, content emission), often in per-rune paths. Cache the key once
         // instead of concatenating a fresh string per access.
         ResourceKey = BaseFontName + "-U" + CodepointSetHash;
@@ -88,7 +88,7 @@ internal sealed class PdfEmbeddedFont
             return items[0];
         }
 
-        // PLAN G06: repeated slides/DOCX runs commonly reference the very same subset
+        // repeated slides/DOCX runs commonly reference the very same subset
         // instance. Rebuilding its dictionary, re-hashing the font program, and
         // re-subsetting on every merge is pure duplicate work: return it directly.
         bool allIdentical = true;
@@ -166,7 +166,7 @@ internal sealed class PdfEmbeddedFont
             sortedGlyphs[glyph] = codePoint;
         }
 
-        // PLAN G06: the codepoint-set hash was computed twice per subset (once for the
+        // the codepoint-set hash was computed twice per subset (once for the
         // base-font tag, once in the constructor). Compute it once here and share it.
         string setHash = ComputeCodepointSetHash(sortedGlyphs);
         string baseFontName = CreateBaseFontName(font, setHash, subset is not null);

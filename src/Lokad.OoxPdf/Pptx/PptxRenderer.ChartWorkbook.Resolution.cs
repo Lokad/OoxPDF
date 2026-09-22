@@ -54,7 +54,7 @@ internal sealed partial class PptxRenderer
                 throw new OoxPdfLimitExceededException("Chart data range exceeds the maximum supported cell count.");
             }
 
-            // PLAN M05: the per-area limit is not sufficient; repeated or overlapping
+            // the per-area limit is not sufficient; repeated or overlapping
             // areas share one union list. Charge the cumulative total before appending.
             long cumulative;
             try
@@ -71,7 +71,7 @@ internal sealed partial class PptxRenderer
                 throw new OoxPdfLimitExceededException("Chart data range union exceeds the maximum supported cell count.");
             }
 
-            // PLAN Q01: conversion-wide cumulative charge before growing the union list.
+            // conversion-wide cumulative charge before growing the union list.
             OoxConversionBudget.Current?.ChargeChartRangeCells(areaCells);
 
             values.EnsureCapacity(values.Count + (int)areaCells);

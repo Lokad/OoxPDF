@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // PLAN W05: one bounded workbook model per embedded part, shared by every chart
+        // one bounded workbook model per embedded part, shared by every chart
         // frame of this conversion through the render context cache. The per-frame range
         // memo on the shared model is cleared below so nothing accumulates across frames.
         ChartWorkbookData? chartWorkbook = GetOrCreateChartWorkbook(context.WorkbookCache, sceneChart?.ExternalData ?? default, context.CancellationToken);
@@ -126,7 +126,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // PLAN W05: one bounded workbook model per embedded part, shared by every chart
+    // one bounded workbook model per embedded part, shared by every chart
     // frame of this conversion. The cache holds boxed models (the workbook type stays
     // private to the renderer); the per-conversion instance rides on the render context
     // (like the image cache) and dies with the conversion. Each model is already capped
@@ -810,7 +810,7 @@ internal sealed partial class PptxRenderer
             return new ScatterSeries([], series);
         }
 
-        // PLAN W05: workbook lookups below ran a visibility filter plus linear scan per
+        // workbook lookups below ran a visibility filter plus linear scan per
         // point (quadratic in series length). Index once per vector instead; first-wins
         // insertion matches the linear scan exactly (range indices are unique).
         Dictionary<int, ChartIndexedNumberPoint> xWorkbook = BuildWorkbookPointIndex(series.XValues);

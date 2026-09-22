@@ -3,7 +3,7 @@ using Lokad.OoxPdf.Diagnostics;
 namespace Lokad.OoxPdf;
 
 /// <summary>
-/// Conversion-wide cumulative work accounting (PLAN Q01). Per-site caps bound
+/// Conversion-wide cumulative work accounting. Per-site caps bound
 /// individual allocations; this budget bounds their sum across one conversion so
 /// many individually legal expansions cannot jointly exhaust a shared process.
 /// </summary>

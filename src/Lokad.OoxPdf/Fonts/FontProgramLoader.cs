@@ -14,7 +14,7 @@ internal static class FontProgramLoader
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            // PLAN G03: synchronously completed sources (memory, cached files) must not
+            // synchronously completed sources (memory, cached files) must not
             // pay a Task allocation per load. The array copy stays: source bytes are
             // shared across concurrent conversions under the M09 immutability contract,
             // and the parsed font takes ownership of its own buffer at this boundary.

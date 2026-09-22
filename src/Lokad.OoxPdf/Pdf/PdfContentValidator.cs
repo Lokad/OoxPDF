@@ -63,7 +63,7 @@ internal static class PdfContentValidator
         }
     }
 
-    // PLAN G05: tokens retain content offsets instead of substrings. The scan keeps at
+    // tokens retain content offsets instead of substrings. The scan keeps at
     // most four, and only operator classification plus resource-name operands read them:
     // operators classify by length and leading characters, names resolve through span
     // lookups, and strings materialize solely for failure messages. Allocation stays

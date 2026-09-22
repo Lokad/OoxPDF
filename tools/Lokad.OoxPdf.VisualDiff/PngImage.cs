@@ -8,7 +8,7 @@ internal sealed class PngImage
 {
     private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
 
-    // PLAN Q06: shared pixel/dimension budget with the rasterizer so its output
+    // shared pixel/dimension budget with the rasterizer so its output
     // always fits here (67M pixels, 32768 per side).
     private const int MaxDimension = 32768;
     private const long MaxPixels = 67_108_864L;
@@ -78,7 +78,7 @@ internal sealed class PngImage
 
     public static PngImage Load(string path)
     {
-        // PLAN Q06: fail fast on absurd inputs before buffering the whole file.
+        // fail fast on absurd inputs before buffering the whole file.
         // Legitimate rasterizer/diff PNGs fit well under this (67M pixels cap).
         const long MaxPngInputBytes = 512L * 1024L * 1024L;
         if (new FileInfo(path).Length > MaxPngInputBytes)
@@ -100,7 +100,7 @@ internal sealed class PngImage
         byte[]? palette = null;
         byte[]? transparency = null;
 
-        // PLAN Q06: chunk framing is untrusted. Bounds-check every slice so truncated
+        // chunk framing is untrusted. Bounds-check every slice so truncated
         // files fail with InvalidDataException instead of runtime slicing errors.
         int offset = Signature.Length;
         while (offset < bytes.Length)
@@ -190,7 +190,7 @@ internal sealed class PngImage
 
     private static byte[] Inflate(byte[] compressed, int width, int height, int bitsPerPixel)
     {
-        // PLAN Q06: capped inflation instead of CopyTo: the exact inflated size is
+        // capped inflation instead of CopyTo: the exact inflated size is
         // stride+filter per row, so anything beyond it is hostile.
         long maxInflated;
         try

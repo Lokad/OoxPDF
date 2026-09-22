@@ -118,7 +118,7 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
 
         using FileStream input = File.OpenRead(inputPath);
-        // PLAN Q01: one explicitly scoped conversion budget per Convert call.
+        // one explicitly scoped conversion budget per Convert call.
         // Totals are snapshotted before publication; the summary below emits before the
         // atomic move succeeds, so a throwing observer fails the conversion while the
         // pre-existing destination is still untouched (R20).

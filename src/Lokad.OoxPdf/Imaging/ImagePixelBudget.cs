@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf.Imaging;
 
 internal static class ImagePixelBudget
 {
-    // PLAN M08 accounting status: the per-image pixel cap below bounds every single
+    // the per-image pixel cap below bounds every single
     // image (single-image live set: compressed bytes, one inflated copy, RGB/alpha
     // planes, compression scratch; duplicate IDAT/inflated copies were removed).
     // What it does NOT bound is the aggregate: many individually legal images,

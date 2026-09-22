@@ -38,7 +38,7 @@ internal sealed partial class PptxRenderer
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxTheme theme = scene.Theme;
         var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
-        // PLAN W05: one bounded workbook model per embedded part, shared by every chart
+        // one bounded workbook model per embedded part, shared by every chart
         // frame of this conversion (like the image cache above). Each model is already
         // capped (workbook totals, range unions); the dictionary itself is bounded by
         // the package entry count and dies with this conversion.
@@ -121,7 +121,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSlide slide = document.Slides[slideIndex];
-        // PLAN Q06: inspection sessions share one scene per conversion instead of
+        // inspection sessions share one scene per conversion instead of
         // rebuilding it per slide per entry point. Rendering still builds its own.
         PptxScene scene = sharedScene ?? new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxSceneSlide sceneSlide = scene.Slides[slideIndex];

@@ -9,7 +9,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
-// PLAN W02: font collection and painting computed identical text layouts per shape
+// font collection and painting computed identical text layouts per shape
 // node. Keyed by node identity plus the traversal context (color map, placeholder
 // mode) that feeds the layout; nodes compare by reference because record value
 // equality would deep-compare whole subtrees per lookup. Color maps ride the render
@@ -348,7 +348,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        // PLAN W02: font collection and painting computed this full layout per node.
+        // font collection and painting computed this full layout per node.
         // The layout is a pure function of (node, color map, placeholder mode) within
         // a slide render, so compute once and share the instance between both passes.
         Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? memo = context.TextSpanMemo;

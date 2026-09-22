@@ -42,7 +42,7 @@ public sealed class OoxPdfOptions
     public Action<OoxPdfDiagnostic>? DiagnosticSink { get; init; }
 
     /// <summary>
-    /// Cumulative per-conversion work budgets (PLAN Q01). When null, generous
+    /// Cumulative per-conversion work budgets. When null, generous
     /// built-in defaults apply (see <see cref="OoxConversionLimits"/>). Set tighter
     /// values to enforce a shared-process memory/work limit; budget crossings fail
     /// with <see cref="OoxPdfLimitExceededException"/> before further expansion and

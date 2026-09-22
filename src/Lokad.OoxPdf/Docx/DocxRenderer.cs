@@ -1186,7 +1186,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         ref int imageIndex)
     {
-        // PLAN Q01: emission helpers observe the conversion token so a
+        // emission helpers observe the conversion token so a
         // cancelled conversion fails fast inside large pages, not just between them.
         switch (item)
         {

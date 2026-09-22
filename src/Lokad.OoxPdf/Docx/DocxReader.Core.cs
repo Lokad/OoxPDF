@@ -60,7 +60,7 @@ internal sealed partial class DocxReader
         DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         cancellationToken.ThrowIfCancellationRequested();
-        // PLAN W04: one related-story cache per Read, shared by document headers/footers,
+        // one related-story cache per Read, shared by document headers/footers,
         // body section breaks, and every section's page settings.
         var storyCache = new RelatedStoryPartCache();
         DocxSectionBreakElement? finalSectionBreak = sectionProperties is null

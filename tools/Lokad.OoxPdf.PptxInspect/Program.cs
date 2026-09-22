@@ -17,7 +17,7 @@ string outputDirectory = Path.GetFullPath(args[1]);
 bool includeText = args.Any(arg => string.Equals(arg, "--include-text", StringComparison.Ordinal));
 HashSet<int>? slideFilter = ReadSlideFilter(args);
 
-// PLAN Q06: inspection inputs are bounded independently of library safety.
+// inspection inputs are bounded independently of library safety.
 const long MaxInspectInputBytes = 512L * 1024L * 1024L;
 if (!File.Exists(inputPath))
 {
@@ -36,7 +36,7 @@ Directory.CreateDirectory(outputDirectory);
 using FileStream stream = File.OpenRead(inputPath);
 OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
 PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-// PLAN Q06: one shared inspection scene per conversion. Each Inspect* entry point
+// one shared inspection scene per conversion. Each Inspect* entry point
 // used to rebuild the whole scene per slide, multiplying master/layout parses by
 // the number of inspection passes.
 IEnumerable<PptxSlide> slides = document.Slides;
@@ -65,7 +65,7 @@ catch (Exception ex) when (ex is InvalidDataException or InvalidOperationExcepti
 int failedSlides = 0;
 foreach (PptxSlide slide in slides)
 {
-    // PLAN Q06: isolate slides for managed failures so one oversized slide does
+    // isolate slides for managed failures so one oversized slide does
     // not discard the rest.
     try
     {
@@ -317,7 +317,7 @@ if (failedSlides != 0)
     Console.Error.WriteLine($"{failedSlides} slides failed inspection.");
 }
 
-// PLAN Q06: tool peaks are recorded separately from converter peaks.
+// tool peaks are recorded separately from converter peaks.
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return failedSlides == 0 ? 0 : 1;
 
