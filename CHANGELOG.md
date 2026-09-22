@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added bottom-reserve 14pt probe as slope held-out evidence (Q07 increment): category ticks bumped 9pt to 14pt by byte-surgical fixture edit (Office reference renders clean); Office plot box matches the rule prediction within 0.01pt at the new size (193.68 vs 193.69), confirming the 7.0+1.813fs slope and ruling out a retune (overlay residual sits inside documented tolerance). Direct PNG review shows complete correct content (SSIM 0.948, recall 0.991, diagnostics empty) with the same box-shift gap class. Manifests: 118 locked / 210 approximate / 0 needs-review (336 cases).
+
 - Removed cell-memo debug output from library stdout and fixed its double-counted hit counter (hygiene fix found during cap-tuning probes: every memo hit wrote a W04HIT line to the host console and incremented Hits twice; TotalHits-gated tests and memoized behavior are unchanged). Pinned by the full suite with byte-identical outputs.
 
 - Added pattern-phase probe as weave-calibration held-out evidence (Q07 increment): a shifted copy of the overlay chart (+1.3pt) renders dotted-band crops pixel-identical (MAE 0.0) between Office and candidate, proving both sides anchor the pct70 weave to the page and closing the pattern-phase question; the probe carries the same bottom-reserve box-shift gap class as its parent (SSIM 0.950, recall 0.970, diagnostics empty). Manifests: 118 locked / 209 approximate / 0 needs-review (335 cases).
