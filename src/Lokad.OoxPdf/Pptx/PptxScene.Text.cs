@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
+using static Lokad.OoxPdf.Pptx.PptxRunTextAttributeReaders;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -244,53 +245,12 @@ internal sealed partial class PptxSceneBuilder
         }
     }
 
-    private static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return (runProperties?.Attribute("sz") ?? defaultRunProperties?.Attribute("sz")) is { } size
-            ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
-            : 18d;
-    }
-
-    private static double ReadCharacterSpacing(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return (runProperties?.Attribute("spc") ?? defaultRunProperties?.Attribute("spc")) is { } spacing
-            ? int.Parse(spacing.Value, CultureInfo.InvariantCulture) / 100d
-            : 0d;
-    }
-
     private static double? ReadOptionalChartCharacterSpacing(XElement? runProperties)
     {
         return runProperties?.Attribute("spc") is { } spacing &&
             int.TryParse(spacing.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int spacingHundredths)
                 ? spacingHundredths / 100d
                 : null;
-    }
-
-    private static double ReadBaselineOffset(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
-    {
-        return (runProperties?.Attribute("baseline") ?? defaultRunProperties?.Attribute("baseline")) is { } baseline
-            ? fontSize * int.Parse(baseline.Value, CultureInfo.InvariantCulture) / 100000d
-            : 0d;
-    }
-
-    private static bool IsStrikeEnabled(string? value)
-    {
-        return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string? ReadUnderlineValue(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return (string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"));
-    }
-
-    private static string? ReadStrikeValue(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
-    }
-
-    private static string? ReadTextCapsValue(XElement? runProperties, XElement? defaultRunProperties)
-    {
-        return (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
     }
 
     private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)

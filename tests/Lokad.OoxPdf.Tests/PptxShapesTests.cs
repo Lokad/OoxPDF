@@ -1596,4 +1596,36 @@ internal static class PptxShapesTests
         var child = new PptxRenderer.GroupTransform(long.MaxValue, long.MaxValue, long.MaxValue, long.MaxValue, 0, 0, 4d, 4d, 0d, false, false);
         TestAssert.Throws<InvalidDataException>(() => parent.Combine(child));
     }
+
+    public static void RunTextAttributeReadersParseKnownAttributes()
+    {
+        // R14: the shared run-attribute readers interpret sz/spc/baseline/u/strike/cap
+        // identically for scene building and rendering, with documented defaults.
+        XNamespace drawing = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        var runProperties = new XElement(drawing + "rPr",
+            new XAttribute("sz", "1200"),
+            new XAttribute("spc", "50"),
+            new XAttribute("baseline", "25000"),
+            new XAttribute("u", "sng"),
+            new XAttribute("strike", "sngStrike"),
+            new XAttribute("cap", "all"));
+        TestAssert.Equal(12d, PptxRunTextAttributeReaders.ReadFontSize(runProperties, null));
+        TestAssert.Equal(0.5d, PptxRunTextAttributeReaders.ReadCharacterSpacing(runProperties, null));
+        TestAssert.Equal(3d, PptxRunTextAttributeReaders.ReadBaselineOffset(runProperties, null, 12d));
+        TestAssert.Equal("sng", PptxRunTextAttributeReaders.ReadUnderlineValue(runProperties, null));
+        TestAssert.Equal("sngStrike", PptxRunTextAttributeReaders.ReadStrikeValue(runProperties, null));
+        TestAssert.Equal("all", PptxRunTextAttributeReaders.ReadTextCapsValue(runProperties, null));
+        TestAssert.True(PptxRunTextAttributeReaders.IsStrikeEnabled("sngStrike"), "Strike spellings other than noStrike enable strike.");
+        TestAssert.True(!PptxRunTextAttributeReaders.IsStrikeEnabled("noStrike"), "noStrike disables strike.");
+        TestAssert.True(!PptxRunTextAttributeReaders.IsStrikeEnabled(null), "Missing strike disables strike.");
+        var defaultRunProperties = new XElement(drawing + "defRPr", new XAttribute("sz", "900"));
+        TestAssert.Equal(18d, PptxRunTextAttributeReaders.ReadFontSize(null, null));
+        TestAssert.Equal(9d, PptxRunTextAttributeReaders.ReadFontSize(null, defaultRunProperties));
+        TestAssert.Equal(12d, PptxRunTextAttributeReaders.ReadFontSize(runProperties, defaultRunProperties));
+        TestAssert.Equal(0d, PptxRunTextAttributeReaders.ReadCharacterSpacing(null, null));
+        TestAssert.Equal(0d, PptxRunTextAttributeReaders.ReadBaselineOffset(null, null, 12d));
+        TestAssert.True(PptxRunTextAttributeReaders.ReadUnderlineValue(null, null) is null, "Missing underline stays null.");
+        TestAssert.True(PptxRunTextAttributeReaders.ReadStrikeValue(null, null) is null, "Missing strike stays null.");
+        TestAssert.True(PptxRunTextAttributeReaders.ReadTextCapsValue(null, null) is null, "Missing caps stays null.");
+    }
 }

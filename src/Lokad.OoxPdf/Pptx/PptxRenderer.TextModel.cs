@@ -5,6 +5,7 @@ using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
+using static Lokad.OoxPdf.Pptx.PptxRunTextAttributeReaders;
 
 namespace Lokad.OoxPdf.Pptx;
 
