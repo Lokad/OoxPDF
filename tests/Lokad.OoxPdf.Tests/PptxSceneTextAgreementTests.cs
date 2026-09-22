@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
-using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -850,15 +849,7 @@ internal static class PptxSceneTextAgreementTests
             .ToArray();
         TestAssert.Equal(2, shapeRuns.Length);
 
-        byte[] bytes = TestFontBuilder.CreateTestFont();
-        OpenTypeFont font = OpenTypeFont.Load(bytes);
-        var resolution = new FontFaceResolution(
-            font.FamilyName,
-            font.FamilyName,
-            new FontStyleKey(),
-            new MemoryFontProgramSource("memory:r14-table", bytes),
-            IsFallback: false);
-        var tableResolver = new PresentationFontResolver(new CannedFontResolver(resolution));
+        var tableResolver = CreateCannedPresentationResolver("memory:r14-table");
         var slideSource = new PptxRenderSource(
             PptxRenderSourceKind.Slide,
             scene.Slides[0].PartName,
@@ -905,15 +896,7 @@ internal static class PptxSceneTextAgreementTests
         PptxScene scene,
         bool includePlaceholders = false)
     {
-        byte[] bytes = TestFontBuilder.CreateTestFont();
-        OpenTypeFont font = OpenTypeFont.Load(bytes);
-        var resolution = new FontFaceResolution(
-            font.FamilyName,
-            font.FamilyName,
-            new FontStyleKey(),
-            new MemoryFontProgramSource("memory:r14-agreement", bytes),
-            IsFallback: false);
-        var resolver = new PresentationFontResolver(new CannedFontResolver(resolution));
+        var resolver = CreateCannedPresentationResolver("memory:r14-agreement");
         MethodInfo spans = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .Single(candidate => candidate.Name == "ReadTextSpansForShape" && candidate.GetParameters().Length == 9);
         try
@@ -941,6 +924,19 @@ internal static class PptxSceneTextAgreementTests
         }
 
         return inherited;
+    }
+
+    private static PresentationFontResolver CreateCannedPresentationResolver(string sourceId)
+    {
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        OpenTypeFont font = OpenTypeFont.Load(bytes);
+        var resolution = new FontFaceResolution(
+            font.FamilyName,
+            font.FamilyName,
+            new FontStyleKey(),
+            new MemoryFontProgramSource(sourceId, bytes),
+            IsFallback: false);
+        return new PresentationFontResolver(new CannedFontResolver(resolution));
     }
 
     private sealed class CannedFontResolver(FontFaceResolution resolution) : IFontResolver
