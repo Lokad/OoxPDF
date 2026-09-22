@@ -19,11 +19,22 @@ public sealed class DiagnosticCollector
 
     public int DroppedCount => droppedCount;
 
-    public bool HasWarningsOrErrors => diagnostics.Any(d => d.Severity is OoxPdfSeverity.Warning or OoxPdfSeverity.Error);
+    private bool sawWarningOrError;
+
+    /// <summary>
+    /// Whether any warning or error was ever observed (R20). Tracked independently of
+    /// sampling: retained entries are capped, but severity must survive overflow so CLI
+    /// strict mode cannot miss an error that was dropped from the retained samples.
+    /// </summary>
+    public bool HasWarningsOrErrors => sawWarningOrError;
 
     public void Add(OoxPdfDiagnostic diagnostic)
     {
         occurrenceCounts[diagnostic.Id] = occurrenceCounts.TryGetValue(diagnostic.Id, out int count) ? count + 1 : 1;
+        if (diagnostic.Severity is OoxPdfSeverity.Warning or OoxPdfSeverity.Error)
+        {
+            sawWarningOrError = true;
+        }
         if (diagnostics.Count < MaxRetainedDiagnostics)
         {
             diagnostics.Add(diagnostic);

@@ -18,7 +18,10 @@ namespace Lokad.OoxPdf;
 /// <item>Caller-owned streams are never closed or disposed. Input is read sequentially
 /// and output needs only forward writes; non-seekable host streams are supported.
 /// File outputs publish atomically: any failure, including cancellation, leaves a
-/// pre-existing destination untouched and removes only the staging file.</item>
+/// pre-existing destination untouched and removes only the staging file. Observer callbacks
+/// (<see cref="OoxPdfOptions.DiagnosticSink"/>) run before publication, so a throwing observer fails
+/// the conversion without publishing anything (a post-publication throw would falsely report
+/// rollback of an already-replaced destination).</item>
 /// <item>Cancellation is observed cooperatively at stage boundaries and inside bounded
 /// expansion loops. A cancelled conversion throws <see cref="OperationCanceledException"/>
 /// and never produces a partial PDF.</item>
@@ -116,8 +119,9 @@ public static class OoxPdfConverter
 
         using FileStream input = File.OpenRead(inputPath);
         // PLAN Q01: one explicitly scoped conversion budget per Convert call.
-        // Totals are snapshotted before publication; the summary below only
-        // emits after the atomic move succeeds, never for partial output.
+        // Totals are snapshotted before publication; the summary below emits before the
+        // atomic move succeeds, so a throwing observer fails the conversion while the
+        // pre-existing destination is still untouched (R20).
         IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
@@ -146,8 +150,8 @@ public static class OoxPdfConverter
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            File.Move(stagingPath, outputPath, overwrite: true);
             ReportResourceUsage(options, totals, pages.Count);
+            File.Move(stagingPath, outputPath, overwrite: true);
         }
         finally
         {
@@ -211,8 +215,8 @@ public static class OoxPdfConverter
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
         ReportResourceUsage(options, totals, pages.Count);
+        PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
     }
 
     private static void ReportResourceUsage(OoxPdfOptions options, OoxConversionTotals totals, int pageCount)
