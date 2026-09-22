@@ -3,9 +3,9 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-data-label-legend-keys-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "data-labels", "legend-keys", "office-probe", "needs-review"],
+  "tags": ["pptx", "ladder", "chart", "data-labels", "legend-keys", "office-probe", "approximate"],
   "expected": {
-    "minAgentRating": 1,
+    "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,

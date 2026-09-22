@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved data-label-legend-keys probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (columns with data labels including legend-key glyphs all matching; SSIM 0.991, histogram correlation 0.999, diagnostics empty) with the recorded sub-lock-bar label-positioning nuance (recall 0.958). Manifests: 118 locked / 195 approximate / 13 needs-review.
+
 - Moved doughnut-top-legend-exploded probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (exploded segments with matching offsets, top legend swatches; SSIM 0.977, recall 0.990, histogram correlation 1.0, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 194 approximate / 14 needs-review.
 
 - Moved column-negative and doughnut-top-legend probes to approximate (Q07 increment): direct PNG reviews show complete correct content indistinguishable at page scale (columns including below-axis negatives with month labels; doughnut segments with top legend swatches; SSIM 0.995/0.984, recall 0.974/0.993, diagnostics empty) with the recorded sub-lock-bar positioning nuance. Manifests: 118 locked / 193 approximate / 15 needs-review.
