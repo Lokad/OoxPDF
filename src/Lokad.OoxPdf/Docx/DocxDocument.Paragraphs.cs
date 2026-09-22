@@ -277,6 +277,18 @@ internal sealed record DocxNumberingIndent(
     public static DocxNumberingIndent Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null);
 }
 
+// R17: parsed run vertical alignment. The raw w:val spelling stays on
+// VerticalAlignmentValue as provenance; execution switches on the parsed enum so
+// superscript/subscript handling cannot drift between measurement and reading.
+// Unknown spellings fall back to Baseline, matching the legacy comparisons, which
+// only special-cased the two script shifts (measurement compared case-insensitively).
+internal enum DocxRunVerticalAlignment
+{
+    Baseline,
+    Superscript,
+    Subscript
+}
+
 internal sealed record DocxTextRun(
     string Text,
     double FontSize,
@@ -374,6 +386,23 @@ internal sealed record DocxTextRun(
         HiddenValue,
         UnderlineColorHex,
         StyleResolution);
+
+    public DocxRunVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
+
+    public static DocxRunVerticalAlignment ParseVerticalAlignment(string? value)
+    {
+        if (string.Equals(value, "superscript", StringComparison.OrdinalIgnoreCase))
+        {
+            return DocxRunVerticalAlignment.Superscript;
+        }
+
+        if (string.Equals(value, "subscript", StringComparison.OrdinalIgnoreCase))
+        {
+            return DocxRunVerticalAlignment.Subscript;
+        }
+
+        return DocxRunVerticalAlignment.Baseline;
+    }
 }
 
 internal sealed record DocxEffectiveRunProperties(
@@ -401,7 +430,10 @@ internal sealed record DocxEffectiveRunProperties(
     bool Hidden,
     string? HiddenValue,
     string? UnderlineColorHex,
-    DocxRunStyleResolution StyleResolution);
+    DocxRunStyleResolution StyleResolution)
+{
+    public DocxRunVerticalAlignment VerticalAlignment => DocxTextRun.ParseVerticalAlignment(VerticalAlignmentValue);
+}
 
 internal sealed record DocxRunStyleResolution(
     string? CharacterStyleId,

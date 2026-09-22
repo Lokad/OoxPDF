@@ -2946,6 +2946,21 @@ internal static class DocxTablesTests
         TestAssert.True(Math.Abs(row.Height - 10.96d) < 0.000001d, "Exact last row should hang the bottom width below the declared height. Height=" + row.Height.ToString(CultureInfo.InvariantCulture));
     }
 
+    public static void RunVerticalAlignmentParsesKnownSpellings()
+    {
+        // R17: superscript/subscript parse case-insensitively; everything else falls
+        // back to Baseline like the legacy comparisons, which only special-cased the
+        // two script shifts.
+        TestAssert.Equal(DocxRunVerticalAlignment.Superscript, DocxTextRun.ParseVerticalAlignment("superscript"));
+        TestAssert.Equal(DocxRunVerticalAlignment.Superscript, DocxTextRun.ParseVerticalAlignment("SuperScript"));
+        TestAssert.Equal(DocxRunVerticalAlignment.Subscript, DocxTextRun.ParseVerticalAlignment("subscript"));
+        TestAssert.Equal(DocxRunVerticalAlignment.Subscript, DocxTextRun.ParseVerticalAlignment("SUBSCRIPT"));
+        TestAssert.Equal(DocxRunVerticalAlignment.Baseline, DocxTextRun.ParseVerticalAlignment("baseline"));
+        TestAssert.Equal(DocxRunVerticalAlignment.Baseline, DocxTextRun.ParseVerticalAlignment(string.Empty));
+        TestAssert.Equal(DocxRunVerticalAlignment.Baseline, DocxTextRun.ParseVerticalAlignment(null));
+        TestAssert.Equal(DocxRunVerticalAlignment.Baseline, DocxTextRun.ParseVerticalAlignment("raised"));
+    }
+
     public static void CellVerticalAlignmentParsesKnownSpellings()
     {
         // R17: bottom/center parse case-insensitively; everything else (including

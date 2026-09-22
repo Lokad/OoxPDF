@@ -1233,8 +1233,7 @@ internal sealed partial class DocxReader
             ? FirstNonEmpty(resolvedRun.Fonts.ComplexScript, resolvedRun.FontFamily)
             : resolvedRun.FontFamily;
         bool isScriptShiftedRun =
-            string.Equals(resolvedRun.VerticalAlignmentValue, "superscript", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(resolvedRun.VerticalAlignmentValue, "subscript", StringComparison.OrdinalIgnoreCase);
+            DocxTextRun.ParseVerticalAlignment(resolvedRun.VerticalAlignmentValue) is not DocxRunVerticalAlignment.Baseline;
         runs.Add(new DocxTextRun(
             text,
             resolvedRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,

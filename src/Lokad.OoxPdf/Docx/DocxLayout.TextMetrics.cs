@@ -140,12 +140,12 @@ internal static class DocxVerticalAlignMetrics
 
     private static bool IsSuperscript(DocxTextRun run)
     {
-        return run.EffectiveProperties.VerticalAlignmentValue?.Equals("superscript", StringComparison.OrdinalIgnoreCase) == true;
+        return run.EffectiveProperties.VerticalAlignment == DocxRunVerticalAlignment.Superscript;
     }
 
     private static bool IsSubscript(DocxTextRun run)
     {
-        return run.EffectiveProperties.VerticalAlignmentValue?.Equals("subscript", StringComparison.OrdinalIgnoreCase) == true;
+        return run.EffectiveProperties.VerticalAlignment == DocxRunVerticalAlignment.Subscript;
     }
 }
 
