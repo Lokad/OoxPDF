@@ -106,6 +106,10 @@ shared process. Defaults are generous multiples of the per-site caps:
   plus chart dense slots materialized from cached/literal vectors (R04).
 - `MaxTableFragmentsPerConversion` (default 20,000): total DOCX table row
   fragments constructed.
+- `MaxXmlNodesPerConversion` (default 40,000,000): total XML elements plus
+  attributes parsed across every part; cached parses do not recharge (R04).
+- `MaxWorkbookCellsPerConversion` (default 1,000,000): total chart workbook
+  cells read across every embedded workbook; cached models do not recharge (R04).
 - `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
   including PPTX crop/recolor variants and effect rasters, through the shared
   decoder boundary (R03). Each image is still individually pixel-capped; cache
@@ -128,18 +132,16 @@ With `OoxPdfOptions.ReportResourceUsage`, each successful conversion emits one
 informational `CONVERSION_RESOURCE_SUMMARY` diagnostic reporting cumulative
 counters plus the peak live reservation
 (`pages`, `chartRangeCells`, `tableFragments`, `imagesDecoded`, `fontWork`,
-`peakLiveImageBytes`). Informational diagnostics never affect CLI `--strict`
-exit codes.
+`xmlNodes`, `workbookCells`, `peakLiveImageBytes`). Informational diagnostics
+never affect CLI `--strict` exit codes.
 
 Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
-or process memory. It omits simultaneous buffers beyond the 4-byte estimate
-(PNG inflated bytes plus RGB/alpha planes, JPEG sample planes plus RGB,
-IDAT capacity/scratch, compression output), retained pixels/variants after
-decoder return, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Covered budgets do not yet bound aggregate XML objects/characters,
-nested-package bytes, worksheet models, scene nodes, page/resource/output
-bytes, or serialization (R04-R06). Do not size hosts from
-`peakLiveImageBytes` plus image headroom alone.
+or process memory. It covers per-format working-set estimates held across
+decode/transform/compress (R02) but omits pixels retained outside any live
+operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
+work. Covered budgets do not yet bound nested-package bytes, scene nodes,
+retained models, page/resource/output bytes, or serialization (R04-R06).
+Do not size hosts from `peakLiveImageBytes` plus image headroom alone.
 
 Host admission: measure conversion-only live/process peaks across
 page/image/font/chart breadth with `ReportResourceUsage`, separate discovery,

@@ -95,6 +95,9 @@ internal sealed partial class PptxRenderer
             }
 
             sheets[sheet.Name] = worksheetData;
+            // R04: cells accumulate against the conversion aggregate quota across
+            // every embedded workbook; cached workbook models do not recharge.
+            OoxConversionBudget.Current?.ChargeWorkbookCells(worksheetData.Cells.Count);
             foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();

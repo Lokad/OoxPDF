@@ -1,6 +1,8 @@
 using System.Reflection;
+using System.Text;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Imaging;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -86,6 +88,97 @@ internal static class OoxResourceGuaranteeTests
 
             throw new InvalidOperationException("Expected dense expansion to hit the range budget.");
         }
+    }
+
+    public static void XmlLoadsRespectAggregateNodeBudget()
+    {
+        // R04: individually legal XML parses accumulate against one conversion quota
+        // instead of each resetting it. Ten small documents (5 objects each) exceed
+        // a 10-object aggregate while passing every per-document cap.
+        byte[] xml = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><a><b x=\"1\"/><b x=\"2\"/></a>");
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxXmlNodesPerConversion = 10 }))
+        {
+            TestAssert.Throws<OoxPdfLimitExceededException>(() =>
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    using var stream = new MemoryStream(xml, writable: false);
+                    SafeXml.Load(stream, CancellationToken.None);
+                }
+            });
+            TestAssert.True(scope.Budget.XmlNodes > 0, "Attempted parses must charge before failing.");
+        }
+
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxXmlNodesPerConversion = 1_000 }))
+        {
+            using var stream = new MemoryStream(xml, writable: false);
+            SafeXml.Load(stream, CancellationToken.None);
+            // Root plus two empty elements plus two attributes: 5 objects.
+            TestAssert.Equal(5, scope.Budget.XmlNodes);
+        }
+    }
+
+    public static void ChartWorkbooksRespectAggregateCellBudget()
+    {
+        // R04: cells accumulate across embedded workbooks against one conversion quota.
+        byte[] xlsx = MinimalSingleCellWorkbook();
+        var resource = new PptxScenePackageResource("/xl/embed.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx);
+        var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource, null, string.Empty);
+        MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .First(method => method.Name == "GetOrCreateChartWorkbook");
+        object? Invoke(Dictionary<string, object?>? shared)
+        {
+            try
+            {
+                return getOrCreate.Invoke(null, [shared, external, CancellationToken.None]);
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                throw ex.InnerException;
+            }
+        }
+
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxWorkbookCellsPerConversion = 0 }))
+        {
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => Invoke(new Dictionary<string, object?>(StringComparer.Ordinal)));
+            TestAssert.Equal(0, scope.Budget.WorkbookCells);
+        }
+
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null))
+        {
+            Invoke(new Dictionary<string, object?>(StringComparer.Ordinal));
+            TestAssert.Equal(1, scope.Budget.WorkbookCells);
+        }
+    }
+
+    private static byte[] MinimalSingleCellWorkbook()
+    {
+        const string spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        const string officeRels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        const string packageRels = "http://schemas.openxmlformats.org/package/2006/relationships";
+        using MemoryStream packageStream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
+                "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>" +
+                "<Default Extension=\"xml\" ContentType=\"application/xml\"/>" +
+                "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>" +
+                "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>" +
+                "</Types>",
+            ["xl/workbook.xml"] =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                "<workbook xmlns=\"" + spreadsheet + "\" xmlns:r=\"" + officeRels + "\">" +
+                "<sheets><sheet name=\"Sheet1\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>",
+            ["xl/_rels/workbook.xml.rels"] =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                "<Relationships xmlns=\"" + packageRels + "\">" +
+                "<Relationship Id=\"rId1\" Type=\"" + officeRels + "/worksheet\" Target=\"worksheets/sheet1.xml\"/></Relationships>",
+            ["xl/worksheets/sheet1.xml"] =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                "<worksheet xmlns=\"" + spreadsheet + "\"><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData></worksheet>",
+        });
+        return packageStream.ToArray();
     }
 
     private static string FindCase(string name)

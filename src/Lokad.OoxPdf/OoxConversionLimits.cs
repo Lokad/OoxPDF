@@ -5,9 +5,9 @@ namespace Lokad.OoxPdf;
 /// covered work of one kind across a whole conversion, complementing the per-site caps
 /// (per chart union, per table row, per image) that bound individual allocations.
 /// Covered work includes chart range cells plus dense slots, table fragments,
-/// content images (including crop/recolor variants and effect rasters), font loads
-/// and subsets, and the live image reservation peak (R01-R04). Aggregate XML DOMs,
-/// nested packages, worksheet models, pages/resources/output bytes, and writer work
+/// XML nodes, workbook cells, content images (including crop/recolor variants and
+/// effect rasters), font loads and subsets, and the live image reservation peak
+/// (R01-R04). Nested packages, pages/resources/output bytes, and writer work
 /// are not yet bounded (R04-R06); the live peak is a reservation peak, not total
 /// memory (R19). Defaults are generous multiples of the per-site caps; hosts with
 /// a claimed memory/work limit should set tighter values and watch
@@ -28,6 +28,22 @@ public sealed class OoxConversionLimits
     /// twenty times the per-row cap).
     /// </summary>
     public long MaxTableFragmentsPerConversion { get; init; } = 20_000;
+
+    /// <summary>
+    /// Maximum XML nodes parsed per conversion (default 40,000,000, ten times the
+    /// combined per-document object cap of 2,000,000 elements plus 2,000,000
+    /// attributes). Counts elements plus attributes across every parsed part while
+    /// cached parses do not recharge; each document still fails fast at its own
+    /// caps before amplifying small input into a huge DOM (R04).
+    /// </summary>
+    public long MaxXmlNodesPerConversion { get; init; } = 40_000_000;
+
+    /// <summary>
+    /// Maximum chart workbook cells read per conversion (default 1,000,000, ten
+    /// times the per-workbook cap). Counts cells across every embedded workbook
+    /// while cached workbook models do not recharge (R04).
+    /// </summary>
+    public long MaxWorkbookCellsPerConversion { get; init; } = 1_000_000;
 
     /// <summary>
     /// Maximum content images decoded per conversion (default 500), including PPTX
