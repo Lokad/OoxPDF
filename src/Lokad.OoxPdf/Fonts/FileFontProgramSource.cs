@@ -10,13 +10,23 @@ public sealed class FileFontProgramSource : IFontProgramSource
     internal const long MaxLocalFontBytes = 64L * 1024L * 1024L;
 
     private readonly string path;
+    private readonly WindowsFontResolver.RetainedFileTracker? retention;
     private readonly object sync = new();
     private ReadOnlyMemory<byte>? cachedBytes;
 
     public FileFontProgramSource(string path)
+        : this(path, retention: null)
+    {
+    }
+
+    // R13: snapshot-tracked sources report loads and accesses so the shared
+    // snapshot can cap aggregate retained bytes with LRU eviction. Untracked
+    // sources (including all direct public uses) behave exactly as before.
+    internal FileFontProgramSource(string path, WindowsFontResolver.RetainedFileTracker? retention)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         this.path = System.IO.Path.GetFullPath(path);
+        this.retention = retention;
     }
 
     internal static void CheckLocalFontSize(long byteCount, string path)
@@ -35,6 +45,7 @@ public sealed class FileFontProgramSource : IFontProgramSource
     {
         if (cachedBytes is ReadOnlyMemory<byte> bytes)
         {
+            retention?.NoteAccessed(path);
             return ValueTask.FromResult(bytes);
         }
 
@@ -43,6 +54,7 @@ public sealed class FileFontProgramSource : IFontProgramSource
         {
             if (cachedBytes is ReadOnlyMemory<byte> cached)
             {
+                retention?.NoteAccessed(path);
                 return ValueTask.FromResult(cached);
             }
 
@@ -50,7 +62,18 @@ public sealed class FileFontProgramSource : IFontProgramSource
             CheckLocalFontSize(new FileInfo(path).Length, path);
             byte[] loaded = File.ReadAllBytes(path);
             cachedBytes = loaded;
+            retention?.NoteLoaded(path, loaded.LongLength);
             return ValueTask.FromResult((ReadOnlyMemory<byte>)loaded);
         }
+    }
+
+    // R13: clears retained bytes so the owning snapshot stays bounded. Arrays
+    // already handed out stay alive (and valid: files are immutable program
+    // sources) via GC; the next access simply re-reads through the per-source
+    // lock. Takes no lock itself so snapshot eviction under its own lock cannot
+    // deadlock against in-progress loads.
+    internal void EvictCachedBytes()
+    {
+        cachedBytes = null;
     }
 }

@@ -10,9 +10,9 @@ namespace Lokad.OoxPdf.Fonts;
 /// program bytes after first use (files are capped individually; see
 /// FileFontProgramSource). R13 ownership: the process-static snapshot owns the
 /// sources, resolver instances share them, and conversions only borrow the arrays;
-/// discovery spans (R13) bound the initial read but not retention. The retained
-/// population is bounded by the installed files, not by conversions: repeated
-/// conversions never re-read the disk. Hosts that rotate font directories or must
+/// discovery spans (R13) bound the initial read. Aggregate retention is capped by
+/// MaxSnapshotRetainedBytes with LRU eviction, so repeated conversions re-read from
+/// local disk only after eviction. Hosts that rotate font directories or must
 /// release memory call <see cref="InvalidateDiscoveryCaches"/>; existing resolver
 /// instances keep their snapshot.
 /// </remarks>
@@ -27,6 +27,80 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     // long-lived directly-held resolver cannot grow without bound on adversarial
     // distinct families; per-conversion instances never approach the cap.
     internal const int MaxCachedResolutions = 4096;
+
+    // R13: aggregate ceiling on snapshot-retained program bytes. A conversion
+    // typically touches a handful of families; hundreds of megabytes only
+    // accumulate across adversarial font directories, where LRU eviction re-reads
+    // evicted files from local disk on demand.
+    internal const long MaxSnapshotRetainedBytes = 512L * 1024L * 1024L;
+
+    // R13: snapshot-owned LRU over per-file program sources. Mirrors the pack
+    // eviction contract: retained entries move to the back on every access,
+    // overflow evicts from the front, evicted bytes re-read on demand, and arrays
+    // already handed out stay alive via GC. Eviction takes no source locks, so it
+    // cannot deadlock against in-progress loads.
+    internal sealed class RetainedFileTracker
+    {
+        private readonly long maxTotalBytes;
+        private readonly IReadOnlyDictionary<string, FileFontProgramSource> sourcesByPath;
+        private readonly object sync = new();
+        private readonly Dictionary<string, long> retainedSizes = new(StringComparer.OrdinalIgnoreCase);
+        private readonly LinkedList<string> retainedOrder = new();
+        private long retainedBytes;
+
+        internal RetainedFileTracker(long maxTotalBytes, IReadOnlyDictionary<string, FileFontProgramSource> sourcesByPath)
+        {
+            this.maxTotalBytes = maxTotalBytes;
+            this.sourcesByPath = sourcesByPath;
+        }
+
+        internal void NoteLoaded(string path, long byteCount)
+        {
+            lock (sync)
+            {
+                if (retainedSizes.TryGetValue(path, out long previous))
+                {
+                    retainedBytes -= previous;
+                    retainedOrder.Remove(path);
+                }
+
+                retainedSizes[path] = byteCount;
+                retainedOrder.AddLast(path);
+                retainedBytes += byteCount;
+
+                while (retainedBytes > maxTotalBytes && retainedOrder.Count > 0)
+                {
+                    string eldest = retainedOrder.First!.Value;
+                    if (retainedOrder.Count == 1)
+                    {
+                        // Only the just-loaded source is left; a single file always
+                        // fits by the per-file cap, so this is unreachable in practice.
+                        break;
+                    }
+
+                    retainedOrder.RemoveFirst();
+                    retainedBytes -= retainedSizes.GetValueOrDefault(eldest);
+                    retainedSizes.Remove(eldest);
+                    if (sourcesByPath.TryGetValue(eldest, out FileFontProgramSource? source))
+                    {
+                        source.EvictCachedBytes();
+                    }
+                }
+            }
+        }
+
+        internal void NoteAccessed(string path)
+        {
+            lock (sync)
+            {
+                if (retainedSizes.ContainsKey(path))
+                {
+                    retainedOrder.Remove(path);
+                    retainedOrder.AddLast(path);
+                }
+            }
+        }
+    }
     private readonly Dictionary<FontRequest, FontFaceResolution> requestCache = new(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
 
     private sealed record DiscoverySnapshot(
@@ -69,6 +143,8 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             DiscoverySnapshot Discover()
             {
                 var fonts = new List<FontFaceResolution>();
+                var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
+                var retention = new RetainedFileTracker(MaxSnapshotRetainedBytes, sourcesByPath);
                 foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
@@ -86,7 +162,11 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                             // table extents, never outlines or layout tables. Read exactly
                             // those bytes instead of the whole program per file.
                             (byte[] bytes, bool complete, long fileLength) = ReadDiscoveryBytes(path);
-                            var source = new FileFontProgramSource(path);
+                            if (!sourcesByPath.TryGetValue(path, out FileFontProgramSource? source))
+                            {
+                                source = new FileFontProgramSource(path, retention);
+                                sourcesByPath[path] = source;
+                            }
                             bool isCollection = OpenTypeFont.IsTrueTypeCollectionHeader(bytes);
                             int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
                             for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)

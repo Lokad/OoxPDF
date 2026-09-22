@@ -1206,6 +1206,95 @@ internal static class OoxLimitsTests
         }
     }
 
+    public static void SnapshotRetainedFilesEvictLeastRecentlyUsed()
+    {
+        // R13: snapshot retention evicts least-recently-used files past the
+        // aggregate ceiling; evicted files re-read byte-identical programs while
+        // retained files keep serving their arrays.
+        string directory = Path.Combine(Path.GetTempPath(), "oox-limits-retain-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string pathA = Path.Combine(directory, "a.ttf");
+            string pathB = Path.Combine(directory, "b.ttf");
+            File.WriteAllBytes(pathA, TestFontBuilder.CreateTestFont());
+            File.WriteAllBytes(pathB, TestFontBuilder.CreateCffKindFont("OtherFamily"));
+            long cap = Math.Max(new FileInfo(pathA).Length, new FileInfo(pathB).Length);
+            var sources = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
+            var retention = new WindowsFontResolver.RetainedFileTracker(cap, sources);
+            var sourceA = new FileFontProgramSource(pathA, retention);
+            var sourceB = new FileFontProgramSource(pathB, retention);
+            sources[pathA] = sourceA;
+            sources[pathB] = sourceB;
+
+            byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestAssert.True(firstA.SequenceEqual(File.ReadAllBytes(pathA)), "First load must match the served bytes.");
+
+            // Caching B evicted A. B still serves its retained array even after its
+            // file changes underneath; re-accessing A afterwards re-reads from disk.
+            byte[] changedB = TestFontBuilder.CreateCffKindFont("ChangedFamily");
+            File.WriteAllBytes(pathB, changedB);
+            byte[] secondB = sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestAssert.True(!secondB.SequenceEqual(changedB), "Retained sources must keep serving their arrays.");
+            byte[] changedA = TestFontBuilder.CreateTestFont();
+            for (int i = 0; i < changedA.Length; i++)
+            {
+                changedA[i] = (byte)(changedA[i] ^ 0xFF);
+            }
+
+            File.WriteAllBytes(pathA, changedA);
+            byte[] secondA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestAssert.True(secondA.SequenceEqual(changedA), "Evicted sources must re-read the current file bytes.");
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    public static void SnapshotRetainedFilesRespectAccessRecency()
+    {
+        // R13: snapshot retention refreshes recency on hits. Both files fit; touching
+        // the eldest before loading the third evicts the middle file instead.
+        string directory = Path.Combine(Path.GetTempPath(), "oox-limits-retain-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            byte[][] bySize = [TestFontBuilder.CreateTestFont(), TestFontBuilder.CreateCffKindFont("OtherFamily"), TestFontBuilder.CreateCffKindFont("Z")];
+            Array.Sort(bySize, (left, right) => right.Length.CompareTo(left.Length));
+            string pathA = Path.Combine(directory, "a.ttf");
+            string pathB = Path.Combine(directory, "b.ttf");
+            string pathC = Path.Combine(directory, "c.ttf");
+            File.WriteAllBytes(pathA, bySize[0]);
+            File.WriteAllBytes(pathB, bySize[1]);
+            File.WriteAllBytes(pathC, bySize[2]);
+            long cap = (long)bySize[0].Length + bySize[1].Length;
+            var sources = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
+            var retention = new WindowsFontResolver.RetainedFileTracker(cap, sources);
+            var sourceA = new FileFontProgramSource(pathA, retention);
+            var sourceB = new FileFontProgramSource(pathB, retention);
+            var sourceC = new FileFontProgramSource(pathC, retention);
+            sources[pathA] = sourceA;
+            sources[pathB] = sourceB;
+            sources[pathC] = sourceC;
+
+            byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            sourceC.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+
+            // C evicted B (least recently used); A must still be retained.
+            File.WriteAllBytes(pathA, TestFontBuilder.CreateCffKindFont("TouchedFamily"));
+            byte[] secondA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestAssert.True(secondA.SequenceEqual(firstA), "Touched sources must survive the next eviction.");
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
+        }
+    }
+
     public static void ClassKerningBelowCapLoads()
     {
         // PLAN M10 probe scale: two 512-glyph sets densify to 262,144 pairs and must
