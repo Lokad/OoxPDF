@@ -31,7 +31,7 @@ only, never gates.
 | R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; chart tri-state readers verified distinct |
 | R15 chart data resolution | partial | `7ee38cee` presence checks + subset normalization; `9584c17c` existence short-circuits + densify tests |
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
-| R17 units and execution values | partial | `e45f09f5` transform contract (5 geometry tests) + cell-alignment enum (parse matrix) |
+| R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
 | R18 resource identity | closed | `ee8e6372`; full-digest/ exact-equality/collision tests (`PdfIdentityTests`, pdf) |
 | R19 telemetry scope | closed | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md` |
 | R20 severity and publication | closed | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api) |
@@ -63,7 +63,7 @@ index bounds the worst case rather than shifting the median.
   agreement gates; share context-independent inherited nodes behind (node, slide) keys.
 - R15-remainder: chart-frame context for shared dense/label results; ReadSceneOrXml
   arm consolidation; extent memoization.
-- R17-remainder: parse paragraph alignment and border execution strings into enums
+- R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
   (cell vertical alignment done).
 - R22-closeout: Office-gated visual runs for new held-out variations (needs Office/COM);
   page/content/output summary fields; staged page/resource emission.
