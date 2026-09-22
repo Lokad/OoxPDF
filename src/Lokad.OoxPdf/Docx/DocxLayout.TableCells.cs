@@ -154,7 +154,14 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale)
     {
         paragraphBoundaryIndex = 0;
-        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
+var context = new DocxTableCellLayoutContext(
+            TextMeasurer: textMeasurer,
+            DefaultTabStopPoints: defaultTabStopPoints,
+            ParagraphSpacingScale: paragraphSpacingScale,
+            PageNumber: pageNumber,
+            PageCount: pageCount,
+            CellMemo: null);
+                IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -173,7 +180,7 @@ internal sealed partial class DocxLayoutEngine
                 consumedHeight += pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                consumedHeight += MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+                consumedHeight += MeasureNestedTableHeight(tableElement.Table, textWidth, context);
                 if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
                 {
                     return true;
@@ -191,7 +198,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             consumedHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, context);
             paragraphBoundaryIndex++;
             if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
             {
@@ -220,7 +227,14 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale)
     {
         boundary = new DocxNestedTableBoundary(0, IsInsideNestedTable: false);
-        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
+var context = new DocxTableCellLayoutContext(
+            TextMeasurer: textMeasurer,
+            DefaultTabStopPoints: defaultTabStopPoints,
+            ParagraphSpacingScale: paragraphSpacingScale,
+            PageNumber: pageNumber,
+            PageCount: pageCount,
+            CellMemo: null);
+                IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -241,7 +255,7 @@ internal sealed partial class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 double tableTop = consumedHeight;
-                double tableHeight = MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+                double tableHeight = MeasureNestedTableHeight(tableElement.Table, textWidth, context);
                 consumedHeight += tableHeight;
                 if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
                 {
@@ -267,7 +281,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             consumedHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+            consumedHeight += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, context);
             if (consumedHeight >= fragmentBoundaryFromRowTop - 0.001d)
             {
                 boundary = new DocxNestedTableBoundary(nestedTableIndex, IsInsideNestedTable: false);

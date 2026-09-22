@@ -882,6 +882,13 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale)
     {
         heightBeforeBreak = 0d;
+        var context = new DocxTableCellLayoutContext(
+            TextMeasurer: textMeasurer,
+            DefaultTabStopPoints: defaultTabStopPoints,
+            ParagraphSpacingScale: paragraphSpacingScale,
+            PageNumber: pageNumber,
+            PageCount: pageCount,
+            CellMemo: null);
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
@@ -917,7 +924,7 @@ internal sealed partial class DocxLayoutEngine
                 heightBeforeBreak += pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
-                heightBeforeBreak += MeasureNestedTableHeight(tableElement.Table, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+                heightBeforeBreak += MeasureNestedTableHeight(tableElement.Table, textWidth, context);
                 continue;
             }
 
@@ -930,7 +937,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             heightBeforeBreak += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            heightBeforeBreak += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, paragraphSpacingScale);
+            heightBeforeBreak += MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, context);
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }
