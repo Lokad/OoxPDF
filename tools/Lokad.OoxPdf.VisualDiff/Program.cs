@@ -1,19 +1,48 @@
 using System.Text;
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Lokad.OoxPdf.VisualDiff;
 
-if (args.Length is not 3 and not 4)
+long maxCombinedPixels = 256L * 1024L * 1024L;
+var positional = new List<string>();
+for (int i = 0; i < args.Length; i++)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.VisualDiff <reference-png-directory> <candidate-png-directory> <output-directory> [region-specs.json]");
+    if (string.Equals(args[i], "--max-combined-pixels", StringComparison.Ordinal))
+    {
+        if (i + 1 >= args.Length ||
+            !long.TryParse(args[i + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out long quota) ||
+            quota < 0)
+        {
+            Console.Error.WriteLine("--max-combined-pixels expects a non-negative integer.");
+            return 2;
+        }
+
+        maxCombinedPixels = quota;
+        i++;
+        continue;
+    }
+
+    if (args[i].StartsWith("--", StringComparison.Ordinal))
+    {
+        Console.Error.WriteLine($"Unknown option '{args[i]}'.");
+        return 2;
+    }
+
+    positional.Add(args[i]);
+}
+
+if (positional.Count is not 3 and not 4)
+{
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.VisualDiff <reference-png-directory> <candidate-png-directory> <output-directory> [region-specs.json] [--max-combined-pixels <n>]");
     return 2;
 }
 
-string referenceDirectory = Path.GetFullPath(args[0]);
-string candidateDirectory = Path.GetFullPath(args[1]);
-string outputDirectory = Path.GetFullPath(args[2]);
-string? regionSpecsPath = args.Length == 4 ? Path.GetFullPath(args[3]) : null;
+string referenceDirectory = Path.GetFullPath(positional[0]);
+string candidateDirectory = Path.GetFullPath(positional[1]);
+string outputDirectory = Path.GetFullPath(positional[2]);
+string? regionSpecsPath = positional.Count == 4 ? Path.GetFullPath(positional[3]) : null;
 
 if (!Directory.Exists(referenceDirectory))
 {
@@ -34,11 +63,19 @@ string[] candidateFiles = Directory.GetFiles(candidateDirectory, "*.png").Order(
 int pageCount = Math.Max(referenceFiles.Length, candidateFiles.Length);
 
 var metrics = new List<PageMetric>();
-for (int i = 0; i < pageCount; i++)
+try
 {
-    string? referenceFile = i < referenceFiles.Length ? referenceFiles[i] : null;
-    string? candidateFile = i < candidateFiles.Length ? candidateFiles[i] : null;
-    metrics.Add(MeasurePage(i + 1, referenceFile, candidateFile));
+    for (int i = 0; i < pageCount; i++)
+    {
+        string? referenceFile = i < referenceFiles.Length ? referenceFiles[i] : null;
+        string? candidateFile = i < candidateFiles.Length ? candidateFiles[i] : null;
+        metrics.Add(MeasurePage(i + 1, referenceFile, candidateFile, maxCombinedPixels));
+    }
+}
+catch (InvalidDataException ex)
+{
+    Console.Error.WriteLine($"Cannot compare PNGs: {ex.Message}");
+    return 1;
 }
 
 var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
@@ -56,6 +93,29 @@ Console.WriteLine($"Wrote {metrics.Count} visual comparison entries to {outputDi
 // PLAN Q06: tool peaks are recorded separately from converter peaks.
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
+
+// R21: bound the paired working set (both RGBA buffers plus compare scratch) from
+// header dimensions before decoding either image. Per-image file/pixel caps still
+// apply inside Load; this additionally bounds what large pairs may jointly retain.
+static void CheckCombinedPixelQuota(string referenceFile, string candidateFile, long maxCombinedPixels)
+{
+    (int referenceWidth, int referenceHeight) = PngImage.ReadDimensions(referenceFile);
+    (int candidateWidth, int candidateHeight) = PngImage.ReadDimensions(candidateFile);
+    long combined;
+    try
+    {
+        combined = checked((long)referenceWidth * referenceHeight + (long)candidateWidth * candidateHeight);
+    }
+    catch (OverflowException ex)
+    {
+        throw new InvalidDataException("PNG pair dimensions overflow.", ex);
+    }
+
+    if (combined > maxCombinedPixels)
+    {
+        throw new InvalidDataException($"PNG pair pixel count {combined} exceeds the maximum of {maxCombinedPixels} (--max-combined-pixels).");
+    }
+}
 
 static string BuildIndexHtml(IReadOnlyList<PageMetric> metrics, string referenceDirectory, string candidateDirectory, string outputDirectory)
 {
@@ -99,8 +159,13 @@ static void AppendImage(StringBuilder html, string title, string? fileName, stri
     html.AppendLine("\"></div>");
 }
 
-static PageMetric MeasurePage(int page, string? referenceFile, string? candidateFile)
+static PageMetric MeasurePage(int page, string? referenceFile, string? candidateFile, long maxCombinedPixels)
 {
+    if (referenceFile is not null && candidateFile is not null)
+    {
+        CheckCombinedPixelQuota(referenceFile, candidateFile, maxCombinedPixels);
+    }
+
     PngImage? reference = referenceFile is null ? null : PngImage.Load(referenceFile);
     PngImage? candidate = candidateFile is null ? null : PngImage.Load(candidateFile);
     bool dimensionsMatch = reference is not null

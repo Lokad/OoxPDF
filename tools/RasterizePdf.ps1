@@ -7,7 +7,12 @@ param(
 
     [int] $Dpi = 144,
 
-    [switch] $SkipBuild
+    [switch] $SkipBuild,
+
+    # R21: bound native validation time from the outside. PDFium calls are
+    # synchronous, so an over-long render is killed at the process boundary
+    # instead of hanging the validation gate.
+    [int] $TimeoutSeconds = 600
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,7 +48,11 @@ else {
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project $rasterizerProject -OutputDll $rasterizerDll -Description "PDFium rasterizer"
 }
 
-dotnet $rasterizerDll $inputFull $outputFull $Dpi
-if ($LASTEXITCODE -ne 0) {
-    throw "PDFium rasterizer failed with exit code $LASTEXITCODE."
+$rasterizer = Start-Process -FilePath "dotnet" -ArgumentList @($rasterizerDll, $inputFull, $outputFull, $Dpi) -NoNewWindow -PassThru
+if (-not $rasterizer.WaitForExit($TimeoutSeconds * 1000)) {
+    try { $rasterizer.Kill() } catch { }
+    throw "PDFium rasterizer timed out after $TimeoutSeconds seconds on $InputPdf."
+}
+if ($rasterizer.ExitCode -ne 0) {
+    throw "PDFium rasterizer failed with exit code $($rasterizer.ExitCode)."
 }

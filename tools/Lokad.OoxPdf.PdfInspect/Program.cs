@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory] [--text-only] [--page <number>]...");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory] [--text-only] [--page <number>]... [--max-total-decoded-bytes <n>] [--max-objects <n>]");
     return 2;
 }
 
@@ -48,8 +48,19 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     return 1;
 }
 
+long maxTotalDecodedBytes = ReadLongOption(args, "--max-total-decoded-bytes", PdfObject.MaxTotalDecodedStreamBytes);
+long maxObjects = ReadLongOption(args, "--max-objects", PdfObject.MaxInspectObjects);
 string pdf = Encoding.Latin1.GetString(bytes);
-var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
+IReadOnlyList<PdfObject> objects;
+try
+{
+    objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly, maxTotalDecodedBytes: maxTotalDecodedBytes, maxObjects: maxObjects);
+}
+catch (InvalidDataException ex)
+{
+    Console.Error.WriteLine($"Cannot inspect '{inputPath}': {ex.Message}");
+    return 1;
+}
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
 IReadOnlyList<PdfFontResource> fontResources = BuildFontResources(objects);
 Dictionary<(int PageNumber, string FontName), IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
@@ -148,6 +159,26 @@ if (outputDirectory is not null)
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
 
+static long ReadLongOption(string[] args, string name, long defaultValue)
+{
+    for (int i = 1; i + 1 < args.Length; i++)
+    {
+        if (!string.Equals(args[i], name, StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (!long.TryParse(args[i + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out long value) || value < 0)
+        {
+            throw new ArgumentException($"{name} expects a non-negative integer.");
+        }
+
+        return value;
+    }
+
+    return defaultValue;
+}
+
 static HashSet<int>? ReadPageFilter(string[] args)
 {
     var pages = new HashSet<int>();
@@ -184,6 +215,13 @@ static string? ReadOutputDirectory(string[] args)
         }
 
         if (string.Equals(arg, "--page", StringComparison.Ordinal))
+        {
+            i++;
+            continue;
+        }
+
+        if (string.Equals(arg, "--max-total-decoded-bytes", StringComparison.Ordinal) ||
+            string.Equals(arg, "--max-objects", StringComparison.Ordinal))
         {
             i++;
             continue;
@@ -789,22 +827,50 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
         @"(?s)(?<number>\d+)\s+(?<generation>\d+)\s+obj(?<body>.*?)endobj",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    public static IReadOnlyList<PdfObject> ParseAll(string pdf, byte[] bytes, bool skipImageDecode)
+    public static IReadOnlyList<PdfObject> ParseAll(string pdf, byte[] bytes, bool skipImageDecode, long maxTotalDecodedBytes = MaxTotalDecodedStreamBytes, long maxObjects = MaxInspectObjects)
     {
+        // R21: aggregate quotas across streams/objects. Each stream still fails fast
+        // at its own 256 MiB inflation cap; the running total additionally bounds what
+        // many modest streams may jointly retain, and the object cap bounds the parsed
+        // list itself. Skipped streams keep raw bytes with a status note.
+        var budget = new DecodeBudget(maxTotalDecodedBytes);
         var objects = new List<PdfObject>();
         foreach (Match match in ObjectRegex.Matches(pdf))
         {
+            if (objects.Count >= maxObjects)
+            {
+                throw new InvalidDataException($"PDF object count exceeds the maximum of {maxObjects}.");
+            }
+
             int number = int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture);
             int generation = int.Parse(match.Groups["generation"].Value, CultureInfo.InvariantCulture);
             string rawBody = match.Groups["body"].Value;
             string body = rawBody.Trim();
             string dictionary = ReadDictionary(body);
-            PdfStream? stream = TryReadStream(match, rawBody, bytes, dictionary, skipImageDecode);
+            PdfStream? stream = TryReadStream(match, rawBody, bytes, dictionary, skipImageDecode, budget);
             objects.Add(new PdfObject(number, generation, body, dictionary, stream));
         }
 
         objects.AddRange(ParseObjectStreams(objects));
         return objects;
+    }
+
+    private sealed class DecodeBudget(long cap)
+    {
+        public long Cap { get; } = cap;
+
+        public long Remaining { get; private set; } = cap;
+
+        public DecodeResult Reserve(byte[] decoded, string status, byte[] raw)
+        {
+            if (decoded.LongLength > Remaining)
+            {
+                return new DecodeResult(raw, $"decode skipped (aggregate over {Cap} bytes)");
+            }
+
+            Remaining -= decoded.LongLength;
+            return new DecodeResult(decoded, status);
+        }
     }
 
     private static IReadOnlyList<PdfObject> ParseObjectStreams(IReadOnlyList<PdfObject> objects)
@@ -880,7 +946,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
             : string.Empty;
     }
 
-    private static PdfStream? TryReadStream(Match match, string body, byte[] bytes, string dictionary, bool skipImageDecode)
+    private static PdfStream? TryReadStream(Match match, string body, byte[] bytes, string dictionary, bool skipImageDecode, DecodeBudget budget)
     {
         int bodyStream = body.IndexOf("stream", StringComparison.Ordinal);
         int bodyEndStream = body.LastIndexOf("endstream", StringComparison.Ordinal);
@@ -914,7 +980,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
         }
 
         DecodeResult decoded = filters.Contains("FlateDecode", StringComparison.Ordinal)
-            ? TryInflate(raw)
+            ? TryInflate(raw, budget)
             : new DecodeResult(raw, "not decoded");
         return new PdfStream(raw.Length, decoded.Bytes.Length, filters, decoded.Status, decoded.Bytes);
     }
@@ -927,17 +993,28 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
 
     private const long MaxDecodedStreamBytes = 256L * 1024L * 1024L;
 
-    private static DecodeResult TryInflate(byte[] raw)
+    internal const long MaxTotalDecodedStreamBytes = 1024L * 1024L * 1024L;
+
+    internal const long MaxInspectObjects = 5_000_000;
+
+    private static DecodeResult TryInflate(byte[] raw, DecodeBudget budget)
     {
         // A null inflate result means valid framing over the byte cap: keep raw bytes
         // with a status note instead of expanding. Invalid framing falls through to
-        // the raw-deflate retry, exactly like the previous CopyTo pipeline.
+        // the raw-deflate retry, exactly like the previous CopyTo pipeline. Decoded
+        // bytes additionally reserve against the aggregate quota; once exhausted,
+        // streams keep raw bytes without inflating at all.
+        if (budget.Remaining <= 0)
+        {
+            return new DecodeResult(raw, $"decode skipped (aggregate over {budget.Cap} bytes)");
+        }
+
         try
         {
             byte[]? zlib = CopyInflateCapped(raw, useZlibHeader: true);
             if (zlib is not null)
             {
-                return new DecodeResult(zlib, "decoded");
+                return budget.Reserve(zlib, "decoded", raw);
             }
         }
         catch (InvalidDataException)
@@ -947,7 +1024,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
                 byte[]? rawDeflate = CopyInflateCapped(raw, useZlibHeader: false);
                 if (rawDeflate is not null)
                 {
-                    return new DecodeResult(rawDeflate, "decoded raw deflate");
+                    return budget.Reserve(rawDeflate, "decoded raw deflate", raw);
                 }
             }
             catch (InvalidDataException ex)

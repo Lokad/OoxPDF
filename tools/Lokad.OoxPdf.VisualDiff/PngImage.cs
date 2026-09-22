@@ -8,6 +8,11 @@ internal sealed class PngImage
 {
     private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
 
+    // PLAN Q06: shared pixel/dimension budget with the rasterizer so its output
+    // always fits here (67M pixels, 32768 per side).
+    private const int MaxDimension = 32768;
+    private const long MaxPixels = 67_108_864L;
+
     private PngImage(int width, int height, byte[] rgba)
     {
         Width = width;
@@ -20,6 +25,56 @@ internal sealed class PngImage
     public int Height { get; }
 
     public byte[] Rgba { get; }
+
+    // R21: header-only dimensions so the paired quota can be enforced before
+    // either RGBA buffer exists. Rejects the same malformed headers as Load.
+    public static (int Width, int Height) ReadDimensions(string path)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = File.ReadAllBytes(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidDataException($"Cannot read PNG input '{path}': {ex.Message}", ex);
+        }
+
+        if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
+        {
+            throw new InvalidDataException("File is not a PNG image.");
+        }
+
+        if (bytes.Length < Signature.Length + 8 + 13)
+        {
+            throw new InvalidDataException("PNG chunk header is truncated.");
+        }
+
+        int length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(Signature.Length, 4));
+        string type = Encoding.ASCII.GetString(bytes, Signature.Length + 4, 4);
+        if (length != 13 || !string.Equals(type, "IHDR", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("PNG image header is missing.");
+        }
+
+        ReadOnlySpan<byte> data = bytes.AsSpan(Signature.Length + 8, 13);
+        int width = BinaryPrimitives.ReadInt32BigEndian(data[..4]);
+        int height = BinaryPrimitives.ReadInt32BigEndian(data.Slice(4, 4));
+        int bitDepth = data[8];
+        int colorType = data[9];
+        byte interlace = data[12];
+        if (width <= 0 || height <= 0 || width > MaxDimension || height > MaxDimension)
+        {
+            throw new InvalidDataException($"PNG dimensions are out of range: {width}x{height}.");
+        }
+
+        if (!IsSupportedFormat(bitDepth, colorType) || interlace != 0)
+        {
+            throw new NotSupportedException("Only non-interlaced grayscale, indexed, truecolor, and truecolor-alpha PNGs with common bit depths are supported.");
+        }
+
+        return (width, height);
+    }
 
     public static PngImage Load(string path)
     {
@@ -97,10 +152,6 @@ internal sealed class PngImage
             }
         }
 
-        // PLAN Q06: shared pixel/dimension budget with the rasterizer so its output
-        // always fits here (67M pixels, 32768 per side).
-        const int MaxDimension = 32768;
-        const long MaxPixels = 67_108_864L;
         if (width <= 0 || height <= 0 || width > MaxDimension || height > MaxDimension)
         {
             throw new InvalidDataException($"PNG dimensions are out of range: {width}x{height}.");

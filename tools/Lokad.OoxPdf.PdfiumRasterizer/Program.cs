@@ -2,22 +2,50 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Lokad.OoxPdf.PdfiumRasterizer;
 
-if (args.Length is < 2 or > 3)
+var positional = new List<string>();
+long maxTotalPixels = 1_000_000_000L;
+for (int i = 0; i < args.Length; i++)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfiumRasterizer <input.pdf> <output-directory> [dpi]");
+    if (string.Equals(args[i], "--max-total-pixels", StringComparison.Ordinal))
+    {
+        if (i + 1 >= args.Length ||
+            !long.TryParse(args[i + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out long quota) ||
+            quota < 0)
+        {
+            Console.Error.WriteLine("--max-total-pixels expects a non-negative integer.");
+            return 2;
+        }
+
+        maxTotalPixels = quota;
+        i++;
+        continue;
+    }
+
+    if (args[i].StartsWith("--", StringComparison.Ordinal))
+    {
+        Console.Error.WriteLine($"Unknown option '{args[i]}'.");
+        return 2;
+    }
+
+    positional.Add(args[i]);
+}
+
+if (positional.Count is < 2 or > 3)
+{
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfiumRasterizer <input.pdf> <output-directory> [dpi] [--max-total-pixels <n>]");
     return 2;
 }
 
-string inputPdf = Path.GetFullPath(args[0]);
-string outputDirectory = Path.GetFullPath(args[1]);
+string inputPdf = Path.GetFullPath(positional[0]);
+string outputDirectory = Path.GetFullPath(positional[1]);
 // PLAN Q06: unbounded DPI turns page size into a giant pinned bitmap. Cap the range
 // generously (all tracked manifests use 144) and fail with usage text, not a crash.
 const int MinDpi = 36;
 const int MaxDpi = 600;
-if (!int.TryParse(args.Length == 3 ? args[2] : "144", CultureInfo.InvariantCulture, out int dpi) ||
+if (!int.TryParse(positional.Count == 3 ? positional[2] : "144", CultureInfo.InvariantCulture, out int dpi) ||
     dpi < MinDpi || dpi > MaxDpi)
 {
-    Console.Error.WriteLine($"Invalid DPI '{(args.Length == 3 ? args[2] : "144")}': expected an integer {MinDpi}-{MaxDpi}.");
+    Console.Error.WriteLine($"Invalid DPI '{(positional.Count == 3 ? positional[2] : "144")}': expected an integer {MinDpi}-{MaxDpi}.");
     return 2;
 }
 
@@ -49,14 +77,22 @@ try
     try
     {
         int pageCount = PdfiumNative.FPDF_GetPageCount(document);
+        var pixelQuota = new TotalPixelQuota(maxTotalPixels);
         int failedPages = 0;
         for (int pageIndex = 0; pageIndex < pageCount; pageIndex++)
         {
             // PLAN Q06: isolate pages for managed failures so one oversized page does
             // not discard the rest; native crashes remain process-fatal (documented).
+            // R21: an exhausted aggregate pixel quota aborts the run instead, since
+            // every further page would fail the same check.
             try
             {
-                RenderPage(document, pageIndex, Path.Combine(outputDirectory, $"page-{pageIndex + 1:000}.png"), dpi);
+                RenderPage(document, pageIndex, Path.Combine(outputDirectory, $"page-{pageIndex + 1:000}.png"), dpi, pixelQuota);
+            }
+            catch (QuotaExceededException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                return 1;
             }
             catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or OutOfMemoryException)
             {
@@ -85,7 +121,7 @@ finally
 Console.WriteLine($"Tool peak working set: {System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64} bytes.");
 return 0;
 
-static void RenderPage(IntPtr document, int pageIndex, string outputPath, int dpi)
+static void RenderPage(IntPtr document, int pageIndex, string outputPath, int dpi, TotalPixelQuota pixelQuota)
 {
     IntPtr page = PdfiumNative.FPDF_LoadPage(document, pageIndex);
     if (page == IntPtr.Zero)
@@ -142,6 +178,8 @@ static void RenderPage(IntPtr document, int pageIndex, string outputPath, int dp
             throw new InvalidDataException($"PDF page raster pixel count {pixelCount} exceeds the maximum of {MaxRasterPixels}.");
         }
 
+        pixelQuota.Add(pixelCount);
+
         int width = Math.Max(1, (int)longWidth);
         int height = Math.Max(1, (int)longHeight);
         int stride = checked(width * 4);
@@ -177,3 +215,27 @@ static void RenderPage(IntPtr document, int pageIndex, string outputPath, int dp
         PdfiumNative.FPDF_ClosePage(page);
     }
 }
+
+// R21: aggregate rendered-pixel quota across pages. Per-page dimension/pixel caps
+// still fail single pages in isolation; this additionally bounds the total work a
+// many-page document may demand. Tripping aborts the run (see the loop above).
+internal sealed class TotalPixelQuota(long cap)
+{
+    public long Cap { get; } = cap;
+
+    private long total;
+
+    public void Add(long pixels)
+    {
+        total = checked(total + pixels);
+        if (total > Cap)
+        {
+            throw new QuotaExceededException($"PDF total raster pixel count {total} exceeds the maximum of {Cap} (--max-total-pixels).");
+        }
+    }
+}
+
+internal sealed class QuotaExceededException(string message) : IOException(message)
+{
+}
+

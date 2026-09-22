@@ -11,6 +11,7 @@ internal static class TestCatalog
         .. FromType("api", typeof(PublicApiTests)),
         .. FromType("api", typeof(DiagnosticOutcomeTests)),
         .. FromType("cli", typeof(CliTests)),
+        .. FromType("tools", typeof(ToolBudgetTests)),
         .. FromType("ooxml", typeof(OoxmlTests)),
         .. FromType("ooxml", typeof(OoxmlBoundsTests)),
         .. FromType("ooxml", typeof(OoxLimitsTests)),
