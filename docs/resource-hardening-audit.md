@@ -28,7 +28,7 @@ only, never gates.
 | R11 shared border-overlap plan | closed | `9233ae9d`; `DocxBorderPlanTests` (docx-tables) |
 | R12 document/page indexes | closed | `daec0208` drawings, `dc8f1987` related stories, `b404bde3` reference pages; equivalence tests; before/after probes in this audit |
 | R13 font byte ownership | closed | `ac57c794` spans, `0a9ee59d` recency, `17c5484a` in-flight throttle, `266ff97f` retained LRU, `c56b247d` retention proof + measurements |
-| R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; `2c14ed05` plain-shape scene/span agreement battery; `fc8fecd9` break-run line-boundary agreement; `a4c46558` field-run agreement; chart tri-state readers verified distinct |
+| R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; `2c14ed05` plain-shape scene/span agreement battery; `fc8fecd9` break-run line-boundary agreement; `a4c46558` field-run agreement; `2c4af54e` paragraph-alignment agreement; chart tri-state readers verified distinct |
 | R15 chart data resolution | closed | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, series-vector, and bar/line extent memos; sparse tick-edge max counts + mechanics tests; area/radar extents single-evaluation (no repeat); suite 1683/0/9 |
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
 | R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
