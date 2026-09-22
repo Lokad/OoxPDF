@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 ## Unreleased
 
@@ -122,10 +122,6 @@
 - Repaired allocation-probe accounting (Q05): output hashing/page-count checks now run outside the counters, retained memory is a post-GC delta against a pre-run baseline, read stages no longer include package rebuilds, PPTX render is labeled inclusive of its scene rebuild, reports disclose source revision/OS/GC mode/font inventory/output mode/isolation, --output-mode file separates output-buffering costs, --isolate measures each input in a fresh process with per-input peaks, and the self-test validates attribution with a planted allocation.
 - Cut cold Windows font discovery allocation roughly in half (about 1,140 MB to about 542 MB on this machine's font inventory, about 28% faster): discovery now reads only the table directory plus required header-table extents per file and parses collection faces in place instead of repackaging per-face copies, with accept/reject behavior identical to whole-program reads.
 - Hardened the CLI so diagnostics paths colliding with input/output are rejected before conversion, malformed numeric geometry normalizes to invalid-data failures, and diagnostics-write failures no longer escape error handling.
-- Fixed garbled subset-font text when one typeface is used with different character sets across a document: embedded font resources are now keyed by codepoint set so merged subsets keep valid CID mappings.
-- Supported forward-only output streams for stream conversion: PDF cross-reference offsets are now tracked internally instead of reading output Position, so non-seekable host descriptor streams no longer fail with Specified method is not supported.
-- Fixed very slow DOCX conversion for run-dense documents: run typeface resolution during text measuring is now indexed instead of scanning all runs per measurement, about 100x faster on a 131-page markup document with byte-identical output.
-- Capped XML element count per part during package reading so broad shallow documents fail fast instead of inflating the DOM without bound.
 
 ## 0.1.5 - 2026-09-19
 
