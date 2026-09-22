@@ -29,7 +29,7 @@ only, never gates.
 | R12 document/page indexes | closed | `daec0208` drawings, `dc8f1987` related stories, `b404bde3` reference pages; equivalence tests; before/after probes in this audit |
 | R13 font byte ownership | closed | `ac57c794` spans, `0a9ee59d` recency, `17c5484a` in-flight throttle, `266ff97f` retained LRU, `c56b247d` retention proof + measurements |
 | R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; chart tri-state readers verified distinct |
-| R15 chart data resolution | partial | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, and series-vector memos + mechanics tests; suite 1679/0/9 |
+| R15 chart data resolution | partial | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, and series-vector memos; sparse tick-edge max counts + mechanics tests; suite 1681/0/9 |
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
 | R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
 | R18 resource identity | closed | `ee8e6372`; full-digest/ exact-equality/collision tests (`PdfIdentityTests`, pdf) |
