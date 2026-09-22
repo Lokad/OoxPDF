@@ -49,12 +49,15 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
+    // R12: reference and section-end page searches run against the once-per-group
+    // page index instead of re-walking page item trees per location.
     private static int ResolveSectionEndEndnotePageIndex(
         IReadOnlyList<DocxBodyElement> elements,
+        RelatedStoryPageIndex referenceIndex,
         IReadOnlyList<DocxLayoutPage> pages,
         DocxInlineReferenceLocation location)
     {
-        int referencePageIndex = FindInlineReferenceRenderedPageIndex();
+        int referencePageIndex = referenceIndex.FindFirstPageWithReference(location);
         if (referencePageIndex < 0 ||
             !string.Equals(pages[referencePageIndex].PageSettings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
         {
@@ -62,29 +65,28 @@ internal sealed partial class DocxLayoutEngine
         }
 
         (int startBlockIndex, int endBlockIndex) = ResolveSectionBlockRange(elements, location.SourceBlockIndex);
-        int sectionEndPageIndex = -1;
-        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
-        {
-            if (EnumeratePageSourceBlockIndexes(pages[pageIndex]).Any(index => index >= startBlockIndex && index <= endBlockIndex))
-            {
-                sectionEndPageIndex = pageIndex;
-            }
-        }
-
+        int sectionEndPageIndex = referenceIndex.FindLastPageWithBlockInRange(startBlockIndex, endBlockIndex);
         return sectionEndPageIndex >= 0 ? sectionEndPageIndex : referencePageIndex;
+    }
 
-        int FindInlineReferenceRenderedPageIndex()
+    private static Dictionary<int, List<DocxInlineReferenceLocation>> BuildInlineReferenceLocationsByBlock(
+        DocxDocument document,
+        CancellationToken cancellationToken)
+    {
+        // R12: reference locations derive from the immutable document, so memoize them
+        // by source block instead of re-walking (table) paragraphs on every fragment page.
+        var locationsByBlock = new Dictionary<int, List<DocxInlineReferenceLocation>>();
+        for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
         {
-            for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+            cancellationToken.ThrowIfCancellationRequested();
+            List<DocxInlineReferenceLocation> blockLocations = EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex).ToList();
+            if (blockLocations.Count != 0)
             {
-                if (IsInlineReferenceRenderedOnPage(pages, pageIndex, location))
-                {
-                    return pageIndex;
-                }
+                locationsByBlock[sourceBlockIndex] = blockLocations;
             }
-
-            return -1;
         }
+
+        return locationsByBlock;
     }
 
     private static (int StartBlockIndex, int EndBlockIndex) ResolveSectionBlockRange(IReadOnlyList<DocxBodyElement> elements, int sourceBlockIndex)
@@ -171,8 +173,10 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    // R12: owners arrive from the once-per-pass page index instead of re-walking
+    // every page item tree for each (page, reference) check.
     private static bool IsInlineReferenceRenderedOnPage(
-        IReadOnlyList<DocxLayoutPage> pages,
+        IReadOnlyList<IReadOnlyList<DocxPageTextLineOwner>> ownersByPage,
         int pageIndex,
         DocxInlineReferenceLocation location)
     {
@@ -186,20 +190,20 @@ internal sealed partial class DocxLayoutEngine
 
         if (IsInlineReferenceOffsetRenderedAnywhere(reference.SourceRunIndex, reference.TextOffsetInRun))
         {
-            return EnumeratePageTextLineOwners(pages[pageIndex])
+            return ownersByPage[pageIndex]
                 .Any(owner => TextLineMatchesInlineReferenceOwner(owner, sourceBlockIndex, location.SourceParagraph) &&
                     owner.Line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, reference.SourceRunIndex, reference.TextOffsetInRun)));
         }
 
-        return EnumeratePageTextLineOwners(pages[pageIndex])
+        return ownersByPage[pageIndex]
             .Any(owner => TextLineMatchesInlineReferenceOwner(owner, sourceBlockIndex, location.SourceParagraph) &&
                 owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == reference.SourceRunIndex));
 
         bool IsInlineReferenceRunRenderedAnywhere(int sourceRunIndex)
         {
-            foreach (DocxLayoutPage page in pages)
+            foreach (IReadOnlyList<DocxPageTextLineOwner> owners in ownersByPage)
             {
-                foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
+                foreach (DocxPageTextLineOwner owner in owners)
                 {
                     if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
                         owner.Line.Segments.Any(segment => segment.SourceTextRunIndex == sourceRunIndex))
@@ -214,9 +218,9 @@ internal sealed partial class DocxLayoutEngine
 
         bool IsInlineReferenceOffsetRenderedAnywhere(int sourceRunIndex, int textOffsetInRun)
         {
-            foreach (DocxLayoutPage page in pages)
+            foreach (IReadOnlyList<DocxPageTextLineOwner> owners in ownersByPage)
             {
-                foreach (DocxPageTextLineOwner owner in EnumeratePageTextLineOwners(page))
+                foreach (DocxPageTextLineOwner owner in owners)
                 {
                     if (TextLineMatchesInlineReferenceOwner(owner, location.SourceBlockIndex, location.SourceParagraph) &&
                         owner.Line.Segments.Any(segment => SegmentContainsSourceTextOffset(segment, sourceRunIndex, textOffsetInRun)))

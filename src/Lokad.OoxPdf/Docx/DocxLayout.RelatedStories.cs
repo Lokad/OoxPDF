@@ -84,22 +84,39 @@ internal sealed partial class DocxLayoutEngine
             return pages;
         }
 
+        // R12: document-derived reference locations are memoized by source block (table
+        // paragraphs no longer re-walk on every fragment page), story layouts and lookups
+        // are memoized by page body width, and page owners/blocks come from one index.
+        Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
+        var storyLayoutsByWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
+        var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
+        RelatedStoryPageIndex referenceIndex = RelatedStoryPageIndex.Build(pages, cancellationToken);
         var pagesWithStories = new DocxLayoutPage[pages.Count];
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = pages[pageIndex];
-            IReadOnlyList<DocxRelatedStoryLayout> pageRelatedStoryLayouts = pageIndex == 0
-                ? relatedStoryLayouts
-                : resolveRelatedStoryLayouts(ResolvePageBodyWidth(page));
-            storyByKey = CreateRelatedStoryLookup(pageRelatedStoryLayouts);
+            double bodyWidth = ResolvePageBodyWidth(page);
+            if (!storyLayoutsByWidth.TryGetValue(bodyWidth, out IReadOnlyList<DocxRelatedStoryLayout>? pageRelatedStoryLayouts))
+            {
+                pageRelatedStoryLayouts = pageIndex == 0 ? relatedStoryLayouts : resolveRelatedStoryLayouts(bodyWidth);
+                storyLayoutsByWidth[bodyWidth] = pageRelatedStoryLayouts;
+                storyLookupByWidth[bodyWidth] = CreateRelatedStoryLookup(pageRelatedStoryLayouts);
+            }
+
+            storyByKey = storyLookupByWidth[bodyWidth];
             DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
             List<DocxReferencedRelatedStoryLayout> pageFootnoteStories = [];
-            foreach (int sourceBlockIndex in EnumeratePageSourceBlockIndexes(page))
+            foreach (int sourceBlockIndex in referenceIndex.SortedBlocks(pageIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
+                if (!locationsByBlock.TryGetValue(sourceBlockIndex, out List<DocxInlineReferenceLocation>? blockLocations))
+                {
+                    continue;
+                }
+
+                foreach (DocxInlineReferenceLocation location in blockLocations)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxInlineReference reference = location.Reference;
@@ -119,7 +136,7 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
-                    if (!IsInlineReferenceRenderedOnPage(pages, pageIndex, location))
+                    if (!referenceIndex.IsReferenceRenderedOnPage(pageIndex, location))
                     {
                         continue;
                     }
@@ -146,12 +163,19 @@ internal sealed partial class DocxLayoutEngine
             }
 
             var outputPages = pages.ToList();
+            // R12: classify with the reference scan only (the section-end page cannot
+            // change the outcome: a found sectEnd reference always resolves); the page
+            // itself is resolved once per section group below, after earlier groups may
+            // have grown the page list.
+            RelatedStoryPageIndex endnoteIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
             var documentEndLocations = new List<DocxInlineReferenceLocation>();
             var sectionEndLocations = new List<DocxInlineReferenceLocation>();
             foreach (DocxInlineReferenceLocation endnoteLocation in endnoteLocations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, endnoteLocation) < 0)
+                int referencePageIndex = endnoteIndex.FindFirstPageWithReference(endnoteLocation);
+                if (referencePageIndex < 0 ||
+                    !string.Equals(outputPages[referencePageIndex].PageSettings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
                 {
                     documentEndLocations.Add(endnoteLocation);
                     continue;
@@ -160,12 +184,14 @@ internal sealed partial class DocxLayoutEngine
                 sectionEndLocations.Add(endnoteLocation);
             }
 
+            var sectionRangeByBlock = new Dictionary<int, (int StartBlockIndex, int EndBlockIndex)>();
             foreach (IGrouping<(int StartBlockIndex, int EndBlockIndex), DocxInlineReferenceLocation> sectionGroup in sectionEndLocations
-                         .GroupBy(location => ResolveSectionBlockRange(document.BodyElements, location.SourceBlockIndex))
+                         .GroupBy(location => ResolveMemoizedSectionBlockRange(location.SourceBlockIndex))
                          .OrderBy(group => group.Key.StartBlockIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, outputPages, sectionGroup.First());
+                endnoteIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
+                int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, endnoteIndex, outputPages, sectionGroup.First());
                 if (sectionEndPageIndex < 0)
                 {
                     documentEndLocations.AddRange(sectionGroup);
@@ -204,6 +230,17 @@ internal sealed partial class DocxLayoutEngine
             }
 
             return ReindexPageOwnedLayouts(AddDocumentEndnoteStories());
+
+            (int StartBlockIndex, int EndBlockIndex) ResolveMemoizedSectionBlockRange(int sourceBlockIndex)
+            {
+                if (!sectionRangeByBlock.TryGetValue(sourceBlockIndex, out (int StartBlockIndex, int EndBlockIndex) range))
+                {
+                    range = ResolveSectionBlockRange(document.BodyElements, sourceBlockIndex);
+                    sectionRangeByBlock[sourceBlockIndex] = range;
+                }
+
+                return range;
+            }
 
             IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories()
             {
@@ -356,7 +393,8 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private sealed record DocxInlineReferenceLocation(
+    // R12: internal for index equivalence tests; constructed during layout only.
+    internal sealed record DocxInlineReferenceLocation(
         int SourceBlockIndex,
         DocxParagraph SourceParagraph,
         DocxInlineReference Reference);

@@ -977,4 +977,135 @@ internal static class DocxFootnotesTests
         TestAssert.True(snapshot.Pages[overflowEndnotePageIndex].PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == 0), "The inserted section-end continuation page should retain marker-owned endnote provenance.");
         TestAssert.Equal(0, snapshot.Pages[secondSectionPageIndex].PlacedEndnoteStoryCount);
     }
+
+    public static void RelatedStoryPageIndexMatchesLegacyMatching()
+    {
+        // R12: the once-per-pass page index answers reference/block queries exactly
+        // like the legacy per-check page walks: null-tolerance and identity paragraph
+        // matching, offset and run-fallback segment checks, vacuous truth for
+        // never-rendered runs, and last-page section ranges.
+        DocxParagraph source = MakeNoteParagraph();
+        DocxParagraph other = MakeNoteParagraph();
+        DocxTextLineLayout lineA = MakeOwnerLine(null, 0, 7, "hello");
+        DocxTextLineLayout lineB = MakeOwnerLine(other, 0, 7, "world");
+        DocxTextLineLayout lineC = MakeOwnerLine(null, 1, 7, "!");
+        DocxLayoutPage page0 = MakeOwnerPage([lineA]);
+        DocxLayoutPage page1 = MakeOwnerPage([lineB, lineC]);
+        DocxLayoutEngine.RelatedStoryPageIndex index = DocxLayoutEngine.RelatedStoryPageIndex.Build([page0, page1], CancellationToken.None);
+
+        DocxInlineReference reference = new(DocxRelatedStoryKind.Footnote, "1", null, null, SourceRunIndex: 7, RunChildIndex: 0, TextOffsetInRun: 2);
+        var location = new DocxLayoutEngine.DocxInlineReferenceLocation(0, source, reference);
+        TestAssert.True(index.IsReferenceRenderedOnPage(0, location), "Null-tolerance line must match any paragraph of its block.");
+        TestAssert.True(!index.IsReferenceRenderedOnPage(1, location), "Identity mismatch and block mismatch must reject page 1.");
+        TestAssert.Equal(0, index.FindFirstPageWithReference(location));
+
+        var block1 = new DocxLayoutEngine.DocxInlineReferenceLocation(1, source, reference with { TextOffsetInRun = 0 });
+        TestAssert.True(!index.IsReferenceRenderedOnPage(0, block1), "Block mismatch must reject page 0.");
+        TestAssert.True(index.IsReferenceRenderedOnPage(1, block1), "Null-tolerance line must match block 1 on page 1.");
+
+        var missingBlock = new DocxLayoutEngine.DocxInlineReferenceLocation(9, source, reference);
+        TestAssert.True(index.IsReferenceRenderedOnPage(0, missingBlock), "Blocks rendered nowhere stay vacuously true (legacy).");
+        TestAssert.True(index.IsReferenceRenderedOnPage(1, missingBlock), "Blocks rendered nowhere stay vacuously true (legacy).");
+        TestAssert.Equal(0, index.FindFirstPageWithReference(missingBlock));
+
+        var unrenderedRun = new DocxLayoutEngine.DocxInlineReferenceLocation(0, source, reference with { SourceRunIndex = 99 });
+        TestAssert.True(index.IsReferenceRenderedOnPage(1, unrenderedRun), "Never-rendered runs stay vacuously true (legacy).");
+        var negativeRun = new DocxLayoutEngine.DocxInlineReferenceLocation(0, source, reference with { SourceRunIndex = -1 });
+        TestAssert.True(index.IsReferenceRenderedOnPage(1, negativeRun), "Negative runs stay vacuously true (legacy).");
+
+        int[] page0Blocks = index.SortedBlocks(0);
+        TestAssert.Equal(1, page0Blocks.Length);
+        TestAssert.Equal(0, page0Blocks[0]);
+        int[] page1Blocks = index.SortedBlocks(1);
+        TestAssert.Equal(2, page1Blocks.Length);
+        TestAssert.Equal(0, page1Blocks[0]);
+        TestAssert.Equal(1, page1Blocks[1]);
+        TestAssert.Equal(1, index.FindLastPageWithBlockInRange(0, 0));
+        TestAssert.Equal(1, index.FindLastPageWithBlockInRange(0, 1));
+        TestAssert.Equal(-1, index.FindLastPageWithBlockInRange(5, 9));
+    }
+
+    private static DocxParagraph MakeNoteParagraph()
+    {
+        return new DocxParagraph(
+            [],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+    }
+
+    private static DocxTextLineLayout MakeOwnerLine(DocxParagraph? paragraph, int block, int run, string text)
+    {
+        var styleRun = new DocxTextRun(text, 10d, null, false, false, false, null, null);
+        var segment = new DocxTextSegmentLayout(
+            text,
+            styleRun,
+            0d,
+            text.Length * 5d,
+            10d,
+            0d,
+            0d,
+            default,
+            false,
+            run,
+            0,
+            DocxTextSegmentRole.Text);
+        return new DocxTextLineLayout(
+            Text: text,
+            StyleRun: styleRun,
+            FontSize: 10d,
+            X: 0d,
+            BaselineY: 10d,
+            Width: text.Length * 5d,
+            Segments: [segment],
+            SourceBlockIndex: block,
+            SourceParagraphIndex: null,
+            SourceLineIndex: null,
+            Story: null,
+            LineHeight: null,
+            AppliedBeforeSpacing: null,
+            IsFirstParagraphLine: null,
+            EndsWithIntraTokenBreak: false,
+            SingleLineHeight: null,
+            ListLabelSingleLineHeight: null,
+            BodyWindowsLineHeight: null,
+            ListLabelWindowsLineHeight: null,
+            EffectiveLineSpacingFactor: null,
+            LineSpacingFactorFloorApplied: null,
+            PendingAfterSpacing: null,
+            ParagraphBeforeSpacing: null,
+            ParagraphAfterSpacing: null,
+            ContextualSpacingSuppressed: null,
+            SourceParagraph: paragraph,
+            LineHeightSource: null,
+            EmitsTerminalParagraphMark: false);
+    }
+
+    private static DocxLayoutPage MakeOwnerPage(IReadOnlyList<DocxTextLineLayout> lines)
+    {
+        return new DocxLayoutPage(
+            612d,
+            792d,
+            72d,
+            72d,
+            0d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            new DocxSectionLayoutProperties(null, null, null, null, null, null, []),
+            [],
+            [],
+            [],
+            [],
+            [],
+            lines);
+    }
 }
