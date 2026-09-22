@@ -2961,6 +2961,20 @@ internal static class DocxTablesTests
         TestAssert.Equal(DocxRunVerticalAlignment.Baseline, DocxTextRun.ParseVerticalAlignment("raised"));
     }
 
+    public static void TableWidthKindParsesKnownSpellings()
+    {
+        // R17: dxa/pct parse case-insensitively; everything else falls back to Auto
+        // like the legacy comparisons, which only special-cased the two kinds.
+        TestAssert.Equal(DocxTableWidthKind.Dxa, DocxTable.ParseTableWidthKind("dxa"));
+        TestAssert.Equal(DocxTableWidthKind.Dxa, DocxTable.ParseTableWidthKind("DXA"));
+        TestAssert.Equal(DocxTableWidthKind.Percent, DocxTable.ParseTableWidthKind("pct"));
+        TestAssert.Equal(DocxTableWidthKind.Percent, DocxTable.ParseTableWidthKind("Pct"));
+        TestAssert.Equal(DocxTableWidthKind.Auto, DocxTable.ParseTableWidthKind("auto"));
+        TestAssert.Equal(DocxTableWidthKind.Auto, DocxTable.ParseTableWidthKind(string.Empty));
+        TestAssert.Equal(DocxTableWidthKind.Auto, DocxTable.ParseTableWidthKind(null));
+        TestAssert.Equal(DocxTableWidthKind.Auto, DocxTable.ParseTableWidthKind("nimble"));
+    }
+
     public static void CellVerticalAlignmentParsesKnownSpellings()
     {
         // R17: bottom/center parse case-insensitively; everything else (including

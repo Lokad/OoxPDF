@@ -27,6 +27,35 @@ internal sealed record DocxTable(
     {
     }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+
+    public DocxTableWidthKind PreferredWidthKind => ParseTableWidthKind(PreferredWidthType);
+
+    public static DocxTableWidthKind ParseTableWidthKind(string? value)
+    {
+        if (string.Equals(value, "dxa", StringComparison.OrdinalIgnoreCase))
+        {
+            return DocxTableWidthKind.Dxa;
+        }
+
+        if (string.Equals(value, "pct", StringComparison.OrdinalIgnoreCase))
+        {
+            return DocxTableWidthKind.Percent;
+        }
+
+        return DocxTableWidthKind.Auto;
+    }
+}
+
+// R17: parsed table width kinds. The raw w:type spelling stays on
+// PreferredWidthType as provenance (snapshots and inspection read it); execution
+// switches on the parsed enum instead of re-comparing strings per layout. Unknown
+// spellings fall back to Auto, matching the legacy comparisons, which only
+// special-cased dxa and pct.
+internal enum DocxTableWidthKind
+{
+    Auto,
+    Dxa,
+    Percent
 }
 
 internal sealed record DocxTableLook(
@@ -122,6 +151,8 @@ internal sealed record DocxTableCell(
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 
     public DocxTableCellVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
+
+    public DocxTableWidthKind PreferredWidthKind => DocxTable.ParseTableWidthKind(PreferredWidthType);
 
     public static DocxTableCellVerticalAlignment ParseVerticalAlignment(string? value)
     {

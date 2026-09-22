@@ -291,7 +291,7 @@ internal sealed partial class DocxLayoutEngine
                         ResolveTableCellBorderContentInset(lastCell, "right", fixedScale);
                 }
         
-                if (table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+                if (table.PreferredWidthKind == DocxTableWidthKind.Percent &&
                     int.TryParse(table.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
                 {
                     double normalPercentageWidth = tableAvailableWidth * fiftiethsPercent / 5000d;
@@ -306,8 +306,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             double preferredWidth = ResolvePreferredTableWidth() ?? fallbackTableWidth;
-            return table.PreferredWidthType?.Equals("dxa", StringComparison.OrdinalIgnoreCase) == true ||
-                table.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true
+            return table.PreferredWidthKind is DocxTableWidthKind.Dxa or DocxTableWidthKind.Percent
                 ? Math.Max(1d, preferredWidth)
                 : Math.Min(tableAvailableWidth, preferredWidth);
         }
@@ -349,7 +348,7 @@ internal sealed partial class DocxLayoutEngine
                             return points * fixedScale;
                         }
                 
-                        if (cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+                        if (cell.PreferredWidthKind == DocxTableWidthKind.Percent &&
                             int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent))
                         {
                             return Math.Max(0d, preferredTableWidth * fiftiethsPercent / 5000d);
@@ -505,7 +504,7 @@ internal sealed partial class DocxLayoutEngine
             return true;
         }
 
-        return cell.PreferredWidthType?.Equals("pct", StringComparison.OrdinalIgnoreCase) == true &&
+        return cell.PreferredWidthKind == DocxTableWidthKind.Percent &&
             int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent) &&
             fiftiethsPercent > 0;
     }
