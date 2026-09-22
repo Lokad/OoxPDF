@@ -93,7 +93,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                                     // Collections parse each face in place instead of
                                     // repackaging per-face sfnt copies (G02).
                                     headers = isCollection
-                                        ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex)
+                                        ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength)
                                         : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength);
                                 }
                                 catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
@@ -164,8 +164,13 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             ReadExactly(stream, header, 0, header.Length);
             if (OpenTypeFont.IsTrueTypeCollectionHeader(header))
             {
-                // Collections repackage per-face bytes at parse time, so span
-                // reads do not apply; keep the whole-program read.
+                // R13: collections read the header, face offsets, face directories,
+                // and needed table extents instead of the whole program per file.
+                if (TryReadCollectionDiscoverySpan(stream, header, fileLength, out byte[]? span))
+                {
+                    return (span, false, fileLength);
+                }
+
                 return (File.ReadAllBytes(path), true, fileLength);
             }
 
@@ -195,6 +200,80 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         }
 
         return (File.ReadAllBytes(path), true, fileLength);
+    }
+
+    private static bool TryReadCollectionDiscoverySpan(FileStream stream, byte[] header, long fileLength, out byte[]? span)
+    {
+        span = null;
+        try
+        {
+            uint faceCount = OpenTypeFont.U32(header, 8);
+            if (faceCount == 0 || faceCount > 256)
+            {
+                return false;
+            }
+
+            int offsetTableLength = checked((int)faceCount * 4);
+            long offsetsEnd = checked(12L + offsetTableLength);
+            if (offsetsEnd > fileLength)
+            {
+                return false;
+            }
+
+            var offsets = new byte[offsetTableLength];
+            ReadExactly(stream, offsets, 0, offsets.Length);
+            long requiredEnd = offsetsEnd;
+            var faceWindow = new byte[12];
+            for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
+            {
+                long faceOffset = OpenTypeFont.U32(offsets, faceIndex * 4);
+                if (faceOffset > fileLength - 12)
+                {
+                    return false;
+                }
+
+                stream.Seek(faceOffset, SeekOrigin.Begin);
+                ReadExactly(stream, faceWindow, 0, faceWindow.Length);
+                ushort faceTableCount = OpenTypeFont.U16(faceWindow, 4);
+                if (faceTableCount == 0 || faceTableCount > 256)
+                {
+                    return false;
+                }
+
+                int directoryLength = checked(faceTableCount * 16);
+                if (faceOffset > fileLength - 12 - directoryLength)
+                {
+                    return false;
+                }
+
+                var window = new byte[12 + directoryLength];
+                Buffer.BlockCopy(faceWindow, 0, window, 0, faceWindow.Length);
+                stream.Seek(faceOffset + 12, SeekOrigin.Begin);
+                ReadExactly(stream, window, 12, directoryLength);
+                if (!OpenTypeFont.TryGetTableDirectoryByteBudget(window, headerOffset: 0, fileLength, out long faceEnd))
+                {
+                    return false;
+                }
+
+                requiredEnd = Math.Max(requiredEnd, faceEnd);
+            }
+
+            if (requiredEnd > fileLength || requiredEnd > int.MaxValue)
+            {
+                return false;
+            }
+
+            stream.Seek(0, SeekOrigin.Begin);
+            var prefix = new byte[(int)requiredEnd];
+            ReadExactly(stream, prefix, 0, prefix.Length);
+            span = prefix;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException or NotSupportedException)
+        {
+            span = null;
+            return false;
+        }
     }
 
     private static void ReadExactly(Stream stream, byte[] buffer, int offset, int count)

@@ -1153,6 +1153,59 @@ internal static class OoxLimitsTests
         }
     }
 
+    public static void CollectionDiscoverySpanCoversNeededTables()
+    {
+        // R13: collection discovery reads the header, face offsets, face directories,
+        // and needed table extents instead of the whole program per file. Trailing
+        // dead space stays on disk while span parses match full-file parses exactly.
+        byte[] bodies = TestFontBuilder.CreateCollection("FirstFamily", "SecondFamily");
+        byte[] collection = new byte[bodies.Length + 65536];
+        Array.Copy(bodies, collection, bodies.Length);
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".ttc");
+        File.WriteAllBytes(path, collection);
+        try
+        {
+            MethodInfo read = typeof(WindowsFontResolver).GetMethod("ReadDiscoveryBytes", BindingFlags.NonPublic | BindingFlags.Static)
+                ?? throw new InvalidOperationException("Expected discovery span helper.");
+            var span = ((byte[] Bytes, bool Complete, long FileLength))read.Invoke(null, [path])!;
+            TestAssert.True(!span.Complete, "Collection discovery must return a span, not the whole file.");
+            TestAssert.True(span.Bytes.Length > 0 && span.Bytes.Length < collection.Length, "Span must exclude the trailing dead space.");
+            TestAssert.Equal(collection.Length, span.FileLength);
+            for (int i = 0; i < 2; i++)
+            {
+                OpenTypeFont.FontDiscoveryHeaders fromSpan = OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(span.Bytes, i, span.FileLength);
+                OpenTypeFont.FontDiscoveryHeaders full = OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(collection, i);
+                TestAssert.Equal(full, fromSpan);
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    public static void DiscoveryResolvesSyntheticCollectionFromDirectory()
+    {
+        // R13: collection faces discovered through span reads resolve like before.
+        string directory = Path.Combine(Path.GetTempPath(), "oox-limits-fonts-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(directory, "synthetic.ttc"), TestFontBuilder.CreateCollection("SpanFirst", "SpanSecond"));
+            var resolver = new WindowsFontResolver(directory);
+            FontFaceResolution first = resolver.Resolve(new FontRequest("SpanFirst"));
+            TestAssert.NotNull(first.Source);
+            TestAssert.Equal("SpanFirst", first.FamilyName);
+            FontFaceResolution second = resolver.Resolve(new FontRequest("SpanSecond"));
+            TestAssert.NotNull(second.Source);
+            TestAssert.Equal("SpanSecond", second.FamilyName);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
+        }
+    }
+
     public static void ClassKerningBelowCapLoads()
     {
         // PLAN M10 probe scale: two 512-glyph sets densify to 262,144 pairs and must

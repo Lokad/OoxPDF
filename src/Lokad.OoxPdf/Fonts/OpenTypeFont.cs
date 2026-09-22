@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
@@ -166,21 +166,36 @@ internal sealed partial class OpenTypeFont
     internal static bool TryGetDiscoveryByteBudget(byte[] prefix, long fileLength, out long requiredEnd)
     {
         requiredEnd = 0;
+        if (prefix.Length < 12 || fileLength < 12 || IsTrueTypeCollectionHeader(prefix))
+        {
+            return false;
+        }
+
+        return TryGetTableDirectoryByteBudget(prefix, headerOffset: 0, fileLength, out requiredEnd);
+    }
+
+    // R13: per-face budget for collection span reads. window holds one sfnt header
+    // plus its full table directory (12 + tableCount*16 bytes from headerOffset);
+    // table extents validate against the real file length exactly like whole-file
+    // reads, so the span covers every table discovery touches.
+    internal static bool TryGetTableDirectoryByteBudget(byte[] window, int headerOffset, long fileLength, out long requiredEnd)
+    {
+        requiredEnd = 0;
         try
         {
-            if (prefix.Length < 12 || fileLength < 12 || IsTrueTypeCollectionHeader(prefix))
+            if (window.Length < headerOffset + 12)
             {
                 return false;
             }
 
-            ushort tableCount = U16(prefix, 4);
+            ushort tableCount = U16(window, headerOffset + 4);
             if (tableCount == 0 || tableCount > 256)
             {
                 return false;
             }
 
-            long directoryEnd = checked(12L + (long)tableCount * 16L);
-            if (directoryEnd > prefix.Length)
+            long directoryEnd = checked((long)headerOffset + 12L + (long)tableCount * 16L);
+            if (directoryEnd > window.Length)
             {
                 return false;
             }
@@ -189,10 +204,10 @@ internal sealed partial class OpenTypeFont
             int found = 0;
             for (int i = 0; i < tableCount; i++)
             {
-                int record = 12 + i * 16;
-                string tag = Encoding.ASCII.GetString(prefix, record, 4);
-                uint offset = U32(prefix, record + 8);
-                uint length = U32(prefix, record + 12);
+                int record = headerOffset + 12 + i * 16;
+                string tag = Encoding.ASCII.GetString(window, record, 4);
+                uint offset = U32(window, record + 8);
+                uint length = U32(window, record + 12);
                 long end = checked((long)offset + (long)length);
                 if (end > fileLength)
                 {
@@ -268,6 +283,14 @@ internal sealed partial class OpenTypeFont
     // accept and reject precisely like repackaged ones.
     internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex)
     {
+        return ReadCollectionFaceDiscoveryHeaders(bytes, fontIndex, fileLength: null);
+    }
+
+    // fileLength carries the real file size when bytes is a leading span (R13); extent
+    // validation then matches whole-file reads exactly. Null keeps historical behavior.
+    internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength)
+    {
+        long extentLimit = fileLength ?? bytes.Length;
         if (bytes.Length < 16)
         {
             throw new InvalidDataException("TrueType collection header is too small.");
@@ -285,19 +308,19 @@ internal sealed partial class OpenTypeFont
         }
 
         uint fontOffset = U32(bytes, 12 + fontIndex * 4);
-        if (fontOffset > bytes.Length - 12)
+        if (fontOffset > extentLimit - 12)
         {
             throw new InvalidDataException("TrueType collection font offset is invalid.");
         }
 
         ushort faceTableCount = U16(bytes, (int)fontOffset + 4);
         int directoryLength = 12 + faceTableCount * 16;
-        if ((ulong)fontOffset + (ulong)(uint)directoryLength > (ulong)bytes.Length)
+        if ((ulong)fontOffset + (ulong)(uint)directoryLength > (ulong)extentLimit)
         {
             throw new InvalidDataException("TrueType collection table directory is invalid.");
         }
 
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, (int)fontOffset + 12, faceTableCount, "collection face");
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, (int)fontOffset + 12, faceTableCount, "collection face", extentLimit);
         long outputLength = directoryLength;
         for (int i = 0; i < faceTableCount; i++)
         {
@@ -306,12 +329,12 @@ internal sealed partial class OpenTypeFont
             outputLength = checked(outputLength + length);
         }
 
-        if (outputLength > (long)bytes.Length + 3L * faceTableCount + 4L)
+        if (outputLength > extentLimit + 3L * faceTableCount + 4L)
         {
             throw new InvalidDataException("TrueType collection face exceeds file length.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, what: "collection face", fileLength: null);
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, what: "collection face", fileLength: fileLength);
     }
 
     private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, string what, long? fileLength)
