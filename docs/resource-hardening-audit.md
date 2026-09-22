@@ -85,7 +85,13 @@ index bounds the worst case rather than shifting the median.
   no memo; frame context and arm consolidation analyzed above, not planned).
 - R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
   (cell vertical alignment done).
-- R22-closeout: Office-gated visual runs for new held-out variations (needs Office/COM);
+- R22-closeout: Office COM rendering verified working via supervised RenderReference
+  (probe PDFs render ok); first Office-gated R14 evidence: placeholder inheritance sizes
+  agree exactly (unmatched 24.96pt master bodyStyle, matched 26.04pt layout lstStyle;
+  formal text-op compare shows X-exact positions with ~1-3pt Y placement deltas, out of
+  scope for inheritance gates). Synthetic packages need theme part, nvGrpSpPr/grpSpPr,
+  and cNvSpPr or PowerPoint reports them corrupt (unit fixtures stay minimal/lenient);
+  Office-gated visual runs for new held-out variations remain to be curated;
   `e3f292dd` post-write/pre-move snapshot with writer page/content/output fields
   (file path; stream path keeps pre-write zeros under R20); staged page/resource
   emission (writer holds all pages before emitting; incremental staging is a design
