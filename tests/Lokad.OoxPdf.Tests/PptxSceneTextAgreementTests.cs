@@ -1059,6 +1059,90 @@ internal static class PptxSceneTextAgreementTests
    }
 
 
+    public static void SchemeColorRunsAgreeBetweenSceneAndSpans()
+    {
+        // R14: scheme-color agreement probe. Runs colored by theme scheme
+        // references resolve identically on both pipelines through the slide color map.
+        string theme = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="SchemeTheme">
+              <a:themeElements>
+                <a:clrScheme name="SchemeTheme">
+                  <a:dk1><a:srgbClr val="111111"/></a:dk1>
+                  <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                  <a:accent6><a:srgbClr val="336699"/></a:accent6>
+                </a:clrScheme>
+                <a:fontScheme name="SchemeTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+              </a:themeElements>
+            </a:theme>
+            """;
+        string presentationRels = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+              <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+            </Relationships>
+            """;
+        string types = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+              <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+              <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+            </Types>
+            """;
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = types,
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = presentationRels,
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/theme/theme1.xml"] = theme,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:solidFill><a:schemeClr val="accent6"/></a:solidFill></a:rPr><a:t>Acc</a:t></a:r><a:r><a:rPr sz="1800"><a:solidFill><a:schemeClr val="dk1"/></a:solidFill></a:rPr><a:t>Dark</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        PptxSceneTextRun[] sceneRuns = body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
+            .ToArray();
+        TestAssert.Equal(2, sceneRuns.Length);
+        TestAssert.Equal(new RgbColor(0x33, 0x66, 0x99), sceneRuns[0].ResolvedStyle.Color);
+        TestAssert.Equal(new RgbColor(0x11, 0x11, 0x11), sceneRuns[1].ResolvedStyle.Color);
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadSpans(node, document, scene);
+        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
+            .Select(span => span.SourceRun)
+            .Where(run => run is not null)
+            .Select(run => run!)
+            .Distinct()
+            .ToArray();
+        TestAssert.Equal(2, spanRuns.Length);
+        TestAssert.Equal("Acc", spanRuns[0].Text);
+        TestAssert.Equal("Dark", spanRuns[1].Text);
+        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+        TestAssert.Equal(sceneRuns[1].ResolvedStyle.Color, spanRuns[1].Style.Color);
+    }
+
+
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
         PptxSceneNode node,
         PptxDocument document,
