@@ -1,0 +1,69 @@
+# Resource Hardening Closure Audit
+
+Requirement-by-requirement verdicts for PLAN.md findings R01-R22 (reviewed 2026-09-22).
+Evidence per finding: implementing commit(s) on master plus covering tests, all green in
+the full Release suite (1672 passed / 0 failed / 9 skipped with `--skip-slow`) with
+336/336 visual manifests valid. Verdicts: **closed**, **partial**, **open**.
+
+Verification method: production changes prove out through byte-identical outputs
+(deterministic conversion tests, text-operation gates, visual manifest validation),
+zero-budget trips that fail without the fix (stash-verified where noted), exact-count
+pins (budgets, peaks, estimates), and allocation bounds. Timing probes are observations
+only, never gates.
+
+## Verdicts
+
+| ID | Verdict | Evidence |
+|---|---|---|
+| R01 JPEG allocation guard | closed | `443e7304`; `JpegScanReservesBeforeAllocating`, malformed/header/crop zero-budget gates (ooxml, imaging) |
+| R02 image working-set ownership | closed | `93a8fe64`; 4 ownership tests, live-cap/summary constants (imaging, ooxml) |
+| R03 shared work charges | closed | `443e7304`; variant/font/dense zero-budget gates (ooxml); JPEG recolor cancellation verified in code |
+| R04 aggregate expansion | closed | `443e7304` dense slots; `657812af` XML nodes/cells; `59ffdd92` scene nodes/nested bytes/models; N/2N/4N scaling test |
+| R05 ZIP intake preflight | closed | `87778190`; EOCD count/size rejections, 10k-entry cap, Length-throwing staging (ooxml) |
+| R06 budgets through serialization | closed | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved (ooxml, api) |
+| R07 emergency wrap bound | closed | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text) |
+| R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
+| R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
+| R10 graphics/resource indexes | closed | `1d7c41d2`; `PdfResourceIndexTests` (pdf) |
+| R11 shared border-overlap plan | closed | `9233ae9d`; `DocxBorderPlanTests` (docx-tables) |
+| R12 document/page indexes | closed | `daec0208` drawings, `dc8f1987` related stories, `b404bde3` reference pages; equivalence tests; before/after probes in this audit |
+| R13 font byte ownership | closed | `ac57c794` spans, `0a9ee59d` recency, `17c5484a` in-flight throttle, `266ff97f` retained LRU, `c56b247d` retention proof + measurements |
+| R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; chart tri-state readers verified distinct |
+| R15 chart data resolution | partial | `7ee38cee` presence checks + subset normalization; `9584c17c` existence short-circuits + densify tests |
+| R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
+| R17 units and execution values | partial | `e45f09f5` transform contract (5 geometry tests) + cell-alignment enum (parse matrix) |
+| R18 resource identity | closed | `ee8e6372`; full-digest/ exact-equality/collision tests (`PdfIdentityTests`, pdf) |
+| R19 telemetry scope | closed | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md` |
+| R20 severity and publication | closed | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api) |
+| R21 tool budgets | closed | `5cf3e1c9`; spawn-based tools group (7 tests), ps1 timeout |
+| R22 closure evidence | partial | `90095d5b` pointer removal + scaling test; this audit; audit-doc records |
+
+## R12 profiling evidence
+
+Synthetic decks, medians of 3, Windows Release (observations, not gates). Footnote
+placement (model-level layout): 500/1000/2000 notes measured 57/106/174 ms pre-index
+versus 17/45/67 ms indexed, identical placement counts. Drawing conversion (full DOCX
+render): 400/800/1600 anchored drawings measured ~164/270/325 ms pre-index versus
+~154/196/424 ms indexed with byte-identical PDFs: layout-dominated noise, so the
+index bounds the worst case rather than shifting the median.
+
+## Analyzed, not planned (deliberate non-changes)
+
+- Chart dense-provenance split: provenance fields are consumed at ~94 use sites versus
+  ~22 pure-value reads; separating them adds index joins without removing work.
+- Shared inherited scene-node graphs across slides: per-slide node freshness is
+  load-bearing for identity-keyed memo correctness (R09); sharing needs (node, slide)
+  keys first.
+- Disk spooling for intake/output: the explicit policy is bounded in-memory staging
+  with disposal; spooling stays open.
+
+## Residual work
+
+- R14-deeper: migrate layout to scene-resolved text one family at a time with
+  agreement gates; share context-independent inherited nodes behind (node, slide) keys.
+- R15-remainder: chart-frame context for shared dense/label results; ReadSceneOrXml
+  arm consolidation; extent memoization.
+- R17-remainder: parse paragraph alignment and border execution strings into enums
+  (cell vertical alignment done).
+- R22-closeout: Office-gated visual runs for new held-out variations (needs Office/COM);
+  page/content/output summary fields; staged page/resource emission.
