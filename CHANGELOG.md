@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved line-stacked port to approximate (Q07 increment): fixture inspection proves both series are unstyled (no spPr; colors resolve through the theme accent sequence), so the same-hue shade difference is the documented unstyled-series approximation gap already recorded for line-markers and line-3series; direct PNG review shows matching line geometry, axes, and legend with SSIM 0.990 and empty diagnostics (histogram correlation 0.675). Manifests: 118 locked / 197 approximate / 11 needs-review.
+
 - Moved line-trend port to approximate (Q07 increment): text-operation comparison (34 reference vs 34 candidate ops, no missing or extra text) pins the recall shortfall to fallback advance accumulation (title glyph drift to -0.20pt along the run, tick labels +0.35pt, legend within 0.13pt) with direct PNG review showing matching line geometry; SSIM 0.983, histogram correlation 0.924, diagnostics empty. Recorded as the measured font-advance positioning gap class. Manifests: 118 locked / 196 approximate / 12 needs-review.
 
 - Moved data-label-legend-keys probe to approximate (Q07 increment): direct PNG review shows complete correct content indistinguishable at page scale (columns with data labels including legend-key glyphs all matching; SSIM 0.991, histogram correlation 0.999, diagnostics empty) with the recorded sub-lock-bar label-positioning nuance (recall 0.958). Manifests: 118 locked / 195 approximate / 13 needs-review.
