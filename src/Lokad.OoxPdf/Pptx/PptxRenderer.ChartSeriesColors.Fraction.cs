@@ -8,7 +8,7 @@ internal sealed partial class PptxRenderer
     // fraction = level / cap. Base shade k per turn band; at/below fraction 0.5 lerp
     // the linear shade toward raw, above fraction 0.5 tint toward white with weight 1.28.
     // Bases resolve live from the chart palette/theme, so custom themes work.
-    // End-to-end vs Office: worst 4 (see PLAN.md).
+    // End-to-end vs Office: worst-case gap recorded during Office calibration.
     private const int FractionCurveVaryColorsPointThreshold = 96;
 
     private const double FractionCurveTintWeight = 1.28d;

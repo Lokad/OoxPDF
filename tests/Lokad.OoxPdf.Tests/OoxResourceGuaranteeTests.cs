@@ -336,6 +336,27 @@ internal static class OoxResourceGuaranteeTests
         }
     }
 
+    public static void XmlAggregateChargesScaleLinearly()
+    {
+        // R22: aggregate accounting must scale with input size (N/2N/4N documents
+        // charge 5N objects), proving per-document quotas neither reset nor compound
+        // superlinearly across a conversion.
+        byte[] xml = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><a><b x=\"1\"/><b x=\"2\"/></a>");
+        foreach (int documents in new[] { 2, 4, 8 })
+        {
+            using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxXmlNodesPerConversion = 1_000_000 }))
+            {
+                for (int i = 0; i < documents; i++)
+                {
+                    using var stream = new MemoryStream(xml, writable: false);
+                    SafeXml.Load(stream, CancellationToken.None);
+                }
+
+                TestAssert.Equal(5 * documents, scope.Budget.XmlNodes);
+            }
+        }
+    }
+
     private static string FindCase(string name)
     {
         string[] candidates = new[]

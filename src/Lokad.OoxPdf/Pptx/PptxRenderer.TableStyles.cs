@@ -60,7 +60,7 @@ internal static class PptxTableStyleResolver
         if (tableStyle.Kind == PptxBuiltInTableStyleKind.LightStyle1)
         {
             // LightStyle1 banded rows keep the raw accent (Office-calibrated: no alpha
-            // wash and no firstRow fill; see PLAN.md).
+            // wash and no firstRow fill).
             if (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0)
             {
                 return new PptxSceneFillStyle(true, accent, alpha);
@@ -79,7 +79,7 @@ internal static class PptxTableStyleResolver
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
             // MediumStyle2 band fills are linear-light tints toward white (Office-calibrated
-            // exact weights 0.60 banded / 0.80 unbanded; see PLAN.md).
+            // exact weights 0.60 banded / 0.80 unbanded).
             RgbColor color = banded
                 ? LinearLightColor.TintTowardWhite(accent, 0.60d)
                 : LinearLightColor.TintTowardWhite(accent, 0.80d);
@@ -91,7 +91,7 @@ internal static class PptxTableStyleResolver
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
             // DarkStyle1 band fills are linear-light shades toward black (Office-calibrated
-            // exact weight 0.60 banded; unbanded rows keep the raw accent; see PLAN.md).
+            // exact weight 0.60 banded; unbanded rows keep the raw accent).
             RgbColor color = banded
                 ? LinearLightColor.ShadeTowardBlack(accent, 0.60d)
                 : accent;
@@ -134,7 +134,7 @@ internal static class PptxTableStyleResolver
         }
 
         // DarkStyle1 body text stays light on the dark fills (Office-calibrated: white
-        // unstyled text on banded and unbanded body rows; see PLAN.md).
+        // unstyled text on banded and unbanded body rows).
         if (color is null &&
             supportedStyle &&
             tableStyle.Kind == PptxBuiltInTableStyleKind.DarkStyle1 &&
