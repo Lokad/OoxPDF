@@ -10,7 +10,7 @@
     "connector",
     "curved",
     "transform",
-    "needs-review"
+    "approximate"
   ],
   "expected": {
     "minAgentRating": 3,
