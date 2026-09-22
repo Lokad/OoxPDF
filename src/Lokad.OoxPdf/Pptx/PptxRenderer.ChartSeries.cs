@@ -715,6 +715,27 @@ internal sealed partial class PptxRenderer
             () => ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook));
     }
 
+    // R15: per-frame shared series vectors behind one call shape, mirroring shared
+    // labels and names. Workbook-less charts rebuild directly.
+    private static IReadOnlyList<ChartIndexedNumberVector> ReadSharedChartSeriesVectors(
+        PptxSceneChartPlot? plot,
+        XElement chartElement,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly)
+    {
+        if (workbook is null)
+        {
+            return ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly);
+        }
+
+        object? source = plot is not null ? plot : null;
+        return workbook.GetOrAddSeriesVectors(
+            source,
+            chartElement,
+            plotVisibleOnly,
+            () => ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly));
+    }
+
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();

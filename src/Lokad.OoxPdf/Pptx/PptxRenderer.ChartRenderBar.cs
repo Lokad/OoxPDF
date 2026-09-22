@@ -465,7 +465,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return plotBox;
@@ -515,7 +515,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(topBottomSeriesVectors) == 0)
             {
                 return plotBox;
@@ -620,7 +620,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return plotBox;
@@ -695,7 +695,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(categorySeriesVectors) == 0)
             {
                 return plotBox;
@@ -740,7 +740,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return plotBox;
@@ -905,7 +905,7 @@ internal sealed partial class PptxRenderer
 
         bool HasInsideValueAxisCrossing()
         {
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return false;
@@ -1301,7 +1301,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartBarPlotOptions stripOptions = ReadSceneOrXmlChartBarOptions(stripPlot, stripChart, PptxSceneChartGrouping.Clustered);
-            return GetBarChartValueExtents(ReadSceneOrXmlChartSeriesVectors(stripPlot, stripChart, workbook, plotVisibleOnly), stripOptions.Grouping);
+            return GetBarChartValueExtents(ReadSharedChartSeriesVectors(stripPlot, stripChart, workbook, plotVisibleOnly), stripOptions.Grouping);
         }
 
         return new ChartValueExtents(0d, 1d);

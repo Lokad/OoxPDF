@@ -33,7 +33,7 @@ internal sealed partial class PptxRenderer
         if (barChart is not null)
         {
             PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, 0);
-            IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             int barSeriesCount = CountRenderableSeries(barSeriesVectors);
             if (barSeriesCount != 0)
             {
@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, barChartIndex);
-                    IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSceneOrXmlChartSeriesVectors(extraBarPlot, extraBarChart, workbook, plotVisibleOnly);
+                    IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSharedChartSeriesVectors(extraBarPlot, extraBarChart, workbook, plotVisibleOnly);
                     int extraSeriesCount = CountRenderableSeries(extraSeriesVectors);
                     if (extraSeriesCount == 0)
                     {
@@ -157,7 +157,7 @@ internal sealed partial class PptxRenderer
                 foreach (XElement comboLineChart in ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Line))
                 {
                     PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
-                    IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, comboLineChart, workbook, plotVisibleOnly);
+                    IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, comboLineChart, workbook, plotVisibleOnly);
                     if (CountRenderableSeries(lineSeriesVectors) == 0)
                     {
                         lineChartIndex++;

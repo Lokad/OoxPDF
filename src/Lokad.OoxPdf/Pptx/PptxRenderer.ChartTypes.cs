@@ -43,7 +43,8 @@ internal sealed partial class PptxRenderer
         ChartIndexedNumberPoint Point,
         ChartIndexedNumberPoint? WorkbookPoint);
 
-    private readonly record struct ChartIndexedNumberVector(
+    // R16: internal so the per-frame shared series-vector memo carries the vector type.
+    internal readonly record struct ChartIndexedNumberVector(
         IReadOnlyList<ChartIndexedNumberPoint> Points,
         int? PointCount,
         string? Formula,
@@ -228,7 +229,7 @@ internal sealed partial class PptxRenderer
         return max < 0 ? 0 : checked(max + 1);
     }
 
-    private readonly record struct ChartIndexedNumberPoint(
+    internal readonly record struct ChartIndexedNumberPoint(
         int Index,
         ChartPointIndexSource IndexSource,
         double? Value,

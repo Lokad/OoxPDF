@@ -410,11 +410,14 @@ internal sealed partial class PptxRenderer
 
         private readonly Dictionary<(object? Source, XElement? ChartElement), IReadOnlyList<ChartSeriesNameRecord>> seriesNameMemo = new();
 
+        private readonly Dictionary<(object? Source, XElement? ChartElement, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedNumberVector>> seriesVectorsMemo = new();
+
         internal void ClearRangeMemo()
         {
             rangeMemo.Clear();
             labelMemo.Clear();
             seriesNameMemo.Clear();
+            seriesVectorsMemo.Clear();
         }
 
         internal IReadOnlyList<ChartSeriesNameRecord> GetOrAddSeriesNames(
@@ -431,6 +434,23 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartSeriesNameRecord> names = factory();
             seriesNameMemo[key] = names;
             return names;
+        }
+
+        internal IReadOnlyList<ChartIndexedNumberVector> GetOrAddSeriesVectors(
+            object? source,
+            XElement? chartElement,
+            bool plotVisibleOnly,
+            Func<IReadOnlyList<ChartIndexedNumberVector>> factory)
+        {
+            var key = (source, chartElement, plotVisibleOnly);
+            if (seriesVectorsMemo.TryGetValue(key, out IReadOnlyList<ChartIndexedNumberVector>? cached))
+            {
+                return cached;
+            }
+
+            IReadOnlyList<ChartIndexedNumberVector> vectors = factory();
+            seriesVectorsMemo[key] = vectors;
+            return vectors;
         }
 
         internal IReadOnlyList<ChartIndexedTextPoint?> GetOrAddCategoryLabels(
