@@ -12,22 +12,77 @@ internal sealed partial class PptxRenderer
     // names referenced by surviving content. References always emit "/{name} "
     // (Do/Tf), so the trailing space guards prefix collisions (Im1 vs Im12).
     // Conservative: a name that never appears is dropped; anything else stays.
-    internal static List<PdfImageResource> PruneUnreferencedImages(string content, List<PdfImageResource> images)
+    internal static List<PdfImageResource> PruneUnreferencedImages(string content, List<PdfImageResource> images, CancellationToken cancellationToken = default)
     {
-        return PruneUnreferencedResources(content, images, static image => image.ResourceName);
+        return PruneUnreferencedResources(content, images, static image => image.ResourceName, cancellationToken);
     }
 
-    internal static List<PdfFontResource> PruneUnreferencedChartFonts(string content, List<PdfFontResource> fonts)
+    internal static List<PdfFontResource> PruneUnreferencedChartFonts(string content, List<PdfFontResource> fonts, CancellationToken cancellationToken = default)
     {
-        return PruneUnreferencedResources(content, fonts, static font => font.ResourceName);
+        return PruneUnreferencedResources(content, fonts, static font => font.ResourceName, cancellationToken);
     }
 
-    private static List<T> PruneUnreferencedResources<T>(string content, List<T> resources, Func<T, string> resourceName)
+    private static List<T> PruneUnreferencedResources<T>(string content, List<T> resources, Func<T, string> resourceName, CancellationToken cancellationToken)
     {
+        if (resources.Count == 0)
+        {
+            return resources;
+        }
+
+        var wanted = new HashSet<string>(StringComparer.Ordinal);
+        foreach (T resource in resources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            wanted.Add(PdfEmbeddedFont.SanitizeName(resourceName(resource)));
+        }
+
+        var referenced = new HashSet<string>(StringComparer.Ordinal);
+        int position = 0;
+        while (position < content.Length)
+        {
+            if ((position & 4095) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            if (content[position] != '/')
+            {
+                position++;
+                continue;
+            }
+
+            int tokenStart = position + 1;
+            int tokenEnd = tokenStart;
+            while (tokenEnd < content.Length && !char.IsWhiteSpace(content[tokenEnd]))
+            {
+                tokenEnd++;
+            }
+
+            if (tokenEnd < content.Length && content[tokenEnd] == ' ' && tokenEnd > tokenStart)
+            {
+                string token = content.Substring(tokenStart, tokenEnd - tokenStart);
+                if (wanted.Contains(token))
+                {
+                    referenced.Add(token);
+                    if (referenced.Count == wanted.Count)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            position = tokenEnd + 1;
+        }
+
         List<T>? pruned = null;
         for (int i = 0; i < resources.Count; i++)
         {
-            if (content.Contains('/' + PdfEmbeddedFont.SanitizeName(resourceName(resources[i])) + ' ', StringComparison.Ordinal))
+            if ((i & 63) == 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            if (referenced.Contains(PdfEmbeddedFont.SanitizeName(resourceName(resources[i]))))
             {
                 if (pruned is not null)
                 {

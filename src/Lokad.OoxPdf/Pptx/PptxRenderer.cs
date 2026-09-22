@@ -96,8 +96,8 @@ internal sealed partial class PptxRenderer
             // failed nodes cannot accumulate uncharged serialized resources. Surviving
             // references are name-based, so pruning unreferenced names keeps them valid.
             string content = graphics.ToString();
-            List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages);
-            List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts);
+            List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
+            List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts, context.CancellationToken);
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations));
 
         }

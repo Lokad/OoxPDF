@@ -11,6 +11,13 @@ internal sealed class PdfGraphicsBuilder
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
     private readonly List<PdfTilingPatternResource> patterns = [];
+    // R10: registration indexes mirroring the append-only resource lists. Dictionary
+    // lookups replace per-call linear scans so distinct-state registration is O(1);
+    // TruncateContent rebuilds them so rolled-back entries never dangle.
+    private readonly Dictionary<string, int> extGStateIndex = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<int>> softMaskIndex = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> shadingIndex = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> patternIndex = new(StringComparer.Ordinal);
     private int stateDepth;
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
@@ -110,8 +117,9 @@ internal sealed class PdfGraphicsBuilder
             "F" +
             ((int)Math.Round(strokeAlpha * 100000d, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) +
             "S";
-        if (!extGStates.Any(state => state.ResourceName.Equals(resourceName, StringComparison.Ordinal)))
+        if (!extGStateIndex.TryGetValue(resourceName, out _))
         {
+            extGStateIndex[resourceName] = extGStates.Count;
             extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha, null));
         }
 
@@ -123,18 +131,28 @@ internal sealed class PdfGraphicsBuilder
         fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
         strokeAlpha = Math.Clamp(strokeAlpha, 0d, 1d);
         string resourceName = "GSM" + (extGStates.Count + 1).ToString(CultureInfo.InvariantCulture);
-        foreach (PdfExtGStateResource state in extGStates)
+        if (softMaskIndex.TryGetValue(mask.ResourceKey, out List<int>? softMaskCandidates))
         {
-            if (state.SoftMask is not null &&
-                state.SoftMask.ResourceKey.Equals(mask.ResourceKey, StringComparison.Ordinal) &&
-                Math.Abs(state.FillAlpha - fillAlpha) < 0.000001d &&
-                Math.Abs(state.StrokeAlpha - strokeAlpha) < 0.000001d)
+            foreach (int softMaskCandidate in softMaskCandidates)
             {
-                builder.Append('/').Append(state.ResourceName).AppendLine(" gs");
-                return;
+                PdfExtGStateResource state = extGStates[softMaskCandidate];
+                if (Math.Abs(state.FillAlpha - fillAlpha) < 0.000001d &&
+                    Math.Abs(state.StrokeAlpha - strokeAlpha) < 0.000001d)
+                {
+                    builder.Append('/').Append(state.ResourceName).AppendLine(" gs");
+                    return;
+                }
             }
         }
 
+        extGStateIndex[resourceName] = extGStates.Count;
+        if (!softMaskIndex.TryGetValue(mask.ResourceKey, out List<int>? softMaskBucket))
+        {
+            softMaskBucket = [];
+            softMaskIndex[mask.ResourceKey] = softMaskBucket;
+        }
+
+        softMaskBucket.Add(extGStates.Count);
         extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha, mask));
         builder.Append('/').Append(resourceName).AppendLine(" gs");
     }
@@ -159,14 +177,14 @@ internal sealed class PdfGraphicsBuilder
     public void FillRectangleWithTilingPattern(double x, double y, double width, double height, PdfTilingPattern pattern)
     {
         string resourceName = "P" + (patterns.Count + 1).ToString(CultureInfo.InvariantCulture);
-        PdfTilingPatternResource? existing = patterns.FirstOrDefault(resource => resource.Pattern.ResourceKey == pattern.ResourceKey);
-        if (existing is null)
+        if (!patternIndex.TryGetValue(pattern.ResourceKey, out int existingPatternIndex))
         {
+            patternIndex[pattern.ResourceKey] = patterns.Count;
             patterns.Add(new PdfTilingPatternResource(resourceName, pattern));
         }
         else
         {
-            resourceName = existing.ResourceName;
+            resourceName = patterns[existingPatternIndex].ResourceName;
         }
 
         builder.Append("/Pattern cs /").Append(PdfEmbeddedFont.SanitizeName(resourceName)).AppendLine(" scn");
@@ -182,14 +200,14 @@ internal sealed class PdfGraphicsBuilder
     {
         var shading = new PdfAxialShading(x0, y0, x1, y1, stops);
         string resourceName = "Sh" + (shadings.Count + 1).ToString(CultureInfo.InvariantCulture);
-        PdfShadingResource? existing = shadings.FirstOrDefault(resource => resource.Shading.ResourceKey == shading.ResourceKey);
-        if (existing is null)
+        if (!shadingIndex.TryGetValue(shading.ResourceKey, out int existingShadingIndex))
         {
+            shadingIndex[shading.ResourceKey] = shadings.Count;
             shadings.Add(new PdfShadingResource(resourceName, shading));
         }
         else
         {
-            resourceName = existing.ResourceName;
+            resourceName = shadings[existingShadingIndex].ResourceName;
         }
 
         builder.Append('/').Append(resourceName).AppendLine(" sh");
@@ -506,8 +524,41 @@ internal sealed class PdfGraphicsBuilder
         }
 
         stateDepth = Math.Max(0, mark.StateDepth);
+        RebuildResourceIndexes();
     }
 
+    private void RebuildResourceIndexes()
+    {
+        extGStateIndex.Clear();
+        softMaskIndex.Clear();
+        shadingIndex.Clear();
+        patternIndex.Clear();
+        for (int i = 0; i < shadings.Count; i++)
+        {
+            shadingIndex[shadings[i].Shading.ResourceKey] = i;
+        }
+
+        for (int i = 0; i < patterns.Count; i++)
+        {
+            patternIndex[patterns[i].Pattern.ResourceKey] = i;
+        }
+
+        for (int i = 0; i < extGStates.Count; i++)
+        {
+            PdfExtGStateResource state = extGStates[i];
+            extGStateIndex[state.ResourceName] = i;
+            if (state.SoftMask is not null)
+            {
+                if (!softMaskIndex.TryGetValue(state.SoftMask.ResourceKey, out List<int>? bucket))
+                {
+                    bucket = [];
+                    softMaskIndex[state.SoftMask.ResourceKey] = bucket;
+                }
+
+                bucket.Add(i);
+            }
+        }
+    }
     public override string ToString()
     {
         return builder.ToString();
