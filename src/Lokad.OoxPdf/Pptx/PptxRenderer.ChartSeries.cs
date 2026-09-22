@@ -571,9 +571,11 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartRadarSeries> BuildRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
+        // R15: filter on the sparse presence check first so valueless series never
+        // materialize (or charge) dense arrays.
         return series
+            .Where(vector => vector.HasAnyValue())
             .Select(vector => new ChartRadarSeries(vector.DensePoints(), vector))
-            .Where(item => item.Points.Any(point => point?.Value is not null))
             .ToArray();
     }
 

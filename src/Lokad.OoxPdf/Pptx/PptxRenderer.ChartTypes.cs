@@ -293,6 +293,29 @@ internal sealed partial class PptxRenderer
             return ResolveDensePointCount(PointCount, points) > 0;
         }
 
+        // R15: sparse existence check for label rendering probes. Matches the dense
+        // scan exactly (in-range indexes, text-bearing points, non-whitespace text)
+        // without materializing the slot array.
+        public bool HasAnyVisibleText()
+        {
+            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
+            int pointCount = ResolveDensePointCount(PointCount, points);
+            if (pointCount <= 0)
+            {
+                return false;
+            }
+
+            foreach (ChartIndexedTextPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.HasText && !string.IsNullOrWhiteSpace(point.Text))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public IReadOnlyList<ChartIndexedTextPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
         {
             IReadOnlyList<ChartIndexedTextPoint> points = WorkbookPoints ?? [];

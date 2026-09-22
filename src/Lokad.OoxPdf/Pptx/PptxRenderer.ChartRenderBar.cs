@@ -1118,17 +1118,11 @@ internal sealed partial class PptxRenderer
         double right = Math.Min(plotBox.X + plotBox.Width, flooredRight);
         return new ChartPlotBox(plotBox.X, plotBox.Y, Math.Max(1d, right - plotBox.X), plotBox.Height);
     }
+    // R15: existence probe over the sparse points; the dense array is only built
+    // when labels actually render.
     private static bool HasRenderableCategoryLabels(PptxSceneChartPlot? barPlot, XElement barChart, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        foreach (ChartIndexedTextPoint? labelPoint in ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).DensePoints())
-        {
-            if (!string.IsNullOrWhiteSpace(labelPoint?.Text))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).HasAnyVisibleText();
     }
     private static ChartPlotBox AdjustStackedColumnBottomLegendPlotBox(
         ChartPlotBox plotBox,
