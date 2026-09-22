@@ -69,7 +69,7 @@ index bounds the worst case rather than shifting the median.
 - R14-deeper: migrate layout to scene-resolved text one family at a time with
   agreement gates; share context-independent inherited nodes behind (node, slide) keys.
   Entry: ComputeTextSpansForSceneNode re-clones node.Source instead of consuming
-  node.TextBody; eleven agreement batteries gate runs, breaks, fields, alignment,
+  node.TextBody; twelve agreement batteries gate runs, breaks, fields, alignment,
   placeholders, table/shape consistency, full styles, hyperlinks, and every inheritance layer (paragraph
   defRPr, shape lstStyle, layout bodies, master txStyles, master defaultTextStyle).
   Known migration prerequisites: click identity lives only in renderer models; table
