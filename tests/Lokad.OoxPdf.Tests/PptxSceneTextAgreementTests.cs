@@ -195,6 +195,69 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void ParagraphAlignmentAgreesBetweenSceneAndSpans()
+    {
+        // R14: paragraph-level agreement probe. Explicit paragraph alignment must
+        // resolve identically in the scene model and the renderer line layout
+        // (alignment applies at line level; fragments stay fragment-relative).
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1800"/><a:t>Centered</a:t></a:r></a:p>
+                      <a:p><a:pPr algn="r"/><a:r><a:rPr sz="1800"/><a:t>Right</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        string[] sceneAlignments = body.Paragraphs
+            .Select(paragraph => paragraph.ResolvedStyle.Alignment)
+            .ToArray();
+        TestAssert.Equal(2, sceneAlignments.Length);
+
+        PptxTextParagraphLayoutSnapshot[] layoutParagraphs = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.SelectMany(frame => frame.Paragraphs)
+            .ToArray();
+        TestAssert.Equal(sceneAlignments.Length, layoutParagraphs.Length);
+        // The scene preserves the raw alignment token while layout lines carry the
+        // resolved name; the gate bridges them through the production parser so both
+        // pipelines must interpret the token identically.
+        MethodInfo parse = typeof(PptxRenderer).GetMethod("ParseAlignment", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected alignment parser.");
+        for (int i = 0; i < sceneAlignments.Length; i++)
+        {
+            string lineAlignment = layoutParagraphs[i].Lines[0].Alignment;
+            object? parsed;
+            try
+            {
+                parsed = parse.Invoke(null, [sceneAlignments[i]]);
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException ?? ex;
+            }
+
+            TestAssert.Equal(parsed?.ToString(), lineAlignment);
+        }
+    }
+
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
         PptxSceneNode node,
         PptxDocument document,
