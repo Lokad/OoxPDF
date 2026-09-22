@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -785,6 +786,117 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal("Defaulted", spanRuns[0].Text);
         TestAssert.Equal(23d, spanRuns[0].Style.NominalFontSize);
         TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+    }
+
+    public static void TableCellTextMatchesShapeText()
+    {
+        // R14: table/shape consistency probe. Identical paragraph XML in a shape
+        // and in table cells must resolve to the same run text and core styles on
+        // both pipelines, pinning that the table path adds no phantom styling over
+        // the shared readers (table cells carry unresolved XML, so this gates the
+        // renderer cascade against the scene-resolved shape).
+        string bodyPara1 = """<a:p><a:r><a:rPr sz="1600" b="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>One</a:t></a:r></a:p>""";
+        string bodyPara2 = """<a:p><a:r><a:rPr sz="1600" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>Two</a:t></a:r></a:p>""";
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      {bodyPara1}
+                      {bodyPara2}
+                    </p:txBody>
+                  </p:sp>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="0" y="2743200"/><a:ext cx="3657600" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                        <a:tbl>
+                          <a:tblGrid><a:gridCol w="1828800"/><a:gridCol w="1828800"/></a:tblGrid>
+                          <a:tr h="914400">
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/>
+                            {bodyPara1}
+                            </a:txBody><a:tcPr/></a:tc>
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/>
+                            {bodyPara2}
+                            </a:txBody><a:tcPr/></a:tc>
+                          </a:tr>
+                        </a:tbl>
+                      </a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode shapeNode = scene.Slides[0].SlideNodes[0];
+        PptxSceneNode tableNode = scene.Slides[0].SlideNodes[1];
+        TestAssert.Equal(PptxSceneNodeKind.Shape, shapeNode.Kind);
+        TestAssert.Equal(PptxSceneNodeKind.Table, tableNode.Kind);
+        PptxSceneTextBody shapeBody = TestAssert.NotNull(shapeNode.TextBody);
+        PptxSceneTextRun[] shapeRuns = shapeBody.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
+            .ToArray();
+        TestAssert.Equal(2, shapeRuns.Length);
+
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        OpenTypeFont font = OpenTypeFont.Load(bytes);
+        var resolution = new FontFaceResolution(
+            font.FamilyName,
+            font.FamilyName,
+            new FontStyleKey(),
+            new MemoryFontProgramSource("memory:r14-table", bytes),
+            IsFallback: false);
+        var tableResolver = new PresentationFontResolver(new CannedFontResolver(resolution));
+        var slideSource = new PptxRenderSource(
+            PptxRenderSourceKind.Slide,
+            scene.Slides[0].PartName,
+            scene.Slides[0].SlideXml,
+            new Dictionary<string, OoxRelationship>(),
+            scene.Slides[0].SlideColorMap);
+        var context = new PptxRenderContext(
+            document,
+            scene.Theme,
+            document.Slides[0],
+            scene.Slides[0],
+            slideSource,
+            [],
+            tableResolver,
+            new Dictionary<string, PdfImageXObject?>(),
+            null,
+            CancellationToken.None);
+        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpans", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected table span reader.");
+        object? tableSpans;
+        try { tableSpans = readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap]); }
+        catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
+        PptxRenderer.PptxTextRunModel[] cellRuns = ((System.Collections.IList)tableSpans!)
+            .Cast<PptxRenderer.PptxPositionedTextSpan>()
+            .Select(span => span.SourceRun)
+            .Where(run => run is not null)
+            .Select(run => run!)
+            .Distinct()
+            .ToArray();
+        TestAssert.Equal(2, cellRuns.Length);
+        for (int i = 0; i < shapeRuns.Length; i++)
+        {
+            TestAssert.Equal(shapeRuns[i].Text, cellRuns[i].Text);
+            TestAssert.Equal(shapeRuns[i].ResolvedStyle.FontSize, cellRuns[i].Style.NominalFontSize);
+            TestAssert.Equal(shapeRuns[i].ResolvedStyle.Color, cellRuns[i].Style.Color);
+            TestAssert.Equal(shapeRuns[i].ResolvedStyle.Bold, cellRuns[i].Style.Bold);
+            TestAssert.Equal(shapeRuns[i].ResolvedStyle.Italic, cellRuns[i].Style.Italic);
+        }
     }
 
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
