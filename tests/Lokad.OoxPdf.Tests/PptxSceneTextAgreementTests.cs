@@ -890,6 +890,63 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void GroupedShapeTextAgreesBetweenSceneAndSpans()
+    {
+        // R14: grouped-shape agreement probe. Text in a grouped shape resolves
+        // run text and core styles identically on both pipelines through the group
+        // transform chain.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:grpSp>
+                    <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:nvPr/></p:nvGrpSpPr>
+                    <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="2743200" cy="1828800"/></a:xfrm></p:grpSpPr>
+                    <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:nvPr/></p:nvSpPr>
+                      <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                        <a:p><a:r><a:rPr sz="1800" b="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>Grouped</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:grpSp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode group = scene.Slides[0].SlideNodes[0];
+        TestAssert.Equal(PptxSceneNodeKind.Group, group.Kind);
+        PptxSceneNode node = group.Children[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        PptxSceneTextRun[] sceneRuns = body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
+            .ToArray();
+        TestAssert.Equal(1, sceneRuns.Length);
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadSpans(node, document, scene);
+        PptxRenderer.PptxTextRunModel[] spanRuns = positioned
+            .Select(span => span.SourceRun)
+            .Where(run => run is not null)
+            .Select(run => run!)
+            .Distinct()
+            .ToArray();
+        TestAssert.Equal(1, spanRuns.Length);
+        TestAssert.Equal("Grouped", spanRuns[0].Text);
+        TestAssert.Equal(sceneRuns[0].ResolvedStyle.FontSize, spanRuns[0].Style.NominalFontSize);
+        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Bold, spanRuns[0].Style.Bold);
+    }
+
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
         PptxSceneNode node,
         PptxDocument document,
