@@ -91,7 +91,7 @@ index bounds the worst case rather than shifting the median.
   formal text-op compare shows X-exact positions with ~1-3pt Y placement deltas, out of
   scope for inheritance gates). Synthetic packages need theme part, nvGrpSpPr/grpSpPr,
   and cNvSpPr or PowerPoint reports them corrupt (unit fixtures stay minimal/lenient);
-  Office-gated visual runs for new held-out variations remain to be curated;
+  Two held-out placeholder-inheritance cases (`e8837d62`) pass CheckVisualCase against live Office references with pinned thresholds;
   `e3f292dd` post-write/pre-move snapshot with writer page/content/output fields
   (file path; stream path keeps pre-write zeros under R20); staged page/resource
   emission (writer holds all pages before emitting; incremental staging is a design
