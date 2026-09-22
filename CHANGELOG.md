@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved scatter-clusters and scatter-smooth ports to approximate (Q07 increment): fixture inspection proves unstyled marker fills (clusters series carry only ln/noFill with no marker element; smooth series has no spPr at all), so the same-hue shade difference is the documented unstyled-series approximation gap already recorded for the line family; direct PNG review shows matching marker positions, curve geometry, axes, and legend with empty diagnostics (histogram correlation 0.503/0.815, the strongest magnitudes in this class, honestly recorded). Manifests: 118 locked / 206 approximate / 2 needs-review.
+
 - Moved curved-connector-transform probe to approximate (Q07 increment): direct PNG review shows all four curved connectors with correctly directed arrowheads and matching curve paths (SSIM 0.988, recall 0.974, histogram correlation 1.0, diagnostics empty) with the recorded arrowhead-placement nuance below the lock bar. Manifests: 118 locked / 204 approximate / 4 needs-review.
 
 - Moved border-alpha to approximate (Q07 increment): direct PNG review shows identical table geometry and fills with only border-blending shade nuance (reference borders fractionally darker; SSIM 0.885 on border coverage, recall 1.0, histogram correlation 0.998, diagnostics empty). Recorded as the alpha-blending gap class shared with picture-alpha. Manifests: 118 locked / 203 approximate / 5 needs-review.
