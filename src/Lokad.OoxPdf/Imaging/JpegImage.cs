@@ -222,6 +222,8 @@ internal sealed class JpegImage
                 components.Add(component);
                 offset += 3;
             }
+
+            ImagePixelBudget.Check(width, height, "JPEG");
         }
 
         private void ReadHuffmanTables(ReadOnlySpan<byte> segment)
@@ -305,6 +307,15 @@ internal sealed class JpegImage
             }
 
             offset += length;
+
+            if (width <= 0 || height <= 0 || components.Count is not (1 or 3))
+            {
+                throw new InvalidDataException("JPEG frame metadata is incomplete.");
+            }
+
+            ImagePixelBudget.Check(width, height, "JPEG");
+            long scanLiveEstimate = checked((long)width * height * 4L);
+            using var scanReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(scanLiveEstimate);
             InitializeComponentBuffers();
             var reader = new EntropyReader(bytes, offset);
             int mcuColumns = (width + maxHorizontal * 8 - 1) / (maxHorizontal * 8);
@@ -331,13 +342,59 @@ internal sealed class JpegImage
 
         private void InitializeComponentBuffers()
         {
-            int mcuColumns = (width + maxHorizontal * 8 - 1) / (maxHorizontal * 8);
-            int mcuRows = (height + maxVertical * 8 - 1) / (maxVertical * 8);
+            cancellationToken.ThrowIfCancellationRequested();
+            int mcuUnitX;
+            int mcuUnitY;
+            try
+            {
+                mcuUnitX = checked(maxHorizontal * 8);
+                mcuUnitY = checked(maxVertical * 8);
+            }
+            catch (OverflowException ex)
+            {
+                throw new InvalidDataException("JPEG sampling factors overflow.", ex);
+            }
+
+            if (mcuUnitX <= 0 || mcuUnitY <= 0)
+            {
+                throw new InvalidDataException("JPEG sampling factors are invalid.");
+            }
+
+            int mcuColumns;
+            int mcuRows;
+            try
+            {
+                mcuColumns = checked((checked(width + mcuUnitX - 1) / mcuUnitX));
+                mcuRows = checked((checked(height + mcuUnitY - 1) / mcuUnitY));
+            }
+            catch (OverflowException ex)
+            {
+                throw new InvalidDataException("JPEG dimensions overflow.", ex);
+            }
+
             foreach (Component component in components)
             {
-                component.SampleWidth = mcuColumns * component.Horizontal * 8;
-                component.SampleHeight = mcuRows * component.Vertical * 8;
-                component.Samples = new byte[component.SampleWidth * component.SampleHeight];
+                int sampleWidth;
+                int sampleHeight;
+                try
+                {
+                    sampleWidth = checked(checked(mcuColumns * component.Horizontal) * 8);
+                    sampleHeight = checked(checked(mcuRows * component.Vertical) * 8);
+                }
+                catch (OverflowException ex)
+                {
+                    throw new InvalidDataException("JPEG component dimensions overflow.", ex);
+                }
+
+                long planeBytes = checked((long)sampleWidth * sampleHeight);
+                if (planeBytes > int.MaxValue)
+                {
+                    throw new InvalidDataException("JPEG component plane is too large.");
+                }
+
+                component.SampleWidth = sampleWidth;
+                component.SampleHeight = sampleHeight;
+                component.Samples = new byte[(int)planeBytes];
                 component.DcPredictor = 0;
             }
         }
@@ -467,13 +524,24 @@ internal sealed class JpegImage
 
         private byte[] BuildRgb()
         {
-            var rgb = new byte[width * height * 3];
+            long rgbBytes = checked((long)width * height * 3L);
+            if (rgbBytes > int.MaxValue)
+            {
+                throw new InvalidDataException("JPEG pixel plane is too large.");
+            }
+
+            var rgb = new byte[(int)rgbBytes];
             if (components.Count == 1)
             {
                 Component gray = components[0];
                 int target = 0;
                 for (int y = 0; y < height; y++)
                 {
+                    if ((y & 255) == 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
                     for (int x = 0; x < width; x++)
                     {
                         byte value = Sample(gray, x, y);
@@ -492,6 +560,11 @@ internal sealed class JpegImage
             int offset = 0;
             for (int y = 0; y < height; y++)
             {
+                if ((y & 255) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
                 for (int x = 0; x < width; x++)
                 {
                     double luma = Sample(yComponent, x, y);

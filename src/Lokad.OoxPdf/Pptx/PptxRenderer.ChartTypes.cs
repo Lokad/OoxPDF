@@ -61,6 +61,7 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
+            OoxConversionBudget.Current?.ChargeChartRangeCells(pointCount);
             var values = new ChartIndexedNumberPoint?[pointCount];
             foreach (ChartIndexedNumberPoint point in points)
             {
@@ -227,6 +228,7 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
+            OoxConversionBudget.Current?.ChargeChartRangeCells(pointCount);
             var values = new ChartIndexedTextPoint?[pointCount];
             foreach (ChartIndexedTextPoint point in points)
             {

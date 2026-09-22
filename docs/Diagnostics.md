@@ -97,25 +97,31 @@ Exit codes:
 
 ## Resource Budgets and Host Admission
 
-Per-conversion cumulative budgets (`OoxPdfOptions.ConversionLimits`, PLAN Q01)
-bound total work so many individually legal expansions cannot jointly exhaust a
+Per-conversion cumulative budgets (`OoxPdfOptions.ConversionLimits`) bound
+covered work so many individually legal expansions cannot jointly exhaust a
 shared process. Defaults are generous multiples of the per-site caps:
 
 - `MaxChartRangeCellsPerConversion` (default 2,000,000): total chart workbook
-  range cells expanded, including blank cells materialized during union expansion.
+  range cells expanded, including blank cells materialized during union expansion,
+  plus chart dense slots materialized from cached/literal vectors (R04).
 - `MaxTableFragmentsPerConversion` (default 20,000): total DOCX table row
   fragments constructed.
-- `MaxImagesDecodedPerConversion` (default 500): total content images decoded
-  (each image is still individually pixel-capped).
+- `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
+  including PPTX crop/recolor variants and effect rasters, through the shared
+  decoder boundary (R03). Each image is still individually pixel-capped; cache
+  hits do not recharge.
 - `MaxFontWorkPerConversion` (default 5,000): total font program loads and
-  subset builds.
-- `MaxLiveImageBytesPerConversion` (default 512 MiB): peak transient image
-  decode scratch plus pixel planes reserved at any one time (conservative
-  width-by-height-by-4 estimate per pixel decode; JPEG passthrough holds none).
+  subset builds through the shared loader/subsetter boundary, covering DOCX and
+  PPTX (R03). Ordinary conversions resolve dozens; thousands indicate reference
+  churn. Cache hits do not recharge.
+- `MaxLiveImageBytesPerConversion` (default 512 MiB): peak image-decode
+  reservation using a width-by-height-by-4 estimate per pixel decode (R01
+  reserves before component-plane allocation; JPEG passthrough holds none).
 
 Crossing any budget throws `OoxPdfLimitExceededException` before further
 expansion: no partial PDF is published (file output stays atomic) and the
 failure escapes per-node recovery, so it always aborts the conversion.
+Limit exceptions escape tolerant loader/diagnostic catch filters.
 
 With `OoxPdfOptions.ReportResourceUsage`, each successful conversion emits one
 informational `CONVERSION_RESOURCE_SUMMARY` diagnostic reporting cumulative
@@ -124,10 +130,20 @@ counters plus the peak live reservation
 `peakLiveImageBytes`). Informational diagnostics never affect CLI `--strict`
 exit codes.
 
-Host admission recipe: run a representative corpus with `ReportResourceUsage`
-enabled, take the maximum observed `peakLiveImageBytes` plus headroom for the
-per-image pixel cap, and size concurrent conversions as
-`maxConcurrent ≈ hostByteBudget / perConversionPeak`. Set tighter
+Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
+or process memory. It omits simultaneous buffers beyond the 4-byte estimate
+(PNG inflated bytes plus RGB/alpha planes, JPEG sample planes plus RGB,
+IDAT capacity/scratch, compression output), retained pixels/variants after
+decoder return, compressed PDF resources, fonts, XML DOMs, pages, and writer
+work. Covered budgets do not yet bound aggregate XML objects/characters,
+nested-package bytes, worksheet models, scene nodes, page/resource/output
+bytes, or serialization (R04-R06). Do not size hosts from
+`peakLiveImageBytes` plus image headroom alone.
+
+Host admission: measure conversion-only live/process peaks across
+page/image/font/chart breadth with `ReportResourceUsage`, separate discovery,
+transient allocation, retained ownership, and output buffering, and size
+admission from total peaks plus host baseline/concurrency headroom. Set tighter
 `ConversionLimits` for shared processes and tune them against measured
 corpora; `ConvertAsync` offloading to `Task.Run` is not admission control.
 

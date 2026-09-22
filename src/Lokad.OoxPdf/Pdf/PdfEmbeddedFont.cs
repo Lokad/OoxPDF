@@ -59,6 +59,7 @@ internal sealed class PdfEmbeddedFont
 
     public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken)
     {
+        OoxConversionBudget.Current?.ChargeFontWork(1);
         var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
         foreach (int codePoint in codePoints)
         {

@@ -1,4 +1,4 @@
-﻿namespace Lokad.OoxPdf.Fonts;
+namespace Lokad.OoxPdf.Fonts;
 
 internal static class FontProgramLoader
 {
@@ -8,6 +8,8 @@ internal static class FontProgramLoader
         {
             return null;
         }
+
+        OoxConversionBudget.Current?.ChargeFontWork(1);
 
         try
         {
@@ -23,7 +25,7 @@ internal static class FontProgramLoader
             cancellationToken.ThrowIfCancellationRequested();
             return OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex, cancellationToken);
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is not OoxPdfLimitExceededException && (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException))
         {
             return null;
         }

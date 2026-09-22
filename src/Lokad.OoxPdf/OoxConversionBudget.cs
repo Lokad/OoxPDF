@@ -19,11 +19,19 @@ namespace Lokad.OoxPdf;
 /// holds its own budget, so charge sites need no synchronization; concurrent
 /// conversions hold separate budgets, which scoping guarantees.
 /// </para>
-/// <para>Live reservations (image decode scratch plus pixel planes) are tracked
-/// separately from cumulative work: <see cref="ReserveLiveImageBytes"/> fails before
+/// <para>Live reservations track the image-decode reservation peak, not total live or
+/// process memory (R19): <see cref="ReserveLiveImageBytes"/> fails before
 /// allocation when the live level would exceed its cap and releases on dispose, while
 /// <see cref="PeakLiveImageBytes"/> records the high-water mark reported in the
-/// CONVERSION_RESOURCE_SUMMARY diagnostic.
+/// CONVERSION_RESOURCE_SUMMARY diagnostic. The width-by-height-by-4 estimate omits
+/// simultaneous buffers, retained pixels/variants, and non-image work.
+/// </para>
+/// <para>Shared allocating boundaries (R03-R04): content images charge once in
+/// <see cref="Imaging.OoxImageDecoder"/> (including crop/recolor/effect variants),
+/// font programs charge once in <see cref="Fonts.FontProgramLoader"/> and subsets once
+/// in <see cref="Pdf.PdfEmbeddedFont"/>, and chart dense slots charge against
+/// chart range cells. Cache hits do not recharge; limit failures escape tolerant
+/// catch filters and per-node recovery.
 /// </para>
 /// </remarks>
 internal sealed class OoxConversionBudget
@@ -51,8 +59,9 @@ internal sealed class OoxConversionBudget
     public long FontWork { get; private set; }
 
     /// <summary>
-    /// Currently reserved live image decode bytes. Returns to zero when every
-    /// reservation is disposed; single-threaded renderers hold at most one.
+    /// Currently reserved live image decode bytes (reservation peak accounting, not total live).
+    /// Returns to zero when every
+    /// reservation is disposed; single-threaded renderers hold at most one reservation at a time.
     /// </summary>
     public long LiveImageBytes { get; private set; }
 

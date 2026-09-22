@@ -55,8 +55,7 @@ internal sealed class PresentationFontResolver
             return cached;
         }
 
-        // PLAN Q01: conversion-wide cumulative charge before font parsing allocates.
-        OoxConversionBudget.Current?.ChargeFontWork(1);
+        // R03: font-program charge lives in FontProgramLoader.Load (shared PPTX/DOCX boundary); cache hits do not charge.
         cached = FontProgramLoader.Load(resolution, cancellationToken);
         openTypeFonts[key] = cached;
         return cached;
@@ -79,8 +78,7 @@ internal sealed class PresentationFontResolver
             return cached.Subset;
         }
 
-        // PLAN Q01: conversion-wide cumulative charge before subsetting allocates.
-        OoxConversionBudget.Current?.ChargeFontWork(1);
+        // R03: subset charge lives in PdfEmbeddedFont.Create (shared PPTX/DOCX boundary); cache hits do not charge.
         PdfEmbeddedFont created = PdfEmbeddedFont.Create(font, codePoints, cancellationToken);
         if (cached is null)
         {

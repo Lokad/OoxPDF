@@ -72,6 +72,7 @@ internal sealed partial class PptxRenderer
         double scaleX = pixelWidth / shadowWidth;
         double scaleY = pixelHeight / shadowHeight;
 
+        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
@@ -180,6 +181,7 @@ internal sealed partial class PptxRenderer
         double scaleX = pixelWidth / glowWidth;
         double scaleY = pixelHeight / glowHeight;
 
+        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)

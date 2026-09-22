@@ -430,9 +430,9 @@ internal sealed partial class PptxRenderer
                     {
                         try
                         {
-                            JpegImage jpeg = JpegImage.Read(bytes);
-                            byte[] rgb = ApplyImageRecolor(jpeg.Rgb, recolor);
-                            return PdfImageXObject.RgbPng(jpeg.Width, jpeg.Height, rgb, alpha: null);
+                            (int recolorWidth, int recolorHeight, byte[] recolorRgb, byte[]? _) = OoxImageDecoder.DecodePixels(contentType, bytes, cancellationToken);
+                            byte[] rgb = ApplyImageRecolor(recolorRgb, recolor);
+                            return PdfImageXObject.RgbPng(recolorWidth, recolorHeight, rgb, alpha: null);
                         }
                         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                         {

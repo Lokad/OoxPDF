@@ -13,6 +13,7 @@ internal static class TestCatalog
         .. FromType("ooxml", typeof(OoxmlTests)),
         .. FromType("ooxml", typeof(OoxmlBoundsTests)),
         .. FromType("ooxml", typeof(OoxLimitsTests)),
+        .. FromType("ooxml", typeof(OoxResourceGuaranteeTests)),
         .. FromType("pdf", typeof(PdfWriterTests)),
         .. FromType(ClassifyPptx, typeof(PptxTests)),
         .. FromType(ClassifyDocx, typeof(DocxTests)),

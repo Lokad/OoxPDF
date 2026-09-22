@@ -28,10 +28,9 @@ internal static class OoxImageDecoder
 
     public static PdfImageXObject Decode(string contentType, byte[] bytes, Func<byte[], byte[]> recolorRgb, CancellationToken cancellationToken = default)
     {
-        // PLAN Q01: conversion-wide cumulative charge before decoding allocates.
-        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
         if (IsJpegContentType(contentType))
         {
+            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             JpegInfo info = JpegInfo.Read(bytes);
             return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent);
         }
@@ -44,18 +43,21 @@ internal static class OoxImageDecoder
     {
         if (IsPngContentType(contentType))
         {
+            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             PngImage png = PngImage.Read(bytes, cancellationToken);
             return (png.Width, png.Height, png.Rgb, png.Alpha);
         }
 
         if (IsBmpContentType(contentType))
         {
+            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             BmpImage bmp = BmpImage.Read(bytes, cancellationToken);
             return (bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha);
         }
 
         if (IsJpegContentType(contentType))
         {
+            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             JpegImage jpeg = JpegImage.Read(bytes, cancellationToken);
             return (jpeg.Width, jpeg.Height, jpeg.Rgb, null);
         }
