@@ -28,7 +28,7 @@ only, never gates.
 | R11 shared border-overlap plan | closed | `9233ae9d`; `DocxBorderPlanTests` (docx-tables) |
 | R12 document/page indexes | closed | `daec0208` drawings, `dc8f1987` related stories, `b404bde3` reference pages; equivalence tests; before/after probes in this audit |
 | R13 font byte ownership | closed | `ac57c794` spans, `0a9ee59d` recency, `17c5484a` in-flight throttle, `266ff97f` retained LRU, `c56b247d` retention proof + measurements |
-| R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; `2c14ed05` plain-shape scene/span agreement battery; `fc8fecd9` break-run line-boundary agreement; `a4c46558` field-run agreement; `2c4af54e` paragraph-alignment agreement; `16da8e1c` placeholder-text agreement (master bodyStyle) and matched-placeholder agreement (layout lstStyle wins); fixtures must use p:ph per Office files; full 15-field run-style agreement at nominal size; `e91570c1` hyperlink color/underline agreement; `1f2cf402` paragraph-default inheritance; `12ba206c` shape list-style defaults; `40a4770f` master default-style fallback; `7630de21` grouped-shape text; chart tri-state readers verified distinct |
+| R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; `2c14ed05` plain-shape scene/span agreement battery; `fc8fecd9` break-run line-boundary agreement; `a4c46558` field-run agreement; `2c4af54e` paragraph-alignment agreement; `16da8e1c` placeholder-text agreement (master bodyStyle) and matched-placeholder agreement (layout lstStyle wins); fixtures must use p:ph per Office files; full 15-field run-style agreement at nominal size; `e91570c1` hyperlink color/underline agreement; `1f2cf402` paragraph-default inheritance; `12ba206c` shape list-style defaults; `40a4770f` master default-style fallback; `7630de21` grouped-shape text; `65d42692` table-style text; chart tri-state readers verified distinct |
 | R15 chart data resolution | closed | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, series-vector, and bar/line extent memos; sparse tick-edge max counts + mechanics tests; area/radar extents single-evaluation (no repeat); suite 1683/0/9 |
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
 | R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
@@ -69,8 +69,8 @@ index bounds the worst case rather than shifting the median.
 - R14-deeper: migrate layout to scene-resolved text one family at a time with
   agreement gates; share context-independent inherited nodes behind (node, slide) keys.
   Entry: ComputeTextSpansForSceneNode re-clones node.Source instead of consuming
-  node.TextBody; thirteen agreement batteries gate runs, breaks, fields, alignment,
-  placeholders, table/shape consistency, grouped shapes, full styles, hyperlinks, and every inheritance layer (paragraph
+  node.TextBody; fourteen agreement batteries gate runs, breaks, fields, alignment,
+  placeholders, table/shape consistency, table-style text, grouped shapes, full styles, hyperlinks, and every inheritance layer (paragraph
   defRPr, shape lstStyle, layout bodies, master txStyles, master defaultTextStyle).
   Known migration prerequisites: click identity lives only in renderer models; table
   cells carry unresolved XML (no scene text model). Migration design: build run models
