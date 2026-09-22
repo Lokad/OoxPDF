@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-grouped-picture-caption.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "groups", "pictures", "text", "caption", "needs-review"],
+  "tags": ["pptx", "ladder", "groups", "pictures", "text", "caption", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

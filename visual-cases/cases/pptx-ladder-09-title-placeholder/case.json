@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-09-title-placeholder.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "inheritance", "placeholders", "needs-review"],
+  "tags": ["pptx", "ladder", "inheritance", "placeholders", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
