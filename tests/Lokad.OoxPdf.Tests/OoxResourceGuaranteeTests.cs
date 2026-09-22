@@ -243,6 +243,9 @@ internal static class OoxResourceGuaranteeTests
             () => new OoxConversionLimits { MaxPagesPerConversion = -1 },
             () => new OoxConversionLimits { MaxPdfContentBytesPerConversion = -1 },
             () => new OoxConversionLimits { MaxOutputBytesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxSceneNodesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxNestedPackageBytesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxWorkbookModelsPerConversion = -1 },
         })
         {
             string input = FindCase("docx-tables.docx");
@@ -251,6 +254,85 @@ internal static class OoxResourceGuaranteeTests
                 input,
                 output,
                 new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, ConversionLimits = capped() }));
+        }
+    }
+
+    public static void SceneNodesRespectNodeBudget()
+    {
+        // R04: scene nodes charge as they materialize across slides, masters, and
+        // layouts. A zero node budget trips even a single-picture deck.
+        string input = FindCase("pptx-ladder-07-image-crop.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxSceneNodesPerConversion = 0 },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void NestedPackagesRespectAggregateByteBudget()
+    {
+        // R04: nested package bytes accumulate across embedded workbooks, each
+        // already capped individually. A zero aggregate budget trips the first open.
+        byte[] xlsx = MinimalSingleCellWorkbook();
+        var resource = new PptxScenePackageResource("/xl/embed.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx);
+        var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource, null, string.Empty);
+        MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .First(method => method.Name == "GetOrCreateChartWorkbook");
+        object? Invoke(Dictionary<string, PptxRenderer.ChartWorkbookData?>? shared)
+        {
+            try
+            {
+                return getOrCreate.Invoke(null, [shared, external, CancellationToken.None]);
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                throw ex.InnerException;
+            }
+        }
+
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxNestedPackageBytesPerConversion = 0 }))
+        {
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => Invoke(new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal)));
+            TestAssert.Equal(0, scope.Budget.NestedPackageBytes);
+        }
+    }
+
+    public static void ChartWorkbooksRespectModelBudget()
+    {
+        // R04: retained workbook models accumulate across embedded workbooks while
+        // cached models bypass the read without recharging.
+        byte[] xlsx = MinimalSingleCellWorkbook();
+        var resource = new PptxScenePackageResource("/xl/embed.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx);
+        var external = PptxSceneChartExternalData.Defined("rId9", "/xl/embed.xlsx", resource, null, string.Empty);
+        MethodInfo getOrCreate = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .First(method => method.Name == "GetOrCreateChartWorkbook");
+        object? Invoke(Dictionary<string, PptxRenderer.ChartWorkbookData?>? shared)
+        {
+            try
+            {
+                return getOrCreate.Invoke(null, [shared, external, CancellationToken.None]);
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                throw ex.InnerException;
+            }
+        }
+
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxWorkbookModelsPerConversion = 0 }))
+        {
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => Invoke(new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal)));
+            TestAssert.Equal(0, scope.Budget.WorkbookModels);
+        }
+
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null))
+        {
+            var cache = new Dictionary<string, PptxRenderer.ChartWorkbookData?>(StringComparer.Ordinal);
+            Invoke(cache);
+            TestAssert.Equal(1, scope.Budget.WorkbookModels);
+            Invoke(cache);
+            TestAssert.Equal(1, scope.Budget.WorkbookModels);
         }
     }
 

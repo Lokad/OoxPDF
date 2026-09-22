@@ -7,9 +7,9 @@ namespace Lokad.OoxPdf;
 /// Covered work includes chart range cells plus dense slots, table fragments,
 /// XML nodes, workbook cells, content images (including crop/recolor variants and
 /// effect rasters), font loads and subsets, serialized pages/content/output bytes,
-/// and the live image reservation peak (R01-R06). Nested packages, retained models,
-/// and remaining writer work (fonts/images already count at decode) are not yet
-/// bounded; the live peak is a reservation peak, not total
+/// scene nodes, nested package bytes, workbook models,
+/// and the live image reservation peak (R01-R06). Remaining writer work (fonts/images
+/// already count at decode) is not yet bounded; the live peak is a reservation peak, not total
 /// memory (R19). Defaults are generous multiples of the per-site caps; hosts with
 /// a claimed memory/work limit should set tighter values and watch
 /// <see cref="OoxPdfOptions.ReportResourceUsage"/> output while tuning.
@@ -66,6 +66,26 @@ public sealed class OoxConversionLimits
     /// the conversion scope is still open (R06).
     /// </summary>
     public long MaxOutputBytesPerConversion { get; init; } = 2147483648;
+
+    /// <summary>
+    /// Maximum PPTX scene nodes built per conversion (default 2,000,000). Counts
+    /// shapes across slides, masters, and layouts as they materialize, including
+    /// nested group children; cached DOMs re-walked per slide recharge (R04).
+    /// </summary>
+    public long MaxSceneNodesPerConversion { get; init; } = 2_000_000;
+
+    /// <summary>
+    /// Maximum retained bytes across nested packages per conversion (default
+    /// 536,870,912, i.e. 512 MiB, twice the per-package total). Counts embedded
+    /// chart workbook packages, each already capped individually (R04).
+    /// </summary>
+    public long MaxNestedPackageBytesPerConversion { get; init; } = 536_870_912;
+
+    /// <summary>
+    /// Maximum chart workbook models read per conversion (default 100). Each model
+    /// is already cell-capped; cached models do not recharge (R04).
+    /// </summary>
+    public long MaxWorkbookModelsPerConversion { get; init; } = 100;
 
     /// <summary>
     /// Maximum content images decoded per conversion (default 500), including PPTX
@@ -149,6 +169,21 @@ public sealed class OoxConversionLimits
         if (MaxOutputBytesPerConversion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxOutputBytesPerConversion), "Conversion output byte budget must be non-negative.");
+        }
+
+        if (MaxSceneNodesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxSceneNodesPerConversion), "Conversion scene node budget must be non-negative.");
+        }
+
+        if (MaxNestedPackageBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxNestedPackageBytesPerConversion), "Conversion nested package byte budget must be non-negative.");
+        }
+
+        if (MaxWorkbookModelsPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxWorkbookModelsPerConversion), "Conversion workbook model budget must be non-negative.");
         }
     }
 }

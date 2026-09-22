@@ -67,6 +67,12 @@ internal sealed class OoxConversionBudget
 
     public long PdfOutputBytes { get; private set; }
 
+    public long SceneNodes { get; private set; }
+
+    public long NestedPackageBytes { get; private set; }
+
+    public long WorkbookModels { get; private set; }
+
     public long ImagesDecoded { get; private set; }
 
     public long FontWork { get; private set; }
@@ -235,6 +241,54 @@ internal sealed class OoxConversionBudget
         }
 
         PdfOutputBytes += count;
+    }
+
+    public void ChargeSceneNodes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxSceneNodesPerConversion - SceneNodes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the scene node budget of {limits.MaxSceneNodesPerConversion} nodes.");
+        }
+
+        SceneNodes += count;
+    }
+
+    public void ChargeNestedPackageBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxNestedPackageBytesPerConversion - NestedPackageBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the nested package byte budget of {limits.MaxNestedPackageBytesPerConversion} bytes.");
+        }
+
+        NestedPackageBytes += count;
+    }
+
+    public void ChargeWorkbookModels(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxWorkbookModelsPerConversion - WorkbookModels)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the workbook model budget of {limits.MaxWorkbookModelsPerConversion} models.");
+        }
+
+        WorkbookModels += count;
     }
 
     /// <summary>

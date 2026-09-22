@@ -424,6 +424,9 @@ internal sealed partial class PptxSceneBuilder
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships, cancellationToken) : [],
                 child));
+            // R04: scene nodes accumulate across slides, masters, and layouts (nested
+            // group children count as they materialize) against the conversion quota.
+            OoxConversionBudget.Current?.ChargeSceneNodes(1);
         }
 
         return nodes;

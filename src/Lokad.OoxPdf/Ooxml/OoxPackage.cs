@@ -28,13 +28,18 @@ internal sealed class OoxPackage
     private int xmlParseCount;
     private int relationshipParseCount;
 
-    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes)
+    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes, long retainedBytes)
     {
         this.parts = parts;
         ContentTypes = contentTypes;
+        RetainedBytes = retainedBytes;
     }
 
     public OoxContentTypes ContentTypes { get; }
+
+    // R04: total retained part bytes staged by Open, backing the conversion
+    // aggregate quota for nested packages.
+    internal long RetainedBytes { get; }
 
     public IReadOnlyCollection<OoxPart> Parts => parts.Values;
 
@@ -232,7 +237,7 @@ internal sealed class OoxPackage
             parts.Add(partName, new OoxPart(partName, contentType, partBytes));
         }
 
-            OoxPackage result = new OoxPackage(parts, contentTypes);
+            OoxPackage result = new OoxPackage(parts, contentTypes, totalBytes);
             return result;
         }
         finally

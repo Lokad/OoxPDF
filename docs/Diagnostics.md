@@ -110,6 +110,12 @@ shared process. Defaults are generous multiples of the per-site caps:
   attributes parsed across every part; cached parses do not recharge (R04).
 - `MaxWorkbookCellsPerConversion` (default 1,000,000): total chart workbook
   cells read across every embedded workbook; cached models do not recharge (R04).
+- `MaxSceneNodesPerConversion` (default 2,000,000): total PPTX scene nodes
+  built across slides, masters, and layouts, including nested group children (R04).
+- `MaxNestedPackageBytesPerConversion` (default 512 MiB): total retained bytes
+  across nested (embedded workbook) packages, each already capped individually (R04).
+- `MaxWorkbookModelsPerConversion` (default 100): total retained chart workbook
+  models; cached models do not recharge (R04).
 - `MaxPagesPerConversion` (default 10,000): total PDF pages serialized (R06).
 - `MaxPdfContentBytesPerConversion` (default 1 GiB): total encoded page-content
   bytes serialized (R06).
@@ -144,10 +150,9 @@ Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
 or process memory. It covers per-format working-set estimates held across
 decode/transform/compress (R02) but omits pixels retained outside any live
 operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Covered budgets do not yet bound nested-package bytes, scene nodes,
-retained models, or remaining writer work such as fonts and images (already
-counted at decode); the page/content/output summary fields are a follow-up.
-Do not size hosts from `peakLiveImageBytes` plus image headroom alone.
+work. Covered budgets do not yet bound remaining writer work such as fonts and
+images (already counted at decode); the page/content/output summary fields are
+a follow-up. Do not size hosts from `peakLiveImageBytes` plus image headroom alone.
 
 Host admission: measure conversion-only live/process peaks across
 page/image/font/chart breadth with `ReportResourceUsage`, separate discovery,
