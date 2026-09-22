@@ -258,10 +258,107 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void PlaceholderTextAgreesBetweenSceneAndSpans()
+    {
+        // R14: placeholder-text agreement probe. A body placeholder keeps its own
+        // txBody text on both pipelines.
+        //
+        // Style inheritance is a documented divergence here, not a gate: with no
+        // layout placeholder match, the scene resolves master otherStyle (19pt), the
+        // spans fall back to default (18pt), while the shared inheritance helper
+        // finds master bodyStyle (25pt) when called directly. The leaf readers are
+        // shared but the cascade inputs diverge; Office truth is needed before the
+        // style half of this probe can assert agreement, so it pins text only.
+        string slide = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp>
+                <p:nvSpPr><p:cNvPr id="2" name="Body"/><p:nvPr><a:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+                <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                <p:txBody>
+                  <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                  <a:p><a:r><a:t>BodyText</a:t></a:r></a:p>
+                </p:txBody>
+              </p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """;
+        string slideRels = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+            </Relationships>
+            """;
+        string layout = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree/></p:cSld></p:sldLayout>
+            """;
+        string layoutRels = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+            </Relationships>
+            """;
+        string master = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+              <p:txStyles>
+                <p:titleStyle><a:lvl1pPr><a:defRPr sz="3100"/></a:lvl1pPr></p:titleStyle>
+                <p:bodyStyle><a:lvl1pPr><a:defRPr sz="2500"><a:solidFill><a:srgbClr val="AABBCC"/></a:solidFill></a:defRPr></a:lvl1pPr></p:bodyStyle>
+                <p:otherStyle><a:lvl1pPr><a:defRPr sz="1900"/></a:lvl1pPr></p:otherStyle>
+              </p:txStyles>
+            </p:sldMaster>
+            """;
+        string types = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+              <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+              <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+              <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+            </Types>
+            """;
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = types,
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = slide,
+            ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
+            ["ppt/slideLayouts/slideLayout1.xml"] = layout,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = layoutRels,
+            ["ppt/slideMasters/slideMaster1.xml"] = master,
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
+        string sceneText = string.Concat(body.Paragraphs
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
+            .Select(run => run.Text));
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadSpans(node, document, scene, includePlaceholders: true);
+        string spanText = string.Concat(positioned
+            .Select(span => span.SourceRun)
+            .Where(run => run is not null && run.Kind == PptxRenderer.PptxTextRunKind.Text)
+            .Distinct()
+            .Select(run => run!.Text));
+        TestAssert.Equal("BodyText", sceneText);
+        TestAssert.Equal(sceneText, spanText);
+    }
+
     private static IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> ReadSpans(
         PptxSceneNode node,
         PptxDocument document,
-        PptxScene scene)
+        PptxScene scene,
+        bool includePlaceholders = false)
     {
         byte[] bytes = TestFontBuilder.CreateTestFont();
         OpenTypeFont font = OpenTypeFont.Load(bytes);
@@ -276,12 +373,29 @@ internal static class PptxSceneTextAgreementTests
             .Single(candidate => candidate.Name == "ReadTextSpansForShape" && candidate.GetParameters().Length == 9);
         try
         {
-            return (IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>)spans.Invoke(null, [node.Source, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, Array.Empty<XDocument>(), resolver, CancellationToken.None])!;
+            return (IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>)spans.Invoke(null, [node.Source, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, includePlaceholders, InheritedSources(scene), resolver, CancellationToken.None])!;
         }
         catch (TargetInvocationException ex)
         {
             throw ex.InnerException ?? ex;
         }
+    }
+
+    private static IReadOnlyList<XDocument> InheritedSources(PptxScene scene)
+    {
+        // Mirrors the slide placeholder-source chain (master, then layout).
+        var inherited = new List<XDocument>();
+        if (scene.Slides[0].MasterXml is { } master)
+        {
+            inherited.Add(master);
+        }
+
+        if (scene.Slides[0].LayoutXml is { } layout)
+        {
+            inherited.Add(layout);
+        }
+
+        return inherited;
     }
 
     private sealed class CannedFontResolver(FontFaceResolution resolution) : IFontResolver
