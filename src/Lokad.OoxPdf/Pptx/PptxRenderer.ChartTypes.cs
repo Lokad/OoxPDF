@@ -74,6 +74,32 @@ internal sealed partial class PptxRenderer
             return values;
         }
 
+        public bool HasAnyValue()
+        {
+            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
+            int pointCount = ResolveDensePointCount(PointCount, points);
+            if (pointCount <= 0)
+            {
+                return false;
+            }
+
+            foreach (ChartIndexedNumberPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.Value is not null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool HasAnyDenseSlot()
+        {
+            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
+            return ResolveDensePointCount(PointCount, points) > 0;
+        }
+
         public IReadOnlyList<ChartIndexedNumberPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = WorkbookPoints ?? [];
@@ -239,6 +265,32 @@ internal sealed partial class PptxRenderer
             }
 
             return values;
+        }
+
+        public bool HasAnyText()
+        {
+            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
+            int pointCount = ResolveDensePointCount(PointCount, points);
+            if (pointCount <= 0)
+            {
+                return false;
+            }
+
+            foreach (ChartIndexedTextPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.HasText)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool HasAnyDenseSlot()
+        {
+            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
+            return ResolveDensePointCount(PointCount, points) > 0;
         }
 
         public IReadOnlyList<ChartIndexedTextPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)

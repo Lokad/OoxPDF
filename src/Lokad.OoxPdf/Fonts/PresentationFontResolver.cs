@@ -71,8 +71,8 @@ internal sealed class PresentationFontResolver
         // T01: the 64-bit set hash is a lookup shortcut, not an identity proof. Stored
         // sets are compared on every hit so a hash collision can never corrupt output;
         // a mismatch falls back to a fresh uncached subset instead of poisoning the cache.
-        string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\u001f" + HashCodePointSet(codePoints);
         int[] sorted = SortDeduplicate(codePoints);
+        string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\u001f" + HashSortedCodePoints(sorted);
         if (subsets.TryGetValue(key, out SubsetEntry? cached) && cached.CodePoints.AsSpan().SequenceEqual(sorted))
         {
             return cached.Subset;
@@ -112,10 +112,11 @@ internal sealed class PresentationFontResolver
         Array.Resize(ref sorted, count);
         return sorted;
     }
-
-    private static string HashCodePointSet(IReadOnlyList<int> codePoints)
+    // R15: one normalized codepoint set feeds both the lookup hash and the hit
+    // equality check, so repeated subset requests sort/deduplicate once instead of
+    // once for hashing and again for comparison.
+    private static string HashSortedCodePoints(int[] sorted)
     {
-        int[] sorted = SortDeduplicate(codePoints);
         ulong hash = 14695981039346656037ul;
         foreach (int codePoint in sorted)
         {

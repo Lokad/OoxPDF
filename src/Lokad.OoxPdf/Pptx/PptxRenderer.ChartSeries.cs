@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
@@ -579,7 +579,7 @@ internal sealed partial class PptxRenderer
 
     private static int CountRenderableSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
-        return series.Count(vector => vector.DensePoints().Any(point => point?.Value is not null));
+        return series.Count(vector => vector.HasAnyValue());
     }
 
     private static IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> DensifyChartPointSeries(IEnumerable<ChartIndexedNumberVector> series)
@@ -666,7 +666,7 @@ internal sealed partial class PptxRenderer
                     series.DataSources.Categories,
                     workbook,
                     plotVisibleOnly))
-                .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null || vector.DensePoints().Count != 0);
+                .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null || vector.HasAnyDenseSlot());
         }
 
         return ReadChartCategoryLabelVector(chartElement, workbook, plotVisibleOnly);
@@ -1155,7 +1155,7 @@ internal sealed partial class PptxRenderer
             ChartIndexedNumberVector bubbleSizes = readBubbleSize
                 ? ReadChartNumberVector(element.Element(ChartNamespace + "bubbleSize"), workbook, plotVisibleOnly)
                 : default;
-            if (xValues.DensePoints().Count == 0 && yValues.DensePoints().Count == 0)
+            if (!xValues.HasAnyDenseSlot() && !yValues.HasAnyDenseSlot())
             {
                 continue;
             }

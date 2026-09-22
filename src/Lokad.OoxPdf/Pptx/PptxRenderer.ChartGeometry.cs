@@ -17,7 +17,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
             ChartIndexedNumberVector values = ReadChartNumberVector(element.Element(ChartNamespace + "val"), workbook, plotVisibleOnly);
-            if (values.Points.Count > 0 || values.PointCount is not null || values.DensePoints().Count != 0)
+            if (values.Points.Count > 0 || values.PointCount is not null || values.HasAnyDenseSlot())
             {
                 series.Add(values);
             }

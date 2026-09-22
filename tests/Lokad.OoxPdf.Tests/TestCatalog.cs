@@ -60,6 +60,7 @@ internal static class TestCatalog
         .. FromType("pptx-charts", typeof(PptxChartAxesTests)),
         .. FromType("pptx-charts", typeof(PptxChartRenderingTests)),
         .. FromType("pptx-charts", typeof(PptxChartRangeTests)),
+        .. FromType("pptx-charts", typeof(PptxChartDensifyTests)),
         .. FromType("pptx-charts", typeof(PptxChartNumberFormatsTests)),
         .. FromType("pptx-charts", typeof(PptxChartPlotOptionsAgreementTests)),
         .. FromType("pptx-typography", typeof(PptxTypographyTests)),
