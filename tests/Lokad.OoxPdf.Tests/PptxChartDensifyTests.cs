@@ -82,6 +82,49 @@ internal static class PptxChartDensifyTests
         TestAssert.True(allocated <= 262144L, $"Counting renderable series must not densify 10,000-slot vectors, allocated {allocated} bytes.");
     }
 
+    public static void SparseMaxDenseCountMatchesDensifiedMax()
+    {
+        // R15: the sparse max-dense-count probe must agree with densify-then-max,
+        // including sparse, declared, empty, negative-index, and over-cap cases.
+        Type vectorType = NumberVectorType();
+        Type pointType = NumberPointType();
+        Array series = Array.CreateInstance(vectorType, 5);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [], null), 0);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 5d), (2, null)], null), 1);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, null), (1, null)], 5), 2);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [], 4), 3);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [(-1, 1d)], null), 4);
+        TestAssert.Equal(5, InvokeMaxDensePointCount(series));
+        TestAssert.Equal(InvokeDensifiedMaxCount(series), InvokeMaxDensePointCount(series));
+
+        Array empty = Array.CreateInstance(vectorType, 0);
+        TestAssert.Equal(0, InvokeMaxDensePointCount(empty));
+
+        object huge = BuildNumberVector(vectorType, pointType, [], 200000);
+        Array hugeSeries = Array.CreateInstance(vectorType, 1);
+        hugeSeries.SetValue(huge, 0);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => InvokeMaxDensePointCount(hugeSeries));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => InvokeDensifiedMaxCount(hugeSeries));
+    }
+
+    public static void MaxDenseCountSkipsDensifyAllocation()
+    {
+        Type vectorType = NumberVectorType();
+        Type pointType = NumberPointType();
+        Array series = Array.CreateInstance(vectorType, 3);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 1d)], null), 0);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [], null), 1);
+        series.SetValue(BuildNumberVector(vectorType, pointType, [], 10000), 2);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        int max = InvokeMaxDensePointCount(series);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        TestAssert.Equal(10000, max);
+        TestAssert.True(allocated <= 262144L, "Counting dense slots must not densify 10,000-slot vectors, allocated " + allocated + " bytes.");
+    }
+
     public static void SubsetCacheChargesOncePerCodepointSet()
     {
         byte[] bytes = TestFontBuilder.CreateTestFont();
@@ -395,6 +438,41 @@ internal static class PptxChartDensifyTests
     private static void InvokeHasAnyDenseSlotThrowing(Type vectorType, object vector)
     {
         InvokeBool(vectorType, vector, "HasAnyDenseSlot");
+    }
+
+    private static int InvokeMaxDensePointCount(Array series)
+    {
+        MethodInfo count = typeof(PptxRenderer).GetMethod("MaxDensePointCount", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected max-dense-count helper.");
+        try
+        {
+            return (int)count.Invoke(null, [series])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static int InvokeDensifiedMaxCount(Array series)
+    {
+        MethodInfo densify = typeof(PptxRenderer).GetMethod("DensifyChartPointSeries", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected densify helper.");
+        try
+        {
+            var dense = (System.Collections.IList)densify.Invoke(null, [series])!;
+            int max = 0;
+            foreach (object? values in dense)
+            {
+                max = Math.Max(max, ((System.Collections.IList)values!).Count);
+            }
+
+            return max;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
     }
 
     private static int InvokeDenseLength(Type vectorType, object vector)

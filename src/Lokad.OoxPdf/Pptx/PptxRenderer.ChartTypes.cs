@@ -101,6 +101,14 @@ internal sealed partial class PptxRenderer
             return ResolveDensePointCount(PointCount, points) > 0;
         }
 
+        // R15: sparse dense length behind the same resolution as DensePoints so
+        // count-only passes never materialize (or charge) dense arrays.
+        public int DensePointCount()
+        {
+            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
+            return ResolveDensePointCount(PointCount, points);
+        }
+
         public IReadOnlyList<ChartIndexedNumberPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = WorkbookPoints ?? [];

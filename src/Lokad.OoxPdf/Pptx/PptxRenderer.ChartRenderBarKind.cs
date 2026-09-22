@@ -282,7 +282,7 @@ internal sealed partial class PptxRenderer
                         if (categoryTickStroke.Alpha > 0.001d)
                         {
                             ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, chartXml, tickCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-                            int tickCategoryCount = Math.Max(1, DensifyChartPointSeries(barSeriesVectors).Max(values => values.Count));
+                            int tickCategoryCount = Math.Max(1, MaxDensePointCount(barSeriesVectors));
                             double tickSlotWidth = plotBox.Width / tickCategoryCount;
                             double[] tickEdges = new double[tickCategoryCount + 1];
                             for (int tickIndex = 0; tickIndex <= tickCategoryCount; tickIndex++)
@@ -350,7 +350,7 @@ internal sealed partial class PptxRenderer
                         if (horizontalCategoryTickStroke.Alpha > 0.001d)
                         {
                             ChartTextStyle horizontalCategoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, chartXml, tickCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-                            int horizontalCategoryCount = Math.Max(1, DensifyChartPointSeries(barSeriesVectors).Max(values => values.Count));
+                            int horizontalCategoryCount = Math.Max(1, MaxDensePointCount(barSeriesVectors));
                             double horizontalSlotHeight = plotBox.Height / horizontalCategoryCount;
                             double[] horizontalCategoryEdges = new double[horizontalCategoryCount + 1];
                             for (int horizontalCategoryIndex = 0; horizontalCategoryIndex <= horizontalCategoryCount; horizontalCategoryIndex++)

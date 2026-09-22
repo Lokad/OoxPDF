@@ -584,6 +584,19 @@ internal sealed partial class PptxRenderer
         return series.Count(vector => vector.HasAnyValue());
     }
 
+    // R15: resolve per-series dense lengths sparsely so count-only passes
+    // (tick edges) never materialize (or charge) dense arrays.
+    private static int MaxDensePointCount(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        int max = 0;
+        foreach (ChartIndexedNumberVector vector in series)
+        {
+            max = Math.Max(max, vector.DensePointCount());
+        }
+
+        return max;
+    }
+
     private static IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> DensifyChartPointSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series

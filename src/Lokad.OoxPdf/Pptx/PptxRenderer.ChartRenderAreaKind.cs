@@ -81,7 +81,7 @@ internal sealed partial class PptxRenderer
                     if (areaCategoryTickStroke.Alpha > 0.001d)
                     {
                         ChartTextStyle areaCategoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, chartXml, tickCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-                        int areaPointCount = Math.Max(1, DensifyChartPointSeries(areaSeriesVectors).Max(values => values.Count));
+                        int areaPointCount = Math.Max(1, MaxDensePointCount(areaSeriesVectors));
                         double[] areaTickEdges = new double[areaPointCount];
                         for (int areaTickIndex = 0; areaTickIndex < areaPointCount; areaTickIndex++)
                         {
