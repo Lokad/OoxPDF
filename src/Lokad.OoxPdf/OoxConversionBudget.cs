@@ -67,6 +67,10 @@ internal sealed class OoxConversionBudget
 
     public long PdfOutputBytes { get; private set; }
 
+    public long PdfFontBytes { get; private set; }
+
+    public long PdfImageBytes { get; private set; }
+
     public long SceneNodes { get; private set; }
 
     public long NestedPackageBytes { get; private set; }
@@ -241,6 +245,38 @@ internal sealed class OoxConversionBudget
         }
 
         PdfOutputBytes += count;
+    }
+
+    public void ChargePdfFontBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxPdfFontBytesPerConversion - PdfFontBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the PDF font byte budget of {limits.MaxPdfFontBytesPerConversion} bytes.");
+        }
+
+        PdfFontBytes += count;
+    }
+
+    public void ChargePdfImageBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxPdfImageBytesPerConversion - PdfImageBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the PDF image byte budget of {limits.MaxPdfImageBytesPerConversion} bytes.");
+        }
+
+        PdfImageBytes += count;
     }
 
     public void ChargeSceneNodes(long count)

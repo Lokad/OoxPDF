@@ -246,6 +246,8 @@ internal static class OoxResourceGuaranteeTests
             () => new OoxConversionLimits { MaxSceneNodesPerConversion = -1 },
             () => new OoxConversionLimits { MaxNestedPackageBytesPerConversion = -1 },
             () => new OoxConversionLimits { MaxWorkbookModelsPerConversion = -1 },
+            () => new OoxConversionLimits { MaxPdfFontBytesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxPdfImageBytesPerConversion = -1 },
         })
         {
             string input = FindCase("docx-tables.docx");
@@ -355,6 +357,34 @@ internal static class OoxResourceGuaranteeTests
                 TestAssert.Equal(5 * documents, scope.Budget.XmlNodes);
             }
         }
+    }
+
+    public static void PdfFontsRespectFontByteBudget()
+    {
+        // R06: retained font resources accumulate across embedded fonts. A zero font
+        // byte budget trips a font-embedding conversion without publishing output.
+        string input = FindCase("docx-tables.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxPdfFontBytesPerConversion = 0 },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void PdfImagesRespectImageByteBudget()
+    {
+        // R06: retained image resources (including soft masks) accumulate across
+        // embedded images. A zero image byte budget trips an image conversion.
+        string input = FindCase("pptx-ladder-07-image-crop.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxPdfImageBytesPerConversion = 0 },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
     }
 
     private static string FindCase(string name)

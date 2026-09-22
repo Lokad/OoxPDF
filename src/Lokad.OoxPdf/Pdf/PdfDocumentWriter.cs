@@ -386,8 +386,13 @@ internal sealed class PdfDocumentWriter
 
         ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
         byte[] compressedFontProgram = Compress(fontProgram.Span, cancellationToken);
+        byte[] toUnicode = Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken));
+        // R06: retained font resources accumulate across embedded fonts; charge the
+        // program plus ToUnicode bytes as they serialize (operation counts alone do
+        // not bound retained resource bytes).
+        OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
         writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
-        writer.WriteStreamObject(objects.ToUnicode, string.Empty, Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken)));
+        writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
     }
 
     private static string BuildInfoObject(DateTimeOffset creationDate)
@@ -399,6 +404,9 @@ internal sealed class PdfDocumentWriter
 
     private static void WriteImageObjects(PdfObjectWriter writer, PdfImageXObject image, ImageObjectNumbers objects)
     {
+        // R06: retained image resources accumulate across embedded images (soft masks
+        // ride the same path); charge encoded bytes as they serialize.
+        OoxConversionBudget.Current?.ChargePdfImageBytes(checked((long)image.Bytes.Length + (image.Alpha?.Length ?? 0)));
         string smask = objects.SoftMask is null ? string.Empty : FormattableString.Invariant($" /SMask {objects.SoftMask.Value} 0 R");
         writer.WriteStreamObject(objects.Image, FormattableString.Invariant(
             $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace {image.ColorSpace} /BitsPerComponent {image.BitsPerComponent} /Filter {image.Filter}{smask}"), image.Bytes);

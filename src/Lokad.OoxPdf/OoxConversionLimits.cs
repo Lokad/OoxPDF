@@ -7,9 +7,10 @@ namespace Lokad.OoxPdf;
 /// Covered work includes chart range cells plus dense slots, table fragments,
 /// XML nodes, workbook cells, content images (including crop/recolor variants and
 /// effect rasters), font loads and subsets, serialized pages/content/output bytes,
-/// scene nodes, nested package bytes, workbook models,
-/// and the live image reservation peak (R01-R06). Remaining writer work (fonts/images
-/// already count at decode) is not yet bounded; the live peak is a reservation peak, not total
+/// scene nodes, nested package bytes, workbook models, serialized font/image bytes,
+/// and the live image reservation peak (R01-R06). Writer vector graphics (paths,
+/// shadings, annotations) remain outside byte quotas; the live peak is a reservation
+/// peak, not total
 /// memory (R19). Defaults are generous multiples of the per-site caps; hosts with
 /// a claimed memory/work limit should set tighter values and watch
 /// <see cref="OoxPdfOptions.ReportResourceUsage"/> output while tuning.
@@ -66,6 +67,21 @@ public sealed class OoxConversionLimits
     /// the conversion scope is still open (R06).
     /// </summary>
     public long MaxOutputBytesPerConversion { get; init; } = 2147483648;
+
+    /// <summary>
+    /// Maximum PDF font bytes serialized per conversion (default 268,435,456, i.e.
+    /// 256 MiB, four times the per-file program cap). Counts embedded font programs
+    /// plus ToUnicode maps as they serialize, complementing the font-work operation
+    /// count (R06).
+    /// </summary>
+    public long MaxPdfFontBytesPerConversion { get; init; } = 268435456;
+
+    /// <summary>
+    /// Maximum PDF image bytes serialized per conversion (default 536,870,912, i.e.
+    /// 512 MiB). Counts encoded image and soft-mask bytes as they serialize,
+    /// complementing the image-decode count (R06).
+    /// </summary>
+    public long MaxPdfImageBytesPerConversion { get; init; } = 536870912;
 
     /// <summary>
     /// Maximum PPTX scene nodes built per conversion (default 2,000,000). Counts
@@ -169,6 +185,16 @@ public sealed class OoxConversionLimits
         if (MaxOutputBytesPerConversion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxOutputBytesPerConversion), "Conversion output byte budget must be non-negative.");
+        }
+
+        if (MaxPdfFontBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxPdfFontBytesPerConversion), "Conversion PDF font byte budget must be non-negative.");
+        }
+
+        if (MaxPdfImageBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxPdfImageBytesPerConversion), "Conversion PDF image byte budget must be non-negative.");
         }
 
         if (MaxSceneNodesPerConversion < 0)

@@ -121,6 +121,10 @@ shared process. Defaults are generous multiples of the per-site caps:
   bytes serialized (R06).
 - `MaxOutputBytesPerConversion` (default 2 GiB): total PDF output bytes measured
   after writing, charged while the conversion scope is still open (R06).
+- `MaxPdfFontBytesPerConversion` (default 256 MiB): total embedded font program
+  plus ToUnicode bytes serialized, complementing the font-work count (R06).
+- `MaxPdfImageBytesPerConversion` (default 512 MiB): total encoded image and
+  soft-mask bytes serialized, complementing the image-decode count (R06).
 - `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
   including PPTX crop/recolor variants and effect rasters, through the shared
   decoder boundary (R03). Each image is still individually pixel-capped; cache
@@ -150,9 +154,9 @@ Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
 or process memory. It covers per-format working-set estimates held across
 decode/transform/compress (R02) but omits pixels retained outside any live
 operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Covered budgets do not yet bound remaining writer work such as fonts and
-images (already counted at decode); the page/content/output summary fields are
-a follow-up. Do not size hosts from `peakLiveImageBytes` plus image headroom alone.
+work. Writer resource bytes (fonts, images) now charge alongside decode counts;
+the page/content/output/font/image summary fields are a follow-up. Do not size
+hosts from `peakLiveImageBytes` plus image headroom alone.
 
 Host admission: measure conversion-only live/process peaks across
 page/image/font/chart breadth with `ReportResourceUsage`, separate discovery,
