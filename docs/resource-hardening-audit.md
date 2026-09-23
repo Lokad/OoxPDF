@@ -2,8 +2,8 @@
 
 Requirement-by-requirement verdicts for PLAN.md findings R01-R22 (reviewed 2026-09-22).
 Evidence per finding: implementing commit(s) on master plus covering tests, all green in
-the full Release suite (1672 passed / 0 failed / 9 skipped with `--skip-slow`) with
-336/336 visual manifests valid. Verdicts: **closed**, **partial**, **open**.
+the full Release suite (1710 passed / 0 failed / 9 skipped with `--skip-slow`) with
+339/339 visual manifests valid. Verdicts: **closed**, **partial**, **open**.
 
 Verification method: production changes prove out through byte-identical outputs
 (deterministic conversion tests, text-operation gates, visual manifest validation),
@@ -28,7 +28,7 @@ only, never gates.
 | R11 shared border-overlap plan | closed | `9233ae9d`; `DocxBorderPlanTests` (docx-tables) |
 | R12 document/page indexes | closed | `daec0208` drawings, `dc8f1987` related stories, `b404bde3` reference pages; equivalence tests; before/after probes in this audit |
 | R13 font byte ownership | closed | `ac57c794` spans, `0a9ee59d` recency, `17c5484a` in-flight throttle, `266ff97f` retained LRU, `c56b247d` retention proof + measurements |
-| R14 text interpretation | partial | `49e8eb25` unifies 7 run readers + contract test; `2c14ed05` plain-shape scene/span agreement battery; `fc8fecd9` break-run line-boundary agreement; `a4c46558` field-run agreement; `2c4af54e` paragraph-alignment agreement; `16da8e1c` placeholder-text agreement (master bodyStyle) and matched-placeholder agreement (layout lstStyle wins); fixtures must use p:ph per Office files; full 15-field run-style agreement at nominal size; `e91570c1` hyperlink color/underline agreement; `1f2cf402` paragraph-default inheritance; `12ba206c` shape list-style defaults; `40a4770f` master default-style fallback; `7630de21` grouped-shape text; `65d42692` table-style text; `12f917d5` scheme colors; chart tri-state readers verified distinct |
+| R14 text interpretation | closed | `49e8eb25` unifies 7 run readers + contract test; `2c14ed05` plain-shape scene/span agreement battery; `fc8fecd9` break-run line-boundary agreement; `a4c46558` field-run agreement; `2c4af54e` paragraph-alignment agreement; `16da8e1c` placeholder-text agreement (master bodyStyle) and matched-placeholder agreement (layout lstStyle wins); fixtures must use p:ph per Office files; full 15-field run-style agreement at nominal size; `e91570c1` hyperlink color/underline agreement; `1f2cf402` paragraph-default inheritance; `12ba206c` shape list-style defaults; `40a4770f` master default-style fallback; `7630de21` grouped-shape text; `65d42692` table-style text; `12f917d5` scheme colors; chart tri-state readers verified distinct; scene-fed migration executed for every in-scope family (plain, placeholder, link, field, group, table) with span-exact equivalence pins and production flipped under qualification, suite byte-identical plus Office-gated visual checks |
 | R15 chart data resolution | closed | presence checks + subset normalization; existence short-circuits; per-frame shared dense label, series-name, series-vector, and bar/line extent memos; sparse tick-edge max counts + mechanics tests; area/radar extents single-evaluation (no repeat); suite 1683/0/9 |
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
 | R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
@@ -36,7 +36,7 @@ only, never gates.
 | R19 telemetry scope | closed | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md` |
 | R20 severity and publication | closed | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api) |
 | R21 tool budgets | closed | `5cf3e1c9`; spawn-based tools group (7 tests), ps1 timeout |
-| R22 closure evidence | partial | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records |
+| R22 closure evidence | partial | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records; clip/ellipsis/underline Office divergences fixed with locked gates; staged emission mapped, execution open |
 
 ## R12 profiling evidence
 
@@ -66,39 +66,23 @@ index bounds the worst case rather than shifting the median.
 
 ## Residual work
 
-- R14-deeper: migrate layout to scene-resolved text one family at a time with
-  agreement gates; share context-independent inherited nodes behind (node, slide) keys.
-  Entry: ComputeTextSpansForSceneNode re-clones node.Source instead of consuming
-  node.TextBody; fifteen agreement batteries gate runs, breaks, fields, alignment,
-  placeholders, table/shape consistency, table-style text, grouped shapes, scheme colors, full styles, hyperlinks, and every inheritance layer (paragraph
-  defRPr, shape lstStyle, layout bodies, master txStyles, master defaultTextStyle).
-  Known migration prerequisites: click identity lives only in renderer models; table
-  cells carry unresolved XML (no scene text model). Cell-model design (executed):
-  resolve cell paragraphs via shared scene readers with shape:=cell-txBody (matches the
-  renderer, which passes txBody as shape, so ph lookup yields otherStyle on both),
-  inherited:=[], sources:=slide chain, plus StyleText threading through run resolution
-  (scene readers now thread the table style). Cells resolve at span time through shared readers with renderer-merged retained-style semantics, and the cell span entry serves scene-fed spans in production. Migration design: build run models
-  from TextBody runs reusing layout and measuring unchanged.
-  Plain-shape scene-fed design (mapped, not started): ComputeTextSpansForSceneNode
-  re-clones node.Source and re-walks the placeholder/master chain per shape while the scene
-  builder already resolves the identical chain once (shape lstStyle, inherited bodies,
-  inherited txStyle, default text style) and discards the merged defaults. Retention delta:
-  keep DefaultParagraphProperties and DefaultRunProperties per scene paragraph; the
-  scene-fed flow builder then reuses BuildParagraphBulletModel, ReadParagraphSpacing,
-  ResolveParagraphTextStyle, and BuildRunModels on retained inputs with layout and
-  measuring untouched. Run click identity threads from retained run Properties XML through
-  the shared readers (both pipelines already share PptxRunTextAttributeReaders, and the
-  15 batteries prove field-level style equality). Snapshot cascade layer parity needs the
-  retained layer sources.
-  Merged-XML note (cosmetic, no consumer): the scene merger lets an empty lnSpc element wipe inherited
-  spacing content (matched placeholder resolves explicit 90 percent where the renderer merger and
-  Office keep the 100 percent default), so the fed builder merges retained layer sources with the
-  renderer merger instead of reusing scene-merged defaults. No consumer reads spacing from scene
-  defaults (scene styles and snapshots carry no spacing fields), so alignment is not required. Executed for plain shapes with no placeholders, hyperlinks, fields, or group transforms:
-  fields behind an equivalence test (span-exact on the plain-shape battery) with the production entry flipped to the scene-fed path under that qualification (span-for-span against the XML path); tables, grouped
-  shapes, and autofit loops stay on the XML path. Validation bar: agreement
-  batteries plus byte-identical full suite and visual manifests before Office-gated
-  variations.
+- R14-deeper: scene-fed text migration executed for every in-scope family.
+  Fifteen agreement batteries gate runs, breaks, fields, alignment, placeholders,
+  table/shape consistency, table-style text, grouped shapes, scheme colors, full styles,
+  hyperlinks, and every inheritance layer. Production serves scene-fed positioned spans
+  for plain shapes, placeholders, links, fields, grouped shapes, and table cells; only
+  unplaceable shapes (unsupported orientation, no layout frame) and tables without scene
+  text fall back. Layout, measuring, emission, frame geometry, diagnostics, and snapshot
+  cascade parity are unchanged: the entry reuses retained cascade defaults and layer
+  sources merged with the renderer merger, rebuilt bullet/run models, and the shared
+  flow/layout/span pipeline.
+  Span-exact equivalence pins cover plain shapes, placeholders (matched and unmatched),
+  links with click identity, fields, grouped shapes through nested transforms, and styled
+  table cells. Deliberately unchanged: shared inherited scene-node graphs across slides
+  (per-slide node freshness is load-bearing for identity-keyed memos); scene merger
+  spacing alignment (no consumer reads spacing from scene defaults). Validation bar met:
+  agreement batteries plus byte-identical full suite (1710 passed, deterministic conversion
+  stable) and Office-gated visual checks.
 - R15-remainder: closed (bar/line extents shared; area/radar single-evaluation need
   no memo; frame context and arm consolidation analyzed above, not planned).
 - R17-remainder: closed (paragraph alignment was already enum-typed; border edges validate at parse).
