@@ -122,9 +122,10 @@ public static class OoxPdfConverter
         // Totals are snapshotted before publication; the summary below emits before the
         // atomic move succeeds, so a throwing observer fails the conversion while the
         // pre-existing destination is still untouched (R20).
-        // R06: the conversion scope stays open through serialization so page, content,
-        // and output budgets bind the writer; totals snapshot after serialization so the
-        // summary reports writer-stage fields, still before the atomic move (R20).
+        // R06.1: the conversion scope stays open through serialization so page and
+        // content budgets bind the writer and each output chunk is admitted against
+        // the output budget before its write; totals snapshot after serialization so
+        // the summary reports writer-stage fields, still before the atomic move (R20).
         IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
         string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
@@ -143,13 +144,11 @@ public static class OoxPdfConverter
             using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
             {
                 pages = RenderPages(input, inputKind, options, cancellationToken);
-                long outputBytes;
                 using (FileStream output = File.Create(stagingPath))
                 {
-                    outputBytes = PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+                    PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
                 }
 
-                scope.Budget.ChargePdfOutputBytes(outputBytes);
                 totals = scope.Budget.Totals;
             }
 
@@ -212,7 +211,8 @@ public static class OoxPdfConverter
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
         IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
-        // R06: like the file path, the scope stays open through serialization; the
+        // R06.1: like the file path, the scope stays open through serialization and
+        // output chunks admit incrementally during WriteBlank; the
         // summary still reports pre-write totals (writer-stage fields stay zero here)
         // so a throwing observer leaves stream output untouched (R20), unlike the
         // file path which snapshots after serialization into its staging file.
@@ -222,8 +222,7 @@ public static class OoxPdfConverter
             totals = scope.Budget.Totals;
             cancellationToken.ThrowIfCancellationRequested();
             ReportResourceUsage(options, totals, pages.Count);
-            long outputBytes = PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
-            scope.Budget.ChargePdfOutputBytes(outputBytes);
+            PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
         }
     }
 

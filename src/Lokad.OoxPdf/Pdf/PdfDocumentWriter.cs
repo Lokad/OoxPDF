@@ -31,9 +31,12 @@ internal sealed class PdfDocumentWriter
         }
         return deduped;
     }
-    // R06: returns the exact serialized byte count so the conversion scope (still open
-    // at the call site) can charge output bytes after writing. Pages and encoded
-    // content bytes charge up front, bounding serialization before it allocates.
+    // R06.1: returns the exact serialized byte count. Every byte below crosses the
+    // PdfObjectWriter boundary, which admits each chunk against the output budget
+    // before writing, so a zero budget writes nothing and no call-site whole-output
+    // charge remains. On success the admitted total equals the returned position.
+    // Pages and encoded content bytes charge up front, bounding serialization
+    // before it allocates.
     public static long WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);

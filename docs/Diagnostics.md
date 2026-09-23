@@ -119,8 +119,8 @@ shared process. Defaults are generous multiples of the per-site caps:
 - `MaxPagesPerConversion` (default 10,000): total PDF pages serialized (R06).
 - `MaxPdfContentBytesPerConversion` (default 1 GiB): total encoded page-content
   bytes serialized (R06).
-- `MaxOutputBytesPerConversion` (default 2 GiB): total PDF output bytes measured
-  after writing, charged while the conversion scope is still open (R06).
+- `MaxOutputBytesPerConversion` (default 2 GiB): total PDF output bytes admitted before each write
+  while the conversion scope is still open; a zero budget writes nothing (R06.1).
 - `MaxPdfFontBytesPerConversion` (default 256 MiB): total embedded font program
   plus ToUnicode bytes serialized, complementing the font-work count (R06).
 - `MaxPdfImageBytesPerConversion` (default 512 MiB): total encoded image and

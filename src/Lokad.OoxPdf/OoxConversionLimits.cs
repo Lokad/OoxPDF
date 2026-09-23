@@ -63,8 +63,8 @@ public sealed class OoxConversionLimits
 
     /// <summary>
     /// Maximum PDF output bytes published per conversion (default 2,147,483,648,
-    /// i.e. 2 GiB). Charged from the measured serialized size after writing, while
-    /// the conversion scope is still open (R06).
+    /// i.e. 2 GiB). Admitted before every serialized chunk reaches the destination,
+    /// while the conversion scope is still open (R06.1); a zero budget writes nothing.
     /// </summary>
     public long MaxOutputBytesPerConversion { get; init; } = 2147483648;
 

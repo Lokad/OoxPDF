@@ -56,8 +56,7 @@ internal sealed class PdfObjectWriter
         WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
         WriteAscii(FormattableString.Invariant($"<< /Length {contentBytes.Length} >>\nstream\n"));
         cancellationToken.ThrowIfCancellationRequested();
-        stream.Write(contentBytes);
-        position += contentBytes.Length;
+        WriteRawBytes(contentBytes);
         WriteAscii("endstream\nendobj\n");
     }
 
@@ -68,8 +67,7 @@ internal sealed class PdfObjectWriter
         WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
         WriteAscii(FormattableString.Invariant($"<< {dictionaryEntries} /Length {streamBytes.Length} >>\nstream\n"));
         cancellationToken.ThrowIfCancellationRequested();
-        stream.Write(streamBytes);
-        position += streamBytes.Length;
+        WriteRawBytes(streamBytes);
         WriteAscii("\nendstream\nendobj\n");
     }
 
@@ -77,6 +75,20 @@ internal sealed class PdfObjectWriter
     {
         cancellationToken.ThrowIfCancellationRequested();
         byte[] bytes = Encoding.ASCII.GetBytes(text);
+        WriteRawBytes(bytes);
+    }
+
+    // R06.1: every PDF byte crosses this single boundary. The output budget is
+    // admitted before the destination sees the chunk, so a zero budget writes
+    // nothing and an exact budget trips only when a further byte is attempted.
+    // On success the admitted total equals Position. When the destination throws
+    // mid-write, the budget holds admitted bytes, which may exceed the prefix the
+    // destination actually kept; no exact recoverable count is invented. No
+    // output-sized buffer is introduced here: ASCII payloads are encoded once by
+    // WriteAscii and raw spans charge their length directly.
+    private void WriteRawBytes(ReadOnlySpan<byte> bytes)
+    {
+        OoxConversionBudget.Current?.ChargePdfOutputBytes(bytes.Length);
         stream.Write(bytes);
         position += bytes.Length;
     }

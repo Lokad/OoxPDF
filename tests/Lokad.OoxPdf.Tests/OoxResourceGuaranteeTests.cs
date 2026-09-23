@@ -4,6 +4,7 @@ using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -221,8 +222,8 @@ internal static class OoxResourceGuaranteeTests
 
     public static void PdfOutputRespectOutputBudget()
     {
-        // R06: measured output bytes charge while the scope is still open, after
-        // writing but before atomic publication.
+        // R06.1: output bytes admit before every write while the scope is still
+        // open, so a zero budget trips before publication.
         string input = FindCase("docx-tables.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
@@ -231,6 +232,197 @@ internal static class OoxResourceGuaranteeTests
             ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = 0 },
         }));
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void PdfOutputZeroBudgetWritesNothingToCountingDestination()
+    {
+        // R06.1: each output chunk admits against the budget before its write, so a
+        // zero budget trips before the destination sees any byte (previously the
+        // whole PDF was written, then charged).
+        string input = FindCase("docx-tables.docx");
+        using var inner = new MemoryStream();
+        using var counting = new CountingWriteStream(inner);
+        using FileStream inputStream = File.OpenRead(input);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(
+            inputStream,
+            counting,
+            new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = 0 },
+            }));
+        TestAssert.Equal(0L, counting.TotalWritten);
+        TestAssert.Equal(0L, inner.Length);
+    }
+
+    public static void PdfOutputExactBudgetSucceedsOneByteShortFailsAcrossPaths()
+    {
+        // R06.1: exact/one-byte-too-small boundaries on file, seekable-stream, and
+        // forward-only-stream paths. The one-byte-short file case trips at the tail
+        // (after fonts/images/xref) and preserves a pre-existing destination.
+        string input = FindCase("docx-tables.docx");
+        string ample = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, ample, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+        long size = new FileInfo(ample).Length;
+        TestAssert.True(size > 0, "Ample conversion must produce output.");
+
+        string exact = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, exact, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = size },
+        });
+        TestAssert.Equal(size, new FileInfo(exact).Length);
+
+        string sentinel = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        byte[] sentinelBytes = new byte[] { 1, 2, 3, 4 };
+        File.WriteAllBytes(sentinel, sentinelBytes);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, sentinel, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = size - 1 },
+        }));
+        TestAssert.True(File.ReadAllBytes(sentinel).SequenceEqual(sentinelBytes), "Budget failure must preserve the pre-existing destination.");
+
+        using (var output = new MemoryStream())
+        {
+            using FileStream seekableInput = File.OpenRead(input);
+            OoxPdfConverter.Convert(seekableInput, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = size },
+            });
+            TestAssert.Equal(size, output.Length);
+        }
+
+        using (var output = new MemoryStream())
+        {
+            using FileStream seekableInput = File.OpenRead(input);
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(seekableInput, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = size - 1 },
+            }));
+        }
+
+        // Forward-only destinations never expose Position/Length; the writer keeps
+        // its own count and the exact budget still succeeds.
+        using var forwardInner = new MemoryStream();
+        using var forwardOnly = new ForwardOnlyWriteStream(forwardInner);
+        using FileStream forwardInput = File.OpenRead(input);
+        OoxPdfConverter.Convert(forwardInput, forwardOnly, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = size },
+        });
+        TestAssert.Equal(size, forwardInner.Length);
+    }
+
+    public static void PdfOutputCountingDestinationNeverCrossesBudget()
+    {
+        // R06.1: a counting destination proves no write crosses the allowed total,
+        // including late font/image/xref chunks on an image deck; the destination
+        // keeps its allowed prefix after the later failure.
+        string input = FindCase("pptx-ladder-07-image-crop.pptx");
+        string ample = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, ample, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+        long size = new FileInfo(ample).Length;
+        TestAssert.True(size > 0, "Ample conversion must produce output.");
+
+        using var inner = new MemoryStream();
+        using var counting = new CountingWriteStream(inner);
+        using FileStream inputStream = File.OpenRead(input);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(
+            inputStream,
+            counting,
+            new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Pptx,
+                ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = size - 1 },
+            }));
+        TestAssert.True(counting.TotalWritten <= size - 1, "No write may cross the allowed total, wrote " + counting.TotalWritten + " of " + size + ".");
+        TestAssert.True(counting.TotalWritten > 0, "Earlier chunks stay admitted; the failure happens at the tail.");
+    }
+
+    public static void PdfOutputThrowingDestinationPropagatesWithoutWrapping()
+    {
+        // R06.1: admission precedes the write, so a destination failure surfaces as
+        // the destination exception itself, never wrapped or mistaken for a budget trip.
+        string input = FindCase("docx-tables.docx");
+        using FileStream inputStream = File.OpenRead(input);
+        using var throwing = new ThrowingWriteStream(new IOException("probe-destination-boom"));
+        IOException thrown = TestAssert.Throws<IOException>(() => OoxPdfConverter.Convert(
+            inputStream,
+            throwing,
+            new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }));
+        TestAssert.Contains("probe-destination-boom", thrown.Message);
+    }
+
+    public static void PdfObjectWriterAdmitsEveryWriteMethodBeforeWriting()
+    {
+        // R06.1: direct writer regressions exercise all write methods. A zero budget
+        // trips before any byte; an ample budget matches the unscoped byte sequence
+        // and the admitted total equals the written total.
+        byte[] content = Encoding.ASCII.GetBytes("BT /F1 12 Tf (x) Tj ET");
+        byte[] payload = new byte[] { 1, 2, 3, 4, 5 };
+
+        using var ampleInner = new MemoryStream();
+        using var ampleCounting = new CountingWriteStream(ampleInner);
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits()))
+        {
+            var writer = new PdfObjectWriter(ampleCounting, CancellationToken.None);
+            writer.WriteHeader();
+            writer.WriteObject(1, "<< /Type /Catalog >>\n");
+            writer.WriteContentStreamObject(2, content);
+            writer.WriteStreamObject(3, "/Filter /FlateDecode", payload);
+            writer.WriteAscii("trailer\n");
+            TestAssert.Equal(ampleCounting.TotalWritten, scope.Budget.PdfOutputBytes);
+        }
+
+        byte[] admitted = ampleInner.ToArray();
+        TestAssert.True(admitted.Length > 0, "Ample budget must write the full sequence.");
+        using (var plain = new MemoryStream())
+        {
+            var writer = new PdfObjectWriter(plain, CancellationToken.None);
+            writer.WriteHeader();
+            writer.WriteObject(1, "<< /Type /Catalog >>\n");
+            writer.WriteContentStreamObject(2, content);
+            writer.WriteStreamObject(3, "/Filter /FlateDecode", payload);
+            writer.WriteAscii("trailer\n");
+            TestAssert.True(plain.ToArray().SequenceEqual(admitted), "Admission must not alter emitted bytes.");
+        }
+
+        void Attempt(Action<PdfObjectWriter> write)
+        {
+            using var attemptInner = new MemoryStream();
+            using var attemptCounting = new CountingWriteStream(attemptInner);
+            using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(
+                new OoxConversionLimits { MaxOutputBytesPerConversion = 0 }))
+            {
+                var writer = new PdfObjectWriter(attemptCounting, CancellationToken.None);
+                TestAssert.Throws<OoxPdfLimitExceededException>(() => write(writer));
+            }
+
+            TestAssert.Equal(0L, attemptCounting.TotalWritten);
+        }
+
+        Attempt(writer => writer.WriteHeader());
+        Attempt(writer => writer.WriteObject(1, "<< /Type /Catalog >>\n"));
+        Attempt(writer => writer.WriteContentStreamObject(2, content));
+        Attempt(writer => writer.WriteStreamObject(3, "/Filter /FlateDecode", payload));
+        Attempt(writer => writer.WriteAscii("trailer\n"));
+
+        // Cancellation still precedes admission and writing.
+        using var cancelledInner = new MemoryStream();
+        using var cancelledCounting = new CountingWriteStream(cancelledInner);
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits()))
+        {
+            var writer = new PdfObjectWriter(cancelledCounting, new CancellationToken(canceled: true));
+            TestAssert.Throws<OperationCanceledException>(() => writer.WriteAscii("x"));
+            TestAssert.Equal(0L, scope.Budget.PdfOutputBytes);
+        }
+
+        TestAssert.Equal(0L, cancelledCounting.TotalWritten);
     }
 
     public static void ConversionLimitsRejectSerializationNegativeCaps()
@@ -473,6 +665,103 @@ internal static class OoxResourceGuaranteeTests
             ConversionLimits = new OoxConversionLimits { MaxPdfImageBytesPerConversion = 0 },
         }));
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    private sealed class CountingWriteStream(MemoryStream inner) : Stream
+    {
+        public long TotalWritten { get; private set; }
+
+        public override bool CanRead => false;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => true;
+
+        public override long Length => inner.Length;
+
+        public override long Position { get => inner.Position; set => throw new NotSupportedException(); }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            inner.Write(buffer, offset, count);
+            TotalWritten += count;
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            inner.Write(buffer);
+            TotalWritten += buffer.Length;
+        }
+
+        public override void WriteByte(byte value)
+        {
+            inner.WriteByte(value);
+            TotalWritten += 1;
+        }
+    }
+
+    private sealed class ForwardOnlyWriteStream(MemoryStream inner) : Stream
+    {
+        public override bool CanRead => false;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => inner.CanWrite;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+
+        public override void Write(ReadOnlySpan<byte> buffer) => inner.Write(buffer);
+
+        protected override void Dispose(bool disposing)
+        {
+        }
+    }
+
+    private sealed class ThrowingWriteStream(Exception failure) : Stream
+    {
+        public override bool CanRead => false;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => true;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw failure;
+
+        public override void Write(ReadOnlySpan<byte> buffer) => throw failure;
     }
 
     private static string FindCase(string name)
