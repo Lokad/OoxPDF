@@ -149,9 +149,10 @@ counters plus the peak live reservation
 (`pages`, `chartRangeCells`, `tableFragments`, `imagesDecoded`, `fontWork`,
 `xmlNodes`, `workbookCells`, `peakLiveImageBytes`, plus `pdfPages`,
 `pdfContentBytes`, and `pdfOutputBytes` writer-stage fields). File conversions
-snapshot after serialization, so the writer-stage fields carry post-write values
-before atomic publication; stream conversions snapshot before serialization, so
-those fields stay zero there even when the emitted PDF contains them. Both omit
+snapshot after serialization, so the page/content/output fields carry post-write
+values before atomic publication; stream conversions snapshot after rendering but
+before serialization, so page/content fields carry render-stage values while output
+stays zero even when the emitted PDF contains those bytes. Both omit
 charged domains without a summary field (font/image bytes, scene nodes, nested
 package bytes, workbook models). Informational diagnostics
 never affect CLI `--strict` exit codes.

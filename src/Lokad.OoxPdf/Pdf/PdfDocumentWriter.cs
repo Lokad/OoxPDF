@@ -35,8 +35,8 @@ internal sealed class PdfDocumentWriter
     // PdfObjectWriter boundary, which admits each chunk against the output budget
     // before writing, so a zero budget writes nothing and no call-site whole-output
     // charge remains. On success the admitted total equals the returned position.
-    // Pages and encoded content bytes charge up front, bounding serialization
-    // before it allocates.
+    // Pages and content bytes admit per produced page during rendering (R06.2);
+    // the writer keeps page validation, planning, and numbering.
     public static long WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
@@ -44,15 +44,6 @@ internal sealed class PdfDocumentWriter
         {
             throw new ArgumentException("A PDF document must contain at least one page.", nameof(pages));
         }
-
-        OoxConversionBudget.Current?.ChargePdfPages(pages.Count);
-        long contentByteTotal = 0;
-        foreach (PdfPage page in pages)
-        {
-            contentByteTotal = checked(contentByteTotal + page.Content.Length);
-        }
-
-        OoxConversionBudget.Current?.ChargePdfContentBytes(contentByteTotal);
 
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {

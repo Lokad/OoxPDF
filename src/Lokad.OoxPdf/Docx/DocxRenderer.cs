@@ -147,6 +147,8 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         if (!HasRenderableContent())
         {
+            // R06.2: admit the single blank page like any produced page.
+            OoxConversionBudget.Current?.ChargePdfPages(1);
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
@@ -880,6 +882,9 @@ internal sealed partial class DocxRenderer
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // R06.2: admit the upcoming page before it emits; later pages, fonts,
+            // and images never produce past the trip.
+            OoxConversionBudget.Current?.ChargePdfPages(1);
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
@@ -974,16 +979,21 @@ internal sealed partial class DocxRenderer
                 layoutPage.Height);
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count);
+            string content = graphics.ToString();
             pages.Add(new PdfPage(
                 layoutPage.Width,
                 layoutPage.Height,
-                graphics.ToString(),
+                content,
                 fontResources.Resources,
                 pageImages.ToArray(),
                 graphics.ExtGStates,
                 graphics.Shadings,
                 graphics.Patterns,
                 annotations));
+            // R06.2: admit the emitted content bytes (pages admit at the top of
+            // each iteration, before emission). DOCX layout itself stays
+            // whole-document; repagination control is a named residual.
+            OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
         }
 
         return pages;

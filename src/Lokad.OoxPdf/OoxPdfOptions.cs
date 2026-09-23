@@ -57,8 +57,9 @@ public sealed class OoxPdfOptions
     /// (pages, chart cells, table fragments, images, font operations, XML nodes,
     /// workbook cells, serialized page/content/output bytes) plus the peak live image
     /// decode reservation so hosts can account concurrent conversions. File conversions
-    /// snapshot after serialization, so writer-stage fields carry post-write values;
-    /// stream conversions snapshot before serialization, so those fields stay zero there.
+    /// snapshot after serialization, so page/content/output fields carry post-write
+    /// values; stream conversions snapshot after rendering but before serialization,
+    /// so page/content fields carry render-stage values while output stays zero there.
     /// Informational diagnostics never affect CLI strict exit codes. Disabled by default.
     /// </summary>
     public bool ReportResourceUsage { get; init; }

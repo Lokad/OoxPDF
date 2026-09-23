@@ -26,6 +26,9 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             pages[i] = new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints);
+            // R06.2: admit each produced page before further production, so a small
+            // page budget rejects before later slides materialize.
+            OoxConversionBudget.Current?.ChargePdfPages(1);
         }
 
         return pages;
@@ -52,6 +55,9 @@ internal sealed partial class PptxRenderer
         for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // R06.2: admit the upcoming page before it materializes; later slides
+            // (and their fonts/images) never produce past the trip.
+            OoxConversionBudget.Current?.ChargePdfPages(1);
             PptxSlide slide = document.Slides[slideIndex];
             PptxSceneSlide sceneSlide = scene.Slides[slideIndex];
             XDocument slideXml = sceneSlide.SlideXml;
@@ -99,7 +105,9 @@ internal sealed partial class PptxRenderer
             List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
             List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts, context.CancellationToken);
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations));
-
+            // R06.2: admit the emitted content bytes (pages admit at the top of
+            // each iteration, before production).
+            OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
         }
 
         return pages;

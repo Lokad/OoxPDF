@@ -641,10 +641,12 @@ internal static class OoxLimitsTests
         TestAssert.True(!summary.Message.Contains("pdfOutputBytes=0", StringComparison.Ordinal), "Writer output bytes must be reported, got: " + summary.Message);
     }
 
-    public static void ConversionResourceSummaryOmitsWriterStageOnStreamPath()
+    public static void ConversionResourceSummaryReportsRenderStageOnStreamPath()
     {
-        // R22: the stream path keeps the pre-write snapshot so a throwing observer
-        // leaves stream output untouched (R20); writer-stage fields stay zero.
+        // R06.2: pages/content admit during rendering, so the pre-write stream
+        // snapshot reports render-stage fields while output (still post-snapshot)
+        // stays zero. The R20 guarantee is unchanged: a throwing observer still
+        // leaves stream output untouched because the summary precedes serialization.
         string input = DocxWithInlinePng();
         var diagnostics = new List<OoxPdfDiagnostic>();
         using FileStream inputStream = File.OpenRead(input);
@@ -656,7 +658,8 @@ internal static class OoxLimitsTests
             DiagnosticSink = diagnostics.Add,
         });
         OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
-        TestAssert.Contains("pdfPages=0", summary.Message);
+        TestAssert.Contains("pdfPages=1", summary.Message);
+        TestAssert.True(!summary.Message.Contains("pdfContentBytes=0", StringComparison.Ordinal), "Render-stage content bytes must be reported, got: " + summary.Message);
         TestAssert.Contains("pdfOutputBytes=0", summary.Message);
     }
 

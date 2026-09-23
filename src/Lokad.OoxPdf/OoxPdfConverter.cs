@@ -123,7 +123,7 @@ public static class OoxPdfConverter
         // atomic move succeeds, so a throwing observer fails the conversion while the
         // pre-existing destination is still untouched (R20).
         // R06.1: the conversion scope stays open through serialization so page and
-        // content budgets bind the writer and each output chunk is admitted against
+        // content budgets bind the renderers (R06.2) and each output chunk is admitted against
         // the output budget before its write; totals snapshot after serialization so
         // the summary reports writer-stage fields, still before the atomic move (R20).
         IReadOnlyList<PdfPage> pages;

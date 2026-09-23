@@ -667,6 +667,78 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
     }
 
+    public static void PdfPageBudgetAdmitsDuringRenderBeforeLaterSlides()
+    {
+        // R06.2: per-slide page admission trips during rendering, before the last
+        // slide (and its image) materializes. With a generous page budget the same
+        // deck trips the image budget instead, proving the trailing slide decodes.
+        string input = WriteImageSlideDeck(3);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException imageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxImagesDecodedPerConversion = 0 },
+        }));
+        TestAssert.Contains("image decode budget", imageTrip.Message);
+        OoxPdfLimitExceededException pageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits
+            {
+                MaxPagesPerConversion = 2,
+                MaxImagesDecodedPerConversion = 0,
+            },
+        }));
+        TestAssert.Contains("page budget", pageTrip.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void PdfPageBudgetAdmitsDuringRenderBeforeLaterDocxPages()
+    {
+        // R06.2: per-page DOCX admission trips during page emission, before the
+        // trailing page (and its image) produces. The image-budget run proves the
+        // trailing image decodes when pages are ample.
+        string input = WritePagedDocxWithTrailingImage();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException imageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxImagesDecodedPerConversion = 0 },
+        }));
+        TestAssert.Contains("image decode budget", imageTrip.Message);
+        OoxPdfLimitExceededException pageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits
+            {
+                MaxPagesPerConversion = 2,
+                MaxImagesDecodedPerConversion = 0,
+            },
+        }));
+        TestAssert.Contains("page budget", pageTrip.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void PdfContentBudgetAdmitsDuringRenderBeforeLaterPages()
+    {
+        // R06.2: per-page content admission trips on the first emitted page, before
+        // the trailing image decodes (previously content charged in the writer after
+        // the whole document rendered).
+        string input = WritePagedDocxWithTrailingImage();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException contentTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits
+            {
+                MaxPdfContentBytesPerConversion = 0,
+                MaxImagesDecodedPerConversion = 0,
+            },
+        }));
+        TestAssert.Contains("content byte budget", contentTrip.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
     private sealed class CountingWriteStream(MemoryStream inner) : Stream
     {
         public long TotalWritten { get; private set; }
@@ -762,6 +834,117 @@ internal static class OoxResourceGuaranteeTests
         public override void Write(byte[] buffer, int offset, int count) => throw failure;
 
         public override void Write(ReadOnlySpan<byte> buffer) => throw failure;
+    }
+
+    private static string WriteImageSlideDeck(int slides)
+    {
+        // R06.2: text slides with a picture on the trailing slide only, so a
+        // last-slide producer tripwire (image decode) distinguishes render-time
+        // admission from end-of-render charges. Single quotes keep the XML readable.
+        var sldIds = new StringBuilder();
+        var slideRels = new StringBuilder();
+        var slideOverrides = new StringBuilder();
+        for (int i = 1; i <= slides; i++)
+        {
+            sldIds.Append("<p:sldId id=\"" + (255 + i) + "\" r:id=\"rId" + i + "\"/>");
+            slideRels.Append("<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"slides/slide" + i + ".xml\"/>");
+            slideOverrides.Append("<Override PartName=\"/ppt/slides/slide" + i + ".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/>");
+        }
+        string presentation = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<p:presentation xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+            + "<p:sldSz cx=\"9144000\" cy=\"6858000\"/>"
+            + "<p:sldIdLst>" + sldIds.ToString() + "</p:sldIdLst>"
+            + "</p:presentation>";
+        string presRels = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" + slideRels.ToString() + "</Relationships>";
+        string types = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+            + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+            + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+            + "<Default Extension=\"png\" ContentType=\"image/png\"/>"
+            + "<Override PartName=\"/ppt/presentation.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"/>"
+            + slideOverrides.ToString()
+            + "</Types>";
+        string slideXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+            + "<p:cSld><p:spTree><p:sp>"
+            + "<p:nvSpPr><p:cNvPr id=\"2\" name=\"Deck\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>"
+            + "<p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"2743200\" cy=\"457200\"/></a:xfrm><a:prstGeom prst=\"rect\"/></p:spPr>"
+            + "<p:txBody><a:bodyPr/><a:lstStyle/>"
+            + "<a:p><a:r><a:rPr sz=\"2400\"><a:latin typeface=\"Arial\"/>"
+            + "</a:rPr><a:t>Page</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>";
+        string imageSlideXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+            + "<p:cSld><p:spTree><p:pic>"
+            + "<p:nvPicPr><p:cNvPr id=\"2\" name=\"DeckImage\"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>"
+            + "<p:blipFill><a:blip r:embed=\"rIdImage1\"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>"
+            + "<p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"2743200\" cy=\"1371600\"/></a:xfrm><a:prstGeom prst=\"rect\"/></p:spPr>"
+            + "</p:pic></p:spTree></p:cSld></p:sld>";
+        string imageSlideRels = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+            + "<Relationship Id=\"rIdImage1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"../media/image1.png\"/>"
+            + "</Relationships>";
+        var parts = new Dictionary<string, string>();
+        parts["[Content_Types].xml"] = types;
+        parts["_rels/.rels"] = PptxTests.PackageRelationship();
+        parts["ppt/presentation.xml"] = presentation;
+        parts["ppt/_rels/presentation.xml.rels"] = presRels;
+        for (int i = 1; i < slides; i++)
+        {
+            parts["ppt/slides/slide" + i + ".xml"] = slideXml;
+        }
+
+        parts["ppt/slides/slide" + slides + ".xml"] = imageSlideXml;
+        parts["ppt/slides/_rels/slide" + slides + ".xml.rels"] = imageSlideRels;
+        string path = TestFixtures.WriteTempPackage(".pptx", parts);
+        using (var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Update))
+        {
+            var entry = zip.CreateEntry("ppt/media/image1.png");
+            using var entryStream = entry.Open();
+            byte[] png = TestFixtures.CreateRgbPng(2, 1, new byte[] { 255, 0, 0, 0, 0, 255 });
+            entryStream.Write(png, 0, png.Length);
+        }
+
+        return path;
+    }
+
+    private static string WritePagedDocxWithTrailingImage()
+    {
+        // R06.2: three forced pages with an inline image on the last page only.
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+                + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+                + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+                + "<Default Extension=\"png\" ContentType=\"image/png\"/>"
+                + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+                + "</Types>"),
+            ["_rels/.rels"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>"
+                + "</Relationships>"),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rIdImage1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/image1.png\"/>"
+                + "</Relationships>"),
+            ["word/document.xml"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
+                + " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\""
+                + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""
+                + " xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\""
+                + " xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+                + "<w:body>"
+                + "<w:p><w:r><w:t>first</w:t></w:r><w:r><w:br w:type=\"page\"/></w:r></w:p>"
+                + "<w:p><w:r><w:t>second</w:t></w:r><w:r><w:br w:type=\"page\"/></w:r></w:p>"
+                + "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/>"
+                + "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
+                + "<pic:pic><pic:blipFill><a:blip r:embed=\"rIdImage1\"/></pic:blipFill></pic:pic>"
+                + "</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+                + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>"
+                + "</w:body></w:document>"),
+            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, new byte[] { 255, 0, 0, 0, 0, 255 }),
+        });
     }
 
     private static string FindCase(string name)
