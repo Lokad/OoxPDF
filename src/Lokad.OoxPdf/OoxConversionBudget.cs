@@ -71,6 +71,10 @@ internal sealed class OoxConversionBudget
 
     public long PdfImageBytes { get; private set; }
 
+    public long RetainedImageBytes { get; private set; }
+
+    public long RetainedFontBytes { get; private set; }
+
     public long SceneNodes { get; private set; }
 
     public long NestedPackageBytes { get; private set; }
@@ -93,7 +97,7 @@ internal sealed class OoxConversionBudget
     /// </summary>
     public long PeakLiveImageBytes { get; private set; }
 
-    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes);
+    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes, RetainedImageBytes, RetainedFontBytes);
 
     public static Scope BeginScope(OoxConversionLimits? limits)
     {
@@ -279,6 +283,38 @@ internal sealed class OoxConversionBudget
         PdfImageBytes += count;
     }
 
+    public void ChargeRetainedImageBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxRetainedImageBytesPerConversion - RetainedImageBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the retained image byte budget of {limits.MaxRetainedImageBytesPerConversion} bytes.");
+        }
+
+        RetainedImageBytes += count;
+    }
+
+    public void ChargeRetainedFontBytes(long count)
+    {
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count > limits.MaxRetainedFontBytesPerConversion - RetainedFontBytes)
+        {
+            throw new OoxPdfLimitExceededException(
+                $"Conversion exceeds the retained font byte budget of {limits.MaxRetainedFontBytesPerConversion} bytes.");
+        }
+
+        RetainedFontBytes += count;
+    }
+
     public void ChargeSceneNodes(long count)
     {
         if (count < 0)
@@ -431,12 +467,14 @@ internal readonly record struct OoxConversionTotals(
     long PeakLiveImageBytes,
     long PdfPages,
     long PdfContentBytes,
-    long PdfOutputBytes)
+    long PdfOutputBytes,
+    long RetainedImageBytes,
+    long RetainedFontBytes)
 {
     public OoxPdfDiagnostic ToSummaryDiagnostic(int pageCount)
     {
         string message = FormattableString.Invariant(
-            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}.");
+            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; retainedImageBytes={RetainedImageBytes}; retainedFontBytes={RetainedFontBytes}.");
         return new OoxPdfDiagnostic(
             "CONVERSION_RESOURCE_SUMMARY",
             OoxPdfSeverity.Info,

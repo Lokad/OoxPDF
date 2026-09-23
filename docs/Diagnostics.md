@@ -125,6 +125,14 @@ shared process. Defaults are generous multiples of the per-site caps:
   plus ToUnicode bytes serialized, complementing the font-work count (R06).
 - `MaxPdfImageBytesPerConversion` (default 512 MiB): total encoded image and
   soft-mask bytes serialized, complementing the image-decode count (R06).
+- `MaxRetainedImageBytesPerConversion` (default 512 MiB): total encoded image
+  plus soft-mask bytes of newly created image resources at the owning producer
+  (R06.2). Cache hits create nothing and do not recharge; pruned resources stay
+  charged. Intentionally separate from the serialized image cap.
+- `MaxRetainedFontBytesPerConversion` (default 256 MiB): total subset (or whole
+  fallback) font program bytes at subset construction (R06.2). Identical-merge
+  fast paths build nothing and do not recharge. Intentionally separate from the
+  serialized font cap.
 - `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
   including PPTX crop/recolor variants and effect rasters, through the shared
   decoder boundary (R03). Each image is still individually pixel-capped; cache
@@ -161,11 +169,31 @@ Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
 or process memory. It covers per-format working-set estimates held across
 decode/transform/compress (R02) but omits pixels retained outside any live
 operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Writer font/image bytes charge alongside decode counts, but only the
-page/content/output writer-stage fields have summary fields so far (file path;
-stream path reports pre-write zeros); font/image-byte and remaining-domain
-summary fields stay R19 follow-up work. Do not size
+work. Retained image/font production carries admission caps plus `retainedImageBytes`/
+`retainedFontBytes` summary fields (R06.2); serialized font/image bytes charge
+without summary fields (R19 follow-up). Do not size
 hosts from `peakLiveImageBytes` plus image headroom alone.
+
+Domain map (R06.2/V01) — every charged domain against its admission bound, or its
+named residual:
+
+- Chart range cells, dense slots, table fragments, XML nodes, workbook cells and
+  models, nested package bytes, scene nodes: aggregate cumulative caps (R04).
+- Images: decode counts at the shared decoder boundary (R03); live working set as
+  a reservation peak (R02); retained encoded bytes at the owning producer with
+  no recharge on cache hits and no refunds (R06.2); serialized bytes at the
+  writer (R06).
+- Fonts: load/subset counts at the shared loader boundary (R03); retained programs
+  at subset construction with identical-merge fast paths exempt (R06.2);
+  serialized bytes plus ToUnicode maps at the writer (R06).
+- Pages, content, output: per-page admission during rendering (R06.2),
+  serialization totals (R06), pre-write output admission at every write (R06.1).
+- Vector, shading, and annotation writer data: no byte quota (residual; writer
+  validation still applies).
+- XML/text payload heaps, font subset/compress scratch, writer scratch: counts
+  bound work, not heap bytes (residual; V01 measures).
+- DOCX repagination passes: fragment/table budgets bound the inputs, but the
+  passes themselves have no separate control (residual).
 
 Host admission: measure conversion-only live/process peaks across
 page/image/font/chart breadth with `ReportResourceUsage`, separate discovery,

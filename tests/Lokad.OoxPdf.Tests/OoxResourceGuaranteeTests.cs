@@ -440,6 +440,8 @@ internal static class OoxResourceGuaranteeTests
             () => new OoxConversionLimits { MaxNestedPackageBytesPerConversion = -1 },
             () => new OoxConversionLimits { MaxWorkbookModelsPerConversion = -1 },
             () => new OoxConversionLimits { MaxPdfFontBytesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxRetainedImageBytesPerConversion = -1 },
+            () => new OoxConversionLimits { MaxRetainedFontBytesPerConversion = -1 },
             () => new OoxConversionLimits { MaxPdfImageBytesPerConversion = -1 },
         })
         {
@@ -739,6 +741,81 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
     }
 
+    public static void RetainedImageBytesTripBeforeSerialization()
+    {
+        // R06.2: retained production charges land at the owning producer. A zero
+        // retained-image budget trips during rendering, before any serialization.
+        string input = FindCase("pptx-ladder-07-image-crop.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxRetainedImageBytesPerConversion = 0 },
+        }));
+        TestAssert.Contains("retained image byte budget", thrown.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+    public static void RetainedFontBytesTripBeforeSerialization()
+    {
+        // R06.2: a zero retained-font budget trips at the first subset build.
+        string input = FindCase("docx-tables.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxRetainedFontBytesPerConversion = 0 },
+        }));
+        TestAssert.Contains("retained font byte budget", thrown.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+    public static void RepeatedImagesDoNotRechargeRetainedBytes()
+    {
+        // R06.2: the same image on every slide decodes once (cache hits create
+        // nothing), so retained bytes equal the single-use deck.
+        long singleBytes = RetainedImageBytesOf(WriteImageSlideDeck(3), OoxPdfInputKind.Pptx);
+        long repeatedBytes = RetainedImageBytesOf(WriteImageSlideDeck(3, imageOnEverySlide: true), OoxPdfInputKind.Pptx);
+        TestAssert.True(singleBytes > 0, "Image deck must retain image bytes.");
+        TestAssert.Equal(singleBytes, repeatedBytes);
+    }
+    public static void DistinctDocxImagesChargePerProducedPage()
+    {
+        // R06.2: DOCX retains per produced page with no cross-page cache, so the
+        // same image on two pages charges exactly twice the single-image deck.
+        long one = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(), OoxPdfInputKind.Docx);
+        long two = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(imageOnMiddlePage: true), OoxPdfInputKind.Docx);
+        TestAssert.True(one > 0, "Image document must retain image bytes.");
+        TestAssert.Equal(2 * one, two);
+    }
+    public static void RetainedBytesReportedOnFilePath()
+    {
+        // R06.2: retained fields ride the typed file-path summary alongside the
+        // serialized writer-stage fields.
+        string input = FindCase("docx-tables.docx");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.True(ParseCounter(summary.Message, "retainedFontBytes=") > 0, "Retained font bytes must be reported, got: " + summary.Message);
+        TestAssert.True(summary.Message.Contains("retainedImageBytes=", StringComparison.Ordinal), "Retained image bytes must be reported, got: " + summary.Message);
+    }
+    private static long RetainedImageBytesOf(string input, OoxPdfInputKind kind)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = kind,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        return ParseCounter(summary.Message, "retainedImageBytes=");
+    }
     private sealed class CountingWriteStream(MemoryStream inner) : Stream
     {
         public long TotalWritten { get; private set; }
@@ -836,7 +913,7 @@ internal static class OoxResourceGuaranteeTests
         public override void Write(ReadOnlySpan<byte> buffer) => throw failure;
     }
 
-    private static string WriteImageSlideDeck(int slides)
+    private static string WriteImageSlideDeck(int slides, bool imageOnEverySlide = false)
     {
         // R06.2: text slides with a picture on the trailing slide only, so a
         // last-slide producer tripwire (image decode) distinguishes render-time
@@ -889,13 +966,15 @@ internal static class OoxResourceGuaranteeTests
         parts["_rels/.rels"] = PptxTests.PackageRelationship();
         parts["ppt/presentation.xml"] = presentation;
         parts["ppt/_rels/presentation.xml.rels"] = presRels;
-        for (int i = 1; i < slides; i++)
+        for (int i = 1; i <= slides; i++)
         {
-            parts["ppt/slides/slide" + i + ".xml"] = slideXml;
+            bool imageSlide = imageOnEverySlide || i == slides;
+            parts["ppt/slides/slide" + i + ".xml"] = imageSlide ? imageSlideXml : slideXml;
+            if (imageSlide)
+            {
+                parts["ppt/slides/_rels/slide" + i + ".xml.rels"] = imageSlideRels;
+            }
         }
-
-        parts["ppt/slides/slide" + slides + ".xml"] = imageSlideXml;
-        parts["ppt/slides/_rels/slide" + slides + ".xml.rels"] = imageSlideRels;
         string path = TestFixtures.WriteTempPackage(".pptx", parts);
         using (var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Update))
         {
@@ -908,9 +987,17 @@ internal static class OoxResourceGuaranteeTests
         return path;
     }
 
-    private static string WritePagedDocxWithTrailingImage()
+    private static string WritePagedDocxWithTrailingImage(bool imageOnMiddlePage = false)
     {
-        // R06.2: three forced pages with an inline image on the last page only.
+        // R06.2: three forced pages with an inline image on the last page (and
+        // optionally the middle page, to pin per-page retention without a cache).
+        string middleImage = imageOnMiddlePage
+            ? "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/>"
+                + "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
+                + "<pic:pic><pic:blipFill><a:blip r:embed=\"rIdImage1\"/></pic:blipFill></pic:pic>"
+                + "</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+            : string.Empty;
+        string secondPage = "<w:p><w:r><w:t>second</w:t></w:r><w:r><w:br w:type=\"page\"/></w:r></w:p>" + middleImage;
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -936,7 +1023,7 @@ internal static class OoxResourceGuaranteeTests
                 + " xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
                 + "<w:body>"
                 + "<w:p><w:r><w:t>first</w:t></w:r><w:r><w:br w:type=\"page\"/></w:r></w:p>"
-                + "<w:p><w:r><w:t>second</w:t></w:r><w:r><w:br w:type=\"page\"/></w:r></w:p>"
+                + secondPage
                 + "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/>"
                 + "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
                 + "<pic:pic><pic:blipFill><a:blip r:embed=\"rIdImage1\"/></pic:blipFill></pic:pic>"

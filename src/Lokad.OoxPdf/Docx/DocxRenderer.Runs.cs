@@ -684,7 +684,10 @@ internal sealed partial class DocxRenderer
         // message the explicit branch below used to emit); diagnostics stay local.
         try
         {
-            return OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
+            PdfImageXObject imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
+            // R06.2: admit retained bytes at creation (DOCX retains per page).
+            OoxConversionBudget.Current?.ChargeRetainedImageBytes(imageResource.RetainedByteCount);
+            return imageResource;
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {

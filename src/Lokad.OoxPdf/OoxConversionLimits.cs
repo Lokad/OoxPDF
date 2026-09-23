@@ -84,6 +84,25 @@ public sealed class OoxConversionLimits
     public long MaxPdfImageBytesPerConversion { get; init; } = 536870912;
 
     /// <summary>
+    /// Maximum retained image bytes produced per conversion (default 536,870,912,
+    /// i.e. 512 MiB). Counts encoded image plus soft-mask bytes of every newly
+    /// created image resource at its owning producer, before serialization
+    /// (R06.2). Cache hits create nothing and do not recharge; pruned or
+    /// deduplicated-away resources stay charged (no refunds). This is a retained
+    /// production bound, intentionally separate from the serialized image cap.
+    /// </summary>
+    public long MaxRetainedImageBytesPerConversion { get; init; } = 536870912;
+
+    /// <summary>
+    /// Maximum retained font program bytes produced per conversion (default
+    /// 268,435,456, i.e. 256 MiB). Counts subset (or whole fallback) font programs
+    /// at subset construction, before serialization (R06.2). Identical-merge fast
+    /// paths build nothing and do not recharge; no refunds. This is a retained
+    /// production bound, intentionally separate from the serialized font cap.
+    /// </summary>
+    public long MaxRetainedFontBytesPerConversion { get; init; } = 268435456;
+
+    /// <summary>
     /// Maximum PPTX scene nodes built per conversion (default 2,000,000). Counts
     /// shapes across slides, masters, and layouts as they materialize, including
     /// nested group children; cached DOMs re-walked per slide recharge (R04).
@@ -195,6 +214,16 @@ public sealed class OoxConversionLimits
         if (MaxPdfImageBytesPerConversion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxPdfImageBytesPerConversion), "Conversion PDF image byte budget must be non-negative.");
+        }
+
+        if (MaxRetainedImageBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxRetainedImageBytesPerConversion), "Conversion retained image byte budget must be non-negative.");
+        }
+
+        if (MaxRetainedFontBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxRetainedFontBytesPerConversion), "Conversion retained font byte budget must be non-negative.");
         }
 
         if (MaxSceneNodesPerConversion < 0)

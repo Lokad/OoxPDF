@@ -125,6 +125,11 @@ internal sealed partial class PptxRenderer
                 imageResource.PartName,
                 imageResource.ContentType,
                 imageResource.Bytes);
+            if (croppedImage is not null)
+            {
+                // R06.2: admit retained bytes at creation; cache hits create nothing.
+                OoxConversionBudget.Current?.ChargeRetainedImageBytes(croppedImage.RetainedByteCount);
+            }
             imageCache?.TryAdd(cacheKey, croppedImage);
             return croppedImage;
 
@@ -399,6 +404,11 @@ internal sealed partial class PptxRenderer
         }
 
         PdfImageXObject? image = CreateImage(partName, contentType, bytes, recolor, diagnosticSink, slideIndex, cancellationToken);
+        if (image is not null)
+        {
+            // R06.2: admit retained bytes at creation; cache hits create nothing.
+            OoxConversionBudget.Current?.ChargeRetainedImageBytes(image.RetainedByteCount);
+        }
         imageCache?.TryAdd(cacheKey, image);
         return image;
     }

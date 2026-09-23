@@ -170,7 +170,11 @@ internal sealed class PdfEmbeddedFont
         // base-font tag, once in the constructor). Compute it once here and share it.
         string setHash = ComputeCodepointSetHash(sortedGlyphs);
         string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
-        return new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset);
+        var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset);
+        // R06.2: admit the retained font program at construction. Identical-merge
+        // fast paths return existing instances above and create nothing.
+        OoxConversionBudget.Current?.ChargeRetainedFontBytes(embedded.FontProgramBytes.Length);
+        return embedded;
     }
 
     private static bool HasIdenticalMappings(PdfEmbeddedFont[] items)
