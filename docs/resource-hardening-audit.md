@@ -26,9 +26,10 @@ only, never gates.
 | R03 shared work charges | closed | `443e7304`; variant/font/dense zero-budget gates (ooxml); JPEG recolor cancellation verified in code |
 | R04 aggregate expansion | closed | `443e7304` dense slots; `657812af` XML nodes/cells; `59ffdd92` scene nodes/nested bytes/models; N/2N/4N scaling test |
 | R05 ZIP intake preflight | closed | `87778190`; EOCD count/size rejections, 10k-entry cap, Length-throwing staging (ooxml) |
-| R06 budgets through serialization | partial | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api). Residuals per ledger: R06.1
-output cap before every write, R06.2 preventive producer admission, R06.3 bounded retained
-payloads |
+| R06 budgets through serialization | partial | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api). R06.1 done in `fa55919a` (single pre-write admission boundary in PdfObjectWriter,
+zero/exact/one-short boundaries on file/seekable/forward-only paths, counting and
+throwing-destination gates, full suite 1716/0/9, manifests 339/339); remaining residuals
+per ledger: R06.2 preventive producer admission, R06.3 bounded retained payloads |
 | R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). Residuals per ledger: R07.1 work/character characterization and justified line expectations, R07.2 suffix/span amplification removal with bounded shaping fallback |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
