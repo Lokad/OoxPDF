@@ -90,10 +90,11 @@ index bounds the worst case rather than shifting the median.
   the shared readers (both pipelines already share PptxRunTextAttributeReaders, and the
   15 batteries prove field-level style equality). Snapshot cascade layer parity needs the
   retained layer sources.
-  Known scene-side divergence (open): the scene merger lets an empty lnSpc element wipe inherited
+  Merged-XML note (cosmetic, no consumer): the scene merger lets an empty lnSpc element wipe inherited
   spacing content (matched placeholder resolves explicit 90 percent where the renderer merger and
   Office keep the 100 percent default), so the fed builder merges retained layer sources with the
-  renderer merger instead of reusing scene-merged defaults. Scene merger alignment is a later slice. Executed for plain shapes with no placeholders, hyperlinks, fields, or group transforms:
+  renderer merger instead of reusing scene-merged defaults. No consumer reads spacing from scene
+  defaults (scene styles and snapshots carry no spacing fields), so alignment is not required. Executed for plain shapes with no placeholders, hyperlinks, fields, or group transforms:
   fields behind an equivalence test (span-exact on the plain-shape battery) with the production entry flipped to the scene-fed path under that qualification (span-for-span against the XML path); tables, grouped
   shapes, and autofit loops stay on the XML path. Validation bar: agreement
   batteries plus byte-identical full suite and visual manifests before Office-gated
