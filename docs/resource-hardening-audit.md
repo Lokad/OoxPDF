@@ -2,8 +2,9 @@
 
 Requirement-by-requirement verdicts for PLAN.md findings R01-R22 (reviewed 2026-09-22).
 Reconciled 2026-09-23 with the local PLAN.md ledger at `7c1f0be0`: R06, R07, R19, R20
-are **partial** (named residuals in their rows), R22 is **standing** (definition of done
-per slice; V01 is the finite verification milestone), the rest stay **closed (recorded)**.
+are partial or closed as recorded in their rows; R06 keeps one residual (DOCX repagination
+control); R22 is **standing** (definition of done per slice; V01 below is the finite
+verification milestone).
 The suite/manifest counts below were re-verified at the same SHA on 2026-09-23 (Windows
 Release build plus full `--skip-slow` suite; per-test report and manifest inventory under
 ignored `artifacts/s01-baseline/`).
@@ -130,3 +131,51 @@ index bounds the worst case rather than shifting the median.
   bar: deterministic stability, zero-budget trips, R20 tests, full suite, manifests.
   Phase seam executed: plan/numbers are class-level pure functions with identical bytes;
   lazy page production per format plus streaming emission remain future optimization beyond the numbered requirements (the original review requested bounded spooling or staged page/resource emission; bounded in-memory intake is DEC01 policy and output payload staging is R06.3).
+
+## V01 integration evidence (2026-09-23, final revision `d159509c`)
+
+Windows 10.0.26200 x64, .NET SDK 10.0.300-preview / runtime .NET 10.0.12, workstation GC,
+Windows fonts via `WindowsFontResolver`, library 0.1.5. No thresholds were recalibrated in
+any slice below; no full-suite, Office, package, or peak-memory run from prior evidence is
+re-attributed here.
+
+- Fresh Release build (0 errors) plus full console suite with per-test reports:
+  1742 passed / 0 failed / 9 skipped (`--skip-slow`; report ignored
+  `artifacts/r063exec/tests.log`), and unskipped 1750 passed / 0 failed / 1 skipped
+  (report `artifacts/r063exec/tests-full.log`). The 8 slow skips all pass unskipped;
+  the single remaining skip is `PptxPrivateLayoutDiagnosticWhenRequested`, whose
+  precondition is private input that must not be versioned (genuinely unavailable,
+  not passing-by-assertion).
+- Visual manifests 339/339 valid (118 locked, 9 locked-text-ops, 212 approximate).
+- Affected visual family runs against cached Office references (no live COM launched):
+  pptx-smoke 6/6 candidates byte-identical to pre-change runs (one pre-existing
+  needs-review), docx-layout 60/60 byte-identical, pptx-typography 95/95 byte-identical
+  (reports under ignored `artifacts/visual/reports/`). Byte-identical candidates prove
+  no fidelity change from the budget/writer/wrap work; the one failing gate is F01 below.
+- Held-out/layout-path evidence: no slice changed scene-fed text, placeholder, table,
+- field/link, or cascade paths; the DOCX wrap surgery (R07.2) is covered by the
+  docx-layout 60/60 byte-identity plus the wrap work/break pins, and the writer
+  restructure (R06.3) by the smoke/typography byte-identity plus deterministic
+  conversion tests.
+- Preventive-failure recovery against the isolated pre-change parent (`4317db07`,
+  disposable worktree, report ignored `artifacts/r063/parent-ooxml2.log`): the 7
+  discriminating probes fail there as predicted (zero output budget wrote 46,813 bytes
+  before tripping; counting destination crossed 780/779; writer admitted 0 of 199
+  written bytes; all three page/content tripwires hit the image budget first; the
+  shrink-cap model scanned without failing), while the 2 characterization probes pass
+  identically and all 143 baseline tests stay green. R06.3/R19 API-dependent probes
+  cannot compile on the parent; their mechanisms rest on parent code citations (whole-
+  output charge after `WriteBlank`, end-of-render page/content charges, complete-list
+  writer) plus the byte-equality gates above.
+- Scaling/peak envelope (AllocProbe `--isolate --stages`, reports ignored
+  `artifacts/r063/owners.json`, `window-*.json`): 2/4/8-slide text+image decks scale
+  linearly in allocations (~5.3 MB per 2 slides) and retained heap (~23 KB/slide);
+  render dominates transients, writer discipline bounds serialization; default- vs
+  tiny-window runs are byte-identical with spilled volume tracking content.
+  Operating envelope: measured only at these small corpora. No arbitrary-document OOM
+  immunity is claimed; hosts must size from measured workload peaks plus baseline,
+  concurrency, and headroom per `Diagnostics.md`.
+- New defects get scoped entries, not catch-all burial: F01 (clipped centered
+  micro-label, PLAN.md) records the one failing visual gate with origin/master parity
+  evidence; it needs R14-scope triage, not a threshold relaxation.
+

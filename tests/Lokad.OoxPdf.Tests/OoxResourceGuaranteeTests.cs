@@ -646,6 +646,10 @@ internal static class OoxResourceGuaranteeTests
         // R06: retained font resources accumulate across embedded fonts. A zero font
         // byte budget trips a font-embedding conversion without publishing output.
         string input = FindCase("docx-tables.docx");
+        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
+        {
+            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
+        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -759,6 +763,10 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.2: a zero retained-font budget trips at the first subset build.
         string input = FindCase("docx-tables.docx");
+        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
+        {
+            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
+        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -803,6 +811,20 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.True(ParseCounter(summary.Message, "retainedFontBytes=") > 0, "Retained font bytes must be reported, got: " + summary.Message);
         TestAssert.True(summary.Message.Contains("retainedImageBytes=", StringComparison.Ordinal), "Retained image bytes must be reported, got: " + summary.Message);
     }
+    private static bool EmbedsFontBytes(string input, OoxPdfInputKind kind)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = kind,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        return ParseCounter(summary.Message, "pdfFontBytes=") > 0;
+    }
+
     private static long RetainedImageBytesOf(string input, OoxPdfInputKind kind)
     {
         var diagnostics = new List<OoxPdfDiagnostic>();
