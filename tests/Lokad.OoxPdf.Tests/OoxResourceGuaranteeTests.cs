@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -1005,6 +1006,34 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
     }
 
+    public static void RepaginationDoesNotRechargePages()
+    {
+        // R06.2: header displacement forces a second full layout pass, but page charges
+        // apply once per emitted final page: an exact page budget succeeds. The model-level
+        // check below proves the second pass engages (nonzero displacement); without it the
+        // budget assertion would hold vacuously.
+        string input = WriteDisplacingHeaderDocx();
+        using FileStream probeStream = File.OpenRead(input);
+        OoxPackage probePackage = OoxPackage.Open(probeStream, CancellationToken.None);
+        DocxDocument probeDocument = new DocxReader().Read(probePackage, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxLayout probeLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(probeDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxLayoutPage firstPage = probeLayout.Pages[0];
+        double headerBottom = probeLayout.HeaderContentBottomByPage.TryGetValue(0, out double bottom) ? bottom : -1d;
+        TestAssert.True(headerBottom < firstPage.Height - firstPage.MarginTop, "Fixture must displace headers into a second pass.");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+            ConversionLimits = new OoxConversionLimits { MaxPagesPerConversion = 1 },
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.Contains("pdfPages=1", summary.Message);
+        TestAssert.True(new FileInfo(output).Length > 0, "Exact budget must publish.");
+    }
+
     private sealed class CountingWriteStream(MemoryStream inner) : Stream
     {
         public long TotalWritten { get; private set; }
@@ -1245,6 +1274,42 @@ internal static class OoxResourceGuaranteeTests
             inner.Write(buffer);
             written += buffer.Length;
         }
+    }
+    private static string WriteDisplacingHeaderDocx()
+    {
+        var header = new System.Text.StringBuilder();
+        for (int i = 1; i <= 8; i++)
+        {
+            header.Append("<w:p><w:r><w:t>Header line " + i + "</w:t></w:r></w:p>");
+        }
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+                + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+                + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+                + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+                + "<Override PartName=\"/word/header1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml\"/>"
+                + "</Types>",
+            ["_rels/.rels"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>"
+                + "</Relationships>",
+            ["word/_rels/document.xml.rels"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rIdHeader1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header1.xml\"/>"
+                + "</Relationships>",
+            ["word/header1.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                + header.ToString()
+                + "</w:hdr>",
+            ["word/document.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+                + "<w:body>"
+                + "<w:p><w:r><w:t>Body text</w:t></w:r></w:p>"
+                + "<w:sectPr><w:headerReference w:type=\"default\" r:id=\"rIdHeader1\"/><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>"
+                + "</w:body></w:document>",
+        });
     }
     private static string FindCase(string name)
     {
