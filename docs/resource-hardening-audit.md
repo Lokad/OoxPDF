@@ -110,3 +110,5 @@ index bounds the worst case rather than shifting the median.
   and R20 temp-file publication stay fixed; lazy per-page production differs by
   format (PPTX per-slide is natural, DOCX pagination is whole-document). Validation
   bar: deterministic stability, zero-budget trips, R20 tests, full suite, manifests.
+  Phase seam executed: plan/numbers are class-level pure functions with identical bytes;
+  remaining work is lazy page production per format plus streaming emission.
