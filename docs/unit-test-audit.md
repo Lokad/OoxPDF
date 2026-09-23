@@ -24,7 +24,27 @@ This audit tracks the shift to Office-PDF-first fidelity work. Unit tests remain
 
 Implication: the public visual gate is the right lock for this feature. Unit tests should verify that text renders and fonts are embedded, but should avoid treating the candidate's current exact text matrix as the source of truth.
 
-## Quantified Inventory (refreshed 2026-09-22, Release binary 1672 passed / 0 failed / 9 skipped with --skip-slow)
+## S01 Execution Baseline (2026-09-23, `7c1f0be0`)
+
+Fresh Release build plus full `--skip-slow` suite at the PLAN.md ledger baseline SHA,
+Windows 10.0.26200 x64, .NET SDK 10.0.300-preview / runtime .NET 10.0.12, workstation GC
+(default; no server-GC runtimeconfig), Windows fonts via `WindowsFontResolver`
+(`WindowsFontResolverFindsInstalledFonts` passed), library version 0.1.5:
+
+```powershell
+dotnet build Lokad.OoxPdf.slnx -c Release --no-restore
+dotnet run --project tests/Lokad.OoxPdf.Tests -c Release --no-build -- --skip-slow --report artifacts/s01-baseline/tests.log
+pwsh -NoProfile -File tools/ValidateVisualCases.ps1
+```
+
+- Build: 0 errors (7 pre-existing warnings); suite **1711 passed / 0 failed / 9 skipped**
+  (8 slow-filter skips plus 1 environmental: `PptxPrivateLayoutDiagnosticWhenRequested`
+  needs private input); exit code 0.
+- Visual manifests: **339/339 valid** (locked=118, locked-text-ops=9, approximate=212).
+- Per-test JSON report, stdout log, exit code, build log, manifest log, `dotnet --info`,
+  and HEAD pin live under ignored `artifacts/s01-baseline/` (not tracked evidence).
+
+## Quantified Inventory (historical: refreshed 2026-09-22, Release binary 1672 passed / 0 failed / 9 skipped with --skip-slow)
 
 - `PptxTests.cs`: 63 ` Tm`/`Tj`/`TJ` assertion hits; `DocxTests.cs`: 12 (2026-09-03 survey; recount before scheduling rewrites). These are the freeze-risk surface.
 - Pilot conversion pattern (do not bulk-rewrite yet): replace `AssertContainsTextMatrixAtX(pdf, 72d)`-style exact-matrix checks with smoke assertions (page count, media box, `Tf` font resource present, `Tj`/`TJ` text drawn, diagnostics empty) and rely on the matching `visual-cases/` lock (e.g. ladder typography ports, `pptx-ladder-02-plain-text` MAE 0.028749 precedent).
@@ -63,8 +83,8 @@ Implication: the public visual gate is the right lock for this feature. Unit tes
   PDFs), i.e. layout-dominated noise with the index bounding the worst case rather
   than shifting the median. The reference-to-rendered-page index then removed the
   remaining per-check all-pages scans.
-- The 9 skips are environmental preconditions (Windows fonts, Office-free
-  assertions, slow gates), unchanged by this work.
+- The 9 skips are 8 slow-filter skips plus 1 environmental precondition
+  (`PptxPrivateLayoutDiagnosticWhenRequested` needs private input), unchanged by this work.
 
 ## Remaining Gaps
 

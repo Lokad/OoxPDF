@@ -147,15 +147,23 @@ With `OoxPdfOptions.ReportResourceUsage`, each successful conversion emits one
 informational `CONVERSION_RESOURCE_SUMMARY` diagnostic reporting cumulative
 counters plus the peak live reservation
 (`pages`, `chartRangeCells`, `tableFragments`, `imagesDecoded`, `fontWork`,
-`xmlNodes`, `workbookCells`, `peakLiveImageBytes`). Informational diagnostics
+`xmlNodes`, `workbookCells`, `peakLiveImageBytes`, plus `pdfPages`,
+`pdfContentBytes`, and `pdfOutputBytes` writer-stage fields). File conversions
+snapshot after serialization, so the writer-stage fields carry post-write values
+before atomic publication; stream conversions snapshot before serialization, so
+those fields stay zero there even when the emitted PDF contains them. Both omit
+charged domains without a summary field (font/image bytes, scene nodes, nested
+package bytes, workbook models). Informational diagnostics
 never affect CLI `--strict` exit codes.
 
 Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
 or process memory. It covers per-format working-set estimates held across
 decode/transform/compress (R02) but omits pixels retained outside any live
 operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Writer resource bytes (fonts, images) now charge alongside decode counts;
-the page/content/output/font/image summary fields are a follow-up. Do not size
+work. Writer font/image bytes charge alongside decode counts, but only the
+page/content/output writer-stage fields have summary fields so far (file path;
+stream path reports pre-write zeros); font/image-byte and remaining-domain
+summary fields stay R19 follow-up work. Do not size
 hosts from `peakLiveImageBytes` plus image headroom alone.
 
 Host admission: measure conversion-only live/process peaks across

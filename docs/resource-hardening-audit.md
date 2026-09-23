@@ -1,6 +1,12 @@
 # Resource Hardening Closure Audit
 
 Requirement-by-requirement verdicts for PLAN.md findings R01-R22 (reviewed 2026-09-22).
+Reconciled 2026-09-23 with the local PLAN.md ledger at `7c1f0be0`: R06, R07, R19, R20
+are **partial** (named residuals in their rows), R22 is **standing** (definition of done
+per slice; V01 is the finite verification milestone), the rest stay **closed (recorded)**.
+The suite/manifest counts below were re-verified at the same SHA on 2026-09-23 (Windows
+Release build plus full `--skip-slow` suite; per-test report and manifest inventory under
+ignored `artifacts/s01-baseline/`).
 Evidence per finding: implementing commit(s) on master plus covering tests, all green in
 the full Release suite (1711 passed / 0 failed / 9 skipped with `--skip-slow`) with
 339/339 visual manifests valid. Verdicts: **closed**, **partial**, **open**.
@@ -20,8 +26,10 @@ only, never gates.
 | R03 shared work charges | closed | `443e7304`; variant/font/dense zero-budget gates (ooxml); JPEG recolor cancellation verified in code |
 | R04 aggregate expansion | closed | `443e7304` dense slots; `657812af` XML nodes/cells; `59ffdd92` scene nodes/nested bytes/models; N/2N/4N scaling test |
 | R05 ZIP intake preflight | closed | `87778190`; EOCD count/size rejections, 10k-entry cap, Length-throwing staging (ooxml) |
-| R06 budgets through serialization | closed | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api) |
-| R07 emergency wrap bound | closed | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text) |
+| R06 budgets through serialization | partial | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api). Residuals per ledger: R06.1
+output cap before every write, R06.2 preventive producer admission, R06.3 bounded retained
+payloads |
+| R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). Residuals per ledger: R07.1 work/character characterization and justified line expectations, R07.2 suffix/span amplification removal with bounded shaping fallback |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
 | R10 graphics/resource indexes | closed | `1d7c41d2`; `PdfResourceIndexTests` (pdf) |
@@ -33,10 +41,10 @@ only, never gates.
 | R16 util typing | closed | `226d879e` typed PPTX caches; `6fd2ce7f` immutable cell context; compiler-checked + byte-identical suite |
 | R17 units and execution values | closed | transform contract + cell/run vertical alignment + table width kinds (parse matrices); paragraph alignment and story kinds pre-existing; suite 1676/0/9 |
 | R18 resource identity | closed | `ee8e6372`; full-digest/ exact-equality/collision tests (`PdfIdentityTests`, pdf) |
-| R19 telemetry scope | closed | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md` |
-| R20 severity and publication | closed | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api) |
+| R19 telemetry scope | partial | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md`. Residuals per ledger: typed domain/phase reporting, retained/in-flight owners, qualified host guidance |
+| R20 severity and publication | partial | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api). Residual per ledger: pre-write stream summary versus post-write file summary contract, resolved together with R19 |
 | R21 tool budgets | closed | `5cf3e1c9`; spawn-based tools group (7 tests), ps1 timeout |
-| R22 closure evidence | closed | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records; clip/ellipsis/underline Office divergences fixed with locked gates; 8 of 9 skips verified passing unskipped (1 environmental); N/2N/4N page scaling pinned; staged emission mapped with phase seam executed byte-identical |
+| R22 closure evidence | standing | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records; clip/ellipsis/underline Office divergences fixed with locked gates; 8 of 9 skips verified passing unskipped (1 environmental); N/2N/4N page scaling pinned; staged emission mapped with phase seam executed byte-identical |
 
 ## R12 profiling evidence
 
@@ -54,8 +62,7 @@ index bounds the worst case rather than shifting the median.
 - Shared inherited scene-node graphs across slides: per-slide node freshness is
   load-bearing for identity-keyed memo correctness (R09); sharing needs (node, slide)
   keys first.
-- Disk spooling for intake/output: the explicit policy is bounded in-memory staging
-  with disposal; spooling stays open.
+- Disk-backed intake stays deferred under DEC01 (bounded in-memory intake with disposal is policy); output payload staging is active R06.3 work, not a deferred item.
 - Area/radar extent memoization: one extent evaluation per frame, so a memo stores
   without removing any densification.
 - ReadSceneOrXml arm consolidation: 14 scene/xml branches with heterogeneous bodies;
@@ -111,4 +118,4 @@ index bounds the worst case rather than shifting the median.
   format (PPTX per-slide is natural, DOCX pagination is whole-document). Validation
   bar: deterministic stability, zero-budget trips, R20 tests, full suite, manifests.
   Phase seam executed: plan/numbers are class-level pure functions with identical bytes;
-  lazy page production per format plus streaming emission remain future optimization beyond the numbered requirements (the review declined spooling; bounded in-memory staging is policy).
+  lazy page production per format plus streaming emission remain future optimization beyond the numbered requirements (the original review requested bounded spooling or staged page/resource emission; bounded in-memory intake is DEC01 policy and output payload staging is R06.3).

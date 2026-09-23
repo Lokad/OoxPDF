@@ -44,7 +44,8 @@ public sealed class OoxPdfOptions
     /// <summary>
     /// Cumulative per-conversion work budgets. When null, generous
     /// built-in defaults apply (see <see cref="OoxConversionLimits"/>). Set tighter
-    /// values to enforce a shared-process memory/work limit; budget crossings fail
+    /// values to bound covered work in a shared process (counts bound work, not heap
+    /// bytes; see R04/V01); budget crossings fail
     /// with <see cref="OoxPdfLimitExceededException"/> before further expansion and
     /// never produce a partial PDF.
     /// </summary>
@@ -53,8 +54,11 @@ public sealed class OoxPdfOptions
     /// <summary>
     /// When true, a successful conversion emits one informational
     /// CONVERSION_RESOURCE_SUMMARY diagnostic reporting cumulative work counters
-    /// (pages, chart cells, table fragments, images, font operations) plus the peak
-    /// live image decode reservation so hosts can account concurrent conversions.
+    /// (pages, chart cells, table fragments, images, font operations, XML nodes,
+    /// workbook cells, serialized page/content/output bytes) plus the peak live image
+    /// decode reservation so hosts can account concurrent conversions. File conversions
+    /// snapshot after serialization, so writer-stage fields carry post-write values;
+    /// stream conversions snapshot before serialization, so those fields stay zero there.
     /// Informational diagnostics never affect CLI strict exit codes. Disabled by default.
     /// </summary>
     public bool ReportResourceUsage { get; init; }
