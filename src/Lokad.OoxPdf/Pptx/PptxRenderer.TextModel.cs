@@ -320,9 +320,17 @@ internal sealed partial class PptxRenderer
         double textClipHeight = document.SlideHeightPoints;
         if (clipsVerticalOverflow)
         {
+            // F01: the vertical clip spans the shape text area (bounds minus regular
+            // insets), not the preset-inscribed flow rect. Office keeps a glyph whose
+            // baseline sits inside shape bounds even when preset inscription shrinks the
+            // flow rect past it (small-label-origin: Office Y=359.11 inside shape bounds,
+            // outside the ellipse-inscribed clip). Horizontal placement and clip keep the
+            // inscribed rect, which Office matches to 0.03pt. Shapes without preset
+            // insets are unaffected (both rects coincide).
+            double clipTextHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
             (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
-                document.SlideHeightPoints - flowYTop - insets.Top - textHeight,
-                textHeight,
+                document.SlideHeightPoints - yTop - insets.Top - clipTextHeight,
+                clipTextHeight,
                 document.SlideHeightPoints);
         }
         RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, colorMap, out RgbColor fontColor)
@@ -902,6 +910,8 @@ internal sealed partial class PptxRenderer
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         PptxTextFlowFrame fedFlow = BuildTextFlowFrame(fedFrame, document, estimator);
         PptxTextFrameLayout fedLayout = BuildTextFrameLayout(fedFlow, document, estimator, allowWrapping: true);
+        int f01Lines = 0;
+        foreach (var pg in fedLayout.Paragraphs) { f01Lines += pg.Lines.Count; }
         return RemapMongolianVerticalSpans(FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver), node.Source);
     }
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)

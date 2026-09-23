@@ -1114,6 +1114,44 @@ internal static class PptxTextLayoutTests
         TestAssert.Equal(0, PptxTests.CountTextMatrices(pdf));
     }
 
+    private static string FindVisualCase(string name)
+    {
+        string[] candidates = new[]
+        {
+            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
+        };
+        foreach (string candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("Case file not found: " + name);
+    }
+
+    public static void PptxEllipseMicroLabelKeepsOfficePositionedLine()
+    {
+        // F01: an ellipse micro-box under vertOverflow clip keeps the line whose
+        // baseline sits inside shape bounds (Office Y=359.11) even though preset
+        // inscription shrinks the flow rect past it. The vertical clip spans shape
+        // bounds; horizontal placement keeps the inscribed rect (Office X=186.38).
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        string input = FindVisualCase("pptx-ladder-04-typography-small-label-origin-probe.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(1, PptxTests.CountTextMatrices(pdf));
+        TestAssert.True(pdf.Contains("/FontFile2", StringComparison.Ordinal), "Kept line must embed its font.");
+    }
+
     public static void PptxSyntheticTextBoxEllipsisAddsMarkerAtLastVisibleLine()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
