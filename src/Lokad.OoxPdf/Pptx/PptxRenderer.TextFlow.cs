@@ -774,11 +774,30 @@ internal sealed partial class PptxRenderer
             foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
             {
                 PptxPositionedTextSpan[] frame = frameSpans.ToArray();
-                result.AddRange(frame);
                 if (!frame.Any(span => string.Equals(span.FrameVerticalOverflowMode, nameof(PptxTextVerticalOverflow.Ellipsis), StringComparison.Ordinal)))
                 {
+                    result.AddRange(frame);
                     continue;
                 }
+
+                // Office drops ellipsis lines whose baseline sits outside the text rectangle
+                // and appends the marker inline after the last kept line: the ellipsis
+                // reference emits Visible plus U+2026 on one baseline with no second line.
+                PptxPositionedTextSpan[] strictVisible = frame
+                    .Where(span => BaselineInsideVerticalClip(span.Run, span.Run.Y + span.Run.BaselineOffset))
+                    .ToArray();
+                if (strictVisible.Length != 0 && strictVisible.Length != frame.Length)
+                {
+                    result.AddRange(strictVisible);
+                    result.Add(CreateEllipsisOverflowMarker(strictVisible
+                        .OrderBy(span => span.ParagraphIndex)
+                        .ThenBy(span => span.LineIndex)
+                        .ThenBy(span => span.SpanIndex)
+                        .Last()));
+                    continue;
+                }
+
+                result.AddRange(frame);
 
                 PptxPositionedTextSpan[] visible = frame
                     .Where(span => BaselineIntersectsClip(span.Run, span.Run.Y + span.Run.BaselineOffset))

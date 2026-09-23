@@ -85,6 +85,17 @@ internal sealed partial class PptxRenderer
         graphics.FillCurrentPathEvenOdd();
     }
 
+    private static bool BaselineInsideVerticalClip(TextRun run, double baselineY)
+    {
+        if (HasTextTransform(run))
+        {
+            return true;
+        }
+
+        return baselineY >= run.ClipY - PptxTextMetricRules.TextStateTolerance &&
+            baselineY <= run.ClipY + run.ClipHeight + PptxTextMetricRules.TextStateTolerance;
+    }
+
     private static bool BaselineIntersectsClip(TextRun run, double baselineY)
     {
         if (HasTextTransform(run))

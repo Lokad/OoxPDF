@@ -1177,6 +1177,68 @@ internal static class PptxTextLayoutTests
     // anchor-overflow reference emits 5 text operations with no Clip two,
     // whose baseline sits outside the text rectangle even though its glyph
     // outline intersects it.
+    // Office drops ellipsis lines whose baseline sits outside the text rectangle
+    // and appends the marker inline after the last kept line: the ellipsis reference
+    // emits Visible plus U+2026 on one baseline with no second line.
+    public static void PptxSyntheticEllipsisDropsBaselineOutsideLineAndMarksInline()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="ellipsis"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Visible line</a:t></a:r></a:p>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Hidden line</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            string[] glyphRunTexts = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+                .Select(run => run.Text)
+                .ToArray();
+
+            TestAssert.Equal(2, glyphRunTexts.Length);
+            TestAssert.True(
+                glyphRunTexts.Contains("Visible line", StringComparer.Ordinal),
+                "Expected vertOverflow=\"ellipsis\" to keep text whose baseline remains inside the text rectangle.");
+            TestAssert.True(
+                !glyphRunTexts.Contains("Hidden line", StringComparer.Ordinal),
+                "Expected vertOverflow=\"ellipsis\" to drop text whose baseline sits outside the text rectangle instead of emitting a clipped sliver.");
+            TestAssert.True(
+                glyphRunTexts.Contains("…", StringComparer.Ordinal),
+                "Expected vertOverflow=\"ellipsis\" to render an Office-style ellipsis marker after the last visible line.");
+        }
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 432 216 36 re W* n", pdf);
+        TestAssert.True(
+            diagnostics.All(diagnostic => diagnostic.Id != "PPTX_UNSUPPORTED_TEXT_OVERFLOW"),
+            "Expected shape text ellipsis overflow to be handled by the shared text-frame renderer.");    }
+
     public static void PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip()
     {
         string input = Path.Combine(
