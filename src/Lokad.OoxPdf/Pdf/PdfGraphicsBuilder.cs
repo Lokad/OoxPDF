@@ -399,6 +399,41 @@ internal sealed class PdfGraphicsBuilder
         DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth, textRotationQuarterTurns);
     }
 
+    // RV01: diagnosed fallback text. Every rune is positioned absolutely with
+    // the fallback advances, so emitted positions match fallback measurement
+    // exactly without knowing viewer font advances. Character spacing is baked
+    // into the rune positions, so Tc stays 0. Synthetic styles are covered by
+    // face choice (bold/oblique faces), never double-struck here.
+    public void DrawFallbackText(
+        string fontResourceName,
+        double fontSize,
+        byte red,
+        byte green,
+        byte blue,
+        IReadOnlyList<PdfFallbackGlyph> glyphs)
+    {
+        if (glyphs.Count == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine("BT");
+        if (!TryAppendFillGray(red, green, blue))
+        {
+            builder.Append(PdfDocumentWriter.FormatColor(red)).Append(" ").Append(PdfDocumentWriter.FormatColor(green)).Append(" ").Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" rg");
+        }
+
+        builder.Append("/").Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(" ").Append(PdfDocumentWriter.FormatNumber(fontSize)).AppendLine(" Tf");
+        builder.AppendLine("0 Tc");
+        foreach (PdfFallbackGlyph glyph in glyphs)
+        {
+            builder.Append("1 0 0 1 ").Append(PdfDocumentWriter.FormatNumber(glyph.X)).Append(" ").Append(PdfDocumentWriter.FormatNumber(glyph.Y)).AppendLine(" Tm");
+            builder.Append("<").Append(glyph.Code.ToString("X2", CultureInfo.InvariantCulture)).AppendLine("> Tj");
+        }
+
+        builder.AppendLine("ET");
+    }
+
     private void DrawGlyphTextOperator(
         string fontResourceName,
         double fontSize,

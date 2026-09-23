@@ -13,7 +13,7 @@ internal static class PdfContentValidator
     public static void ValidatePage(PdfPage page, int pageIndex, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        RequireUniqueNames(page.Fonts.Select(font => font.ResourceName), "font", pageIndex);
+        RequireUniqueNames(page.Fonts.Select(font => font.ResourceName).Concat(page.FallbackFonts.Select(font => font.ResourceName)), "font", pageIndex);
         RequireUniqueNames(page.Images.Select(image => image.ResourceName), "image", pageIndex);
         RequireUniqueNames(page.ExtGStates.Select(state => state.ResourceName), "graphics-state", pageIndex);
         RequireUniqueNames(page.Shadings.Select(shading => shading.ResourceName), "shading", pageIndex);
@@ -22,7 +22,7 @@ internal static class PdfContentValidator
         ValidateContent(
             page.Content,
             $"PDF page {pageIndex + 1}",
-            new HashSet<string>(page.Fonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName)), StringComparer.Ordinal),
+            new HashSet<string>(page.Fonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName)).Concat(page.FallbackFonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName))), StringComparer.Ordinal),
             new HashSet<string>(page.Images.Select(image => PdfEmbeddedFont.SanitizeName(image.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(page.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(page.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),

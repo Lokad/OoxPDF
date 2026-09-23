@@ -76,7 +76,8 @@ internal sealed record DocxTextSegmentLayout(
     bool CompensatePdfCharacterSpacing,
     int SourceTextRunIndex,
     int SourceTextOffsetInRun,
-    DocxTextSegmentRole Role);
+    DocxTextSegmentRole Role,
+    PdfFallbackFontResource? FallbackFace = null);
 
 internal enum DocxTextSegmentRole
 {
@@ -210,12 +211,14 @@ internal sealed record DocxFontResources(
     IReadOnlyList<PdfFontResource> Resources,
     IReadOnlyDictionary<DocxTextRun, DocxRunFontResource> RunResources,
     DocxRunFontResource? Fallback,
-    IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> FallbackChains);
+    IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> FallbackChains,
+    IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> FallbackFaces,
+    IReadOnlyList<PdfFallbackFontResource> FallbackFontResources);
 
 internal sealed record DocxTextEmissionSegment(
     string Text,
     DocxTextRun StyleRun,
-    DocxRunFontResource Resource,
+    DocxRunFontResource? Resource,
     RgbColor Color,
     double X,
     double BaselineY,
@@ -229,7 +232,8 @@ internal sealed record DocxTextEmissionSegment(
     bool IsTerminalLineSpace,
     int SourceTextRunIndex,
     int SourceTextOffsetInRun,
-    DocxTextSegmentRole Role);
+    DocxTextSegmentRole Role,
+    PdfFallbackFontResource? FallbackFace = null);
 
 internal readonly record struct DocxKeepBlockEstimate(
     double Height,

@@ -159,6 +159,12 @@ internal sealed class PdfDocumentWriter
             WriteFontObjects(writer, font, numbers.FontObjects[font.ResourceKey], cancellationToken);
         }
 
+        foreach (PdfFallbackFont font in plan.FallbackFonts)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            WriteFallbackFontObjects(writer, font, numbers.FallbackFontObjects[font.ResourceKey], cancellationToken);
+        }
+
         foreach (PdfImageXObject image in plan.Images)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -269,7 +275,7 @@ internal sealed class PdfDocumentWriter
             }
 
             var builder = new StringBuilder("<<");
-            if (page.Fonts.Count != 0)
+            if (page.Fonts.Count != 0 || page.FallbackFonts.Count != 0)
             {
                 builder.Append(" /Font <<");
                 foreach (PdfFontResource font in page.Fonts)
@@ -277,6 +283,13 @@ internal sealed class PdfDocumentWriter
                     FontObjectNumbers objects = numbers.FontObjects[font.Font.ResourceKey];
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
                     builder.Append(CultureInfo.InvariantCulture, $"{objects.Type0} 0 R");
+                }
+
+                foreach (PdfFallbackFontResource font in page.FallbackFonts)
+                {
+                    FallbackFontObjectNumbers objects = numbers.FallbackFontObjects[font.Font.ResourceKey];
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
+                    builder.Append(CultureInfo.InvariantCulture, $"{objects.Font} 0 R");
                 }
 
                 builder.Append(" >>");
@@ -363,6 +376,16 @@ internal sealed class PdfDocumentWriter
         // not bound retained resource bytes).
         OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
         writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
+        writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
+    }
+
+    // RV01: standard-14 fallback faces carry no embeddable program, so the font object needs only the Type1 dictionary and the static WinAnsi ToUnicode map. The static descriptor/CMap bytes are writer overhead (catalog class), not retained font payload: no font-byte budget charges apply, while emitted text still counts toward content/output admission.
+    private static void WriteFallbackFontObjects(PdfObjectWriter writer, PdfFallbackFont font, FallbackFontObjectNumbers objects, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        writer.WriteObject(objects.Font, FormattableString.Invariant($"<< /Type /Font /Subtype /Type1 /BaseFont /{font.FaceName} /Encoding /WinAnsiEncoding /ToUnicode {objects.ToUnicode} 0 R >>\n"));
+
+        byte[] toUnicode = Encoding.ASCII.GetBytes(PdfFallbackFont.WinAnsiToUnicodeCMap);
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
     }
 
@@ -610,6 +633,7 @@ internal sealed class PdfDocumentWriter
 
     private sealed record PdfDocumentPlan(
         IReadOnlyList<PdfEmbeddedFont> Fonts,
+        IReadOnlyList<PdfFallbackFont> FallbackFonts,
         IReadOnlyList<PdfImageXObject> Images,
         IReadOnlyList<PdfAxialShading> Shadings,
         IReadOnlyList<PdfLuminositySoftMask> SoftMasks,
@@ -617,6 +641,7 @@ internal sealed class PdfDocumentWriter
 
     private sealed record PdfDocumentNumbers(
         IReadOnlyDictionary<string, FontObjectNumbers> FontObjects,
+        IReadOnlyDictionary<string, FallbackFontObjectNumbers> FallbackFontObjects,
         IReadOnlyDictionary<string, ImageObjectNumbers> ImageObjects,
         IReadOnlyDictionary<string, int> ShadingObjects,
         IReadOnlyDictionary<string, int> SoftMaskObjects,
@@ -630,6 +655,11 @@ internal sealed class PdfDocumentWriter
             .SelectMany(p => p.Fonts.Select(f => f.Font))
             .GroupBy(f => f.ResourceKey, StringComparer.Ordinal)
             .Select(group => PdfEmbeddedFont.Merge(group, cancellationToken))
+            .ToList();
+        cancellationToken.ThrowIfCancellationRequested();
+        List<PdfFallbackFont> fallbackFonts = pages
+            .SelectMany(p => p.FallbackFonts.Select(f => f.Font))
+            .DistinctBy(f => f.ResourceKey, StringComparer.Ordinal)
             .ToList();
         cancellationToken.ThrowIfCancellationRequested();
         List<PdfImageXObject> images = DeduplicateImages(pages
@@ -655,7 +685,7 @@ internal sealed class PdfDocumentWriter
             .DistinctBy(s => s.ResourceKey)
             .ToList();
 
-        return new PdfDocumentPlan(fonts, images, shadings, softMasks, patterns);
+        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, softMasks, patterns);
     }
 
 
@@ -674,7 +704,17 @@ internal sealed class PdfDocumentWriter
                 ToUnicode: baseObject + 4);
         }
 
-        int imageObjectBase = fontObjectBase + plan.Fonts.Count * 5;
+        var fallbackFontObjects = new Dictionary<string, FallbackFontObjectNumbers>(StringComparer.Ordinal);
+        for (int i = 0; i < plan.FallbackFonts.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int baseObject = fontObjectBase + plan.Fonts.Count * 5 + i * 2;
+            fallbackFontObjects[plan.FallbackFonts[i].ResourceKey] = new FallbackFontObjectNumbers(
+                Font: baseObject,
+                ToUnicode: baseObject + 1);
+        }
+
+        int imageObjectBase = fontObjectBase + plan.Fonts.Count * 5 + plan.FallbackFonts.Count * 2;
         var imageObjects = new Dictionary<string, ImageObjectNumbers>(StringComparer.Ordinal);
         int nextImageObject = imageObjectBase;
         foreach (PdfImageXObject image in plan.Images)
@@ -732,9 +772,11 @@ internal sealed class PdfDocumentWriter
             objectCount = nextAnnotationObject - 1;
         }
 
-        return new PdfDocumentNumbers(fontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
+        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
     }
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
+
+    private readonly record struct FallbackFontObjectNumbers(int Font, int ToUnicode);
 
     private readonly record struct ImageObjectNumbers(int Image, int? SoftMask);
 

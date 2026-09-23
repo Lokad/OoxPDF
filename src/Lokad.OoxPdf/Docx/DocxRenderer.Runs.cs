@@ -23,20 +23,53 @@ internal sealed partial class DocxRenderer
         DocxTextEmissionPlan plan,
         bool syntheticItalic)
     {
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(text, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: true);
+        string emissionText = SubstituteUncoveredGlyphs(resource.Embedded, text);
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(emissionText, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: true);
         if (positioningArray is not null)
         {
             graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             return;
         }
 
-        string glyphHex = resource.Embedded.EncodeGlyphHex(text);
+        string glyphHex = resource.Embedded.EncodeGlyphHex(emissionText);
         if (glyphHex.Length == 0)
         {
             return;
         }
 
         graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+    }
+
+    // RV01: runes with no glyph in the emitting face render as question mark so
+    // conversions never silently drop input text. The substitution is diagnosed once
+    // per family at preparation (FONT_MISSING_GLYPHS); the subset carries question
+    // mark exactly when a covered run needs it.
+    private static string SubstituteUncoveredGlyphs(PdfEmbeddedFont embedded, string text)
+    {
+        bool clean = true;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            if (!PdfFallbackFont.IsNonRenderedControl(rune) && embedded.Font.MapCodePoint(rune.Value) == 0)
+            {
+                clean = false;
+                break;
+            }
+        }
+
+        if (clean)
+        {
+            return text;
+        }
+
+        // Layout constructs keep their pass-through (emission drops them exactly
+        // as before); only genuinely missing graphics become question mark.
+        var builder = new StringBuilder(text.Length);
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            builder.Append(PdfFallbackFont.IsNonRenderedControl(rune) || embedded.Font.MapCodePoint(rune.Value) != 0 ? rune.ToString() : "?");
+        }
+
+        return builder.ToString();
     }
 
     private static bool ShouldApplySyntheticBold(DocxTextRun style, DocxRunFontResource resource)
@@ -46,10 +79,10 @@ internal sealed partial class DocxRenderer
 
     private static void RenderRunBackground(
         DocxTextRun style,
-        OpenTypeFont font,
+        double ascender,
+        double descender,
         double x,
         double width,
-        double fontSize,
         double baselineY,
         PdfGraphicsBuilder graphics)
     {
@@ -58,8 +91,6 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        double ascender = DocxLineMetrics.MeasureWindowsAscender(font, fontSize);
-        double descender = DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
         double fillY = baselineY - descender;
         double fillHeight = ascender + descender;
         DocxEffectiveRunProperties effective = style.EffectiveProperties;
@@ -315,6 +346,92 @@ internal sealed partial class DocxRenderer
                 graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
             }
         }
+    }
+
+    // RV01: fallback underline/strike rectangles from diagnosed constants (no font
+    // tables available). Underline is solid; DoubleStrike draws two rectangles.
+    private static void RenderFallbackTextDecorations(
+        DocxTextRun style,
+        double x,
+        double width,
+        double fontSize,
+        double baselineY,
+        RgbColor color,
+        PdfGraphicsBuilder graphics)
+    {
+        if (width <= 0d)
+        {
+            return;
+        }
+
+        DocxEffectiveRunProperties effective = style.EffectiveProperties;
+        if (effective.Underline)
+        {
+            RgbColor underlineColor = ResolveUnderlineDecorationColor(effective, color);
+            graphics.SetFillRgb(underlineColor.Red, underlineColor.Green, underlineColor.Blue);
+            double thickness = fontSize * PdfFallbackFont.UnderlineThicknessEm;
+            graphics.FillRectangle(x, baselineY + fontSize * PdfFallbackFont.UnderlinePositionEm - thickness / 2d, width, thickness);
+        }
+
+        if (effective.Strike || effective.DoubleStrike)
+        {
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            double thickness = fontSize * PdfFallbackFont.StrikeoutThicknessEm;
+            double y = baselineY + fontSize * PdfFallbackFont.StrikeoutPositionEm;
+            if (effective.DoubleStrike)
+            {
+                double offset = Math.Max(thickness, fontSize / 18d);
+                graphics.FillRectangle(x, y - offset - thickness / 2d, width, thickness);
+                graphics.FillRectangle(x, y + offset - thickness / 2d, width, thickness);
+            }
+            else
+            {
+                graphics.FillRectangle(x, y - thickness / 2d, width, thickness);
+            }
+        }
+    }
+
+    // RV01: fallback glyph emission positions every rune absolutely with the fallback
+    // advances measured from the original runes, so positions match fallback layout
+    // measurement even for substituted markers. Unencodable runes become question
+    // mark (diagnosed at preparation for embedded faces, covered by the
+    // FONT_NO_USABLE_FACE message on the fallback path).
+    private static void DrawFallbackRunGlyphText(
+        PdfGraphicsBuilder graphics,
+        PdfFallbackFontResource fallback,
+        string text,
+        double x,
+        double baselineY,
+        RgbColor color,
+        double fontSize,
+        double characterSpacing)
+    {
+        Rune[] runes = [.. text.EnumerateRunes()];
+        if (runes.Length == 0)
+        {
+            return;
+        }
+
+        var glyphs = new List<PdfFallbackGlyph>(runes.Length);
+        double cursorX = x;
+        for (int i = 0; i < runes.Length; i++)
+        {
+            // Layout constructs advance (zero) without emitting, exactly matching
+            // fallback measurement, which counts every rune for spacing gaps.
+            if (!PdfFallbackFont.IsNonRenderedControl(runes[i]))
+            {
+                PdfFallbackFont.TryEncodeWinAnsi(runes[i].Value, out byte code);
+                glyphs.Add(new PdfFallbackGlyph(cursorX, baselineY, code));
+            }
+
+            cursorX += PdfFallbackFont.MeasureAdvanceEm(runes[i]) * fontSize / PdfFallbackFont.UnitsPerEm;
+            if (i < runes.Length - 1)
+            {
+                cursorX += characterSpacing;
+            }
+        }
+
+        graphics.DrawFallbackText(fallback.ResourceName, fontSize, color.Red, color.Green, color.Blue, glyphs);
     }
 
     private static RgbColor ResolveUnderlineDecorationColor(DocxEffectiveRunProperties effective, RgbColor textColor)

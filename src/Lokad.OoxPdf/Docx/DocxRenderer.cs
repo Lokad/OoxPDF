@@ -997,7 +997,8 @@ internal sealed partial class DocxRenderer
                 graphics.ExtGStates,
                 graphics.Shadings,
                 graphics.Patterns,
-                annotations);
+                annotations,
+                fontResources.FallbackFontResources);
             // R06.2: admit the emitted content bytes (pages admit at the top of
             // each iteration, before emission). DOCX layout itself stays
             // whole-document; repagination control is a named residual.
@@ -1042,7 +1043,21 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
-                        double ascender = target.Resource.Embedded.Font.Os2.WindowsAscender * target.FontSize / target.Resource.Embedded.Font.UnitsPerEm;
+                        // RV01: fallback segments use diagnosed constants for bookmark targets.
+                        double ascender;
+                        if (target.FallbackFace is not null)
+                        {
+                            ascender = target.FontSize * PdfFallbackFont.AscentEm;
+                        }
+                        else if (target.Resource is { } bookmarkResource)
+                        {
+                            OpenTypeFont bookmarkFont = bookmarkResource.Embedded.Font;
+                            ascender = bookmarkFont.Os2.WindowsAscender * target.FontSize / bookmarkFont.UnitsPerEm;
+                        }
+                        else
+                        {
+                            continue;
+                        }
                         destinations[bookmark.Name] = new PdfLinkDestination(
                             pageIndex,
                             targetX,
@@ -1082,8 +1097,24 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
 
-                    double ascender = segment.Resource.Embedded.Font.Os2.WindowsAscender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
-                    double descender = segment.Resource.Embedded.Font.Os2.WindowsDescender * segment.FontSize / segment.Resource.Embedded.Font.UnitsPerEm;
+                    // RV01: fallback segments use diagnosed constants for link rectangles.
+                    double ascender;
+                    double descender;
+                    if (segment.FallbackFace is not null)
+                    {
+                        ascender = segment.FontSize * PdfFallbackFont.AscentEm;
+                        descender = segment.FontSize * PdfFallbackFont.DescentEm;
+                    }
+                    else if (segment.Resource is { } hyperlinkResource)
+                    {
+                        OpenTypeFont hyperlinkFont = hyperlinkResource.Embedded.Font;
+                        ascender = hyperlinkFont.Os2.WindowsAscender * segment.FontSize / hyperlinkFont.UnitsPerEm;
+                        descender = hyperlinkFont.Os2.WindowsDescender * segment.FontSize / hyperlinkFont.UnitsPerEm;
+                    }
+                    else
+                    {
+                        continue;
+                    }
                     double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
                     if (IsExternalHyperlink(link))
                     {
@@ -1138,11 +1169,10 @@ internal sealed partial class DocxRenderer
             segment.PdfCharacterSpacingSource,
             segment.CompensatePdfCharacterSpacing,
             segment.IsTerminalLineSpace);
-        double emittedAdvance = DocxTextEmissionPlanner.MeasureAdvanceProfile(
-            segment.Text,
-            segment.Resource.Embedded,
-            segment.Width,
-            plan).PlannedEmittedAdvance;
+        // RV01: fallback runs have no advance profile; measured width stands in.
+        double emittedAdvance = segment.Resource is { } advanceResource
+            ? DocxTextEmissionPlanner.MeasureAdvanceProfile(segment.Text, advanceResource.Embedded, segment.Width, plan).PlannedEmittedAdvance
+            : segment.Width;
         return emittedAdvance > 0d ? emittedAdvance : segment.Width;
     }
 

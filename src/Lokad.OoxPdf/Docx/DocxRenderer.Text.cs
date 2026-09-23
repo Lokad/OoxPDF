@@ -26,9 +26,22 @@ internal sealed partial class DocxRenderer
         }
 
         RgbColor color = segment.Color;
+        if (segment.FallbackFace is { } fallback)
+        {
+            DrawFallbackTextEmissionSegment(segment, fallback, graphics, markupContext);
+            return;
+        }
+
+        DocxRunFontResource? resource = segment.Resource;
+        if (resource is null)
+        {
+            return;
+        }
+
         if (!segment.IsTerminalLineSpace)
         {
-            RenderRunBackground(style, segment.Resource.Embedded.Font, segment.X, segment.Width, segment.FontSize, segment.BaselineY, graphics);
+            OpenTypeFont font = resource.Embedded.Font;
+            RenderRunBackground(style, DocxLineMetrics.MeasureWindowsAscender(font, segment.FontSize), DocxLineMetrics.MeasureWindowsDescender(font, segment.FontSize), segment.X, segment.Width, segment.BaselineY, graphics);
         }
 
         DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
@@ -38,10 +51,10 @@ internal sealed partial class DocxRenderer
             segment.PdfCharacterSpacingSource,
             segment.CompensatePdfCharacterSpacing,
             segment.IsTerminalLineSpace);
-        DrawRunGlyphText(graphics, segment.Resource, segment.Text, segment.X, segment.BaselineY, color, plan, segment.SyntheticItalic);
+        DrawRunGlyphText(graphics, resource, segment.Text, segment.X, segment.BaselineY, color, plan, segment.SyntheticItalic);
         if (!segment.IsTerminalLineSpace && segment.SyntheticBold)
         {
-            DrawRunGlyphText(graphics, segment.Resource, segment.Text, segment.X + 0.35d, segment.BaselineY, color, plan, segment.SyntheticItalic);
+            DrawRunGlyphText(graphics, resource, segment.Text, segment.X + 0.35d, segment.BaselineY, color, plan, segment.SyntheticItalic);
         }
 
         if (!segment.IsTerminalLineSpace)
@@ -65,7 +78,7 @@ internal sealed partial class DocxRenderer
             double decorationWidth = ResolveRevisionDecorationWidth();
             RenderTextDecorations(
                 style,
-                segment.Resource.Embedded,
+                resource.Embedded,
                 segment.Text,
                 segment.X,
                 decorationWidth,
@@ -207,7 +220,13 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+            PdfFallbackFontResource? fallbackFace = null;
             if (resource is null)
+            {
+                fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out fallbackFace);
+            }
+
+            if (resource is null && fallbackFace is null)
             {
                 continue;
             }
@@ -258,12 +277,13 @@ internal sealed partial class DocxRenderer
                     segment.PdfCharacterSpacing,
                     segment.PdfCharacterSpacingSource,
                     segment.CompensatePdfCharacterSpacing,
-                    ShouldApplySyntheticBold(emissionStyleRun, resource),
-                    emissionEffective.Italic && !resource.Resolution.Italic,
+                    resource is not null && ShouldApplySyntheticBold(emissionStyleRun, resource),
+                    resource is not null && emissionEffective.Italic && !resource.Resolution.Italic,
                     IsTerminalLineSpace: false,
                     segment.SourceTextRunIndex,
                     currentPartSourceTextOffset,
-                    segment.Role), fontResources, cancellationToken);
+                    segment.Role,
+                    FallbackFace: fallbackFace), fontResources, cancellationToken);
                 substitutedFieldXAdjustment += emittedWidth - part.Width;
             }
         }
@@ -284,7 +304,8 @@ internal sealed partial class DocxRenderer
     
             DocxTextSegmentLayout segment = segments[^1];
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
-            if (resource is null)
+            fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out PdfFallbackFontResource? terminalFallbackFace);
+            if (resource is null && terminalFallbackFace is null)
             {
                 return;
             }
@@ -305,11 +326,12 @@ internal sealed partial class DocxRenderer
                 PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
                 CompensatePdfCharacterSpacing: true,
                 SyntheticBold: false,
-                SyntheticItalic: effective.Italic && !resource.Resolution.Italic,
+                SyntheticItalic: resource is not null && effective.Italic && !resource.Resolution.Italic,
                 IsTerminalLineSpace: true,
                 segment.SourceTextRunIndex,
                 segment.SourceTextOffsetInRun + segment.Text.Length,
-                segment.Role));
+                segment.Role,
+                FallbackFace: terminalFallbackFace));
         }
 
             AddTerminalLineSpace();
@@ -355,11 +377,12 @@ internal sealed partial class DocxRenderer
                 PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.TerminalLineSpace,
                 CompensatePdfCharacterSpacing: true,
                 SyntheticBold: false,
-                SyntheticItalic: effective.Italic && !resource.Resolution.Italic,
+                SyntheticItalic: resource is not null && effective.Italic && !resource.Resolution.Italic,
                 IsTerminalLineSpace: true,
                 segment.SourceTextRunIndex,
                 segment.SourceTextOffsetInRun + segment.Text.Length,
-                segment.Role));
+                segment.Role,
+                FallbackFace: null));
             break;
         }
 
@@ -573,7 +596,13 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxRunFontResource? resource = ResolveFontResource(segment.StyleRun, fontResources);
+            PdfFallbackFontResource? fallbackFace = null;
             if (resource is null)
+            {
+                fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out fallbackFace);
+            }
+
+            if (resource is null && fallbackFace is null)
             {
                 continue;
             }
@@ -601,8 +630,10 @@ internal sealed partial class DocxRenderer
                     fontSize,
                     line.X,
                     useWordCompatibleTextProfile);
-                double partAdvance = DocxTextEmissionPlanner.MeasureAdvanceProfile(part.Text, resource.Embedded, part.Width, plan)
-                    .PlannedEmittedAdvance;
+                // RV01: fallback runs have no advance profile; measured part width stands in.
+                double partAdvance = resource is not null
+                    ? DocxTextEmissionPlanner.MeasureAdvanceProfile(part.Text, resource.Embedded, part.Width, plan).PlannedEmittedAdvance
+                    : part.Width;
                 emittedEndX = Math.Max(emittedEndX, partX + partAdvance);
             }
         }
@@ -623,6 +654,56 @@ internal sealed partial class DocxRenderer
     private static bool ShouldCapWordCompatibleAllMarkupTextFontSize(double fontSize, bool useWordCompatibleTextProfile)
     {
         return useWordCompatibleTextProfile && fontSize > WordCompatibleAllMarkupMaxBodyTextFontSizePoints;
+    }
+
+    // RV01: diagnosed fallback emission: background from fallback constants, every
+    // rune positioned absolutely with fallback advances, decorations as solid
+    // constant-metric rectangles. Terminal spaces draw their space glyph like the
+    // embedded path.
+    private static void DrawFallbackTextEmissionSegment(
+        DocxTextEmissionSegment segment,
+        PdfFallbackFontResource fallback,
+        PdfGraphicsBuilder graphics,
+        DocxMarkupContext markupContext)
+    {
+        if (!segment.IsTerminalLineSpace)
+        {
+            RenderRunBackground(
+                segment.StyleRun,
+                segment.FontSize * PdfFallbackFont.AscentEm,
+                segment.FontSize * PdfFallbackFont.DescentEm,
+                segment.X,
+                segment.Width,
+                segment.BaselineY,
+                graphics);
+        }
+
+        DrawFallbackRunGlyphText(
+            graphics,
+            fallback,
+            segment.Text,
+            segment.X,
+            segment.BaselineY,
+            segment.Color,
+            segment.FontSize,
+            segment.StyleRun.EffectiveProperties.CharacterSpacingPoints);
+
+        if (!segment.IsTerminalLineSpace)
+        {
+            bool revisionProfile = UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
+                (segment.StyleRun.Revision is not null || segment.StyleRun.Revisions.Count != 0);
+            RgbColor decorationColor = revisionProfile
+                ? new RgbColor(WordCompatibleAllMarkupReviewStrokeRgb.Red, WordCompatibleAllMarkupReviewStrokeRgb.Green, WordCompatibleAllMarkupReviewStrokeRgb.Blue)
+                : segment.Color;
+            RenderFallbackTextDecorations(
+                segment.StyleRun,
+                segment.X,
+                segment.Width,
+                segment.FontSize,
+                segment.BaselineY,
+                decorationColor,
+                graphics);
+        }
     }
 
     private static void RenderTextLine(
@@ -713,10 +794,25 @@ internal sealed partial class DocxRenderer
                 line.Segments
                     .Select(segment => ResolveFontResource(segment.StyleRun, fontResources))
                     .FirstOrDefault(resource => resource is not null);
-            string glyphHex = labelResource?.Embedded.EncodeGlyphHex(label) ?? string.Empty;
-            if (labelResource is not null && glyphHex.Length != 0)
+            if (labelResource is not null)
             {
-                graphics.DrawGlyphText(labelResource.Name, labelFontSize, markerX + 1.5d, markerY + 1.4d, 0, 0, 0, glyphHex, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+                string glyphHex = labelResource.Embedded.EncodeGlyphHex(SubstituteUncoveredGlyphs(labelResource.Embedded, label));
+                if (glyphHex.Length != 0)
+                {
+                    graphics.DrawGlyphText(labelResource.Name, labelFontSize, markerX + 1.5d, markerY + 1.4d, 0, 0, 0, glyphHex, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+                }
+            }
+            else
+            {
+                // RV01: marker labels without any embedded resource use the first
+                // fallback face of the line instead of vanishing.
+                PdfFallbackFontResource? fallbackLabel = line.Segments
+                    .Select(segment => fontResources.FallbackFaces.TryGetValue(segment.StyleRun, out PdfFallbackFontResource? face) ? face : null)
+                    .FirstOrDefault(face => face is not null);
+                if (fallbackLabel is not null)
+                {
+                    DrawFallbackRunGlyphText(graphics, fallbackLabel, label, markerX + 1.5d, markerY + 1.4d, new RgbColor(0, 0, 0), labelFontSize, 0d);
+                }
             }
         }
     }

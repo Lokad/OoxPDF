@@ -25,10 +25,22 @@ internal sealed partial class DocxRenderer
         PrepareResolvedRunFontResources(plan, resources, runResources, fontCache, cancellationToken);
         DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
         IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(plan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
-        IDocxTextMeasurer? measurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
+        IDocxTextMeasurer? innerMeasurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
             ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache)
             : null;
-        return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains);
+        ReportMissingGlyphs(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken);
+        Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(plan, runResources, diagnosticSink, cancellationToken);
+        List<PdfFallbackFontResource> fallbackFontResources = fallbackFaces.Values
+            .DistinctBy(face => face.Font.ResourceKey, StringComparer.Ordinal)
+            .OrderBy(face => face.ResourceName, StringComparer.Ordinal)
+            .ToList();
+        IDocxTextMeasurer? measurer = innerMeasurer;
+        if (fallbackFaces.Count != 0)
+        {
+            measurer = new MissingFontRoutingMeasurer(innerMeasurer, new DocxFallbackTextMeasurer(), fallbackFaces);
+        }
+
+        return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources);
     }
 
     // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines, so the
@@ -131,6 +143,118 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    // RV01: codepoints no usable face covers are substituted with question mark at
+    // emission; report them once per family (union across runs, sorted, capped) so the
+    // substitution is diagnosed, never silent.
+    private static void ReportMissingGlyphs(
+        DocxFontPlan plan,
+        Dictionary<DocxTextRun, DocxRunFontResource> runResources,
+        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains,
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        var missingByFamily = new Dictionary<string, SortedSet<int>>(StringComparer.Ordinal);
+        foreach (DocxResolvedRunTypeface resolved in plan.Runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(resolved.Run.Text) ||
+                !runResources.TryGetValue(resolved.Run, out DocxRunFontResource? resource))
+            {
+                continue;
+            }
+
+            // Runs with a per-character chain are covered face by face; only runes
+            // missed by every candidate count. Layout constructs never reach glyphs.
+            IReadOnlyList<OpenTypeFont> coverageFonts = fallbackChains.TryGetValue(resolved.Run, out IReadOnlyList<DocxFallbackFontEntry>? chain)
+                ? chain.Select(entry => entry.Font).ToArray()
+                : (LoadFont(resource.Resolution, fontCache, cancellationToken) is { } primaryFont ? new[] { primaryFont } : Array.Empty<OpenTypeFont>());
+            if (coverageFonts.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (Rune rune in resolved.Run.Text.EnumerateRunes())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!PdfFallbackFont.IsNonRenderedControl(rune) && coverageFonts.All(candidate => candidate.MapCodePoint(rune.Value) == 0))
+                {
+                    if (!missingByFamily.TryGetValue(resource.Resolution.FamilyName, out SortedSet<int>? codepoints))
+                    {
+                        codepoints = new SortedSet<int>();
+                        missingByFamily[resource.Resolution.FamilyName] = codepoints;
+                    }
+
+                    codepoints.Add(rune.Value);
+                }
+            }
+        }
+
+        const int maxListedCodepoints = 12;
+        foreach ((string family, SortedSet<int> codepoints) in missingByFamily)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string listed = string.Join(", ", codepoints.Take(maxListedCodepoints).Select(code => "U+" + code.ToString("X4")));
+            if (codepoints.Count > maxListedCodepoints)
+            {
+                listed += ", and " + (codepoints.Count - maxListedCodepoints).ToString(CultureInfo.InvariantCulture) + " more";
+            }
+
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "FONT_MISSING_GLYPHS",
+                OoxPdfSeverity.Warning,
+                codepoints.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + family + " have no glyph in any usable face (" + listed + ") and show as question mark.",
+                PartName: null,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: family,
+                Fallback: "Question-mark substitution"));
+        }
+    }
+
+    // RV01: runs with text but no usable embedded resource render with the diagnosed
+    // built-in fallback faces instead of vanishing. Each affected family is reported once;
+    // resource names follow fixed face order (FF1 regular, FF2 bold, FF3 oblique,
+    // FF4 bold-oblique) so output stays deterministic.
+    private static Dictionary<DocxTextRun, PdfFallbackFontResource> PrepareMissingFontFallback(
+        DocxFontPlan plan,
+        Dictionary<DocxTextRun, DocxRunFontResource> runResources,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        var faces = new Dictionary<DocxTextRun, PdfFallbackFontResource>();
+        var reportedFamilies = new HashSet<string>(StringComparer.Ordinal);
+        foreach (DocxResolvedRunTypeface resolved in plan.Runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(resolved.Run.Text) || runResources.ContainsKey(resolved.Run))
+            {
+                continue;
+            }
+
+            DocxEffectiveRunProperties effective = resolved.Run.EffectiveProperties;
+            PdfFallbackFont face = PdfFallbackFont.ForStyle(effective.Bold, effective.Italic);
+            string name = face == PdfFallbackFont.HelveticaBold ? "FF2" : face == PdfFallbackFont.HelveticaOblique ? "FF3" : face == PdfFallbackFont.HelveticaBoldOblique ? "FF4" : "FF1";
+            faces[resolved.Run] = new PdfFallbackFontResource(name, face);
+
+            string family = resolved.RequestedFamily ?? resolved.ResolvedFamily ?? "unknown";
+            if (reportedFamilies.Add(family))
+            {
+                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                    "FONT_NO_USABLE_FACE",
+                    OoxPdfSeverity.Warning,
+                    "No usable embeddable font for " + family + "; text renders with the built-in fallback typeface. Characters outside WinAnsi appear as question mark.",
+                    PartName: null,
+                    SlideIndex: null,
+                    PageIndex: null,
+                    Feature: family,
+                    Fallback: "Built-in fallback typeface"));
+            }
+        }
+
+        return faces;
+    }
+
     private static void PrepareResolvedRunFontResources(
         DocxFontPlan plan,
         List<PdfFontResource> resources,
@@ -153,14 +277,14 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             FontFaceResolution resolution = group.First().Resolution;
-            IReadOnlyList<int> glyphs = CollectRunGlyphs(group.Select(item => item.Run), cancellationToken);
-            if (glyphs.Count == 0)
+            OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
+            if (font is null)
             {
                 continue;
             }
 
-            OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
-            if (font is null)
+            IReadOnlyList<int> glyphs = CollectRunGlyphs(group.Select(item => item.Run), font, cancellationToken);
+            if (glyphs.Count == 0)
             {
                 continue;
             }
@@ -208,7 +332,7 @@ internal sealed partial class DocxRenderer
             return null;
         }
 
-        IReadOnlyList<int> glyphs = CollectRunGlyphs(fallbackRuns, cancellationToken);
+        IReadOnlyList<int> glyphs = CollectRunGlyphs(fallbackRuns, font, cancellationToken);
         if (glyphs.Count == 0)
         {
             return null;
@@ -392,9 +516,13 @@ internal sealed partial class DocxRenderer
 
         return chains;
     }
-    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs, CancellationToken cancellationToken)
+    // RV01: question mark joins the subset when a covered run carries codepoints
+    // the face cannot map, so emission-time substitution stays extractable. A face
+    // mapping question mark itself to .notdef is pathological and left as-is.
+    private static IReadOnlyList<int> CollectRunGlyphs(IEnumerable<DocxResolvedRunTypeface> runs, OpenTypeFont? coverageFont, CancellationToken cancellationToken)
     {
         var glyphs = new HashSet<int>();
+        bool needsQuestionMark = false;
         foreach (DocxResolvedRunTypeface run in runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -402,7 +530,16 @@ internal sealed partial class DocxRenderer
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 glyphs.Add(rune.Value);
+                if (!needsQuestionMark && coverageFont is not null && !PdfFallbackFont.IsNonRenderedControl(rune) && coverageFont.MapCodePoint(rune.Value) == 0)
+                {
+                    needsQuestionMark = true;
+                }
             }
+        }
+
+        if (needsQuestionMark && coverageFont is not null && coverageFont.MapCodePoint(0x3F) != 0)
+        {
+            glyphs.Add(0x3F);
         }
 
         foreach (Rune rune in " 0123456789".EnumerateRunes())

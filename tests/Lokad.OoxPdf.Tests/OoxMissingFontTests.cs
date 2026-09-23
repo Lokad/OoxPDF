@@ -20,6 +20,7 @@ internal static class OoxMissingFontTests
         (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocx(input, resolver);
         TestAssert.Contains("/Type /Pages /Count 3", pdf);
         TestAssert.Contains("BT", pdf);
+        TestAssert.Contains("/Font <<", pdf);
         TestAssert.DoesNotContain("/FontFile2", pdf);
         string extracted = ExtractWinAnsiText(pdf);
         TestAssert.Contains("First", extracted);
@@ -41,6 +42,7 @@ internal static class OoxMissingFontTests
         (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocx(input, new FixedBytesResolver(new byte[] { 1, 2, 3, 4 }));
         TestAssert.Contains("/Type /Pages /Count 3", pdf);
         TestAssert.Contains("BT", pdf);
+        TestAssert.Contains("/Font <<", pdf);
         string extracted = ExtractWinAnsiText(pdf);
         TestAssert.Contains("First", extracted);
         TestAssert.Contains("Third", extracted);
@@ -54,6 +56,7 @@ internal static class OoxMissingFontTests
         (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocx(input, new FixedBytesResolver(TestFontBuilder.CreateCffKindFont()));
         TestAssert.Contains("/Type /Pages /Count 3", pdf);
         TestAssert.Contains("BT", pdf);
+        TestAssert.Contains("/Font <<", pdf);
         string extracted = ExtractWinAnsiText(pdf);
         TestAssert.Contains("First", extracted);
         TestAssert.Contains("Third", extracted);
@@ -86,6 +89,7 @@ internal static class OoxMissingFontTests
         string pdf = File.ReadAllText(output, Encoding.Latin1);
         TestAssert.Contains("/Type /Pages /Count 1", pdf);
         TestAssert.Contains("BT", pdf);
+        TestAssert.Contains("/Font <<", pdf);
         TestAssert.DoesNotContain("/FontFile2", pdf);
         TestAssert.True(ExtractWinAnsiText(pdf).Length > 0, "Fallback text must stay extractable.");
         TestAssert.Equal(OoxPdfSeverity.Warning, diagnostics.Single(d => d.Id == "FONT_NO_USABLE_FACE").Severity);

@@ -149,6 +149,93 @@ internal static class DocxVerticalAlignMetrics
     }
 }
 
+// RV01: deterministic fallback measurer for text with no usable embeddable
+// face. Average advances (wide scripts count double, combining marks zero)
+// plus Helvetica-fraction line metrics; character spacing follows the shared
+// helper so layout and fallback emission agree exactly.
+internal sealed class DocxFallbackTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+{
+    public double MeasureText(DocxTextRun? run, string text, double fontSize)
+    {
+        double units = 0d;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            units += PdfFallbackFont.MeasureAdvanceEm(rune);
+        }
+
+        return DocxTextSpacing.AddCharacterSpacing(units * fontSize / PdfFallbackFont.UnitsPerEm, run, text);
+    }
+
+    public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+    {
+        return fontSize * PdfFallbackFont.SingleLineHeightEm;
+    }
+
+    public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+    {
+        return fontSize * PdfFallbackFont.AscentEm;
+    }
+
+    public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+    {
+        return fontSize * PdfFallbackFont.DescentEm;
+    }
+}
+
+// RV01: routes runs without a usable embedded resource to the fallback
+// measurer while the remaining runs keep their font measurement, so mixed
+// documents measure each run with the face that emits it.
+internal sealed class MissingFontRoutingMeasurer(IDocxTextMeasurer? inner, DocxFallbackTextMeasurer fallback, IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+{
+    public double MeasureText(DocxTextRun? run, string text, double fontSize)
+    {
+        if (run is not null && fallbackFaces.ContainsKey(run))
+        {
+            return fallback.MeasureText(run, text, fontSize);
+        }
+
+        return inner is not null
+            ? inner.MeasureText(run, text, fontSize)
+            : fallback.MeasureText(run, text, fontSize);
+    }
+
+    public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize)
+    {
+        if (run is not null && fallbackFaces.ContainsKey(run))
+        {
+            return fallback.MeasureSingleLineHeight(run, fontSize);
+        }
+
+        return inner is IDocxLineMetricsProvider provider
+            ? provider.MeasureSingleLineHeight(run, fontSize)
+            : fallback.MeasureSingleLineHeight(run, fontSize);
+    }
+
+    public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+    {
+        if (run is not null && fallbackFaces.ContainsKey(run))
+        {
+            return fallback.MeasureWindowsAscender(run, fontSize);
+        }
+
+        return inner is IDocxStaticTextMetricsProvider provider
+            ? provider.MeasureWindowsAscender(run, fontSize)
+            : fallback.MeasureWindowsAscender(run, fontSize);
+    }
+
+    public double MeasureWindowsDescender(DocxTextRun? run, double fontSize)
+    {
+        if (run is not null && fallbackFaces.ContainsKey(run))
+        {
+            return fallback.MeasureWindowsDescender(run, fontSize);
+        }
+
+        return inner is IDocxStaticTextMetricsProvider provider
+            ? provider.MeasureWindowsDescender(run, fontSize)
+            : fallback.MeasureWindowsDescender(run, fontSize);
+    }
+}
+
 internal sealed class DocxEmbeddedTextMeasurer(PdfEmbeddedFont embedded) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
 {
     public double MeasureText(DocxTextRun? run, string text, double fontSize)

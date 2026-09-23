@@ -37,7 +37,7 @@ internal readonly record struct PdfPage
     {
     }
 
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfLinkAnnotation> annotations)
+    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfLinkAnnotation> annotations, IReadOnlyList<PdfFallbackFontResource>? fallbackFonts = null)
     {
         Width = width;
         Height = height;
@@ -48,6 +48,7 @@ internal readonly record struct PdfPage
         Shadings = shadings;
         Patterns = patterns;
         Annotations = annotations;
+        FallbackFonts = fallbackFonts ?? [];
     }
 
     public double Width { get; }
@@ -57,6 +58,8 @@ internal readonly record struct PdfPage
     public string Content { get; init; }
 
     public IReadOnlyList<PdfFontResource> Fonts { get; }
+
+    public IReadOnlyList<PdfFallbackFontResource> FallbackFonts { get; }
 
     public IReadOnlyList<PdfImageResource> Images { get; }
 
