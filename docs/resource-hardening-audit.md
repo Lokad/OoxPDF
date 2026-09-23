@@ -39,8 +39,9 @@ per-domain admission map in tracked Diagnostics.md, full suite 1731/0/9, manifes
 339/339); R06.3 done in `0f0e1e0d` (produce/spill/emit staged emission with a 64 MiB default
 resident window, delete-on-close escalation, byte-identical numbering, stream
 snapshot/report between production and emission, probe window flag in `e7b4b255`,
-full suite 1742/0/9, manifests 339/339); remaining residual per ledger:
-DOCX repagination control |
+full suite 1742/0/9, manifests 339/339); repagination control done in `239a59f1` (at most two full layouts documented, charges
+once per emitted final page with a displacing-header gate, full suite 1743/0/9,
+manifests 339/339); R06 closed |
 | R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). R07.1 done in `c2682336` (profiling measurer with calls/chars/distinct-slices/per-run attribution; uneven/tracking/run/capacity/allocation scaling gates; first/continuation break offsets; justified-vs-left break equality; full suite 1726/0/9, manifests 339/339); R07.2 done in `cbbdf2eb` (range tokens without suffix copies, per-segment span index with binary seek, 128-probe search caps with emit-candidate grow fallback and defined shrink failure, shrink-cap gate, all R07.1 pins green, full suite 1732/0/9, manifests 339/339); R07 closed |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
