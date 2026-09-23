@@ -887,7 +887,13 @@ internal sealed partial class PptxRenderer
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
         PptxTextLayoutModel xmlLayout = BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken);
-        PptxTextFrameLayout xmlFrame = xmlLayout.Frames.Single();
+        // Layout skips shapes it cannot place (unsupported orientation); the XML path
+        // then yields no spans either.
+        PptxTextFrameLayout? xmlFrame = xmlLayout.Frames.SingleOrDefault();
+        if (xmlFrame is null)
+        {
+            return [];
+        }
         PptxTextFrameModel frameModel = xmlFrame.Model;
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(textBody.Paragraphs, frameModel, theme, colorMap, slideNumber, frameModel.ShapeFontColor, default);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };

@@ -89,8 +89,8 @@ index bounds the worst case rather than shifting the median.
   measuring untouched. Run click identity threads from retained run Properties XML through
   the shared readers (both pipelines already share PptxRunTextAttributeReaders, and the
   15 batteries prove field-level style equality). Snapshot cascade layer parity needs the
-  retained layer sources. First slice: plain shapes with no placeholders, hyperlinks, or
-  fields behind an equivalence test (span-for-span against the XML path); tables, grouped
+  retained layer sources. Executed for plain shapes with no placeholders, hyperlinks, fields, or group transforms:
+  fields behind an equivalence test (span-exact on the plain-shape battery) with the production entry flipped to the scene-fed path under that qualification (span-for-span against the XML path); tables, grouped
   shapes, and autofit loops stay on the XML path. Validation bar: agreement
   batteries plus byte-identical full suite and visual manifests before Office-gated
   variations.
