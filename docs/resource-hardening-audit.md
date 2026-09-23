@@ -35,8 +35,11 @@ page/content with output still zero, full suite 1719/0/9, manifests 339/339);
 retained-resource producer limits done in `2e0c9996` (new retained image/font caps
 with producer charges, dedup/no-recharge/no-refund semantics, typed summary fields,
 per-domain admission map in tracked Diagnostics.md, full suite 1731/0/9, manifests
-339/339); remaining residuals per ledger: DOCX repagination control, R06.3 bounded
-retained payloads |
+339/339); R06.3 done in `0f0e1e0d` (produce/spill/emit staged emission with a 64 MiB default
+resident window, delete-on-close escalation, byte-identical numbering, stream
+snapshot/report between production and emission, probe window flag in `e7b4b255`,
+full suite 1742/0/9, manifests 339/339); remaining residual per ledger:
+DOCX repagination control |
 | R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). R07.1 done in `c2682336` (profiling measurer with calls/chars/distinct-slices/per-run attribution; uneven/tracking/run/capacity/allocation scaling gates; first/continuation break offsets; justified-vs-left break equality; full suite 1726/0/9, manifests 339/339); R07.2 done in `cbbdf2eb` (range tokens without suffix copies, per-segment span index with binary seek, 128-probe search caps with emit-candidate grow fallback and defined shrink failure, shrink-cap gate, all R07.1 pins green, full suite 1732/0/9, manifests 339/339); R07 closed |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
