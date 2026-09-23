@@ -184,7 +184,7 @@ re-attributed here.
   `PdfFontsRespectFontByteBudget` (DejaVu-only environment embeds zero font bytes;
   pre-existing, same shape now skip-gated). Final-revision CI needs a push, which is
   a separate authorization; workflow configuration alone is not claimed as a result.
-- New defects get scoped entries, not catch-all burial: F01 (clipped centered
-  micro-label, PLAN.md) records the one failing visual gate with origin/master parity
-  evidence; it needs R14-scope triage, not a threshold relaxation.
+- New defects get scoped entries, not catch-all burial: F01 (clipped centered micro-label, PLAN.md) is fixed in `bb5d2ed7`: preset-inset shapes
+  clip vertically to shape bounds (Office-paired baseline deltas -0.03/+0.04, MAE 0.0018);
+  blast radius verified as exactly the fixed case across four visual families.
 
