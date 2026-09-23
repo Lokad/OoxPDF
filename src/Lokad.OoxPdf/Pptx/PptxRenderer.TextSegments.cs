@@ -523,11 +523,22 @@ internal sealed partial class PptxRenderer
         return gaps[(gaps.Count - 1) / 2];
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
+    // R14-deeper: table cells resolve paragraphs through the shared scene readers;
+    // the frame geometry and downstream layout stay on the existing path.
+    internal static IReadOnlyList<PptxPositionedTextSpan> BuildSceneFedTableCellTextSpans(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
         PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
-        PptxTextFrameLayout layout = BuildTextFrameLayout(frameModel, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
-        return FlattenTextLayoutToSpans(new PptxTextLayoutModel([layout]), context.FontResolver);
+        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, tableFrame.TextStyle, context.InheritedXml, context.Theme, tableFrame.ColorMap);
+        IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.SlideNumber, shapeFontColor: null, tableFrame.TextStyle);
+        var fedFrame = frameModel with { Paragraphs = fedParagraphs };
+        PptxTextFrameLayout layout = BuildTextFrameLayout(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
+        return FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { layout }), context.FontResolver);
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
+    {
+        // R14-deeper: table cells resolve paragraphs through the shared scene readers.
+        return BuildSceneFedTableCellTextSpans(tableFrame, context);
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)

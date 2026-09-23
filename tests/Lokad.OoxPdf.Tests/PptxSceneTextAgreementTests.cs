@@ -293,6 +293,138 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void TableCellParagraphsApplyStyleText()
+    {
+        // R14-deeper: cell runs without direct formatting inherit the table style
+        // text color and bold through the shared scene readers.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Defaults"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle><a:lvl1pPr><a:defRPr sz="1600"/></a:lvl1pPr></a:lstStyle>
+                        <a:p><a:r><a:rPr><a:latin typeface="Arial"/></a:rPr><a:t>Styled</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="3" name="Plain"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="1828800"/><a:ext cx="4572000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle/>
+                        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Bare</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        var cellBody = new XElement(a + "txBody",
+            new XElement(a + "lstStyle"),
+            new XElement(a + "p",
+                new XElement(a + "r",
+                    new XElement(a + "rPr"),
+                    new XElement(a + "t", "Cell"))));
+        var styleText = new PptxSceneTableCellTextStyle(new RgbColor(17, 34, 51), true);
+        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(
+            cellBody, styleText, new List<XDocument>(), scene.Theme, PptxColorMap.Default);
+        PptxSceneTextParagraph cellParagraph = cellParagraphs.Single();
+        PptxSceneTextRun cellRun = cellParagraph.Runs.Single();
+        TestAssert.Equal(new RgbColor(17, 34, 51), cellRun.ResolvedStyle.Color);
+        TestAssert.True(cellRun.ResolvedStyle.Bold, "Expected the unstyled cell run to inherit the table style bold.");
+    }
+
+    public static void SceneFedSpansMatchXmlPathForTableCells()
+    {
+        // R14-deeper: table cells resolve paragraphs through the shared scene readers
+        // with table style text; fed spans must match the XML path exactly.
+        string input = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-10-table-style-text.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        MethodInfo frameMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate => candidate.Name == "BuildTableCellTextFrame" && candidate.GetParameters().Length == 15);
+        MethodInfo spansMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate => candidate.Name == "ReadTextSpansForTableCellTextFrame" && candidate.GetParameters().Length == 2);
+        MethodInfo contextMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate => candidate.Name == "TryLoadRenderContext" && candidate.GetParameters().Length == 7);
+        object? context;
+        try
+        {
+            context = contextMethod.Invoke(null, new object?[] { document, package, 0, new Dictionary<string, PdfImageXObject?>(), null, CancellationToken.None, null });
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        TestAssert.True(context is PptxRenderContext, "Expected a render context for the table fixture.");
+        int comparedSpans = 0;
+        foreach (PptxSceneNode node in scene.Slides[0].SlideNodes)
+        {
+            if (node.Kind != PptxSceneNodeKind.Table || node.Table is null)
+            {
+                continue;
+            }
+
+            foreach (PptxSceneTableCell cell in node.Table.Rows.SelectMany(row => row.Cells))
+            {
+                if (cell.LayoutTextBody is null && cell.TextBody is null)
+                {
+                    continue;
+                }
+
+                object? frame;
+                try
+                {
+                    frame = frameMethod.Invoke(null, new object?[] { cell, 0, 0, 1, 1, 100d, 100d, 100d, 1d, 72d, 72d, 200d, 100d, PptxColorMap.Default, cell.StyleText });
+                }
+                catch (TargetInvocationException ex)
+                {
+                    throw ex.InnerException ?? ex;
+                }
+
+                if (frame is not PptxRenderer.PptxTableCellTextFrame tableFrame)
+                {
+                    continue;
+                }
+
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans;
+                try
+                {
+                    xmlSpans = (IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>)spansMethod.Invoke(null, new object?[] { tableFrame, context })!;
+                }
+                catch (TargetInvocationException ex)
+                {
+                    throw ex.InnerException ?? ex;
+                }
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTableCellTextSpans(tableFrame, (PptxRenderContext)context!);
+                comparedSpans += xmlSpans.Count;
+                TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
+                for (int index = 0; index < xmlSpans.Count; index++)
+                {
+                    TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
+                    TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
+                    TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
+                    TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
+                }
+            }
+        }
+        TestAssert.True(comparedSpans > 0, "Expected table cells to exercise fed-path spans.");
+    }
+
     public static void PlainShapeRunTextAndStyleAgree()
     {
         // R14: first scene-fed-layout agreement gate. Plain-shape run text and core

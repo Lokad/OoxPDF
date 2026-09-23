@@ -73,11 +73,11 @@ index bounds the worst case rather than shifting the median.
   placeholders, table/shape consistency, table-style text, grouped shapes, scheme colors, full styles, hyperlinks, and every inheritance layer (paragraph
   defRPr, shape lstStyle, layout bodies, master txStyles, master defaultTextStyle).
   Known migration prerequisites: click identity lives only in renderer models; table
-  cells carry unresolved XML (no scene text model). Cell-model design (mapped, not started):
+  cells carry unresolved XML (no scene text model). Cell-model design (executed):
   resolve cell paragraphs via shared scene readers with shape:=cell-txBody (matches the
   renderer, which passes txBody as shape, so ph lookup yields otherStyle on both),
   inherited:=[], sources:=slide chain, plus StyleText threading through run resolution
-  (scene readers lack the table-style parameter today). Migration design: build run models
+  (scene readers now thread the table style). Cells resolve at span time through shared readers with renderer-merged retained-style semantics, and the cell span entry serves scene-fed spans in production. Migration design: build run models
   from TextBody runs reusing layout and measuring unchanged.
   Plain-shape scene-fed design (mapped, not started): ComputeTextSpansForSceneNode
   re-clones node.Source and re-walks the placeholder/master chain per shape while the scene

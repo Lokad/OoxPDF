@@ -46,6 +46,18 @@ internal static class PptxRunTextAttributeReaders
         return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
     }
 
+    internal static bool HasRunTextFill(XElement? runProperties)
+    {
+        if (runProperties is null)
+        {
+            return false;
+        }
+
+        XNamespace ns = runProperties.Name.Namespace;
+        return runProperties.Element(ns + "solidFill") is not null ||
+            runProperties.Element(ns + "noFill") is not null ||
+            runProperties.Element(ns + "gradFill") is not null;
+    }
     internal static string? ReadTextCapsValue(XElement? runProperties, XElement? defaultRunProperties)
     {
         return (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));

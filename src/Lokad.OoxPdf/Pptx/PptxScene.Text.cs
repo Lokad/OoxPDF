@@ -58,7 +58,8 @@ internal sealed partial class PptxSceneBuilder
         IReadOnlyList<XElement> inheritedPlaceholderShapes,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
-        PptxColorMap colorMap)
+        PptxColorMap colorMap,
+        PptxSceneTableCellTextStyle tableStyle = default)
     {
         XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
         int level = properties?.Attribute("lvl") is { } levelAttribute
@@ -99,14 +100,30 @@ internal sealed partial class PptxSceneBuilder
             paragraph.Element(DrawingNamespace + "endParaRPr"),
             level,
             resolvedStyle,
-            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray(),
+            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap, tableStyle)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray(),
             defaultParagraphProperties,
             defaultRunProperties,
             cascadeLayers,
             paragraph);
     }
 
-    private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)
+    // R14-deeper: table cells resolve paragraphs through the shared scene readers
+    // with the cell body as shape (matching the renderer, which passes txBody as
+    // shape), no inherited placeholders, and the slide placeholder-source chain.
+    internal static IReadOnlyList<PptxSceneTextParagraph> ReadTableCellParagraphs(
+        XElement textBody,
+        PptxSceneTableCellTextStyle styleText,
+        IReadOnlyList<XDocument> placeholderSources,
+        PptxTheme theme,
+        PptxColorMap colorMap)
+    {
+        return textBody.Elements(DrawingNamespace + "p")
+            .Select(paragraph => ReadParagraph(paragraph, textBody, textBody, [], [], placeholderSources, theme, colorMap, styleText))
+            .ToArray();
+    }
+
+    private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap,
+        PptxSceneTableCellTextStyle tableStyle = default)
     {
         if (element.Name == DrawingNamespace + "r")
         {
@@ -115,14 +132,14 @@ internal sealed partial class PptxSceneBuilder
                 PptxSceneTextRunKind.Text,
                 (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
                 runProperties,
-                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap),
+                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap, tableStyle),
                 element);
         }
 
         if (element.Name == DrawingNamespace + "br")
         {
             XElement? runProperties = element.Element(DrawingNamespace + "rPr");
-            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", runProperties, ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap), element);
+            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", runProperties, ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap, tableStyle), element);
         }
 
         if (element.Name == DrawingNamespace + "fld")
@@ -132,7 +149,7 @@ internal sealed partial class PptxSceneBuilder
                 PptxSceneTextRunKind.Field,
                 (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
                 runProperties,
-                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap),
+                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap, tableStyle),
                 element);
         }
 
@@ -211,7 +228,8 @@ internal sealed partial class PptxSceneBuilder
             ReadCharacterSpacing(defaultRunProperties, null));
     }
 
-    private static PptxSceneRunStyle ResolveRunStyle(XElement? runProperties, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)
+    private static PptxSceneRunStyle ResolveRunStyle(XElement? runProperties, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap,
+        PptxSceneTableCellTextStyle tableStyle = default)
     {
         double fontSize = ReadFontSize(runProperties, defaultRunProperties);
         double alpha = paragraphStyle.Alpha;
@@ -227,6 +245,10 @@ internal sealed partial class PptxSceneBuilder
             color = runColor;
             alpha = runAlpha;
         }
+        else if (tableStyle.Color is { } tableTextColor && !HasRunTextFill(runProperties))
+        {
+            color = tableTextColor;
+        }
         else if (PptxColorResolver.TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
@@ -239,6 +261,7 @@ internal sealed partial class PptxSceneBuilder
             ? null
             : theme.ResolveTypefaceWithSource(requestedTypeface);
         bool bold = OoxXml.ParseOptionalBool(runProperties, "b") ||
+            (runProperties?.Attribute("b") is null && tableStyle.Bold) ||
             (runProperties?.Attribute("b") is null && paragraphStyle.Bold);
         bool italic = OoxXml.ParseOptionalBool(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && paragraphStyle.Italic);

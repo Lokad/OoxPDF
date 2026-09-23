@@ -178,12 +178,7 @@ internal sealed partial class PptxRenderer
             typeface.Source,
             typeface.Typeface);
 
-        bool HasTextFill()
-        {
-            return runProperties?.Element(DrawingNamespace + "solidFill") is not null ||
-                runProperties?.Element(DrawingNamespace + "noFill") is not null ||
-                runProperties?.Element(DrawingNamespace + "gradFill") is not null;
-        }
+        bool HasTextFill() => HasRunTextFill(runProperties);
 
         bool IsKerningEnabled()
         {
