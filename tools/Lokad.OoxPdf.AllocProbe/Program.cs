@@ -18,7 +18,7 @@ using Lokad.OoxPdf.Pptx;
 // emission/write) and corpus generation stay open for later slices.
 if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal)))
 {
-    Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] <input...> | --self-test | --font-breadth <n,...> --out <report.json>");
+    Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--resident-window bytes] <input...> | --self-test | --font-breadth <n,...> --out <report.json>");
     Console.WriteLine("  Measures one cold plus N warm conversions per input and writes a JSON report.");
     Console.WriteLine("  --output-mode buffer (default) keeps converter output in a MemoryStream;");
     Console.WriteLine("  --output-mode file writes converter output to a temp file (no output buffering attributed).");
@@ -44,6 +44,12 @@ bool measureStages = args.Any(arg => string.Equals(arg, "--stages", StringCompar
 bool isolate = args.Any(arg => string.Equals(arg, "--isolate", StringComparison.Ordinal))
     && !args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal));
 string outputMode = ReadOption("--output-mode") ?? "buffer";
+long residentWindowBytes = ReadOption("--resident-window") is null ? 67108864L : ReadLongOption("--resident-window") ?? -1L;
+if (residentWindowBytes < 0)
+{
+    Console.Error.WriteLine("Invalid --resident-window: expected non-negative bytes.");
+    return 2;
+}
 if (outputMode != "buffer" && outputMode != "file")
 {
     Console.Error.WriteLine($"Invalid --output-mode '{outputMode}': expected buffer or file.");
@@ -53,13 +59,13 @@ if (outputMode != "buffer" && outputMode != "file")
 string[] inputs = args.Where(arg => !arg.StartsWith("--", StringComparison.Ordinal) && !IsOptionValue(arg)).ToArray();
 if (reportPath is null || inputs.Length == 0 || warmup < 0 || iterations < 1)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--output-mode buffer|file] [--isolate] <input...>");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--output-mode buffer|file] [--resident-window bytes] [--isolate] <input...>");
     return 2;
 }
 
 if (isolate)
 {
-    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode);
+    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode, residentWindowBytes);
 }
 
 var reports = new List<object>();
@@ -81,7 +87,7 @@ foreach (string input in inputs)
         string? peakNote = args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal))
             ? "single-input isolated child process: peak is per-input"
             : null;
-        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote));
+        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote, residentWindowBytes));
     }
     catch (Exception ex)
     {
@@ -145,7 +151,7 @@ static object DescribeFontInventory()
     }
 }
 
-static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode)
+static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode, long residentWindowBytes)
 {
     // cold inputs run independently in fresh child processes so static
     // caches cannot leak across inputs and each child reports its own process peak.
@@ -186,6 +192,8 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
 
         psi.ArgumentList.Add("--output-mode");
         psi.ArgumentList.Add(outputMode);
+        psi.ArgumentList.Add("--resident-window");
+        psi.ArgumentList.Add(residentWindowBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         psi.ArgumentList.Add("--isolated-child");
         psi.ArgumentList.Add(input);
         try
@@ -242,7 +250,7 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
 bool IsOptionValue(string arg)
 {
     int index = Array.IndexOf(args, arg);
-    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode");
+    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode" || args[index - 1] == "--resident-window");
 }
 
 string? ReadOption(string name)
@@ -268,7 +276,24 @@ int? ReadIntOption(string name)
     return value;
 }
 
-static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null)
+long? ReadLongOption(string name)
+{
+    string? text = ReadOption(name);
+    if (text is null)
+    {
+        return null;
+    }
+
+    if (!long.TryParse(text, out long value))
+    {
+        Console.Error.WriteLine($"Invalid integer for {name}: {text}");
+        return null;
+    }
+
+    return value;
+}
+
+static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null, long residentWindowBytes = 67108864L)
 {
     string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
         : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
@@ -277,7 +302,11 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
     var outputLengths = new List<int>();
     var pageCounts = new List<int>();
 
-    var options = new OoxPdfOptions { InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx };
+    var options = new OoxPdfOptions
+    {
+        InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
+        ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = residentWindowBytes },
+    };
     (object cold, string coldSha, int coldLength, int coldPages) = MeasureOnce(inputBytes, options, inputExtension: kind == "docx" ? ".docx" : ".pptx", outputMode, recordOutput: true);
     outputShas.Add(coldSha);
     outputLengths.Add(coldLength);
@@ -315,6 +344,7 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
         pageCount = pageCounts[0],
         fontResolver = "default",
         outputMode,
+        residentWindowBytes,
         cold,
         warm = warm.ToArray(),
         stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0], outputMode) : null,
