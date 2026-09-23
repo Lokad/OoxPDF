@@ -142,17 +142,23 @@ internal sealed partial class DocxRenderer
         markupContext = DocxMarkupContext.FromMode(markupMode, markupGeometryMode);
     }
 
-    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    // R06.3: yields pages progressively so the writer can spill content and retain
+    // only descriptors; callers must drain inside the conversion budget scope.
+    public IEnumerable<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!HasRenderableContent())
         {
             // R06.2: admit the single blank page like any produced page.
             OoxConversionBudget.Current?.ChargePdfPages(1);
-            return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
+            yield return new PdfPage(document.PageWidthPoints, document.PageHeightPoints);
+            yield break;
         }
 
-        return RenderParagraphs(document, fontResolver, ResolveEffectiveMarkupContext(document), diagnosticSink, cancellationToken);
+        foreach (PdfPage page in RenderParagraphs(document, fontResolver, ResolveEffectiveMarkupContext(document), diagnosticSink, cancellationToken))
+        {
+            yield return page;
+        }
 
         bool HasRenderableContent()
         {
@@ -856,7 +862,7 @@ internal sealed partial class DocxRenderer
         return drawingsByType.Values.Any(HasRenderableDrawings);
     }
 
-    private static IReadOnlyList<PdfPage> RenderParagraphs(
+    private static IEnumerable<PdfPage> RenderParagraphs(
         DocxDocument document,
         IFontResolver fontResolver,
         DocxMarkupContext markupContext,
@@ -876,7 +882,6 @@ internal sealed partial class DocxRenderer
         bool suppressCommentReferenceSpacer = ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext);
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations();
-        var pages = new List<PdfPage>(layout.Pages.Count);
         int imageIndex = 1;
 
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
@@ -980,7 +985,7 @@ internal sealed partial class DocxRenderer
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count);
             string content = graphics.ToString();
-            pages.Add(new PdfPage(
+            yield return new PdfPage(
                 layoutPage.Width,
                 layoutPage.Height,
                 content,
@@ -989,14 +994,12 @@ internal sealed partial class DocxRenderer
                 graphics.ExtGStates,
                 graphics.Shadings,
                 graphics.Patterns,
-                annotations));
+                annotations);
             // R06.2: admit the emitted content bytes (pages admit at the top of
             // each iteration, before emission). DOCX layout itself stays
             // whole-document; repagination control is a named residual.
             OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
         }
-
-        return pages;
 
         IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations()
         {

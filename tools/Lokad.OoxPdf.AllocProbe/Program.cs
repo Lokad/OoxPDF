@@ -392,13 +392,13 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         {
             DocxDocument renderDocument = new DocxReader().Read(renderPackage, diagnosticSink: null, CancellationToken.None, markupMode);
             renderScope = "exclusive: layout and emission from prebuilt package and document";
-            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: null, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None), renderScope);
+            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: null, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
         }
         else
         {
             PptxDocument renderDocument = new PptxReader().Read(renderPackage, CancellationToken.None);
             renderScope = "INCLUSIVE: PptxRenderer.RenderPages rebuilds the scene internally; package and document prerequisites are prebuilt";
-            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: null).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None), renderScope);
+            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: null).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
         }
     }
 

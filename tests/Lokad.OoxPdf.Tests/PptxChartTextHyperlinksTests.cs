@@ -9,7 +9,7 @@ internal static class PptxChartTextHyperlinksTests
 {
     public static void PptxChartTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
+        (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
             """<a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Visit site</a:t></a:r>""",
             """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -141,7 +141,7 @@ internal static class PptxChartTextHyperlinksTests
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart data label hyperlink should not emit hyperlink diagnostics.");
     }
 
-    private static (IReadOnlyList<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null)
     {
         string contentTypes = PptxTests.BasicContentTypes().Replace(
             "</Types>",
@@ -210,7 +210,7 @@ internal static class PptxChartTextHyperlinksTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None);
+        List<PdfPage> pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
         return (pages, diagnostics);
     }
 }

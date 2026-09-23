@@ -15,7 +15,7 @@ internal static class PptxTextHyperlinksTests
             paragraphXml: """<a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdRunLink"/></a:rPr><a:t>Link</a:t></a:r></a:p>""",
             slideRelsXml: """<Relationship Id="rIdRunLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/run" TargetMode="External"/>""");
 
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, new LinkTestFontResolver());
+        (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, new LinkTestFontResolver());
 
         PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
         TestAssert.Equal("https://example.invalid/run", annotation.Uri);
@@ -280,13 +280,13 @@ internal static class PptxTextHyperlinksTests
         }
     }
 
-    private static (IReadOnlyList<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver fontResolver)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver fontResolver)
     {
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None);
+        List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
         return (pages, diagnostics);
     }
 }

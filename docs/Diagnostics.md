@@ -133,6 +133,12 @@ shared process. Defaults are generous multiples of the per-site caps:
   fallback) font program bytes at subset construction (R06.2). Identical-merge
   fast paths build nothing and do not recharge. Intentionally separate from the
   serialized font cap.
+- `MaxResidentPageContentBytesPerConversion` (default 64 MiB): page-content bytes
+  retained in memory during staged emission (R06.3). Past the window, content spills
+  to a delete-on-close temp file and is re-read in order, so output stays
+  byte-identical while stageable payload retention follows the window. Spilled volume
+  is reported as `pageContentSpilledBytes`; escalation notifies once per conversion
+  with informational `PDF_PAGE_CONTENT_SPILLED`.
 - `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
   including PPTX crop/recolor variants and effect rasters, through the shared
   decoder boundary (R03). Each image is still individually pixel-capped; cache

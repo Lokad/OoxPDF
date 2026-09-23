@@ -129,7 +129,7 @@ internal static class PptxVisibilityTests
         {
             OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-            pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None).Count;
+            pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None).Count();
         }
 
         TestAssert.Equal(1, pages);

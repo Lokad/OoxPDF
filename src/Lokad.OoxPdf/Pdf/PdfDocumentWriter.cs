@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Pdf;
 
@@ -39,23 +40,96 @@ internal sealed class PdfDocumentWriter
     // the writer keeps page validation, planning, and numbering.
     public static long WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
-        ArgumentNullException.ThrowIfNull(stream);
-        if (pages.Count == 0)
-        {
-            throw new ArgumentException("A PDF document must contain at least one page.", nameof(pages));
-        }
+        return WriteStaged(stream, pages, new OoxConversionLimits(), diagnosticSink: null, cancellationToken, creationDate);
+    }
 
-        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+    // R06.3: staged emission. The producer enumerable is drained once: each page is
+    // validated, its content bytes are encoded a single time and handed to the spill
+    // store, and only the blanked descriptor is retained. Planning, numbering, and
+    // emission then run over descriptors with content re-read in order, so output
+    // stays byte-identical while stageable payload retention follows the window.
+    public static long WriteStaged(
+        Stream stream,
+        IEnumerable<PdfPage> pages,
+        OoxConversionLimits limits,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken,
+        DateTimeOffset? creationDate = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        var (blanked, staging) = ProduceStagedPages(pages, limits, diagnosticSink, cancellationToken);
+        using (staging)
         {
-            PdfPage page = pages[pageIndex];
-            if (!double.IsFinite(page.Width) || !double.IsFinite(page.Height) || page.Width <= 0 || page.Height <= 0)
+            return EmitStaged(stream, blanked, staging, cancellationToken, creationDate);
+        }
+    }
+
+    // R06.3: drains the producer once (validate, encode, spill, blank) and hands
+    // staging ownership to the caller, so the stream path can snapshot and report
+    // between production and emission. The caller must dispose the staging.
+    public static (IReadOnlyList<PdfPage> Pages, PdfPageContentStaging Staging) ProduceStagedPages(
+        IEnumerable<PdfPage> pages,
+        OoxConversionLimits limits,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(pages);
+        ArgumentNullException.ThrowIfNull(limits);
+        // Ownership transfers to the caller; dispose on the drain-failure path below.
+        var staging = new PdfPageContentStaging(limits.MaxResidentPageContentBytesPerConversion, diagnosticSink);
+        try
+        {
+            var blanked = new List<PdfPage>();
+            int pageIndex = 0;
+            foreach (PdfPage page in pages)
             {
-                throw new ArgumentOutOfRangeException(nameof(pages), "PDF pages must have finite positive dimensions.");
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!double.IsFinite(page.Width) || !double.IsFinite(page.Height) || page.Width <= 0 || page.Height <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(pages), "PDF pages must have finite positive dimensions.");
+                }
+
+                PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
+                staging.AddPage(Encoding.ASCII.GetBytes(page.Content), cancellationToken);
+                blanked.Add(page with { Content = string.Empty });
+                pageIndex++;
             }
 
-            PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
-        }
+            if (blanked.Count == 0)
+            {
+                throw new ArgumentException("A PDF document must contain at least one page.", nameof(pages));
+            }
 
+            if (staging.SpilledBytes > 0)
+            {
+                OoxConversionBudget.Current?.NotePageContentSpilled(staging.SpilledBytes);
+            }
+
+            return (blanked, staging);
+        }
+        catch
+        {
+            staging.Dispose();
+            throw;
+        }
+    }
+
+    // R06.3: emits already-produced descriptors with content re-read in order.
+    public static long EmitStaged(
+        Stream stream,
+        IReadOnlyList<PdfPage> pages,
+        PdfPageContentStaging staging,
+        CancellationToken cancellationToken,
+        DateTimeOffset? creationDate = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(pages);
+        ArgumentNullException.ThrowIfNull(staging);
+        return WriteCore(stream, pages, staging, cancellationToken, creationDate);
+    }
+
+    private static long WriteCore(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var writer = new PdfObjectWriter(stream, cancellationToken);
         writer.WriteHeader();
@@ -75,7 +149,7 @@ internal sealed class PdfDocumentWriter
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(numbers.AnnotationObjectsByPage[i])} >>\n"));
-            byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
+            byte[] contentBytes = staging.GetPageBytes(i, cancellationToken);
             writer.WriteContentStreamObject(contentObjectNumber, contentBytes);
         }
 

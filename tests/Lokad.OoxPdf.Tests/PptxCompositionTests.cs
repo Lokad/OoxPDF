@@ -257,7 +257,7 @@ internal static class PptxCompositionTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None);
+        List<PdfPage> pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
 
         PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
         TestAssert.Equal("https://example.invalid/group", annotation.Uri);

@@ -2453,7 +2453,7 @@ internal static class DocxTableCellsTests
             [],
             [table]);
 
-        IReadOnlyList<PdfPage> pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None);
+        List<PdfPage> pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).ToList();
 
         TestAssert.Equal(2, pages.Count);
         TestAssert.DoesNotContain("10.48 10 59.52 0.48 re f", pages[0].Content);

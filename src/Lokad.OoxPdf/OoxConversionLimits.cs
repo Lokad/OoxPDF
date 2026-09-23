@@ -103,6 +103,14 @@ public sealed class OoxConversionLimits
     public long MaxRetainedFontBytesPerConversion { get; init; } = 268435456;
 
     /// <summary>
+    /// Maximum page-content bytes retained in memory per conversion (default 67,108,864,
+    /// i.e. 64 MiB). Page content past this resident window spills to a delete-on-close
+    /// temp file during staged emission and is re-read in order, so output stays
+    /// byte-identical while stageable payload retention follows the window (R06.3).
+    /// </summary>
+    public long MaxResidentPageContentBytesPerConversion { get; init; } = 67108864;
+
+    /// <summary>
     /// Maximum PPTX scene nodes built per conversion (default 2,000,000). Counts
     /// shapes across slides, masters, and layouts as they materialize, including
     /// nested group children; cached DOMs re-walked per slide recharge (R04).
@@ -219,6 +227,11 @@ public sealed class OoxConversionLimits
         if (MaxRetainedImageBytesPerConversion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxRetainedImageBytesPerConversion), "Conversion retained image byte budget must be non-negative.");
+        }
+
+        if (MaxResidentPageContentBytesPerConversion < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxResidentPageContentBytesPerConversion), "Conversion resident page content byte budget must be non-negative.");
         }
 
         if (MaxRetainedFontBytesPerConversion < 0)

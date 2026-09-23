@@ -643,8 +643,8 @@ internal static class DocxFontRenderingTests
         };
         DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None);
+        List<PdfPage> pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).ToList();
 
         TestAssert.Equal(1, pages.Count);
         PdfPage page = pages[0];
@@ -710,11 +710,11 @@ internal static class DocxFontRenderingTests
             run,
             new DocxFontCatalog([], DocxThemeFonts.Empty));
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new DocxRenderer(
+        List<PdfPage> pages = new DocxRenderer(
                 resolver,
                 OoxPdfDocxMarkupMode.Final,
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None);
+            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).ToList();
 
         TestAssert.Equal(1, pages.Count);
         PdfPage page = pages[0];
@@ -745,11 +745,11 @@ internal static class DocxFontRenderingTests
             run,
             new DocxFontCatalog([], DocxThemeFonts.Empty));
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new DocxRenderer(
+        List<PdfPage> pages = new DocxRenderer(
                 resolver,
                 OoxPdfDocxMarkupMode.Final,
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None);
+            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).ToList();
 
         TestAssert.Equal(1, pages.Count);
         TestAssert.True(

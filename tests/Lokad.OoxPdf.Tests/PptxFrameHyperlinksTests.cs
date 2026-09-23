@@ -44,7 +44,7 @@ internal static class PptxFrameHyperlinksTests
                 """
         });
 
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
+        (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
 
         PdfLinkAnnotation[] annotations = pages.Single().Annotations.ToArray();
         TestAssert.Equal(2, annotations.Length);
@@ -164,13 +164,13 @@ internal static class PptxFrameHyperlinksTests
         }
     }
 
-    private static (IReadOnlyList<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input)
     {
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new PptxRenderer(new LinkTestFontResolver()).RenderPages(document, package, diagnostics.Add, CancellationToken.None);
+        List<PdfPage> pages = new PptxRenderer(new LinkTestFontResolver()).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
         return (pages, diagnostics);
     }
 }

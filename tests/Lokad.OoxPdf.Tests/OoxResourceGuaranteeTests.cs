@@ -832,6 +832,157 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.Contains("probe-mid-write-boom", thrown.Message);
         TestAssert.True(inner.Length <= 100, "Only the allowed prefix may exist.");
     }
+    public static void TinyWindowMatchesDefaultBytesOnFileAndStream()
+    {
+        // R06.3: forced file escalation must emit byte-identical output on both
+        // public paths; the window changes residency, never bytes.
+        string input = FindCase("docx-tables.docx");
+        string defaultPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        string spilledPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, defaultPdf, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+        OoxPdfConverter.Convert(input, spilledPdf, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 },
+        });
+        TestAssert.True(File.ReadAllBytes(defaultPdf).SequenceEqual(File.ReadAllBytes(spilledPdf)), "Window must not alter emitted bytes.");
+        using FileStream defaultInput = File.OpenRead(input);
+        using FileStream spilledInput = File.OpenRead(input);
+        using var defaultOutput = new MemoryStream();
+        using var spilledOutput = new MemoryStream();
+        OoxPdfConverter.Convert(defaultInput, defaultOutput, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+        OoxPdfConverter.Convert(spilledInput, spilledOutput, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 },
+        });
+        TestAssert.True(defaultOutput.ToArray().SequenceEqual(spilledOutput.ToArray()), "Window must not alter stream bytes.");
+    }
+
+    public static void TinyWindowSpillsAndReports()
+    {
+        // R06.3: a one-byte window spills every content byte; the typed summary
+        // reports exactly the serialized content total, and the spill diagnostic fires.
+        // The default window spills nothing and stays silent.
+        string input = FindCase("docx-tables.docx");
+        var spilledDiagnostics = new List<OoxPdfDiagnostic>();
+        string spilledPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, spilledPdf, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = spilledDiagnostics.Add,
+            ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 },
+        });
+        OoxPdfDiagnostic spilledSummary = spilledDiagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        int contentBytes = ParseCounter(spilledSummary.Message, "pdfContentBytes=");
+        TestAssert.True(contentBytes > 0, "Content must exist to spill.");
+        TestAssert.Equal(contentBytes, ParseCounter(spilledSummary.Message, "pageContentSpilledBytes="));
+        TestAssert.True(spilledDiagnostics.Any(d => d.Id == "PDF_PAGE_CONTENT_SPILLED"), "Escalation must notify.");
+        var defaultDiagnostics = new List<OoxPdfDiagnostic>();
+        string defaultPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, defaultPdf, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = defaultDiagnostics.Add,
+        });
+        OoxPdfDiagnostic defaultSummary = defaultDiagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.Equal(0, ParseCounter(defaultSummary.Message, "pageContentSpilledBytes="));
+        TestAssert.True(defaultDiagnostics.All(d => d.Id != "PDF_PAGE_CONTENT_SPILLED"), "Default window must stay silent.");
+    }
+
+    public static void SpilledBytesScaleWithPages()
+    {
+        // R06.3: N/2N proof that spilled volume follows output size (identical slides
+        // spill exactly proportional content), i.e. retention follows the window.
+        long spilled2 = SpilledBytesOf(WriteSlideDeck(2));
+        long spilled4 = SpilledBytesOf(WriteSlideDeck(4));
+        TestAssert.True(spilled2 > 0, "Slides must spill content.");
+        TestAssert.Equal(2 * spilled2, spilled4);
+    }
+
+    private static long SpilledBytesOf(string input)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+            ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 },
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        return ParseCounter(summary.Message, "pageContentSpilledBytes=");
+    }
+
+    public static void StagingCleansTempOnFailure()
+    {
+        // R06.3: a zero output budget trips during emission after the spill, so the
+        // owned spill temp must vanish with the staging; nothing is published.
+        string input = FindCase("docx-tables.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits
+            {
+                MaxResidentPageContentBytesPerConversion = 1,
+                MaxOutputBytesPerConversion = 0,
+            },
+        }));
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void ForwardOnlyStreamWithTinyWindowMatchesDefault()
+    {
+        // R06.3: forward-only destinations never expose Position/Length; spilled
+        // content is re-read from the owned temp, so exact bytes still succeed.
+        string input = FindCase("docx-tables.docx");
+        using var defaultInner = new MemoryStream();
+        using var defaultForward = new ForwardOnlyWriteStream(defaultInner);
+        using FileStream defaultInput = File.OpenRead(input);
+        OoxPdfConverter.Convert(defaultInput, defaultForward, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+        using var spilledInner = new MemoryStream();
+        using var spilledForward = new ForwardOnlyWriteStream(spilledInner);
+        using FileStream spilledInput = File.OpenRead(input);
+        OoxPdfConverter.Convert(spilledInput, spilledForward, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 },
+        });
+        TestAssert.Equal(defaultInner.Length, spilledInner.Length);
+        TestAssert.True(defaultInner.ToArray().SequenceEqual(spilledInner.ToArray()), "Window must not alter forward-only bytes.");
+    }
+
+    public static void EmptyPageSequenceThrows()
+    {
+        // R06.3: staged emission still rejects empty documents like the writer always has.
+        using var output = new MemoryStream();
+        TestAssert.Throws<ArgumentException>(() => PdfDocumentWriter.WriteStaged(output, Array.Empty<PdfPage>(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+    }
+
+    public static void PageContentStagingRoundTripsAndCleansTemp()
+    {
+        // R06.3: store-level proof. Memory mode round-trips; past the window the
+        // store escalates to a temp file preserving order, accounts spilled bytes,
+        // and deletes the temp on dispose.
+        using var staging = new PdfPageContentStaging(10, diagnosticSink: null);
+        staging.AddPage(new byte[] { 1, 2, 3 }, CancellationToken.None);
+        TestAssert.Equal(false, staging.IsFileBacked);
+        staging.AddPage(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }, CancellationToken.None);
+        TestAssert.Equal(true, staging.IsFileBacked);
+        string? path = staging.SpillPathForTests;
+        TestAssert.True(path is not null, "Escalation must create a temp file.");
+        TestAssert.True(staging.GetPageBytes(0, CancellationToken.None).SequenceEqual(new byte[] { 1, 2, 3 }), "First page must round-trip.");
+        TestAssert.True(staging.GetPageBytes(1, CancellationToken.None).SequenceEqual(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }), "Second page must round-trip.");
+        TestAssert.Equal(2, staging.Count);
+        TestAssert.Equal(11L, staging.SpilledBytes);
+        staging.Dispose();
+        TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
+    }
+
     private sealed class CountingWriteStream(MemoryStream inner) : Stream
     {
         public long TotalWritten { get; private set; }

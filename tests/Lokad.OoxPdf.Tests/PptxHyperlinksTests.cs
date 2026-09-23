@@ -38,7 +38,7 @@ internal static class PptxHyperlinksTests
                 """
         });
 
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
+        (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
 
         PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
         TestAssert.Equal("https://example.invalid/shape", annotation.Uri);
@@ -405,18 +405,18 @@ internal static class PptxHyperlinksTests
         TestAssert.Equal(0, pages.Single().Annotations.Count);
         TestAssert.Equal(1, diagnostics.Count(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK"));
     }
-    private static (IReadOnlyList<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input)
     {
         return RenderSlidePages(input, null);
     }
 
-    private static (IReadOnlyList<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver? fontResolver)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderSlidePages(string input, IFontResolver? fontResolver)
     {
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        IReadOnlyList<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None);
+        List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
         return (pages, diagnostics);
     }
 

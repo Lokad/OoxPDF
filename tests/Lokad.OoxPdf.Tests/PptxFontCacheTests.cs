@@ -71,7 +71,7 @@ internal static class PptxFontCacheTests
         {
             OoxPackage package = OoxPackage.Open(stream, System.Threading.CancellationToken.None);
             PptxDocument document = new PptxReader().Read(package, System.Threading.CancellationToken.None);
-            pageCount = new PptxRenderer(resolver).RenderPages(document, package, diagnosticSink: null, System.Threading.CancellationToken.None).Count;
+            pageCount = new PptxRenderer(resolver).RenderPages(document, package, diagnosticSink: null, System.Threading.CancellationToken.None).Count();
         }
 
         TestAssert.Equal(1, pageCount);

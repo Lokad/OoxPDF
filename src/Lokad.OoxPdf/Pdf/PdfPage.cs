@@ -54,7 +54,7 @@ internal readonly record struct PdfPage
 
     public double Height { get; }
 
-    public string Content { get; }
+    public string Content { get; init; }
 
     public IReadOnlyList<PdfFontResource> Fonts { get; }
 

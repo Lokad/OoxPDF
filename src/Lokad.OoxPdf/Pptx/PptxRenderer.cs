@@ -19,25 +19,23 @@ internal sealed partial class PptxRenderer
         this.fontResolver = new PresentationFontResolver(fontResolver);
     }
 
-    public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document, CancellationToken cancellationToken)
+    public IEnumerable<PdfPage> RenderBlankPages(PptxDocument document, CancellationToken cancellationToken)
     {
-        var pages = new PdfPage[document.Slides.Count];
-        for (int i = 0; i < pages.Length; i++)
+        for (int i = 0; i < document.Slides.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            pages[i] = new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints);
+            yield return new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints);
             // R06.2: admit each produced page before further production, so a small
             // page budget rejects before later slides materialize.
             OoxConversionBudget.Current?.ChargePdfPages(1);
         }
-
-        return pages;
     }
 
-    public IReadOnlyList<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    // R06.3: yields pages progressively so the writer can spill content and retain
+    // only descriptors; callers must drain inside the conversion budget scope.
+    public IEnumerable<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var pages = new List<PdfPage>(document.Slides.Count);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
         PptxTheme theme = scene.Theme;
         var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
@@ -63,7 +61,7 @@ internal sealed partial class PptxRenderer
             XDocument slideXml = sceneSlide.SlideXml;
             if (slideXml.Root is null)
             {
-                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints));
+                yield return new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints);
                 continue;
             }
 
@@ -104,13 +102,11 @@ internal sealed partial class PptxRenderer
             string content = graphics.ToString();
             List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
             List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts, context.CancellationToken);
-            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations));
+            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations);
             // R06.2: admit the emitted content bytes (pages admit at the top of
             // each iteration, before production).
             OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
         }
-
-        return pages;
     }
 
     private static PptxRenderContext? TryLoadRenderContext(

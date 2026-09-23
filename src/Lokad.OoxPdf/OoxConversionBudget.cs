@@ -75,6 +75,12 @@ internal sealed class OoxConversionBudget
 
     public long RetainedFontBytes { get; private set; }
 
+    /// <summary>
+    /// Page content bytes spilled to the staging temp file during staged emission.
+    /// Accounting only (no admission cap); proves retention follows the window.
+    /// </summary>
+    public long PageContentSpilledBytes { get; private set; }
+
     public long SceneNodes { get; private set; }
 
     public long NestedPackageBytes { get; private set; }
@@ -97,7 +103,17 @@ internal sealed class OoxConversionBudget
     /// </summary>
     public long PeakLiveImageBytes { get; private set; }
 
-    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes, RetainedImageBytes, RetainedFontBytes, PdfFontBytes, PdfImageBytes);
+    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes, RetainedImageBytes, RetainedFontBytes, PdfFontBytes, PdfImageBytes, PageContentSpilledBytes);
+
+    public void NotePageContentSpilled(long bytes)
+    {
+        if (bytes < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bytes));
+        }
+
+        PageContentSpilledBytes += bytes;
+    }
 
     public static Scope BeginScope(OoxConversionLimits? limits)
     {
@@ -471,12 +487,13 @@ internal readonly record struct OoxConversionTotals(
     long RetainedImageBytes,
     long RetainedFontBytes,
     long PdfFontBytes,
-    long PdfImageBytes)
+    long PdfImageBytes,
+    long PageContentSpilledBytes)
 {
     public OoxPdfDiagnostic ToSummaryDiagnostic(int pageCount)
     {
         string message = FormattableString.Invariant(
-            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; retainedImageBytes={RetainedImageBytes}; retainedFontBytes={RetainedFontBytes}; pdfFontBytes={PdfFontBytes}; pdfImageBytes={PdfImageBytes}.");
+            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; retainedImageBytes={RetainedImageBytes}; retainedFontBytes={RetainedFontBytes}; pdfFontBytes={PdfFontBytes}; pdfImageBytes={PdfImageBytes}; pageContentSpilledBytes={PageContentSpilledBytes}.");
         return new OoxPdfDiagnostic(
             "CONVERSION_RESOURCE_SUMMARY",
             OoxPdfSeverity.Info,

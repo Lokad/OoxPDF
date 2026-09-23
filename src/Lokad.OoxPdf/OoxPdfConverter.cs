@@ -126,8 +126,8 @@ public static class OoxPdfConverter
         // content budgets bind the renderers (R06.2) and each output chunk is admitted against
         // the output budget before its write; totals snapshot after serialization so
         // the summary reports writer-stage fields, still before the atomic move (R20).
-        IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
+        int pageCount;
         string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
         if (!string.IsNullOrEmpty(outputDirectory))
         {
@@ -143,17 +143,18 @@ public static class OoxPdfConverter
         {
             using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
             {
-                pages = RenderPages(input, inputKind, options, cancellationToken);
+                // R06.3: the writer drains the producer enumerable once, spilling page
+                // content past the resident window and retaining only descriptors.
                 using (FileStream output = File.Create(stagingPath))
                 {
-                    PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+                    PdfDocumentWriter.WriteStaged(output, RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken, options.FixedCreationDate);
                 }
-
                 totals = scope.Budget.Totals;
+                pageCount = checked((int)totals.PdfPages);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            ReportResourceUsage(options, totals, pages.Count);
+            ReportResourceUsage(options, totals, pageCount);
             File.Move(stagingPath, outputPath, overwrite: true);
         }
         finally
@@ -209,7 +210,6 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
 
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
-        IReadOnlyList<PdfPage> pages;
         OoxConversionTotals totals;
         // R06.1: like the file path, the scope stays open through serialization and
         // output chunks admit incrementally during WriteBlank; the
@@ -218,11 +218,17 @@ public static class OoxPdfConverter
         // file path which snapshots after serialization into its staging file.
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
         {
-            pages = RenderPages(input, inputKind, options, cancellationToken);
-            totals = scope.Budget.Totals;
-            cancellationToken.ThrowIfCancellationRequested();
-            ReportResourceUsage(options, totals, pages.Count);
-            PdfDocumentWriter.WriteBlank(output, pages, cancellationToken, options.FixedCreationDate);
+            // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
+            // observer report still precede serialization, preserving the stream rules;
+            // emission follows from staging.
+            var (blanked, staging) = PdfDocumentWriter.ProduceStagedPages(RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken);
+            using (staging)
+            {
+                totals = scope.Budget.Totals;
+                cancellationToken.ThrowIfCancellationRequested();
+                ReportResourceUsage(options, totals, checked((int)scope.Budget.PdfPages));
+                PdfDocumentWriter.EmitStaged(output, blanked, staging, cancellationToken, options.FixedCreationDate);
+            }
         }
     }
 
@@ -234,7 +240,7 @@ public static class OoxPdfConverter
         }
     }
 
-    private static IReadOnlyList<PdfPage> RenderPages(Stream input, OoxPdfInputKind inputKind, OoxPdfOptions options, CancellationToken cancellationToken)
+    private static IEnumerable<PdfPage> RenderPages(Stream input, OoxPdfInputKind inputKind, OoxPdfOptions options, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPackage package = OoxPackage.Open(input, cancellationToken);
