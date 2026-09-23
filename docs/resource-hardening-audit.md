@@ -115,7 +115,7 @@ index bounds the worst case rather than shifting the median.
   `e3f292dd` post-write/pre-move snapshot with writer page/content/output fields
   (file path; stream path keeps pre-write zeros under R20); staged page/resource
   emission (writer holds all pages before emitting; incremental staging design is mapped below).
-  Staged page/resource emission design (mapped, not started): the writer materializes
+  Staged page/resource emission design (executed in `0f0e1e0d`; the mapping below is retained as the design record): the writer materializes
   every PdfPage (content strings plus per-page font subsets and image bytes) before
   numbering objects from complete collections, so peak tracks the whole document.
   Staging keeps RenderPages descriptors but streams in phases: accumulate font
