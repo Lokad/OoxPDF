@@ -78,7 +78,20 @@ index bounds the worst case rather than shifting the median.
   renderer, which passes txBody as shape, so ph lookup yields otherStyle on both),
   inherited:=[], sources:=slide chain, plus StyleText threading through run resolution
   (scene readers lack the table-style parameter today). Migration design: build run models
-  from TextBody runs reusing layout and measuring unchanged. Validation bar: agreement
+  from TextBody runs reusing layout and measuring unchanged.
+  Plain-shape scene-fed design (mapped, not started): ComputeTextSpansForSceneNode
+  re-clones node.Source and re-walks the placeholder/master chain per shape while the scene
+  builder already resolves the identical chain once (shape lstStyle, inherited bodies,
+  inherited txStyle, default text style) and discards the merged defaults. Retention delta:
+  keep DefaultParagraphProperties and DefaultRunProperties per scene paragraph; the
+  scene-fed flow builder then reuses BuildParagraphBulletModel, ReadParagraphSpacing,
+  ResolveParagraphTextStyle, and BuildRunModels on retained inputs with layout and
+  measuring untouched. Run click identity threads from retained run Properties XML through
+  the shared readers (both pipelines already share PptxRunTextAttributeReaders, and the
+  15 batteries prove field-level style equality). Snapshot cascade layer parity needs the
+  retained layer sources. First slice: plain shapes with no placeholders, hyperlinks, or
+  fields behind an equivalence test (span-for-span against the XML path); tables, grouped
+  shapes, and autofit loops stay on the XML path. Validation bar: agreement
   batteries plus byte-identical full suite and visual manifests before Office-gated
   variations.
 - R15-remainder: closed (bar/line extents shared; area/radar single-evaluation need
