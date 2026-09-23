@@ -132,6 +132,45 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void SceneFedSpansMatchXmlPathForPlaceholders()
+    {
+        // R14-deeper: placeholder inheritance resolves through retained defaults on
+        // both paths (unmatched body placeholder and layout-matched placeholder).
+        string[] inputs = new[]
+        {
+            System.IO.Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-placeholder-inherit.pptx"),
+            System.IO.Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-placeholder-inherit-matched.pptx"),
+        };
+        int comparedSpans = 0;
+        foreach (string input in inputs)
+        {
+            using FileStream stream = File.OpenRead(input);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+            PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+            var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-placeholders");
+            foreach (PptxSceneNode node in scene.Slides[0].SlideNodes)
+            {
+                if (node.TextBody is null)
+                {
+                    continue;
+                }
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadSpans(node, document, scene, true);
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, true, InheritedSources(scene), resolver, CancellationToken.None);
+                TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
+                comparedSpans += xmlSpans.Count;
+                for (int index = 0; index < xmlSpans.Count; index++)
+                {
+                    TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
+                    TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
+                    TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
+                    TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
+                }
+            }
+        TestAssert.True(comparedSpans > 0, "Expected placeholder fixtures to exercise fed-path spans.");
+        }
+    }
+
     public static void PlainShapeRunTextAndStyleAgree()
     {
         // R14: first scene-fed-layout agreement gate. Plain-shape run text and core

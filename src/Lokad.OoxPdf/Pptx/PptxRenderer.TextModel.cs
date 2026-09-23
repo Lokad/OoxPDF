@@ -754,7 +754,9 @@ internal sealed partial class PptxRenderer
             XElement paragraph = sceneParagraph.Source;
             XElement? paragraphProperties = sceneParagraph.Properties;
             string levelName = "lvl" + Math.Clamp(sceneParagraph.Level + 1, 1, 9).ToString(CultureInfo.InvariantCulture) + "pPr";
-            XElement? defaultParagraphProperties = sceneParagraph.DefaultParagraphProperties;
+            XElement? defaultParagraphProperties = PptxParagraphPropertyMerger.MergeRendererDefaultProperties(
+                DrawingNamespace + "defRPr",
+                sceneParagraph.CascadeLayers.Select(layer => layer.Source).ToArray());
             var cascade = new PptxParagraphStyleCascade(
                 levelName,
                 sceneParagraph.CascadeLayers.Select(layer => new PptxParagraphStyleLayer(layer.Name, SceneCascadeLayerKind(layer.Kind), layer.Source)).ToList());
