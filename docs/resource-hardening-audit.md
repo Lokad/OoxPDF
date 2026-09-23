@@ -20,7 +20,7 @@ only, never gates.
 | R03 shared work charges | closed | `443e7304`; variant/font/dense zero-budget gates (ooxml); JPEG recolor cancellation verified in code |
 | R04 aggregate expansion | closed | `443e7304` dense slots; `657812af` XML nodes/cells; `59ffdd92` scene nodes/nested bytes/models; N/2N/4N scaling test |
 | R05 ZIP intake preflight | closed | `87778190`; EOCD count/size rejections, 10k-entry cap, Length-throwing staging (ooxml) |
-| R06 budgets through serialization | closed | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved (ooxml, api) |
+| R06 budgets through serialization | closed | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api) |
 | R07 emergency wrap bound | closed | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text) |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using Lokad.OoxPdf;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
@@ -338,6 +339,93 @@ internal static class OoxResourceGuaranteeTests
         }
     }
 
+    public static void PdfPagesAndContentScaleLinearly()
+    {
+        // R06: page and content accounting must scale with page count: identical
+        // pages charge identical content bytes (no reset, no superlinear compounding),
+        // and conversion allocations grow at most linearly across deck sizes.
+        var pageCounts = new List<long>();
+        var contentBytes = new List<long>();
+        var allocatedBytes = new List<long>();
+        foreach (int slides in new[] { 1, 2, 4 })
+        {
+            string input = WriteSlideDeck(slides);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { ReportResourceUsage = true, DiagnosticSink = diagnostics.Add });
+            allocatedBytes.Add(GC.GetAllocatedBytesForCurrentThread() - before);
+            string message = diagnostics.Single(diagnostic => diagnostic.Id == "CONVERSION_RESOURCE_SUMMARY").Message;
+            pageCounts.Add(ParseSummaryCounter(message, "pdfPages="));
+            contentBytes.Add(ParseSummaryCounter(message, "pdfContentBytes="));
+        }
+
+        TestAssert.Equal(1, pageCounts[0]);
+        TestAssert.Equal(2, pageCounts[1]);
+        TestAssert.Equal(4, pageCounts[2]);
+        TestAssert.Equal(2 * contentBytes[0], contentBytes[1]);
+        TestAssert.Equal(2 * contentBytes[1], contentBytes[2]);
+        TestAssert.True(allocatedBytes[2] <= 2 * allocatedBytes[1], "Expected conversion allocations to grow at most linearly with page count.");
+    }
+
+    private static long ParseSummaryCounter(string message, string marker)
+    {
+        int start = message.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
+        int end = message.IndexOf(";", start, StringComparison.Ordinal);
+        if (end < 0)
+        {
+            end = message.IndexOf(".", start, StringComparison.Ordinal);
+        }
+        return long.Parse(message.Substring(start, end - start), System.Globalization.CultureInfo.InvariantCulture);
+    }
+    private static string WriteSlideDeck(int slides)
+    {
+        var sldIds = new StringBuilder();
+        var slideRels = new StringBuilder();
+        var slideOverrides = new StringBuilder();
+        for (int i = 1; i <= slides; i++)
+        {
+            sldIds.Append($"<p:sldId id='{255 + i}' r:id='rId{i}'/>");
+            slideRels.Append($"<Relationship Id='rId{i}' Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide' Target='slides/slide{i}.xml'/>");
+            slideOverrides.Append($"<Override PartName='/ppt/slides/slide{i}.xml' ContentType='application/vnd.openxmlformats-officedocument.presentationml.slide+xml'/>");
+        }
+        var presentation = new StringBuilder();
+        presentation.Append("<?xml version='1.0' encoding='UTF-8'?>");
+        presentation.Append("<p:presentation xmlns:p='http://schemas.openxmlformats.org/presentationml/2006/main' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'>");
+        presentation.Append("<p:sldSz cx='9144000' cy='6858000'/>");
+        presentation.Append("<p:sldIdLst>" + sldIds.ToString() + "</p:sldIdLst>");
+        presentation.Append("</p:presentation>");
+        var presRels = new StringBuilder();
+        presRels.Append("<?xml version='1.0' encoding='UTF-8'?>");
+        presRels.Append("<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>" + slideRels.ToString() + "</Relationships>");
+        var types = new StringBuilder();
+        types.Append("<?xml version='1.0' encoding='UTF-8'?>");
+        types.Append("<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'>");
+        types.Append("<Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/>");
+        types.Append("<Default Extension='xml' ContentType='application/xml'/>");
+        types.Append("<Override PartName='/ppt/presentation.xml' ContentType='application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml'/>");
+        types.Append(slideOverrides.ToString());
+        types.Append("</Types>");
+        string slideXml = "<?xml version='1.0' encoding='UTF-8'?>"
+            + "<p:sld xmlns:p='http://schemas.openxmlformats.org/presentationml/2006/main' xmlns:a='http://schemas.openxmlformats.org/drawingml/2006/main'>"
+            + "<p:cSld><p:spTree><p:sp>"
+            + "<p:nvSpPr><p:cNvPr id='2' name='Deck'/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>"
+            + "<p:spPr><a:xfrm><a:off x='914400' y='914400'/><a:ext cx='2743200' cy='457200'/></a:xfrm><a:prstGeom prst='rect'/></p:spPr>"
+            + "<p:txBody><a:bodyPr/><a:lstStyle/>"
+            + "<a:p><a:r><a:rPr sz='2400'><a:latin typeface='Arial'/>"
+            + "</a:rPr><a:t>Page</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>";
+        var parts = new Dictionary<string, string>();
+        parts["[Content_Types].xml"] = types.ToString();
+        parts["_rels/.rels"] = PptxTests.PackageRelationship();
+        parts["ppt/presentation.xml"] = presentation.ToString();
+        parts["ppt/_rels/presentation.xml.rels"] = presRels.ToString();
+        for (int i = 1; i <= slides; i++)
+        {
+            parts["ppt/slides/slide" + i + ".xml"] = slideXml;
+        }
+
+        return TestFixtures.WriteTempPackage(".pptx", parts);
+    }
     public static void XmlAggregateChargesScaleLinearly()
     {
         // R22: aggregate accounting must scale with input size (N/2N/4N documents
