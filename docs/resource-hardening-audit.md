@@ -32,8 +32,11 @@ throwing-destination gates, full suite 1716/0/9, manifests 339/339); page/conten
 admission done in `484e8ee8` (per-page/per-content charges at the owning renderer
 iterations with last-page image tripwires, stream summaries report render-stage
 page/content with output still zero, full suite 1719/0/9, manifests 339/339);
-remaining residuals per ledger: R06.2 retained-resource producer limits and DOCX
-repagination control, R06.3 bounded retained payloads |
+retained-resource producer limits done in `2e0c9996` (new retained image/font caps
+with producer charges, dedup/no-recharge/no-refund semantics, typed summary fields,
+per-domain admission map in tracked Diagnostics.md, full suite 1731/0/9, manifests
+339/339); remaining residuals per ledger: DOCX repagination control, R06.3 bounded
+retained payloads |
 | R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). R07.1 done in `c2682336` (profiling measurer with calls/chars/distinct-slices/per-run attribution; uneven/tracking/run/capacity/allocation scaling gates; first/continuation break offsets; justified-vs-left break equality; full suite 1726/0/9, manifests 339/339); remaining residual per ledger: R07.2 suffix/span amplification removal with bounded shaping fallback |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
