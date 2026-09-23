@@ -132,7 +132,7 @@ index bounds the worst case rather than shifting the median.
   Phase seam executed: plan/numbers are class-level pure functions with identical bytes;
   lazy page production per format plus streaming emission remain future optimization beyond the numbered requirements (the original review requested bounded spooling or staged page/resource emission; bounded in-memory intake is DEC01 policy and output payload staging is R06.3).
 
-## V01 integration evidence (2026-09-23, final revision `d159509c`)
+## V01 integration evidence (2026-09-23, final revision `18879f58`)
 
 Windows 10.0.26200 x64, .NET SDK 10.0.300-preview / runtime .NET 10.0.12, workstation GC,
 Windows fonts via `WindowsFontResolver`, library 0.1.5. No thresholds were recalibrated in
@@ -141,7 +141,7 @@ re-attributed here.
 
 - Fresh Release build (0 errors) plus full console suite with per-test reports:
   1742 passed / 0 failed / 9 skipped (`--skip-slow`; report ignored
-  `artifacts/r063exec/tests.log`), and unskipped 1750 passed / 0 failed / 1 skipped
+  `artifacts/r063exec/tests-final.log`), and unskipped 1750 passed / 0 failed / 1 skipped
   (report `artifacts/r063exec/tests-full.log`). The 8 slow skips all pass unskipped;
   the single remaining skip is `PptxPrivateLayoutDiagnosticWhenRequested`, whose
   precondition is private input that must not be versioned (genuinely unavailable,
@@ -175,6 +175,15 @@ re-attributed here.
   Operating envelope: measured only at these small corpora. No arbitrary-document OOM
   immunity is claimed; hosts must size from measured workload peaks plus baseline,
   concurrency, and headroom per `Diagnostics.md`.
+- Release-candidate readiness (REL01, verification only, no publication): library 0.1.5
+  packed fresh from final sources (package `Lokad.OoxPdf.0.1.5.nupkg`, sha256
+  `8b303beb25dabbeb88106e8d232d99b472e8cd30d6424c5857b12269639a5fcb`) and smoked
+  through the packed package only (valid PDF header, embedded FontFile2 plus ToUnicode
+  map); artifacts ignored under `artifacts/nuget/` and `artifacts/package-smoke/`. CI on
+  origin/master HEAD (`7c1f0be0`, run 35833559045): Windows success, Ubuntu failure on
+  `PdfFontsRespectFontByteBudget` (DejaVu-only environment embeds zero font bytes;
+  pre-existing, same shape now skip-gated). Final-revision CI needs a push, which is
+  a separate authorization; workflow configuration alone is not claimed as a result.
 - New defects get scoped entries, not catch-all burial: F01 (clipped centered
   micro-label, PLAN.md) records the one failing visual gate with origin/master parity
   evidence; it needs R14-scope triage, not a threshold relaxation.
