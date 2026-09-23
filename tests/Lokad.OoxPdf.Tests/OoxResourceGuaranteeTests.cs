@@ -706,6 +706,12 @@ internal static class OoxResourceGuaranteeTests
         // trailing page (and its image) produces. The image-budget run proves the
         // trailing image decodes when pages are ample.
         string input = WritePagedDocxWithTrailingImage();
+        // Font-less fallback layout collapses the forced pages, so the
+        // multi-page admission premise needs an embeddable font.
+        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
+        {
+            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
+        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException imageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -732,6 +738,12 @@ internal static class OoxResourceGuaranteeTests
         // the trailing image decodes (previously content charged in the writer after
         // the whole document rendered).
         string input = WritePagedDocxWithTrailingImage();
+        // Font-less fallback layout collapses the forced pages, so the
+        // multi-page admission premise needs an embeddable font.
+        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
+        {
+            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
+        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException contentTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
@@ -800,6 +812,10 @@ internal static class OoxResourceGuaranteeTests
         // R06.2: retained fields ride the typed file-path summary alongside the
         // serialized writer-stage fields.
         string input = FindCase("docx-tables.docx");
+        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
+        {
+            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
+        }
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions
