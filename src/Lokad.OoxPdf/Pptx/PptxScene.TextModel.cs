@@ -94,7 +94,8 @@ internal sealed record PptxSceneTextParagraph(
     IReadOnlyList<PptxSceneTextRun> Runs,
     XElement? DefaultParagraphProperties,
     XElement? DefaultRunProperties,
-    IReadOnlyList<PptxSceneCascadeLayer> CascadeLayers);
+    IReadOnlyList<PptxSceneCascadeLayer> CascadeLayers,
+    XElement? Source);
 
 internal sealed record PptxSceneTextRun(
     PptxSceneTextRunKind Kind,

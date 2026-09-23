@@ -84,6 +84,54 @@ internal static class PptxSceneTextAgreementTests
             "Expected the matched placeholder to retain the layout placeholder list-style layer.");
     }
 
+    public static void SceneFedSpansMatchXmlPathForPlainShape()
+    {
+        // R14-deeper: the scene-fed builder must reproduce the XML-path positioned
+        // spans exactly for plain shapes (same retained inputs through shared readers).
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="21" name="Probe21"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800" b="1"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:rPr><a:t>Alpha </a:t></a:r><a:r><a:rPr sz="1200" i="1"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:rPr><a:t>Beta</a:t></a:r></a:p>
+                      <a:p><a:r><a:rPr sz="1400" u="sng" strike="sngStrike"><a:solidFill><a:srgbClr val="778899"/></a:solidFill></a:rPr><a:t>Gamma</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadSpans(node, document, scene);
+        var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed");
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+        TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
+        for (int index = 0; index < xmlSpans.Count; index++)
+        {
+            TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
+            TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
+            TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
+            TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
+            TestAssert.Equal(xmlSpans[index].Run.Bold, fedSpans[index].Run.Bold);
+            TestAssert.Equal(xmlSpans[index].Run.Italic, fedSpans[index].Run.Italic);
+            TestAssert.Equal(xmlSpans[index].Run.Underline, fedSpans[index].Run.Underline);
+            TestAssert.Equal(xmlSpans[index].ParagraphIndex, fedSpans[index].ParagraphIndex);
+            TestAssert.Equal(xmlSpans[index].LineIndex, fedSpans[index].LineIndex);
+        }
+    }
+
     public static void PlainShapeRunTextAndStyleAgree()
     {
         // R14: first scene-fed-layout agreement gate. Plain-shape run text and core

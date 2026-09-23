@@ -102,7 +102,8 @@ internal sealed partial class PptxSceneBuilder
             paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray(),
             defaultParagraphProperties,
             defaultRunProperties,
-            cascadeLayers);
+            cascadeLayers,
+            paragraph);
     }
 
     private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)
