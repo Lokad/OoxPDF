@@ -2,8 +2,7 @@
 
 Requirement-by-requirement verdicts for PLAN.md findings R01-R22 (reviewed 2026-09-22).
 Reconciled 2026-09-23 with the local PLAN.md ledger at `7c1f0be0`: R06, R07, R19, R20
-are partial or closed as recorded in their rows; R06 keeps one residual (DOCX repagination
-control); R22 is **standing** (definition of done per slice; V01 below is the finite
+are closed as recorded in their rows; R22 is **standing** (definition of done per slice; V01 below is the finite
 verification milestone).
 The suite/manifest counts below were re-verified at the same SHA on 2026-09-23 (Windows
 Release build plus full `--skip-slow` suite; per-test report and manifest inventory under
