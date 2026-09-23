@@ -155,23 +155,40 @@ With `OoxPdfOptions.ReportResourceUsage`, each successful conversion emits one
 informational `CONVERSION_RESOURCE_SUMMARY` diagnostic reporting cumulative
 counters plus the peak live reservation
 (`pages`, `chartRangeCells`, `tableFragments`, `imagesDecoded`, `fontWork`,
-`xmlNodes`, `workbookCells`, `peakLiveImageBytes`, plus `pdfPages`,
-`pdfContentBytes`, and `pdfOutputBytes` writer-stage fields). File conversions
-snapshot after serialization, so the page/content/output fields carry post-write
-values before atomic publication; stream conversions snapshot after rendering but
-before serialization, so page/content fields carry render-stage values while output
-stays zero even when the emitted PDF contains those bytes. Both omit
-charged domains without a summary field (font/image bytes, scene nodes, nested
-package bytes, workbook models). Informational diagnostics
+`xmlNodes`, `workbookCells`, `peakLiveImageBytes`, `pdfPages`, `pdfContentBytes`,
+`pdfOutputBytes`, `retainedImageBytes`, `retainedFontBytes`, `pdfFontBytes`, and
+`pdfImageBytes`). Scene nodes, nested package bytes, and workbook models charge
+without summary fields. Informational diagnostics
 never affect CLI `--strict` exit codes.
+
+Diagnostic phases and conversion outcomes (R19/R20): the summary is phase-specific
+telemetry, not a commit notification. File conversions report once, after
+serialization into the staging file and before the atomic move, so every field
+carries post-write values; stream conversions report once, after rendering but
+before serialization, so page/content/retained fields carry render-stage values
+while writer-stage fields stay zero even when the emitted PDF contains those bytes.
+No committed-notification diagnostic exists: normal return without throwing is the
+commitment signal (file: atomically published; stream: fully written).
+Observer rules: a throwing summary callback fails the conversion. On the file path
+the failure surfaces before the atomic move, so a pre-existing destination stays
+untouched and only owned staging is removed. On the stream path the report precedes
+serialization, so the destination keeps whatever prefix (possibly nothing) was
+written before the throw and the caller retains ownership. Outcome guarantees:
+success returns committed output; writer/destination failure propagates the
+underlying exception with an allowed stream prefix kept and file staging cleaned;
+cancellation and quota failures abort before further expansion with nothing
+published; observer failure behaves like a pre-commit abort per path above;
+file publication failure (atomic move) propagates with staging cleaned and the
+destination untouched.
 
 Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
 or process memory. It covers per-format working-set estimates held across
 decode/transform/compress (R02) but omits pixels retained outside any live
 operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Retained image/font production carries admission caps plus `retainedImageBytes`/
-`retainedFontBytes` summary fields (R06.2); serialized font/image bytes charge
-without summary fields (R19 follow-up). Do not size
+work. Retained image/font production carries admission caps plus summary fields (R06.2),
+as do serialized font/image bytes. Output/content byte counts exclude runtime
+representation overhead (UTF-16 strings, builder capacity, DOMs); asynchronous
+loaders escape calling-thread allocation counters. Do not size
 hosts from `peakLiveImageBytes` plus image headroom alone.
 
 Domain map (R06.2/V01) — every charged domain against its admission bound, or its

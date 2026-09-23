@@ -97,7 +97,7 @@ internal sealed class OoxConversionBudget
     /// </summary>
     public long PeakLiveImageBytes { get; private set; }
 
-    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes, RetainedImageBytes, RetainedFontBytes);
+    public OoxConversionTotals Totals => new(ChartRangeCells, TableFragments, ImagesDecoded, FontWork, XmlNodes, WorkbookCells, PeakLiveImageBytes, PdfPages, PdfContentBytes, PdfOutputBytes, RetainedImageBytes, RetainedFontBytes, PdfFontBytes, PdfImageBytes);
 
     public static Scope BeginScope(OoxConversionLimits? limits)
     {
@@ -469,12 +469,14 @@ internal readonly record struct OoxConversionTotals(
     long PdfContentBytes,
     long PdfOutputBytes,
     long RetainedImageBytes,
-    long RetainedFontBytes)
+    long RetainedFontBytes,
+    long PdfFontBytes,
+    long PdfImageBytes)
 {
     public OoxPdfDiagnostic ToSummaryDiagnostic(int pageCount)
     {
         string message = FormattableString.Invariant(
-            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; retainedImageBytes={RetainedImageBytes}; retainedFontBytes={RetainedFontBytes}.");
+            $"Conversion resource totals: pages={pageCount}; chartRangeCells={ChartRangeCells}; tableFragments={TableFragments}; imagesDecoded={ImagesDecoded}; fontWork={FontWork}; xmlNodes={XmlNodes}; workbookCells={WorkbookCells}; peakLiveImageBytes={PeakLiveImageBytes}; pdfPages={PdfPages}; pdfContentBytes={PdfContentBytes}; pdfOutputBytes={PdfOutputBytes}; retainedImageBytes={RetainedImageBytes}; retainedFontBytes={RetainedFontBytes}; pdfFontBytes={PdfFontBytes}; pdfImageBytes={PdfImageBytes}.");
         return new OoxPdfDiagnostic(
             "CONVERSION_RESOURCE_SUMMARY",
             OoxPdfSeverity.Info,

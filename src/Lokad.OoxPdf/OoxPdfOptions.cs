@@ -56,7 +56,7 @@ public sealed class OoxPdfOptions
     /// CONVERSION_RESOURCE_SUMMARY diagnostic reporting cumulative work counters
     /// (pages, chart cells, table fragments, images, font operations, XML nodes,
     /// workbook cells, serialized page/content/output bytes, retained image/font
-    /// bytes) plus the peak live image
+    /// bytes, serialized font/image bytes) plus the peak live image
     /// decode reservation so hosts can account concurrent conversions. File conversions
     /// snapshot after serialization, so page/content/output fields carry post-write
     /// values; stream conversions snapshot after rendering but before serialization,

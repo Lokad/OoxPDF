@@ -816,6 +816,22 @@ internal static class OoxResourceGuaranteeTests
         OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
         return ParseCounter(summary.Message, "retainedImageBytes=");
     }
+    public static void StreamMidWriteFailureKeepsAllowedPrefix()
+    {
+        // R20: a destination that fails mid-write surfaces its own exception; the
+        // caller keeps the allowed prefix and owns the stream.
+        var failure = new IOException("probe-mid-write-boom");
+        string input = FindCase("docx-tables.docx");
+        using FileStream inputStream = File.OpenRead(input);
+        using var inner = new MemoryStream();
+        using var faulting = new FaultAfterWriteStream(inner, 100, failure);
+        IOException thrown = TestAssert.Throws<IOException>(() => OoxPdfConverter.Convert(
+            inputStream,
+            faulting,
+            new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx }));
+        TestAssert.Contains("probe-mid-write-boom", thrown.Message);
+        TestAssert.True(inner.Length <= 100, "Only the allowed prefix may exist.");
+    }
     private sealed class CountingWriteStream(MemoryStream inner) : Stream
     {
         public long TotalWritten { get; private set; }
@@ -1034,6 +1050,29 @@ internal static class OoxResourceGuaranteeTests
         });
     }
 
+    private sealed class FaultAfterWriteStream(MemoryStream inner, long maxBytes, Exception failure) : Stream
+    {
+        private long written;
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() => inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => Write(new ReadOnlySpan<byte>(buffer, offset, count));
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            if (written + buffer.Length > maxBytes)
+            {
+                throw failure;
+            }
+            inner.Write(buffer);
+            written += buffer.Length;
+        }
+    }
     private static string FindCase(string name)
     {
         string[] candidates = new[]

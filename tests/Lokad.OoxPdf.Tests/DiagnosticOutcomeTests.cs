@@ -47,6 +47,40 @@ internal static class DiagnosticOutcomeTests
         TestAssert.Equal(0, output.Length);
     }
 
+    public static void FilePublicationFailureCleansStaging()
+    {
+        // R20: when the atomic move itself fails (destination is an existing
+        // directory), the conversion propagates the failure, removes only owned
+        // staging, and leaves the destination directory intact.
+        string input = FindCase("docx-tables.docx");
+        string directory = Path.Combine(Path.GetTempPath(), "oOxPdfPubFail" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            try
+            {
+                OoxPdfConverter.Convert(input, directory, new OoxPdfOptions
+                {
+                    InputKind = OoxPdfInputKind.Docx,
+                });
+                throw new InvalidOperationException("Expected publication failure.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Expected publication failure modes (platform move semantics differ);
+                // any other exception type propagates and fails the test.
+            }
+            TestAssert.True(Directory.Exists(directory), "Publication failure must leave the destination directory intact.");
+            string? parent = Path.GetDirectoryName(directory);
+            TestAssert.True(parent is not null, "Destination must have a parent directory.");
+            TestAssert.Equal(0, Directory.GetFiles(parent, Path.GetFileName(directory) + ".tmp-*").Length);
+        }
+        finally
+        {
+            Directory.Delete(directory);
+        }
+    }
+
     private static void ThrowOnSummary(OoxPdfDiagnostic diagnostic)
     {
         if (diagnostic.Id == "CONVERSION_RESOURCE_SUMMARY")

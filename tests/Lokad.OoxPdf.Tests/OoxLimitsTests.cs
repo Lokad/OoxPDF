@@ -663,6 +663,23 @@ internal static class OoxLimitsTests
         TestAssert.Contains("pdfOutputBytes=0", summary.Message);
     }
 
+    public static void SerializedFontImageBytesReportedOnFilePath()
+    {
+        // R19: the completed typed snapshot reports serialized font/image bytes on
+        // the file path alongside every other charged domain.
+        string input = DocxWithInlinePng();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.True(!summary.Message.Contains("pdfFontBytes=0", StringComparison.Ordinal), "Serialized font bytes must be reported, got: " + summary.Message);
+        TestAssert.True(!summary.Message.Contains("pdfImageBytes=0", StringComparison.Ordinal), "Serialized image bytes must be reported, got: " + summary.Message);
+    }
     public static void ConversionLimitsRejectNegativeCaps()
     {
         // Q01: negative cumulative caps are rejected at option validation.
