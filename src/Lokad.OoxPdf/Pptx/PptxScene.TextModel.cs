@@ -86,7 +86,9 @@ internal sealed record PptxSceneTextParagraph(
     XElement? EndParagraphProperties,
     int Level,
     PptxSceneParagraphStyle ResolvedStyle,
-    IReadOnlyList<PptxSceneTextRun> Runs);
+    IReadOnlyList<PptxSceneTextRun> Runs,
+    XElement? DefaultParagraphProperties,
+    XElement? DefaultRunProperties);
 
 internal sealed record PptxSceneTextRun(
     PptxSceneTextRunKind Kind,

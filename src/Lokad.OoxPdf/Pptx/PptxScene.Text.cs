@@ -76,7 +76,9 @@ internal sealed partial class PptxSceneBuilder
             paragraph.Element(DrawingNamespace + "endParaRPr"),
             level,
             resolvedStyle,
-            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray());
+            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray(),
+            defaultParagraphProperties,
+            defaultRunProperties);
     }
 
     private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)

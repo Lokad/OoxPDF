@@ -10,6 +10,53 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxSceneTextAgreementTests
 {
+    public static void SceneParagraphRetainsCascadeDefaults()
+    {
+        // R14-deeper: the scene builder resolves the placeholder/master default chain once
+        // per paragraph; the migration reuses these retained defaults instead of re-walking
+        // the chain in the renderer.
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Defaults"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle><a:lvl1pPr><a:defRPr sz="1600"/></a:lvl1pPr></a:lstStyle>
+                        <a:p><a:r><a:rPr><a:latin typeface="Arial"/></a:rPr><a:t>Styled</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="3" name="Plain"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="1828800"/><a:ext cx="4572000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle/>
+                        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Bare</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+
+        PptxSceneTextParagraph styled = TestAssert.NotNull(scene.Slides[0].SlideNodes[0].TextBody).Paragraphs[0];
+        XElement? styledDefaults = styled.DefaultParagraphProperties;
+        TestAssert.True(styledDefaults is not null, "Expected the shape lstStyle level defaults to be retained for the migration.");
+        TestAssert.Equal("1600", styledDefaults.Elements().FirstOrDefault(e => e.Name.LocalName == "defRPr")?.Attribute("sz")?.Value ?? string.Empty);
+        TestAssert.Equal("1600", styled.DefaultRunProperties?.Attribute("sz")?.Value ?? string.Empty);
+
+        PptxSceneTextParagraph bare = TestAssert.NotNull(scene.Slides[0].SlideNodes[1].TextBody).Paragraphs[0];
+        TestAssert.True(bare.DefaultParagraphProperties is null, "Expected no retained defaults without any level overrides.");
+    }
+
     public static void PlainShapeRunTextAndStyleAgree()
     {
         // R14: first scene-fed-layout agreement gate. Plain-shape run text and core
