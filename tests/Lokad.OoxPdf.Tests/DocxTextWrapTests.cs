@@ -1014,6 +1014,26 @@ internal static class DocxTextWrapTests
         TestAssert.Equal(token.Length, covered);
     }
 
+    public static void EmergencyWrapShrinkCapFailsDefined()
+    {
+        // R07.2: ten huge stems ahead of a long tiny tail make every feasible prefix
+        // overflow, so the backward scan would walk the whole token. Past 128 shrink
+        // probes the conversion fails defined instead of searching unbounded.
+        var token = new System.Text.StringBuilder();
+        token.Append(new string((char)72, 10));
+        token.Append(new string((char)97, 15000));
+        var measurer = new ProfilingMeasurer((run, text) =>
+        {
+            double width = 0d;
+            foreach (char c in text)
+            {
+                width += c == (char)72 ? 100d : 0.01d;
+            }
+            return width;
+        });
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => WrapSpansWithWidths(token.ToString(), SingleSpan(token.ToString()), _ => 10d, true, measurer));
+        TestAssert.Contains("shrink probes", thrown.Message);
+    }
     public static void EmergencyWrapCancelledTokenThrows()
     {
         using var cancelled = new CancellationTokenSource();
