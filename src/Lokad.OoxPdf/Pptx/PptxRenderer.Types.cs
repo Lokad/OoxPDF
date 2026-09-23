@@ -51,7 +51,6 @@ internal sealed partial class PptxRenderer
         public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double UnderlineThicknessFallback = 0.0125d;
-        public const double OfficeUnderlineThicknessMetricScale = 0.25d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
         public const double HighlightMaximumDescentFontScale = 0.23d;
         public const double HighlightMaximumHeightFontScale = 1.18d;
@@ -110,12 +109,16 @@ internal sealed partial class PptxRenderer
             return Math.Max(MinimumStrokeWidth, strikeoutSize > 0d ? strikeoutSize : fontSize * StrikeThicknessFallback);
         }
 
+        // PowerPoint emits the full post-table thickness: the underline-single
+        // Office reference draws a 2.64pt bar for 36pt Arial (150/2048 em) at the
+        // raw post position. The quartering scale was an initial-commit assumption
+        // with no Office evidence; the Word path already uses the full metric.
         public static double UnderlineThickness(PdfEmbeddedFont embedded, double fontSize)
         {
             double fontScale = fontSize / embedded.Font.UnitsPerEm;
             double underlineSize = Math.Abs(embedded.Font.Post.UnderlineThickness) * fontScale;
             return underlineSize > TextStateTolerance
-                ? underlineSize * OfficeUnderlineThicknessMetricScale
+                ? underlineSize
                 : fontSize * UnderlineThicknessFallback;
         }
 
