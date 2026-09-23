@@ -91,7 +91,7 @@ index bounds the worst case rather than shifting the median.
   formal text-op compare shows X-exact positions with ~1-3pt Y placement deltas, out of
   scope for inheritance gates). Synthetic packages need theme part, nvGrpSpPr/grpSpPr,
   and cNvSpPr or PowerPoint reports them corrupt (unit fixtures stay minimal/lenient);
-  Three held-out cases (`e8837d62` placeholder pair, `d13445ac` table style) pass CheckVisualCase against live Office references with pinned thresholds; table case exposed large-slack row stretching, fixed to declared heights (1.2x-3x Office probes);
+  Three held-out cases (`e8837d62` placeholder pair, `d13445ac` table style) pass CheckVisualCase against live Office references with pinned thresholds; table case exposed large-slack row stretching, fixed to declared heights (1.2x-3x Office probes); family run surfaced 4 stale pixel gates, 1 recalibrated (`c5016569` mixed-stack, text-exact) and 3 honest failures kept: ellipsis truncation, clip overflow, and underline metrics diverge from Office (Y placement aside);
   `e3f292dd` post-write/pre-move snapshot with writer page/content/output fields
   (file path; stream path keeps pre-write zeros under R20); staged page/resource
   emission (writer holds all pages before emitting; incremental staging is a design
