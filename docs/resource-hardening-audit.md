@@ -27,7 +27,7 @@ only, never gates.
 | R03 shared work charges | closed | `443e7304`; variant/font/dense zero-budget gates (ooxml); JPEG recolor cancellation verified in code |
 | R04 aggregate expansion | closed | `443e7304` dense slots; `657812af` XML nodes/cells; `59ffdd92` scene nodes/nested bytes/models; N/2N/4N scaling test |
 | R05 ZIP intake preflight | closed | `87778190`; EOCD count/size rejections, 10k-entry cap, Length-throwing staging (ooxml) |
-| R06 budgets through serialization | partial | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api). R06.1 done in `fa55919a` (single pre-write admission boundary in PdfObjectWriter,
+| R06 budgets through serialization | closed (recorded) | `bfcb5d52`; page/content/output zero-budget trips, negative-cap validation, R20 order preserved; N/2N/4N-page scaling pins exact page charges, exact content doubling, and linear allocation bounds (ooxml, api). R06.1 done in `fa55919a` (single pre-write admission boundary in PdfObjectWriter,
 zero/exact/one-short boundaries on file/seekable/forward-only paths, counting and
 throwing-destination gates, full suite 1716/0/9, manifests 339/339); page/content
 admission done in `484e8ee8` (per-page/per-content charges at the owning renderer
