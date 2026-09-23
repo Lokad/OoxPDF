@@ -370,8 +370,8 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ComputeTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
-        // R14-deeper: plain shapes resolve spans from retained scene inputs; the
-        // XML path stays for groups and tables.
+        // R14-deeper: shape text resolves spans from retained scene inputs; the
+        // XML path stays for tables, which carry no scene text model.
         if (UseSceneFedTextSpans(node))
         {
             return BuildSceneFedTextSpans(node, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
@@ -383,11 +383,6 @@ internal sealed partial class PptxRenderer
     private static bool UseSceneFedTextSpans(PptxSceneNode node)
     {
         if (node.Kind != PptxSceneNodeKind.Shape || node.TextBody is null)
-        {
-            return false;
-        }
-
-        if (node.Source.Ancestors(PresentationNamespace + "grpSp").Any())
         {
             return false;
         }

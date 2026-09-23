@@ -733,7 +733,7 @@ internal sealed partial class PptxRenderer
     // R14-deeper: scene-fed paragraph models reuse the retained cascade defaults
     // instead of re-walking the placeholder/master chain. Layout, measuring, and
     // emission downstream are untouched. Plain shapes only: tables carry no scene
-    // text model, and grouped-shape transforms stay on the XML path for now.
+    // text model.
     private static IReadOnlyList<PptxTextParagraphModel> BuildSceneFedParagraphModels(
         IReadOnlyList<PptxSceneTextParagraph> sceneParagraphs,
         PptxTextFrameModel frameModel,
