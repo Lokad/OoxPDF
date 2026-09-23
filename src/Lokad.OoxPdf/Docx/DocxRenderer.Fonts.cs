@@ -234,7 +234,7 @@ internal sealed partial class DocxRenderer
 
             DocxEffectiveRunProperties effective = resolved.Run.EffectiveProperties;
             PdfFallbackFont face = PdfFallbackFont.ForStyle(effective.Bold, effective.Italic);
-            string name = face == PdfFallbackFont.HelveticaBold ? "FF2" : face == PdfFallbackFont.HelveticaOblique ? "FF3" : face == PdfFallbackFont.HelveticaBoldOblique ? "FF4" : "FF1";
+            string name = PdfFallbackFont.ResourceNameFor(effective.Bold, effective.Italic);
             faces[resolved.Run] = new PdfFallbackFontResource(name, face);
 
             string family = resolved.RequestedFamily ?? resolved.ResolvedFamily ?? "unknown";

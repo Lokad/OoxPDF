@@ -77,7 +77,7 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 
 - `FONT_UNSUPPORTED_OUTLINES`: a CFF/OpenType-CFF typeface was detected and not embedded (native CFF embedding is unsupported). DOCX substitutes the document fallback typeface for primary runs, skips CFF per-character fallback candidates, and degrades CFF-only fallbacks to the missing-font path; PPTX regroups uses through its per-glyph fallback. One warning per typeface per conversion.
 
-- `FONT_NO_USABLE_FACE`: document text had no usable embeddable font, so it renders with the built-in Helvetica fallback (standard Type1, never embedded) using deterministic average advances. Page breaks and extractable text are preserved; characters outside WinAnsi appear as "?". One warning per typeface per conversion.
+- `FONT_NO_USABLE_FACE`: document text had no usable embeddable font, so it renders with the built-in Helvetica fallback (standard Type1, never embedded) using deterministic average advances. Page breaks and extractable text are preserved; characters outside WinAnsi appear as "?". In PPTX, fallback spans stay link-free and chart titles render through the same seam. One warning per typeface per conversion.
 
 - `FONT_MISSING_GLYPHS`: codepoints with no glyph in any usable face render as "?" through the primary face (the subset carries "?" exactly when needed). One warning per typeface per conversion, listing the affected codepoints in order with a remainder count.
 

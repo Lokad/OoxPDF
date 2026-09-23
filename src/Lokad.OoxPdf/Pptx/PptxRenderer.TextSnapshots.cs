@@ -366,7 +366,14 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                // RV01: inspection mirrors emission misses for fallback spans; the
+                // conversion path paints them with the fallback face.
+                if (rendered.Font is not { } snapshotEmbedded)
+                {
+                    continue;
+                }
+
+                TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, snapshotEmbedded, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
                 if (glyphRun is null)
                 {
                     continue;
@@ -376,16 +383,16 @@ internal sealed partial class PptxRenderer
                 if (run.HighlightColor is not null)
                 {
                     double highlightBaselineY = emissionSpan.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
-                    if (TryGetHighlightRectangle(rendered.Font, run, highlightBaselineY, emissionSpan.GlyphSpan.NaturalWidth, out TextHighlightRectangle rectangle))
+                    if (TryGetHighlightRectangle(snapshotEmbedded, run, highlightBaselineY, emissionSpan.GlyphSpan.NaturalWidth, out TextHighlightRectangle rectangle))
                     {
                         highlightRectangle = rectangle;
                     }
                 }
 
-                TextDecorationRectangle? underlineRectangle = run.Underline && TryGetUnderlineRectangle(rendered.Font, glyphRun, out TextDecorationRectangle underline)
+                TextDecorationRectangle? underlineRectangle = run.Underline && TryGetUnderlineRectangle(snapshotEmbedded, glyphRun, out TextDecorationRectangle underline)
                     ? underline
                     : null;
-                TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(rendered.Font, glyphRun, out TextDecorationRectangle strike)
+                TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(snapshotEmbedded, glyphRun, out TextDecorationRectangle strike)
                     ? strike
                     : null;
                 PptxInterGlyphAdjustmentSummary adjustments = SummarizeTextInterGlyphAdjustments(glyphRun.Glyphs);
@@ -405,21 +412,21 @@ internal sealed partial class PptxRenderer
                     rendered.Resolution.WeightClass,
                     rendered.Resolution.FontFaceIndex,
                     rendered.Resolution.HasMathTable,
-                    rendered.Font.Font.TableTags.Contains("GPOS", StringComparer.Ordinal),
-                    rendered.Font.Font.TableTags.Contains("kern", StringComparer.Ordinal),
-                    rendered.Font.Font.UnitsPerEm,
-                    rendered.Font.Font.GlyphCount,
-                    rendered.Font.Font.Os2.Version,
-                    rendered.Font.Font.Os2.WidthClass,
-                    rendered.Font.Font.Os2.TypographicAscender,
-                    rendered.Font.Font.Os2.TypographicDescender,
-                    rendered.Font.Font.Os2.TypographicLineGap,
-                    rendered.Font.Font.Os2.WindowsAscender,
-                    rendered.Font.Font.Os2.WindowsDescender,
-                    rendered.Font.Font.Post.ItalicAngle,
-                    rendered.Font.Font.Post.UnderlinePosition,
-                    rendered.Font.Font.Post.UnderlineThickness,
-                    rendered.Font.Font.Post.IsFixedPitch,
+                    snapshotEmbedded.Font.TableTags.Contains("GPOS", StringComparer.Ordinal),
+                    snapshotEmbedded.Font.TableTags.Contains("kern", StringComparer.Ordinal),
+                    snapshotEmbedded.Font.UnitsPerEm,
+                    snapshotEmbedded.Font.GlyphCount,
+                    snapshotEmbedded.Font.Os2.Version,
+                    snapshotEmbedded.Font.Os2.WidthClass,
+                    snapshotEmbedded.Font.Os2.TypographicAscender,
+                    snapshotEmbedded.Font.Os2.TypographicDescender,
+                    snapshotEmbedded.Font.Os2.TypographicLineGap,
+                    snapshotEmbedded.Font.Os2.WindowsAscender,
+                    snapshotEmbedded.Font.Os2.WindowsDescender,
+                    snapshotEmbedded.Font.Post.ItalicAngle,
+                    snapshotEmbedded.Font.Post.UnderlinePosition,
+                    snapshotEmbedded.Font.Post.UnderlineThickness,
+                    snapshotEmbedded.Font.Post.IsFixedPitch,
                     run.Bold,
                     run.Italic,
                     run.Underline,

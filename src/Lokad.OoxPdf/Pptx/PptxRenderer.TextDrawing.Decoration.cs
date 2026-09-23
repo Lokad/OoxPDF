@@ -67,6 +67,49 @@ internal sealed partial class PptxRenderer
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && rectangle.Height > 0d;
     }
 
+    // RV01: fallback decoration and highlight rectangles from diagnosed constants
+    // (no font tables available). Widths come from measured layout geometry.
+    private static void FillFallbackTextDecoration(PdfGraphicsBuilder graphics, double x, double baselineY, double width, double fontSize, bool underline, bool strike)
+    {
+        if (width <= 0d || (!underline && !strike))
+        {
+            return;
+        }
+
+        if (underline)
+        {
+            double thickness = fontSize * PdfFallbackFont.UnderlineThicknessEm;
+            graphics.FillRectangle(x, baselineY + fontSize * PdfFallbackFont.UnderlinePositionEm - thickness / 2d, width, thickness);
+        }
+
+        if (strike)
+        {
+            double thickness = fontSize * PdfFallbackFont.StrikeoutThicknessEm;
+            graphics.FillRectangle(x, baselineY + fontSize * PdfFallbackFont.StrikeoutPositionEm - thickness / 2d, width, thickness);
+        }
+    }
+
+    private static void FillFallbackHighlight(PdfGraphicsBuilder graphics, TextRun run, RgbColor highlight, double baselineY, double lineWidth)
+    {
+        if (!BaselineIntersectsClip(run, baselineY))
+        {
+            return;
+        }
+
+        double descent = run.FontSize * PdfFallbackFont.DescentEm;
+        double height = run.FontSize * (PdfFallbackFont.AscentEm + PdfFallbackFont.DescentEm);
+        graphics.SaveState();
+        if (HasTextTransform(run))
+        {
+            ApplyTextTransform(graphics, run);
+        }
+
+        graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+        graphics.FillRectangleEvenOdd(run.X, baselineY - descent, lineWidth, height);
+        graphics.RestoreState();
+    }
+
     private static void FillTextDecorationRectangleEvenOdd(PdfGraphicsBuilder graphics, TextDecorationRectangle rectangle)
     {
         double x = rectangle.X;

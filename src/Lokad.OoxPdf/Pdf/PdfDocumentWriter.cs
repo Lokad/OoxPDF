@@ -269,7 +269,7 @@ internal sealed class PdfDocumentWriter
 
         string BuildResources(PdfPage page)
         {
-            if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0 && page.Patterns.Count == 0)
+            if (page.Fonts.Count == 0 && page.FallbackFonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0 && page.Patterns.Count == 0)
             {
                 return "<< >>";
             }

@@ -14,6 +14,14 @@ internal sealed class PresentationFontResolver
     private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> openTypeFonts = new();
     private readonly Dictionary<string, SubsetEntry> subsets = new(StringComparer.Ordinal);
 
+    // RV01: per-conversion record of diagnosed missing-font families and glyph sets,
+    // so per-slide and per-chart preparation reports each family once.
+    public HashSet<string> ReportedMissingFontDiagnostics { get; } = new(StringComparer.Ordinal);
+
+    // RV01: fallback faces used anywhere in the conversion (slides and chart
+    // parts share this resolver), so pages register them without threading lists.
+    public HashSet<PdfFallbackFont> UsedFallbackFaces { get; } = new();
+
     public PresentationFontResolver(IFontResolver? primary)
     {
         this.primary = primary ?? new WindowsFontResolver();

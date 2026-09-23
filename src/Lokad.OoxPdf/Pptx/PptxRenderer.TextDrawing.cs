@@ -233,7 +233,7 @@ internal sealed partial class PptxRenderer
     }
 
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null, bool includeFallbackFaces = true)
     {
         if (textRuns.Count == 0)
         {
@@ -248,10 +248,13 @@ internal sealed partial class PptxRenderer
                 run.Bold,
                 run.Italic,
                 run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
-            .ToArray(), fontResolver, resourcePrefix, cancellationToken, diagnosticSink, nameScope);
+            .ToArray(), fontResolver, resourcePrefix, cancellationToken, diagnosticSink, nameScope, includeFallbackFaces);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null)
+    // RV01: slide preparation passes includeFallbackFaces: false and covers split-run
+    // families separately (emission looks those up); chart preparation keeps the
+    // inline behavior for its run families.
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null, bool includeFallbackFaces = true)
     {
         if (uses.Count == 0)
         {
@@ -267,24 +270,167 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             TextFontUse first = group.First();
             (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken);
-            if (resolved is null)
+            if (resolved is null || !resolved.Value.Font.HasTrueTypeOutlines)
             {
-                continue;
-            }
-            FontFaceResolution resolution = resolved.Value.Resolution;
-            OpenTypeFont font = resolved.Value.Font;
-            if (!font.HasTrueTypeOutlines)
-            {
+                if (!includeFallbackFaces)
+                {
+                    continue;
+                }
+
+                // RV01: uses without a usable embeddable face render with the diagnosed
+                // built-in fallback instead of vanishing.
+                int[] fallbackCodepoints = group.SelectMany(use => use.CodePoints).Where(code => !PdfFallbackFont.IsNonRenderedControl(code)).ToArray();
+                if (fallbackCodepoints.Length == 0)
+                {
+                    continue;
+                }
+
+                PdfFallbackFont face = PdfFallbackFont.ForStyle(first.Bold, first.Italic);
+                string fallbackName = PdfFallbackFont.ResourceNameFor(first.Bold, first.Italic);
+                var fallbackResolution = new FontFaceResolution(first.FamilyName, face.FaceName, new FontStyleKey(first.Bold, first.Italic), new MemoryFontProgramSource("fallback:" + face.FaceName, ReadOnlyMemory<byte>.Empty), IsFallback: true);
+                fonts[group.Key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
+                fontResolver.UsedFallbackFaces.Add(face);
+                ReportMissingFontFallback(first.FamilyName, fontResolver, diagnosticSink);
                 continue;
             }
 
-            PdfEmbeddedFont embedded = fontResolver.GetOrCreateSubset(resolution, font, group.SelectMany(use => use.CodePoints).ToArray(), cancellationToken);
+            FontFaceResolution resolution = resolved.Value.Resolution;
+            OpenTypeFont font = resolved.Value.Font;
+            int[] codepoints = AddQuestionMarkForUncoveredCodepoints(group, font, fontResolver, diagnosticSink, cancellationToken);
+            PdfEmbeddedFont embedded = fontResolver.GetOrCreateSubset(resolution, font, codepoints, cancellationToken);
             string resourceName = resourcePrefix + (CountPrefixedResourceNames(nameScope, resourcePrefix) + resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, resolution, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));
         }
 
         return new RenderedFonts(fonts, resources);
+    }
+
+    // RV01: reports a family whose text has no usable embeddable face once per
+    // conversion (preparation runs per slide and per chart part).
+    private static void ReportMissingFontFallback(string familyName, PresentationFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        if (!fontResolver.ReportedMissingFontDiagnostics.Add("face:" + familyName))
+        {
+            return;
+        }
+
+        diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+            "FONT_NO_USABLE_FACE",
+            OoxPdfSeverity.Warning,
+            "No usable embeddable font for " + familyName + "; text renders with the built-in fallback typeface. Characters outside WinAnsi appear as question mark.",
+            PartName: null,
+            SlideIndex: null,
+            PageIndex: null,
+            Feature: familyName,
+            Fallback: "Built-in fallback typeface"));
+    }
+
+    // RV01: codepoints with no glyph in the emitting face are substituted with
+    // question mark at emission; the subset carries it exactly when needed, and the
+    // substitution is diagnosed once per family with the affected codepoints.
+    private static int[] AddQuestionMarkForUncoveredCodepoints(IGrouping<FontRequest, TextFontUse> group, OpenTypeFont font, PresentationFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    {
+        int[] codepoints = group.SelectMany(use => use.CodePoints).ToArray();
+        List<int>? missing = null;
+        foreach (int codePoint in codepoints)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!PdfFallbackFont.IsNonRenderedControl(codePoint) && font.MapCodePoint(codePoint) == 0)
+            {
+                missing ??= new List<int>();
+                if (!missing.Contains(codePoint))
+                {
+                    missing.Add(codePoint);
+                }
+            }
+        }
+
+        if (missing is null)
+        {
+            return codepoints;
+        }
+
+        missing.Sort();
+        if (fontResolver.ReportedMissingFontDiagnostics.Add("glyph:" + group.Key.FamilyName))
+        {
+            const int maxListedCodepoints = 12;
+            string listed = string.Join(", ", missing.Take(maxListedCodepoints).Select(code => "U+" + code.ToString("X4")));
+            if (missing.Count > maxListedCodepoints)
+            {
+                listed += ", and " + (missing.Count - maxListedCodepoints).ToString(CultureInfo.InvariantCulture) + " more";
+            }
+
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "FONT_MISSING_GLYPHS",
+                OoxPdfSeverity.Warning,
+                missing.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + group.Key.FamilyName + " have no glyph in any usable face (" + listed + ") and show as question mark.",
+                PartName: null,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: group.Key.FamilyName,
+                Fallback: "Question-mark substitution"));
+        }
+
+        if (font.MapCodePoint(0x3F) == 0)
+        {
+            return codepoints;
+        }
+
+        var withQuestionMark = new int[codepoints.Length + 1];
+        Array.Copy(codepoints, withQuestionMark, codepoints.Length);
+        withQuestionMark[codepoints.Length] = 0x3F;
+        return withQuestionMark;
+    }
+
+    // RV01: emission splits spans by glyph typeface, so families that only appear on
+    // split runs need fallback coverage when unresolvable. Embedded entries stay
+    // exactly as prepared: resolvable spans without entries keep current behavior.
+    private static void AddSplitFallbackFaces(
+        Dictionary<FontRequest, RenderedFont> fonts,
+        IEnumerable<PptxPositionedTextSpan> spans,
+        PresentationFontResolver fontResolver,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        foreach (PptxPositionedTextSpan emissionSpan in spans.SelectMany(SplitSpanByGlyphTypeface))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            TextRun run = emissionSpan.Run;
+            var key = FontRequestForRun(run);
+            if (fonts.ContainsKey(key))
+            {
+                continue;
+            }
+
+            bool hasRenderable = false;
+            foreach (Rune rune in run.Text.EnumerateRunes())
+            {
+                if (!PdfFallbackFont.IsNonRenderedControl(rune))
+                {
+                    hasRenderable = true;
+                    break;
+                }
+            }
+
+            if (!hasRenderable)
+            {
+                continue;
+            }
+
+            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(key, cancellationToken);
+            if (resolved is not null && resolved.Value.Font.HasTrueTypeOutlines)
+            {
+                continue;
+            }
+
+            PdfFallbackFont face = PdfFallbackFont.ForStyle(key.Bold, key.Italic);
+            string fallbackName = PdfFallbackFont.ResourceNameFor(key.Bold, key.Italic);
+            var fallbackResolution = new FontFaceResolution(key.FamilyName, face.FaceName, new FontStyleKey(key.Bold, key.Italic), new MemoryFontProgramSource("fallback:" + face.FaceName, ReadOnlyMemory<byte>.Empty), IsFallback: true);
+            fonts[key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
+            fontResolver.UsedFallbackFaces.Add(face);
+            ReportMissingFontFallback(key.FamilyName, fontResolver, diagnosticSink);
+        }
     }
 
     // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines, so the
@@ -362,7 +508,14 @@ internal sealed partial class PptxRenderer
         {
             if (fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
             {
-                DrawWrappedRun(rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
+                if (rendered.FallbackFace is { } fallback)
+                {
+                    DrawFallbackWrappedRun(fallback, run);
+                }
+                else if (rendered.Font is { } embedded)
+                {
+                    DrawWrappedRun(rendered.ResourceName, embedded, run, rendered.SyntheticBold, rendered.SyntheticItalic);
+                }
             }
         }
 
@@ -416,16 +569,81 @@ internal sealed partial class PptxRenderer
             graphics.RestoreState();
         }
 
+        // RV01: fallback legacy runs distribute runes evenly across the label box
+        // (these runs carry box geometry, not measured advances), encoding WinAnsi
+        // with question-mark substitution for unencodable runes.
+        void DrawFallbackWrappedRun(PdfFallbackFontResource fallback, TextRun run)
+        {
+            graphics.SaveState();
+            if (HasTextTransform(run))
+            {
+                ApplyTextTransform(graphics, run);
+            }
+
+            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
+            Rune[] runes = [.. run.Text.EnumerateRunes()];
+            double baselineY = run.Y + run.BaselineOffset;
+            if (runes.Length != 0 && BaselineIntersectsClip(run, baselineY))
+            {
+                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+                if (needsTextAlpha)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
+                }
+
+                double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+                var glyphs = new List<PdfFallbackGlyph>(runes.Length);
+                double slot = run.Width / runes.Length;
+                for (int i = 0; i < runes.Length; i++)
+                {
+                    if (PdfFallbackFont.IsNonRenderedControl(runes[i]))
+                    {
+                        continue;
+                    }
+
+                    PdfFallbackFont.TryEncodeWinAnsi(runes[i].Value, out byte code);
+                    glyphs.Add(new PdfFallbackGlyph(run.X + i * slot, baselineY, code));
+                }
+
+                graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
+                if (run.Underline || run.Strike)
+                {
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    FillFallbackTextDecoration(graphics, run.X, baselineY, run.Width, pdfFontSize, run.Underline, run.Strike);
+                }
+
+                if (needsTextAlpha)
+                {
+                    graphics.RestoreState();
+                }
+            }
+
+            graphics.RestoreState();
+        }
+
         void DrawHighlightRunsWithFonts()
         {
             foreach (TextRun run in CoalesceHighlightRuns())
             {
-                if (run.HighlightColor is null || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
+                if (run.HighlightColor is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
 
-                DrawHighlightRun(rendered.Font, run);
+                // RV01: fallback highlights use the measured run width with diagnosed
+                // constants instead of vanishing.
+                if (rendered.FallbackFace is not null)
+                {
+                    double baselineY = run.Y + run.BaselineOffset;
+                    FillFallbackHighlight(graphics, run, highlight, baselineY, run.Width);
+                }
+                else if (rendered.Font is { } highlightEmbedded)
+                {
+                    DrawHighlightRun(highlightEmbedded, run);
+                }
             }
 
             IReadOnlyList<TextRun> CoalesceHighlightRuns()
@@ -484,11 +702,84 @@ internal sealed partial class PptxRenderer
                 TextRun run = emissionSpan.Run;
                 if (fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
-                    DrawWrappedSpan(rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
-                    // Unresolved-font spans stay link-free: no glyphs are painted and the font layer reports the miss.
-                    hyperlinkScope?.CollectEmissionSpan(emissionSpan, rendered.Font);
+                    if (rendered.FallbackFace is { } fallback)
+                    {
+                        DrawFallbackWrappedSpan(fallback, emissionSpan);
+                        // Fallback spans stay link-free like other unresolved spans.
+                    }
+                    else if (rendered.Font is { } embedded)
+                    {
+                        DrawWrappedSpan(rendered.ResourceName, embedded, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                        hyperlinkScope?.CollectEmissionSpan(emissionSpan, embedded);
+                    }
                 }
             }
+        }
+
+        // RV01: fallback spans distribute runes across the layout span width in
+        // UTF-16 proportion (layout measured these spans without per-rune advances),
+        // encoding WinAnsi with question-mark substitution for unencodable runes.
+        void DrawFallbackWrappedSpan(PdfFallbackFontResource fallback, PptxPositionedTextSpan span)
+        {
+            TextRun run = span.Run;
+            graphics.SaveState();
+            if (HasTextTransform(run))
+            {
+                ApplyTextTransform(graphics, run);
+            }
+
+            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
+            Rune[] runes = [.. run.Text.EnumerateRunes()];
+            double baselineY = run.Y + run.BaselineOffset;
+            if (runes.Length != 0 && BaselineIntersectsClip(run, baselineY))
+            {
+                bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+                    (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+                if (needsTextAlpha)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
+                }
+
+                double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+                int totalUnits = 0;
+                foreach (Rune rune in runes)
+                {
+                    totalUnits += rune.Utf16SequenceLength;
+                }
+
+                double gaps = Math.Max(0, runes.Length - 1) * run.CharacterSpacing;
+                double unit = totalUnits == 0 ? 0d : Math.Max(0d, run.Width - gaps) / totalUnits;
+                var glyphs = new List<PdfFallbackGlyph>(runes.Length);
+                int usedUnits = 0;
+                int gapCount = 0;
+                foreach (Rune rune in runes)
+                {
+                    if (!PdfFallbackFont.IsNonRenderedControl(rune))
+                    {
+                        PdfFallbackFont.TryEncodeWinAnsi(rune.Value, out byte code);
+                        glyphs.Add(new PdfFallbackGlyph(run.X + usedUnits * unit + gapCount * run.CharacterSpacing, baselineY, code));
+                    }
+
+                    usedUnits += rune.Utf16SequenceLength;
+                    gapCount++;
+                }
+
+                graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
+                if (run.Underline || run.Strike)
+                {
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    FillFallbackTextDecoration(graphics, run.X, baselineY, run.Width, pdfFontSize, run.Underline, run.Strike);
+                }
+
+                if (needsTextAlpha)
+                {
+                    graphics.RestoreState();
+                }
+            }
+
+            graphics.RestoreState();
         }
 
         void DrawWrappedSpan(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
@@ -547,12 +838,22 @@ internal sealed partial class PptxRenderer
             foreach (PptxPositionedTextSpan span in CoalesceHighlightSpans())
             {
                 TextRun run = span.Run;
-                if (run.HighlightColor is null || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
+                if (run.HighlightColor is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
 
-                DrawHighlightSpan(rendered.Font, span);
+                // RV01: fallback highlights use the layout span width with diagnosed
+                // constants instead of vanishing.
+                if (rendered.FallbackFace is not null)
+                {
+                    double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
+                    FillFallbackHighlight(graphics, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
+                }
+                else if (rendered.Font is { } highlightEmbedded)
+                {
+                    DrawHighlightSpan(highlightEmbedded, span);
+                }
             }
 
             IReadOnlyList<PptxPositionedTextSpan> CoalesceHighlightSpans()
@@ -610,23 +911,55 @@ internal sealed partial class PptxRenderer
         return new FontRequest(PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily), run.Bold, run.Italic);
     }
 
+    // RV01: mirrors the atom substitution so hex encoding sees the same runes.
+    private static string SubstituteUncoveredRunes(PdfEmbeddedFont embedded, string text)
+    {
+        bool clean = true;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            if (!PdfFallbackFont.IsNonRenderedControl(rune) && embedded.Font.MapCodePoint(rune.Value) == 0 && embedded.Font.MapCodePoint(0x3F) != 0)
+            {
+                clean = false;
+                break;
+            }
+        }
+
+        if (clean)
+        {
+            return text;
+        }
+
+        var builder = new StringBuilder(text.Length);
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            builder.Append(!PdfFallbackFont.IsNonRenderedControl(rune) && embedded.Font.MapCodePoint(rune.Value) == 0 ? "?" : rune.ToString());
+        }
+
+        return builder.ToString();
+    }
+
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
-        string glyphHex = embedded.EncodeGlyphHex(run.Text);
+        string emissionText = SubstituteUncoveredRunes(embedded, run.Text);
+        string glyphHex = embedded.EncodeGlyphHex(emissionText);
         double baselineY = run.Y + run.BaselineOffset;
         if (glyphHex.Length == 0 || !BaselineIntersectsClip(run, baselineY))
         {
             return null;
         }
 
-        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
+        IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms();
+        // RV01: substituted markers take zero advance at emission, so alignment
+        // measures the emitted atoms instead of the unmapped advances.
+        double lineWidth = string.Equals(emissionText, run.Text, StringComparison.Ordinal)
+            ? MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled)
+            : glyphs.Sum(atom => atom.Advance + atom.AdjustmentBefore);
         double x = run.Alignment switch
         {
             TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms();
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = run.CharacterSpacing;
         string? positioningArray = EncodeGlyphPositioningArray(embedded, glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
@@ -638,7 +971,18 @@ internal sealed partial class PptxRenderer
             ushort previousGlyph = 0;
             foreach (Rune rune in run.Text.EnumerateRunes())
             {
+                // RV01: runes with no glyph in the emitting face render as question
+                // mark (diagnosed at preparation) with zero advance and no kerning,
+                // matching layout, which skips them; layout constructs keep their
+                // pass-through exactly as before.
                 ushort glyph = embedded.Font.MapCodePoint(rune.Value);
+                bool substituted = false;
+                if (glyph == 0 && !PdfFallbackFont.IsNonRenderedControl(rune))
+                {
+                    glyph = embedded.Font.MapCodePoint(0x3F);
+                    substituted = glyph != 0;
+                }
+
                 if (glyph == 0)
                 {
                     continue;
@@ -648,15 +992,15 @@ internal sealed partial class PptxRenderer
                 if (atoms.Count > 0)
                 {
                     adjustmentBefore += run.CharacterSpacing;
-                    if (run.KerningEnabled && previousGlyph != 0)
+                    if (!substituted && run.KerningEnabled && previousGlyph != 0)
                     {
                         adjustmentBefore += embedded.Font.GetKerning(previousGlyph, glyph) * run.FontSize / embedded.Font.UnitsPerEm;
                     }
                 }
 
-                double advance = embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
-                atoms.Add(new TextGlyphAtom(rune.Value, run.FontFamily, PptxGlyphTypefaceResolutionSource.Primary, glyph, advance, adjustmentBefore));
-                previousGlyph = glyph;
+                double advance = substituted ? 0d : embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
+                atoms.Add(new TextGlyphAtom(substituted ? 0x3F : rune.Value, run.FontFamily, PptxGlyphTypefaceResolutionSource.Primary, glyph, advance, adjustmentBefore));
+                previousGlyph = substituted ? (ushort)0 : glyph;
             }
 
             return atoms;

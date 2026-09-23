@@ -32,6 +32,23 @@ internal sealed class PdfFallbackFont
 
     public string ResourceKey => "Fallback-" + FaceName;
 
+    // Fixed resource names in face order so output stays deterministic across documents.
+    public static string ResourceNameFor(bool bold, bool italic)
+    {
+        return bold ? (italic ? "FF4" : "FF2") : (italic ? "FF3" : "FF1");
+    }
+
+    // Page assembly for conversion-wide fallback use (slides and chart parts share
+    // one resolver): fixed face order keeps output deterministic.
+    public static IReadOnlyList<PdfFallbackFontResource> ToResources(IEnumerable<PdfFallbackFont> faces)
+    {
+        return faces
+            .Distinct()
+            .OrderBy(face => ResourceNameFor(face.Bold, face.Italic), StringComparer.Ordinal)
+            .Select(face => new PdfFallbackFontResource(ResourceNameFor(face.Bold, face.Italic), face))
+            .ToArray();
+    }
+
     public static PdfFallbackFont ForStyle(bool bold, bool italic)
     {
         return bold ? (italic ? HelveticaBoldOblique : HelveticaBold) : (italic ? HelveticaOblique : Helvetica);

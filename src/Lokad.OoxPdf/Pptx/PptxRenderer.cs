@@ -88,7 +88,12 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes);
             cancellationToken.ThrowIfCancellationRequested();
-            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink);
+            // RV01: emission looks up split-run families, so cover families that only appear after the glyph-typeface split.
+            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false);
+            Dictionary<FontRequest, RenderedFont> slideFonts = new(renderedFonts.Fonts, FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
+            AddSplitFallbackFaces(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken);
+            renderedFonts = new RenderedFonts(slideFonts, renderedFonts.Resources);
+
             // Hidden master shapes stay unpainted when the slide opts out (S01).
             if (context.SceneSlide.ShowMasterShapes)
             {
@@ -102,7 +107,7 @@ internal sealed partial class PptxRenderer
             string content = graphics.ToString();
             List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
             List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts, context.CancellationToken);
-            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations);
+            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations, PdfFallbackFont.ToResources(fontResolver.UsedFallbackFaces));
             // R06.2: admit the emitted content bytes (pages admit at the top of
             // each iteration, before production).
             OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);

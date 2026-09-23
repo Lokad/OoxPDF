@@ -216,10 +216,11 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct RenderedFont(
         string ResourceName,
-        PdfEmbeddedFont Font,
+        PdfEmbeddedFont? Font,
         FontFaceResolution Resolution,
         bool SyntheticBold,
-        bool SyntheticItalic);
+        bool SyntheticItalic,
+        PdfFallbackFontResource? FallbackFace = null);
 
     private readonly record struct RenderedFonts(IReadOnlyDictionary<FontRequest, RenderedFont> Fonts, IReadOnlyList<PdfFontResource> Resources);
 
