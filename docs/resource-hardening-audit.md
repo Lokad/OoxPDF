@@ -111,5 +111,17 @@ index bounds the worst case rather than shifting the median.
   Three held-out cases (`e8837d62` placeholder pair, `d13445ac` table style) pass CheckVisualCase against live Office references with pinned thresholds; table case exposed large-slack row stretching, fixed to declared heights (1.2x-3x Office probes); family run surfaced 4 stale pixel gates, 1 recalibrated (`c5016569` mixed-stack, text-exact) with ellipsis truncation fixed by the same baseline rule (strictly-outside lines dropped, marker inline after the last kept line; the ellipsis reference now matches the Office 2 text operations with no second line), clip overflow fixed by a layout-level cull of baseline-outside lines under vertOverflow clip with ellipsis keeping its own marker logic; anchor-overflow now matches the Office 5 text operations and is promoted to locked-text-ops; underline metrics fixed by emitting the full post-table thickness (the quartering scale was an initial-commit assumption with no Office evidence; the underline-single reference draws the full 2.64pt bar and the locked case passes again);
   `e3f292dd` post-write/pre-move snapshot with writer page/content/output fields
   (file path; stream path keeps pre-write zeros under R20); staged page/resource
-  emission (writer holds all pages before emitting; incremental staging is a design
-  slice, not started).
+  emission (writer holds all pages before emitting; incremental staging design is mapped below).
+  Staged page/resource emission design (mapped, not started): the writer materializes
+  every PdfPage (content strings plus per-page font subsets and image bytes) before
+  numbering objects from complete collections, so peak tracks the whole document.
+  Staging keeps RenderPages descriptors but streams in phases: accumulate font
+  codepoint unions per resource key and image digest registries (first sighting
+  streams bytes, later pages reference numbers) while holding only page content;
+  then write header, pages, merged font subsets, deduped images, and xref.
+  Numbering need not match the current precomputed scheme: determinism pins only
+  require run-to-run stability, but object order must stay deterministic. R06 charge
+  points (pages, content, output), per-page validation order, cancellation points,
+  and R20 temp-file publication stay fixed; lazy per-page production differs by
+  format (PPTX per-slide is natural, DOCX pagination is whole-document). Validation
+  bar: deterministic stability, zero-budget trips, R20 tests, full suite, manifests.
