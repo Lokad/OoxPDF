@@ -1077,7 +1077,9 @@ internal static class PptxTextLayoutTests
             string.Join(", ", lineTextLengths.Select(length => length.ToString(CultureInfo.InvariantCulture))));
     }
 
-    public static void PptxSyntheticTextBoxClipsOverflow()
+    // Office drops the 48pt line whose baseline sits outside the 36pt clip
+    // rectangle: no text operation is emitted for out-of-frame clip lines.
+    public static void PptxSyntheticTextBoxClipDropsLineWithBaselineOutsideClip()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -1109,7 +1111,7 @@ internal static class PptxTextLayoutTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 432 72 36 re W* n", pdf);
+        TestAssert.Equal(0, PptxTests.CountTextMatrices(pdf));
     }
 
     public static void PptxSyntheticTextBoxEllipsisAddsMarkerAtLastVisibleLine()
@@ -1171,7 +1173,11 @@ internal static class PptxTextLayoutTests
             "Expected shape text ellipsis overflow to be handled by the shared text-frame renderer.");
     }
 
-    public static void PptxTextFrameVerticalClipKeepsGlyphsThatIntersectClip()
+    // Office drops out-of-frame lines under vertOverflow clip: the live
+    // anchor-overflow reference emits 5 text operations with no Clip two,
+    // whose baseline sits outside the text rectangle even though its glyph
+    // outline intersects it.
+    public static void PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip()
     {
         string input = Path.Combine(
             Directory.GetCurrentDirectory(),
@@ -1191,8 +1197,8 @@ internal static class PptxTextLayoutTests
             glyphRunTexts.Contains("Clip one", StringComparer.Ordinal),
             "Expected first clipped line to remain visible.");
         TestAssert.True(
-            glyphRunTexts.Contains("Clip two", StringComparer.Ordinal),
-            "Expected vertOverflow=\"clip\" to keep text whose glyph outline intersects the text rectangle even when the baseline is outside it.");
+            !glyphRunTexts.Contains("Clip two", StringComparer.Ordinal),
+            "Expected vertOverflow=\"clip\" to drop the line whose baseline sits outside the text rectangle, matching the 5-operation Office reference.");
         TestAssert.True(
             glyphRunTexts.Contains("Flow one", StringComparer.Ordinal),
             "Expected overflow-enabled companion frame to keep its first line.");

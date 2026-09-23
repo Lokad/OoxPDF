@@ -54,7 +54,10 @@ internal static class PptxTypographyTests
         TestAssert.True(resolver.ResolveCalls > 0, "PPTX conversion should use the supplied font resolver for text layout and embedding.");
     }
 
-    public static void PptxSyntheticTextClipKeepsGlyphsWhoseBaselineIsOutsideClip()
+    // Office drops out-of-frame clip lines whole (anchor-overflow reference:
+    // 5 emitted operations, no Clip two), so a 24pt line that does not fit
+    // the 12pt clip rectangle emits no text operation.
+    public static void PptxSyntheticTextClipDropsLineWithBaselineOutsideClip()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -90,7 +93,7 @@ internal static class PptxTypographyTests
 
         string pdf = PptxTests.ReadPdfDecodedAscii(output);
         TestAssert.Contains(" W* n", pdf);
-        TestAssert.True(PptxTests.CountTextMatrices(pdf) > 0, "A vertical text clip should not drop glyphs whose outlines intersect the clip even when the baseline is outside it.");
+        TestAssert.Equal(0, PptxTests.CountTextMatrices(pdf));
     }
 
     public static void PptxSyntheticRotatedTextBoxProducesTransform()

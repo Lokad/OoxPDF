@@ -181,6 +181,34 @@ internal sealed partial class PptxRenderer
         return new PptxTextLineMetrics(lineTopY - baselineY, lineAdvance, "positioned-line");
     }
 
+    private static void AddClippedParagraphLine(
+        List<PptxTextLineLayout> lines,
+        TextLayoutLine line,
+        PptxTextLineBoxLayout box,
+        TextAlignment alignment,
+        double textX,
+        double textWidth,
+        bool justify,
+        bool distribute,
+        TextAdvanceEstimator advanceEstimator,
+        bool cullOutOfFrameLines,
+        double baselineY,
+        double clipY,
+        double clipHeight)
+    {
+        // Office drops out-of-frame lines under vertOverflow clip (ellipsis keeps its own last-line marker logic): the
+        // anchor-overflow reference emits 5 text operations where the unculled
+        // layout emits 6 (Clip two has its baseline outside the text rectangle
+        // even though its glyph outline intersects it). Culled lines keep
+        // advancing the cursor, so later line positions are unchanged.
+        if (cullOutOfFrameLines && (baselineY < clipY || baselineY > clipY + clipHeight))
+        {
+            return;
+        }
+
+        AddAlignedParagraphLine(lines, line, box, alignment, textX, textWidth, justify, distribute, advanceEstimator);
+    }
+
     private static void AddAlignedParagraphLine(
         List<PptxTextLineLayout> lines,
         TextLayoutLine line,
