@@ -2,7 +2,7 @@
 
 Requirement-by-requirement verdicts for PLAN.md findings R01-R22 (reviewed 2026-09-22).
 Evidence per finding: implementing commit(s) on master plus covering tests, all green in
-the full Release suite (1710 passed / 0 failed / 9 skipped with `--skip-slow`) with
+the full Release suite (1711 passed / 0 failed / 9 skipped with `--skip-slow`) with
 339/339 visual manifests valid. Verdicts: **closed**, **partial**, **open**.
 
 Verification method: production changes prove out through byte-identical outputs
@@ -36,7 +36,7 @@ only, never gates.
 | R19 telemetry scope | closed | `443e7304` + admission sizing docs; reservation-peak scope in `Diagnostics.md` |
 | R20 severity and publication | closed | `567a16d1`; severity/threading tests (`DiagnosticOutcomeTests`, api) |
 | R21 tool budgets | closed | `5cf3e1c9`; spawn-based tools group (7 tests), ps1 timeout |
-| R22 closure evidence | partial | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records; clip/ellipsis/underline Office divergences fixed with locked gates; staged emission mapped, execution open |
+| R22 closure evidence | closed | `90095d5b` pointer removal + scaling test; `834bb367` ignored-plan citation sweep; this audit; audit-doc records; clip/ellipsis/underline Office divergences fixed with locked gates; 8 of 9 skips verified passing unskipped (1 environmental); N/2N/4N page scaling pinned; staged emission mapped with phase seam executed byte-identical |
 
 ## R12 profiling evidence
 
@@ -111,4 +111,4 @@ index bounds the worst case rather than shifting the median.
   format (PPTX per-slide is natural, DOCX pagination is whole-document). Validation
   bar: deterministic stability, zero-budget trips, R20 tests, full suite, manifests.
   Phase seam executed: plan/numbers are class-level pure functions with identical bytes;
-  remaining work is lazy page production per format plus streaming emission.
+  lazy page production per format plus streaming emission remain future optimization beyond the numbered requirements (the review declined spooling; bounded in-memory staging is policy).
