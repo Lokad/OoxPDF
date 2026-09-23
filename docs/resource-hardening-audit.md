@@ -37,7 +37,7 @@ with producer charges, dedup/no-recharge/no-refund semantics, typed summary fiel
 per-domain admission map in tracked Diagnostics.md, full suite 1731/0/9, manifests
 339/339); remaining residuals per ledger: DOCX repagination control, R06.3 bounded
 retained payloads |
-| R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). R07.1 done in `c2682336` (profiling measurer with calls/chars/distinct-slices/per-run attribution; uneven/tracking/run/capacity/allocation scaling gates; first/continuation break offsets; justified-vs-left break equality; full suite 1726/0/9, manifests 339/339); remaining residual per ledger: R07.2 suffix/span amplification removal with bounded shaping fallback |
+| R07 emergency wrap bound | partial | `7c143098`; `EmergencyWrap*BoundsWork` scaling tests (docx-text). R07.1 done in `c2682336` (profiling measurer with calls/chars/distinct-slices/per-run attribution; uneven/tracking/run/capacity/allocation scaling gates; first/continuation break offsets; justified-vs-left break equality; full suite 1726/0/9, manifests 339/339); R07.2 done in `cbbdf2eb` (range tokens without suffix copies, per-segment span index with binary seek, 128-probe search caps with emit-candidate grow fallback and defined shrink failure, shrink-cap gate, all R07.1 pins green, full suite 1732/0/9, manifests 339/339); R07 closed |
 | R08 cell memo repair | closed | `eb237ed7`; memo hit/miss/coordinate tests (docx-tables, `DocxCellMemoTests`) |
 | R09 per-slide memo lifetime | closed | `272de7e0`; per-slide constructions verified in `PptxRenderer.cs`; memo suites green |
 | R10 graphics/resource indexes | closed | `1d7c41d2`; `PdfResourceIndexTests` (pdf) |
