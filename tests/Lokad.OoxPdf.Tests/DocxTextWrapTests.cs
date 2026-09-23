@@ -1025,6 +1025,219 @@ internal static class DocxTextWrapTests
         TestAssert.Throws<OperationCanceledException>(() => WrapSpans(token, spans, 10d, true, measurer, cancelled.Token));
     }
 
+    // R07.1 characterization: work instrumentation beyond call counts. Records calls,
+    // measured characters, distinct slices (a memo-effectiveness proxy), and per-run
+    // attribution, so scaling tests pin work volume rather than bare call counts.
+    // Shaping stays stubbed by design (deterministic unit widths); real-shaping
+    // equivalence belongs to R07.2 layout semantics plus visual gates.
+    internal sealed class ProfilingMeasurer(Func<DocxTextRun?, string, double> width) : IDocxTextMeasurer
+    {
+        public int MeasureCalls;
+        public long CharsMeasured;
+        public readonly HashSet<string> DistinctSlices = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> CallsByRun = new(StringComparer.Ordinal);
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            MeasureCalls++;
+            CharsMeasured += text.Length;
+            DistinctSlices.Add(text);
+            string key = run?.FontFamily ?? "(null)";
+            CallsByRun[key] = CallsByRun.TryGetValue(key, out int count) ? count + 1 : 1;
+            return width(run, text);
+        }
+    }
+    // Strongly uneven advances: narrow stems with very wide rounds defeat the
+    // average-width fit estimate, exercising grow/shrink search depth.
+    private static double AlternatingWidth(DocxTextRun? run, string text)
+    {
+        double width = 0d;
+        foreach (char c in text)
+        {
+            width += c == (char)97 ? 0.5d : 8d;
+        }
+        return width;
+    }
+    // Negative tracking on AV pairs makes longer prefixes measure smaller, so prefix
+    // widths are not monotonic and the shorter-safe-break fallback runs.
+    private static double KernedWidth(DocxTextRun? run, string text)
+    {
+        double width = text.Length * 1d;
+        int index = 0;
+        while ((index = text.IndexOf("AV", index, StringComparison.Ordinal)) >= 0)
+        {
+            width -= 0.9d;
+            index += 2;
+        }
+        return width;
+    }
+    // Run-varying advances for many-short-run scaling (run count varies at fixed length).
+    private static double FamilyWidth(DocxTextRun? run, string text)
+    {
+        return text.Length * (run?.FontFamily == "Wide" ? 8d : 0.5d);
+    }
+    // R07.1: alternating 0.5/8.0 advances at 10pt capacity (383 calls / 17,022 chars
+    // measured 2026-09-23). Bounds pin current work volume; fit plus coverage pin the
+    // line contract under adversarial widths.
+    public static void EmergencyWrapUnevenAdvancesBoundsWork()
+    {
+        var token = new System.Text.StringBuilder();
+        for (int i = 0; i < 256; i++)
+        {
+            token.Append(i % 2 == 0 ? (char)97 : (char)98);
+        }
+        var measurer = new ProfilingMeasurer(AlternatingWidth);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token.ToString(), SingleSpan(token.ToString()), _ => 10d, true, measurer);
+        TestAssert.True(measurer.MeasureCalls <= 1200, string.Format("Uneven advances must stay bounded, saw {0} measures.", measurer.MeasureCalls));
+        TestAssert.True(measurer.CharsMeasured <= 60000, string.Format("Uneven advances must bound measured characters, saw {0}.", measurer.CharsMeasured));
+        AssertCoverage(token.ToString(), lines);
+        AssertAllLinesFit(lines, _ => 10d, AlternatingWidth);
+    }
+    // R07.1: AV-kerning makes prefix widths non-monotonic at 10pt capacity (43 calls /
+    // 2,468 chars measured 2026-09-23).
+    public static void EmergencyWrapNegativeTrackingBoundsWork()
+    {
+        var token = new System.Text.StringBuilder();
+        for (int i = 0; i < 128; i++)
+        {
+            token.Append("AV");
+        }
+        var measurer = new ProfilingMeasurer(KernedWidth);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token.ToString(), SingleSpan(token.ToString()), _ => 10d, true, measurer);
+        TestAssert.True(measurer.MeasureCalls <= 200, string.Format("Negative tracking must stay bounded, saw {0} measures.", measurer.MeasureCalls));
+        TestAssert.True(measurer.CharsMeasured <= 10000, string.Format("Negative tracking must bound measured characters, saw {0}.", measurer.CharsMeasured));
+        AssertCoverage(token.ToString(), lines);
+        AssertAllLinesFit(lines, _ => 10d, KernedWidth);
+    }
+    // R07.1: run count varies independently at fixed 256-char length (8/16/32 runs).
+    public static void EmergencyWrapManyShortRunsBoundsWork()
+    {
+        int calls8 = WrapFamilyRuns(8, out _);
+        int calls16 = WrapFamilyRuns(16, out IReadOnlyList<DocxWrappedTextLine> lines16);
+        int calls32 = WrapFamilyRuns(32, out _);
+        TestAssert.True(calls16 <= 3 * calls8, string.Format("Doubling runs must scale calls linearly, saw {0} then {1}.", calls8, calls16));
+        TestAssert.True(calls32 <= 3 * calls16, string.Format("Doubling runs must scale calls linearly, saw {0} then {1}.", calls16, calls32));
+        foreach (DocxWrappedTextLine line in lines16)
+        {
+            TestAssert.True(line.Text.Length > 0, "No empty lines.");
+        }
+    }
+    // R07.1: line capacity varies independently on one 256-char uniform token.
+    public static void EmergencyWrapCapacityScalingBoundsWork()
+    {
+        string token = new string((char)97, 256);
+        int calls10 = WrapUniformWithWidths(token, _ => 10d, out IReadOnlyList<DocxWrappedTextLine> lines10);
+        int calls20 = WrapUniformWithWidths(token, _ => 20d, out IReadOnlyList<DocxWrappedTextLine> lines20);
+        int calls40 = WrapUniformWithWidths(token, _ => 40d, out _);
+        TestAssert.True(calls20 <= calls10, string.Format("Doubling capacity must not add work, saw {0} then {1}.", calls10, calls20));
+        TestAssert.True(calls40 <= calls20, string.Format("Doubling capacity must not add work, saw {0} then {1}.", calls20, calls40));
+        AssertCoverage(token, lines10);
+        AssertCoverage(token, lines20);
+    }
+    // R07.1: N/2N/4N allocation evidence above fixed setup costs. GC bytes are exact
+    // (not sampled), so ratios pin the growth shape deterministically.
+    public static void EmergencyWrapAllocationScalesLinearly()
+    {
+        long alloc128 = WrapAllocated(new string((char)97, 128));
+        long alloc256 = WrapAllocated(new string((char)97, 256));
+        long alloc512 = WrapAllocated(new string((char)97, 512));
+        TestAssert.True(alloc256 - alloc128 > 0, "Growth must be observable above setup.");
+        TestAssert.True(alloc512 - alloc256 <= (long)(2.5d * (alloc256 - alloc128)), string.Format("Allocations must scale linearly, saw deltas {0} then {1}.", alloc256 - alloc128, alloc512 - alloc256));
+    }
+    // R07.1: first-line (6pt) versus continuation (10pt) widths pin distinct break
+    // offsets, including the ragged tail; R07.2 must preserve both widths.
+    public static void WrapFirstContinuationWidthsPinStarts()
+    {
+        string token = new string((char)97, 128);
+        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), lineIndex => lineIndex == 0 ? 6d : 10d, true, measurer);
+        AssertCoverage(token, lines);
+        TestAssert.Equal(6, lines[0].Text.Length);
+        for (int i = 1; i < lines.Count - 1; i++)
+        {
+            TestAssert.Equal(10, lines[i].Text.Length);
+        }
+        TestAssert.Equal(2, lines[lines.Count - 1].Text.Length);
+        TestAssert.Equal(14, lines.Count);
+    }
+    // R07.1: justification stretches lines but must not re-break them: a justified
+    // paragraph pins the same break offsets as its left-aligned twin.
+    public static void JustifiedParagraphLineStartsArePinned()
+    {
+        string[] justified = LayoutLineTexts(justified: true);
+        string[] plain = LayoutLineTexts(justified: false);
+        TestAssert.Equal(plain.Length, justified.Length);
+        TestAssert.True(justified.Length > 1, "Case must wrap to several lines.");
+        for (int i = 0; i < justified.Length; i++)
+        {
+            TestAssert.Equal(plain[i], justified[i]);
+        }
+    }
+
+    private static int WrapFamilyRuns(int runs, out IReadOnlyList<DocxWrappedTextLine> lines)
+    {
+        int partLength = 256 / runs;
+        var text = new System.Text.StringBuilder();
+        var spans = new List<DocxTextSpan>();
+        for (int i = 0; i < runs; i++)
+        {
+            string part = new string(i % 2 == 0 ? (char)97 : (char)98, partLength);
+            text.Append(part);
+            var run = new DocxTextRun(part, 11d, null, false, false, false, null, i % 2 == 0 ? "Narrow" : "Wide");
+            spans.Add(new DocxTextSpan(part, run, i, 0));
+        }
+        var measurer = new ProfilingMeasurer(FamilyWidth);
+        lines = WrapSpansWithWidths(text.ToString(), spans.ToArray(), _ => 10d, true, measurer);
+        AssertCoverage(text.ToString(), lines);
+        AssertAllLinesFit(lines, _ => 10d, FamilyWidth);
+        return measurer.MeasureCalls;
+    }
+
+    private static int WrapUniformWithWidths(string token, Func<int, double> widths, out IReadOnlyList<DocxWrappedTextLine> lines)
+    {
+        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
+        lines = WrapSpansWithWidths(token, SingleSpan(token), widths, true, measurer);
+        AssertAllLinesFit(lines, widths, (run, text) => text.Length * 1d);
+        return measurer.MeasureCalls;
+    }
+
+    private static long WrapAllocated(string token)
+    {
+        WrapUniformWithWidths(token, _ => 10d, out _);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        WrapUniformWithWidths(token, _ => 10d, out _);
+        return GC.GetAllocatedBytesForCurrentThread() - before;
+    }
+
+    private static DocxTextSpan[] SingleSpan(string token)
+    {
+        var run = new DocxTextRun(token, 11d, null, false, false, false, null, "Test");
+        return new[] { new DocxTextSpan(token, run, 0, 0) };
+    }
+
+    private static void AssertCoverage(string token, IReadOnlyList<DocxWrappedTextLine> lines)
+    {
+        int covered = 0;
+        foreach (DocxWrappedTextLine line in lines)
+        {
+            TestAssert.True(line.Text.Length > 0, "No empty lines.");
+            covered += line.Text.Length;
+        }
+        TestAssert.Equal(token.Length, covered);
+    }
+
+    private static void AssertAllLinesFit(IReadOnlyList<DocxWrappedTextLine> lines, Func<int, double> widths, Func<DocxTextRun?, string, double> width)
+    {
+        var verifier = new ProfilingMeasurer(width);
+        for (int i = 0; i < lines.Count; i++)
+        {
+            double lineWidth = 0d;
+            foreach (DocxTextSpan span in lines[i].Spans)
+            {
+                lineWidth += verifier.MeasureText(span.StyleRun, span.Text, 11d);
+            }
+            TestAssert.True(lineWidth <= widths(i) + 1e-9, string.Format("Line {0} must fit: {1} exceeds {2}.", i, lineWidth, widths(i)));
+        }
+    }
     private static void AssertWrapScaling(string token, int maxCalls, int[]? goldenLengths)
     {
         IReadOnlyList<DocxWrappedTextLine> lines = WrapWithCounting(token, 10d, true, out int calls);
@@ -1062,13 +1275,49 @@ internal static class DocxTextWrapTests
         return lines;
     }
 
+    private static string[] LayoutLineTexts(bool justified)
+    {
+        string alignment = justified ? "<w:jc w:val=\"both\"/>" : string.Empty;
+        string body = "<w:p><w:pPr>" + alignment + "<w:ind w:left=\"5000\" w:right=\"5000\"/></w:pPr>"
+            + "<w:r><w:t xml:space=\"preserve\">alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu</w:t></w:r></w:p>";
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+                + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+                + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+                + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+                + "</Types>",
+            ["_rels/.rels"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>"
+                + "</Relationships>",
+            ["word/document.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                + "<w:body>" + body + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>" + "</w:body></w:document>",
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Select(line => line.Text)
+            .ToArray();
+    }
     private static IReadOnlyList<DocxWrappedTextLine> WrapSpans(string token, DocxTextSpan[] spans, double width, bool allowOverwide, IDocxTextMeasurer measurer, CancellationToken cancellationToken)
+    {
+        return WrapSpansWithWidths(token, spans, _ => width, allowOverwide, measurer, cancellationToken);
+    }
+    private static IReadOnlyList<DocxWrappedTextLine> WrapSpansWithWidths(string token, DocxTextSpan[] spans, Func<int, double> widths, bool allowOverwide, IDocxTextMeasurer measurer, CancellationToken cancellationToken = default)
     {
         MethodInfo wrap = typeof(DocxLayoutEngine).GetMethod("WrapWords", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected WrapWords.");
         try
         {
-            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, (Func<int, double>)(_ => width), 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken]);
+            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, widths, 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken]);
             return ((System.Collections.IEnumerable)result!).Cast<DocxWrappedTextLine>().ToArray();
         }
         catch (TargetInvocationException ex)
