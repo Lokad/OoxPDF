@@ -171,6 +171,80 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
+    public static void SceneFedSpansMatchXmlPathForLinksAndFields()
+    {
+        // R14-deeper: hyperlink clicks resolve from retained run properties and
+        // fields resolve identically on both paths.
+        string slideRels = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/" TargetMode="External"/>
+            </Relationships>
+            """;
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="26" name="LinkProbe"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Link</a:t></a:r><a:r><a:rPr sz="1800"/><a:t>Plain</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
+        });
+
+        CompareXmlAndFedSpans(input, "Link");
+        string fieldInput = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-04-field-text.pptx");
+        CompareXmlAndFedSpans(fieldInput, null);
+    }
+
+    private static void CompareXmlAndFedSpans(string input, string? requiredText)
+    {
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-links-fields");
+        int comparedSpans = 0;
+        var seenTexts = new List<string>();
+        foreach (PptxSceneNode node in scene.Slides[0].SlideNodes)
+        {
+            if (node.TextBody is null)
+            {
+                continue;
+            }
+
+            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadSpans(node, document, scene);
+            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+            comparedSpans += xmlSpans.Count;
+            TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
+            for (int index = 0; index < xmlSpans.Count; index++)
+            {
+                TestAssert.True(xmlSpans[index].SourceRun is not null && fedSpans[index].SourceRun is not null, "Expected compared spans to carry source runs.");
+                TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
+                TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
+                TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
+                TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
+                seenTexts.Add(xmlSpans[index].Run.Text);
+                TestAssert.Equal(xmlSpans[index].SourceRun!.Style.HyperlinkClickId ?? string.Empty, fedSpans[index].SourceRun!.Style.HyperlinkClickId ?? string.Empty);
+            }
+        }
+
+        TestAssert.True(comparedSpans > 0, "Expected inputs to exercise fed-path spans.");
+        if (requiredText is not null)
+        {
+            TestAssert.True(seenTexts.Contains(requiredText, StringComparer.Ordinal), "Expected the required run text to be exercised.");
+        }
+    }
+
     public static void PlainShapeRunTextAndStyleAgree()
     {
         // R14: first scene-fed-layout agreement gate. Plain-shape run text and core
