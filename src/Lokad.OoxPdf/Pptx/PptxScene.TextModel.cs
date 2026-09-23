@@ -81,6 +81,11 @@ internal sealed record PptxSceneTextBody(
     bool HasUnsupportedVerticalOverflow,
     IReadOnlyList<PptxSceneTextParagraph> Paragraphs);
 
+internal sealed record PptxSceneCascadeLayer(
+    string Name,
+    string Kind,
+    XElement? Source);
+
 internal sealed record PptxSceneTextParagraph(
     XElement? Properties,
     XElement? EndParagraphProperties,
@@ -88,7 +93,8 @@ internal sealed record PptxSceneTextParagraph(
     PptxSceneParagraphStyle ResolvedStyle,
     IReadOnlyList<PptxSceneTextRun> Runs,
     XElement? DefaultParagraphProperties,
-    XElement? DefaultRunProperties);
+    XElement? DefaultRunProperties,
+    IReadOnlyList<PptxSceneCascadeLayer> CascadeLayers);
 
 internal sealed record PptxSceneTextRun(
     PptxSceneTextRunKind Kind,

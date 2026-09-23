@@ -16,7 +16,8 @@ internal sealed partial class PptxSceneBuilder
             return null;
         }
 
-        IReadOnlyList<XElement> inheritedTextBodies = FindInheritedPlaceholderShapes(element, placeholderSources)
+        IReadOnlyList<XElement> inheritedPlaceholderShapes = FindInheritedPlaceholderShapes(element, placeholderSources);
+        IReadOnlyList<XElement> inheritedTextBodies = inheritedPlaceholderShapes
             .Select(shape => shape.Element(PresentationNamespace + "txBody"))
             .Where(textBody => textBody is not null)
             .Cast<XElement>()
@@ -27,7 +28,7 @@ internal sealed partial class PptxSceneBuilder
             textBody.Element(DrawingNamespace + "lstStyle"),
             HasUnsupportedTextOrientation(bodyProperties),
             HasUnsupportedTextVerticalOverflow(bodyProperties),
-            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBodies, placeholderSources, theme, colorMap)).ToArray());
+            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBodies, inheritedPlaceholderShapes, placeholderSources, theme, colorMap)).ToArray());
     }
 
     private static bool HasUnsupportedTextOrientation(XElement? bodyProperties)
@@ -54,6 +55,7 @@ internal sealed partial class PptxSceneBuilder
         XElement shape,
         XElement textBody,
         IReadOnlyList<XElement> inheritedTextBodies,
+        IReadOnlyList<XElement> inheritedPlaceholderShapes,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
         PptxColorMap colorMap)
@@ -71,6 +73,27 @@ internal sealed partial class PptxSceneBuilder
         XElement? defaultRunProperties = properties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
         PptxSceneParagraphStyle resolvedStyle = ResolveParagraphStyle(level, properties, defaultParagraphProperties, defaultRunProperties, shape, theme, colorMap);
+        string levelName = "lvl" + Math.Clamp(level + 1, 1, 9).ToString(CultureInfo.InvariantCulture) + "pPr";
+        var cascadeLayers = new List<PptxSceneCascadeLayer>
+        {
+            new("shape.lstStyle", "ShapeListStyle", textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)),
+        };
+        cascadeLayers.AddRange(inheritedPlaceholderShapes
+            .Select((placeholder, index) => new PptxSceneCascadeLayer(
+                PptxTextStyleInheritance.PlaceholderListStyleLayerName(placeholder, index, placeholderSources.Count),
+                PptxTextStyleInheritance.PlaceholderListStyleLayerKindName(placeholder, index, placeholderSources.Count),
+                placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)))
+            .Reverse());
+        cascadeLayers.Add(new PptxSceneCascadeLayer(
+            "inherited.txStyle",
+            "InheritedTextStyle",
+            PptxTextStyleInheritance.FindInheritedTextStyle(shape, placeholderSources, levelName))
+);
+        cascadeLayers.Add(new PptxSceneCascadeLayer(
+            "defaultTextStyle",
+            "DefaultTextStyle",
+            PptxTextStyleInheritance.FindDefaultTextStyle(placeholderSources, levelName))
+);
         return new PptxSceneTextParagraph(
             properties,
             paragraph.Element(DrawingNamespace + "endParaRPr"),
@@ -78,7 +101,8 @@ internal sealed partial class PptxSceneBuilder
             resolvedStyle,
             paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray(),
             defaultParagraphProperties,
-            defaultRunProperties);
+            defaultRunProperties,
+            cascadeLayers);
     }
 
     private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)

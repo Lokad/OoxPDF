@@ -57,6 +57,33 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.True(bare.DefaultParagraphProperties is null, "Expected no retained defaults without any level overrides.");
     }
 
+    public static void SceneCascadeLayersMatchRendererSnapshot()
+    {
+        // R14-deeper: scene-retained cascade layers must reproduce the renderer snapshot
+        // layer names and kinds (the matched placeholder inherits layout lstStyle).
+        string input = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases",
+            "pptx-ladder-04-placeholder-inherit-matched.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
+        PptxSceneTextParagraph sceneParagraph = scene.Slides[0].SlideNodes
+            .Where(node => node.TextBody is not null)
+            .SelectMany(node => node.TextBody!.Paragraphs)
+            .First(paragraph => paragraph.Runs.Any(run => run.Text == "BodyText"));
+        PptxTextParagraphModelSnapshot snapshotParagraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .SelectMany(frame => frame.Paragraphs)
+            .First(paragraph => paragraph.Runs.Any(run => run.Text == "BodyText"));
+        TestAssert.Equal(snapshotParagraph.CascadeLayerNames.Count, sceneParagraph.CascadeLayers.Count);
+        for (int index = 0; index < sceneParagraph.CascadeLayers.Count; index++)
+        {
+            TestAssert.Equal(snapshotParagraph.CascadeLayerNames[index], sceneParagraph.CascadeLayers[index].Name);
+            TestAssert.Equal(snapshotParagraph.CascadeLayerKinds[index], sceneParagraph.CascadeLayers[index].Kind);
+        }
+        TestAssert.True(sceneParagraph.CascadeLayers.Any(layer => layer.Name == "layout.placeholder.lstStyle"),
+            "Expected the matched placeholder to retain the layout placeholder list-style layer.");
+    }
+
     public static void PlainShapeRunTextAndStyleAgree()
     {
         // R14: first scene-fed-layout agreement gate. Plain-shape run text and core
