@@ -180,10 +180,19 @@ re-attributed here.
   `8b303beb25dabbeb88106e8d232d99b472e8cd30d6424c5857b12269639a5fcb`) and smoked
   through the packed package only (valid PDF header, embedded FontFile2 plus ToUnicode
   map); artifacts ignored under `artifacts/nuget/` and `artifacts/package-smoke/`. CI on
-  origin/master HEAD (`7c1f0be0`, run 35833559045): Windows success, Ubuntu failure on
-  `PdfFontsRespectFontByteBudget` (DejaVu-only environment embeds zero font bytes;
-  pre-existing, same shape now skip-gated). Final-revision CI needs a push, which is
-  a separate authorization; workflow configuration alone is not claimed as a result.
+  origin/master HEAD: the 25-commit stack was pushed (run 35853845761) and Ubuntu
+  exposed three more tests of the same DejaVu-only shape
+  (`PdfPageBudgetAdmitsDuringRenderBeforeLaterDocxPages`,
+  `PdfContentBudgetAdmitsDuringRenderBeforeLaterPages`, `RetainedBytesReportedOnFilePath`:
+  fallback DOCX layout collapses the three forced pages to one and retains zero font
+  bytes, reproduced locally with an empty `IFontResolver`, pages=1 versus 3 with Arial).
+  Fixed in `bb2b8e33` by gating all three on `EmbedsFontBytes`, matching the existing
+  font-budget skips. Final CI at `bb2b8e33` (run 35854953289,
+  `https://github.com/Lokad/OoxPDF/actions/runs/35854953289`): Windows full suite
+  1742 passed / 0 failed / 11 skipped (environmental/slow only) with manifest, text,
+  allocation, package-smoke, adversarial, and VisualDiff gates green; Ubuntu portable
+  groups 329 passed / 0 failed / 52 skipped (ooxml 155/0/9) with manifest, allocation,
+  package-smoke, and adversarial gates green.
 - New defects get scoped entries, not catch-all burial: F01 (clipped centered micro-label, PLAN.md) is fixed in `bb5d2ed7`: preset-inset shapes
   clip vertically to shape bounds (Office-paired baseline deltas -0.03/+0.04, MAE 0.0018);
   blast radius verified as exactly the fixed case across four visual families.
