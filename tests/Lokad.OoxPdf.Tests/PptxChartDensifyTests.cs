@@ -587,6 +587,145 @@ internal static class PptxChartDensifyTests
         }
     }
 
+    public static void CategoryLabelLookupsScaleLinearly()
+    {
+        // RV14: N sequential label lookups must not rescan points per lookup.
+        const int count = 2000;
+        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected text vector type.");
+        var inner = new List<PptxRenderer.ChartIndexedTextPoint>(count);
+        for (int i = 0; i < count; i++)
+        {
+            inner.Add(new PptxRenderer.ChartIndexedTextPoint(i, default, "label" + i, true, default));
+        }
+
+        var counting = new CountingTextPoints(inner);
+        object vector = BuildTextVectorWithPoints(vectorType, counting, null);
+        MethodInfo lookup = typeof(PptxRenderer).GetMethod("GetIndexedCategoryLabel", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected category label lookup.");
+        for (int i = 0; i < count; i++)
+        {
+            try
+            {
+                lookup.Invoke(null, [vector, i]);
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException ?? ex;
+            }
+        }
+
+        TestAssert.True(counting.Visits <= 4L * count, $"Sequential label lookups must scan linearly, visited {counting.Visits} points for {count} labels.");
+    }
+
+    public static void CategoryLabelLookupKeepsFirstMatchPrecedence()
+    {
+        // RV14: duplicates keep the first text; sparse, blank, and out-of-range
+        // indices yield empty; out-of-order points resolve correctly.
+        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected text vector type.");
+        object vector = BuildTextVector(vectorType, [(2, "b", true), (0, "a", true), (2, "B2", true), (1, "", true), (3, "c", false)], null);
+        MethodInfo lookup = typeof(PptxRenderer).GetMethod("GetIndexedCategoryLabel", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected category label lookup.");
+        TestAssert.Equal("a", InvokeCategoryLabel(lookup, vector, 0));
+        TestAssert.Equal("", InvokeCategoryLabel(lookup, vector, 1));
+        TestAssert.Equal("b", InvokeCategoryLabel(lookup, vector, 2));
+        TestAssert.Equal("", InvokeCategoryLabel(lookup, vector, 3));
+        TestAssert.Equal("", InvokeCategoryLabel(lookup, vector, 5));
+    }
+
+    public static void ValueOnlyLabelsSkipCategoryLookup()
+    {
+        // RV14: value-only labels must not touch category points at all.
+        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected text vector type.");
+        object vector = BuildTextVectorWithPoints(vectorType, new ThrowingTextPoints(), null);
+        MethodInfo format = typeof(PptxRenderer).GetMethod("FormatCartesianDataLabel", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected cartesian label formatter.");
+        Type optionsType = typeof(PptxRenderer).GetNestedType("ChartDataLabelOptions", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected label options type.");
+        object options = Activator.CreateInstance(optionsType)!;
+        Type namesType = typeof(PptxRenderer).GetNestedType("ChartSeriesNameRecord", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected series name type.");
+        Array names = Array.CreateInstance(namesType, 0);
+        string label;
+        try
+        {
+            label = (string)format.Invoke(null, [1.5, 0, 0, null, null, null, options, vector, names])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new InvalidOperationException("Value-only labels must not enumerate category points.", ex.InnerException ?? ex);
+        }
+
+        TestAssert.Equal("", label);
+    }
+
+    private static string InvokeCategoryLabel(MethodInfo lookup, object vector, int index)
+    {
+        try
+        {
+            return (string)lookup.Invoke(null, [vector, index])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static object BuildTextVectorWithPoints(Type vectorType, object points, int? pointCount)
+    {
+        ConstructorInfo ctor = vectorType.GetConstructors().Single();
+        object?[] args = ctor.GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
+        args[0] = points;
+        args[1] = pointCount;
+        try
+        {
+            return ctor.Invoke(args) ?? throw new InvalidOperationException("Expected vector instance.");
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private sealed class CountingTextPoints(IReadOnlyList<PptxRenderer.ChartIndexedTextPoint> inner) : IReadOnlyList<PptxRenderer.ChartIndexedTextPoint>
+    {
+        public long Visits;
+
+        public PptxRenderer.ChartIndexedTextPoint this[int index]
+        {
+            get { Visits++; return inner[index]; }
+        }
+
+        public int Count
+        {
+            get { Visits++; return inner.Count; }
+        }
+
+        public IEnumerator<PptxRenderer.ChartIndexedTextPoint> GetEnumerator()
+        {
+            foreach (PptxRenderer.ChartIndexedTextPoint point in inner)
+            {
+                Visits++;
+                yield return point;
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private sealed class ThrowingTextPoints : IReadOnlyList<PptxRenderer.ChartIndexedTextPoint>
+    {
+        public PptxRenderer.ChartIndexedTextPoint this[int index] => throw new InvalidOperationException("Category points must not be enumerated.");
+
+        public int Count => throw new InvalidOperationException("Category points must not be enumerated.");
+
+        public IEnumerator<PptxRenderer.ChartIndexedTextPoint> GetEnumerator() => throw new InvalidOperationException("Category points must not be enumerated.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     private sealed class CannedFontResolver(FontFaceResolution resolution) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
