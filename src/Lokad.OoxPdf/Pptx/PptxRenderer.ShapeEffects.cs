@@ -99,6 +99,8 @@ internal sealed partial class PptxRenderer
         }
 
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
+        // RV10: admit retained bytes at creation like ordinary image producers.
+        OoxConversionBudget.Current?.ChargeRetainedImageBytes(image.RetainedByteCount);
         string name = "Im" + imageIndex++;
         graphics.SaveState();
         graphics.SetAlpha(shadow.Alpha, 1d);
@@ -220,6 +222,8 @@ internal sealed partial class PptxRenderer
         }
 
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
+        // RV10: admit retained bytes at creation like ordinary image producers.
+        OoxConversionBudget.Current?.ChargeRetainedImageBytes(image.RetainedByteCount);
         string name = "Im" + imageIndex++;
         graphics.SaveState();
         graphics.SetAlpha(glow.Alpha, 1d);
