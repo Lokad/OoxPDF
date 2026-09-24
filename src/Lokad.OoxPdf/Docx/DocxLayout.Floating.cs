@@ -82,7 +82,7 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static IReadOnlyList<DocxTextLineLayout> LayoutRelatedStoryParagraphTextLines(
+    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages) LayoutRelatedStoryParagraphTextLines(
         DocxParagraph paragraph,
         double fixedScale,
         int sourceBlockIndex,
@@ -99,7 +99,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count == 0)
         {
-            return [];
+            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>());
         }
 
         double fontSize = GetParagraphFontSize(paragraph);
@@ -114,19 +114,25 @@ internal sealed partial class DocxLayoutEngine
         double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         DocxTextRun firstRun = paragraph.Runs[0];
         DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber).ToArray();
+        double storyBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective));
+        // RV05: ordered inline atoms (related-story path). Affined images in
+        // text-mixed paragraphs attach to wrapped lines at run position.
+        DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, lineHeight);
         var layouts = new List<DocxTextLineLayout>(lines.Length);
+        var placedImages = new List<DocxInlineImageLayout>();
         bool firstLine = true;
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             DocxWrappedTextLine line = lines[lineIndex];
-            double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber);
+            double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
+            double lineAdvance = storyMidLinePlan?.GrownHeights[lineIndex] ?? lineHeight;
             double lineX = effective.Alignment switch
             {
                 DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
                 DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
                 _ => paragraphX
             };
-            double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective));
+            double baselineOffset = storyBaselineOffset;
             DocxParagraphLineShape lineShape = CreateParagraphLineShape(
                 paragraph,
                 line,
@@ -153,7 +159,7 @@ internal sealed partial class DocxLayoutEngine
                 SourceParagraphIndex: sourceParagraphIndex,
                 SourceLineIndex: lineIndex,
                 Story: story,
-                LineHeight: lineHeight,
+                LineHeight: lineAdvance,
                 AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                 IsFirstParagraphLine: firstLine,
                 EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
@@ -169,13 +175,30 @@ internal sealed partial class DocxLayoutEngine
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                 ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                 SourceParagraph: paragraph, EmitsTerminalParagraphMark: false));
+            if (storyMidLinePlan is not null)
+            {
+                foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])
+                {
+                    double beforeWidth = MeasureTextSpansForLayout(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber);
+                    placedImages.Add(new DocxInlineImageLayout(
+                        placed.Image,
+                        lineX + beforeWidth,
+                        cursorY - baselineOffset - placed.Height,
+                        placed.Width,
+                        placed.Height,
+                        PageIndex: 0,
+                        SourceBlockIndex: sourceBlockIndex,
+                        SourceParagraphIndex: sourceParagraphIndex,
+                        Story: null));
+                }
+            }
             firstLine = false;
             paragraphX = continuationTextStartOffset;
             paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
-            cursorY -= lineHeight;
+            cursorY -= lineAdvance;
         }
 
-        return layouts;
+        return (layouts, placedImages);
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> CreateFloatingDrawingLayouts(
