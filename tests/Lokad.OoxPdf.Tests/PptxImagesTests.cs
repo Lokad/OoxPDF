@@ -799,6 +799,50 @@ internal static class PptxImagesTests
         TestAssert.Contains("0.298 0 0.698 rg", pdf);
     }
 
+    // RV07: gradient transforms shift the sampled vector.
+    public static void PptxSyntheticSvgGradientTransformShiftsVector()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="translate(50,0)">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M60 0 H100 V20 H60 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.78 0 0.22 rg", pdf);
+        TestAssert.Contains("0.02 0 0.98 rg", pdf);
+    }
+
+    // RV07: unparseable gradient transforms resolve to no gradient with a diagnostic.
+    public static void PptxSyntheticSvgBadGradientTransformResolvesNoGradient()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="bogus(1)">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M60 0 H100 V20 H60 Z" fill="url(#g)"/>
+              <path d="M0 0 H20 V20 H0 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable gradient g", StringComparison.Ordinal)), "Bad gradient transforms must diagnose.");
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
     public static void PptxSyntheticPngPictureAppliesLuminanceRecolor()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

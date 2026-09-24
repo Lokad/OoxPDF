@@ -425,11 +425,26 @@ internal sealed partial class PptxRenderer
                 .ToArray();
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
             {
-                gradients[id] = new SvgGradient(
+                // RV07: gradientTransform composes onto the raw vector in its own
+                // coordinate system; unparseable transforms leave no gradient so
+                // referencing paths diagnose as unresolvable instead of
+                // misrendering untransformed.
+                if (!TryParseSvgTransformList((string?)gradient.Attribute("gradientTransform"), out SvgTransform gradientTransform))
+                {
+                    continue;
+                }
+
+                (double rawX1, double rawY1) = gradientTransform.Apply(
                     ReadSvgDoubleAttribute(gradient, "x1", 0d),
-                    ReadSvgDoubleAttribute(gradient, "y1", 0d),
+                    ReadSvgDoubleAttribute(gradient, "y1", 0d));
+                (double rawX2, double rawY2) = gradientTransform.Apply(
                     ReadSvgDoubleAttribute(gradient, "x2", 1d),
-                    ReadSvgDoubleAttribute(gradient, "y2", 0d),
+                    ReadSvgDoubleAttribute(gradient, "y2", 0d));
+                gradients[id] = new SvgGradient(
+                    rawX1,
+                    rawY1,
+                    rawX2,
+                    rawY2,
                     stops,
                     string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal),
                     ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
