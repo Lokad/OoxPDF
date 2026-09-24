@@ -764,6 +764,53 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.Contains("retained image byte budget", thrown.Message);
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
     }
+    public static void EffectShadowsRespectRetainedImageBudget()
+    {
+        // RV10: shadow effect rasters retain encoded bytes plus the soft mask.
+        // A zero retained-image budget trips during rendering, before serialization.
+        string input = FindCase("pptx-ladder-12-shadow-diagnostic.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxRetainedImageBytesPerConversion = 0 },
+        }));
+        TestAssert.Contains("retained image byte budget", thrown.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void EffectGlowsRespectRetainedImageBudget()
+    {
+        // RV10: same admission for glow rasters, through a synthetic rect shape
+        // carrying a glow effect (no tracked fixture exists for glow).
+        string input = WriteGlowSlideDeck();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxRetainedImageBytesPerConversion = 0 },
+        }));
+        TestAssert.Contains("retained image byte budget", thrown.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void EffectShadowBudgetFailureKeepsStreamEmpty()
+    {
+        // RV10: pre-write stream failures write nothing (R20 outcome contract).
+        string input = FindCase("pptx-ladder-12-shadow-diagnostic.pptx");
+        using FileStream inputStream = File.OpenRead(input);
+        using var output = new MemoryStream();
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(
+            inputStream,
+            output,
+            new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Pptx,
+                ConversionLimits = new OoxConversionLimits { MaxRetainedImageBytesPerConversion = 0 },
+            }));
+        TestAssert.Equal(0, output.Length);
+    }
+
     public static void RetainedFontBytesTripBeforeSerialization()
     {
         // R06.2: a zero retained-font budget trips at the first subset build.
@@ -1207,6 +1254,46 @@ internal static class OoxResourceGuaranteeTests
         }
 
         return path;
+    }
+
+    private static string WriteGlowSlideDeck()
+    {
+        // RV10: single slide with a rect shape carrying a glow effect, so the
+        // raster glow producer runs without any tracked glow fixture.
+        string presentation = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<p:presentation xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+            + "<p:sldSz cx=\"9144000\" cy=\"6858000\"/>"
+            + "<p:sldIdLst><p:sldId id=\"256\" r:id=\"rId1\"/></p:sldIdLst>"
+            + "</p:presentation>";
+        string presRels = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+            + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"slides/slide1.xml\"/>"
+            + "</Relationships>";
+        string types = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+            + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+            + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+            + "<Override PartName=\"/ppt/presentation.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"/>"
+            + "<Override PartName=\"/ppt/slides/slide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/>"
+            + "</Types>";
+        string slideXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+            + "<p:cSld><p:spTree><p:sp>"
+            + "<p:nvSpPr><p:cNvPr id=\"2\" name=\"Glow\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>"
+            + "<p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"2743200\" cy=\"1371600\"/></a:xfrm>"
+            + "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>"
+            + "<a:effectLst><a:glow rad=\"254000\"><a:srgbClr val=\"FF0000\"><a:alpha val=\"75000\"/></a:srgbClr></a:glow></a:effectLst>"
+            + "</p:spPr>"
+            + "<p:txBody><a:bodyPr/><a:lstStyle/>"
+            + "<a:p><a:r><a:rPr sz=\"1800\"><a:latin typeface=\"Arial\"/>"
+            + "</a:rPr><a:t>Glow</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>";
+        var parts = new Dictionary<string, string>();
+        parts["[Content_Types].xml"] = types;
+        parts["_rels/.rels"] = PptxTests.PackageRelationship();
+        parts["ppt/presentation.xml"] = presentation;
+        parts["ppt/_rels/presentation.xml.rels"] = presRels;
+        parts["ppt/slides/slide1.xml"] = slideXml;
+        return TestFixtures.WriteTempPackage(".pptx", parts);
     }
 
     private static string WritePagedDocxWithTrailingImage(bool imageOnMiddlePage = false)
