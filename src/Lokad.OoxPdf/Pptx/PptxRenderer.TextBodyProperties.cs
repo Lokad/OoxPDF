@@ -65,7 +65,7 @@ internal sealed partial class PptxRenderer
             ParseTextBodyRotationDegrees(rotation),
             rotation,
             rotationSource,
-            ExplicitWrapWidth: null);
+            ExplicitWrapWidth: null) { AutofitMode = ParseTextAutofitMode(autofitMode) };
 
         static PptxTextBodyPropertySource MergeTextBodyPropertySources(
             PptxTextBodyPropertySource first,

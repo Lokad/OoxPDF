@@ -199,6 +199,23 @@ internal sealed partial class PptxRenderer
         };
     }
 
+    private static PptxTextAutofitMode ParseTextAutofitMode(string autofitMode)
+    {
+        // The reader only produces element-driven spellings, so anything else
+        // falls back to Absent rather than inventing a mode.
+        return autofitMode switch
+        {
+            "" => PptxTextAutofitMode.Absent,
+            "noAutofit" => PptxTextAutofitMode.None,
+            "spAutoFit" => PptxTextAutofitMode.Shape,
+            "normAutofit" => PptxTextAutofitMode.Normal,
+            _ when autofitMode.Equals("noAutofit", StringComparison.OrdinalIgnoreCase) => PptxTextAutofitMode.None,
+            _ when autofitMode.Equals("spAutoFit", StringComparison.OrdinalIgnoreCase) => PptxTextAutofitMode.Shape,
+            _ when autofitMode.Equals("normAutofit", StringComparison.OrdinalIgnoreCase) => PptxTextAutofitMode.Normal,
+            _ => PptxTextAutofitMode.Absent
+        };
+    }
+
     private static (double Value, PptxTextBodyPropertySource Source, string? RawValue) ReadInset(
         XElement? bodyProperties,
         XElement? inheritedBodyProperties,

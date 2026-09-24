@@ -528,6 +528,15 @@ internal sealed partial class PptxRenderer
         None
     }
 
+    // RV19: autofit execution branches on this enum; the raw spelling stays on AutofitModeValue.
+    private enum PptxTextAutofitMode
+    {
+        Absent,
+        None,
+        Shape,
+        Normal
+    }
+
     private enum PptxTextVerticalOverflow
     {
         Unknown,

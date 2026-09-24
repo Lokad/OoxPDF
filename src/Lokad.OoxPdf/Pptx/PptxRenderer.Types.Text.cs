@@ -337,7 +337,10 @@ internal sealed partial class PptxRenderer
         double? RotationDegrees,
         string? RotationValue,
         PptxTextBodyPropertySource RotationDegreesSource,
-        double? ExplicitWrapWidth);
+        double? ExplicitWrapWidth)
+    {
+        public PptxTextAutofitMode AutofitMode { get; init; } = PptxTextAutofitMode.Absent;
+    }
 
     internal enum PptxTextBodyPropertySource
     {

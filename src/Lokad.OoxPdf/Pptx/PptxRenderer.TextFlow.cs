@@ -234,18 +234,18 @@ internal sealed partial class PptxRenderer
 
     private static bool HasShapeAutoFit(PptxTextBodyProperties bodyProperties)
     {
-        return bodyProperties.AutofitModeValue == "spAutoFit";
+        return bodyProperties.AutofitMode == PptxTextAutofitMode.Shape;
     }
 
     private static bool HasNoAutoFit(PptxTextBodyProperties bodyProperties)
     {
-        return bodyProperties.AutofitModeValue == "noAutofit";
+        return bodyProperties.AutofitMode == PptxTextAutofitMode.None;
     }
 
     // Office default when bodyPr carries no autofit element (North-clone probes 2026-09-06: absent-autofit content centers by line advances).
     private static bool HasAbsentAutofit(PptxTextBodyProperties bodyProperties)
     {
-        return bodyProperties.AutofitModeValue == string.Empty;
+        return bodyProperties.AutofitMode == PptxTextAutofitMode.Absent;
     }
 
     private static (XElement? Element, string Mode, PptxTextBodyPropertySource Source) ReadTextAutofit(
