@@ -483,12 +483,22 @@ static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] in
         int startGen1 = GC.CollectionCount(1);
         int startGen2 = GC.CollectionCount(2);
         var watch = Stopwatch.StartNew();
-        byte[]? bufferedOutput = outputMode == "file"
-            ? null
-            : ConvertToBuffer(inputBytes, options);
-        if (outputMode == "file")
+        using var peakSampler = new PeakSampler();
+        peakSampler.Start();
+        byte[]? bufferedOutput = null;
+        try
         {
-            ConvertToFile(fileInput!, fileOutput!, options);
+            bufferedOutput = outputMode == "file"
+                ? null
+                : ConvertToBuffer(inputBytes, options);
+            if (outputMode == "file")
+            {
+                ConvertToFile(fileInput!, fileOutput!, options);
+            }
+        }
+        finally
+        {
+            peakSampler.Stop();
         }
 
         watch.Stop();
@@ -516,6 +526,9 @@ static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] in
             gen2Collections = gen2,
             elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
             retainedDeltaBytes,
+            peakManagedHeapBytes = peakSampler.PeakManagedHeapBytes,
+            peakPrivateBytes = peakSampler.PeakPrivateBytes,
+            peakWorkingSetBytes = peakSampler.PeakWorkingSetBytes,
         };
         return (metrics, sha, length, pages);
     }
@@ -605,6 +618,32 @@ static int RunSelfTest()
     catch (Exception ex)
     {
         Console.WriteLine($"FAIL self-test attribution: {ex.GetType().Name}: {ex.Message}");
+        ok = false;
+    }
+
+    // RV22: peak sampler must report positive, ordered high-water marks for a
+    // real conversion (working set and private bytes both contain the heap).
+    try
+    {
+        dynamic peakReport = MeasureInput("self-test-peaks.docx", BuildMinimalDocx(), warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer");
+        dynamic peakWarm = peakReport.warm[0];
+        long peakHeap = peakWarm.peakManagedHeapBytes;
+        long peakPrivate = peakWarm.peakPrivateBytes;
+        long peakWorkingSet = peakWarm.peakWorkingSetBytes;
+        Console.WriteLine("self-test peaks: heap=" + peakHeap + " private=" + peakPrivate + " workingSet=" + peakWorkingSet);
+        if (peakHeap <= 0 || peakPrivate <= 0 || peakWorkingSet <= 0 || peakWorkingSet < peakHeap || peakPrivate < peakHeap)
+        {
+            Console.WriteLine("FAIL self-test peaks: high-water marks must be positive with working set and private bytes above the heap.");
+            ok = false;
+        }
+        else
+        {
+            Console.WriteLine("PASS self-test peaks.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("FAIL self-test peaks: " + ex.GetType().Name + ": " + ex.Message);
         ok = false;
     }
 
@@ -891,5 +930,91 @@ sealed class BreadthResolver : IFontResolver
             }
         }
         return new FontFaceResolution(request.FamilyName, "Breadth0", new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[0], IsFallback: true);
+    }
+}
+
+// RV22: process-peak sampling for single conversions. Calling-thread volume
+// counters cannot observe live peaks, so a background thread records the
+// managed-heap, private-byte, and working-set high-water marks seen while one
+// conversion runs. Samples are approximate (5 ms cadence); the sampler thread
+// allocates outside the calling-thread attribution.
+sealed class PeakSampler : IDisposable
+{
+    private readonly Process samplerProcess = Process.GetCurrentProcess();
+    private readonly Thread samplerThread;
+    private readonly object peakLock = new object();
+    private long peakManagedHeapBytes;
+    private long peakPrivateBytes;
+    private long peakWorkingSetBytes;
+    private volatile bool running;
+
+    public PeakSampler()
+    {
+        samplerThread = new Thread(SampleLoop)
+        {
+            IsBackground = true,
+            Name = "AllocProbe peak sampler",
+        };
+    }
+
+    public long PeakManagedHeapBytes => ReadPeak(ref peakManagedHeapBytes);
+
+    public long PeakPrivateBytes => ReadPeak(ref peakPrivateBytes);
+
+    public long PeakWorkingSetBytes => ReadPeak(ref peakWorkingSetBytes);
+
+    public void Start()
+    {
+        running = true;
+        samplerThread.Start();
+    }
+
+    public void Stop()
+    {
+        running = false;
+        samplerThread.Join();
+    }
+
+    public void Dispose()
+    {
+        running = false;
+        if (samplerThread.IsAlive)
+        {
+            samplerThread.Join();
+        }
+
+        samplerProcess.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private long ReadPeak(ref long field)
+    {
+        lock (peakLock)
+        {
+            return field;
+        }
+    }
+
+    private void RecordPeak(ref long field, long value)
+    {
+        lock (peakLock)
+        {
+            if (value > field)
+            {
+                field = value;
+            }
+        }
+    }
+
+    private void SampleLoop()
+    {
+        while (running)
+        {
+            RecordPeak(ref peakManagedHeapBytes, GC.GetTotalMemory(forceFullCollection: false));
+            samplerProcess.Refresh();
+            RecordPeak(ref peakPrivateBytes, samplerProcess.PrivateMemorySize64);
+            RecordPeak(ref peakWorkingSetBytes, samplerProcess.WorkingSet64);
+            Thread.Sleep(5);
+        }
     }
 }
