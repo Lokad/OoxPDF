@@ -453,6 +453,100 @@ internal static class FontTests
         return embedded.FontProgramBytes.ToArray();
     }
 
+    // RV17: varied subsets of one font must share the immutable source
+    // bytes instead of copying the full program per subset, while every
+    // subset stays a reloadable, distinct program.
+    public static void VariedSubsetsShareFontSourceBytes()
+    {
+        byte[] fontProgram = PadFontWithIgnoredTable(TestFontBuilder.CreateTestFont(), 2 * 1024 * 1024);
+        OpenTypeFont font = OpenTypeFont.Load(fontProgram);
+        long fontBytes = fontProgram.Length;
+        var sets = new List<int[]>();
+        for (int k = 0; k < 8; k++)
+        {
+            var set = new List<int>();
+            for (int c = 0; c < 10; c++)
+            {
+                set.Add(0x20 + k * 10 + c);
+            }
+
+            sets.Add(set.ToArray());
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        var embedded = new List<PdfEmbeddedFont>();
+        foreach (int[] set in sets)
+        {
+            embedded.Add(PdfEmbeddedFont.Create(font, set, CancellationToken.None));
+        }
+
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        GC.KeepAlive(embedded);
+        TestAssert.True(allocated <= 4L * fontBytes, string.Format("Eight varied subsets must share source bytes, allocated {0} bytes for a {1}-byte font.", allocated, fontBytes));
+        foreach (PdfEmbeddedFont item in embedded)
+        {
+            TestAssert.True(item.FontProgramBytes.Length > 0, "Subset program must be non-empty.");
+            OpenTypeFont reloaded = OpenTypeFont.Load(item.FontProgramBytes.ToArray());
+            TestAssert.True(reloaded.GlyphCount > 0, "Subset program must reload.");
+        }
+
+        TestAssert.Equal(embedded.Select(item => item.ResourceKey).Distinct().Count(), embedded.Count);
+    }
+
+    // RV17: append a large ignored table (dropped by the subsetter) so copy
+    // elimination is measurable: the source grows without growing subsets.
+    private static byte[] PadFontWithIgnoredTable(byte[] font, int payloadBytes)
+    {
+        int tableCount = (font[4] << 8) | font[5];
+        int oldDataStart = 12 + tableCount * 16;
+        int dataEnd = oldDataStart;
+        for (int i = 0; i < tableCount; i++)
+        {
+            int record = 12 + i * 16;
+            int offset = (font[record + 8] << 24) | (font[record + 9] << 16) | (font[record + 10] << 8) | font[record + 11];
+            int length = (font[record + 12] << 24) | (font[record + 13] << 16) | (font[record + 14] << 8) | font[record + 15];
+            dataEnd = Math.Max(dataEnd, offset + length);
+        }
+
+        int newDataStart = 12 + (tableCount + 1) * 16;
+        int shift = newDataStart - oldDataStart;
+        int payloadOffset = newDataStart + (dataEnd - oldDataStart);
+        byte[] padded = new byte[payloadOffset + payloadBytes];
+        Buffer.BlockCopy(font, 0, padded, 0, 12);
+        padded[4] = (byte)((tableCount + 1 >> 8) & 0xFF);
+        padded[5] = (byte)((tableCount + 1) & 0xFF);
+        for (int i = 0; i < tableCount; i++)
+        {
+            int record = 12 + i * 16;
+            Buffer.BlockCopy(font, record, padded, record, 8);
+            int offset = ((font[record + 8] << 24) | (font[record + 9] << 16) | (font[record + 10] << 8) | font[record + 11]) + shift;
+            padded[record + 8] = (byte)((offset >> 24) & 0xFF);
+            padded[record + 9] = (byte)((offset >> 16) & 0xFF);
+            padded[record + 10] = (byte)((offset >> 8) & 0xFF);
+            padded[record + 11] = (byte)(offset & 0xFF);
+            Buffer.BlockCopy(font, record + 12, padded, record + 12, 4);
+        }
+
+        int newRecord = 12 + tableCount * 16;
+        for (int i = 0; i < 4; i++)
+        {
+            padded[newRecord + i] = 0x5A;
+        }
+        padded[newRecord + 8] = (byte)((payloadOffset >> 24) & 0xFF);
+        padded[newRecord + 9] = (byte)((payloadOffset >> 16) & 0xFF);
+        padded[newRecord + 10] = (byte)((payloadOffset >> 8) & 0xFF);
+        padded[newRecord + 11] = (byte)(payloadOffset & 0xFF);
+        padded[newRecord + 12] = (byte)((payloadBytes >> 24) & 0xFF);
+        padded[newRecord + 13] = (byte)((payloadBytes >> 16) & 0xFF);
+        padded[newRecord + 14] = (byte)((payloadBytes >> 8) & 0xFF);
+        padded[newRecord + 15] = (byte)(payloadBytes & 0xFF);
+        Buffer.BlockCopy(font, oldDataStart, padded, newDataStart, dataEnd - oldDataStart);
+        return padded;
+    }
+
     private static OpenTypeFont LoadSubsetFont(int[] codePoints)
     {
         return OpenTypeFont.Load(CreateSubsetFontBytes(codePoints));
