@@ -104,10 +104,11 @@ internal sealed partial class DocxRenderer
         List<PdfImageResource> pageImages,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
+        Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        PdfImageXObject? xObject = CreateImage(image.Image, diagnosticSink, image.PageIndex, cancellationToken);
+        PdfImageXObject? xObject = CreateImage(image.Image, imageCache, diagnosticSink, image.PageIndex, cancellationToken);
         if (xObject is null)
         {
             return;

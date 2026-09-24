@@ -25,6 +25,7 @@ internal sealed partial class DocxRenderer
         int pageNumber,
         int pageCount,
         CancellationToken cancellationToken,
+        Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex)
     {
         // Office A/B (comment-table and w6-celltuckborders probes, Word-COM rendered):
@@ -75,12 +76,12 @@ internal sealed partial class DocxRenderer
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
-                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image with { X = image.X + geometryXOffset, Y = image.Y - geometryYOffset }, graphics, pageImages, diagnosticSink, cancellationToken, ref imageIndex);
+                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image with { X = image.X + geometryXOffset, Y = image.Y - geometryYOffset }, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex);
                 }
 
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
                 {
-                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, ref imageIndex);
+                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
                 }
 
                 for (int nestedRowIndex = 0; nestedRowIndex < cellLayout.NestedRows.Count; nestedRowIndex++)
@@ -100,7 +101,7 @@ internal sealed partial class DocxRenderer
                         pageNumber,
                         pageCount,
                         cancellationToken,
-                        ref imageIndex);
+                        imageCache, ref imageIndex);
                 }
 
                 graphics.RestoreState();

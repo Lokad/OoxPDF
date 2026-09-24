@@ -795,22 +795,40 @@ internal sealed partial class DocxRenderer
             (byte)Math.Round(source.Blue * sourceWeight + target.Blue * clampedTargetWeight));
     }
 
-    private static PdfImageXObject? CreateImage(DocxInlineImage image, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, CancellationToken cancellationToken)
+    private static PdfImageXObject? CreateImage(DocxInlineImage image, Dictionary<string, PdfImageXObject?> imageCache, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, CancellationToken cancellationToken)
     {
+        // RV17: per-conversion image reuse mirroring the PPTX image cache.
+        // DOCX renders images untransformed, so part plus content type is the
+        // complete decode key; draw-time extents never reach the decoder.
+        // Nameless (synthetic) images skip the cache. Failures cache too, so a
+        // corrupt repeated image diagnoses once instead of decoding per page.
+        string? cacheKey = image.PartName is { } partName ? partName + "\u001f" + image.ContentType : null;
+        if (cacheKey is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
+        {
+            return cached;
+        }
+
         // D02: shared content-image dispatch (unknown types throw with the same
         // message the explicit branch below used to emit); diagnostics stay local.
+        PdfImageXObject? imageResource;
         try
         {
-            PdfImageXObject imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
-            // R06.2: admit retained bytes at creation (DOCX retains per page).
+            imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
+            // R06.2: admit retained bytes at creation (DOCX retains per page); cache hits create nothing.
             OoxConversionBudget.Current?.ChargeRetainedImageBytes(imageResource.RetainedByteCount);
-            return imageResource;
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
             EmitImageDiagnostic(diagnosticSink, image, pageIndex, ex.Message);
-            return null;
+            imageResource = null;
         }
+
+        if (cacheKey is not null)
+        {
+            imageCache.TryAdd(cacheKey, imageResource);
+        }
+
+        return imageResource;
     }
 
     private static void EmitImageDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, DocxInlineImage image, int pageIndex, string reason)

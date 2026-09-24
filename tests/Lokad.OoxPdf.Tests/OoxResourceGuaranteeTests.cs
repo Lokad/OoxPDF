@@ -837,12 +837,16 @@ internal static class OoxResourceGuaranteeTests
     }
     public static void DistinctDocxImagesChargePerProducedPage()
     {
-        // R06.2: DOCX retains per produced page with no cross-page cache, so the
-        // same image on two pages charges exactly twice the single-image deck.
+        // RV17: DOCX charges per unique image resource, not per produced page:
+        // the same image on two pages charges exactly the single-image deck,
+        // while two distinct images charge the sum of their decks.
         long one = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(), OoxPdfInputKind.Docx);
-        long two = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(imageOnMiddlePage: true), OoxPdfInputKind.Docx);
+        long twoSame = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(imageOnMiddlePage: true), OoxPdfInputKind.Docx);
         TestAssert.True(one > 0, "Image document must retain image bytes.");
-        TestAssert.Equal(2 * one, two);
+        TestAssert.Equal(one, twoSame);
+        long oneBlue = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(trailingEmbed: "rIdImage2"), OoxPdfInputKind.Docx);
+        long twoDistinct = RetainedImageBytesOf(WritePagedDocxWithTrailingImage(imageOnMiddlePage: true, distinctMiddleImage: true), OoxPdfInputKind.Docx);
+        TestAssert.Equal(one + oneBlue, twoDistinct);
     }
     public static void RetainedBytesReportedOnFilePath()
     {
@@ -1616,14 +1620,16 @@ internal static class OoxResourceGuaranteeTests
         return TestFixtures.WriteTempPackage(".pptx", parts);
     }
 
-    private static string WritePagedDocxWithTrailingImage(bool imageOnMiddlePage = false)
+    private static string WritePagedDocxWithTrailingImage(bool imageOnMiddlePage = false, bool distinctMiddleImage = false, string trailingEmbed = "rIdImage1")
     {
-        // R06.2: three forced pages with an inline image on the last page (and
-        // optionally the middle page, to pin per-page retention without a cache).
+        // R06.2/RV17: three forced pages with an inline image on the last page
+        // (and optionally the middle page, same or distinct part, to pin
+        // charge-on-new-resource semantics).
+        string middleEmbed = distinctMiddleImage ? "rIdImage2" : "rIdImage1";
         string middleImage = imageOnMiddlePage
             ? "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/>"
                 + "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
-                + "<pic:pic><pic:blipFill><a:blip r:embed=\"rIdImage1\"/></pic:blipFill></pic:pic>"
+                + "<pic:pic><pic:blipFill><a:blip r:embed=\"" + middleEmbed + "\"/></pic:blipFill></pic:pic>"
                 + "</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
             : string.Empty;
         string secondPage = "<w:p><w:r><w:t>second</w:t></w:r><w:r><w:br w:type=\"page\"/></w:r></w:p>" + middleImage;
@@ -1643,6 +1649,7 @@ internal static class OoxResourceGuaranteeTests
             ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
                 + "<Relationship Id=\"rIdImage1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/image1.png\"/>"
+                + "<Relationship Id=\"rIdImage2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/image2.png\"/>"
                 + "</Relationships>"),
             ["word/document.xml"] = TestFixtures.Utf8("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
@@ -1655,11 +1662,12 @@ internal static class OoxResourceGuaranteeTests
                 + secondPage
                 + "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/>"
                 + "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
-                + "<pic:pic><pic:blipFill><a:blip r:embed=\"rIdImage1\"/></pic:blipFill></pic:pic>"
+                + "<pic:pic><pic:blipFill><a:blip r:embed=\"" + trailingEmbed + "\"/></pic:blipFill></pic:pic>"
                 + "</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
                 + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>"
                 + "</w:body></w:document>"),
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, new byte[] { 255, 0, 0, 0, 0, 255 }),
+            ["word/media/image2.png"] = TestFixtures.CreateRgbPng(2, 1, new byte[] { 0, 255, 0, 0, 0, 255 }),
         });
     }
 
@@ -1738,6 +1746,8 @@ internal static class OoxResourceGuaranteeTests
         OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
         TestAssert.Equal(1, ParseCounter(summary.Message, "imagesDecoded="));
         TestAssert.Contains("pdfPages=6", summary.Message);
+        string pdfText = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(output));
+        TestAssert.True(System.Text.RegularExpressions.Regex.Matches(pdfText, @"/Subtype /Image\b").Count >= 1, "Header image must still emit an image object.");
     }
 
     private static string WriteHeaderImageDocx(int pages)
