@@ -592,6 +592,9 @@ internal sealed record DocxRunFonts(
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    // RV05: source run affinity for ordered inline atoms. Images read from a run
+    // carry that run index; -1 means the position was not recorded.
+    public int SourceRunIndex { get; init; } = -1;
 }
 
 // An inline DrawingML textbox (wp:inline plus wps:txbx, no blip): unlike floating

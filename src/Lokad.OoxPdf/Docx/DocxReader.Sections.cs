@@ -145,7 +145,7 @@ internal sealed partial class DocxReader
         XElement run,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision)
+        DocxRevisionInfo? revision, int sourceRunIndex = -1)
     {
         var images = new List<DocxInlineImage>();
         foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
@@ -156,7 +156,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            images.Add(image);
+            images.Add(image with { SourceRunIndex = sourceRunIndex });
         }
 
         foreach (XElement shape in run.Descendants(VmlNamespace + "shape"))
@@ -167,7 +167,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            images.Add(image);
+            images.Add(image with { SourceRunIndex = sourceRunIndex });
         }
 
         return images;

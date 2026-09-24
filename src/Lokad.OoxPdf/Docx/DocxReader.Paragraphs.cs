@@ -292,7 +292,7 @@ internal sealed partial class DocxReader
                 }
 
                 AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision, kind);
-                images.AddRange(ReadInlineImages(firstRun, package, relationships, revision));
+                images.AddRange(ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex));
                 AddFieldReference(
                     kind,
                     DocxFieldSourceKind.Simple,
@@ -390,7 +390,7 @@ internal sealed partial class DocxReader
                     revision,
                     effectiveRevisions,
                     ref currentPageInstructionSeen);
-                images.AddRange(ReadInlineImages(run, package, relationships, revision));
+                images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
                 inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
                 return;
             }
@@ -446,7 +446,7 @@ internal sealed partial class DocxReader
                     runs: runs);
             }
 
-            images.AddRange(ReadInlineImages(run, package, relationships, revision));
+            images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
             inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
         }
 
