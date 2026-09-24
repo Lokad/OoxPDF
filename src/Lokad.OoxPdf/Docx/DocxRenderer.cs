@@ -988,6 +988,10 @@ internal sealed partial class DocxRenderer
 
             IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count);
             string content = graphics.ToString();
+            // RV11: admit the emitted content bytes before yielding, so a small
+            // content budget rejects before the writer encodes or stores the page.
+            // DOCX layout itself stays whole-document; repagination control is a named residual.
+            OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
             yield return new PdfPage(
                 layoutPage.Width,
                 layoutPage.Height,
@@ -999,10 +1003,6 @@ internal sealed partial class DocxRenderer
                 graphics.Patterns,
                 annotations,
                 fontResources.FallbackFontResources);
-            // R06.2: admit the emitted content bytes (pages admit at the top of
-            // each iteration, before emission). DOCX layout itself stays
-            // whole-document; repagination control is a named residual.
-            OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
         }
 
         IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations()

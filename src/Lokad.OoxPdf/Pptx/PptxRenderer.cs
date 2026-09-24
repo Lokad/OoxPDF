@@ -107,10 +107,10 @@ internal sealed partial class PptxRenderer
             string content = graphics.ToString();
             List<PdfImageResource> pageImages = PruneUnreferencedImages(content, orderedImages, context.CancellationToken);
             List<PdfFontResource> pageChartFonts = PruneUnreferencedChartFonts(content, orderedChartFonts, context.CancellationToken);
-            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations, PdfFallbackFont.ToResources(fontResolver.UsedFallbackFaces));
-            // R06.2: admit the emitted content bytes (pages admit at the top of
-            // each iteration, before production).
+            // RV11: admit the emitted content bytes before yielding, so a small
+            // content budget rejects before the writer encodes or stores the page.
             OoxConversionBudget.Current?.ChargePdfContentBytes(content.Length);
+            yield return new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, content, renderedFonts.Resources.Concat(pageChartFonts).ToArray(), pageImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray(), graphics.Patterns.ToArray(), linkAnnotations, PdfFallbackFont.ToResources(fontResolver.UsedFallbackFaces));
         }
     }
 
