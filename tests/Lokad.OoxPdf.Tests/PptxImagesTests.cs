@@ -758,6 +758,47 @@ internal static class PptxImagesTests
         TestAssert.DoesNotContain("86.4 460.8 m", pdf);
     }
 
+    // RV07: repeating gradients wrap strip offsets instead of clamping.
+    public static void PptxSyntheticSvgRepeatSpreadWrapsStripOffsets()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="repeat">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M60 0 H100 V20 H60 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        // 1.3 wraps to 0.30000000000000004 in floating point, hence the trailing 2.
+        TestAssert.Contains("0.698 0 0.302 rg", pdf);
+    }
+
+    // RV07: reflecting gradients mirror strip offsets instead of clamping.
+    public static void PptxSyntheticSvgReflectSpreadMirrorsStripOffsets()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="reflect">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M60 0 H100 V20 H60 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.298 0 0.698 rg", pdf);
+    }
+
     public static void PptxSyntheticPngPictureAppliesLuminanceRecolor()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

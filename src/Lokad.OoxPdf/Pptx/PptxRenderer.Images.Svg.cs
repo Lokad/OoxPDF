@@ -337,7 +337,7 @@ internal sealed partial class PptxRenderer
             vectorMaxY = pathBounds.MinY + gradient.Y2 * pathHeight;
         }
 
-        SvgGradient effective = new SvgGradient(vectorMinX, vectorMinY, vectorMaxX, vectorMaxY, gradient.Stops, gradient.IsUserSpace);
+        SvgGradient effective = new SvgGradient(vectorMinX, vectorMinY, vectorMaxX, vectorMaxY, gradient.Stops, gradient.IsUserSpace, gradient.Spread);
         if (Math.Abs(effective.X2 - effective.X1) >= Math.Abs(effective.Y2 - effective.Y1))
         {
             int stripCount = Math.Clamp((int)Math.Ceiling(pathWidth / 2d), 16, 128);
@@ -431,7 +431,8 @@ internal sealed partial class PptxRenderer
                     ReadSvgDoubleAttribute(gradient, "x2", 1d),
                     ReadSvgDoubleAttribute(gradient, "y2", 0d),
                     stops,
-                    string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal));
+                    string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal),
+                    ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
             }
         }
 
@@ -457,6 +458,17 @@ internal sealed partial class PptxRenderer
         }
 
         return Math.Clamp(double.Parse(trimmed, CultureInfo.InvariantCulture), 0d, 1d);
+    }
+
+    // RV07: reflect and repeat tile the gradient vector; unknown methods pad.
+    private static SvgGradientSpread ReadSvgGradientSpread(string? value)
+    {
+        return value switch
+        {
+            "reflect" => SvgGradientSpread.Reflect,
+            "repeat" => SvgGradientSpread.Repeat,
+            _ => SvgGradientSpread.Pad,
+        };
     }
 
     private static double ReadSvgDoubleAttribute(XElement element, string name, double fallback)
@@ -510,7 +522,23 @@ internal sealed partial class PptxRenderer
         double offset = lengthSquared <= PptxTextMetricRules.TextStateTolerance
             ? 0d
             : ((x - gradient.X1) * dx + (y - gradient.Y1) * dy) / lengthSquared;
-        offset = Math.Clamp(offset, 0d, 1d);
+        offset = gradient.Spread switch
+        {
+            SvgGradientSpread.Repeat => offset - Math.Floor(offset),
+            SvgGradientSpread.Reflect => ReflectSvgGradientOffset(offset),
+            _ => Math.Clamp(offset, 0d, 1d),
+        };
+
+        static double ReflectSvgGradientOffset(double value)
+        {
+            double wrapped = value % 2d;
+            if (wrapped < 0d)
+            {
+                wrapped += 2d;
+            }
+
+            return wrapped > 1d ? 2d - wrapped : wrapped;
+        }
 
         SvgGradientStop previous = gradient.Stops[0];
         foreach (SvgGradientStop next in gradient.Stops.Skip(1))
