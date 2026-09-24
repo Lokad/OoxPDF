@@ -78,6 +78,20 @@ cases; family rows overlap on shared patterns so their totals exceed 339).
 
 Columns are locked / locked-text-ops / approximate / needs-review.
 
+### Approximate-family limitations
+
+Named limitation, intended next improvement, and gate for each approximate family. Counts are the 2026-09-24 validated state.
+
+- pptx-images: SVG vectors stay approximate (strip tessellation with diagnosed fallbacks); next is SVG stroke rendering and reference-pixel gradient and transform cases (need Office references). Gate: family 14/14, pptx-images group, structural color assertions.
+- pptx-charts: Tier-2 behavior stays approximate (trendlines, secondary axes, leader-line labels, percent stacking) with calibrated unstyled-series shading; next is other chart families and styles with held-out Office calibration. Gate: family 60/60, pptx-charts group, structure, color, and label checks plus pixels.
+- pptx-typography: font metrics stay structural approximations with autofit and overflow handling approximate; next is held-out Office calibration for the remaining approximate ports. Gate: family 95/95, pptx-typography group, text operations and line starts plus pixels.
+- pptx-tables: rich table styles stay approximate while mixed-run word wrap is fixed; next is held-out Office calibration for rich-style cells. Gate: pptx-tables group, text operations and line starts plus pixels.
+- pptx-shapes: small preset geometry only with scene-only custom geometry; next is held-out Office calibration for further geometry kinds. Gate: family 33/33, pptx-shapes group, path-operation assertions plus pixels.
+- pptx-composition: master and layout inheritance locks case by case; next is extending locked inheritance coverage. Gate: family gates plus pixels.
+- pptx-effects: raster shadows and glows approximate, other effects unsupported with diagnostics; next is held-out Office calibration for further effects. Gate: family 9/9 plus pixels.
+- docx-layout: Latin greedy wrapping with body-path inline images and approximate columns, notes, and floating wrap; next is table and related-story atom paths with Office calibration. Gate: family 60/60, docx-text groups, words and line starts plus pixels.
+- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text; next is word-compatible Office calibration (references unavailable here). Gate: cached Office gates plus layout snapshots.
+
 ### Lock policy
 
 - New locks require a reviewed agent rating of 4 or 5, tight pixel gates at
