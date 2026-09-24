@@ -226,6 +226,20 @@ internal static class OoxMissingFontTests
         TestAssert.Contains("Anchored", extracted);
         TestAssert.True(diagnostics.Any(d => d.Id == "FONT_NO_USABLE_FACE"), "Balloon fallback must stay diagnosed.");
     }
+
+    // RV06 (RV01 residual): word-compatible balloons keep their word-compatible
+    // strings through the diagnosed fallback instead of substituting default text.
+    public static void MissingFontsPreserveWordCompatibleBalloonText()
+    {
+        string input = WriteCommentBalloonDocx();
+        var resolver = new MapFontResolver([], "Fallback");
+        (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocxWordCompatibleMarkup(input, resolver);
+        string extracted = ExtractWinAnsiText(pdf);
+        TestAssert.Contains("Commented [RV1]", extracted);
+        TestAssert.Contains("Balloon word", extracted);
+        TestAssert.Contains("Anchored", extracted);
+        TestAssert.True(diagnostics.Any(d => d.Id == "FONT_NO_USABLE_FACE"), "Word-compatible fallback must stay diagnosed.");
+    }
     private static string WriteCommentBalloonDocx()
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
@@ -267,6 +281,14 @@ internal static class OoxMissingFontTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, DiagnosticSink = diagnostics.Add, DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup });
+        return (File.ReadAllText(output, Encoding.Latin1), diagnostics);
+    }
+
+    private static (string Pdf, List<OoxPdfDiagnostic> Diagnostics) ConvertDocxWordCompatibleMarkup(string input, IFontResolver resolver)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, DiagnosticSink = diagnostics.Add, DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup, DocxMarkupGeometryMode = OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup });
         return (File.ReadAllText(output, Encoding.Latin1), diagnostics);
     }
 }

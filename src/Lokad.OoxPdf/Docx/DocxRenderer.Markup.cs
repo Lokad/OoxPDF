@@ -1055,10 +1055,27 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        DrawBalloonText(graphics, labelResource, placement.Title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
-        if (!string.IsNullOrWhiteSpace(placement.Body))
+        // RV06 (RV01 residual): without embeddable faces, word-compatible balloons
+        // render their word-compatible strings through the diagnosed fallback so the
+        // no-font output matches the with-fonts word-compatible text.
+        bool fallbackWordCompatibleText = (labelResource is null || bodyResource is null)
+            && ShouldRenderWordCompatibleBalloonText(placement, markupContext);
+        if (fallbackWordCompatibleText)
         {
-            DrawBalloonText(graphics, labelResource, placement.Body, placement.X + 3d, placement.Y + 4d, 5d, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
+            RenderWordCompatibleCommentThreadSeparators(placement, graphics);
+        }
+
+        string title = fallbackWordCompatibleText && !string.IsNullOrWhiteSpace(placement.WordCompatibleTitle)
+            ? placement.WordCompatibleTitle
+            : placement.Title;
+        string body = fallbackWordCompatibleText && !string.IsNullOrWhiteSpace(placement.WordCompatibleBody)
+            ? placement.WordCompatibleBody
+            : placement.Body;
+
+        DrawBalloonText(graphics, labelResource, title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            DrawBalloonText(graphics, labelResource, body, placement.X + 3d, placement.Y + 4d, 5d, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
         }
     }
 
