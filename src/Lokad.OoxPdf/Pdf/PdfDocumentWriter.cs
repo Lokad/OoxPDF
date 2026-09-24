@@ -58,17 +58,16 @@ internal sealed class PdfDocumentWriter
         DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        var (blanked, staging) = ProduceStagedPages(pages, limits, diagnosticSink, cancellationToken);
-        using (staging)
+        using (PdfStagedDocument staged = ProduceStagedPages(pages, limits, diagnosticSink, cancellationToken))
         {
-            return EmitStaged(stream, blanked, staging, cancellationToken, creationDate);
+            return EmitStaged(stream, staged, cancellationToken, creationDate);
         }
     }
 
     // R06.3: drains the producer once (validate, encode, spill, blank) and hands
-    // staging ownership to the caller, so the stream path can snapshot and report
-    // between production and emission. The caller must dispose the staging.
-    public static (IReadOnlyList<PdfPage> Pages, PdfPageContentStaging Staging) ProduceStagedPages(
+    // a staged document (descriptors plus store) to the caller, so the stream path can snapshot and report
+    // between production and emission. The caller must dispose the document.
+    public static PdfStagedDocument ProduceStagedPages(
         IEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -108,7 +107,7 @@ internal sealed class PdfDocumentWriter
                 OoxConversionBudget.Current?.NotePageContentSpilled(staging.SpilledBytes);
             }
 
-            return (blanked, staging);
+            return new PdfStagedDocument(blanked, staging);
         }
         catch
         {
@@ -145,14 +144,20 @@ internal sealed class PdfDocumentWriter
     // R06.3: emits already-produced descriptors with content re-read in order.
     public static long EmitStaged(
         Stream stream,
-        IReadOnlyList<PdfPage> pages,
-        PdfPageContentStaging staging,
+        PdfStagedDocument staged,
         CancellationToken cancellationToken,
         DateTimeOffset? creationDate = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        ArgumentNullException.ThrowIfNull(pages);
-        ArgumentNullException.ThrowIfNull(staging);
+        ArgumentNullException.ThrowIfNull(staged);
+        staged.ThrowIfDisposed();
+        IReadOnlyList<PdfPage> pages = staged.Pages;
+        PdfPageContentStaging staging = staged.Staging;
+        if (staging.Count != pages.Count)
+        {
+            throw new InvalidDataException("Staged page count mismatch.");
+        }
+
         return WriteCore(stream, pages, staging, cancellationToken, creationDate);
     }
 

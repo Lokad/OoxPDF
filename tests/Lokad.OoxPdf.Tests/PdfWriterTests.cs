@@ -1,4 +1,5 @@
 using System.Text;
+using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
@@ -1013,5 +1014,19 @@ internal static class PdfWriterTests
             var content = (System.Text.StringBuilder?)field?.GetValue(graphics);
             return content?.ToString() ?? throw new System.InvalidOperationException("Expected builder content.");
         }
+    }
+
+    // RV19: emitting from a disposed staged document must fail loudly instead of
+    // silently reading the disposed store.
+    public static void DisposedStagedDocumentCannotEmit()
+    {
+        PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(
+            [new PdfPage(612d, 792d, "0 g")],
+            new OoxConversionLimits(),
+            diagnosticSink: null,
+            CancellationToken.None);
+        staged.Dispose();
+        using var stream = new MemoryStream();
+        TestAssert.Throws<ObjectDisposedException>(() => { PdfDocumentWriter.EmitStaged(stream, staged, CancellationToken.None); });
     }
 }

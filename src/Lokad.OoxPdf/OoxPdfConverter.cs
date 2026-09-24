@@ -221,13 +221,12 @@ public static class OoxPdfConverter
             // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
             // observer report still precede serialization, preserving the stream rules;
             // emission follows from staging.
-            var (blanked, staging) = PdfDocumentWriter.ProduceStagedPages(RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken);
-            using (staging)
+            using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken))
             {
                 totals = scope.Budget.Totals;
                 cancellationToken.ThrowIfCancellationRequested();
                 ReportResourceUsage(options, totals, checked((int)scope.Budget.PdfPages));
-                PdfDocumentWriter.EmitStaged(output, blanked, staging, cancellationToken, options.FixedCreationDate);
+                PdfDocumentWriter.EmitStaged(output, staged, cancellationToken, options.FixedCreationDate);
             }
         }
     }
