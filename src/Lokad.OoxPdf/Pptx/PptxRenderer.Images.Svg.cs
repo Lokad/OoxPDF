@@ -89,12 +89,18 @@ internal sealed partial class PptxRenderer
         int unreadablePaths = 0;
         var missingGradients = new SortedSet<string>(StringComparer.Ordinal);
         int unpaintablePaths = 0;
+        int unsupportedTransforms = 0;
         foreach (XElement path in svg.Descendants().Where(element => element.Name.LocalName == "path"))
         {
             cancellationToken.ThrowIfCancellationRequested();
             string? data = (string?)path.Attribute("d");
             if (string.IsNullOrWhiteSpace(data))
             {
+                continue;
+            }
+            if (!TryReadSvgPathTransform(path, out SvgTransform transform))
+            {
+                unsupportedTransforms++;
                 continue;
             }
             char? badCommand = FindFirstUnsupportedSvgPathCommand(data);
@@ -116,9 +122,9 @@ internal sealed partial class PptxRenderer
             }
             if (paint.Gradient is { } gradient)
             {
-                if (TryReadSvgPathBounds(data, out SvgPathBounds pathBounds))
+                if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
-                    RenderSvgGradientPath(graphics, data, gradient, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                    RenderSvgGradientPath(graphics, data, gradient, transform, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                 }
                 else if (badCommand is null)
                 {
@@ -128,7 +134,7 @@ internal sealed partial class PptxRenderer
             else if (paint.Color is { } color)
             {
                 graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-                if (TryAppendSvgPath(graphics, data, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
+                if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                 {
                     graphics.FillCurrentPath();
                 }
@@ -138,7 +144,7 @@ internal sealed partial class PptxRenderer
                 }
             }
         }
-        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, diagnosticSink, slideIndex, partName);
+        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, diagnosticSink, slideIndex, partName);
 
         graphics.RestoreState();
     }
@@ -238,7 +244,7 @@ internal sealed partial class PptxRenderer
     {
         return "MLHVCZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
     }
-    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
     {
         if (diagnosticSink is null)
         {
@@ -259,6 +265,10 @@ internal sealed partial class PptxRenderer
         if (unpaintablePaths > 0)
         {
             EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unpaintablePaths.ToString(CultureInfo.InvariantCulture) + " paths with unparsable paint.");
+        }
+        if (unsupportedTransforms > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unsupportedTransforms.ToString(CultureInfo.InvariantCulture) + " paths with unsupported transforms.");
         }
     }
     private static void EmitSvgWarning(Action<OoxPdfDiagnostic> diagnosticSink, int slideIndex, string? partName, string message)
@@ -284,6 +294,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         string data,
         SvgGradient gradient,
+        SvgTransform transform,
         SvgPathBounds pathBounds,
         double minX,
         double minY,
@@ -294,7 +305,7 @@ internal sealed partial class PptxRenderer
         double scaleY)
     {
         graphics.SaveState();
-        if (!TryAppendSvgPath(graphics, data, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+        if (!TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
         {
             graphics.RestoreState();
             return;
@@ -306,15 +317,27 @@ internal sealed partial class PptxRenderer
         // dominant gradient axis so vertical gradients vary top to bottom.
         double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
         double pathHeight = Math.Max(0.001d, pathBounds.MaxY - pathBounds.MinY);
-        SvgGradient effective = gradient.IsUserSpace
-            ? gradient
-            : gradient with
-            {
-                X1 = pathBounds.MinX + gradient.X1 * pathWidth,
-                Y1 = pathBounds.MinY + gradient.Y1 * pathHeight,
-                X2 = pathBounds.MinX + gradient.X2 * pathWidth,
-                Y2 = pathBounds.MinY + gradient.Y2 * pathHeight,
-            };
+        // User-space endpoints live in the outer coordinate system, so the path
+        // transform applies to them exactly; bounding-box fractions normalize
+        // against the already transformed path bounds.
+        double vectorMinX;
+        double vectorMinY;
+        double vectorMaxX;
+        double vectorMaxY;
+        if (gradient.IsUserSpace)
+        {
+            (vectorMinX, vectorMinY) = transform.Apply(gradient.X1, gradient.Y1);
+            (vectorMaxX, vectorMaxY) = transform.Apply(gradient.X2, gradient.Y2);
+        }
+        else
+        {
+            vectorMinX = pathBounds.MinX + gradient.X1 * pathWidth;
+            vectorMinY = pathBounds.MinY + gradient.Y1 * pathHeight;
+            vectorMaxX = pathBounds.MinX + gradient.X2 * pathWidth;
+            vectorMaxY = pathBounds.MinY + gradient.Y2 * pathHeight;
+        }
+
+        SvgGradient effective = new SvgGradient(vectorMinX, vectorMinY, vectorMaxX, vectorMaxY, gradient.Stops, gradient.IsUserSpace);
         if (Math.Abs(effective.X2 - effective.X1) >= Math.Abs(effective.Y2 - effective.Y1))
         {
             int stripCount = Math.Clamp((int)Math.Ceiling(pathWidth / 2d), 16, 128);
@@ -622,9 +645,10 @@ internal sealed partial class PptxRenderer
         return (commands, true);
     }
 
-    private static bool TryReadSvgPathBounds(string data, out SvgPathBounds bounds)
+    private static bool TryReadSvgPathBounds(string data, SvgTransform transform, out SvgPathBounds bounds)
     {
         (List<SvgPathCommand> commands, bool complete) = ParseSvgPathData(data);
+        commands = TransformSvgCommands(commands, transform);
         bounds = default;
         if (!complete || commands.Count == 0)
         {
@@ -699,9 +723,9 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
-        List<SvgPathCommand> commands = ParseSvgPathData(data).Commands;
+        List<SvgPathCommand> commands = TransformSvgCommands(ParseSvgPathData(data).Commands, transform);
         double currentX = 0d;
         double currentY = 0d;
         double startX = 0d;
@@ -786,4 +810,251 @@ internal sealed partial class PptxRenderer
 
     [GeneratedRegex(@"[MmLlHhVvCcZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?", RegexOptions.CultureInvariant)]
     private static partial Regex SvgPathTokenRegex();
+
+    [GeneratedRegex(@"[A-Za-z]+|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?|[(),]", RegexOptions.CultureInvariant)]
+    private static partial Regex SvgTransformTokenRegex();
+
+    // RV07: affine SVG transform lists shared by bounds and emission. translate,
+    // scale, rotate, skew, and matrix compose left to right; anything else fails
+    // so the path diagnoses instead of drawing untransformed.
+    private readonly record struct SvgTransform(double M11, double M12, double M21, double M22, double OffsetX, double OffsetY)
+    {
+        public static SvgTransform Identity => new SvgTransform(1d, 0d, 0d, 1d, 0d, 0d);
+
+        public bool IsIdentity => M11 == 1d && M12 == 0d && M21 == 0d && M22 == 1d && OffsetX == 0d && OffsetY == 0d;
+
+        public (double X, double Y) Apply(double x, double y) => (M11 * x + M21 * y + OffsetX, M12 * x + M22 * y + OffsetY);
+
+        public static SvgTransform Compose(SvgTransform outer, SvgTransform inner) => new SvgTransform(
+            outer.M11 * inner.M11 + outer.M21 * inner.M12,
+            outer.M12 * inner.M11 + outer.M22 * inner.M12,
+            outer.M11 * inner.M21 + outer.M21 * inner.M22,
+            outer.M12 * inner.M21 + outer.M22 * inner.M22,
+            outer.M11 * inner.OffsetX + outer.M21 * inner.OffsetY + outer.OffsetX,
+            outer.M12 * inner.OffsetX + outer.M22 * inner.OffsetY + outer.OffsetY);
+
+        public static SvgTransform Rotation(double degrees, double centerX, double centerY)
+        {
+            double radians = DegreesToRadians(degrees);
+            double cosine = Math.Cos(radians);
+            double sine = Math.Sin(radians);
+            SvgTransform spin = new SvgTransform(cosine, sine, -sine, cosine, 0d, 0d);
+            SvgTransform toOrigin = new SvgTransform(1d, 0d, 0d, 1d, -centerX, -centerY);
+            SvgTransform back = new SvgTransform(1d, 0d, 0d, 1d, centerX, centerY);
+            return Compose(back, Compose(spin, toOrigin));
+        }
+    }
+
+    private static bool TryParseSvgTransformList(string? text, out SvgTransform transform)
+    {
+        transform = SvgTransform.Identity;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+
+        MatchCollection tokens = SvgTransformTokenRegex().Matches(text);
+        int index = 0;
+        SvgTransform accumulated = SvgTransform.Identity;
+        while (index < tokens.Count)
+        {
+            if (!TryParseSvgTransform(tokens, ref index, out SvgTransform next))
+            {
+                transform = SvgTransform.Identity;
+                return false;
+            }
+
+            accumulated = SvgTransform.Compose(next, accumulated);
+        }
+
+        transform = accumulated;
+        return true;
+    }
+
+    private static bool TryParseSvgTransform(MatchCollection tokens, ref int index, out SvgTransform transform)
+    {
+        transform = SvgTransform.Identity;
+        if (index >= tokens.Count || tokens[index].Value.Length == 0 || !char.IsLetter(tokens[index].Value[0]))
+        {
+            return false;
+        }
+
+        string name = tokens[index].Value;
+        index++;
+        if (index >= tokens.Count || tokens[index].Value != "(")
+        {
+            return false;
+        }
+
+        index++;
+        var args = new List<double>();
+        while (true)
+        {
+            if (index >= tokens.Count)
+            {
+                return false;
+            }
+
+            string token = tokens[index].Value;
+            if (token == ")")
+            {
+                index++;
+                break;
+            }
+
+            if (token == ",")
+            {
+                index++;
+                continue;
+            }
+
+            if (!TryReadSvgNumber(tokens, ref index, out double value))
+            {
+                return false;
+            }
+
+            args.Add(value);
+        }
+
+        double[] values = args.ToArray();
+        switch (name)
+        {
+            case "translate" when values.Length == 1:
+                transform = new SvgTransform(1d, 0d, 0d, 1d, values[0], 0d);
+                return true;
+            case "translate" when values.Length == 2:
+                transform = new SvgTransform(1d, 0d, 0d, 1d, values[0], values[1]);
+                return true;
+            case "scale" when values.Length == 1:
+                transform = new SvgTransform(values[0], 0d, 0d, values[0], 0d, 0d);
+                return true;
+            case "scale" when values.Length == 2:
+                transform = new SvgTransform(values[0], 0d, 0d, values[1], 0d, 0d);
+                return true;
+            case "rotate" when values.Length == 1:
+                transform = SvgTransform.Rotation(values[0], 0d, 0d);
+                return true;
+            case "rotate" when values.Length == 3:
+                transform = SvgTransform.Rotation(values[0], values[1], values[2]);
+                return true;
+            case "skewX" when values.Length == 1:
+                transform = new SvgTransform(1d, 0d, Math.Tan(DegreesToRadians(values[0])), 1d, 0d, 0d);
+                return true;
+            case "skewY" when values.Length == 1:
+                transform = new SvgTransform(1d, Math.Tan(DegreesToRadians(values[0])), 0d, 1d, 0d, 0d);
+                return true;
+            case "matrix" when values.Length == 6:
+                transform = new SvgTransform(values[0], values[1], values[2], values[3], values[4], values[5]);
+                return true;
+            default:
+                transform = SvgTransform.Identity;
+                return false;
+        }
+    }
+
+    // RV07: transformed path commands remapped once for bounds and emission.
+    // H and V normalize to L since transformed axis-aligned segments skew.
+    private static List<SvgPathCommand> TransformSvgCommands(List<SvgPathCommand> commands, SvgTransform transform)
+    {
+        if (transform.IsIdentity)
+        {
+            return commands;
+        }
+
+        var mapped = new List<SvgPathCommand>(commands.Count);
+        double currentX = 0d;
+        double currentY = 0d;
+        double startX = 0d;
+        double startY = 0d;
+        double sourceCurrentX = 0d;
+        double sourceCurrentY = 0d;
+        double sourceStartX = 0d;
+        double sourceStartY = 0d;
+        foreach (SvgPathCommand command in commands)
+        {
+            string kind = command.Kind.ToString();
+            if (kind == "M")
+            {
+                sourceCurrentX = command.Arguments[0];
+                sourceCurrentY = command.Arguments[1];
+                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                startX = currentX;
+                startY = currentY;
+                sourceStartX = sourceCurrentX;
+                sourceStartY = sourceCurrentY;
+                mapped.Add(new SvgPathCommand(
+                    command.Kind, new double[] { currentX, currentY }));
+            }
+            else if (kind == "L")
+            {
+                sourceCurrentX = command.Arguments[0];
+                sourceCurrentY = command.Arguments[1];
+                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand(
+                    command.Kind, new double[] { currentX, currentY }));
+            }
+            else if (kind == "H")
+            {
+                sourceCurrentX = command.Arguments[0];
+                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand(
+                    "L"[0], new double[] { currentX, currentY }));
+            }
+            else if (kind == "V")
+            {
+                sourceCurrentY = command.Arguments[0];
+                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand(
+                    "L"[0], new double[] { currentX, currentY }));
+            }
+            else if (kind == "C")
+            {
+                (double X0, double Y0) = transform.Apply(command.Arguments[0], command.Arguments[1]);
+                (double X1, double Y1) = transform.Apply(command.Arguments[2], command.Arguments[3]);
+                sourceCurrentX = command.Arguments[4];
+                sourceCurrentY = command.Arguments[5];
+                (currentX, currentY) = transform.Apply(sourceCurrentX, sourceCurrentY);
+                mapped.Add(new SvgPathCommand(
+                    command.Kind, new double[] { X0, Y0, X1, Y1, currentX, currentY }));
+            }
+            else if (kind == "Z")
+            {
+                currentX = startX;
+                currentY = startY;
+                sourceCurrentX = sourceStartX;
+                sourceCurrentY = sourceStartY;
+                mapped.Add(command);
+            }
+            else
+            {
+                mapped.Add(command);
+            }
+        }
+
+        return mapped;
+    }
+
+    private static bool TryReadSvgPathTransform(XElement path, out SvgTransform transform)
+    {
+        transform = SvgTransform.Identity;
+        foreach (XElement ancestor in path.Ancestors().Where(element => element.Name.LocalName == "g").Reverse())
+        {
+            if (!TryParseSvgTransformList((string?)ancestor.Attribute("transform"), out SvgTransform ancestorTransform))
+            {
+                transform = SvgTransform.Identity;
+                return false;
+            }
+
+            transform = SvgTransform.Compose(ancestorTransform, transform);
+        }
+
+        if (!TryParseSvgTransformList((string?)path.Attribute("transform"), out SvgTransform local))
+        {
+            transform = SvgTransform.Identity;
+            return false;
+        }
+
+        transform = SvgTransform.Compose(local, transform);
+        return true;
+    }
 }

@@ -670,6 +670,94 @@ internal static class PptxImagesTests
         TestAssert.Contains("0.255 0 0.745 rg", pdf);
     }
 
+    // RV07: path transforms shift emitted coordinates.
+    public static void PptxSyntheticSvgTranslateShiftsPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V100 H0 Z" fill="#FF0000" transform="translate(10,20)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("86.4 453.6 m", pdf);
+        TestAssert.Contains("230.4 453.6 l", pdf);
+    }
+
+    // RV07: path scale transforms scale emitted coordinates.
+    public static void PptxSyntheticSvgScaleScalesPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V100 H0 Z" fill="#FF0000" transform="scale(2)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 468 m", pdf);
+        TestAssert.Contains("360 468 l", pdf);
+    }
+
+    // RV07: path rotation rotates emitted coordinates.
+    public static void PptxSyntheticSvgRotateTurnsPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V100 H0 Z" fill="#FF0000" transform="rotate(90)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 468 m", pdf);
+        TestAssert.Contains("72 396 l", pdf);
+        TestAssert.Contains("-72 396 l", pdf);
+    }
+
+    // RV07: ancestor group transforms apply to nested paths.
+    public static void PptxSyntheticSvgGroupTransformShiftsNestedPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <g transform="translate(0,20)"><path d="M0 0 H100 V100 H0 Z" fill="#FF0000"/></g>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 453.6 m", pdf);
+    }
+
+    // RV07: unsupported transforms skip the path with a diagnostic while siblings render.
+    public static void PptxSyntheticSvgUnsupportedTransformSkipsPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V100 H0 Z" fill="#FF0000"/>
+              <path d="M10 10 H20 V20 H10 Z" fill="#FF0000" transform="bogus(1)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unsupported transforms", StringComparison.Ordinal)), "Unsupported transforms must diagnose.");
+        TestAssert.Contains("72 468 m", pdf);
+        TestAssert.DoesNotContain("86.4 460.8 m", pdf);
+    }
+
     public static void PptxSyntheticPngPictureAppliesLuminanceRecolor()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
