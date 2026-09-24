@@ -24,6 +24,7 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
     Console.WriteLine("  --output-mode file writes converter output to a temp file (no output buffering attributed).");
     Console.WriteLine("  --isolate measures each input in a fresh child process (independent cold, per-input process peaks).");
     Console.WriteLine("  Allocation scope is the calling thread; see report/allocationScope.");
+    Console.WriteLine("  --concurrency <n> runs n conversions of each input in parallel with batch peaks.");
     return 2;
 }
 
@@ -66,6 +67,17 @@ if (reportPath is null || inputs.Length == 0 || warmup < 0 || iterations < 1)
 if (isolate)
 {
     return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode, residentWindowBytes);
+}
+
+if (ReadOption("--concurrency") is string concurrencySpec)
+{
+    if (!int.TryParse(concurrencySpec, out int concurrency) || concurrency < 1)
+    {
+        Console.Error.WriteLine("Invalid --concurrency: expected a positive integer.");
+        return 2;
+    }
+
+    return RunConcurrency(reportPath, inputs, outputMode, residentWindowBytes, concurrency);
 }
 
 var reports = new List<object>();
@@ -250,7 +262,7 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
 bool IsOptionValue(string arg)
 {
     int index = Array.IndexOf(args, arg);
-    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode" || args[index - 1] == "--resident-window");
+    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode" || args[index - 1] == "--resident-window" || args[index - 1] == "--concurrency");
 }
 
 string? ReadOption(string name)
@@ -647,6 +659,33 @@ static int RunSelfTest()
         ok = false;
     }
 
+    // RV22: concurrent conversions of one document must agree byte-for-byte
+    // with positive batch peaks.
+    try
+    {
+        dynamic concurrent = MeasureConcurrencyInput("self-test-concurrency.docx", BuildMinimalDocx(), "buffer", 67108864L, 2);
+        bool concurrentStable = concurrent.outputsStable;
+        int concurrentPages = concurrent.pageCount;
+        long batchHeap = concurrent.batchPeakManagedHeapBytes;
+        long batchPrivate = concurrent.batchPeakPrivateBytes;
+        long batchWorkingSet = concurrent.batchPeakWorkingSetBytes;
+        Console.WriteLine("self-test concurrency: stable=" + concurrentStable + " pages=" + concurrentPages + " heap=" + batchHeap + " private=" + batchPrivate + " workingSet=" + batchWorkingSet);
+        if (!concurrentStable || concurrentPages < 1 || batchHeap <= 0 || batchPrivate <= 0 || batchWorkingSet <= 0)
+        {
+            Console.WriteLine("FAIL self-test concurrency: parallel conversions must agree with positive batch peaks.");
+            ok = false;
+        }
+        else
+        {
+            Console.WriteLine("PASS self-test concurrency.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("FAIL self-test concurrency: " + ex.GetType().Name + ": " + ex.Message);
+        ok = false;
+    }
+
     return ok ? 0 : 1;
 }
 
@@ -911,26 +950,127 @@ static byte[] BuildBreadthDocx(int breadth)
     });
 }
 
-// One file-backed program source per breadth family: distinct StableIds
-// force distinct font loads, so breadth N converts through N parsed fonts.
-sealed class BreadthResolver : IFontResolver
+// RV22: bounded-concurrency measurement. One sequential warmup validates the
+// input and warms caches, then N conversions run concurrently on thread-pool
+// threads with independent options and scopes; a batch sampler records process
+// peaks over the whole batch while per-task walls expose overlap efficiency.
+static int RunConcurrency(string reportPath, string[] inputs, string outputMode, long residentWindowBytes, int concurrency)
 {
-    private readonly IFontProgramSource[] sources;
-    public BreadthResolver(IReadOnlyList<string> paths)
+    var reports = new List<object>();
+    foreach (string input in inputs)
     {
-        sources = paths.Select(path => (IFontProgramSource)new FileFontProgramSource(path)).ToArray();
-    }
-    public FontFaceResolution Resolve(FontRequest request)
-    {
-        for (int i = 0; i < sources.Length; i++)
+        byte[] inputBytes;
+        try
         {
-            if (request.FamilyName.Equals("Breadth" + i, StringComparison.OrdinalIgnoreCase))
-            {
-                return new FontFaceResolution(request.FamilyName, "Breadth" + i, new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[i], IsFallback: false);
-            }
+            inputBytes = File.ReadAllBytes(input);
         }
-        return new FontFaceResolution(request.FamilyName, "Breadth0", new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[0], IsFallback: true);
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Cannot read input: " + ex.Message);
+            return 1;
+        }
+
+        try
+        {
+            reports.Add(MeasureConcurrencyInput(Path.GetFileName(input), inputBytes, outputMode, residentWindowBytes, concurrency));
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Concurrent conversion failed for " + input + ": " + ex.Message);
+            return 1;
+        }
     }
+
+    object report = BuildReport(reports, outputMode, isolation: "concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + " parallel in-process conversions sharing static caches; batch peaks cover the whole batch");
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
+    File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine("Wrote " + reportPath + " (" + reports.Count + " inputs, concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + ").");
+    return 0;
+}
+static object MeasureConcurrencyInput(string name, byte[] inputBytes, string outputMode, long residentWindowBytes, int concurrency)
+{
+    string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
+        : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
+    string extension = kind == "docx" ? ".docx" : ".pptx";
+    OoxPdfOptions FreshOptions()
+    {
+        return new OoxPdfOptions
+        {
+            InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
+            ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = residentWindowBytes },
+        };
+    }
+
+    ConvertOnce(inputBytes, FreshOptions(), extension, outputMode);
+
+    using var batchPeaks = new PeakSampler();
+    batchPeaks.Start();
+    var batchWatch = Stopwatch.StartNew();
+    Task<(string Sha, int Length, int Pages, double Milliseconds)>[] tasks = Enumerable.Range(0, concurrency).Select(_ => Task.Run(() =>
+    {
+        var taskWatch = Stopwatch.StartNew();
+        (string sha, int length, int pages) = ConvertOnce(inputBytes, FreshOptions(), extension, outputMode);
+        taskWatch.Stop();
+        return (sha, length, pages, taskWatch.Elapsed.TotalMilliseconds);
+    })).ToArray();
+
+    try
+    {
+        Task.WaitAll(tasks);
+    }
+    finally
+    {
+        batchPeaks.Stop();
+    }
+
+    batchWatch.Stop();
+    var results = tasks.Select(task => task.Result).ToArray();
+    bool stable = results.Select(result => result.Sha).Distinct(StringComparer.Ordinal).Count() == 1;
+    if (!stable)
+    {
+        Console.Error.WriteLine("WARNING: concurrent conversions of " + name + " produced distinct outputs.");
+    }
+
+    return new
+    {
+        name,
+        kind,
+        inputBytes = inputBytes.Length,
+        concurrency,
+        outputsStable = stable,
+        outputBytes = results[0].Length,
+        outputSha256 = results[0].Sha,
+        pageCount = results[0].Pages,
+        elapsedMilliseconds = batchWatch.Elapsed.TotalMilliseconds,
+        batchPeakManagedHeapBytes = batchPeaks.PeakManagedHeapBytes,
+        batchPeakPrivateBytes = batchPeaks.PeakPrivateBytes,
+        batchPeakWorkingSetBytes = batchPeaks.PeakWorkingSetBytes,
+        tasks = results.Select(result => new { outputBytes = result.Length, pageCount = result.Pages, elapsedMilliseconds = result.Milliseconds }).ToArray(),
+    };
+}
+static (string Sha, int Length, int Pages) ConvertOnce(byte[] inputBytes, OoxPdfOptions options, string inputExtension, string outputMode)
+{
+    if (outputMode == "file")
+    {
+        string stageDirectory = Path.Combine(Path.GetTempPath(), "allocprobe-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(stageDirectory);
+        try
+        {
+            string fileInput = Path.Combine(stageDirectory, "input" + inputExtension);
+            string fileOutput = Path.Combine(stageDirectory, "output.pdf");
+            File.WriteAllBytes(fileInput, inputBytes);
+            ConvertToFile(fileInput, fileOutput, options);
+            byte[] outputBytes = File.ReadAllBytes(fileOutput);
+            return (Convert.ToHexString(SHA256.HashData(outputBytes)).ToLowerInvariant(), outputBytes.Length, ReadPageCount(outputBytes));
+        }
+        finally
+        {
+            try { Directory.Delete(stageDirectory, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    byte[] buffered = ConvertToBuffer(inputBytes, options);
+    return (Convert.ToHexString(SHA256.HashData(buffered)).ToLowerInvariant(), buffered.Length, ReadPageCount(buffered));
 }
 
 // RV22: process-peak sampling for single conversions. Calling-thread volume
@@ -1016,5 +1156,27 @@ sealed class PeakSampler : IDisposable
             RecordPeak(ref peakWorkingSetBytes, samplerProcess.WorkingSet64);
             Thread.Sleep(5);
         }
+    }
+}
+
+// One file-backed program source per breadth family: distinct StableIds
+// force distinct font loads, so breadth N converts through N parsed fonts.
+sealed class BreadthResolver : IFontResolver
+{
+    private readonly IFontProgramSource[] sources;
+    public BreadthResolver(IReadOnlyList<string> paths)
+    {
+        sources = paths.Select(path => (IFontProgramSource)new FileFontProgramSource(path)).ToArray();
+    }
+    public FontFaceResolution Resolve(FontRequest request)
+    {
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (request.FamilyName.Equals("Breadth" + i, StringComparison.OrdinalIgnoreCase))
+            {
+                return new FontFaceResolution(request.FamilyName, "Breadth" + i, new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[i], IsFallback: false);
+            }
+        }
+        return new FontFaceResolution(request.FamilyName, "Breadth0", new FontStyleKey(Bold: false, Italic: false, WeightClass: 400, FaceIndex: 0, HasMathTable: false), sources[0], IsFallback: true);
     }
 }
