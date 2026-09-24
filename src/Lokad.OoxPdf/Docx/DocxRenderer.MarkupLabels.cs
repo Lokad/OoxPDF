@@ -166,21 +166,7 @@ internal sealed partial class DocxRenderer
 
     private static void DrawBalloonText(
         PdfGraphicsBuilder graphics,
-        DocxRunFontResource resource,
-        string text,
-        double x,
-        double baselineY,
-        double fontSize,
-        byte red,
-        byte green,
-        byte blue)
-    {
-        DrawBalloonText(graphics, resource, text, x, baselineY, fontSize, red, green, blue, positioningCharacterSpacing: 0d);
-    }
-
-    private static void DrawBalloonText(
-        PdfGraphicsBuilder graphics,
-        DocxRunFontResource resource,
+        DocxRunFontResource? resource,
         string text,
         double x,
         double baselineY,
@@ -188,8 +174,35 @@ internal sealed partial class DocxRenderer
         byte red,
         byte green,
         byte blue,
-        double positioningCharacterSpacing)
+        PdfFallbackFontResource? fallback = null)
     {
+        DrawBalloonText(graphics, resource, text, x, baselineY, fontSize, red, green, blue, positioningCharacterSpacing: 0d, fallback);
+    }
+
+    private static void DrawBalloonText(
+        PdfGraphicsBuilder graphics,
+        DocxRunFontResource? resource,
+        string text,
+        double x,
+        double baselineY,
+        double fontSize,
+        byte red,
+        byte green,
+        byte blue,
+        double positioningCharacterSpacing,
+        PdfFallbackFontResource? fallback = null)
+    {
+        if (resource is null)
+        {
+            // RV06 (RV01 residual): balloon text without any embeddable face renders
+            // with the diagnosed standard-14 fallback instead of vanishing.
+            if (fallback is not null && text.Length != 0)
+            {
+                DrawFallbackRunGlyphText(graphics, fallback, text, x, baselineY, new RgbColor(red, green, blue), fontSize, positioningCharacterSpacing);
+            }
+
+            return;
+        }
         if (Math.Abs(positioningCharacterSpacing) > 0.001d)
         {
             string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(

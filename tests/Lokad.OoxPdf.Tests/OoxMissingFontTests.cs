@@ -210,4 +210,63 @@ internal static class OoxMissingFontTests
             return new FontFaceResolution(request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic, 400, 0, false), new MemoryFontProgramSource("test:fixed", bytes), true);
         }
     }
+    
+    // RV06 (RV01 residual): comment balloon text with an empty font source keeps
+    // extractable balloon words with a diagnosed fallback.
+    public static void MissingFontsPreserveMarkupBalloonText()
+    {
+        string input = WriteCommentBalloonDocx();
+        var resolver = new MapFontResolver([], "Fallback");
+        (string pdf, List<OoxPdfDiagnostic> diagnostics) = ConvertDocxMarkup(input, resolver);
+        string extracted = ExtractWinAnsiText(pdf);
+        // Balloon bodies trim to margin-derived length with or without fonts
+        // (TrimBalloonText), so the fallback preserves the trimmed body text.
+        TestAssert.Contains("Balloon word", extracted);
+        TestAssert.Contains("Reviewer", extracted);
+        TestAssert.Contains("Anchored", extracted);
+        TestAssert.True(diagnostics.Any(d => d.Id == "FONT_NO_USABLE_FACE"), "Balloon fallback must stay diagnosed.");
+    }
+    private static string WriteCommentBalloonDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+                + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+                + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+                + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+                + "<Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>"
+                + "</Types>"),
+            ["_rels/.rels"] = TestFixtures.Utf8(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>"
+                + "</Relationships>"),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + "<Relationship Id=\"rIdComments\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/>"
+                + "</Relationships>"),
+            ["word/document.xml"] = TestFixtures.Utf8(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                + "<w:body><w:p><w:commentRangeStart w:id=\"1\"/><w:r><w:t>Anchored</w:t></w:r><w:commentRangeEnd w:id=\"1\"/><w:r><w:commentReference w:id=\"1\"/></w:r></w:p>"
+                + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr>"
+                + "</w:body></w:document>"),
+            ["word/comments.xml"] = TestFixtures.Utf8(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                + "<w:comment w:id=\"1\" w:author=\"Reviewer\" w:initials=\"RV\" w:date=\"2026-06-01T00:00:00Z\">"
+                + "<w:p><w:r><w:t>Balloon words here</w:t></w:r></w:p>"
+                + "</w:comment></w:comments>"),
+        });
+    }
+    private static (string Pdf, List<OoxPdfDiagnostic> Diagnostics) ConvertDocxMarkup(string input, IFontResolver resolver)
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, DiagnosticSink = diagnostics.Add, DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup });
+        return (File.ReadAllText(output, Encoding.Latin1), diagnostics);
+    }
 }

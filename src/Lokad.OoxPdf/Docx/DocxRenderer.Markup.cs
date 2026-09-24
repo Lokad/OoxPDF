@@ -142,16 +142,21 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         DocxRunFontResource? labelResource = balloonTextResource ?? ResolveMarkupLabelFontResource(fontResources);
-        if (labelResource is null)
+        DocxRunFontResource? bodyResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
+        // RV06 (RV01 residual): without any embeddable face, balloons render with the
+        // diagnosed standard-14 fallback instead of vanishing.
+        PdfFallbackFontResource? fallbackFace = labelResource is null || bodyResource is null
+            ? fontResources.FallbackFaces.Values.OrderBy(face => face.ResourceName, StringComparer.Ordinal).FirstOrDefault()
+            : null;
+        if (labelResource is null && bodyResource is null && fallbackFace is null)
         {
             return;
         }
 
-        DocxRunFontResource bodyResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
-        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, labelResource.Embedded, bodyResource.Embedded))
+        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, labelResource?.Embedded, bodyResource?.Embedded))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderMarkupBalloonPlacement(placement, graphics, labelResource, bodyResource, markupContext);
+            RenderMarkupBalloonPlacement(placement, graphics, labelResource, bodyResource, fallbackFace, markupContext);
         }
     }
 
@@ -1027,8 +1032,9 @@ internal sealed partial class DocxRenderer
     private static void RenderMarkupBalloonPlacement(
         DocxMarkupBalloonPlacement placement,
         PdfGraphicsBuilder graphics,
-        DocxRunFontResource labelResource,
-        DocxRunFontResource bodyResource,
+        DocxRunFontResource? labelResource,
+        DocxRunFontResource? bodyResource,
+        PdfFallbackFontResource? fallbackFace,
         DocxMarkupContext markupContext)
     {
         DocxMarkupBalloonRgb fillRgb = ResolveMarkupBalloonBodyFillRgb(placement, markupContext);
@@ -1042,17 +1048,17 @@ internal sealed partial class DocxRenderer
             RenderMarkupBalloonConnector(placement, graphics, markupContext);
         }
 
-        if (ShouldRenderWordCompatibleBalloonText(placement, markupContext))
+        if (labelResource is not null && bodyResource is not null && ShouldRenderWordCompatibleBalloonText(placement, markupContext))
         {
             RenderWordCompatibleCommentThreadSeparators(placement, graphics);
             RenderWordCompatibleBalloonText(placement, graphics, labelResource, bodyResource, markupContext.WordCompatiblePrintScale);
             return;
         }
 
-        DrawBalloonText(graphics, labelResource, placement.Title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue);
+        DrawBalloonText(graphics, labelResource, placement.Title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
         if (!string.IsNullOrWhiteSpace(placement.Body))
         {
-            DrawBalloonText(graphics, labelResource, placement.Body, placement.X + 3d, placement.Y + 4d, 5d, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            DrawBalloonText(graphics, labelResource, placement.Body, placement.X + 3d, placement.Y + 4d, 5d, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
         }
     }
 
