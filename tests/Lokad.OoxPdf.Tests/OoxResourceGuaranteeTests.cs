@@ -906,6 +906,51 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.Contains("probe-mid-write-boom", thrown.Message);
         TestAssert.True(inner.Length <= 100, "Only the allowed prefix may exist.");
     }
+    public static void PdfContentBudgetTripsBeforeSpillingDocx()
+    {
+        // RV11: per-page content admission lands before the page is handed to
+        // the writer, so a zero content cap throws before any spill or encoding.
+        string input = FindCase("docx-basic-paragraphs.docx");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+            ConversionLimits = new OoxConversionLimits
+            {
+                MaxPdfContentBytesPerConversion = 0,
+                MaxResidentPageContentBytesPerConversion = 0,
+            },
+        }));
+        TestAssert.Contains("content byte budget", thrown.Message);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PDF_PAGE_CONTENT_SPILLED"), "Content admission must trip before spill work.");
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
+    public static void PdfContentBudgetTripsBeforeSpillingPptx()
+    {
+        // RV11: same ordering on the PPTX path.
+        string input = FindCase("pptx-ladder-02-plain-text.pptx");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Pptx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+            ConversionLimits = new OoxConversionLimits
+            {
+                MaxPdfContentBytesPerConversion = 0,
+                MaxResidentPageContentBytesPerConversion = 0,
+            },
+        }));
+        TestAssert.Contains("content byte budget", thrown.Message);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PDF_PAGE_CONTENT_SPILLED"), "Content admission must trip before spill work.");
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+    }
+
     public static void TinyWindowMatchesDefaultBytesOnFileAndStream()
     {
         // R06.3: forced file escalation must emit byte-identical output on both
