@@ -11,6 +11,18 @@ Evidence per finding: implementing commit(s) on master plus covering tests, all 
 the full Release suite (1711 passed / 0 failed / 9 skipped with `--skip-slow`) with
 339/339 visual manifests valid. Verdicts: **closed**, **partial**, **open**.
 
+## Reading this document (2026-09-24 note)
+
+The verdict table above is the pinned 2026-09-23 historical record: it is preserved verbatim and is not re-verified per slice. Live implementation status lives in the local PLAN.md ledger (ignored) and in the tracked Capabilities, Diagnostics and VisualValidation documents. Where later RV work changed a mechanism this audit describes, the RV entry owns the current claim:
+
+- R06 admission and staging: RV10 charges retained-effect rasters at production, RV11 admits page and content bytes before yield with chunked spill encoding, RV19 owns staged pages through a disposable staged-document contract. See the per-domain admission map in Diagnostics.
+- R07 wrapping: RV13 carries per-token-chain average advances and span-start indexes through emergency and static-story paths.
+- R14 text interpretation: RV03 repairs mixed-run word-boundary breaks with trailing-word pullback; RV19 types the executable text pipeline end to end.
+- R19 and R20 telemetry and outcome contract: RV19 adds disposed-guard and page-count alignment to staged emission.
+- R22 closeout: the staged-emission mapping under Residual work stays a historical design record; RV11 and RV19 own the shipped seam.
+
+Counts pinned above (1711 passed, 339 manifests) belong to the audit revision, not to current master.
+
 Verification method: production changes prove out through byte-identical outputs
 (deterministic conversion tests, text-operation gates, visual manifest validation),
 zero-budget trips that fail without the fix (stash-verified where noted), exact-count
