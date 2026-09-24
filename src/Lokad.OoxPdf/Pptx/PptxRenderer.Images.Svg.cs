@@ -124,7 +124,7 @@ internal sealed partial class PptxRenderer
             {
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
-                    RenderSvgGradientPath(graphics, data, gradient, transform, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                    RenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                 }
                 else if (badCommand is null)
                 {
@@ -133,6 +133,12 @@ internal sealed partial class PptxRenderer
             }
             else if (paint.Color is { } color)
             {
+                if (paint.Opacity < 1d)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(paint.Opacity, 1d);
+                }
+
                 graphics.SetFillRgb(color.Red, color.Green, color.Blue);
                 if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                 {
@@ -141,6 +147,11 @@ internal sealed partial class PptxRenderer
                 else if (badCommand is null)
                 {
                     unreadablePaths++;
+                }
+
+                if (paint.Opacity < 1d)
+                {
+                    graphics.RestoreState();
                 }
             }
         }
@@ -295,6 +306,7 @@ internal sealed partial class PptxRenderer
         string data,
         SvgGradient gradient,
         SvgTransform transform,
+        double opacity,
         SvgPathBounds pathBounds,
         double minX,
         double minY,
@@ -312,6 +324,11 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.ClipCurrentPath();
+        if (opacity < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(opacity, 1d);
+        }
         // RV07: objectBoundingBox vectors normalize into path space while
         // userSpaceOnUse vectors stay in user units; strips run along the
         // dominant gradient axis so vertical gradients vary top to bottom.
@@ -377,6 +394,11 @@ internal sealed partial class PptxRenderer
                     stripWidth,
                     Math.Max(0.001d, (stripMaxY - stripMinY) * scaleY));
             }
+        }
+
+        if (opacity < 1d)
+        {
+            graphics.RestoreState();
         }
 
         graphics.RestoreState();
@@ -494,14 +516,64 @@ internal sealed partial class PptxRenderer
             : double.Parse(value, CultureInfo.InvariantCulture);
     }
 
+    // RV07: CSS style declarations override presentation attributes; opacity
+    // multiplies fill-opacity with whole-element opacity.
+    private static IReadOnlyDictionary<string, string> ReadSvgStyleDeclarations(XElement path)
+    {
+        var declarations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string declaration in (((string?)path.Attribute("style")) ?? string.Empty).Split((char)59))
+        {
+            int colon = declaration.IndexOf((char)58);
+            if (colon <= 0)
+            {
+                continue;
+            }
+
+            string name = declaration.Substring(0, colon).Trim();
+            string value = declaration.Substring(colon + 1).Trim();
+            if (name.Length != 0 && value.Length != 0)
+            {
+                declarations[name] = value;
+            }
+        }
+
+        return declarations;
+    }
+
+    private static double ReadSvgOpacityValue(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 1d;
+        }
+
+        string trimmed = text.Trim();
+        if (trimmed.EndsWith("%", StringComparison.Ordinal) && double.TryParse(trimmed.Substring(0, trimmed.Length - 1), NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
+        {
+            return Math.Clamp(percent / 100d, 0d, 1d);
+        }
+
+        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+        {
+            return Math.Clamp(value, 0d, 1d);
+        }
+
+        return 1d;
+    }
+
     private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients, out SvgPaint paint, out SvgFillFailure failure, out string? gradientId)
     {
         gradientId = null;
-        string? fill = (string?)path.Attribute("fill");
+        IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
+        string? fill = style.TryGetValue("fill", out string? styleFill) && !string.IsNullOrWhiteSpace(styleFill)
+            ? styleFill
+            : (string?)path.Attribute("fill");
+        double opacity = ReadSvgOpacityValue(style.TryGetValue("fill-opacity", out string? styleFillOpacity) ? styleFillOpacity : (string?)path.Attribute("fill-opacity"))
+            * ReadSvgOpacityValue(style.TryGetValue("opacity", out string? styleOpacity) ? styleOpacity : (string?)path.Attribute("opacity"));
         if (fill is null || fill.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             paint = default;
-            failure = SvgFillFailure.None;
+            failure = style.Count > 0 ? SvgFillFailure.UnparsableColor : SvgFillFailure.None;
             return false;
         }
         Match gradient = Regex.Match(fill, @"url\(#(?<id>[^)]+)\)");
@@ -510,7 +582,7 @@ internal sealed partial class PptxRenderer
             gradientId = gradient.Groups["id"].Value;
             if (gradients.TryGetValue(gradientId, out SvgGradient? svgGradient))
             {
-                paint = new SvgPaint(null, svgGradient);
+                paint = new SvgPaint(null, svgGradient, opacity);
                 failure = SvgFillFailure.None;
                 return true;
             }
@@ -520,7 +592,7 @@ internal sealed partial class PptxRenderer
         }
         if (RgbColor.TryParse(fill.TrimStart((char)35), out RgbColor color))
         {
-            paint = new SvgPaint(color, null);
+            paint = new SvgPaint(color, null, opacity);
             failure = SvgFillFailure.None;
             return true;
         }

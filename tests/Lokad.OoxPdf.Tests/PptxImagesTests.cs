@@ -758,6 +758,72 @@ internal static class PptxImagesTests
         TestAssert.DoesNotContain("86.4 460.8 m", pdf);
     }
 
+    // RV07: style-attribute fills paint like fill attributes.
+    public static void PptxSyntheticSvgStyleFillPaintsLikeFillAttribute()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V20 H0 Z" style="fill:#00FF00"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 1 0 rg", pdf);
+    }
+
+    // RV07: style fills win over fill attributes per CSS priority.
+    public static void PptxSyntheticSvgStyleFillBeatsFillAttribute()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V20 H0 Z" fill="#FF0000" style="fill:#0000FF"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.DoesNotContain("1 0 0 rg", pdf);
+    }
+
+    // RV07: fill opacity emits a matching transparency group.
+    public static void PptxSyntheticSvgFillOpacityEmitsTransparency()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V20 H0 Z" fill="#FF0000" fill-opacity="0.5"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/GS50000F100000S gs", pdf);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
+    // RV07: style-only paint that cannot render diagnoses instead of vanishing.
+    public static void PptxSyntheticSvgStyleOnlyStrokeDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V20 H0 Z" style="stroke:blue"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "Unusable style paint must diagnose.");
+    }
+
     // RV07: repeating gradients wrap strip offsets instead of clamping.
     public static void PptxSyntheticSvgRepeatSpreadWrapsStripOffsets()
     {
