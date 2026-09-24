@@ -1722,6 +1722,99 @@ internal static class OoxResourceGuaranteeTests
                 + "</w:body></w:document>",
         });
     }
+    // RV17: one header image repeated across pages must decode (and charge)
+    // once, not once per page.
+    public static void RepeatedHeaderImageDecodesOnce()
+    {
+        string input = WriteHeaderImageDocx(6);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ReportResourceUsage = true,
+            DiagnosticSink = diagnostics.Add,
+        });
+        OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        TestAssert.Equal(1, ParseCounter(summary.Message, "imagesDecoded="));
+        TestAssert.Contains("pdfPages=6", summary.Message);
+    }
+
+    private static string WriteHeaderImageDocx(int pages)
+    {
+        byte[] png = TestFixtures.CreateRgbPng(8, 8, new byte[8 * 8 * 3]);
+        var body = new System.Text.StringBuilder();
+        for (int i = 0; i < pages; i++)
+        {
+            body.Append(i == 0
+                ? "<w:p><w:r><w:t>Body page " + i + "</w:t></w:r></w:p>"
+                : "<w:p><w:pPr><w:pageBreakBefore/></w:pPr><w:r><w:t>Body page " + i + "</w:t></w:r></w:p>");
+        }
+
+        string documentTemplate = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <w:body>
+            [[BODY]]
+                <w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+              </w:body>
+            </w:document>
+            """;
+
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/header1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/header1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:p><w:r><w:drawing>
+                    <wp:inline>
+                      <wp:extent cx="914400" cy="914400"/>
+                      <a:graphic>
+                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                          <pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic>
+                        </a:graphicData>
+                      </a:graphic>
+                    </wp:inline>
+                  </w:drawing></w:r></w:p>
+                </w:hdr>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8(documentTemplate.Replace("[[BODY]]", body.ToString())),
+            ["word/media/image1.png"] = png,
+        });
+    }
+
     private static string FindCase(string name)
     {
         string[] candidates = new[]
