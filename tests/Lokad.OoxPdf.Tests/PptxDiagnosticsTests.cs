@@ -883,6 +883,29 @@ internal static class PptxDiagnosticsTests
 
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART_TRENDLINE"), "Charts without trendlines should not warn.");
     }
+
+    // RV08: unsupported stock chart kinds fall through to the generic chart warning with cached values present.
+    public static void PptxStockChartKindWarnsUnsupportedChart()
+    {
+        IReadOnlyList<OoxPdfDiagnostic> diagnostics = PptxTests.ConvertSingleChartAndCollectDiagnostics("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:stockChart>
+                <c:ser>
+                  <c:cat><c:strLit><c:ptCount val="2"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+                <c:axId val="10"/><c:axId val="20"/>
+              </c:stockChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        OoxPdfDiagnostic[] matches = diagnostics.Where(d => d.Id == "PPTX_UNSUPPORTED_CHART").ToArray();
+        TestAssert.Equal(1, matches.Length);
+        TestAssert.Equal(OoxPdfSeverity.Warning, matches[0].Severity);
+        TestAssert.Equal("Ignored", matches[0].Fallback);
+    }
     // RV09: unsupported payloads must diagnose identically from slide, layout and master nodes.
     public static void PptxUnsupportedEffectDiagnosticsUseInheritedSceneState()
     {

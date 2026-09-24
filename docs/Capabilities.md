@@ -109,3 +109,26 @@ Partial or approximated:
 Unsupported or ignored:
 
 - Interactive PDF features such as forms, non-link annotations, outlines, tagged PDF structure, video, audio, and JavaScript. Hyperlink annotations (/Link with URI actions and internal destinations) are supported for DOCX and PPTX links.
+
+## Static-content fallback matrix
+
+Each row links an unsupported family to its detection diagnostic, fallback, and covering tests (synthetic in-code fixtures). Severities and dedup scope are defined in Diagnostics.
+
+| Family | Detection | Fallback | Covering tests |
+|---|---|---|---|
+| PPTX stock, surface, and 3D charts | `PPTX_UNSUPPORTED_CHART` Warning | Ignored | `PptxStockChartKindWarnsUnsupportedChart` (pptx-model) |
+| PPTX SmartArt | `PPTX_UNSUPPORTED_SMARTART` Warning | Ignored | `PptxUnsupportedFeaturesEmitDiagnostics` (pptx-core) |
+| PPTX OLE objects | `PPTX_UNSUPPORTED_OLE_OBJECT` Warning | Ignored | `PptxUnsupportedFeaturesEmitDiagnostics` (pptx-core) |
+| PPTX audio, video, animation, transitions | matching `PPTX_UNSUPPORTED_*` Warning | Ignored | `PptxUnsupportedFeaturesEmitDiagnostics` (pptx-core) |
+| PPTX missing image parts | `IMAGE_MISSING_PART` Error | Ignored, conversion continues | `PptxMissingImagePartDiagnosesErrorAndContinues` (pptx-images) |
+| Undecodable images | `IMAGE_UNSUPPORTED_FORMAT` Error | Ignored | DocxImagesTests, ImagingTests, PptxImagesTests |
+| Cropped-image decode | `IMAGE_CROP_UNSUPPORTED_FORMAT` Warning | PDF clipping | PptxImagesTests |
+| SVG pictures | `SVG_UNSUPPORTED_CONTENT` Error/Warning | Ignored / Partial | PptxImagesTests SVG diagnostics |
+| DOCX floating charts | `DOCX_UNSUPPORTED_CHART` Warning | Ignored | `DocxUnsupportedChartInHeaderIsDiagnosed` (docx-core) |
+| DOCX SmartArt | `DOCX_UNSUPPORTED_SMARTART` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
+| DOCX equations | `DOCX_UNSUPPORTED_EQUATION` Warning | Ignored | `DocxUnsupportedEquationInFooterIsDiagnosed` (docx-core) |
+| DOCX OLE objects | `DOCX_UNSUPPORTED_OLE_OBJECT` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
+| DOCX external images | `DOCX_UNSUPPORTED_EXTERNAL_IMAGE` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
+| DOCX macros | `DOCX_UNSUPPORTED_MACRO` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
+| Strict OOXML | `OOXML_STRICT_DIALECT` Warning | May render missing | OoxmlTests dialect probes (ooxml) |
+| Font packs | `FONT_PACK_*` throw codes | Conversion fails with DiagnosticId | FontTests pack suites (fonts) |
