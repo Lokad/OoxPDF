@@ -94,7 +94,7 @@ internal sealed partial class PptxRenderer
         RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
-            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, cancellationToken);
+            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken);
             StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
             return;
         }

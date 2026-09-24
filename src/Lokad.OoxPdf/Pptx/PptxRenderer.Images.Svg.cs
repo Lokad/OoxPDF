@@ -10,12 +10,28 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, CancellationToken cancellationToken)
+    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
         XDocument svg;
-        using (var stream = new MemoryStream(bytes))
+        try
         {
-            svg = SafeXml.Load(stream, cancellationToken);
+            using (var stream = new MemoryStream(bytes))
+            {
+                svg = SafeXml.Load(stream, cancellationToken);
+            }
+        }
+        catch (InvalidDataException ex)
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "SVG_UNSUPPORTED_CONTENT",
+                OoxPdfSeverity.Error,
+                "SVG picture could not be parsed and was ignored: " + ex.Message,
+                partName,
+                PageIndex: null,
+                SlideIndex: slideIndex,
+                Feature: "svg",
+                Fallback: "Ignored"));
+            return;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -23,8 +39,18 @@ internal sealed partial class PptxRenderer
             viewWidth <= 0d ||
             viewHeight <= 0d)
         {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "SVG_UNSUPPORTED_CONTENT",
+                OoxPdfSeverity.Error,
+                "SVG picture has no usable viewBox and was ignored.",
+                partName,
+                PageIndex: null,
+                SlideIndex: slideIndex,
+                Feature: "svg",
+                Fallback: "Ignored"));
             return;
         }
+
 
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -58,19 +84,45 @@ internal sealed partial class PptxRenderer
         double scaleX = imageWidth / sourceWidth;
         double scaleY = imageHeight / sourceHeight;
         var gradients = ReadSvgGradients(svg);
+        ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName);
+        var unsupportedCommands = new SortedSet<char>();
+        int unreadablePaths = 0;
+        var missingGradients = new SortedSet<string>(StringComparer.Ordinal);
+        int unpaintablePaths = 0;
         foreach (XElement path in svg.Descendants().Where(element => element.Name.LocalName == "path"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string? data = (string?)path.Attribute("d");
-            if (string.IsNullOrWhiteSpace(data) || !TryReadSvgFill(path, gradients, out SvgPaint paint))
+            if (string.IsNullOrWhiteSpace(data))
             {
                 continue;
             }
-
+            char? badCommand = FindFirstUnsupportedSvgPathCommand(data);
+            if (badCommand is not null)
+            {
+                unsupportedCommands.Add(badCommand.Value);
+            }
+            if (!TryReadSvgFill(path, gradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId))
+            {
+                if (fillFailure == SvgFillFailure.UnresolvedGradient && gradientId is not null)
+                {
+                    missingGradients.Add(gradientId);
+                }
+                else if (fillFailure == SvgFillFailure.UnparsableColor)
+                {
+                    unpaintablePaths++;
+                }
+                continue;
+            }
             if (paint.Gradient is { } gradient)
             {
                 if (TryReadSvgPathBounds(data, out SvgPathBounds pathBounds))
                 {
                     RenderSvgGradientPath(graphics, data, gradient, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                }
+                else if (badCommand is null)
+                {
+                    unreadablePaths++;
                 }
             }
             else if (paint.Color is { } color)
@@ -80,10 +132,152 @@ internal sealed partial class PptxRenderer
                 {
                     graphics.FillCurrentPath();
                 }
+                else if (badCommand is null)
+                {
+                    unreadablePaths++;
+                }
             }
         }
+        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, diagnosticSink, slideIndex, partName);
 
         graphics.RestoreState();
+    }
+
+    // RV07: unsupported rendered content must diagnose instead of silently
+    // vanishing. One diagnostic per element kind (with occurrence count),
+    // restricted to paintable content outside definitions (inert definitions
+    // are correctly skipped).
+    private static void ReportUnsupportedSvgElements(XDocument svg, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+
+        var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (XElement element in svg.Descendants())
+        {
+            string name = element.Name.LocalName;
+            if (IsSupportedSvgElement(name) || IsSvgDefinitionElement(element))
+            {
+                continue;
+            }
+            counts.TryGetValue(name, out int count);
+            counts[name] = count + 1;
+        }
+        foreach ((string name, int count) in counts)
+        {
+            diagnosticSink(new OoxPdfDiagnostic(
+                "SVG_UNSUPPORTED_CONTENT",
+                OoxPdfSeverity.Warning,
+                "SVG picture omits " + count.ToString(CultureInfo.InvariantCulture) + " unsupported " + name + (count == 1 ? " element." : " elements."),
+                partName,
+                PageIndex: null,
+                SlideIndex: slideIndex,
+                Feature: "svg",
+                Fallback: "Partial"));
+        }
+    }
+    private static bool IsSupportedSvgElement(string name)
+    {
+        return name is "svg" or "defs" or "g" or "title" or "desc" or "metadata" or "style" or "path" or "linearGradient" or "radialGradient" or "stop";
+    }
+    private static bool IsSvgDefinitionElement(XElement element)
+    {
+        for (XElement? parent = element.Parent; parent is not null; parent = parent.Parent)
+        {
+            string name = parent.Name.LocalName;
+            if (name is "defs" or "linearGradient" or "radialGradient" or "style")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    // RV07: first unsupported path command for diagnostics (mirrors the M/L/H/V/C/Z
+    // support in both path readers without reinterpreting data).
+    private static char? FindFirstUnsupportedSvgPathCommand(string data)
+    {
+        // The path tokenizer only matches supported command letters, so unknown
+        // commands never surface as tokens: scan raw data instead, skipping
+        // scientific-notation exponents that merely look like letters.
+        for (int i = 0; i < data.Length; i++)
+        {
+            char command = data[i];
+            if (!char.IsLetter(command) || IsSupportedSvgPathCommand(command) || IsSvgExponentMarker(data, i))
+            {
+                continue;
+            }
+            return command;
+        }
+        return null;
+    }
+    private static bool IsSvgExponentMarker(string data, int index)
+    {
+        char marker = data[index];
+        if ((marker == (char)101 || marker == (char)69) && index > 0)
+        {
+            char previous = data[index - 1];
+            if ((previous >= (char)48 && previous <= (char)57) || previous == (char)46)
+            {
+                int next = index + 1;
+                if (next < data.Length && (data[next] == (char)43 || data[next] == (char)45))
+                {
+                    next++;
+                }
+                if (next < data.Length && data[next] >= (char)48 && data[next] <= (char)57)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static bool IsSupportedSvgPathCommand(char command)
+    {
+        return "MLHVCZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
+    }
+    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+        foreach (char command in unsupportedCommands)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits paths using unsupported " + command + " command.");
+        }
+        if (unreadablePaths > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unreadablePaths.ToString(CultureInfo.InvariantCulture) + " unreadable paths.");
+        }
+        foreach (string gradientId in missingGradients)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits paths using unresolvable gradient " + gradientId + ".");
+        }
+        if (unpaintablePaths > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unpaintablePaths.ToString(CultureInfo.InvariantCulture) + " paths with unparsable paint.");
+        }
+    }
+    private static void EmitSvgWarning(Action<OoxPdfDiagnostic> diagnosticSink, int slideIndex, string? partName, string message)
+    {
+        diagnosticSink(new OoxPdfDiagnostic(
+            "SVG_UNSUPPORTED_CONTENT",
+            OoxPdfSeverity.Warning,
+            message,
+            partName,
+            PageIndex: null,
+            SlideIndex: slideIndex,
+            Feature: "svg",
+            Fallback: "Partial"));
+    }
+    private enum SvgFillFailure
+    {
+        None,
+        UnresolvedGradient,
+        UnparsableColor
     }
 
     private static void RenderSvgGradientPath(
@@ -212,29 +406,38 @@ internal sealed partial class PptxRenderer
             : double.Parse(value, CultureInfo.InvariantCulture);
     }
 
-    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients, out SvgPaint paint)
+    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients, out SvgPaint paint, out SvgFillFailure failure, out string? gradientId)
     {
+        gradientId = null;
         string? fill = (string?)path.Attribute("fill");
         if (fill is null || fill.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             paint = default;
+            failure = SvgFillFailure.None;
             return false;
         }
-
         Match gradient = Regex.Match(fill, @"url\(#(?<id>[^)]+)\)");
-        if (gradient.Success && gradients.TryGetValue(gradient.Groups["id"].Value, out SvgGradient? svgGradient))
+        if (gradient.Success)
         {
-            paint = new SvgPaint(null, svgGradient);
-            return true;
+            gradientId = gradient.Groups["id"].Value;
+            if (gradients.TryGetValue(gradientId, out SvgGradient? svgGradient))
+            {
+                paint = new SvgPaint(null, svgGradient);
+                failure = SvgFillFailure.None;
+                return true;
+            }
+            paint = default;
+            failure = SvgFillFailure.UnresolvedGradient;
+            return false;
         }
-
-        if (RgbColor.TryParse(fill.TrimStart('#'), out RgbColor color))
+        if (RgbColor.TryParse(fill.TrimStart((char)35), out RgbColor color))
         {
             paint = new SvgPaint(color, null);
+            failure = SvgFillFailure.None;
             return true;
         }
-
         paint = default;
+        failure = SvgFillFailure.UnparsableColor;
         return false;
     }
 
