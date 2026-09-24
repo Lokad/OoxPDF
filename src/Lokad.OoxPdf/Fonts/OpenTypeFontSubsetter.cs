@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
@@ -44,10 +45,31 @@ internal static class OpenTypeFontSubsetter
         }
     }
 
+    // RV17: fast path for the single representation OpenTypeFont uses today
+    // (a whole owned array); anything else keeps the copying fallback.
+    private static bool TryGetOwnedProgramBytes(OpenTypeFont font, out byte[]? owned)
+    {
+        if (MemoryMarshal.TryGetArray(font.Bytes, out ArraySegment<byte> segment)
+            && segment.Array is not null
+            && segment.Offset == 0
+            && segment.Count == segment.Array.Length)
+        {
+            owned = segment.Array;
+            return true;
+        }
+
+        owned = null;
+        return false;
+    }
+
     private static OpenTypeFontSubset? CreateCore(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        byte[] source = font.Bytes.ToArray();
+        // RV17: the font owns its program bytes for the whole synchronous subset
+        // build and every use below only reads them, so share the owned array
+        // instead of copying per subset. The caller holds the font throughout;
+        // resolvers evict whole font instances, never pooled buffers mid-read.
+        byte[] source = TryGetOwnedProgramBytes(font, out byte[]? owned) ? owned : font.Bytes.ToArray();
         Dictionary<string, TableRecord> tables = ReadTableDirectory(source);
         if (!tables.TryGetValue("glyf", out TableRecord glyf) ||
             !tables.TryGetValue("loca", out TableRecord loca) ||
