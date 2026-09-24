@@ -587,6 +587,62 @@ internal static class PptxChartRenderingTests
         TestAssert.DoesNotContain("1.2 w", pdf);
     }
 
+    // RV04: radar grid spokes must paint over the series fill.
+    public static void RadarSpokesPaintOverSeriesFill()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="457200" y="457200"/><a:ext cx="1828800" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:radarChart>
+                  <c:radarStyle val="filled"/>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:radarChart></c:plotArea></c:chart></c:chartSpace>
+                """),
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        var ops = new System.Text.StringBuilder();
+        foreach (string line in pdf.Split((char)10))
+        {
+            string t = line.Trim();
+            if (t.EndsWith(" m") || t.EndsWith(" l") || t == "S" || t == "f")
+            {
+                ops.Append(t.Length > 24 ? t.Substring(t.Length - 24) : t).Append((char)124);
+            }
+        }
+        string content = pdf.Replace("\r\n", "\n");
+        int fillAt = content.LastIndexOf("\nf\n");
+        int lastStrokeAt = content.LastIndexOf("\nS\n");
+        TestAssert.True(fillAt >= 0 && lastStrokeAt >= 0, "Filled radar must emit grid, spokes and series fill.");
+        TestAssert.True(fillAt < lastStrokeAt, "Series fill must paint before grid strokes so spokes stay visible.");
+    }
+
     public static void PptxSyntheticRadarFilledOutlineNeedsExplicitLine()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
