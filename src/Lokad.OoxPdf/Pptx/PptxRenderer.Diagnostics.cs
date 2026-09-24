@@ -257,7 +257,9 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedCallout(PptxSceneSlide sceneSlide)
     {
-        return HasUnsupportedCallout(sceneSlide.SlideNodes);
+        return HasUnsupportedCallout(sceneSlide.SlideNodes) ||
+            HasUnsupportedCallout(sceneSlide.LayoutNodes) ||
+            HasUnsupportedCallout(sceneSlide.MasterNodes);
     }
 
     private static bool HasUnsupportedCallout(IReadOnlyList<PptxSceneNode> nodes)
@@ -380,7 +382,9 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedEffect(PptxSceneSlide sceneSlide)
     {
-        return HasUnsupportedEffect(sceneSlide.SlideNodes);
+        return HasUnsupportedEffect(sceneSlide.SlideNodes) ||
+            HasUnsupportedEffect(sceneSlide.LayoutNodes) ||
+            HasUnsupportedEffect(sceneSlide.MasterNodes);
     }
 
     private static bool HasUnsupportedEffect(IReadOnlyList<PptxSceneNode> nodes)
@@ -448,7 +452,9 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedCustomGeometry(PptxSceneSlide sceneSlide)
     {
-        return HasUnsupportedCustomGeometry(sceneSlide.SlideNodes);
+        return HasUnsupportedCustomGeometry(sceneSlide.SlideNodes) ||
+            HasUnsupportedCustomGeometry(sceneSlide.LayoutNodes) ||
+            HasUnsupportedCustomGeometry(sceneSlide.MasterNodes);
     }
 
     private static bool HasUnsupportedCustomGeometry(IReadOnlyList<PptxSceneNode> nodes)
