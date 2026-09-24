@@ -802,4 +802,40 @@ internal static class OoxmlTests
         TestAssert.Equal(12d, OoxUnits.TwipsToPoints(240));
         TestAssert.Equal(9d, OoxUnits.HalfPointsToPoints(18));
     }
+
+    // RV02: complex-script detection buckets text by unimplemented behavior.
+    public static void ComplexScriptDetectsJoiningScripts()
+    {
+        TestAssert.Equal(OoxComplexScriptKind.Joining, OoxComplexScript.DetectNeeds("\u0645\u0631\u062D\u0628\u0627"));
+    }
+
+    public static void ComplexScriptDetectsRightToLeftScripts()
+    {
+        TestAssert.Equal(OoxComplexScriptKind.Bidirectional, OoxComplexScript.DetectNeeds("\u05E9\u05DC\u05D5\u05DD"));
+    }
+
+    public static void ComplexScriptDetectsReorderingScripts()
+    {
+        TestAssert.Equal(OoxComplexScriptKind.Reordering, OoxComplexScript.DetectNeeds("\u0915\u092E\u0932"));
+    }
+
+    public static void ComplexScriptDetectsCombiningMarks()
+    {
+        TestAssert.Equal(OoxComplexScriptKind.CombiningMark, OoxComplexScript.DetectNeeds("e\u0301"));
+    }
+
+    public static void ComplexScriptDetectsBidiControls()
+    {
+        TestAssert.Equal(OoxComplexScriptKind.Bidirectional, OoxComplexScript.DetectNeeds("\u200E"));
+    }
+
+    public static void ComplexScriptIgnoresSimpleScripts()
+    {
+        TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds("Hello 123"));
+        TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds("\u65E5\u672C\u8A9E"));
+        TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds(""));
+        TestAssert.Equal(OoxComplexScriptKind.None, OoxComplexScript.DetectNeeds(null));
+    }
+
 }
+
