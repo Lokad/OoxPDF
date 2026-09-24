@@ -325,6 +325,10 @@ internal sealed partial class DocxLayoutEngine
                 [],
                 [],
                 currentItems.ToArray()));
+            // RV12: guard the page budget while paginating without consuming it, so
+            // a tiny budget trips before the full layout is retained; emission still
+            // charges once per final page and repagination never double-charges.
+            OoxConversionBudget.Current?.ThrowIfLayoutPagesExceedBudget(pages.Count);
             currentItems = [];
             activeColumnIndex = 0;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);

@@ -207,6 +207,67 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.True(new FileInfo(ample).Length > 0, "Ample page budget must convert.");
     }
 
+    public static void PdfPagesTripDuringLayoutPagination()
+    {
+        // RV12: layout pagination guards the page budget without consuming it, so a
+        // tiny page budget trips while paginating instead of after full layout.
+        string input = WriteForcedBreakDocx(5);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxPagesPerConversion = 2 },
+        }));
+        TestAssert.Contains("layout pagination", thrown.Message);
+        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+
+        string ample = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, ample, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx,
+            ConversionLimits = new OoxConversionLimits { MaxPagesPerConversion = 5 },
+        });
+        TestAssert.True(new FileInfo(ample).Length > 0, "Exact page budget must convert.");
+    }
+
+    private static string WriteForcedBreakDocx(int paragraphs)
+    {
+        var body = new StringBuilder();
+        for (int i = 0; i < paragraphs; i++)
+        {
+            body.Append("<w:p><w:pPr><w:pageBreakBefore/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>");
+        }
+
+        string documentTemplate = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <w:body>
+            [[BODY]]
+                <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+              </w:body>
+            </w:document>
+            """;
+
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8(documentTemplate.Replace("[[BODY]]", body.ToString()))
+        });
+    }
+
     public static void PdfContentRespectContentBudget()
     {
         // R06: encoded content bytes charge up front during serialization. A zero

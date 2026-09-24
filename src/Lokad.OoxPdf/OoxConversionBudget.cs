@@ -235,6 +235,22 @@ internal sealed class OoxConversionBudget
         PdfPages += count;
     }
 
+    /// <summary>
+    /// Guards DOCX layout pagination against the page budget without consuming
+    /// it: trips once constructed body pages exceed the remaining budget, so a
+    /// tiny budget fails while paginating instead of after the full layout is
+    /// retained. Emission still charges once per final page, and repagination
+    /// passes never double-charge (RV12).
+    /// </summary>
+    internal void ThrowIfLayoutPagesExceedBudget(int constructedPages)
+    {
+        if (constructedPages > limits.MaxPagesPerConversion - PdfPages)
+        {
+            throw new OoxPdfLimitExceededException(
+                "Conversion exceeds the page budget of " + limits.MaxPagesPerConversion.ToString(System.Globalization.CultureInfo.InvariantCulture) + " pages during layout pagination.");
+        }
+    }
+
     public void ChargePdfContentBytes(long count)
     {
         if (count < 0)
