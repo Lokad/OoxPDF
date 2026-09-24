@@ -50,15 +50,18 @@ These warnings are slide-scoped when a slide index is available. Duplicate occur
 
 Unsupported feature warnings:
 
+- `DOCX_UNSUPPORTED_CHART`: a DrawingML chart payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
 - `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default final output when markup printing was not requested.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a complex field was malformed in a way that prevents cached-result or placeholder rendering, nested inside another field instruction, or had no supported dynamic placeholder and no cached result to render.
 - `DOCX_UNSUPPORTED_ENDNOTE`: endnote references were detected and ignored.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
+- `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document.
 - `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content was malformed or used an unsupported payload such as a chart, SmartArt, external image, or anchor positioning outside the supported image/text-box placement model.
 - `DOCX_UNSUPPORTED_FOOTNOTE`: footnote references were detected and ignored.
 - `DOCX_UNSUPPORTED_MACRO`: a VBA project was detected and ignored.
 - `DOCX_UNSUPPORTED_MULTI_COLUMN`: a multi-column section was detected and rendered as a single column.
 - `DOCX_UNSUPPORTED_OLE_OBJECT`: embedded OLE content was detected and ignored.
+- `DOCX_UNSUPPORTED_SMARTART`: a SmartArt diagram payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
 - `DOCX_UNSUPPORTED_TRACKED_CHANGES`: tracked insertion or deletion markup was detected but the selected mode did not request visible markup support.
 - `DOCX_UNSUPPORTED_VML`: VML drawing content outside the supported inline image subset was detected and ignored.
 
@@ -81,7 +84,16 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 
 - `FONT_MISSING_GLYPHS`: codepoints with no glyph in any usable face render as "?" through the primary face (the subset carries "?" exactly when needed). One warning per typeface per conversion, listing the affected codepoints in order with a remainder count.
 
+- Font-pack download, hash, validity, and presence failures throw OoxPdfFontPackException carrying `FONT_PACK_DOWNLOAD_FAILED`, `FONT_PACK_HASH_MISMATCH`, `FONT_PACK_INVALID`, or `FONT_PACK_MISSING` in DiagnosticId instead of emitting a sink diagnostic.
+
 - `COMPLEX_SCRIPT_APPROXIMATION`: text needing joining, reordering, bidirectional reordering, or mark positioning renders without shaping, with glyphs emitted in source order. One warning per behavior family per conversion, with Feature naming the family and Fallback Unshaped glyphs.
+
+## Images and SVG
+
+- `IMAGE_MISSING_PART`: error, a referenced image part was missing, so the image was ignored and conversion continued without it.
+- `IMAGE_UNSUPPORTED_FORMAT`: error, image bytes could not be decoded or the content type is unsupported, so the image was ignored.
+- `IMAGE_CROP_UNSUPPORTED_FORMAT`: a cropped image could not be decoded for Office-style embedding, so PDF clipping is used instead.
+- `SVG_UNSUPPORTED_CONTENT`: unparsable SVG pictures and unusable viewBoxes are errors with the picture ignored; unsupported elements, path commands, gradients, and paint are warnings with the affected content partially omitted. One diagnostic per construct kind.
 
 The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
 
