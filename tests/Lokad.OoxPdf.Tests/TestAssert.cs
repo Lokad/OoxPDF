@@ -36,6 +36,17 @@ internal static class TestAssert
         return value;
     }
 
+    public static T NotNull<T>(T? value, string message)
+        where T : class
+    {
+        if (value is null)
+        {
+            throw new InvalidOperationException(message);
+        }
+
+        return value;
+    }
+
     public static void Contains(string expectedSubstring, string text)
     {
         if (!text.Contains(expectedSubstring, StringComparison.Ordinal))

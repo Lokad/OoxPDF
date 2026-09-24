@@ -202,8 +202,8 @@ internal static class PptxChartPlotOptionsAgreementTests
     private static (object? Axis, XElement Element) LoadAxis(string axisInner)
     {
         string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart><c:valAx><c:axId val=\"10\"/>" + axisInner + "</c:valAx>", "");
-        PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
-        TestAssert.NotNull(sceneChart);
+        PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
+
         TestAssert.Equal(1, sceneChart.Axes.Count);
         XElement element = XDocument.Parse(xml).Descendants(C + "valAx").First();
         return (sceneChart.Axes[0], element);
@@ -224,8 +224,8 @@ internal static class PptxChartPlotOptionsAgreementTests
         foreach (string title in titles)
         {
             string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", title);
-            PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
-            TestAssert.NotNull(sceneChart);
+            PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
+
             XDocument xmlDoc = XDocument.Parse(xml);
             object? xmlText = Invoke("ReadSceneOrXmlChartTitleText", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
             object? sceneText = Invoke("ReadSceneOrXmlChartTitleText", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
@@ -259,8 +259,8 @@ internal static class PptxChartPlotOptionsAgreementTests
         foreach (string legend in legends)
         {
             string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", legend);
-            PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
-            TestAssert.NotNull(sceneChart);
+            PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
+
             XDocument xmlDoc = XDocument.Parse(xml);
             object? xmlLayout = Invoke("ReadSceneOrXmlChartLegendLayout", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc });
             object? sceneLayout = Invoke("ReadSceneOrXmlChartLegendLayout", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc });
@@ -280,8 +280,8 @@ internal static class PptxChartPlotOptionsAgreementTests
             foreach (string vis in visible)
             {
                 string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", blank + vis);
-                PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
-                TestAssert.NotNull(sceneChart);
+                PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
+
                 XDocument xmlDoc = XDocument.Parse(xml);
                 object? xmlBlanks = Invoke("ReadSceneOrXmlChartDisplayBlanksAs", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
                 object? sceneBlanks = Invoke("ReadSceneOrXmlChartDisplayBlanksAs", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
@@ -481,8 +481,8 @@ internal static class PptxChartPlotOptionsAgreementTests
     private static (object? Plot, XElement Element) LoadPlot(string plotKind, string plotInner)
     {
         string xml = ChartSpace("<c:" + plotKind + ">" + plotInner + "<c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:" + plotKind + ">", "");
-        PptxSceneChart? sceneChart = PptxTests.BuildSingleChartScene(xml);
-        PptxSceneChart chart = TestAssert.NotNull(sceneChart);
+        PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
+        PptxSceneChart chart = sceneChart;
         TestAssert.Equal(1, chart.Plots.Count);
         XElement element = XDocument.Parse(xml).Descendants(C + plotKind).First();
         return (chart.Plots[0], element);

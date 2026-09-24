@@ -48,8 +48,7 @@ internal static class PptxSceneTextAgreementTests
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
 
         PptxSceneTextParagraph styled = TestAssert.NotNull(scene.Slides[0].SlideNodes[0].TextBody).Paragraphs[0];
-        XElement? styledDefaults = styled.DefaultParagraphProperties;
-        TestAssert.True(styledDefaults is not null, "Expected the shape lstStyle level defaults to be retained for the migration.");
+        XElement styledDefaults = TestAssert.NotNull(styled.DefaultParagraphProperties, "Expected the shape lstStyle level defaults to be retained for the migration.");
         TestAssert.Equal("1600", styledDefaults.Elements().FirstOrDefault(e => e.Name.LocalName == "defRPr")?.Attribute("sz")?.Value ?? string.Empty);
         TestAssert.Equal("1600", styled.DefaultRunProperties?.Attribute("sz")?.Value ?? string.Empty);
 

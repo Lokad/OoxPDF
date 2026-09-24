@@ -12,8 +12,7 @@ internal static class DocxBorderPlanTests
         foreach (int cols in new[] { 8, 16, 32 })
         {
             (DocxTableRowLayout row, DocxTableRowLayout next) = LayoutAlignedPair(cols);
-            DocxRenderer.RowPairBorderPlan? plan = DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None);
-            TestAssert.True(plan is not null, "Aligned consecutive rows must produce a plan.");
+            DocxRenderer.RowPairBorderPlan plan = TestAssert.NotNull(DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None), "Aligned consecutive rows must produce a plan.");
             TestAssert.Equal(cols, plan.Overlaps.Length);
             (double X, double Right)[] expected = BruteForcePairs(row, next);
             TestAssert.Equal(expected.Length, plan.Overlaps.Length);
@@ -30,8 +29,7 @@ internal static class DocxBorderPlanTests
         (DocxTableRowLayout row, DocxTableRowLayout next) = LayoutMergedPair();
         TestAssert.Equal(1, row.Cells.Count);
         TestAssert.Equal(2, next.Cells.Count);
-        DocxRenderer.RowPairBorderPlan? plan = DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None);
-        TestAssert.True(plan is not null, "Merged consecutive rows must produce a plan.");
+        DocxRenderer.RowPairBorderPlan plan = TestAssert.NotNull(DocxRenderer.RowPairBorderPlan.TryBuild(row, next, CancellationToken.None), "Merged consecutive rows must produce a plan.");
         (double X, double Right)[] expected = BruteForcePairs(row, next);
         TestAssert.Equal(2, expected.Length);
         TestAssert.Equal(expected.Length, plan.Overlaps.Length);

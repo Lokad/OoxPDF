@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -47,7 +48,7 @@ internal static class OpenTypeFontSubsetter
 
     // RV17: fast path for the single representation OpenTypeFont uses today
     // (a whole owned array); anything else keeps the copying fallback.
-    private static bool TryGetOwnedProgramBytes(OpenTypeFont font, out byte[]? owned)
+    private static bool TryGetOwnedProgramBytes(OpenTypeFont font, [NotNullWhen(true)] out byte[]? owned)
     {
         if (MemoryMarshal.TryGetArray(font.Bytes, out ArraySegment<byte> segment)
             && segment.Array is not null

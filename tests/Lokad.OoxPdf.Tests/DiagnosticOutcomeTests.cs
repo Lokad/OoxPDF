@@ -71,8 +71,7 @@ internal static class DiagnosticOutcomeTests
                 // any other exception type propagates and fails the test.
             }
             TestAssert.True(Directory.Exists(directory), "Publication failure must leave the destination directory intact.");
-            string? parent = Path.GetDirectoryName(directory);
-            TestAssert.True(parent is not null, "Destination must have a parent directory.");
+            string parent = TestAssert.NotNull(Path.GetDirectoryName(directory), "Destination must have a parent directory.");
             TestAssert.Equal(0, Directory.GetFiles(parent, Path.GetFileName(directory) + ".tmp-*").Length);
         }
         finally

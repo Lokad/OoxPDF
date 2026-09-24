@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 namespace Lokad.OoxPdf.Fonts;
 
 /// <summary>
@@ -286,7 +287,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         return (File.ReadAllBytes(path), true, fileLength);
     }
 
-    private static bool TryReadCollectionDiscoverySpan(FileStream stream, byte[] header, long fileLength, out byte[]? span)
+    private static bool TryReadCollectionDiscoverySpan(FileStream stream, byte[] header, long fileLength, [NotNullWhen(true)] out byte[]? span)
     {
         span = null;
         try

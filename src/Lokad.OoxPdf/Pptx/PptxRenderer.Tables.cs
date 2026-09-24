@@ -214,20 +214,20 @@ internal sealed partial class PptxRenderer
         var textSpans = new List<PptxPositionedTextSpan>();
         var textFrames = new List<PptxTableCellTextFrame>();
         var cellFills = new List<TableCellFill>();
-        if (bounds is null || sceneTable is null)
+        if (bounds is null || sceneTable is not { } table)
         {
             return null;
         }
 
-        if (emitUnsupportedStyleDiagnostic && sceneTable is not null)
+        if (emitUnsupportedStyleDiagnostic)
         {
-            EmitUnsupportedTableStyleDiagnostic(context, sceneTable);
+            EmitUnsupportedTableStyleDiagnostic(context, table);
         }
 
-        IReadOnlyList<double> rawColumnWidths = sceneTable.ColumnWidths;
-        PptxSceneTableStyle tableStyle = sceneTable.Style;
+        IReadOnlyList<double> rawColumnWidths = table.ColumnWidths;
+        PptxSceneTableStyle tableStyle = table.Style;
 
-        IReadOnlyList<PptxSceneTableRow> rows = sceneTable.Rows;
+        IReadOnlyList<PptxSceneTableRow> rows = table.Rows;
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
             return null;
@@ -240,7 +240,7 @@ internal sealed partial class PptxRenderer
         double frameTop = context.Document.SlideHeightPoints - frameYTop;
         double columnScale = frameWidth / rawColumnWidths.Sum();
 
-        IReadOnlyList<double> rawRowHeights = sceneTable.RowHeights;
+        IReadOnlyList<double> rawRowHeights = table.RowHeights;
         if (rawRowHeights.Count != rows.Count)
         {
             return null;
@@ -248,7 +248,7 @@ internal sealed partial class PptxRenderer
 
         double declaredTableHeight = rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
         double tableHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, declaredTableHeight);
-        double[] rowHeights = ResolveTableRowHeights(context, sceneTable, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap);
+        double[] rowHeights = ResolveTableRowHeights(context, table, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap);
 
         // bound row/column products before allocating dense border grids.
         // Declared grid columns and rows can both be numerous while actual cells
@@ -356,7 +356,7 @@ internal sealed partial class PptxRenderer
             rowTops[rowIndex + 1] = yTop;
         }
 
-        if (!TableHasExplicitBorders(sceneTable))
+        if (!TableHasExplicitBorders(table))
         {
             var defaultGrid = new TableDefaultGrid(
                 frameX,
