@@ -82,6 +82,40 @@ internal sealed partial class DocxReader
                 Feature: feature,
                 Fallback: fallback));
         }
+        // RV09: static payload checks shared by the body document and related stories.
+        // Related-story payloads render, so they diagnose with their own part provenance.
+        void EmitStaticPayloadDiagnostics(XDocument probeDocument, string probePartName)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (HasUnsupportedComplexFields(probeDocument))
+            {
+                Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field", probePartName, "Ignored", false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (probeDocument.Descendants(MathNamespace + "oMath").Any() ||
+                probeDocument.Descendants(MathNamespace + "oMathPara").Any())
+            {
+                Emit("DOCX_UNSUPPORTED_EQUATION", "equation", probePartName, "Ignored", false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (probeDocument.Descendants(WordprocessingNamespace + "object").Any())
+            {
+                Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object", probePartName, "Ignored", false);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (probeDocument.Descendants(ChartNamespace + "chart").Any())
+            {
+                Emit("DOCX_UNSUPPORTED_CHART", "chart drawing payload", probePartName, "Ignored", false);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (probeDocument.Descendants().Any(element => element.Name.Namespace == DiagramNamespace))
+            {
+                Emit("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload", probePartName, "Ignored", false);
+            }
+
+        }
 
         if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
             document.Descendants(WordprocessingNamespace + "commentReference").Any())
@@ -138,41 +172,12 @@ internal sealed partial class DocxReader
                 approximated: markupContext.ApproximatesFormattingRevisions);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        if (HasUnsupportedComplexFields(document))
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field");
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (document.Descendants(MathNamespace + "oMath").Any() ||
-            document.Descendants(MathNamespace + "oMathPara").Any())
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_EQUATION", "equation");
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (document.Descendants(WordprocessingNamespace + "object").Any())
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object");
-        }
+        EmitStaticPayloadDiagnostics(document, partName);
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, relationships)))
         {
             EmitUnsupported("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (document.Descendants(ChartNamespace + "chart").Any())
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_CHART", "chart drawing payload");
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (document.Descendants().Any(element => element.Name.Namespace == DiagramNamespace))
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -281,6 +286,80 @@ internal sealed partial class DocxReader
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {
             EmitUnsupported("DOCX_UNSUPPORTED_MACRO", "macro");
+        }
+        // Related-story payloads render through their own stories, so probe them too.
+        // Relationship-dependent checks stay body-only; their story variants remain open.
+        foreach ((string storyPartName, XDocument storyDocument) in LoadProbeStoryDocuments(package, relationships, cancellationToken))
+        {
+            EmitStaticPayloadDiagnostics(storyDocument, storyPartName);
+
+        }
+    }
+
+
+    // RV09: related-story probe documents for static-payload diagnostics. Headers,
+    // footers, footnotes, endnotes, and comments render, so their payloads diagnose.
+    // Parts that fail to load are skipped here; their story readers diagnose load
+    // failures independently when the stories render.
+    private static IEnumerable<(string PartName, XDocument Document)> LoadProbeStoryDocuments(
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        CancellationToken cancellationToken)
+    {
+        string[] storyRelationshipTypes =
+        [
+            HeaderRelationshipType,
+            FooterRelationshipType,
+            FootnotesRelationshipType,
+            EndnotesRelationshipType,
+            CommentsRelationshipType
+        ];
+        foreach (OoxRelationship relationship in relationships.Values)
+        {
+            if (relationship.IsExternal || relationship.ResolvedTarget is null)
+            {
+                continue;
+            }
+
+            bool isStory = false;
+            foreach (string storyType in storyRelationshipTypes)
+            {
+                if (relationship.Type == storyType)
+                {
+                    isStory = true;
+                    break;
+                }
+            }
+
+            if (!isStory)
+            {
+                continue;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (TryLoadProbeStoryDocument(package, relationship.ResolvedTarget, cancellationToken) is { } storyDocument)
+            {
+                yield return (relationship.ResolvedTarget, storyDocument);
+            }
+        }
+    }
+
+    private static XDocument? TryLoadProbeStoryDocument(OoxPackage package, string partName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            OoxPart? part = package.GetPart(partName);
+            if (part is null)
+            {
+                return null;
+            }
+
+            using Stream stream = part.OpenRead();
+            return SafeXml.Load(stream, cancellationToken);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 
@@ -900,3 +979,8 @@ internal sealed partial class DocxReader
             value.Equals("inset", StringComparison.OrdinalIgnoreCase);
     }
 }
+
+
+
+
+
