@@ -829,14 +829,27 @@ internal sealed partial class PptxRenderer
 
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
-        IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();
-        IReadOnlyList<ChartIndexedNumberPoint?> yPoints = series.YValues.DensePoints();
-        IReadOnlyList<ChartIndexedNumberPoint?> bubbleSizePoints = series.BubbleSizes.DensePoints();
-        int count = Math.Max(xPoints.Count, yPoints.Count);
+        // RV20: compact value arrays pair positions; dense-slot provenance
+        // comes from last-wins sparse indexes (same slots as DensePoints).
+        // Unread bubble sizes resolve their count (caps parity) without
+        // materializing values.
+        double?[] xValues = series.XValues.DenseValues();
+        double?[] yValues = series.YValues.DenseValues();
+        double?[] bubbleValues = series.ReadBubbleSize ? series.BubbleSizes.DenseValues() : [];
+        if (!series.ReadBubbleSize)
+        {
+            series.BubbleSizes.DensePointCount();
+        }
+
+        int count = Math.Max(xValues.Length, yValues.Length);
         if (count == 0)
         {
             return new ScatterSeries([], series);
         }
+
+        Dictionary<int, ChartIndexedNumberPoint> xPoints = BuildDensePointIndex(series.XValues);
+        Dictionary<int, ChartIndexedNumberPoint> yPoints = BuildDensePointIndex(series.YValues);
+        Dictionary<int, ChartIndexedNumberPoint> bubblePoints = series.ReadBubbleSize ? BuildDensePointIndex(series.BubbleSizes) : new Dictionary<int, ChartIndexedNumberPoint>();
 
         // workbook lookups below ran a visibility filter plus linear scan per
         // point (quadratic in series length). Index once per vector instead; first-wins
@@ -847,25 +860,26 @@ internal sealed partial class PptxRenderer
         var points = new List<ScatterPoint>(count);
         for (int i = 0; i < count; i++)
         {
-            ChartIndexedNumberPoint? xPoint = i < xPoints.Count ? xPoints[i] : null;
-            ChartIndexedNumberPoint? yPoint = i < yPoints.Count ? yPoints[i] : null;
-            if (xPoint?.Value is not { } xValue || yPoint?.Value is not { } yValue)
+            if (i >= xValues.Length || xValues[i] is not { } xValue || i >= yValues.Length || yValues[i] is not { } yValue)
             {
                 continue;
             }
 
-            ChartIndexedNumberPoint? bubbleSizePoint = series.ReadBubbleSize && i < bubbleSizePoints.Count ? bubbleSizePoints[i] : null;
-            double size = bubbleSizePoint?.Value ?? 1d;
+            ChartIndexedNumberPoint xPoint = xPoints[i];
+            ChartIndexedNumberPoint yPoint = yPoints[i];
+            double? bubbleValue = series.ReadBubbleSize && i < bubbleValues.Length ? bubbleValues[i] : null;
+            ChartIndexedNumberPoint? bubbleSizePoint = bubbleValue is not null && bubblePoints.TryGetValue(i, out ChartIndexedNumberPoint bubbleSlot) ? bubbleSlot : null;
+            double size = bubbleValue ?? 1d;
             points.Add(new ScatterPoint(
                 xValue,
                 yValue,
                 size,
-                yPoint.Value.Index,
-                xPoint.Value,
-                yPoint.Value,
+                yPoint.Index,
+                xPoint,
+                yPoint,
                 bubbleSizePoint,
-                xWorkbook.TryGetValue(xPoint.Value.Index, out ChartIndexedNumberPoint xWorkbookPoint) ? xWorkbookPoint : null,
-                yWorkbook.TryGetValue(yPoint.Value.Index, out ChartIndexedNumberPoint yWorkbookPoint) ? yWorkbookPoint : null,
+                xWorkbook.TryGetValue(xPoint.Index, out ChartIndexedNumberPoint xWorkbookPoint) ? xWorkbookPoint : null,
+                yWorkbook.TryGetValue(yPoint.Index, out ChartIndexedNumberPoint yWorkbookPoint) ? yWorkbookPoint : null,
                 bubbleSizePoint is { } point && bubbleWorkbook.TryGetValue(point.Index, out ChartIndexedNumberPoint bubbleWorkbookPoint) ? bubbleWorkbookPoint : null,
                 series.YValues.FormatCode,
                 series.BubbleSizes.FormatCode));

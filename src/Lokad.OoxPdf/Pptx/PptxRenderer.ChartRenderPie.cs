@@ -16,8 +16,19 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<int, ChartIndexedNumberPoint> workbookPoints = values.WorkbookPointsForPlotVisibility(values.PlotVisibleOnly)
             .GroupBy(point => point.Index)
             .ToDictionary(group => group.Key, group => group.First());
-        return values.DensePoints()
-            .OfType<ChartIndexedNumberPoint>()
+        // RV20: sparse last-wins slot index instead of the dense array: same
+        // slots (same resolution, range, validity and precedence) with
+        // provenance kept once in the source. Charge the resolved slot count
+        // exactly as the dense materialization did.
+        int slotCount = values.DensePointCount();
+        if (slotCount <= 0)
+        {
+            return [];
+        }
+
+        OoxConversionBudget.Current?.ChargeChartRangeCells(slotCount);
+        return BuildDensePointIndex(values)
+            .Values
             .Where(point => point.Value is > 0d)
             .OrderBy(point => point.Index)
             .Select(point => new ChartIndexedPieSlice(
