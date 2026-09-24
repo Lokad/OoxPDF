@@ -50,6 +50,7 @@ These warnings are slide-scoped when a slide index is available. Duplicate occur
 
 Unsupported feature warnings:
 
+- `DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT`: character-unit paragraph indents are ignored; twip-based indents render.
 - `DOCX_UNSUPPORTED_CHART`: a DrawingML chart payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
 - `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default final output when markup printing was not requested.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a complex field was malformed in a way that prevents cached-result or placeholder rendering, nested inside another field instruction, or had no supported dynamic placeholder and no cached result to render.
@@ -58,9 +59,12 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document.
 - `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content was malformed or used an unsupported payload such as a chart, SmartArt, external image, or anchor positioning outside the supported image/text-box placement model.
 - `DOCX_UNSUPPORTED_FOOTNOTE`: footnote references were detected and ignored.
+- `DOCX_UNSUPPORTED_FORMATTING_REVISIONS`: formatting revisions were detected outside a mode that approximates them, so they are ignored; the AllMarkup approximation is `DOCX_APPROXIMATED_FORMATTING_REVISIONS`.
 - `DOCX_UNSUPPORTED_MACRO`: a VBA project was detected and ignored.
+- `DOCX_UNSUPPORTED_MANUAL_BREAK`: an unsupported manual column-break container was detected; visible body column breaks are supported.
 - `DOCX_UNSUPPORTED_MULTI_COLUMN`: a multi-column section was detected and rendered as a single column.
 - `DOCX_UNSUPPORTED_OLE_OBJECT`: embedded OLE content was detected and ignored.
+- `DOCX_UNSUPPORTED_SECTION_BREAK`: a continuous or unknown paragraph section break was detected; support is partial.
 - `DOCX_UNSUPPORTED_SMARTART`: a SmartArt diagram payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
 - `DOCX_UNSUPPORTED_TRACKED_CHANGES`: tracked insertion or deletion markup was detected but the selected mode did not request visible markup support.
 - `DOCX_UNSUPPORTED_VML`: VML drawing content outside the supported inline image subset was detected and ignored.
@@ -68,9 +72,12 @@ Unsupported feature warnings:
 Approximation warnings:
 
 - `DOCX_APPROXIMATED_COMMENTS`: comment markup was rendered through the selected markup mode with first-pass markers or balloons.
+- `DOCX_APPROXIMATED_ENDNOTE`: endnote references render through first-pass related-story bodies; split-note continuation stays approximate.
+- `DOCX_APPROXIMATED_FOOTNOTE`: footnote references render through first-pass related-story bodies; split-note continuation stays approximate.
 - `DOCX_APPROXIMATED_FORMATTING_REVISIONS`: formatting revisions were detected and surfaced through private-safe property-family provenance, first-pass formatting balloons, change bars, or approximation diagnostics.
 - `DOCX_NUMBERING_INDENT`: a numbering indentation variant outside the supported twip-based left/right/first-line/hanging/tab model was detected, such as character-unit list indents.
 - `DOCX_STYLE_PARAGRAPH_SPACING`: a paragraph style used a spacing variant outside the supported before/after, line-unit, automatic, contextual, exact, auto, and at-least line-spacing model.
+- `DOCX_TABLE_TEXT_DIRECTION`: table cell text-direction variants outside the supported model are approximated.
 - `DOCX_TABLE_BORDER_STYLE`: a table or table style used a border style outside the supported solid, thick, double, triple, dotted, dashed, dash-small-gap, dash-dot-stroked, dot-dash, dot-dot-dash, thin/thick compound, wave/double-wave, 3D emboss/engrave, outset, inset, nil, and none set.
 - `DOCX_APPROXIMATED_TRACKED_CHANGES`: tracked changes were rendered through the selected markup mode with final/original filtering, change bars, inline revision styling, grouped first-pass revision balloons, or compact overflow continuations, but without full Word-style review-pane geometry.
 
@@ -94,6 +101,8 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 - `IMAGE_UNSUPPORTED_FORMAT`: error, image bytes could not be decoded or the content type is unsupported, so the image was ignored.
 - `IMAGE_CROP_UNSUPPORTED_FORMAT`: a cropped image could not be decoded for Office-style embedding, so PDF clipping is used instead.
 - `SVG_UNSUPPORTED_CONTENT`: unparsable SVG pictures and unusable viewBoxes are errors with the picture ignored; unsupported elements, path commands, gradients, and paint are warnings with the affected content partially omitted. One diagnostic per construct kind.
+
+- `DIAGNOSTIC_OVERFLOW`: error, the collector retained the first diagnostics and dropped further occurrences; per-ID totals stay available on the collector.
 
 The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
 
