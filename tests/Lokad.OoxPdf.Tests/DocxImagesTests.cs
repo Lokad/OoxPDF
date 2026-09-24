@@ -1241,4 +1241,20 @@ internal static class DocxImagesTests
         TestAssert.Equal(1, paragraph.Images.Count);
         TestAssert.Equal(1, paragraph.Images.Single().SourceRunIndex);
     }
+    
+    // RV05: an inline image between text runs must paint mid-line at run position,
+    // bottom on the text baseline, not as a block after paragraph text.
+    public static void DocxInlineImagePaintsMidLineAtRunPosition()
+    {
+        var beforeRun = new DocxTextRun("BEFORE", 10d, null, false, false, false, null, null) { SourceRunIndex = 0 };
+        var afterRun = new DocxTextRun("AFTER", 10d, null, false, false, false, null, null) { SourceRunIndex = 2 };
+        var image = new DocxInlineImage(24d, 18d, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("BEFORE", 10d, 12d) with { Runs = [beforeRun, afterRun], Images = [image] };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
+        DocxLayoutItemSnapshot textItem = snapshot.Pages[0].Items.Single(item => item.Kind == "TextLine");
+        DocxLayoutItemSnapshot imageItem = snapshot.Pages[0].Items.Single(item => item.Kind == "InlineImage");
+        TestAssert.True(Math.Abs(imageItem.X - (textItem.X + 30d)) < 0.01, "Image must start after BEFORE text at run position: imageX=" + imageItem.X + " lineX=" + textItem.X);
+        TestAssert.True(Math.Abs(imageItem.Y + imageItem.Height - textItem.Y) < 0.5, "Image bottom must sit on the text baseline: imageBottom=" + (imageItem.Y + imageItem.Height) + " baseline=" + textItem.Y);
+    }
 }

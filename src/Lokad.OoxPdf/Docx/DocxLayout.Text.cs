@@ -597,4 +597,91 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    // RV05: ordered inline atoms (body path). Images carrying a recorded source run
+    // in a text-mixed paragraph attach to the wrapped line spanning their character
+    // offset instead of emitting as blocks after paragraph text.
+    private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height);
+    private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] GrownHeights, bool[] PlacedMask);
+    private static DocxMidLinePlan? CreateMidLinePlan(
+        DocxParagraph paragraph,
+        IReadOnlyList<DocxTextSpan> textSpans,
+        DocxWrappedTextLine[] lines,
+        double firstLineMaxWidth,
+        double continuationLineMaxWidth,
+        double baselineOffset,
+        double lineHeight)
+    {
+        List<(int ImageIndex, DocxInlineImage Image)> affined = new List<(int ImageIndex, DocxInlineImage Image)>();
+        for (int i = 0; i < paragraph.Images.Count; i++)
+        {
+            if (paragraph.Images[i].SourceRunIndex >= 0)
+            {
+                affined.Add((i, paragraph.Images[i]));
+            }
+        }
+        bool hasText = false;
+        foreach (DocxTextSpan span in textSpans)
+        {
+            if (span.Text.Length != 0)
+            {
+                hasText = true;
+                break;
+            }
+        }
+        if (!hasText || affined.Count == 0)
+        {
+            return null;
+        }
+        int[] lineCharLengths = new int[lines.Length];
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            int length = 0;
+            foreach (DocxTextSpan span in lines[lineIndex].Spans)
+            {
+                length += span.Text.Length;
+            }
+            lineCharLengths[lineIndex] = length;
+        }
+        List<DocxMidLineImage>[] imagesByLine = new List<DocxMidLineImage>[lines.Length];
+        double[] lineImageWidths = new double[lines.Length];
+        double[] grownHeights = new double[lines.Length];
+        bool[] placedMask = new bool[paragraph.Images.Count];
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            imagesByLine[lineIndex] = new List<DocxMidLineImage>();
+            grownHeights[lineIndex] = lineHeight;
+        }
+        foreach ((int imageIndex, DocxInlineImage image) in affined)
+        {
+            int position = 0;
+            foreach (DocxTextSpan span in textSpans)
+            {
+                if (span.SourceTextRunIndex >= 0 && span.SourceTextRunIndex < paragraph.Runs.Count && paragraph.Runs[span.SourceTextRunIndex].SourceRunIndex < image.SourceRunIndex)
+                {
+                    position += span.Text.Length;
+                }
+            }
+            int lineStart = 0;
+            int targetLine = lines.Length - 1;
+            int lineOffset = lineCharLengths[targetLine];
+            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            {
+                if (position <= lineStart + lineCharLengths[lineIndex])
+                {
+                    targetLine = lineIndex;
+                    lineOffset = position - lineStart;
+                    break;
+                }
+                lineStart += lineCharLengths[lineIndex];
+            }
+            double maxWidth = targetLine == 0 ? firstLineMaxWidth : continuationLineMaxWidth;
+            double width = Math.Min(maxWidth, image.WidthPoints);
+            double height = image.HeightPoints * width / Math.Max(1d, image.WidthPoints);
+            imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height));
+            lineImageWidths[targetLine] += width;
+            grownHeights[targetLine] = Math.Max(grownHeights[targetLine], baselineOffset + height);
+            placedMask[imageIndex] = true;
+        }
+        return new DocxMidLinePlan(imagesByLine, lineImageWidths, grownHeights, placedMask);
+    }
 }

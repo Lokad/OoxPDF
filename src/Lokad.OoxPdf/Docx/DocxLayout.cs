@@ -584,6 +584,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
+            DocxMidLinePlan? midLinePlan = null;
             if (textMeasurer is not null && textSpans.Count > 0)
             {
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
@@ -601,22 +602,26 @@ internal sealed partial class DocxLayoutEngine
                     EnsureFootnoteReserveForSourceBlock(elementIndex);
                 }
 
+                // RV05: ordered inline atoms (body path). Affined images in text-mixed
+                // paragraphs attach to wrapped lines at run position; wrapping is untouched.
+                midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective)), lineHeight);
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxWrappedTextLine line = lines[lineIndex];
+                    double lineAdvance = midLinePlan?.GrownHeights[lineIndex] ?? lineHeight;
                     if (firstLine)
                     {
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
                     }
 
-                    if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
+                    if (cursorY - lineAdvance < CurrentFrameBottom() && HasCurrentColumnContent())
                     {
                         AdvanceColumnOrPage();
                         EnsureFootnoteReserveForSourceBlock(elementIndex);
                     }
 
-                    double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
+                    double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     double lineX = effective.Alignment switch
                     {
                         DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -682,11 +687,30 @@ internal sealed partial class DocxLayoutEngine
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
                         Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false));
+                    if (midLinePlan is not null)
+                    {
+                        double textBaselineY = cursorY - baselineOffset;
+                        foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
+                        {
+                            // Justified stretch of preceding spaces is not included; line stays exact for
+                            // left/center/right alignment and off by at most the distributed stretch when justified.
+                            double beforeWidth = MeasureTextSpansForLayout(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
+                            currentItems.Add(new DocxInlineImageLayout(
+                                placed.Image,
+                                lineX + beforeWidth,
+                                textBaselineY - placed.Height,
+                                placed.Width,
+                                placed.Height,
+                                pages.Count + 1,
+                                SourceBlockIndex: elementIndex,
+                                SourceParagraphIndex: 0, Story: null));
+                        }
+                    }
                     activeColumnHasContent = true;
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                    cursorY -= lineHeight;
+                    cursorY -= lineAdvance;
                 }
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
@@ -702,8 +726,13 @@ internal sealed partial class DocxLayoutEngine
                 activeColumnHasContent = true;
             }
 
-            foreach (DocxInlineImage image in paragraph.Images)
+            for (int imageIndex = 0; imageIndex < paragraph.Images.Count; imageIndex++)
             {
+                DocxInlineImage image = paragraph.Images[imageIndex];
+                if (midLinePlan?.PlacedMask[imageIndex] == true)
+                {
+                    continue;
+                }
                 cancellationToken.ThrowIfCancellationRequested();
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
