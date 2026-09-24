@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Ooxml;
 
@@ -30,27 +32,7 @@ internal static class OoxComplexScript
         OoxComplexScriptKind kinds = OoxComplexScriptKind.None;
         foreach (Rune rune in text.EnumerateRunes())
         {
-            int value = rune.Value;
-            if (IsJoiningScript(value))
-            {
-                kinds |= OoxComplexScriptKind.Joining;
-            }
-
-            if (IsReorderingScript(value))
-            {
-                kinds |= OoxComplexScriptKind.Reordering;
-            }
-
-            if (IsBidirectionalScript(value))
-            {
-                kinds |= OoxComplexScriptKind.Bidirectional;
-            }
-
-            UnicodeCategory category = Rune.GetUnicodeCategory(rune);
-            if (category == UnicodeCategory.NonSpacingMark || category == UnicodeCategory.EnclosingMark)
-            {
-                kinds |= OoxComplexScriptKind.CombiningMark;
-            }
+            kinds |= ClassifyScalar(rune.Value, Rune.GetUnicodeCategory(rune));
         }
 
         return kinds;
@@ -74,5 +56,84 @@ internal static class OoxComplexScript
         return (value >= 0x0590 && value <= 0x05FF) || (value >= 0x0780 && value <= 0x07BF) ||
             (value >= 0x07C0 && value <= 0x07FF) || value == 0x061C || value == 0x200E || value == 0x200F ||
             (value >= 0x202A && value <= 0x202E) || (value >= 0x2066 && value <= 0x2069);
+    }
+
+    private static OoxComplexScriptKind ClassifyScalar(int value, UnicodeCategory category)
+    {
+        OoxComplexScriptKind kinds = OoxComplexScriptKind.None;
+        if (IsJoiningScript(value))
+        {
+            kinds |= OoxComplexScriptKind.Joining;
+        }
+
+        if (IsReorderingScript(value))
+        {
+            kinds |= OoxComplexScriptKind.Reordering;
+        }
+
+        if (IsBidirectionalScript(value))
+        {
+            kinds |= OoxComplexScriptKind.Bidirectional;
+        }
+
+        if (category == UnicodeCategory.NonSpacingMark || category == UnicodeCategory.EnclosingMark)
+        {
+            kinds |= OoxComplexScriptKind.CombiningMark;
+        }
+
+        return kinds;
+    }
+
+    public static OoxComplexScriptKind DetectCodepoints(IEnumerable<int> codepoints)
+    {
+        OoxComplexScriptKind kinds = OoxComplexScriptKind.None;
+        foreach (int codepoint in codepoints)
+        {
+            if (codepoint < 0 || codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF))
+            {
+                continue;
+            }
+
+            kinds |= ClassifyScalar(codepoint, Rune.GetUnicodeCategory(new Rune(codepoint)));
+        }
+
+        return kinds;
+    }
+
+    public static OoxPdfDiagnostic CreateApproximationDiagnostic(OoxComplexScriptKind kind)
+    {
+        string feature;
+        string behavior;
+        switch (kind)
+        {
+            case OoxComplexScriptKind.Joining:
+                feature = "joining scripts";
+                behavior = "cursive joining";
+                break;
+            case OoxComplexScriptKind.Reordering:
+                feature = "reordering scripts";
+                behavior = "syllable reordering";
+                break;
+            case OoxComplexScriptKind.Bidirectional:
+                feature = "bidirectional text";
+                behavior = "bidirectional reordering";
+                break;
+            case OoxComplexScriptKind.CombiningMark:
+                feature = "combining marks";
+                behavior = "mark positioning";
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(kind), "Complex-script diagnostics take one behavior flag at a time.");
+        }
+
+        return new OoxPdfDiagnostic(
+            "COMPLEX_SCRIPT_APPROXIMATION",
+            OoxPdfSeverity.Warning,
+            "Complex script renders without " + behavior + "; glyphs emit in source order.",
+            PartName: null,
+            SlideIndex: null,
+            PageIndex: null,
+            Feature: feature,
+            Fallback: "Unshaped glyphs");
     }
 }

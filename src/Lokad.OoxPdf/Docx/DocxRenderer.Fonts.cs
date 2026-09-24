@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -39,6 +40,8 @@ internal sealed partial class DocxRenderer
         {
             measurer = new MissingFontRoutingMeasurer(innerMeasurer, new DocxFallbackTextMeasurer(), fallbackFaces);
         }
+
+        ReportComplexScriptApproximation(plan, diagnosticSink, cancellationToken);
 
         return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources);
     }
@@ -209,6 +212,41 @@ internal sealed partial class DocxRenderer
                 PageIndex: null,
                 Feature: family,
                 Fallback: "Question-mark substitution"));
+        }
+    }
+
+    // RV02: complex-script runs render without shaping, so report each behavior
+    // family once per conversion instead of misrendering silently. The font plan
+    // already covers every rendered story, so scanning it needs no extra traversal.
+    private static void ReportComplexScriptApproximation(
+        DocxFontPlan plan,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+
+        OoxComplexScriptKind seen = OoxComplexScriptKind.None;
+        foreach (DocxResolvedRunTypeface resolved in plan.Runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            seen |= OoxComplexScript.DetectNeeds(resolved.Run.Text);
+        }
+
+        foreach (OoxComplexScriptKind kind in new[]
+        {
+            OoxComplexScriptKind.Joining,
+            OoxComplexScriptKind.Reordering,
+            OoxComplexScriptKind.Bidirectional,
+            OoxComplexScriptKind.CombiningMark
+        })
+        {
+            if (seen.HasFlag(kind))
+            {
+                diagnosticSink(OoxComplexScript.CreateApproximationDiagnostic(kind));
+            }
         }
     }
 

@@ -81,6 +81,8 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 
 - `FONT_MISSING_GLYPHS`: codepoints with no glyph in any usable face render as "?" through the primary face (the subset carries "?" exactly when needed). One warning per typeface per conversion, listing the affected codepoints in order with a remainder count.
 
+- `COMPLEX_SCRIPT_APPROXIMATION`: text needing joining, reordering, bidirectional reordering, or mark positioning renders without shaping, with glyphs emitted in source order. One warning per behavior family per conversion, with Feature naming the family and Fallback Unshaped glyphs.
+
 The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
 
 - `Id`: stable diagnostic code.

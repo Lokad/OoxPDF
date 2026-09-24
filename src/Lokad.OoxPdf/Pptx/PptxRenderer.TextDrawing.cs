@@ -4,6 +4,7 @@ using System.Xml.Linq;
 
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -251,6 +252,41 @@ internal sealed partial class PptxRenderer
             .ToArray(), fontResolver, resourcePrefix, cancellationToken, diagnosticSink, nameScope, includeFallbackFaces);
     }
 
+    // RV02: complex-script runs render without shaping; report each behavior family
+    // once per conversion (the resolver set dedups across slide and chart preparation).
+    private static void ReportComplexScriptApproximation(
+        IReadOnlyList<TextFontUse> uses,
+        PresentationFontResolver fontResolver,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        CancellationToken cancellationToken)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+
+        OoxComplexScriptKind seen = OoxComplexScriptKind.None;
+        foreach (TextFontUse use in uses)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            seen |= OoxComplexScript.DetectCodepoints(use.CodePoints);
+        }
+
+        foreach (OoxComplexScriptKind kind in new[]
+        {
+            OoxComplexScriptKind.Joining,
+            OoxComplexScriptKind.Reordering,
+            OoxComplexScriptKind.Bidirectional,
+            OoxComplexScriptKind.CombiningMark
+        })
+        {
+            if (seen.HasFlag(kind) && fontResolver.ReportedMissingFontDiagnostics.Add("script:" + kind))
+            {
+                diagnosticSink(OoxComplexScript.CreateApproximationDiagnostic(kind));
+            }
+        }
+    }
+
     // RV01: slide preparation passes includeFallbackFaces: false and covers split-run
     // families separately (emission looks those up); chart preparation keeps the
     // inline behavior for its run families.
@@ -260,6 +296,8 @@ internal sealed partial class PptxRenderer
         {
             return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
         }
+
+        ReportComplexScriptApproximation(uses, fontResolver, diagnosticSink, cancellationToken);
 
         uses = SubstituteUnembeddableFontUses(uses, fontResolver, diagnosticSink, cancellationToken);
 
