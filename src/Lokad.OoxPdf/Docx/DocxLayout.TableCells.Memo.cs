@@ -77,6 +77,7 @@ internal sealed partial class DocxLayoutEngine
             int? pageCount,
             bool pageStatic,
             out IReadOnlyList<DocxTextLineLayout> relativeLines,
+            out IReadOnlyList<DocxInlineImageLayout> relativePlacedImages,
             out double usedHeight)
         {
             if (entries.TryGetValue(
@@ -86,6 +87,7 @@ internal sealed partial class DocxLayoutEngine
                 Hits++;
                 TotalHits++;
                 relativeLines = stored.Lines;
+                relativePlacedImages = stored.PlacedImages;
                 usedHeight = stored.UsedHeight;
                 return true;
             }
@@ -93,6 +95,7 @@ internal sealed partial class DocxLayoutEngine
             Misses++;
             TotalMisses++;
             relativeLines = [];
+            relativePlacedImages = [];
             usedHeight = 0d;
             return false;
         }
@@ -108,12 +111,14 @@ internal sealed partial class DocxLayoutEngine
             int? pageCount,
             bool pageStatic,
             IReadOnlyList<DocxTextLineLayout> absoluteLines,
+            IReadOnlyList<DocxInlineImageLayout> absolutePlacedImages,
             double originX,
             double originY,
             double usedHeight)
         {
             IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
-            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(relative, usedHeight);
+            IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
+            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(relative, relativePlaced, usedHeight);
         }
 
         internal static IReadOnlyList<DocxTextLineLayout> ToRelativeLines(
@@ -238,11 +243,29 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, double usedHeight)
+        private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages, double usedHeight)
         {
             public IReadOnlyList<DocxTextLineLayout> Lines { get; } = lines;
 
+            public IReadOnlyList<DocxInlineImageLayout> PlacedImages { get; } = placedImages;
+
             public double UsedHeight { get; } = usedHeight;
+        }
+
+        // RV05: placed mid-line images relativize exactly like lines so memo hits
+        // shift them back with the same origin.
+        internal static IReadOnlyList<DocxInlineImageLayout> ToRelativeImages(
+            IReadOnlyList<DocxInlineImageLayout> images,
+            double originX,
+            double originY)
+        {
+            var relative = new List<DocxInlineImageLayout>(images.Count);
+            foreach (DocxInlineImageLayout image in images)
+            {
+                relative.Add(image with { X = image.X - originX, Y = image.Y - originY });
+            }
+
+            return relative;
         }
     }
 }

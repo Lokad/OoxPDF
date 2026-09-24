@@ -10,8 +10,8 @@ internal static class DocxCellMemoTests
         var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, new[] { line }, 10d, 20d, 30d);
-        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, out var relative, out double usedHeight);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, new[] { line }, Array.Empty<DocxInlineImageLayout>(), 10d, 20d, 30d);
+        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, out var relative, out _, out double usedHeight);
         TestAssert.True(hit, "Same key must hit.");
         TestAssert.Equal(1, memo.Hits);
         TestAssert.Equal(0, memo.Misses);
@@ -30,8 +30,8 @@ internal static class DocxCellMemoTests
         var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, new[] { line }, 10d, 20d, 30d);
-        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, out var relative, out double usedHeight);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, new[] { line }, Array.Empty<DocxInlineImageLayout>(), 10d, 20d, 30d);
+        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, out var relative, out _, out double usedHeight);
         TestAssert.True(hit, "Same key must hit for origin replay.");
         TestAssert.Equal(30d, usedHeight);
         var replayed = DocxLayoutEngine.DocxTableCellTextLinesMemo.ShiftLines(relative, 30d, 40d);
@@ -48,12 +48,12 @@ internal static class DocxCellMemoTests
         TestAssert.True(((object)cell).Equals((object)clone), "Test requires equal-valued clones.");
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, new[] { line }, 10d, 20d, 30d);
-        bool cloneHit = memo.TryGetRelativeLines(clone, 80d, null, 36d, 0d, 1d, null, null, true, out _, out _);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, new[] { line }, Array.Empty<DocxInlineImageLayout>(), 10d, 20d, 30d);
+        bool cloneHit = memo.TryGetRelativeLines(clone, 80d, null, 36d, 0d, 1d, null, null, true, out _, out _, out _);
         TestAssert.True(!cloneHit, "Equal-valued distinct cell must not hit reference-identity memo.");
         TestAssert.Equal(0, memo.Hits);
         TestAssert.Equal(1, memo.Misses);
-        bool sameHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, out _, out _);
+        bool sameHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, true, out _, out _, out _);
         TestAssert.True(sameHit, "Same reference must hit.");
         TestAssert.Equal(1, memo.Hits);
     }
@@ -63,15 +63,15 @@ internal static class DocxCellMemoTests
         var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 2, true, new[] { line }, 10d, 20d, 30d);
-        bool staticHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, 2, 5, true, out _, out _);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 2, true, new[] { line }, Array.Empty<DocxInlineImageLayout>(), 10d, 20d, 30d);
+        bool staticHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, 2, 5, true, out _, out _, out _);
         TestAssert.True(staticHit, "Static tier must omit page args.");
 
         var dynamicMemo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
-        dynamicMemo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 2, false, new[] { line }, 10d, 20d, 30d);
-        bool dynamicMiss = dynamicMemo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, 2, 2, false, out _, out _);
+        dynamicMemo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 2, false, new[] { line }, Array.Empty<DocxInlineImageLayout>(), 10d, 20d, 30d);
+        bool dynamicMiss = dynamicMemo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, 2, 2, false, out _, out _, out _);
         TestAssert.True(!dynamicMiss, "Dynamic tier must include page number.");
-        bool dynamicHit = dynamicMemo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 2, false, out _, out _);
+        bool dynamicHit = dynamicMemo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 2, false, out _, out _, out _);
         TestAssert.True(dynamicHit, "Dynamic tier must hit same page args.");
     }
 
@@ -82,10 +82,10 @@ internal static class DocxCellMemoTests
         var line = MakeLine("sample", 10d, 20d, 12d);
         var firstMeasurer = new CountingMeasurer();
         var secondMeasurer = new CountingMeasurer();
-        memo.StoreRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, true, new[] { line }, 10d, 20d, 30d);
-        bool sameHit = memo.TryGetRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, true, out _, out _);
+        memo.StoreRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, true, new[] { line }, Array.Empty<DocxInlineImageLayout>(), 10d, 20d, 30d);
+        bool sameHit = memo.TryGetRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, true, out _, out _, out _);
         TestAssert.True(sameHit, "Same measurer reference must hit.");
-        bool otherMiss = memo.TryGetRelativeLines(cell, 80d, secondMeasurer, 36d, 0d, 1d, null, null, true, out _, out _);
+        bool otherMiss = memo.TryGetRelativeLines(cell, 80d, secondMeasurer, 36d, 0d, 1d, null, null, true, out _, out _, out _);
         TestAssert.True(!otherMiss, "Different measurer reference must miss.");
     }
 
