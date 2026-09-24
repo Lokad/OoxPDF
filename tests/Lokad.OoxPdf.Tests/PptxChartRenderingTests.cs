@@ -643,6 +643,49 @@ internal static class PptxChartRenderingTests
         TestAssert.True(fillAt < lastStrokeAt, "Series fill must paint before grid strokes so spokes stay visible.");
     }
 
+
+    // RV04: style-118 filled-radar series must paint a vertical gradient, not a flat fill.
+    public static void RadarStyle118FilledSeriesPaintsVerticalGradient()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="457200" y="457200"/><a:ext cx="1828800" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:c14="http://schemas.microsoft.com/office/drawing/2007/8/2/chart"><mc:AlternateContent><mc:Choice Requires="c14"><c14:style val="118"/></mc:Choice><mc:Fallback><c:style val="18"/></mc:Fallback></mc:AlternateContent><c:chart><c:plotArea><c:radarChart>
+                  <c:radarStyle val="filled"/>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:radarChart></c:plotArea></c:chart></c:chartSpace>
+                """),
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Sh1 sh", pdf);
+    }
     public static void PptxSyntheticRadarFilledOutlineNeedsExplicitLine()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, int? chartStyleId)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = layout.PointCount;
@@ -30,14 +30,22 @@ internal sealed partial class PptxRenderer
 
             if (layout.IsFilled)
             {
-                // Office renders unstyled filled-radar series solid (single-series ladder
-                // reference; two-series probe with opaque red over blue): the series color
-                // carries no translucency unless an explicit fill says so.
+                // RV04: effective-style-18 filled-radar series paint a vertical theme-relative
+                // gradient sampled from the Office reference; other styles and explicit
+                // fills keep the flat polygon.
                 ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
                 graphics.SaveState();
                 graphics.SetAlpha(fill.Alpha, 1d);
-                graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-                graphics.FillPolygon(points);
+                if ((seriesIndex < seriesFills.Count ? seriesFills[seriesIndex] : null) is null &&
+                    TryReadStyle18SeriesGradient(chartStyleId, fill.Color, out RgbColor gradientTop, out RgbColor gradientBottom))
+                {
+                    PaintRadarSeriesGradient(graphics, points, gradientTop, gradientBottom);
+                }
+                else
+                {
+                    graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+                    graphics.FillPolygon(points);
+                }
                 graphics.RestoreState();
             }
         }
@@ -150,6 +158,83 @@ internal sealed partial class PptxRenderer
                     geometry.CenterY + Math.Sin(angle) * geometry.Radius);
             }
         }
+    }
+
+    // Reads the effective chart style id from the markup-compatibility-resolved tree:
+    // a spliced c14 style when that namespace is understood, else the transitional
+    // style. In this corpus 18 always arrives as the c14:118 fallback; a native-2007
+    // style-18 reference would confirm or split the recipe below.
+    private static int? ReadChartStyleId(XDocument chartXml)
+    {
+        XElement? root = chartXml.Root;
+        XElement? styled = root?.Element(ChartStyle2010Namespace + "style")
+            ?? root?.Element(ChartNamespace + "style");
+        return styled is not null && TryReadStyleValue(styled, out int styleId)
+            ? styleId
+            : null;
+
+        static bool TryReadStyleValue(XElement element, out int value)
+        {
+            value = 0;
+            return element.Attribute("val") is { } attribute &&
+                int.TryParse(attribute.Value, out value);
+        }
+    }
+
+    // Effective-style-18 series recipe calibrated from cached Office references: a vertical
+    // light-to-dark gradient expressed as linear transforms of the series base color
+    // so themed documents keep their hue. The same recipe fits both ladder series.
+    private static bool TryReadStyle18SeriesGradient(int? chartStyleId, RgbColor baseColor, out RgbColor top, out RgbColor bottom)
+    {
+        top = default;
+        bottom = default;
+        if (chartStyleId != 18)
+        {
+            return false;
+        }
+
+        top = ApplyChartStyleGradientStop(baseColor, 0.88d, 0.315d);
+        bottom = ApplyChartStyleGradientStop(baseColor, 1.2832d, -0.1427d);
+        return true;
+    }
+
+    private static RgbColor ApplyChartStyleGradientStop(RgbColor baseColor, double multiplier, double offset)
+    {
+        return new RgbColor(
+            GradientStopByte(baseColor.Red * multiplier + 255d * offset),
+            GradientStopByte(baseColor.Green * multiplier + 255d * offset),
+            GradientStopByte(baseColor.Blue * multiplier + 255d * offset));
+
+        static byte GradientStopByte(double value) => (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
+    }
+
+    private static void PaintRadarSeriesGradient(PdfGraphicsBuilder graphics, (double X, double Y)[] points, RgbColor top, RgbColor bottom)
+    {
+        if (points.Length == 0)
+        {
+            return;
+        }
+
+        double minY = points[0].Y;
+        double maxY = points[0].Y;
+        double centerX = 0d;
+        foreach (var (x, y) in points)
+        {
+            minY = Math.Min(minY, y);
+            maxY = Math.Max(maxY, y);
+            centerX += x;
+        }
+
+        if (maxY - minY <= 0.001d)
+        {
+            graphics.SetFillRgb(top.Red, top.Green, top.Blue);
+            graphics.FillPolygon(points);
+            return;
+        }
+
+        centerX /= points.Length;
+        graphics.ClipPolygon(points);
+        graphics.PaintAxialShading(centerX, maxY, centerX, minY, top.Red, top.Green, top.Blue, bottom.Red, bottom.Green, bottom.Blue);
     }
 
     private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)

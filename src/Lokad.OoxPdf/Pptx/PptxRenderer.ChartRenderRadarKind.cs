@@ -50,7 +50,8 @@ internal sealed partial class PptxRenderer
                 bool radarHasTitle = !string.IsNullOrWhiteSpace(ReadSceneOrXmlChartTitleText(sceneChart, chartXml));
                 ChartRadarLayout radarLayout = ResolveRadarLayout(frame, plotBox, radarOptions.RadarStyle, radarSeries, radarHasTitle, radarManualPlot);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
-                RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
+                int? radarStyleId = ReadChartStyleId(chartXml);
+                RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, radarStyleId);
                 if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSharedCategoryLabels(radarPlot, radarChart, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts);

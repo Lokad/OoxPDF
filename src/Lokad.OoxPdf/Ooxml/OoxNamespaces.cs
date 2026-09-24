@@ -25,6 +25,7 @@ internal static class OoxNamespaces
     public static readonly XNamespace ContentTypesNamespace = "http://schemas.openxmlformats.org/package/2006/content-types";
     public static readonly XNamespace SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     public static readonly XNamespace MarkupCompatibilityNamespace = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+    public static readonly XNamespace ChartStyle2010Namespace = "http://schemas.microsoft.com/office/drawing/2007/8/2/chart";
 
     // ISO 29500 Strict root namespace family (O02). Transitional queries read these
     // parts as blank, so readers fail visibly instead of converting silently empty.
