@@ -477,11 +477,122 @@ internal sealed partial class PptxRenderer
         static byte ToByte(double value) => (byte)Math.Clamp((int)Math.Round(value), byte.MinValue, byte.MaxValue);
     }
 
-    private static bool TryReadSvgPathBounds(string data, out SvgPathBounds bounds)
+    // RV18: one shared path representation for bounds and emission. The parser
+    // resolves relative coordinates once, so both consumers walk the same
+    // absolute commands instead of tokenizing the path data separately.
+    private readonly record struct SvgPathCommand(char Kind, double[] Arguments);
+
+    // Parses the longest supported prefix of SVG path data into absolute
+    // commands. Complete is false when parsing stops early: missing numbers,
+    // an unsupported command, or numbers trailing a close. Bounds require a
+    // complete parse, while emission walks the prefix and reports whether a
+    // move was emitted, preserving the previous partial-emission behavior.
+    // Known divergence: numbers after Z used to spin forever because Z
+    // consumed no tokens; the parser now stops there instead of hanging.
+    private static (List<SvgPathCommand> Commands, bool Complete) ParseSvgPathData(string data)
     {
         MatchCollection tokens = SvgPathTokenRegex().Matches(data);
+        var commands = new List<SvgPathCommand>();
         int index = 0;
         char command = '\0';
+        double currentX = 0d;
+        double currentY = 0d;
+        double startX = 0d;
+        double startY = 0d;
+        while (index < tokens.Count)
+        {
+            string token = tokens[index].Value;
+            if (token.Length == 1 && char.IsLetter(token[0]))
+            {
+                command = token[0];
+                index++;
+            }
+            else if (command == '\0')
+            {
+                return (commands, false);
+            }
+
+            bool relative = char.IsLower(command);
+            switch (char.ToUpperInvariant(command))
+            {
+                case 'M':
+                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
+                    {
+                        return (commands, false);
+                    }
+
+                    startX = currentX;
+                    startY = currentY;
+                    commands.Add(new SvgPathCommand('M', new[] { currentX, currentY }));
+                    command = relative ? 'l' : 'L';
+                    break;
+                case 'L':
+                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
+                    {
+                        return (commands, false);
+                    }
+
+                    commands.Add(new SvgPathCommand('L', new[] { currentX, currentY }));
+                    break;
+                case 'H':
+                    if (!TryReadSvgNumber(tokens, ref index, out double h))
+                    {
+                        return (commands, false);
+                    }
+
+                    currentX = relative ? currentX + h : h;
+                    commands.Add(new SvgPathCommand('H', new[] { currentX }));
+                    break;
+                case 'V':
+                    if (!TryReadSvgNumber(tokens, ref index, out double v))
+                    {
+                        return (commands, false);
+                    }
+
+                    currentY = relative ? currentY + v : v;
+                    commands.Add(new SvgPathCommand('V', new[] { currentY }));
+                    break;
+                case 'C':
+                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c1x, out double c1y) ||
+                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c2x, out double c2y) ||
+                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
+                    {
+                        return (commands, false);
+                    }
+
+                    commands.Add(new SvgPathCommand('C', new[] { c1x, c1y, c2x, c2y, currentX, currentY }));
+                    break;
+                case 'Z':
+                    if (index < tokens.Count)
+                    {
+                        string next = tokens[index].Value;
+                        if (next.Length != 1 || !char.IsLetter(next[0]))
+                        {
+                            return (commands, false);
+                        }
+                    }
+
+                    currentX = startX;
+                    currentY = startY;
+                    commands.Add(new SvgPathCommand('Z', Array.Empty<double>()));
+                    break;
+                default:
+                    return (commands, false);
+            }
+        }
+
+        return (commands, true);
+    }
+
+    private static bool TryReadSvgPathBounds(string data, out SvgPathBounds bounds)
+    {
+        (List<SvgPathCommand> commands, bool complete) = ParseSvgPathData(data);
+        bounds = default;
+        if (!complete || commands.Count == 0)
+        {
+            return false;
+        }
+
         double currentX = 0d;
         double currentY = 0d;
         double startX = 0d;
@@ -499,75 +610,35 @@ internal sealed partial class PptxRenderer
             maxY = Math.Max(maxY, y);
         }
 
-        while (index < tokens.Count)
+        foreach (SvgPathCommand pathCommand in commands)
         {
-            string token = tokens[index].Value;
-            if (token.Length == 1 && char.IsLetter(token[0]))
-            {
-                command = token[0];
-                index++;
-            }
-            else if (command == '\0')
-            {
-                bounds = default;
-                return false;
-            }
-
-            bool relative = char.IsLower(command);
-            switch (char.ToUpperInvariant(command))
+            switch (pathCommand.Kind)
             {
                 case 'M':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
-                    {
-                        bounds = default;
-                        return false;
-                    }
-
+                    currentX = pathCommand.Arguments[0];
+                    currentY = pathCommand.Arguments[1];
                     startX = currentX;
                     startY = currentY;
                     Include(currentX, currentY);
-                    command = relative ? 'l' : 'L';
                     break;
                 case 'L':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
-                    {
-                        bounds = default;
-                        return false;
-                    }
-
+                    currentX = pathCommand.Arguments[0];
+                    currentY = pathCommand.Arguments[1];
                     Include(currentX, currentY);
                     break;
                 case 'H':
-                    if (!TryReadSvgNumber(tokens, ref index, out double h))
-                    {
-                        bounds = default;
-                        return false;
-                    }
-
-                    currentX = relative ? currentX + h : h;
+                    currentX = pathCommand.Arguments[0];
                     Include(currentX, currentY);
                     break;
                 case 'V':
-                    if (!TryReadSvgNumber(tokens, ref index, out double v))
-                    {
-                        bounds = default;
-                        return false;
-                    }
-
-                    currentY = relative ? currentY + v : v;
+                    currentY = pathCommand.Arguments[0];
                     Include(currentX, currentY);
                     break;
                 case 'C':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c1x, out double c1y) ||
-                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c2x, out double c2y) ||
-                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
-                    {
-                        bounds = default;
-                        return false;
-                    }
-
-                    Include(c1x, c1y);
-                    Include(c2x, c2y);
+                    Include(pathCommand.Arguments[0], pathCommand.Arguments[1]);
+                    Include(pathCommand.Arguments[2], pathCommand.Arguments[3]);
+                    currentX = pathCommand.Arguments[4];
+                    currentY = pathCommand.Arguments[5];
                     Include(currentX, currentY);
                     break;
                 case 'Z':
@@ -592,80 +663,41 @@ internal sealed partial class PptxRenderer
 
     private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
-        MatchCollection tokens = SvgPathTokenRegex().Matches(data);
-        if (tokens.Count == 0)
-        {
-            return false;
-        }
-
-        int index = 0;
-        char command = '\0';
+        List<SvgPathCommand> commands = ParseSvgPathData(data).Commands;
         double currentX = 0d;
         double currentY = 0d;
         double startX = 0d;
         double startY = 0d;
         bool hasPath = false;
-        while (index < tokens.Count)
+        foreach (SvgPathCommand pathCommand in commands)
         {
-            string token = tokens[index].Value;
-            if (char.IsLetter(token[0]))
-            {
-                command = token[0];
-                index++;
-            }
-
-            bool relative = char.IsLower(command);
-            switch (char.ToUpperInvariant(command))
+            switch (pathCommand.Kind)
             {
                 case 'M':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
-                    {
-                        return hasPath;
-                    }
-
+                    currentX = pathCommand.Arguments[0];
+                    currentY = pathCommand.Arguments[1];
                     startX = currentX;
                     startY = currentY;
                     graphics.MoveTo(SvgX(currentX), SvgY(currentY));
                     hasPath = true;
-                    command = relative ? 'l' : 'L';
                     break;
                 case 'L':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out currentX, out currentY))
-                    {
-                        return hasPath;
-                    }
-
+                    currentX = pathCommand.Arguments[0];
+                    currentY = pathCommand.Arguments[1];
                     graphics.LineTo(SvgX(currentX), SvgY(currentY));
                     break;
                 case 'H':
-                    if (!TryReadSvgNumber(tokens, ref index, out double h))
-                    {
-                        return hasPath;
-                    }
-
-                    currentX = relative ? currentX + h : h;
+                    currentX = pathCommand.Arguments[0];
                     graphics.LineTo(SvgX(currentX), SvgY(currentY));
                     break;
                 case 'V':
-                    if (!TryReadSvgNumber(tokens, ref index, out double v))
-                    {
-                        return hasPath;
-                    }
-
-                    currentY = relative ? currentY + v : v;
+                    currentY = pathCommand.Arguments[0];
                     graphics.LineTo(SvgX(currentX), SvgY(currentY));
                     break;
                 case 'C':
-                    if (!TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c1x, out double c1y) ||
-                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double c2x, out double c2y) ||
-                        !TryReadSvgPoint(tokens, ref index, relative, currentX, currentY, out double endX, out double endY))
-                    {
-                        return hasPath;
-                    }
-
-                    graphics.CurveTo(SvgX(c1x), SvgY(c1y), SvgX(c2x), SvgY(c2y), SvgX(endX), SvgY(endY));
-                    currentX = endX;
-                    currentY = endY;
+                    graphics.CurveTo(SvgX(pathCommand.Arguments[0]), SvgY(pathCommand.Arguments[1]), SvgX(pathCommand.Arguments[2]), SvgY(pathCommand.Arguments[3]), SvgX(pathCommand.Arguments[4]), SvgY(pathCommand.Arguments[5]));
+                    currentX = pathCommand.Arguments[4];
+                    currentY = pathCommand.Arguments[5];
                     break;
                 case 'Z':
                     graphics.ClosePath();
