@@ -2070,6 +2070,42 @@ internal static class PptxTextLayoutTests
             return double.Parse(matrices[0].Groups[1].Value, CultureInfo.InvariantCulture);
         }
     }
+    // RV03: split words break at word boundaries, not run seams.
+    public static void FragmentedWordBreaksAtWordBoundary()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1574800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>alpha base</a:t></a:r><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>line beta</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        string[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Select(line => string.Concat(line.Spans.Select(span => span.Text)))
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("alpha ", lines[0]);
+        TestAssert.Equal("baseline beta", lines[1]);
+    }
+
     public static void PptxVerticalAutoFitOverflowKeepsWrappedFullSizeText()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
