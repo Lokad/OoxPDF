@@ -59,19 +59,19 @@ Do not commit generated visual artifacts unless they are intentionally small fix
 ## Family Parity Targets (Q07 triage, 2026-09-22)
 
 Each family has an explicit target classification so needs-review triage has a
-destination. Counts below are the 2026-09-22 manifest state after triage rounds 1-14
-(118 locked, 8 locked-text-ops, 208 approximate, 0 needs-review across 334
-cases; family rows overlap on shared patterns so their totals exceed 334).
+destination. Counts below track the manifest state as of 2026-09-24 (triage rounds 1-14 baselined 2026-09-22)
+(118 locked, 9 locked-text-ops, 212 approximate, 0 needs-review across 339
+cases; family rows overlap on shared patterns so their totals exceed 339).
 
 | Family | Cases | Target | Rationale |
 |---|---|---|---|
 | pptx-images | 13 / 0 / 1 / 0 | Locked except known-approx effects | Pixel-faithful embedding; effectively there |
-| pptx-charts | 28 / 0 / 30 / 0 | Tier-1 ports locked; rest approximate with recorded gaps | Matches the Tier-1/Tier-2 split in Capabilities.md; triage complete 2026-09-22 |
-| pptx-typography | 15 / 8 / 70 / 0 | Approximate by default; exact ports lock | Font-metric approximations are structural; text-ops locks pin emission; run-merging fix aligns op grouping with Office |
-| pptx-tables | 9 / 0 / 6 / 0 | Mixed; first-pass built-ins lock, rich styles approximate | Per Capabilities table-style scope; triage complete 2026-09-22 |
+| pptx-charts | 28 / 0 / 32 / 0 | Tier-1 ports locked; rest approximate with recorded gaps | Matches the Tier-1/Tier-2 split in Capabilities.md; triage complete 2026-09-22 |
+| pptx-typography | 15 / 9 / 71 / 0 | Approximate by default; exact ports lock | Font-metric approximations are structural; text-ops locks pin emission; run-merging fix aligns op grouping with Office |
+| pptx-tables | 9 / 0 / 7 / 0 | Mixed; first-pass built-ins lock, rich styles approximate | Per Capabilities table-style scope; triage complete 2026-09-22 |
 | pptx-shapes | 21 / 0 / 12 / 0 | Approximate; small preset geometry only | Preset-geometry scope in Capabilities.md; triage complete 2026-09-22 |
 | pptx-composition | 10 / 0 / 3 / 0 | Mixed; master/layout inheritance locks case by case | Triage complete 2026-09-22 |
-| pptx-effects | 5 / 0 / 4 / 0 | Approximate; shadows/gradients/transparency unsupported | Unsupported-effects scope in Capabilities.md; triage complete 2026-09-22 |
+| pptx-effects | 5 / 0 / 4 / 0 | Mixed; raster shadows/glows and gradient approximations render, other effects approximate | Per Capabilities effects scope; triage complete 2026-09-22 |
 | pptx-smoke | 6 / 0 / 0 / 0 | Locked | Blank/size discovery must stay exact |
 | docx-layout | 11 / 0 / 82 / 0 | Mixed; greedy-wrap approximations stay approximate | Latin greedy wrapping scope in Capabilities.md; triage complete 2026-09-22 |
 | docx-markup | 0 / 0 / 33 / 0 (gated via reference cache) | Approximate with margin modes tracked | Reference-cache workflow below |

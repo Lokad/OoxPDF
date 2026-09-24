@@ -130,7 +130,7 @@ Custom `IFontProgramSource.GetBytesAsync(CancellationToken)` implementations sho
 
 Use `OoxPdfInputKind.Pptx` or `OoxPdfInputKind.Docx` in `OoxPdfOptions.InputKind` to override extension-based detection.
 
-Stream conversion avoids materializing temporary input and output files. For stream input, `InputKind` must be `Pptx` or `Docx` because there is no filename extension to inspect. The converter leaves caller-owned streams open:
+Stream conversion avoids materializing temporary input and output files. Page-content staging may still spill to a bounded temporary file when a page exceeds the resident window (see OoxConversionLimits); the spill is cleaned up on completion. For stream input, `InputKind` must be `Pptx` or `Docx` because there is no filename extension to inspect. The converter leaves caller-owned streams open:
 
 ```csharp
 using var input = new MemoryStream(ooxmlBytes, writable: false);

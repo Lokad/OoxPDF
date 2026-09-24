@@ -21,7 +21,7 @@ Supported:
 - Grouped shapes with nested translation and scaling.
 - Fixed-grid tables with cell fills, explicit grid borders, merged-cell continuations (horizontal merges and row spans), vertical anchoring approximations, and cell text, plus calibrated built-in table styles (MediumStyle2 linear-light band tints at 0.60/0.80, DarkStyle1 black header with 0.60 linear-shade bands and raw unbanded rows, LightStyle1 raw accent bands; first/last row/column accents).
 - Clickable hyperlink annotations for shape, picture, connector, group, table, chart, and unknown-frame clicks plus shape and table body-text runs and chart title, axis-title, and data-label runs, resolving external URLs and internal slide targets with transformed bounds.
-- Native chart rendering for bar/column, line, area, pie/doughnut, scatter, bubble, and radar charts with cached numeric values, including titles (single-series charts gain the series name as an auto title), legends, category/value axes on any side, tick labels, measured horizontal-bar label strips and outer-manual plot reserves, and first-pass data labels. Major tick marks on bar/column, line, area, scatter, and bubble charts scale with tick-label size (Office-calibrated 0.315x) and honor explicit majorTickMark settings; unstyled chart series/gridline/marker/key strokes default to round caps/joins; vertical single-series vary-colors bar/column fills follow per-count variation rows below 96 points and the Office-calibrated linear-light recipe over theme-live accents at 96 or more points. Bar/column plot clips extend 0.69pt past the axis-bounded plot rect on the bottom and right; unstyled line, scatter, and radar series strokes plus legend key lines and glyphs render the theme accent darkened to 0.975x luminance while fills keep raw colors; unstyled axes and ticks render black, except single-plot bar/column charts carrying gallery style 2 without a style part, whose unstyled axis-family strokes render gray at width 1. Unstyled axis titles render bold black. Tier-1 (clustered/stacked bar/column, line with markers, plain pie) is the close-parity target; Tier-2 (area, scatter/bubble, secondary axes, leader-line labels, percent-stacked, trendlines) remains approximate; doughnut and radar ports hold needs-review tripwires after the polar-arc fixes.
+- Native chart rendering for bar/column, line, area, pie/doughnut, scatter, bubble, and radar charts with cached numeric values, including titles (single-series charts gain the series name as an auto title), legends, category/value axes on any side, tick labels, measured horizontal-bar label strips and outer-manual plot reserves, and first-pass data labels. Major tick marks on bar/column, line, area, scatter, and bubble charts scale with tick-label size (Office-calibrated 0.315x) and honor explicit majorTickMark settings; unstyled chart series/gridline/marker/key strokes default to round caps/joins; vertical single-series vary-colors bar/column fills follow per-count variation rows below 96 points and the Office-calibrated linear-light recipe over theme-live accents at 96 or more points. Bar/column plot clips extend 0.69pt past the axis-bounded plot rect on the bottom and right; unstyled line, scatter, and radar series strokes plus legend key lines and glyphs render the theme accent darkened to 0.975x luminance while fills keep raw colors; unstyled axes and ticks render black, except single-plot bar/column charts carrying gallery style 2 without a style part, whose unstyled axis-family strokes render gray at width 1. Unstyled axis titles render bold black. Tier-1 (clustered/stacked bar/column, line with markers, plain pie) is the close-parity target; Tier-2 (area, scatter/bubble, secondary axes, leader-line labels, percent-stacked, trendlines) remains approximate; filled-radar series under effective style 18 paint theme-relative vertical gradients; doughnut ports hold no open tripwires.
 - Chart number formats: sign and conditional sections, 1900/1904 dates and datetimes, scientific and fraction rendering, accounting skip/fill runs, scaling commas, quoted/escaped/bare literal runs, locale currency symbols, and source-linked workbook formats including dates; axes and data labels share one formatter.
 - Markup-compatibility Choice/Fallback selection renders exactly one AlternateContent representation (first understood Choice, else Fallback).
 - Failed slide nodes rewind partial paint and annotations, then report PPTX_NODE_RENDER_FAILED while neighboring nodes render normally.
@@ -32,14 +32,16 @@ Partial or approximated:
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Table rendering honors merges and explicit borders with vertical-anchor approximations, but per-edge border styles, rich table styles beyond the first-pass built-ins, and fine vertical metrics remain approximate.
 - Shape rendering supports only a small preset geometry set.
+- Rasterized outer shadows and glows, axial-gradient chart style fills and shape gradients, approximated SVG gradients, and alpha transparency; other effects remain unsupported.
+- Missing-glyph and missing-font fallback renders deterministic standard-14 faces with capped diagnostics (WinAnsi coverage; other scripts substitute a diagnosed mark).
 - Chart number formats keep invariant separators and English names (locale-specific rules warn instead), and axis labels use chart-side formats rather than linked workbook formats.
 
 Unsupported or ignored:
 
 - Stock, surface, and 3D charts, SmartArt, videos, audio, OLE objects, transitions, animations, macros, and ActiveX.
-- Complex effects such as shadows, gradients, transparency, 3D, and most custom geometry.
+- Complex effects such as 3D, most custom geometry, and effects beyond the supported subset below.
 - Strict OOXML (ISO 29500) content: only the transitional dialect is supported; strict parts warn OOXML_STRICT_DIALECT and may render missing.
-- Complex scripts, bidirectional text, text shaping, fallback font selection, and OpenType layout features.
+- Complex scripts, bidirectional text, text shaping, and OpenType layout features beyond coverage fallback.
 
 Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides. PPTX_UNSUPPORTED_CHART is now reserved for unsupported kinds, missing parts, and formula-only data without cached values (see Diagnostics.md).
 
@@ -67,22 +69,25 @@ Partial or approximated:
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Advanced numbering formats, character-unit list indents, and complex bidirectional list layout are approximate.
-- Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
+- Body-path inline images with recorded run affinity paint mid-line at run position with bottom-on-baseline placement; table and related-story paths still place them as blocks after paragraph text, and overwide images overflow past the margin.
+- Missing-glyph and missing-font fallback renders deterministic standard-14 faces with capped diagnostics, including comment and revision balloon text (word-compatible balloon text still needs embedded faces).
 - Floating drawing wrap effects on nearby body text are still approximate even when anchor placement and exclusion geometry are inspected.
 - Some decorative table border styles, table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
 - Header/footer distance, odd/even variants, first-page variants, and dynamic field evaluation are approximate or unsupported.
 - `Final` and `Original` DOCX markup modes filter inserted/deleted and moved content before layout.
 - `SimpleMarkup` renders final text with page-margin change bars and compact comment markers.
 - `AllMarkup` renders inline revision styling plus first-pass comment and tracked-change balloons with metadata or revision-kind summaries, preview text, table/image fallback markers, and connectors.
+- Footnote and endnote bodies place first-pass as related stories; split-note continuation stays approximate.
+- Multi-column sections flow explicit breaks with first-pass exclusion geometry while continuous balancing stays approximate.
 - Markup modes keep the authored PDF media box and text-column geometry; no expanded review-pane margin is created.
 
 Unsupported or ignored:
 
 - Full Word-style tracked-change balloon content and collision-aware markup margin pagination.
-- Floating charts, SmartArt, equations, live OLE content, footnote/endnote bodies, multi-column layout, macros, and full Word-style text reflow around floating objects.
+- Floating charts, SmartArt, equations, live OLE content, macros, and full Word-style text reflow around floating objects.
 - Section variants beyond the simple page setup used by the current renderer.
 - Strict OOXML (ISO 29500) content: only the transitional dialect is supported; strict parts warn OOXML_STRICT_DIALECT and may render missing.
-- Complex scripts, bidirectional text, text shaping, fallback font selection, and OpenType layout features.
+- Complex scripts, bidirectional text, text shaping, and OpenType layout features beyond coverage fallback.
 
 Comments, tracked changes, formatting revisions, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning or approximation diagnostics when detected.
 
