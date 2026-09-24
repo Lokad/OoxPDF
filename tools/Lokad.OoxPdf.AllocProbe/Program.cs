@@ -1003,6 +1003,12 @@ static object MeasureConcurrencyInput(string name, byte[] inputBytes, string out
 
     ConvertOnce(inputBytes, FreshOptions(), extension, outputMode);
 
+    // Pre-batch collection mirrors the MeasureOnce precondition so floating
+    // warmup garbage does not inflate batch peaks.
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    GC.Collect();
+
     using var batchPeaks = new PeakSampler();
     batchPeaks.Start();
     var batchWatch = Stopwatch.StartNew();
