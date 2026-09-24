@@ -646,15 +646,13 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06: retained font resources accumulate across embedded fonts. A zero font
         // byte budget trips a font-embedding conversion without publishing output.
+        // RV01: deterministic embeddable test face runs this on every host.
         string input = FindCase("docx-tables.docx");
-        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
-        {
-            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
-        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = new TestFaceFontResolver(),
             ConversionLimits = new OoxConversionLimits { MaxPdfFontBytesPerConversion = 0 },
         }));
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
@@ -705,23 +703,21 @@ internal static class OoxResourceGuaranteeTests
         // R06.2: per-page DOCX admission trips during page emission, before the
         // trailing page (and its image) produces. The image-budget run proves the
         // trailing image decodes when pages are ample.
+        // RV01: deterministic embeddable test face runs this on every host.
         string input = WritePagedDocxWithTrailingImage();
-        // Font-less fallback layout collapses the forced pages, so the
-        // multi-page admission premise needs an embeddable font.
-        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
-        {
-            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
-        }
+        var face = new TestFaceFontResolver();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException imageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = face,
             ConversionLimits = new OoxConversionLimits { MaxImagesDecodedPerConversion = 0 },
         }));
         TestAssert.Contains("image decode budget", imageTrip.Message);
         OoxPdfLimitExceededException pageTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = face,
             ConversionLimits = new OoxConversionLimits
             {
                 MaxPagesPerConversion = 2,
@@ -737,17 +733,13 @@ internal static class OoxResourceGuaranteeTests
         // R06.2: per-page content admission trips on the first emitted page, before
         // the trailing image decodes (previously content charged in the writer after
         // the whole document rendered).
+        // RV01: deterministic embeddable test face runs this on every host.
         string input = WritePagedDocxWithTrailingImage();
-        // Font-less fallback layout collapses the forced pages, so the
-        // multi-page admission premise needs an embeddable font.
-        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
-        {
-            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
-        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException contentTrip = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = new TestFaceFontResolver(),
             ConversionLimits = new OoxConversionLimits
             {
                 MaxPdfContentBytesPerConversion = 0,
@@ -775,15 +767,13 @@ internal static class OoxResourceGuaranteeTests
     public static void RetainedFontBytesTripBeforeSerialization()
     {
         // R06.2: a zero retained-font budget trips at the first subset build.
+        // RV01: deterministic embeddable test face runs this on every host.
         string input = FindCase("docx-tables.docx");
-        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
-        {
-            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
-        }
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = new TestFaceFontResolver(),
             ConversionLimits = new OoxConversionLimits { MaxRetainedFontBytesPerConversion = 0 },
         }));
         TestAssert.Contains("retained font byte budget", thrown.Message);
@@ -811,16 +801,14 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.2: retained fields ride the typed file-path summary alongside the
         // serialized writer-stage fields.
+        // RV01: deterministic embeddable test face runs this on every host.
         string input = FindCase("docx-tables.docx");
-        if (!EmbedsFontBytes(input, OoxPdfInputKind.Docx))
-        {
-            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
-        }
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = new TestFaceFontResolver(),
             ReportResourceUsage = true,
             DiagnosticSink = diagnostics.Add,
         });

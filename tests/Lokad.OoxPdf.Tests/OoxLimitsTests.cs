@@ -667,20 +667,18 @@ internal static class OoxLimitsTests
     {
         // R19: the completed typed snapshot reports serialized font/image bytes on
         // the file path alongside every other charged domain.
+        // RV01: deterministic embeddable test face runs this on every host.
         string input = DocxWithInlinePng();
         var diagnostics = new List<OoxPdfDiagnostic>();
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
+            FontResolver = new TestFaceFontResolver(),
             ReportResourceUsage = true,
             DiagnosticSink = diagnostics.Add,
         });
         OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
-        if (summary.Message.Contains("pdfFontBytes=0", StringComparison.Ordinal))
-        {
-            TestAssert.Skip("Environmental precondition not met: (no embeddable font resolved)");
-        }
 
         TestAssert.True(!summary.Message.Contains("pdfFontBytes=0", StringComparison.Ordinal), "Serialized font bytes must be reported, got: " + summary.Message);
         TestAssert.True(!summary.Message.Contains("pdfImageBytes=0", StringComparison.Ordinal), "Serialized image bytes must be reported, got: " + summary.Message);
