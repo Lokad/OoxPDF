@@ -16,6 +16,34 @@ internal sealed partial class PptxRenderer
         ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = layout.PointCount;
 
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            IReadOnlyList<double?> values = series[seriesIndex].Values;
+            var points = new (double X, double Y)[pointCount];
+            for (int i = 0; i < pointCount; i++)
+            {
+                double value = i < values.Count && values[i] is { } pointValue ? Math.Max(0d, pointValue) : 0d;
+                double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
+                double angle = GetRadarPointAngle(i, pointCount);
+                points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
+            }
+
+            if (layout.IsFilled)
+            {
+                // Office renders unstyled filled-radar series solid (single-series ladder
+                // reference; two-series probe with opaque red over blue): the series color
+                // carries no translucency unless an explicit fill says so.
+                ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, 1d);
+                graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+                graphics.FillPolygon(points);
+                graphics.RestoreState();
+            }
+        }
+
+        // RV04: series fills paint before grid spokes so spokes stay visible over filled polygons.
+
         SetChartStroke(graphics, RadarGridlineDefaultStroke);
         bool hasGridPath = false;
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount))
@@ -49,18 +77,6 @@ internal sealed partial class PptxRenderer
                 points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
             }
 
-            if (layout.IsFilled)
-            {
-                // Office renders unstyled filled-radar series solid (single-series ladder
-                // reference; two-series probe with opaque red over blue): the series color
-                // carries no translucency unless an explicit fill says so.
-                ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
-                graphics.SaveState();
-                graphics.SetAlpha(fill.Alpha, 1d);
-                graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-                graphics.FillPolygon(points);
-                graphics.RestoreState();
-            }
             // Office omits the polygon outline on filled radars without an explicit line;
             // marker radars always outline (3.75pt default measured on the ladder reference).
             bool hasExplicitStroke = seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is not null;
@@ -86,7 +102,6 @@ internal sealed partial class PptxRenderer
                     graphics.RestoreState();
                 }
             }
-
         }
 
         void AppendClosedPolylinePath(IReadOnlyList<(double X, double Y)> points)
