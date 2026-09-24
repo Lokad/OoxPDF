@@ -88,6 +88,10 @@ internal sealed partial class DocxLayoutEngine
         // dynamic fields), and emergency tokens structurally contain no tabs (they
         // split tokens), which still does not certify shaping monotonicity.
         var measureMemo = new Dictionary<(int Start, int Length, bool PreserveTerminalSoftHyphen), double>();
+        // RV13: per-token-chain average advance keyed by token end. Remainders
+        // produced while wrapping one chain share its end, so the first full
+        // measure of a chain lets later remainders skip their full measure.
+        var chainAverages = new Dictionary<int, double>();
         // R07.2: index span start offsets once per segment so slice lookups seek
         // instead of restarting traversal from the first span on every measure.
         int[] spanStarts = new int[spans.Count + 1];
@@ -130,9 +134,9 @@ internal sealed partial class DocxLayoutEngine
                 double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
                 double remainingWidth = maxWidth(lineIndex) - usedWidth;
                 if (remainingWidth > 0d &&
-                    TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, out int preferredBreakLength))
+                    TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, out int preferredBreakLength))
                 {
-                    yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true);
+                    yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true, spanStarts);
                     lineIndex++;
                     lineStart = token.Start + preferredBreakLength;
                     lineLength = 0;
@@ -143,7 +147,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false);
+                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
                 lineIndex++;
                 lineStart = token.Start;
                 lineLength = 0;
@@ -154,9 +158,9 @@ internal sealed partial class DocxLayoutEngine
 
             if (lineLength == 0 &&
                 !token.IsBreakableWhitespace &&
-                TryFindPreferredTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, out int breakLength))
+                TryFindPreferredTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, out int breakLength))
             {
-                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true);
+                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true, spanStarts);
                 lineIndex++;
                 lineStart = token.Start + breakLength;
                 lineLength = 0;
@@ -168,9 +172,9 @@ internal sealed partial class DocxLayoutEngine
             else if (lineLength == 0 &&
                 allowOverwideTokenBreaks &&
                 !token.IsBreakableWhitespace &&
-                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, out breakLength))
+                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, out breakLength))
             {
-                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true);
+                yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true, spanStarts);
                 lineIndex++;
                 lineStart = token.Start + breakLength;
                 lineLength = 0;
@@ -189,7 +193,7 @@ internal sealed partial class DocxLayoutEngine
 
         if (lineLength > 0)
         {
-            yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false);
+            yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
         }
     }
 
@@ -208,18 +212,26 @@ internal sealed partial class DocxLayoutEngine
         bool segmentHasDynamicFields,
         CancellationToken cancellationToken,
         int[] spanStarts,
+        Dictionary<int, double> chainAverages,
         out int breakLength)
     {
-        if (TryFindPreferredTokenBreak(text, spans, token, maxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, out breakLength))
+        if (TryFindPreferredTokenBreak(text, spans, token, maxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, out breakLength))
         {
             return true;
         }
 
-        double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
-        if (tokenWidth <= maxWidth)
+        double averageCharWidth;
+        if (!TryEstimateChainOverflow(chainAverages, token, maxWidth, out averageCharWidth))
         {
-            breakLength = 0;
-            return false;
+            double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
+            RecordChainAverageWidth(chainAverages, token, tokenWidth);
+            if (tokenWidth <= maxWidth)
+            {
+                breakLength = 0;
+                return false;
+            }
+
+            averageCharWidth = token.Length > 0 ? tokenWidth / token.Length : 0d;
         }
 
         // R07: estimate fit via average char width to avoid O(N) prefix measures per line.
@@ -232,7 +244,6 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        double averageCharWidth = tokenWidth / token.Length;
         int estimatedFit = averageCharWidth > 0d
             ? Math.Clamp((int)(maxWidth / averageCharWidth), 1, token.Length - 1)
             : 1;
@@ -280,6 +291,21 @@ internal sealed partial class DocxLayoutEngine
                 else
                 {
                     break;
+                }
+            }
+
+            // RV13: the scan reached the end of the token with every proper
+            // prefix fitting (cap and overflow exits keep next short of the
+            // end). The skipped full measure may have estimated overflow on a
+            // mixed-width chain, so confirm: a fitting whole remainder needs
+            // no break. Uses the same unpreserved fit question as the gate.
+            if (next >= token.Length)
+            {
+                double fullWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
+                if (fullWidth <= maxWidth)
+                {
+                    breakLength = 0;
+                    return false;
                 }
             }
 
@@ -365,13 +391,21 @@ internal sealed partial class DocxLayoutEngine
         bool segmentHasDynamicFields,
         CancellationToken cancellationToken,
         int[] spanStarts,
+        Dictionary<int, double> chainAverages,
         out int breakLength)
     {
         breakLength = 0;
-        double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
-        if (tokenWidth <= maxWidth)
+        double averagePreferredCharWidth;
+        if (!TryEstimateChainOverflow(chainAverages, token, maxWidth, out averagePreferredCharWidth))
         {
-            return false;
+            double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
+            RecordChainAverageWidth(chainAverages, token, tokenWidth);
+            if (tokenWidth <= maxWidth)
+            {
+                return false;
+            }
+
+            averagePreferredCharWidth = token.Length > 0 ? tokenWidth / token.Length : 0d;
         }
 
         if (token.Length <= 1)
@@ -380,7 +414,6 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
-        double averagePreferredCharWidth = tokenWidth / token.Length;
         int estimatedPreferredFit = averagePreferredCharWidth > 0d
             ? Math.Clamp((int)(maxWidth / averagePreferredCharWidth), 1, token.Length - 1)
             : 1;
@@ -445,6 +478,18 @@ internal sealed partial class DocxLayoutEngine
                 else
                 {
                     break;
+                }
+            }
+
+            // RV13: same fitting-tail confirmation as the emergency search: a
+            // whole remainder that fits needs no preferred break either.
+            if (nextPreferred >= token.Length)
+            {
+                double fullPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
+                if (fullPreferredWidth <= maxWidth)
+                {
+                    breakLength = 0;
+                    return false;
                 }
             }
 
@@ -541,18 +586,54 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
+    // RV13: per-token-chain average advance used to skip repeat full-remainder
+    // measures. Remainders produced while wrapping one token chain share the
+    // chain end (token.Start + token.Length), which uniquely identifies the
+    // chain within a segment, while font size, tab stops and field state are
+    // fixed for the wrapping call. An estimated overflow skips the full
+    // measure and proceeds to the break search; an estimated fit always falls
+    // through to a confirming real measure, so break decisions match full
+    // measurement. Like the slice memo, averages live for one segment only.
+    private static bool TryEstimateChainOverflow(
+        Dictionary<int, double> chainAverages,
+        TextToken token,
+        double maxWidth,
+        out double averageCharWidth)
+    {
+        if (chainAverages.TryGetValue(token.Start + token.Length, out averageCharWidth) &&
+            averageCharWidth * token.Length > maxWidth)
+        {
+            return true;
+        }
+
+        averageCharWidth = 0d;
+        return false;
+    }
+
+    private static void RecordChainAverageWidth(
+        Dictionary<int, double> chainAverages,
+        TextToken token,
+        double tokenWidth)
+    {
+        if (token.Length > 0)
+        {
+            chainAverages[token.Start + token.Length] = tokenWidth / token.Length;
+        }
+    }
+
     private static DocxWrappedTextLine CreateWrappedTextLine(
         string text,
         IReadOnlyList<DocxTextSpan> spans,
         int start,
         int length,
-        bool endsWithIntraTokenBreak)
+        bool endsWithIntraTokenBreak,
+        int[]? spanStarts = null)
     {
         string lineText = text.Substring(start, length);
         bool preserveTerminalSoftHyphen = endsWithIntraTokenBreak && lineText.EndsWith('\u00AD');
         return new DocxWrappedTextLine(
             RemoveHiddenBreakCharacters(lineText, preserveTerminalSoftHyphen),
-            NormalizeHiddenBreakSpans(SliceTextSpans(spans, start, length), preserveTerminalSoftHyphen),
+            NormalizeHiddenBreakSpans(SliceTextSpans(spans, start, length, spanStarts), preserveTerminalSoftHyphen),
             endsWithIntraTokenBreak);
     }
 

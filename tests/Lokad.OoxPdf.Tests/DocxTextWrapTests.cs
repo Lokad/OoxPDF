@@ -1194,6 +1194,45 @@ internal static class DocxTextWrapTests
         TestAssert.True(alloc8192 <= (long)(3.5d * alloc4096), $"Allocations must scale linearly, saw {alloc4096} then {alloc8192}.");
     }
 
+    // RV13: wide head characters with a narrow tail defeat the chain-average
+    // fit estimate, exercising the fitting-tail confirmation.
+    private static double HeadWideTailNarrowWidth(DocxTextRun? run, string text)
+    {
+        double width = 0d;
+        foreach (char c in text)
+        {
+            width += c == (char)72 ? 10d : c == (char)45 ? 5d : 1d;
+        }
+        return width;
+    }
+
+    // RV13: a mixed-width chain whose narrow tail fits must not be broken when
+    // the chain-average estimate overflows. Wide head characters inflate the
+    // recorded average, but the fitting emergency tail needs no break.
+    public static void EmergencyWrapMixedWidthFittingTailNeedsNoBreak()
+    {
+        string token = new string((char)72, 10) + new string((char)108, 10);
+        var measurer = new ProfilingMeasurer(HeadWideTailNarrowWidth);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
+        AssertCoverage(token, lines);
+        TestAssert.Equal(11, lines.Count);
+        TestAssert.Equal(new string((char)108, 10), lines[10].Text);
+        AssertAllLinesFit(lines, _ => 10d, HeadWideTailNarrowWidth);
+    }
+
+    // RV13: same fitting-tail requirement through preferred (hyphen) breaks.
+    public static void PreferredWrapMixedWidthFittingTailNeedsNoBreak()
+    {
+        string token = new string((char)72, 10) + "-" + new string((char)108, 10);
+        var measurer = new ProfilingMeasurer(HeadWideTailNarrowWidth);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 15d, true, measurer);
+        AssertCoverage(token, lines);
+        TestAssert.Equal(11, lines.Count);
+        TestAssert.Equal("H-", lines[9].Text);
+        TestAssert.Equal(new string((char)108, 10), lines[10].Text);
+        AssertAllLinesFit(lines, _ => 15d, HeadWideTailNarrowWidth);
+    }
+
     // R07.1: first-line (6pt) versus continuation (10pt) widths pin distinct break
     // offsets, including the ragged tail; R07.2 must preserve both widths.
     public static void WrapFirstContinuationWidthsPinStarts()

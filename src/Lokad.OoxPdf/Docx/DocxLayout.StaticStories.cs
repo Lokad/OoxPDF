@@ -479,31 +479,68 @@ internal sealed partial class DocxLayoutEngine
             yield break;
         }
 
+        // RV13: index span starts once so slice lookups seek instead of
+        // restarting from the first span on every measure and line build.
+        int[] spanStarts = new int[spans.Count + 1];
+        for (int spanIndex = 0; spanIndex < spans.Count; spanIndex++)
+        {
+            spanStarts[spanIndex + 1] = spanStarts[spanIndex] + spans[spanIndex].Text.Length;
+        }
+
+        // RV13: memoize static slice widths by text coordinates; repeated
+        // measures of the same slice shape once.
+        var measureMemo = new Dictionary<(int Start, int Length), double>();
         int lineStart = tokens[0].Start;
         int lineLength = 0;
+        // RV13: maintain whitespace presence incrementally instead of
+        // rescanning the whole line per token. Added extents chain
+        // contiguously from lineStart, so the running OR equals a fresh scan.
+        bool lineHasNonWhitespace = false;
         foreach (TextToken token in tokens)
         {
             int candidateLength = token.Start + token.Length - lineStart;
-            bool lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
             if (lineLength > 0 &&
                 lineHasNonWhitespace &&
                 !token.IsBreakableWhitespace &&
-                MeasureStaticTextSpansForWrapping(SliceTextSpans(spans, lineStart, candidateLength), textMeasurer) > maxWidth)
+                MeasureStaticSlice(measureMemo, spans, lineStart, candidateLength, textMeasurer, spanStarts) > maxWidth)
             {
-                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false);
+                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
                 lineStart = token.Start;
                 lineLength = token.Length;
+                lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
             }
             else
             {
+                int addedStart = Math.Max(token.Start, lineStart);
+                lineHasNonWhitespace = lineHasNonWhitespace || HasNonWhitespace(text, addedStart, token.Start + token.Length - addedStart);
                 lineLength = candidateLength;
             }
         }
 
         if (lineLength > 0)
         {
-            yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false);
+            yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
         }
+    }
+
+    // RV13: memoized static slice measurement by text coordinates for one
+    // segment; identical slices measure once.
+    private static double MeasureStaticSlice(
+        Dictionary<(int Start, int Length), double> measureMemo,
+        IReadOnlyList<DocxTextSpan> spans,
+        int start,
+        int length,
+        IDocxTextMeasurer textMeasurer,
+        int[] spanStarts)
+    {
+        if (measureMemo.TryGetValue((start, length), out double cached))
+        {
+            return cached;
+        }
+
+        double width = MeasureStaticTextSpansForWrapping(SliceTextSpans(spans, start, length, spanStarts), textMeasurer);
+        measureMemo[(start, length)] = width;
+        return width;
     }
 
     private static double MeasureStaticTextSpans(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
