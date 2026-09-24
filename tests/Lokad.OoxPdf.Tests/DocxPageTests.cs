@@ -1520,6 +1520,137 @@ internal static class DocxPageTests
         TestAssert.Equal(12d, firstPageSnapshot.ColumnGutterWidthSum);
     }
 
+    // RV15: repeated anchor lookups must not rescan all layout items per
+    // drawing: one index build visits each item once, lookups visit nothing.
+    public static void FloatingSourceBlockLookupsStayBounded()
+    {
+        DocxLayout layout = CreateFloatingSourceBlockDocumentLayout();
+        TestAssert.True(layout.Pages.Count >= 2, "Fixture must span pages.");
+        var counter = new ItemVisitCounter();
+        DocxLayoutPage[] countingPages = layout.Pages.Select(page => page with { Items = new CountingItems(page.Items, counter) }).ToArray();
+        int totalItems = countingPages.Sum(page => page.Items.Count);
+        TestAssert.True(totalItems > 0, "Fixture must lay out items.");
+        object index = InvokeBuildSourceBlockIndex(countingPages);
+        TestAssert.True(counter.Visits <= 2L * totalItems, string.Format("Index build must visit each item once, visited {0} for {1} items.", counter.Visits, totalItems));
+        long afterBuild = counter.Visits;
+        for (int k = 0; k < 25; k++)
+        {
+            TryLookupBlock(index, k % 4, out _);
+            TryLookupBlock(index, 999, out _);
+        }
+        TestAssert.Equal(afterBuild, counter.Visits);
+    }
+
+    // RV15: the per-layout source-block index must agree with the linear scan
+    // slot by slot, including missing blocks.
+    public static void FloatingSourceBlockIndexAgreesWithLinearScan()
+    {
+        DocxLayout layout = CreateFloatingSourceBlockDocumentLayout();
+        IReadOnlyList<DocxLayoutPage> pages = layout.Pages;
+        object index = InvokeBuildSourceBlockIndex(pages);
+        int[] blocks = DocxLayoutSnapshot.FromLayout(layout).SourceBlocks.Select(block => block.SourceBlockIndex).ToArray();
+        TestAssert.True(blocks.Length >= 5, "Fixture must lay out several blocks.");
+        int low = blocks.Min() - 1;
+        int high = blocks.Max() + 1;
+        int found = 0;
+        for (int block = low; block <= high; block++)
+        {
+            object? expected = InvokeFindSourceBlockBounds(pages, block);
+            bool hit = TryLookupBlock(index, block, out object? actual);
+            TestAssert.True((expected is null) == !hit, string.Format("Block {0} presence must match.", block));
+            if (expected is not null)
+            {
+                TestAssert.True(expected.Equals(actual), string.Format("Block {0} bounds must match.", block));
+                found++;
+            }
+        }
+        TestAssert.True(found >= 5, "Agreement must cover several present blocks.");
+    }
+
+    private static DocxLayout CreateFloatingSourceBlockDocumentLayout()
+    {
+        var paragraphs = new List<DocxParagraph>();
+        var elements = new List<DocxBodyElement>();
+        DocxTable? table = null;
+        for (int i = 0; i < 12; i++)
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Block paragraph " + i, 10d, 12d);
+            paragraphs.Add(paragraph);
+            elements.Add(new DocxParagraphElement(paragraph));
+            if (i == 5)
+            {
+                table = DocxTests.CreateSingleCellTable("Cell text", 12d);
+                elements.Add(new DocxTableElement(table));
+            }
+        }
+
+        int[] anchoredBlocks = [0, 1, 2, 0, 1, 2, 0, 1, 2, 999];
+        var drawings = new List<DocxFloatingDrawing>();
+        foreach (int block in anchoredBlocks)
+        {
+            drawings.Add(new DocxFloatingDrawing("0", "0", "0", "0", "0", "0", "0", "0", "1", "1", "914400", "457200", "column", "left", null, "paragraph", null, "0", DocxFloatingWrapKind.Square, "bothSides", SourceParagraphIndex: 0, SourceBlockIndex: block, ImageRelationshipId: null, Image: null));
+        }
+        var document = new DocxDocument(200d, 120d, 10d, 10d, 10d, 10d, DocxPageSettings.Empty, drawings, [], [], elements, paragraphs, table is null ? [] : [table]);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+    }
+
+    private static object InvokeBuildSourceBlockIndex(object pages)
+    {
+        System.Reflection.MethodInfo build = typeof(DocxLayoutEngine).GetMethod("BuildSourceBlockIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected source-block index.");
+        try
+        {
+            return build.Invoke(null, [pages, CancellationToken.None])!;
+        }
+        catch (System.Reflection.TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static object? InvokeFindSourceBlockBounds(object pages, int block)
+    {
+        System.Reflection.MethodInfo find = typeof(DocxLayoutEngine).GetMethod("FindSourceBlockBounds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected source-block scan.");
+        try
+        {
+            return find.Invoke(null, [pages, block]);
+        }
+        catch (System.Reflection.TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static bool TryLookupBlock(object index, int block, out object? value)
+    {
+        System.Reflection.MethodInfo lookup = index.GetType().GetMethod("TryGetValue")
+            ?? throw new InvalidOperationException("Expected index lookup.");
+        object?[] args = [block, null];
+        bool found = (bool)lookup.Invoke(index, args)!;
+        value = args[1];
+        return found;
+    }
+
+    private sealed class ItemVisitCounter
+    {
+        public long Visits;
+    }
+    private sealed class CountingItems(IReadOnlyList<DocxLayoutItem> inner, ItemVisitCounter counter) : IReadOnlyList<DocxLayoutItem>
+    {
+        public DocxLayoutItem this[int index] => inner[index];
+        public int Count => inner.Count;
+        public IEnumerator<DocxLayoutItem> GetEnumerator()
+        {
+            foreach (DocxLayoutItem item in inner)
+            {
+                counter.Visits++;
+                yield return item;
+            }
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     public static void DocxPageLayoutStageManualColumnBreakAdvancesActiveColumn()
     {
         DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", fontSize: 10d, lineSpacingPoints: 12d);
