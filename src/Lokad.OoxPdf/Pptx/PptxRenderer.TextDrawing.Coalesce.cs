@@ -145,8 +145,8 @@ internal sealed partial class PptxRenderer
 
         if (UsesMathTypeface(left.Run.FontFamily) ||
             UsesMathTypeface(right.Run.FontFamily) ||
-            string.Equals(left.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) ||
-            string.Equals(right.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal))
+            left.FrameAutofitMode == PptxTextAutofitMode.Shape ||
+            right.FrameAutofitMode == PptxTextAutofitMode.Shape)
         {
             return true;
         }

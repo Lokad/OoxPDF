@@ -62,7 +62,7 @@ internal sealed partial class PptxRenderer
 
     private static bool StartsOfficeHighlightContinuationTextState(PptxPositionedTextSpan span) =>
         span.Run.HighlightColor is not null &&
-        span.FrameAutofitMode != "noAutofit" &&
+        span.FrameAutofitMode != PptxTextAutofitMode.None &&
         span.ParagraphIndex > 0;
 
     private static Dictionary<int, (double SpacingEm, int FirstNumberedParagraphIndex)> ReadOfficeNumberedFrameCharacterSpacing(IReadOnlyList<PptxPositionedTextSpan> textSpans)
@@ -72,7 +72,7 @@ internal sealed partial class PptxRenderer
         {
             PptxPositionedTextSpan[] frame = frameGroup.ToArray();
             if (!frame.Any(UsesNumberedTextStateProfile) ||
-                !frame.Any(span => string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal)) ||
+                !frame.Any(span => span.ParagraphBulletKind == PptxParagraphBulletKind.AutoNumber) ||
                 frame.Any(span => Math.Abs(span.GlyphSpan.CharacterSpacing) >= PptxTextMetricRules.TextStateTolerance))
             {
                 continue;
@@ -80,12 +80,12 @@ internal sealed partial class PptxRenderer
 
             bool hasExplicitAutoNumberStart = frame.Any(span => span.ParagraphAutoNumberStartAt is not null);
             bool hasBodyContinuation = frame.Any(span =>
-                !string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal));
+                span.ParagraphBulletKind != PptxParagraphBulletKind.AutoNumber);
             double spacingEm = hasExplicitAutoNumberStart && hasBodyContinuation
                 ? PptxTextMetricRules.OfficeAutofitNumberedDenseCharacterSpacingEm
                 : PptxTextMetricRules.OfficeAutofitNumberedDefaultCharacterSpacingEm;
             int firstNumberedParagraphIndex = frame
-                .Where(span => string.Equals(span.ParagraphBulletKind, nameof(PptxParagraphBulletKind.AutoNumber), StringComparison.Ordinal))
+                .Where(span => span.ParagraphBulletKind == PptxParagraphBulletKind.AutoNumber)
                 .Min(span => span.ParagraphIndex);
             spacingByFrame[frameGroup.Key] = (spacingEm, firstNumberedParagraphIndex);
         }
@@ -94,8 +94,8 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool UsesNumberedTextStateProfile(PptxPositionedTextSpan span) =>
-        string.Equals(span.FrameAutofitMode, "spAutoFit", StringComparison.Ordinal) ||
-        string.Equals(span.FrameAutofitMode, "noAutofit", StringComparison.Ordinal);
+        span.FrameAutofitMode == PptxTextAutofitMode.Shape ||
+        span.FrameAutofitMode == PptxTextAutofitMode.None;
 
     private static IReadOnlyList<PptxPositionedTextSpan> SplitLeadingSpacesAtHighlightBoundaries(IReadOnlyList<PptxPositionedTextSpan> textSpans)
     {

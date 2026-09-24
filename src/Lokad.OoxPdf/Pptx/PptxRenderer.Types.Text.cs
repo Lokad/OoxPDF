@@ -67,7 +67,7 @@ internal sealed partial class PptxRenderer
         int FrameIndex,
         int ParagraphIndex,
         int? SourceRunIndex,
-        string ParagraphBulletKind,
+        PptxParagraphBulletKind ParagraphBulletKind,
         string? ParagraphAutoNumberType,
         int? ParagraphAutoNumberStartAt,
         int LineIndex,
@@ -86,12 +86,13 @@ internal sealed partial class PptxRenderer
         double FrameInsetRight,
         double FrameInsetTop,
         double FrameInsetBottom,
-        string FrameWrapMode,
+        PptxTextWrapMode FrameWrapMode,
         string? FrameWrapValue,
-        string FrameVerticalOverflowMode,
+        PptxTextVerticalOverflow FrameVerticalOverflowMode,
         string? FrameVerticalOverflowValue,
-        string FrameVerticalOverflowSource,
-        string FrameAutofitMode,
+        PptxTextBodyPropertySource FrameVerticalOverflowSource,
+        PptxTextAutofitMode FrameAutofitMode,
+        string FrameAutofitModeValue,
         double FrameTextX,
         double FrameTextWidth,
         double FrameTextWrapWidth,
@@ -397,7 +398,7 @@ internal sealed partial class PptxRenderer
         PptxParagraphBulletSizeKind SizeKind,
         string? SizeValue);
 
-    private enum PptxParagraphBulletKind
+    internal enum PptxParagraphBulletKind
     {
         None,
         Character,

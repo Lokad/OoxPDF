@@ -521,7 +521,7 @@ internal sealed partial class PptxRenderer
         Bottom
     }
 
-    private enum PptxTextWrapMode
+    internal enum PptxTextWrapMode
     {
         Unknown,
         Square,
@@ -529,7 +529,7 @@ internal sealed partial class PptxRenderer
     }
 
     // RV19: autofit execution branches on this enum; the raw spelling stays on AutofitModeValue.
-    private enum PptxTextAutofitMode
+    internal enum PptxTextAutofitMode
     {
         Absent,
         None,
@@ -537,7 +537,7 @@ internal sealed partial class PptxRenderer
         Normal
     }
 
-    private enum PptxTextVerticalOverflow
+    internal enum PptxTextVerticalOverflow
     {
         Unknown,
         Overflow,

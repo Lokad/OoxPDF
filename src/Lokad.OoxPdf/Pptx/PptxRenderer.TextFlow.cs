@@ -718,7 +718,7 @@ internal sealed partial class PptxRenderer
                 lineState.FrameIndex,
                 lineState.ParagraphIndex,
                 span.SourceRun?.RunIndex,
-                lineState.Paragraph.Model.Bullet.Kind.ToString(),
+                lineState.Paragraph.Model.Bullet.Kind,
                 lineState.Paragraph.Model.Bullet.AutoNumberType,
                 lineState.Paragraph.Model.Bullet.AutoNumberStartAt,
                 lineState.LineIndex,
@@ -737,11 +737,12 @@ internal sealed partial class PptxRenderer
                 lineState.Frame.Model.Insets.Right,
                 lineState.Frame.Model.Insets.Top,
                 lineState.Frame.Model.Insets.Bottom,
-                lineState.Frame.Model.BodyProperties.WrapMode.ToString(),
+                lineState.Frame.Model.BodyProperties.WrapMode,
                 lineState.Frame.Model.BodyProperties.WrapValue,
-                lineState.Frame.Model.BodyProperties.VerticalOverflow.ToString(),
+                lineState.Frame.Model.BodyProperties.VerticalOverflow,
                 lineState.Frame.Model.BodyProperties.VerticalOverflowValue,
-                lineState.Frame.Model.BodyProperties.VerticalOverflowSource.ToString(),
+                lineState.Frame.Model.BodyProperties.VerticalOverflowSource,
+                lineState.Frame.Model.BodyProperties.AutofitMode,
                 lineState.Frame.Model.BodyProperties.AutofitModeValue,
                 lineState.Frame.Model.TextX,
                 lineState.Frame.Model.TextWidth,
@@ -774,7 +775,7 @@ internal sealed partial class PptxRenderer
             foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
             {
                 PptxPositionedTextSpan[] frame = frameSpans.ToArray();
-                if (!frame.Any(span => string.Equals(span.FrameVerticalOverflowMode, nameof(PptxTextVerticalOverflow.Ellipsis), StringComparison.Ordinal)))
+                if (!frame.Any(span => span.FrameVerticalOverflowMode == PptxTextVerticalOverflow.Ellipsis))
                 {
                     result.AddRange(frame);
                     continue;
