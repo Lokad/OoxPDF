@@ -1163,6 +1163,37 @@ internal static class DocxTextWrapTests
         TestAssert.True(alloc256 - alloc128 > 0, "Growth must be observable above setup.");
         TestAssert.True(alloc512 - alloc256 <= (long)(2.5d * (alloc256 - alloc128)), string.Format("Allocations must scale linearly, saw deltas {0} then {1}.", alloc256 - alloc128, alloc512 - alloc256));
     }
+    // RV13: measured characters must scale linearly at thousands of characters,
+    // not fourfold per doubling (per-line full-remainder measurement).
+    public static void EmergencyWrapMeasuredCharactersScaleLinearly()
+    {
+        long chars2048 = WrapUnitChars(2048);
+        long chars4096 = WrapUnitChars(4096);
+        long chars8192 = WrapUnitChars(8192);
+        TestAssert.True(chars4096 <= 3L * chars2048, $"Measured characters must scale linearly, saw {chars2048} then {chars4096}.");
+        TestAssert.True(chars8192 <= 3L * chars4096, $"Measured characters must scale linearly, saw {chars4096} then {chars8192}.");
+    }
+
+    private static long WrapUnitChars(int length)
+    {
+        string token = new string((char)97, length);
+        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
+        TestAssert.True(lines.Count > 0, "Token must produce lines.");
+        return measurer.CharsMeasured;
+    }
+
+    // RV13: allocations must scale linearly at thousands of characters.
+    public static void EmergencyWrapLargeAllocationScalesLinearly()
+    {
+        long alloc2048 = WrapAllocated(new string((char)97, 2048));
+        long alloc4096 = WrapAllocated(new string((char)97, 4096));
+        long alloc8192 = WrapAllocated(new string((char)97, 8192));
+        TestAssert.True(alloc2048 > 0, "Growth must be observable above setup.");
+        TestAssert.True(alloc4096 <= (long)(3.5d * alloc2048), $"Allocations must scale linearly, saw {alloc2048} then {alloc4096}.");
+        TestAssert.True(alloc8192 <= (long)(3.5d * alloc4096), $"Allocations must scale linearly, saw {alloc4096} then {alloc8192}.");
+    }
+
     // R07.1: first-line (6pt) versus continuation (10pt) widths pin distinct break
     // offsets, including the ragged tail; R07.2 must preserve both widths.
     public static void WrapFirstContinuationWidthsPinStarts()
