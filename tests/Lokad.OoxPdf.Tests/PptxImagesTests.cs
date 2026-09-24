@@ -568,6 +568,108 @@ internal static class PptxImagesTests
         TestAssert.Contains("0.012 0 0.988 rg", pdf);
     }
 
+    private static string WriteSvgGradientDeck(string svg)
+    {
+        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="svg" ContentType="image/svg+xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.svg"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                       xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main">
+                  <p:cSld><p:spTree><p:pic>
+                    <p:blipFill><a:blip><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rId1"/></a:ext></a:extLst></a:blip></p:blipFill>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                  </p:pic></p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/media/image1.svg"] = TestFixtures.Utf8(svg)
+        });
+    }
+
+    // RV07: default objectBoundingBox gradients normalize into path space.
+    public static void PptxSyntheticSvgObjectBoundingBoxGradientVariesAcrossStrips()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M0 0 H100 V20 H0 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.988 0 0.012 rg", pdf);
+        TestAssert.Contains("0.012 0 0.988 rg", pdf);
+    }
+
+    // RV07: vertical gradients tessellate along the dominant axis.
+    public static void PptxSyntheticSvgVerticalGradientVariesTopToBottom()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M0 0 H100 V100 H0 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.988 0 0.012 rg", pdf);
+        TestAssert.Contains("0.012 0 0.988 rg", pdf);
+    }
+
+    // RV07: diagonal gradients project onto the dominant axis.
+    public static void PptxSyntheticSvgDiagonalGradientProjectsOntoDominantAxis()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#FF0000"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M0 0 H100 V100 H0 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.745 0 0.255 rg", pdf);
+        TestAssert.Contains("0.255 0 0.745 rg", pdf);
+    }
+
     public static void PptxSyntheticPngPictureAppliesLuminanceRecolor()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

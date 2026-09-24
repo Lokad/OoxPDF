@@ -301,22 +301,59 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.ClipCurrentPath();
+        // RV07: objectBoundingBox vectors normalize into path space while
+        // userSpaceOnUse vectors stay in user units; strips run along the
+        // dominant gradient axis so vertical gradients vary top to bottom.
         double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
-        int stripCount = Math.Clamp((int)Math.Ceiling(pathWidth / 2d), 16, 128);
-        double stripSvgWidth = pathWidth / stripCount;
-        double sampleY = pathBounds.CenterY;
-        for (int strip = 0; strip < stripCount; strip++)
+        double pathHeight = Math.Max(0.001d, pathBounds.MaxY - pathBounds.MinY);
+        SvgGradient effective = gradient.IsUserSpace
+            ? gradient
+            : gradient with
+            {
+                X1 = pathBounds.MinX + gradient.X1 * pathWidth,
+                Y1 = pathBounds.MinY + gradient.Y1 * pathHeight,
+                X2 = pathBounds.MinX + gradient.X2 * pathWidth,
+                Y2 = pathBounds.MinY + gradient.Y2 * pathHeight,
+            };
+        if (Math.Abs(effective.X2 - effective.X1) >= Math.Abs(effective.Y2 - effective.Y1))
         {
-            double stripMinX = pathBounds.MinX + strip * stripSvgWidth;
-            double stripMaxX = strip == stripCount - 1 ? pathBounds.MaxX : stripMinX + stripSvgWidth;
-            double sampleX = (stripMinX + stripMaxX) / 2d;
-            RgbColor color = SampleSvgGradient(gradient, sampleX, sampleY);
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-            graphics.FillRectangle(
-                imageX + (stripMinX - minX) * scaleX,
-                imageY,
-                Math.Max(0.001d, (stripMaxX - stripMinX) * scaleX),
-                imageHeight);
+            int stripCount = Math.Clamp((int)Math.Ceiling(pathWidth / 2d), 16, 128);
+            double stripSvgWidth = pathWidth / stripCount;
+            double sampleY = pathBounds.CenterY;
+            for (int strip = 0; strip < stripCount; strip++)
+            {
+                double stripMinX = pathBounds.MinX + strip * stripSvgWidth;
+                double stripMaxX = strip == stripCount - 1 ? pathBounds.MaxX : stripMinX + stripSvgWidth;
+                double sampleX = (stripMinX + stripMaxX) / 2d;
+                RgbColor color = SampleSvgGradient(effective, sampleX, sampleY);
+                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                graphics.FillRectangle(
+                    imageX + (stripMinX - minX) * scaleX,
+                    imageY,
+                    Math.Max(0.001d, (stripMaxX - stripMinX) * scaleX),
+                    imageHeight);
+            }
+        }
+        else
+        {
+            int stripCount = Math.Clamp((int)Math.Ceiling(pathHeight / 2d), 16, 128);
+            double stripSvgHeight = pathHeight / stripCount;
+            double sampleX = pathBounds.CenterX;
+            double stripX = imageX + (pathBounds.MinX - minX) * scaleX;
+            double stripWidth = Math.Max(0.001d, pathWidth * scaleX);
+            for (int strip = 0; strip < stripCount; strip++)
+            {
+                double stripMinY = pathBounds.MinY + strip * stripSvgHeight;
+                double stripMaxY = strip == stripCount - 1 ? pathBounds.MaxY : stripMinY + stripSvgHeight;
+                double sampleY = (stripMinY + stripMaxY) / 2d;
+                RgbColor color = SampleSvgGradient(effective, sampleX, sampleY);
+                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                graphics.FillRectangle(
+                    stripX,
+                    imageY + imageHeight - (stripMaxY - minY) * scaleY,
+                    stripWidth,
+                    Math.Max(0.001d, (stripMaxY - stripMinY) * scaleY));
+            }
         }
 
         graphics.RestoreState();
@@ -370,7 +407,8 @@ internal sealed partial class PptxRenderer
                     ReadSvgDoubleAttribute(gradient, "y1", 0d),
                     ReadSvgDoubleAttribute(gradient, "x2", 1d),
                     ReadSvgDoubleAttribute(gradient, "y2", 0d),
-                    stops);
+                    stops,
+                    string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal));
             }
         }
 

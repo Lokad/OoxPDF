@@ -606,7 +606,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct SvgPaint(RgbColor? Color, SvgGradient? Gradient);
 
-    private sealed record SvgGradient(double X1, double Y1, double X2, double Y2, IReadOnlyList<SvgGradientStop> Stops);
+    private sealed record SvgGradient(double X1, double Y1, double X2, double Y2, IReadOnlyList<SvgGradientStop> Stops, bool IsUserSpace);
 
     private readonly record struct SvgGradientStop(double Offset, RgbColor Color);
 
