@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
         double valueAxisCrossingY = 0d;
@@ -88,7 +88,7 @@ internal sealed partial class PptxRenderer
             double[] lower = new double[pointCount];
             for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
             {
-                IReadOnlyList<ChartIndexedNumberPoint?> values = denseSeries[seriesIndex];
+                IReadOnlyList<double?> values = denseSeries[seriesIndex];
                 if (values.Count == 0)
                 {
                     continue;
@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
                 var markers = new List<(double X, double Y)>(values.Count);
                 for (int i = 0; i < values.Count; i++)
                 {
-                    if (values[i]?.Value is not { } value)
+                    if (values[i] is not { } value)
                     {
                         if (displayBlanksAs == PptxSceneChartDisplayBlanksAs.Zero)
                         {
@@ -611,8 +611,8 @@ internal sealed partial class PptxRenderer
     private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
     {
         IEnumerable<double> values = series
-            .SelectMany(item => item.Points)
-            .Select(point => point is { } unwrapped ? unwrapped.Value ?? 0d : 0d);
+            .SelectMany(item => item.Values)
+            .Select(value => value ?? 0d);
         double maxValue = Math.Max(0d, values.DefaultIfEmpty(0d).Max());
         double minValue = Math.Min(0d, values.DefaultIfEmpty(0d).Min());
         return new ChartValueExtents(minValue, maxValue);
@@ -620,7 +620,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
     {
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
         (double minValue, double maxValue) = stacked
             ? GetStackedPointValueExtents(denseSeries, pointCount, percentStacked)

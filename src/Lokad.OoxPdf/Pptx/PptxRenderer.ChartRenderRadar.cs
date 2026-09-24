@@ -39,11 +39,11 @@ internal sealed partial class PptxRenderer
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex].Points;
+            IReadOnlyList<double?> values = series[seriesIndex].Values;
             var points = new (double X, double Y)[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
-                double value = i < values.Count && values[i]?.Value is { } pointValue ? Math.Max(0d, pointValue) : 0d;
+                double value = i < values.Count && values[i] is { } pointValue ? Math.Max(0d, pointValue) : 0d;
                 double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
                 double angle = GetRadarPointAngle(i, pointCount);
                 points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
@@ -144,7 +144,7 @@ internal sealed partial class PptxRenderer
             return new ChartValueExtents(0d, 1d);
         }
 
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
         (double minValue, double maxValue) = stacked
             ? GetStackedPointValueExtents(denseSeries, pointCount, percentStacked)

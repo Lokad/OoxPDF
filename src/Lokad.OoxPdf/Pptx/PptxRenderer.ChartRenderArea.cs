@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
             if (minorGridlines)
@@ -89,7 +89,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
         double[] lower = new double[pointCount];
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
+            IReadOnlyList<double?> values = series[seriesIndex];
             if (values.Count == 0)
             {
                 continue;
@@ -110,13 +110,13 @@ internal sealed partial class PptxRenderer
                 int start = 0;
                 while (start < pointCount)
                 {
-                    while (start < pointCount && (start >= values.Count || values[start]?.Value is null))
+                    while (start < pointCount && (start >= values.Count || values[start] is null))
                     {
                         start++;
                     }
 
                     int end = start;
-                    while (end < pointCount && end < values.Count && values[end]?.Value is not null)
+                    while (end < pointCount && end < values.Count && values[end] is not null)
                     {
                         end++;
                     }
@@ -136,7 +136,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberPoint?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> allSeries)
+    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -154,7 +154,7 @@ internal sealed partial class PptxRenderer
         for (int i = startIndex; i < endIndex; i++)
         {
             double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
-            double value = i < values.Count && values[i]?.Value is { } indexedValue ? indexedValue : 0d;
+            double value = i < values.Count && values[i] is { } indexedValue ? indexedValue : 0d;
             double lowerValue = stacked ? lower[i] : 0d;
             double positiveTotal = GetCategoryPositiveTotal(allSeries, i, percentStacked);
             double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);

@@ -1169,10 +1169,10 @@ internal static class PptxChartRenderingTests
         typedNumberVectors.SetValue(vector, 0);
         object[] radarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [typedNumberVectors])) ?? throw new InvalidOperationException("Expected radar series.")).Cast<object>().ToArray();
         TestAssert.True(radarSeries.Length == 1, "Expected positive cache value to remain an active radar series.");
-        object[] radarPoints = (((System.Collections.IEnumerable?)radarSeries[0].GetType().GetProperty("Points")?.GetValue(radarSeries[0])) ?? throw new InvalidOperationException("Expected radar series to preserve active point records.")).Cast<object>().ToArray();
-        TestAssert.True(radarPoints.Length == 1, "Expected radar series to preserve one active point record.");
-        TestAssert.True((int?)radarPoints[0].GetType().GetProperty("Index")?.GetValue(radarPoints[0]) == 0, "Expected radar active point to preserve the source point index.");
-        TestAssert.True((double?)radarPoints[0].GetType().GetProperty("Value")?.GetValue(radarPoints[0]) == 99d, "Expected radar active point to preserve the rendered cache value.");
+        object[] radarValues = (((System.Collections.IEnumerable?)radarSeries[0].GetType().GetProperty("Values")?.GetValue(radarSeries[0])) ?? throw new InvalidOperationException("Expected radar series to preserve active values.")).Cast<object>().ToArray();
+        TestAssert.True(radarValues.Length == 1, "Expected radar series to preserve one active value.");
+        TestAssert.True((double?)radarValues[0] == 99d, "Expected radar active value to preserve the rendered cache value.");
+        TestAssert.True(radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) is not null, "Expected radar series to preserve its source vector.");
         object radarSource = radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) ?? throw new InvalidOperationException("Expected radar series to preserve its source vector.");
         object[] radarWorkbookPoints = (((System.Collections.IEnumerable?)radarSource.GetType().GetProperty("WorkbookPoints")?.GetValue(radarSource)) ?? throw new InvalidOperationException("Expected radar source vector workbook sidecar points.")).Cast<object>().ToArray();
         TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
@@ -1182,10 +1182,10 @@ internal static class PptxChartRenderingTests
         Array sparseRadarVectors = Array.CreateInstance(vector.GetType(), 1);
         sparseRadarVectors.SetValue(sparseRadarVector, 0);
         object[] sparseRadarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [sparseRadarVectors])) ?? throw new InvalidOperationException("Expected sparse radar series.")).Cast<object>().ToArray();
-        object[] sparseRadarPoints = (((System.Collections.IEnumerable?)sparseRadarSeries[0].GetType().GetProperty("Points")?.GetValue(sparseRadarSeries[0])) ?? throw new InvalidOperationException("Expected sparse radar points.")).Cast<object>().ToArray();
-        TestAssert.True(sparseRadarPoints.Length == 3, "Expected radar geometry projection to preserve sparse point slots.");
-        TestAssert.True(sparseRadarPoints[0] is null && sparseRadarPoints[1] is null, "Expected missing radar point slots to remain explicit gaps.");
-        TestAssert.True((int?)sparseRadarPoints[2].GetType().GetProperty("Index")?.GetValue(sparseRadarPoints[2]) == 2, "Expected sparse radar point to keep its source index.");
+        object[] sparseRadarValues = (((System.Collections.IEnumerable?)sparseRadarSeries[0].GetType().GetProperty("Values")?.GetValue(sparseRadarSeries[0])) ?? throw new InvalidOperationException("Expected sparse radar values.")).Cast<object>().ToArray();
+        TestAssert.True(sparseRadarValues.Length == 3, "Expected radar geometry projection to preserve sparse point slots.");
+        TestAssert.True(sparseRadarValues[0] is null && sparseRadarValues[1] is null, "Expected missing radar point slots to remain explicit gaps.");
+        TestAssert.True((double?)sparseRadarValues[2] == 44d, "Expected sparse radar value to keep its source value.");
         Type scatterSeriesType = typeof(PptxRenderer).GetNestedType(
             "ChartIndexedScatterSeries",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed scatter-series type.");

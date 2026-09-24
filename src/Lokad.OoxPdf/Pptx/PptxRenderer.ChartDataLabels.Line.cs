@@ -38,8 +38,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> densePointSeries = DensifyChartPointSeries(series);
-        if (densePointSeries.Count == 0)
+        IReadOnlyList<IReadOnlyList<double?>> denseValueSeries = DensifyChartValueSeries(series);
+        if (denseValueSeries.Count == 0)
         {
             return;
         }
@@ -48,23 +48,27 @@ internal sealed partial class PptxRenderer
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
 
+        // RV20: index dense-slot provenance once per series (last-wins, like
+        // DensePoints) instead of materializing dense arrays per label below.
+        Dictionary<int, ChartIndexedNumberPoint>[] densePointIndexes = series.Select(BuildDensePointIndex).ToArray();
+
         // RV14: index category labels once per frame instead of linear-scanning
         // per rendered label below.
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
 
-        int pointCount = Math.Max(1, densePointSeries.Max(values => values.Count));
+        int pointCount = Math.Max(1, denseValueSeries.Max(values => values.Count));
         double labelWidth = Math.Max(
             PptxChartMetricRules.CartesianDataLabelMinimumWidth,
             plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
         var textMeasurer = new ChartTextMeasurer(fontResolver);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
-        for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
+        for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
         {
-            IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
-            for (int i = 0; i < points.Count; i++)
+            IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
+            for (int i = 0; i < values.Count; i++)
             {
-                if (points[i]?.Value is not double value)
+                if (values[i] is not double value)
                 {
                     continue;
                 }
@@ -80,7 +84,7 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, colorMap, effectiveOptions);
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                ChartIndexedNumberPoint point = points[i] ?? default;
+                ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(i, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {

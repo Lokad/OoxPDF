@@ -32,7 +32,7 @@ internal sealed partial class PptxRenderer
 
         // Clip-only pad: legends, titles, labels, and bar geometry keep plotBox.
         ChartPlotBox plotClipBox = GetBarPlotClipBox(plotBox);
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
             int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
@@ -148,8 +148,8 @@ internal sealed partial class PptxRenderer
                 double categoryX = plotX + category * categoryWidth + (categoryWidth - clusterWidth) / 2d;
                 for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<ChartIndexedNumberPoint?> values = denseSeries[seriesIndex];
-                    if (category >= values.Count || values[category]?.Value is not { } value)
+                    IReadOnlyList<double?> values = denseSeries[seriesIndex];
+                    if (category >= values.Count || values[category] is not { } value)
                     {
                         continue;
                     }
@@ -1309,7 +1309,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)
     {
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> denseSeries = DensifyChartPointSeries(series);
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
         bool stacked = IsStackedChartGrouping(grouping);
         bool percentStacked = IsPercentStackedChartGrouping(grouping);
@@ -1572,7 +1572,7 @@ internal sealed partial class PptxRenderer
         return patternPreset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent, overlapPercent);
@@ -1583,8 +1583,8 @@ internal sealed partial class PptxRenderer
             double categoryY = plotY + category * categoryHeight + (categoryHeight - clusterHeight) / 2d;
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
-                IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
-                if (category >= values.Count || values[category]?.Value is not { } value)
+                IReadOnlyList<double?> values = series[seriesIndex];
+                if (category >= values.Count || values[category] is not { } value)
                 {
                     continue;
                 }
@@ -1600,7 +1600,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
     {
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = GetStackedBarWidth(categoryWidth, gapWidthPercent);
@@ -1613,8 +1613,8 @@ internal sealed partial class PptxRenderer
             var fillRuns = new List<ChartStackedBarFillRun>();
             for (int category = 0; category < categoryCount; category++)
             {
-                IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
-                if (category >= values.Count || values[category]?.Value is not { } rawValue)
+                IReadOnlyList<double?> values = series[seriesIndex];
+                if (category >= values.Count || values[category] is not { } rawValue)
                 {
                     continue;
                 }
@@ -1683,7 +1683,7 @@ internal sealed partial class PptxRenderer
         fillRuns.Add(new ChartStackedBarFillRun(fill, rectangles));
     }
 
-    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetStackedBarWidth(categoryHeight, gapWidthPercent);
@@ -1696,8 +1696,8 @@ internal sealed partial class PptxRenderer
             var fillRuns = new List<ChartStackedBarFillRun>();
             for (int category = 0; category < categoryCount; category++)
             {
-                IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex];
-                if (category >= values.Count || values[category]?.Value is not { } rawValue)
+                IReadOnlyList<double?> values = series[seriesIndex];
+                if (category >= values.Count || values[category] is not { } rawValue)
                 {
                     continue;
                 }

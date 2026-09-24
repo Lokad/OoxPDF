@@ -82,8 +82,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> densePointSeries = DensifyChartPointSeries(series);
-        if (densePointSeries.Count == 0)
+        IReadOnlyList<IReadOnlyList<double?>> denseValueSeries = DensifyChartValueSeries(series);
+        if (denseValueSeries.Count == 0)
         {
             return;
         }
@@ -92,11 +92,15 @@ internal sealed partial class PptxRenderer
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
 
+        // RV20: index dense-slot provenance once per series (last-wins, like
+        // DensePoints) instead of materializing dense arrays per label below.
+        Dictionary<int, ChartIndexedNumberPoint>[] densePointIndexes = series.Select(BuildDensePointIndex).ToArray();
+
         // RV14: index category labels once per frame instead of linear-scanning
         // per rendered label below.
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
 
-        int categoryCount = Math.Max(1, densePointSeries.Max(values => values.Count));
+        int categoryCount = Math.Max(1, denseValueSeries.Max(values => values.Count));
         double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
@@ -108,20 +112,20 @@ internal sealed partial class PptxRenderer
             double categoryHeight = plotBox.Height / categoryCount;
             double barSlot = stacked
                 ? GetStackedBarWidth(categoryHeight, gapWidthPercent)
-                : categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
+                : categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseValueSeries.Count);
             double labelWidth = Math.Max(PptxChartMetricRules.CartesianDataLabelMinimumWidth, plotBox.Width * PptxChartMetricRules.HorizontalBarDataLabelWidthRatio);
             double[] positiveValues = new double[categoryCount];
             double[] negativeValues = new double[categoryCount];
-            double[] positiveTotals = stacked ? GetCategoryPositiveTotals(densePointSeries, categoryCount, percentStacked) : [];
+            double[] positiveTotals = stacked ? GetCategoryPositiveTotals(denseValueSeries, categoryCount, percentStacked) : [];
             for (int category = 0; category < categoryCount; category++)
             {
                 double categoryY = stacked
                     ? plotBox.Y + category * categoryHeight + (categoryHeight - barSlot) / 2d
                     : plotBox.Y + category * categoryHeight + categoryHeight * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
-                for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
+                for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
-                    if (category >= points.Count || points[category]?.Value is not double value)
+                    IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
+                    if (category >= values.Count || values[category] is not double value)
                     {
                         continue;
                     }
@@ -146,7 +150,7 @@ internal sealed partial class PptxRenderer
                     PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
                     double x = ResolveHorizontalBarDataLabelX(labelPosition, barBaseX, barEndX, labelWidth);
                     double y = categoryY + (stacked ? (barSlot - labelHeight) / 2d : seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d);
-                    ChartIndexedNumberPoint point = points[category] ?? default;
+                    ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
@@ -156,7 +160,7 @@ internal sealed partial class PptxRenderer
                         double textWidth = labelBox.Width;
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, points.Count, !horizontalBars, value);
+                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, pointFills, values.Count, !horizontalBars, value);
                             double legendKeyWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
                             textX += legendKeyWidth;
                             textWidth = Math.Max(1d, textWidth - legendKeyWidth);
@@ -175,19 +179,19 @@ internal sealed partial class PptxRenderer
             double categoryWidth = plotBox.Width / categoryCount;
             double barSlot = stacked
                 ? GetStackedBarWidth(categoryWidth, gapWidthPercent)
-                : categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
+                : categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseValueSeries.Count);
             double[] positiveValues = new double[categoryCount];
             double[] negativeValues = new double[categoryCount];
-            double[] positiveTotals = stacked ? GetCategoryPositiveTotals(densePointSeries, categoryCount, percentStacked) : [];
+            double[] positiveTotals = stacked ? GetCategoryPositiveTotals(denseValueSeries, categoryCount, percentStacked) : [];
             for (int category = 0; category < categoryCount; category++)
             {
                 double categoryX = stacked
                     ? plotBox.X + category * categoryWidth + (categoryWidth - barSlot) / 2d
                     : plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
-                for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
+                for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
-                    if (category >= points.Count || points[category]?.Value is not double value)
+                    IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
+                    if (category >= values.Count || values[category] is not double value)
                     {
                         continue;
                     }
@@ -220,7 +224,7 @@ internal sealed partial class PptxRenderer
                         // bottom-pad law (other positions and plain labels keep legacy 1.0).
                         y = barEndY + ComputeBarLegendKeyOutEndGap(fontSize);
                     }
-                    ChartIndexedNumberPoint point = points[category] ?? default;
+                    ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
@@ -241,9 +245,9 @@ internal sealed partial class PptxRenderer
                             // groupings and plain labels keep the legacy slot math, unobserved).
                             double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, new ChartTextMeasurer(fontResolver).Measure(label, style));
                             double barLegendKeyCategoryWidth = plotBox.Width / categoryCount;
-                            double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, densePointSeries.Count, barOptions.GapWidth, barOptions.Overlap);
+                            double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, denseValueSeries.Count, barOptions.GapWidth, barOptions.Overlap);
                             double barLegendKeyStep = GetClusteredBarStep(barLegendKeyBarWidth, barOptions.Overlap);
-                            double barLegendKeyClusterWidth = barLegendKeyBarWidth + Math.Max(0, densePointSeries.Count - 1) * barLegendKeyStep;
+                            double barLegendKeyClusterWidth = barLegendKeyBarWidth + Math.Max(0, denseValueSeries.Count - 1) * barLegendKeyStep;
                             double barLegendKeyBarCenterX = plotBox.X + category * barLegendKeyCategoryWidth + (barLegendKeyCategoryWidth - barLegendKeyClusterWidth) / 2d + seriesIndex * barLegendKeyStep + barLegendKeyBarWidth / 2d;
                             double barLegendKeyUnitLeft = ComputeBarLegendKeyUnitLeft(barLegendKeyBarCenterX, barLegendKeySwatch, barLegendKeyTextWidth);
                             labelBox = new ChartLayoutBox(barLegendKeyUnitLeft, labelBox.Y, labelBox.Width, labelBox.Height);
@@ -251,7 +255,7 @@ internal sealed partial class PptxRenderer
                         }
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, points.Count, !horizontalBars, value);
+                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, pointFills, values.Count, !horizontalBars, value);
                             if (barLegendKeyUnitCenter)
                             {
                                 textX = labelBox.X + barLegendKeySwatch + barLegendKeySwatch;

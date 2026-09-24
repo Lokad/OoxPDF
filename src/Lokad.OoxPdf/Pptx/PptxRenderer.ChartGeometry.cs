@@ -351,7 +351,7 @@ internal sealed partial class PptxRenderer
             plotBox,
             GetRadarChartGeometry(),
             style,
-            Math.Max(3, series.Max(item => item.Points.Count)),
+            Math.Max(3, series.Max(item => item.Values.Count)),
             ResolveRadarLabelRules());
 
         ChartPolarGeometry GetRadarChartGeometry()

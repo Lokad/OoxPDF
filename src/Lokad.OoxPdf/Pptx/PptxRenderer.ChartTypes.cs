@@ -15,7 +15,7 @@ internal sealed partial class PptxRenderer
 {
     private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points, ChartIndexedScatterSeries Source);
 
-    private readonly record struct ChartRadarSeries(IReadOnlyList<ChartIndexedNumberPoint?> Points, ChartIndexedNumberVector Source);
+    private readonly record struct ChartRadarSeries(IReadOnlyList<double?> Values, ChartIndexedNumberVector Source);
 
     private readonly record struct ScatterPoint(
         double X,

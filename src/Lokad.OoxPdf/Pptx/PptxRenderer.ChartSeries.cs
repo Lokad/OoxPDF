@@ -575,7 +575,7 @@ internal sealed partial class PptxRenderer
         // materialize (or charge) dense arrays.
         return series
             .Where(vector => vector.HasAnyValue())
-            .Select(vector => new ChartRadarSeries(vector.DensePoints(), vector))
+            .Select(vector => new ChartRadarSeries(vector.DenseValues(), vector))
             .ToArray();
     }
 
@@ -602,6 +602,34 @@ internal sealed partial class PptxRenderer
         return series
             .Select(vector => vector.DensePoints())
             .ToArray();
+    }
+
+    // RV20: compact value-only densification for geometry/extent consumers.
+    // Same per-series slot values as DensifyChartPointSeries at one nullable
+    // double per slot; provenance consumers keep DensifyChartPointSeries.
+    private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartValueSeries(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        return series
+            .Select(vector => vector.DenseValues())
+            .ToArray();
+    }
+
+    // RV20: last-wins dense-slot provenance index over the sparse source,
+    // mirroring DensePoints placement (same resolution, range and validity),
+    // so provenance consumers avoid materializing the dense array.
+    private static Dictionary<int, ChartIndexedNumberPoint> BuildDensePointIndex(ChartIndexedNumberVector vector)
+    {
+        int pointCount = vector.DensePointCount();
+        var index = new Dictionary<int, ChartIndexedNumberPoint>();
+        foreach (ChartIndexedNumberPoint point in vector.Points ?? [])
+        {
+            if (point.Index >= 0 && point.Index < pointCount && point.Value is not null)
+            {
+                index[point.Index] = point;
+            }
+        }
+
+        return index;
     }
 
     private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook, bool plotVisibleOnly)

@@ -11,14 +11,14 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static (double Min, double Max) GetClusteredPointValueExtents(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series)
+    private static (double Min, double Max) GetClusteredPointValueExtents(IReadOnlyList<IReadOnlyList<double?>> series)
     {
-        double maxValue = Math.Max(0d, series.SelectMany(points => points).Select(point => point?.Value).OfType<double>().DefaultIfEmpty(0d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(points => points).Select(point => point?.Value).OfType<double>().DefaultIfEmpty(0d).Min());
+        double maxValue = Math.Max(0d, series.SelectMany(values => values).OfType<double>().DefaultIfEmpty(0d).Max());
+        double minValue = Math.Min(0d, series.SelectMany(values => values).OfType<double>().DefaultIfEmpty(0d).Min());
         return (minValue, maxValue);
     }
 
-    private static (double Min, double Max) GetStackedPointValueExtents(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, bool percentStacked)
+    private static (double Min, double Max) GetStackedPointValueExtents(IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, bool percentStacked)
     {
         if (percentStacked)
         {
@@ -31,9 +31,9 @@ internal sealed partial class PptxRenderer
         {
             double positive = 0d;
             double negative = 0d;
-            foreach (IReadOnlyList<ChartIndexedNumberPoint?> values in series)
+            foreach (IReadOnlyList<double?> values in series)
             {
-                if (category >= values.Count || values[category]?.Value is not { } value)
+                if (category >= values.Count || values[category] is not { } value)
                 {
                     continue;
                 }
@@ -75,7 +75,7 @@ internal sealed partial class PptxRenderer
         return Math.Max(0d, barWidth * (1d - overlapPercent / 100d));
     }
 
-    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int category, bool percentStacked)
+    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<double?>> series, int category, bool percentStacked)
     {
         if (!percentStacked)
         {
@@ -83,9 +83,9 @@ internal sealed partial class PptxRenderer
         }
 
         double total = 0d;
-        foreach (IReadOnlyList<ChartIndexedNumberPoint?> values in series)
+        foreach (IReadOnlyList<double?> values in series)
         {
-            if (category < values.Count && values[category]?.Value is { } value)
+            if (category < values.Count && values[category] is { } value)
             {
                 total += Math.Max(0d, value);
             }
@@ -94,7 +94,7 @@ internal sealed partial class PptxRenderer
         return Math.Max(1d, total);
     }
 
-    private static double[] GetCategoryPositiveTotals(IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> series, int categoryCount, bool percentStacked)
+    private static double[] GetCategoryPositiveTotals(IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, bool percentStacked)
     {
         var totals = new double[categoryCount];
         if (!percentStacked)
