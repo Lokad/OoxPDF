@@ -1119,13 +1119,9 @@ internal static class OoxLimitsTests
 
     public static void MergeIdenticalSubsetInstancesSkipsRebuild()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        // RV21: subset merge semantics are font-independent, so the synthetic
+        // test face runs everywhere instead of skipping off Windows.
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         PdfEmbeddedFont subset = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([subset, subset, subset], CancellationToken.None);
         TestAssert.True(ReferenceEquals(subset, merged), "Merging identical subset instances must not rebuild dictionaries or re-subset.");
@@ -1133,13 +1129,9 @@ internal static class OoxLimitsTests
 
     public static void MergeEqualDistinctSubsetsKeepsRemap()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        // RV21: subset merge semantics are font-independent, so the synthetic
+        // test face runs everywhere instead of skipping off Windows.
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second], CancellationToken.None);
