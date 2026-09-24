@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Diagnostics;
@@ -90,7 +91,9 @@ internal sealed class PdfDocumentWriter
                 }
 
                 PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
-                staging.AddPage(Encoding.ASCII.GetBytes(page.Content), cancellationToken);
+                staging.BeginPage(cancellationToken);
+                AppendEncodedPageContent(staging, page.Content, cancellationToken);
+                staging.EndPage(cancellationToken);
                 blanked.Add(page with { Content = string.Empty });
                 pageIndex++;
             }
@@ -111,6 +114,31 @@ internal sealed class PdfDocumentWriter
         {
             staging.Dispose();
             throw;
+        }
+    }
+
+    // RV11-P1: bounded-scratch ASCII encoding. One ASCII char always encodes to
+    // exactly one byte (non-ASCII becomes ?), so any char-boundary chunking is
+    // byte-identical to whole-string encoding while scratch stays at one pooled
+    // chunk. Validation upstream already rejects non-ASCII content.
+    private static void AppendEncodedPageContent(PdfPageContentStaging staging, string content, CancellationToken cancellationToken)
+    {
+        byte[] scratch = ArrayPool<byte>.Shared.Rent(PdfPageContentStaging.ChunkByteCount);
+        try
+        {
+            int offset = 0;
+            while (offset < content.Length)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int chars = Math.Min(PdfPageContentStaging.ChunkByteCount, content.Length - offset);
+                int bytes = Encoding.ASCII.GetBytes(content, offset, chars, scratch, 0);
+                staging.AppendPageBytes(scratch, 0, bytes, cancellationToken);
+                offset += chars;
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(scratch);
         }
     }
 
@@ -149,8 +177,30 @@ internal sealed class PdfDocumentWriter
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(numbers.AnnotationObjectsByPage[i])} >>\n"));
-            byte[] contentBytes = staging.GetPageBytes(i, cancellationToken);
-            writer.WriteContentStreamObject(contentObjectNumber, contentBytes);
+            int contentLength = staging.GetPageLength(i, cancellationToken);
+            writer.WriteContentStreamHeader(contentObjectNumber, contentLength);
+            byte[] copy = ArrayPool<byte>.Shared.Rent(PdfPageContentStaging.ChunkByteCount);
+            try
+            {
+                int offset = 0;
+                while (offset < contentLength)
+                {
+                    int read = staging.ReadPageBytes(i, copy, 0, offset, Math.Min(copy.Length, contentLength - offset), cancellationToken);
+                    if (read == 0)
+                    {
+                        throw new InvalidDataException("Page content spill store ended unexpectedly.");
+                    }
+
+                    writer.WriteContentStreamBytes(copy.AsSpan(0, read));
+                    offset += read;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(copy);
+            }
+
+            writer.WriteContentStreamTrailer();
         }
 
         foreach (PdfEmbeddedFont font in plan.Fonts)

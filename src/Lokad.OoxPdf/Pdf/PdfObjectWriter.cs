@@ -51,12 +51,30 @@ internal sealed class PdfObjectWriter
     // Output bytes match the previous WriteObject encoding exactly.
     public void WriteContentStreamObject(int objectNumber, ReadOnlySpan<byte> contentBytes)
     {
+        WriteContentStreamHeader(objectNumber, contentBytes.Length);
+        WriteContentStreamBytes(contentBytes);
+        WriteContentStreamTrailer();
+    }
+
+    // RV11-P1: chunked content-stream emission. The header carries the known
+    // total length; callers stream the payload in bounded chunks, so spilled
+    // pages are never fully resident during emission.
+    public void WriteContentStreamHeader(int objectNumber, int contentLength)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         offsets.Add(position);
         WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
-        WriteAscii(FormattableString.Invariant($"<< /Length {contentBytes.Length} >>\nstream\n"));
+        WriteAscii(FormattableString.Invariant($"<< /Length {contentLength} >>\nstream\n"));
+    }
+
+    public void WriteContentStreamBytes(ReadOnlySpan<byte> chunk)
+    {
         cancellationToken.ThrowIfCancellationRequested();
-        WriteRawBytes(contentBytes);
+        WriteRawBytes(chunk);
+    }
+
+    public void WriteContentStreamTrailer()
+    {
         WriteAscii("endstream\nendobj\n");
     }
 

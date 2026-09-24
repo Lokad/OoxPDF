@@ -1161,6 +1161,123 @@ internal static class OoxResourceGuaranteeTests
         }
     }
 
+    // RV11-P1: chunked production (odd splits, empty appends, empty pages)
+    // must match whole-page appends byte for byte, in both backing modes.
+    public static void ChunkedPageProductionMatchesWholePage()
+    {
+        byte[] payload = new byte[1000];
+        for (int i = 0; i < payload.Length; i++)
+        {
+            payload[i] = (byte)(i % 251);
+        }
+
+        foreach (long window in new[] { 10L, 100000L })
+        {
+            using var whole = new PdfPageContentStaging(window, diagnosticSink: null);
+            whole.AddPage(payload, CancellationToken.None);
+            using var chunked = new PdfPageContentStaging(window, diagnosticSink: null);
+            chunked.BeginPage(CancellationToken.None);
+            chunked.AppendPageBytes(payload, 0, 0, CancellationToken.None);
+            int offset = 0;
+            foreach (int size in new[] { 1, 2, 3, 5, 8, 13, 21, 34, 55, 89 })
+            {
+                int take = Math.Min(size, payload.Length - offset);
+                if (take == 0)
+                {
+                    break;
+                }
+
+                chunked.AppendPageBytes(payload, offset, take, CancellationToken.None);
+                offset += take;
+            }
+
+            if (offset < payload.Length)
+            {
+                chunked.AppendPageBytes(payload, offset, payload.Length - offset, CancellationToken.None);
+            }
+
+            chunked.EndPage(CancellationToken.None);
+            chunked.BeginPage(CancellationToken.None);
+            chunked.EndPage(CancellationToken.None);
+            whole.BeginPage(CancellationToken.None);
+            whole.EndPage(CancellationToken.None);
+            TestAssert.True(whole.GetPageBytes(0, CancellationToken.None).SequenceEqual(chunked.GetPageBytes(0, CancellationToken.None)), "Chunked production must match whole-page bytes.");
+            TestAssert.Equal(0, chunked.GetPageLength(1, CancellationToken.None));
+            TestAssert.Equal(whole.Count, chunked.Count);
+        }
+    }
+
+    // RV11-P1: exact window boundaries. A page that fits stays resident; one
+    // byte more escalates to the temp file.
+    public static void WindowBoundariesStayMemoryOrSpill()
+    {
+        using var fitting = new PdfPageContentStaging(10, diagnosticSink: null);
+        fitting.AddPage(new byte[10], CancellationToken.None);
+        TestAssert.Equal(false, fitting.IsFileBacked);
+        TestAssert.True(fitting.GetPageBytes(0, CancellationToken.None).SequenceEqual(new byte[10]), "Fitting page must round-trip.");
+        using var overflowing = new PdfPageContentStaging(10, diagnosticSink: null);
+        overflowing.AddPage(new byte[11], CancellationToken.None);
+        TestAssert.Equal(true, overflowing.IsFileBacked);
+        TestAssert.True(overflowing.GetPageBytes(0, CancellationToken.None).SequenceEqual(new byte[11]), "Spilled page must round-trip.");
+    }
+
+    // RV11-P1: unpaired production or reads during an open page fail loudly
+    // instead of silently misaligning page indexes.
+    public static void UnpairedStagingCallsFailLoudly()
+    {
+        using var staging = new PdfPageContentStaging(100000, diagnosticSink: null);
+        TestAssert.Throws<InvalidOperationException>(() => staging.AppendPageBytes(new byte[1], 0, 1, CancellationToken.None));
+        TestAssert.Throws<InvalidOperationException>(() => staging.EndPage(CancellationToken.None));
+        staging.BeginPage(CancellationToken.None);
+        TestAssert.Throws<InvalidOperationException>(() => staging.BeginPage(CancellationToken.None));
+        TestAssert.Throws<InvalidOperationException>(() => staging.GetPageLength(0, CancellationToken.None));
+        staging.EndPage(CancellationToken.None);
+        TestAssert.Throws<InvalidOperationException>(() => staging.EndPage(CancellationToken.None));
+    }
+
+    // RV11-P1: a throwing spill observer propagates its own failure and the
+    // owned temp still vanishes with the staging.
+    public static void ThrowingSpillObserverPropagatesAndCleansTemp()
+    {
+        static void ThrowingSink(OoxPdfDiagnostic diagnostic) => throw new InvalidOperationException("observer boom");
+        using var staging = new PdfPageContentStaging(10, ThrowingSink);
+        staging.AddPage(new byte[] { 1, 2, 3 }, CancellationToken.None);
+        InvalidOperationException thrown = TestAssert.Throws<InvalidOperationException>(() => staging.AddPage(new byte[100], CancellationToken.None));
+        TestAssert.Equal("observer boom", thrown.Message);
+        string? path = staging.SpillPathForTests;
+        TestAssert.True(path is not null, "Escalation must have created a temp file.");
+        staging.Dispose();
+        TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
+    }
+
+    // RV11-P1: chunked ASCII encoding is byte-identical to whole-string
+    // encoding, including non-ASCII replacements straddling chunk edges.
+    public static void ChunkedAsciiEncodingMatchesWholeString()
+    {
+        char[] chars = new string((char)97, 200000).ToCharArray();
+        chars[65534] = (char)233;
+        chars[65535] = (char)233;
+        chars[65536] = (char)233;
+        chars[199999] = (char)200;
+        string content = new string(chars);
+        byte[] expected = Encoding.ASCII.GetBytes(content);
+        using var staging = new PdfPageContentStaging(100000000, diagnosticSink: null);
+        staging.BeginPage(CancellationToken.None);
+        try
+        {
+            System.Reflection.MethodInfo encode = typeof(PdfDocumentWriter).GetMethod("AppendEncodedPageContent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?? throw new InvalidOperationException("Expected chunked encoder.");
+            encode.Invoke(null, [staging, content, CancellationToken.None]);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        staging.EndPage(CancellationToken.None);
+        TestAssert.True(expected.SequenceEqual(staging.GetPageBytes(0, CancellationToken.None)), "Chunked encoding must match whole-string encoding.");
+    }
+
     private static void InvokeBeginPage(PdfPageContentStaging staging)
     {
         try
