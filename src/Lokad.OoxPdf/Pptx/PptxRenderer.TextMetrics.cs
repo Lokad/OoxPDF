@@ -80,41 +80,11 @@ internal sealed partial class PptxRenderer
         return fontSize * PptxTextMetricRules.OfficeBaselineFallback;
     }
 
+    // RV18: painting shares the inspection metric core so font-metric choice and
+    // capping live once; the emitted value is the metric record value.
     private static double BaselineOffset(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor, LineSpacing lineSpacing)
     {
-        if (style is null)
-        {
-            return BaselineOffset(fontSize);
-        }
-
-        ResolvedRunTextStyle runStyle = style.Value;
-        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(runStyle.Typeface, runStyle.Bold, runStyle.Italic);
-        if (font is null || font.UnitsPerEm == 0)
-        {
-            return BaselineOffset(fontSize);
-        }
-
-        double ascenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
-        if (ascenderRatio <= 0d || ascenderRatio > PptxTextMetricRules.MaximumBaselineMetricRatio)
-        {
-            return BaselineOffset(fontSize);
-        }
-
-        double metricRatio = ResolveOfficeBaselineMetricRatio(font, ascenderRatio, fontSize, out _);
-        if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
-        {
-            metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
-        }
-
-        // Tall-font cap (Office probes 2026-09-06): only fonts whose Windows ascent exceeds the em box (Aptos Display 2068/2048) cap the first baseline at lineAdvance minus Windows descent; normal fonts (Calibri 1950/2048) keep winAscent and fallback metrics never cap.
-        if (!lineSpacing.IsExplicit && fontSize > 0d && ascenderRatio > PptxTextMetricRules.MaximumOfficeBaselineWindowsAscenderRatio && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio)
-        {
-            double lineAdvance = ReadLineAdvance(lineSpacing, fontSize);
-            double windowsDescender = font.Os2.WindowsDescender / (double)font.UnitsPerEm * fontSize;
-            metricRatio = Math.Min(metricRatio, (lineAdvance - windowsDescender) / fontSize);
-        }
-
-        return fontSize * metricRatio;
+        return ReadBaselineMetric(fontSize, style, advanceEstimator, useOfficeBaselineFloor, lineSpacing).Value;
     }
 
     private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor, LineSpacing lineSpacing)

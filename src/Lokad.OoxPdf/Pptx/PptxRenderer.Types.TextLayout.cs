@@ -79,7 +79,11 @@ internal sealed partial class PptxRenderer
         int WindowsDescender,
         int TypographicAscender,
         int TypographicDescender,
-        int TypographicLineGap);
+        int TypographicLineGap)
+    {
+        // RV18: single typed baseline result for paint and inspection.
+        public double Value => FontSize * Ratio;
+    }
 
     private sealed record PptxTextSpanLayout(
         PptxTextRunModel? SourceRun,
