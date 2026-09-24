@@ -646,6 +646,23 @@ internal sealed partial class PptxRenderer
         return resolved;
     }
 
+    // RV14: per-frame first-match category index built once; O(1) lookups replace
+    // the per-label linear scan. Duplicates keep first-match precedence; sparse and
+    // blank entries behave exactly like the scan (first HasText match or empty).
+    private static Dictionary<int, string> BuildCategoryLabelIndex(ChartIndexedTextVector categoryLabels)
+    {
+        var index = new Dictionary<int, string>();
+        foreach (ChartIndexedTextPoint point in categoryLabels.Points ?? [])
+        {
+            if (point.HasText && !index.ContainsKey(point.Index))
+            {
+                index[point.Index] = point.Text;
+            }
+        }
+
+        return index;
+    }
+
     private static string FormatCartesianDataLabel(
         double value,
         int seriesIndex,
@@ -654,7 +671,7 @@ internal sealed partial class PptxRenderer
         ChartIndexedNumberPoint? workbookPoint,
         string? valueFormatCode,
         ChartDataLabelOptions options,
-        ChartIndexedTextVector categoryLabels,
+        IReadOnlyDictionary<int, string> categoryLabelIndex,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
@@ -669,8 +686,9 @@ internal sealed partial class PptxRenderer
             parts.Add(seriesName);
         }
 
-        string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
-        if (options.ShowCategoryName && !string.IsNullOrWhiteSpace(categoryLabel))
+        if (options.ShowCategoryName &&
+            categoryLabelIndex.TryGetValue(categoryIndex, out string? categoryLabel) &&
+            !string.IsNullOrWhiteSpace(categoryLabel))
         {
             parts.Add(categoryLabel);
         }
@@ -681,14 +699,6 @@ internal sealed partial class PptxRenderer
         }
 
         return string.Join(GetChartDataLabelSeparator(options), parts);
-    }
-
-    private static string GetIndexedCategoryLabel(ChartIndexedTextVector categoryLabels, int categoryIndex)
-    {
-        return (categoryLabels.Points ?? [])
-            .Where(point => point.HasText && point.Index == categoryIndex)
-            .Select(point => point.Text)
-            .FirstOrDefault() ?? string.Empty;
     }
 
     private static string GetActiveSeriesName(IReadOnlyList<ChartSeriesNameRecord> seriesNames, int seriesIndex)

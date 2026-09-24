@@ -48,6 +48,10 @@ internal sealed partial class PptxRenderer
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
 
+        // RV14: index category labels once per frame instead of linear-scanning
+        // per rendered label below.
+        Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
+
         int pointCount = Math.Max(1, densePointSeries.Max(values => values.Count));
         double labelWidth = Math.Max(
             PptxChartMetricRules.CartesianDataLabelMinimumWidth,
@@ -77,7 +81,7 @@ internal sealed partial class PptxRenderer
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                 ChartIndexedNumberPoint point = points[i] ?? default;
-                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
+                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
                     double legendKeyWidth = effectiveOptions.ShowLegendKey

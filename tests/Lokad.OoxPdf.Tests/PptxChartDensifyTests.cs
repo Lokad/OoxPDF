@@ -589,7 +589,8 @@ internal static class PptxChartDensifyTests
 
     public static void CategoryLabelLookupsScaleLinearly()
     {
-        // RV14: N sequential label lookups must not rescan points per lookup.
+        // RV14: the per-frame index enumerates points once; subsequent lookups
+        // never touch the points again.
         const int count = 2000;
         Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected text vector type.");
@@ -601,21 +602,26 @@ internal static class PptxChartDensifyTests
 
         var counting = new CountingTextPoints(inner);
         object vector = BuildTextVectorWithPoints(vectorType, counting, null);
-        MethodInfo lookup = typeof(PptxRenderer).GetMethod("GetIndexedCategoryLabel", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected category label lookup.");
-        for (int i = 0; i < count; i++)
+        MethodInfo build = typeof(PptxRenderer).GetMethod("BuildCategoryLabelIndex", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected category label index builder.");
+        Dictionary<int, string> index;
+        try
         {
-            try
-            {
-                lookup.Invoke(null, [vector, i]);
-            }
-            catch (TargetInvocationException ex)
-            {
-                throw ex.InnerException ?? ex;
-            }
+            index = (Dictionary<int, string>)build.Invoke(null, [vector])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
         }
 
-        TestAssert.True(counting.Visits <= 4L * count, $"Sequential label lookups must scan linearly, visited {counting.Visits} points for {count} labels.");
+        TestAssert.Equal((long)count, counting.Visits);
+        TestAssert.Equal(count, index.Count);
+        for (int i = 0; i < count; i++)
+        {
+            TestAssert.Equal("label" + i, index[i]);
+        }
+
+        TestAssert.Equal((long)count, counting.Visits);
     }
 
     public static void CategoryLabelLookupKeepsFirstMatchPrecedence()
@@ -625,52 +631,47 @@ internal static class PptxChartDensifyTests
         Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected text vector type.");
         object vector = BuildTextVector(vectorType, [(2, "b", true), (0, "a", true), (2, "B2", true), (1, "", true), (3, "c", false)], null);
-        MethodInfo lookup = typeof(PptxRenderer).GetMethod("GetIndexedCategoryLabel", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected category label lookup.");
-        TestAssert.Equal("a", InvokeCategoryLabel(lookup, vector, 0));
-        TestAssert.Equal("", InvokeCategoryLabel(lookup, vector, 1));
-        TestAssert.Equal("b", InvokeCategoryLabel(lookup, vector, 2));
-        TestAssert.Equal("", InvokeCategoryLabel(lookup, vector, 3));
-        TestAssert.Equal("", InvokeCategoryLabel(lookup, vector, 5));
+        MethodInfo build = typeof(PptxRenderer).GetMethod("BuildCategoryLabelIndex", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected category label index builder.");
+        Dictionary<int, string> index;
+        try
+        {
+            index = (Dictionary<int, string>)build.Invoke(null, [vector])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+
+        TestAssert.Equal("a", index[0]);
+        TestAssert.Equal("", index[1]);
+        TestAssert.Equal("b", index[2]);
+        TestAssert.True(!index.ContainsKey(3), "Uncovered indices stay absent.");
+        TestAssert.True(!index.ContainsKey(5), "Out-of-range indices stay absent.");
     }
 
     public static void ValueOnlyLabelsSkipCategoryLookup()
     {
-        // RV14: value-only labels must not touch category points at all.
-        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected text vector type.");
-        object vector = BuildTextVectorWithPoints(vectorType, new ThrowingTextPoints(), null);
-        MethodInfo format = typeof(PptxRenderer).GetMethod("FormatCartesianDataLabel", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected cartesian label formatter.");
+        // RV14: value-only labels must not touch the category lookup at all.
         Type optionsType = typeof(PptxRenderer).GetNestedType("ChartDataLabelOptions", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected label options type.");
         object options = Activator.CreateInstance(optionsType)!;
         Type namesType = typeof(PptxRenderer).GetNestedType("ChartSeriesNameRecord", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected series name type.");
         Array names = Array.CreateInstance(namesType, 0);
+        MethodInfo format = typeof(PptxRenderer).GetMethod("FormatCartesianDataLabel", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected cartesian label formatter.");
         string label;
         try
         {
-            label = (string)format.Invoke(null, [1.5, 0, 0, null, null, null, options, vector, names])!;
+            label = (string)format.Invoke(null, [1.5, 0, 0, null, null, null, options, new ThrowingCategoryIndex(), names])!;
         }
         catch (TargetInvocationException ex)
         {
-            throw new InvalidOperationException("Value-only labels must not enumerate category points.", ex.InnerException ?? ex);
+            throw new InvalidOperationException("Value-only labels must not consult the category lookup.", ex.InnerException ?? ex);
         }
 
         TestAssert.Equal("", label);
-    }
-
-    private static string InvokeCategoryLabel(MethodInfo lookup, object vector, int index)
-    {
-        try
-        {
-            return (string)lookup.Invoke(null, [vector, index])!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
     }
 
     private static object BuildTextVectorWithPoints(Type vectorType, object points, int? pointCount)
@@ -715,16 +716,25 @@ internal static class PptxChartDensifyTests
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    private sealed class ThrowingTextPoints : IReadOnlyList<PptxRenderer.ChartIndexedTextPoint>
+    private sealed class ThrowingCategoryIndex : IReadOnlyDictionary<int, string>
     {
-        public PptxRenderer.ChartIndexedTextPoint this[int index] => throw new InvalidOperationException("Category points must not be enumerated.");
+        public string this[int key] => throw new InvalidOperationException("Category lookup must be lazy.");
 
-        public int Count => throw new InvalidOperationException("Category points must not be enumerated.");
+        public IEnumerable<int> Keys => throw new InvalidOperationException("Category lookup must be lazy.");
 
-        public IEnumerator<PptxRenderer.ChartIndexedTextPoint> GetEnumerator() => throw new InvalidOperationException("Category points must not be enumerated.");
+        public IEnumerable<string> Values => throw new InvalidOperationException("Category lookup must be lazy.");
+
+        public int Count => throw new InvalidOperationException("Category lookup must be lazy.");
+
+        public bool ContainsKey(int key) => throw new InvalidOperationException("Category lookup must be lazy.");
+
+        public bool TryGetValue(int key, out string value) => throw new InvalidOperationException("Category lookup must be lazy.");
+
+        public IEnumerator<KeyValuePair<int, string>> GetEnumerator() => throw new InvalidOperationException("Category lookup must be lazy.");
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
+
 
     private sealed class CannedFontResolver(FontFaceResolution resolution) : IFontResolver
     {

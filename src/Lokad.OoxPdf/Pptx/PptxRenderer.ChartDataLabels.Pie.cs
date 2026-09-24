@@ -44,6 +44,7 @@ internal sealed partial class PptxRenderer
         double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
+        Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
         double angle = GetPieDataLabelStartAngle(firstSliceAngle);
         // Office draws leader lines only for same-side narrow manual pie labels (the
         // box center sits on the wedge half and the box fits 85.3pt): one leader on
@@ -241,8 +242,9 @@ internal sealed partial class PptxRenderer
                 parts.Add(seriesName);
             }
 
-            string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
-            if (options.ShowCategoryName && !string.IsNullOrWhiteSpace(categoryLabel))
+            if (options.ShowCategoryName &&
+                categoryLabelIndex.TryGetValue(categoryIndex, out string? categoryLabel) &&
+                !string.IsNullOrWhiteSpace(categoryLabel))
             {
                 parts.Add(categoryLabel);
             }
