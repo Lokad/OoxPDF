@@ -30,12 +30,14 @@ internal sealed partial class DocxLayoutEngine
         }
 
         DocxLayoutPage storyCanvas = CreateRelatedStoryLayoutCanvas();
+        IReadOnlyDictionary<int, DocxLayoutSourceBlockBounds> sourceBlocks = BuildSourceBlockIndex([storyCanvas], cancellationToken);
         return story.FloatingDrawings
             .Select(drawing =>
             {
-                DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
-                    ? null
-                    : FindSourceBlockBounds([storyCanvas], drawing.SourceBlockIndex.Value);
+                DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is { } storyBlockIndex
+                    && sourceBlocks.TryGetValue(storyBlockIndex, out DocxLayoutSourceBlockBounds? storyFound)
+                    ? storyFound
+                    : null;
                 return CreateFloatingDrawingLayout(
                     drawing,
                     storyCanvas,
@@ -186,13 +188,17 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
         var layouts = new DocxFloatingDrawingLayout[drawings.Count];
+        IReadOnlyDictionary<int, DocxLayoutSourceBlockBounds>? sourceBlocks = null;
         for (int i = 0; i < drawings.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxFloatingDrawing drawing = drawings[i];
-            DocxLayoutSourceBlockBounds? sourceBlock = drawing.SourceBlockIndex is null
-                ? null
-                : FindSourceBlockBounds(pages, drawing.SourceBlockIndex.Value);
+            DocxLayoutSourceBlockBounds? sourceBlock = null;
+            if (drawing.SourceBlockIndex is { } blockIndex)
+            {
+                sourceBlocks ??= BuildSourceBlockIndex(pages, cancellationToken);
+                sourceBlocks.TryGetValue(blockIndex, out sourceBlock);
+            }
             DocxLayoutPage? anchorPage = sourceBlock is null
                 ? pages.FirstOrDefault()
                 : pages[sourceBlock.FirstPageIndex];
@@ -617,6 +623,60 @@ internal sealed partial class DocxLayoutEngine
         return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu)
             ? OoxUnits.EmuToPoints(emu)
             : null;
+    }
+
+    // RV15: source-block bounds index built once per stable page list. The
+    // single pass reproduces FindSourceBlockBounds exactly (first/last page,
+    // min/max column, topmost top and bottommost bottom across all matching
+    // items); lookups are O(1) instead of O(pages x items) per drawing.
+    // The index is built from the pages handed to each placement call, so
+    // repagination/displacement can never reuse page-sensitive geometry.
+    // FindSourceBlockBounds stays as the independently pinned reference.
+    private static IReadOnlyDictionary<int, DocxLayoutSourceBlockBounds> BuildSourceBlockIndex(
+        IReadOnlyList<DocxLayoutPage> pages,
+        CancellationToken cancellationToken)
+    {
+        var index = new Dictionary<int, DocxLayoutSourceBlockBounds>();
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxLayoutPage page = pages[pageIndex];
+            foreach (DocxLayoutItem item in page.Items)
+            {
+                if (GetSourceBlockIndex(item) is not { } sourceBlockIndex)
+                {
+                    continue;
+                }
+
+                if (!index.TryGetValue(sourceBlockIndex, out DocxLayoutSourceBlockBounds? bounds))
+                {
+                    bounds = new DocxLayoutSourceBlockBounds(pageIndex, pageIndex, null, null, double.NegativeInfinity, double.PositiveInfinity);
+                }
+                else
+                {
+                    bounds = bounds with { LastPageIndex = pageIndex };
+                }
+
+                if (ResolveItemColumnIndex(page, item) is { } columnIndex)
+                {
+                    bounds = bounds with
+                    {
+                        FirstColumnIndex = bounds.FirstColumnIndex is null ? columnIndex : Math.Min(bounds.FirstColumnIndex.Value, columnIndex),
+                        LastColumnIndex = bounds.LastColumnIndex is null ? columnIndex : Math.Max(bounds.LastColumnIndex.Value, columnIndex)
+                    };
+                }
+
+                (double y, double height) = GetVerticalBounds(item);
+                bounds = bounds with
+                {
+                    VerticalTop = Math.Max(bounds.VerticalTop, y + height),
+                    VerticalBottom = Math.Min(bounds.VerticalBottom, y)
+                };
+                index[sourceBlockIndex] = bounds;
+            }
+        }
+
+        return index;
     }
 
     private static DocxLayoutSourceBlockBounds? FindSourceBlockBounds(IReadOnlyList<DocxLayoutPage> pages, int sourceBlockIndex)
