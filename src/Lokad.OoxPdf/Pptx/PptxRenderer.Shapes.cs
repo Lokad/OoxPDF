@@ -228,7 +228,6 @@ internal sealed partial class PptxRenderer
             out FillRect pictureFillRect,
             out double pictureFillAlpha);
         PptxSceneCustomGeometry? sceneCustomGeometry = customGeometryOverride is { HasGeometry: true } ? customGeometryOverride : null;
-        XElement? customGeometry = hasCustomGeometry && sceneCustomGeometry is null ? shapeProperties.Element(DrawingNamespace + "custGeom") : null;
 
         if (transformed)
         {
@@ -249,7 +248,7 @@ internal sealed partial class PptxRenderer
 
         if (hasOuterShadow &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
-            customGeometry is null && sceneCustomGeometry is null)
+            sceneCustomGeometry is null && !hasCustomGeometry)
         {
             if (outerShadow.BlurRadius > 0d &&
                 preset == "rect" &&
@@ -263,7 +262,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if ((sceneCustomGeometry is not null && TryRenderCustomGeometry(
+        if (sceneCustomGeometry is not null && TryRenderCustomGeometry(
                 sceneCustomGeometry,
                 graphics,
                 x,
@@ -282,27 +281,7 @@ internal sealed partial class PptxRenderer
                 lineCap,
                 lineJoin,
                 headEnd,
-                tailEnd)) ||
-            (customGeometry is not null && TryRenderCustomGeometry(
-                customGeometry,
-                graphics,
-                x,
-                y,
-                width,
-                height,
-                hasFill,
-                fill,
-                fillAlpha,
-                hasStroke,
-                stroke,
-                lineWidth,
-                strokeAlpha,
-                hasDash,
-                dashPattern,
-                lineCap,
-                lineJoin,
-                headEnd,
-                tailEnd)))
+                tailEnd))
         {
             if (transformed)
             {
