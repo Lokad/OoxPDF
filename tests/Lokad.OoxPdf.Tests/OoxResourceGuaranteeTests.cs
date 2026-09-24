@@ -1102,6 +1102,164 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
     }
 
+    // RV11-P1: with a 1 KiB resident window, emitting N/2N/4N single-page
+    // payloads must not transiently allocate whole pages: staging scratch
+    // stays flat while payloads quadruple (output itself is discarded).
+    public static void StagedEmissionScratchStaysFlatAtN2N4N()
+    {
+        foreach (int size in new[] { 262144, 524288, 1048576 })
+        {
+            var pages = new[] { new PdfPage(612, 792, new string((char)10, size)) };
+            var limits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1024 };
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            using var output = new DiscardingWriteStream();
+            PdfDocumentWriter.WriteStaged(output, pages, limits, diagnosticSink: null, CancellationToken.None);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.True(output.TotalWritten >= size, "Emission must write the page payload.");
+            TestAssert.True(allocated <= 393216L, string.Format("Staged emission scratch must stay flat, allocated {0} bytes for a {1}-byte page.", allocated, size));
+        }
+    }
+
+    // RV11-P1: spilled pages must support bounded partial reads that
+    // reassemble exactly, in memory and file modes, with cancellation.
+    public static void SpilledPagePartialReadsReassemble()
+    {
+        byte[] first = new byte[] { 1, 2, 3 };
+        byte[] second = new byte[300];
+        for (int i = 0; i < second.Length; i++)
+        {
+            second[i] = (byte)(i % 251);
+        }
+
+        byte[] expected = first.Concat(second).ToArray();
+        foreach (long window in new[] { 1L, 100000L })
+        {
+            using var staging = new PdfPageContentStaging(window, diagnosticSink: null);
+            InvokeBeginPage(staging);
+            InvokeAppendPageBytes(staging, first);
+            InvokeAppendPageBytes(staging, second);
+            InvokeEndPage(staging);
+            TestAssert.Equal(expected.Length, InvokeGetPageLength(staging, 0));
+            var reassembled = new List<byte>();
+            byte[] buffer = new byte[7];
+            int offset = 0;
+            int read;
+            while ((read = InvokeReadPageBytes(staging, buffer, offset, CancellationToken.None)) > 0)
+            {
+                reassembled.AddRange(buffer.Take(read));
+                offset += read;
+            }
+
+            TestAssert.True(expected.SequenceEqual(reassembled), "Partial reads must reassemble the page exactly.");
+            TestAssert.Equal(0, InvokeReadPageBytes(staging, buffer, expected.Length, CancellationToken.None));
+            using var cancelled = new CancellationTokenSource();
+            cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => InvokeReadPageBytes(staging, buffer, 0, cancelled.Token));
+        }
+    }
+
+    private static void InvokeBeginPage(PdfPageContentStaging staging)
+    {
+        try
+        {
+            System.Reflection.MethodInfo begin = typeof(PdfPageContentStaging).GetMethod("BeginPage")
+                ?? throw new InvalidOperationException("Expected chunked page production.");
+            begin.Invoke(staging, [CancellationToken.None]);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static void InvokeAppendPageBytes(PdfPageContentStaging staging, byte[] chunk)
+    {
+        try
+        {
+            System.Reflection.MethodInfo append = typeof(PdfPageContentStaging).GetMethod("AppendPageBytes")
+                ?? throw new InvalidOperationException("Expected chunked page production.");
+            append.Invoke(staging, [chunk, 0, chunk.Length, CancellationToken.None]);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static void InvokeEndPage(PdfPageContentStaging staging)
+    {
+        try
+        {
+            System.Reflection.MethodInfo end = typeof(PdfPageContentStaging).GetMethod("EndPage")
+                ?? throw new InvalidOperationException("Expected chunked page production.");
+            end.Invoke(staging, [CancellationToken.None]);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static int InvokeGetPageLength(PdfPageContentStaging staging, int pageIndex)
+    {
+        try
+        {
+            System.Reflection.MethodInfo length = typeof(PdfPageContentStaging).GetMethod("GetPageLength")
+                ?? throw new InvalidOperationException("Expected chunked page reads.");
+            return (int)length.Invoke(staging, [pageIndex, CancellationToken.None])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private static int InvokeReadPageBytes(PdfPageContentStaging staging, byte[] buffer, int sourceOffset, CancellationToken cancellationToken)
+    {
+        try
+        {
+            System.Reflection.MethodInfo read = typeof(PdfPageContentStaging).GetMethod("ReadPageBytes")
+                ?? throw new InvalidOperationException("Expected chunked page reads.");
+            return (int)read.Invoke(staging, [0, buffer, 0, sourceOffset, buffer.Length, cancellationToken])!;
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw ex.InnerException ?? ex;
+        }
+    }
+
+    private sealed class DiscardingWriteStream : Stream
+    {
+        public long TotalWritten { get; private set; }
+
+        public override bool CanRead => false;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => true;
+
+        public override long Length => TotalWritten;
+
+        public override long Position { get => TotalWritten; set => throw new NotSupportedException(); }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => TotalWritten += count;
+
+        public override void Write(ReadOnlySpan<byte> buffer) => TotalWritten += buffer.Length;
+    }
+
     public static void RepaginationDoesNotRechargePages()
     {
         // R06.2: header displacement forces a second full layout pass, but page charges
