@@ -24,6 +24,132 @@ internal sealed partial class PptxRenderer
             : layout;
     }
 
+    // RV03: word glue across run seams. A segment continues the current word
+    // when the previous advance ends in a word char and the segment starts
+    // with one. Letters, digits, apostrophes and no-break spaces glue; spaces,
+    // tabs, punctuation and breaks start new words. Astral code points glue
+    // conservatively so surrogate pairs are never split.
+    private static bool WordContinuesOntoLine(int? previousCodePoint, string advanceText)
+    {
+        if (previousCodePoint is not { } previous || advanceText.Length == 0)
+        {
+            return false;
+        }
+
+        return IsWordGlueCodePoint(previous) && StartsWithWordGlue(advanceText);
+    }
+
+    private static bool IsWordGlueCodePoint(int codePoint)
+    {
+        if (codePoint == 0xA0 || codePoint == 0x27 || codePoint == 0x2019 || codePoint > 0xFFFF)
+        {
+            return true;
+        }
+
+        return Rune.IsLetterOrDigit(new Rune(codePoint));
+    }
+
+    private static bool StartsWithWordGlue(string advanceText)
+    {
+        foreach (Rune rune in advanceText.EnumerateRunes())
+        {
+            int value = rune.Value;
+            return value == 0xA0 || value == 0x27 || value == 0x2019 || value > 0xFFFF || Rune.IsLetterOrDigit(rune);
+        }
+        return false;
+    }
+    // RV03: backward word scan over emitted line spans. Locates the trailing
+    // word start (span index plus char offset within it) for pullback. Only
+    // space-led splits proceed: the word must start after spaces, so the head
+    // stays drawn with unchanged neighbors while the tail moves whole.
+    private static bool TryFindTrailingWordStart(
+        IReadOnlyList<PptxTextSpanLayout> spans,
+        out int spanIndex,
+        out int charOffset)
+    {
+        spanIndex = -1;
+        charOffset = 0;
+        bool inWord = false;
+        for (int i = 0; i < spans.Count; i++)
+        {
+            string text = spans[i].Run.Text;
+            int offset = 0;
+            foreach (Rune rune in text.EnumerateRunes())
+            {
+                if (IsWordGlueCodePoint(rune.Value))
+                {
+                    if (!inWord)
+                    {
+                        spanIndex = i;
+                        charOffset = offset;
+                    }
+                    inWord = true;
+                }
+                else
+                {
+                    inWord = false;
+                }
+                offset += rune.Utf16SequenceLength;
+            }
+        }
+        if (!inWord || spanIndex < 0)
+        {
+            return false;
+        }
+        string head = spans[spanIndex].Run.Text[..charOffset];
+        foreach (char c in head)
+        {
+            if (c != (char)32)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    // RV03: detaches the trailing-word spans from the line for re-emission
+    // after the break. A space-only head stays drawn at the old line end
+    // (mirroring leading-space emission); tails return without leading spaces
+    // for the caller to re-add on the fresh line.
+    private static List<(PptxTextRunModel? SourceRun, TextRun Run)>? DetachTrailingWordSpans(
+        TextLayoutLine line,
+        int wordStartSpan,
+        int wordLeadingSpaces,
+        ref double cursorX,
+        ref int? previousAdvanceCodePoint,
+        TextAdvanceEstimator advanceEstimator)
+    {
+        if (wordStartSpan <= 0 || wordStartSpan >= line.Spans.Count)
+        {
+            return null;
+        }
+        var tails = new List<(PptxTextRunModel? SourceRun, TextRun Run)>();
+        while (line.Spans.Count > wordStartSpan && line.TryRemoveLastSpan(out PptxTextSpanLayout? removed))
+        {
+            tails.Add((removed.SourceRun, removed.Run));
+        }
+        tails.Reverse();
+        if (tails.Count == 0)
+        {
+            return null;
+        }
+        (PptxTextRunModel? firstSource, TextRun firstRun) = tails[0];
+        string tailText = firstRun.Text[wordLeadingSpaces..];
+        if (wordLeadingSpaces > 0)
+        {
+            string headText = firstRun.Text[..wordLeadingSpaces];
+            int? headPrevious = LastCodePoint(line.Spans[wordStartSpan - 1].Run.Text);
+            double headIntrinsic = advanceEstimator.Measure(headText, firstRun.FontSize, firstRun.FontFamily, firstRun.Bold, firstRun.Italic, firstRun.CharacterSpacing, firstRun.KerningEnabled);
+            double headBoundary = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, headText, headPrevious, firstRun.FontSize, new TextAdvanceOptions(firstRun.FontFamily, firstRun.Bold, firstRun.Italic, firstRun.CharacterSpacing, firstRun.KerningEnabled));
+            double headWidth = Math.Max(0d, headIntrinsic + headBoundary);
+            TextRun headRun = firstRun with { Text = headText, X = line.EndX, Width = headWidth };
+            line.Add(firstSource, headRun, line.EndX + headWidth, BuildTextAtoms(headRun, advanceEstimator, PptxTextAtomKind.Space), BuildGlyphSpan(headRun, advanceEstimator, 0d));
+            cursorX = line.EndX;
+            previousAdvanceCodePoint = LastCodePoint(headText);
+        }
+        tails[0] = (firstSource, firstRun with { Text = tailText });
+        return tails;
+    }
+
     private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping, PptxTextColumnBreakMode columnBreakMode, int lineBalanceTarget, int lineBalanceStartColumn)
     {
         PptxTextFrameModel frame = flowFrame.Model;
@@ -405,6 +531,21 @@ internal sealed partial class PptxRenderer
                             }
                         }
 
+                        // RV03: words split across runs break at word boundaries, not run
+                        // seams. When the overflowing segment continues a word begun on this
+                        // line and the whole word fits the line, detach the word tail so the
+                        // standard break below emits without it; re-added after the break.
+                        List<(PptxTextRunModel? SourceRun, TextRun Run)>? pulledWordSpans = null;
+                        if (flowSegment.Draw &&
+                            currentAdvanceText.Length != 0 &&
+                            WordContinuesOntoLine(previousAdvanceCodePoint, currentAdvanceText) &&
+                            TryFindTrailingWordStart(line.Spans, out int wordStartSpan, out int wordLeadingSpaces) &&
+                            wordStartSpan > 0 &&
+                            cursorX - line.Spans[wordStartSpan].Run.X + segmentWidth <= effectiveTextWidth + wrapTolerance)
+                        {
+                            pulledWordSpans = DetachTrailingWordSpans(line, wordStartSpan, wordLeadingSpaces, ref cursorX, ref previousAdvanceCodePoint, advanceEstimator);
+                        }
+
                         double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
                         AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight);
                         double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
@@ -446,7 +587,26 @@ internal sealed partial class PptxRenderer
                             previousAdvanceCodePoint = LastCodePoint(movedNoBreakAdvanceText);
                         }
 
-                        currentSegment = currentSegment.TrimStart();
+                                                if (pulledWordSpans is not null)
+                        {
+                            foreach ((PptxTextRunModel? wordSource, TextRun wordRun) in pulledWordSpans)
+                            {
+                                double wordBoundary = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, wordRun.Text, previousAdvanceCodePoint, wordRun.FontSize, new TextAdvanceOptions(wordRun.FontFamily, wordRun.Bold, wordRun.Italic, wordRun.CharacterSpacing, wordRun.KerningEnabled));
+                                double wordIntrinsic = advanceEstimator.Measure(wordRun.Text, wordRun.FontSize, wordRun.FontFamily, wordRun.Bold, wordRun.Italic, wordRun.CharacterSpacing, wordRun.KerningEnabled);
+                                double wordWidth = Math.Max(0d, wordIntrinsic + wordBoundary);
+                                double wordLeading = pendingVisibleLeadingAdjustment + wordBoundary;
+                                TextRun placedRun = wordRun with { X = cursorX + wordBoundary, Y = cursorY, Width = wordWidth, ClipX = columnClipX, ClipWidth = columnClipWidth };
+                                double wordEndX = cursorX + wordWidth;
+                                line.Add(wordSource, placedRun, wordEndX, BuildTextAtoms(placedRun, advanceEstimator, null), BuildGlyphSpan(placedRun, advanceEstimator, wordLeading));
+                                maxFontSize = Math.Max(maxFontSize, placedRun.FontSize);
+                                cursorX = wordEndX;
+                                line.AdvanceTo(cursorX);
+                                pendingVisibleLeadingAdjustment = 0d;
+                                previousAdvanceCodePoint = LastCodePoint(wordRun.Text);
+                            }
+                        }
+
+currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
                         segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, new TextAdvanceOptions(runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled));
