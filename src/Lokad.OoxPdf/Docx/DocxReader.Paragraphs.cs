@@ -1209,10 +1209,16 @@ internal sealed partial class DocxReader
             DocxRunStyleResolution runStyleResolution,
             DocxRevisionInfo? revision)
         {
+            // RV06 footnote-align probe: Office renders the mark at baseline when no
+            // superscript is specified (style-less reference exports full-size marks
+            // on the baseline), so the display run follows the resolved cascade
+            // instead of forcing superscript. Documents whose FootnoteReference or
+            // EndnoteReference style (or direct run properties) specify superscript
+            // keep it through the cascade.
             AddResolvedTextRuns(
                 runs,
                 displayText,
-                resolvedRun with { VerticalAlignmentValue = "superscript" },
+                resolvedRun,
                 runStyleResolution,
                 currentSourceRunIndex,
                 textOffset,

@@ -833,7 +833,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal(1, block.EndnoteReferenceCount);
     }
 
-    public static void DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersAsSuperscriptRuns()
+    public static void DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -875,10 +875,11 @@ internal static class DocxFieldsTests
         TestAssert.Equal(5, first.Runs.Count);
         TestAssert.Equal("Before", first.Runs[0].Text);
         TestAssert.Equal("1", first.Runs[1].Text);
-        TestAssert.Equal("superscript", first.Runs[1].VerticalAlignmentValue ?? string.Empty);
+        // RV06 footnote-align probe: style-less marks render at baseline in Office.
+        TestAssert.Equal(string.Empty, first.Runs[1].VerticalAlignmentValue ?? string.Empty);
         TestAssert.Equal("Middle", first.Runs[2].Text);
         TestAssert.Equal("1", first.Runs[3].Text);
-        TestAssert.Equal("superscript", first.Runs[3].VerticalAlignmentValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, first.Runs[3].VerticalAlignmentValue ?? string.Empty);
         TestAssert.Equal("After", first.Runs[4].Text);
         TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote).DisplayText ?? string.Empty);
         TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
