@@ -227,8 +227,8 @@ internal sealed partial class DocxRenderer
     // titles set in Segoe UI Bold while bodies use the document face (unresolved titles
     // run 4.4pt wider than Aptos at the same size). Resolved once per conversion; a
     // fallback/unresolvable result keeps the label face everywhere (including off-Windows). A
-    // non-bold family member is also rejected: server SKUs may ship Segoe UI without its
-    // Bold face, and narrower non-bold advances would silently under-wrap titles.
+    // Segoe UI Semibold (600) is also rejected: server SKUs may ship the family without its
+    // Bold face, and narrower semibold advances would silently under-wrap titles.
     internal static FontFaceResolution? ResolveBalloonTitleFace(IFontResolver fontResolver, DocxMarkupContext markupContext, CancellationToken cancellationToken)
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(markupContext))
@@ -237,7 +237,7 @@ internal sealed partial class DocxRenderer
         }
 
         FontFaceResolution resolved = fontResolver.Resolve(new FontRequest("Segoe UI", Bold: true));
-        if (resolved.IsFallback || !resolved.Bold)
+        if (resolved.IsFallback || resolved.WeightClass < 700)
         {
             return null;
         }
