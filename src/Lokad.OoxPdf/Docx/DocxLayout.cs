@@ -188,6 +188,24 @@ internal sealed partial class DocxLayoutEngine
     private const double TableCellNoWrapLineWidthPoints = 1_000_000d;
     private const double UntokenedParagraphBaselineExtraPoints = 0.12d;
 
+    // RV06: break-adjacent spacing rows spill from the paragraph's last non-empty
+    // body line. Comment-range paragraphs may carry trailing marker lines, so scan
+    // back for the last non-empty line owned by the paragraph itself.
+    private static int FindBreakSpillLineIndex(IReadOnlyList<DocxLayoutItem> currentItems, DocxParagraph paragraph)
+    {
+        for (int itemIndex = currentItems.Count - 1; itemIndex >= 0; itemIndex--)
+        {
+            if (currentItems[itemIndex] is DocxTextLineLayout candidate &&
+                ReferenceEquals(candidate.SourceParagraph, paragraph) &&
+                candidate.Text.Length > 0)
+            {
+                return itemIndex;
+            }
+        }
+
+        return -1;
+    }
+
     private static bool HasNoSpacingElement(DocxEffectiveParagraphProperties effective)
     {
         return !DocxParagraphSpacing.HasBeforeSpacingSide(effective.Spacing) &&
@@ -731,6 +749,129 @@ internal sealed partial class DocxLayoutEngine
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= lineHeight;
+                }
+
+                // RV06: break-adjacent spacing rows (Word 16.0 spill-matrix and
+                // trailing-space probes): a non-empty text-only body paragraph
+                // immediately followed by a break-only page-break paragraph carries
+                // a two-space spill row on the same page past the after-spacing gap
+                // (second space at body-left plus 144 design points), plus one
+                // row-end space beyond authored trailing when the last wrapped line
+                // ends in trailing whitespace (clean-ending lines already carry the
+                // row-end space from the wrap pipeline). Content-independent across
+                // clean, trailing-space and comment-range paragraphs; the break-free
+                // control emits nothing. Scoped to text-only body paragraphs with a
+                // reader-built break-only BreakParagraph (hand-built null breaks and
+                // inline splits stay open, as do centered/right and table-cell
+                // patterns).
+                int breakSpillLineIndex = FindBreakSpillLineIndex(currentItems, paragraph);
+                if (paragraph.Images.Count == 0 &&
+                    paragraph.InlineTextBoxes.Count == 0 &&
+                    lines.Length > 0 &&
+                    elementIndex + 1 < document.BodyElements.Count &&
+                    document.BodyElements[elementIndex + 1] is DocxPageBreakElement nextBreak &&
+                    nextBreak.BreakParagraph is { } nextBreakParagraph &&
+                    nextBreakParagraph.Images.Count == 0 &&
+                    nextBreakParagraph.InlineTextBoxes.Count == 0 &&
+                    nextBreakParagraph.Runs.All(static run => run.Text.Length == 0) &&
+                    breakSpillLineIndex >= 0)
+                {
+                    DocxTextLineLayout breakLastLine = (DocxTextLineLayout)currentItems[breakSpillLineIndex];
+                    // Office keeps exactly one row-end space beyond authored trailing:
+                    // clean-ending lines already carry it from the wrap pipeline, so
+                    // only lines ending in authored trailing whitespace need it here.
+                    bool breakNeedsRowEndSpace = lines[^1].Text.EndsWith(' ');
+                    double breakSpaceWidth = textMeasurer.MeasureText(firstRun, " ", paragraphFontSize);
+                    var breakRowEndSegment = new DocxTextSegmentLayout(
+                        " ",
+                        firstRun,
+                        breakLastLine.X + breakLastLine.Width,
+                        breakSpaceWidth,
+                        paragraphFontSize,
+                        0d,
+                        0d,
+                        DocxTextStateCharacterSpacingSource.None,
+                        true,
+                        -1,
+                        0,
+                        DocxTextSegmentRole.BreakSpill);
+                    if (breakNeedsRowEndSpace)
+                    {
+                        currentItems[breakSpillLineIndex] = breakLastLine with
+                        {
+                            Text = breakLastLine.Text + " ",
+                            Width = breakLastLine.Width + breakSpaceWidth,
+                            Segments = [.. breakLastLine.Segments, breakRowEndSegment],
+                        };
+                    }
+
+                    // Office sets the spill row past the paragraph after-spacing gap,
+                    // not on the immediate next line slot.
+                    double breakSpillAfterSpacing = spacingProfile.ParagraphAfterSpacing;
+                    double breakSpillX = x + continuationTextStartOffset;
+                    double breakSpillTabX = breakSpillX + 144d * paragraphSpacingScale;
+                    double breakSpillBaseline = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective));
+                    if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
+                    {
+                        breakSpillBaseline += UntokenedParagraphBaselineExtraPoints;
+                    }
+
+                    currentItems.Add(new DocxTextLineLayout(
+                        "  ",
+                        firstRun,
+                        paragraphFontSize,
+                        breakSpillX,
+                        cursorY - breakSpillAfterSpacing - breakSpillBaseline,
+                        (breakSpillTabX - breakSpillX) + breakSpaceWidth,
+                        [
+                            new DocxTextSegmentLayout(
+                                " ",
+                                firstRun,
+                                breakSpillX,
+                                breakSpaceWidth,
+                                paragraphFontSize,
+                                0d,
+                                0d,
+                                DocxTextStateCharacterSpacingSource.None,
+                                true,
+                                -1,
+                                0,
+                                DocxTextSegmentRole.BreakSpill),
+                            new DocxTextSegmentLayout(
+                                " ",
+                                firstRun,
+                                breakSpillTabX,
+                                breakSpaceWidth,
+                                paragraphFontSize,
+                                0d,
+                                0d,
+                                DocxTextStateCharacterSpacingSource.None,
+                                true,
+                                -1,
+                                0,
+                                DocxTextSegmentRole.BreakSpill),
+                        ],
+                        SourceBlockIndex: elementIndex,
+                        SourceParagraphIndex: 0,
+                        SourceLineIndex: lines.Length,
+                        LineHeight: lineHeight,
+                        AppliedBeforeSpacing: 0d,
+                        IsFirstParagraphLine: false,
+                        EndsWithIntraTokenBreak: lines[^1].EndsWithIntraTokenBreak,
+                        SingleLineHeight: lineHeightProfile.SingleLineHeight,
+                        ListLabelSingleLineHeight: lineHeightProfile.ListLabelSingleLineHeight,
+                        BodyWindowsLineHeight: lineHeightProfile.BodyWindowsLineHeight,
+                        ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
+                        EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
+                        LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
+                        LineHeightSource: lineHeightProfile.Source,
+                        PendingAfterSpacing: null,
+                        ParagraphBeforeSpacing: null,
+                        ParagraphAfterSpacing: null,
+                        ContextualSpacingSuppressed: null,
+                        SourceParagraph: paragraph,
+                        Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false));
+                    cursorY -= breakSpillAfterSpacing + lineHeight;
                 }
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)

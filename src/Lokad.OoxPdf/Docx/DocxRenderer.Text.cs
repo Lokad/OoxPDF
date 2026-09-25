@@ -238,6 +238,7 @@ internal sealed partial class DocxRenderer
             bool ShouldSuppressCommentReferenceSpacerPart(DocxTextEmissionPart part)
             {
             return suppressCommentReferenceSpacer &&
+                segment.Role != DocxTextSegmentRole.BreakSpill &&
                 part.Width > 0d &&
                 !string.IsNullOrEmpty(part.Text) &&
                 string.IsNullOrWhiteSpace(part.Text) &&

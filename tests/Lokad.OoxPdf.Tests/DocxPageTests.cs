@@ -2025,4 +2025,62 @@ internal static class DocxPageTests
         TestAssert.Equal(3, secondPageLines.Length);
         TestAssert.Equal("One", secondPageLines[0].Text);
     }
+
+    public static void DocxBreakOnlyParagraphEmitsOfficeSpacingRows()
+    {
+        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("Break spill   ", 10d, 12d);
+        DocxParagraph breakParagraph = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 12d);
+        DocxParagraph second = DocxTests.CreateDocxLayoutParagraph("Next", 10d, 12d);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(first),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", breakParagraph),
+                new DocxParagraphElement(second)
+            ],
+            [first, second],
+            []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        DocxTextLineLayout[] firstPageLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+        TestAssert.Equal(2, firstPageLines.Length);
+        TestAssert.Equal("Break spill    ", firstPageLines[0].Text);
+        TestAssert.Equal("  ", firstPageLines[1].Text);
+        TestAssert.Equal(2, firstPageLines[1].Segments.Count);
+        TestAssert.True(Math.Abs((firstPageLines[1].Segments[1].X - firstPageLines[1].Segments[0].X) - 144d) < 1d, "spill tab stop");
+        DocxParagraph control = DocxTests.CreateDocxLayoutParagraph("Control", 10d, 12d);
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 12d);
+        var controlDocument = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(control), new DocxParagraphElement(after)],
+            [control, after],
+            []);
+        DocxTextLineLayout[] controlLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(controlDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+        TestAssert.Equal(2, controlLines.Length);
+        TestAssert.True(controlLines[0].Text.EndsWith(" ", StringComparison.Ordinal) == false, "no spill without break");
+    }
 }
