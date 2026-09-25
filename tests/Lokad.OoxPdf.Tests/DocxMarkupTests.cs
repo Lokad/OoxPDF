@@ -400,13 +400,17 @@ internal static class DocxMarkupTests
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(30d, layout.Pages[0].MarginLeft);
         TestAssert.Equal(207d, layout.Pages[0].MarginRight);
-        TestAssert.Equal(207d, layout.Pages[1].MarginLeft);
-        TestAssert.Equal(30d, layout.Pages[1].MarginRight);
+        TestAssert.Equal(18d, layout.Pages[1].MarginLeft);
+        TestAssert.Equal(207d, layout.Pages[1].MarginRight);
         TestAssert.Equal(189d, layout.Pages[0].MarkupMarginReservePoints);
-        TestAssert.Equal(189d, layout.Pages[1].MarkupMarginReservePoints);
+        // The even reserve is measured past the gutter-shifted authored margin (207 - 30).
+        TestAssert.Equal(177d, layout.Pages[1].MarkupMarginReservePoints);
         TestAssert.Equal(30d, layout.Pages[0].ColumnFrames[0].X);
-        TestAssert.Equal(207d, layout.Pages[1].ColumnFrames[0].X);
-        TestAssert.Equal(layout.Pages[0].ColumnFrames[0].Width, layout.Pages[1].ColumnFrames[0].Width);
+        TestAssert.Equal(18d, layout.Pages[1].ColumnFrames[0].X);
+        // The review reserve targets the fixed preferred margin on both pages, so mirrored body
+        // frames differ by exactly the alternating inside gutter (363 vs 375).
+        TestAssert.Equal(363d, layout.Pages[0].ColumnFrames[0].Width);
+        TestAssert.Equal(375d, layout.Pages[1].ColumnFrames[0].Width);
     }
 
     public static void DocxMarkupWordCompatibleGeometryUsesReserveMarginFallback()
@@ -1178,7 +1182,8 @@ internal static class DocxMarkupTests
         // balloon bodies at a 22.56pt design inset; the mirrored odd page (s = 612 / 824.5) starts it at
         // balloon-body 437.36 minus 22.56 * s = 420.615 (Office 420.60).
         TestAssert.Contains("420.615 89.475 191.015 614.25 re f", pages[0].Content);
-        TestAssert.Contains("0.37 89.475 199.7 614.25 re f", pages[1].Content);
+        // Even pages keep the right lane too (Office 420.60 on both pages).
+        TestAssert.Contains("420.615 89.475 191.015 614.25 re f", pages[1].Content);
     }
 
     public static void DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor()

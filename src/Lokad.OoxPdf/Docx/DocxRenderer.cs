@@ -826,6 +826,21 @@ internal sealed partial class DocxRenderer
         return markupContext.WordCompatibleTextXOffset;
     }
 
+    // Office (mirrored-margin reference, Word-COM rendered): the print-scale X shift
+    // follows each page own left margin (even mirrored body at 40.06 = 54pt times scale),
+    // not the document margin, so scaled pages keep margin-times-scale body origins.
+    private static DocxMarkupContext WithPageTextEmissionXOffset(DocxMarkupContext markupContext, DocxLayoutPage layoutPage)
+    {
+        if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
+            markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
+            !markupContext.ExpandsMarkupMargin)
+        {
+            return markupContext;
+        }
+
+        return markupContext with { WordCompatibleTextXOffset = -layoutPage.MarginLeft * (1d - markupContext.WordCompatiblePrintScale) };
+    }
+
     private static bool UsesWordCompatibleAllMarkupTextProfile(DocxMarkupContext markupContext)
     {
         return markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
@@ -900,6 +915,7 @@ internal sealed partial class DocxRenderer
             // and images never produce past the trip.
             OoxConversionBudget.Current?.ChargePdfPages(1);
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
+            markupContext = WithPageTextEmissionXOffset(markupContext, layoutPage);
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
             int pageNumber = pageIndex + 1;

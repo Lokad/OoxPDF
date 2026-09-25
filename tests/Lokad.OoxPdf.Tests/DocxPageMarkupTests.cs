@@ -380,7 +380,7 @@ internal static class DocxPageMarkupTests
         TestAssert.True(Math.Abs(layout.Pages[1].MarkupMarginReservePoints - 135d) < 0.001d, "The final section should report the reserve added beyond its own authored margin.");
     }
 
-    public static void DocxMarkupReserveMarginMirrorsLaneOnEvenPages()
+    public static void DocxMarkupReserveMarginKeepsRightLaneOnMirroredEvenPages()
     {
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -404,16 +404,13 @@ internal static class DocxPageMarkupTests
         TestAssert.True(reserveLayout.Pages.Count >= 2, "The mirrored-margin fixture should cover odd and even pages.");
         TestAssert.True(reserveLayout.Pages[0].MarginRight > preserveLayout.Pages[0].MarginRight, "Odd mirrored pages should keep the reserved markup lane on the right.");
         TestAssert.Equal(preserveLayout.Pages[0].MarginLeft, reserveLayout.Pages[0].MarginLeft);
-        TestAssert.True(reserveLayout.Pages[1].MarginLeft > preserveLayout.Pages[1].MarginLeft, "Even mirrored pages should reserve the markup lane on the left.");
-        TestAssert.Equal(preserveLayout.Pages[1].MarginRight, reserveLayout.Pages[1].MarginRight);
+        TestAssert.True(reserveLayout.Pages[1].MarginRight > preserveLayout.Pages[1].MarginRight, "Even mirrored pages should keep the reserved markup lane on the right (Office balloons right on both pages).");
+        TestAssert.Equal(preserveLayout.Pages[1].MarginLeft, reserveLayout.Pages[1].MarginLeft);
         TestAssert.True(placements.Any(placement => placement.PageIndex == 0 && placement.Side == "Right"), "Odd-page balloons should use the right mirrored lane.");
-        TestAssert.True(placements.Any(placement => placement.PageIndex == 1 && placement.Side == "Left"), "Even-page balloons should use the left mirrored lane.");
+        TestAssert.True(placements.Any(placement => placement.PageIndex == 1 && placement.Side == "Right"), "Even-page balloons should use the right lane like odd pages.");
         TestAssert.True(
             placements.Where(placement => placement.Side == "Right").All(placement => placement.BalloonConnectorX < placement.X),
             "Right-lane connector stems should stay between the body frame and balloon body.");
-        TestAssert.True(
-            placements.Where(placement => placement.Side == "Left").All(placement => placement.BalloonConnectorX > placement.X + placement.Width),
-            "Left-lane connector stems should stay between the body frame and balloon body.");
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBar()

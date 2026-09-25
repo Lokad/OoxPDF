@@ -298,6 +298,11 @@ internal sealed partial class DocxLayoutEngine
         double marginLeft = ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints);
         double marginRight = ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints);
         double gutter = Math.Max(0d, ReadTwipsValue(effectiveSettings.GutterDistanceValue, effectiveSettings.GutterDistancePoints ?? 0d));
+        // Odd-authored margins, captured before gutter and reserve: even mirrored pages
+        // mirror the body (left) side onto the authored right while the right side keeps
+        // odd-page geometry below.
+        double oddAuthoredMarginLeft = marginLeft;
+        double oddAuthoredMarginRight = marginRight;
         if (gutter > 0d)
         {
             if (ShouldApplyGutterToRightMargin(document, pageNumber))
@@ -314,17 +319,26 @@ internal sealed partial class DocxLayoutEngine
         double authoredMarginRight = marginRight;
         if (reserveMarkupMargin)
         {
-            if (ShouldReserveLeftMarkupMargin(document, pageNumber))
-            {
-                marginLeft = ResolveReservedMarkupLeftMargin(width, marginLeft, marginRight, printScale, retuneReserve);
-            }
-            else
-            {
-                marginRight = ResolveReservedMarkupRightMargin(width, marginLeft, marginRight, printScale, retuneReserve);
-            }
+            // Office (mirrored-margin reference, Word-COM rendered): even mirrored pages
+            // keep the balloon lane on the right like odd pages (balloons at 437.33 on both
+            // pages), so the review reserve never mirrors left. The 2026-06 mirroring
+            // assumption is retired; page gutters still mirror via ShouldApplyGutterToRightMargin.
+            marginRight = ResolveReservedMarkupRightMargin(width, marginLeft, marginRight, printScale, retuneReserve);
         }
 
         double markupMarginReservePoints = Math.Max(0d, Math.Max(marginLeft - authoredMarginLeft, marginRight - authoredMarginRight));
+        if (IsEvenMirroredPage(document, pageNumber))
+        {
+            // Office (mirrored-margin reference): even pages mirror the body (left) side onto
+            // the authored right margin, while the right side keeps odd-page geometry (full
+            // mirror without reserve, odd reserved geometry with reserve) so the review reserve
+            // and balloon lane never mirror left.
+            marginLeft = oddAuthoredMarginRight;
+            if (!reserveMarkupMargin)
+            {
+                marginRight = oddAuthoredMarginLeft;
+            }
+        }
         double marginTop = ReadTwipsValue(effectiveSettings.MarginTopValue, document.MarginTopPoints);
         double marginBottom = ReadTwipsValue(effectiveSettings.MarginBottomValue, document.MarginBottomPoints);
 
@@ -407,28 +421,6 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(marginRight, Math.Min(preferredMargin, maxRightMargin));
     }
 
-    private static double ResolveReservedMarkupLeftMargin(double pageWidth, double marginLeft, double marginRight, double printScale, bool retuneReserve)
-    {
-        double bodyWidth = Math.Max(1d, pageWidth - marginLeft - marginRight);
-        if (bodyWidth <= MinimumMarkupBodyWidthPoints)
-        {
-            return marginLeft;
-        }
-
-        double maxLeftMargin = Math.Max(marginLeft, pageWidth - marginRight - MinimumMarkupBodyWidthPoints);
-        double preferredMargin = PreferredMarkupMarginPoints;
-        if (retuneReserve && Math.Abs(printScale - 1d) >= 0.000000001d)
-        {
-            preferredMargin = Math.Max(marginLeft, pageWidth - marginRight - bodyWidth * printScale);
-        }
-
-        return Math.Max(marginLeft, Math.Min(preferredMargin, maxLeftMargin));
-    }
-
-    private static bool ShouldReserveLeftMarkupMargin(DocxDocument document, int pageNumber)
-    {
-        return IsEvenMirroredPage(document, pageNumber);
-    }
 
     private static bool ShouldApplyGutterToRightMargin(DocxDocument document, int pageNumber)
     {

@@ -447,6 +447,35 @@ internal static class DocxCommentsTests
             "Word-compatible all-markup should not draw legacy yellow comment marker boxes.");
     }
 
+    public static void DocxWordCompatibleBalloonsStayRightOnMirroredEvenPages()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-margin-mirrored.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(
+            fontResolver: null,
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot[] evenBalloons = renderer.InspectMarkupBalloons(document)
+            .Where(placement => placement.PageIndex == 1)
+            .ToArray();
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+
+        TestAssert.True(evenBalloons.Length != 0, "The mirrored fixture should balloon even-page comments.");
+        TestAssert.True(
+            evenBalloons.All(placement => placement.Side == "Right"),
+            "Office keeps mirrored even-page balloons on the right (mirrored-ref balloons at 437.33 on both pages).");
+        TestAssert.True(
+            Math.Abs(layout.Pages[1].MarginLeft - 54d) < 0.5d,
+            "Mirrored even pages should keep the authored left margin without a left review reserve; observed " + layout.Pages[1].MarginLeft.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     public static void DocxWordCompatibleBalloonBodiesUseOfficeMeasuredWidth()
     {
         string input = DocxTests.WriteCommentAuthorColorProbeDocx();
