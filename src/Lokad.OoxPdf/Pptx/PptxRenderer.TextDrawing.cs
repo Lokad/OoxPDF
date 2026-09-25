@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
             }
 
             estimator ??= new TextAdvanceEstimator(fontResolver, cancellationToken);
-            List<(string Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken);
+            List<(string? Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken);
             if (segments.Count == 1)
             {
                 rewritten.Add(run with { FontFamily = segments[0].Typeface });
@@ -81,7 +81,7 @@ internal sealed partial class PptxRenderer
             else
             {
                 double cursorX = run.X;
-                foreach ((string typeface, string text) in segments)
+                foreach ((string? typeface, string text) in segments)
                 {
                     double width = estimator.Measure(text, run.FontSize, typeface, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
                     rewritten.Add(run with
@@ -114,15 +114,17 @@ internal sealed partial class PptxRenderer
         return rewritten;
     }
 
-    private static List<(string Typeface, string Text)> SplitRunByFallbackTypeface(TextRun run, TextAdvanceEstimator estimator, CancellationToken cancellationToken)
+    private static List<(string? Typeface, string Text)> SplitRunByFallbackTypeface(TextRun run, TextAdvanceEstimator estimator, CancellationToken cancellationToken)
     {
-        var segments = new List<(string Typeface, string Text)>();
+        var segments = new List<(string? Typeface, string Text)>();
         string? segmentTypeface = null;
         var segmentText = new StringBuilder();
         void FlushSegment()
         {
-            if (segmentText.Length != 0 && segmentTypeface is not null)
+            if (segmentText.Length != 0)
             {
+                // RV01 residual: estimator-unresolvable runes keep a null-typeface segment so
+                // downstream default-family handling substitutes a diagnosed question mark.
                 segments.Add((segmentTypeface, segmentText.ToString()));
                 segmentText.Clear();
             }
@@ -132,12 +134,8 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             string? typeface = estimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value)?.Typeface;
-            if (typeface is null)
-            {
-                continue;
-            }
-
-            if (segmentTypeface is not null && !typeface.Equals(segmentTypeface, StringComparison.OrdinalIgnoreCase))
+            bool sameFamily = segmentTypeface is null ? typeface is null : typeface is not null && typeface.Equals(segmentTypeface, StringComparison.OrdinalIgnoreCase);
+            if (!sameFamily)
             {
                 FlushSegment();
                 segmentTypeface = null;
@@ -389,26 +387,7 @@ internal sealed partial class PptxRenderer
             return codepoints;
         }
 
-        missing.Sort();
-        if (fontResolver.ReportedMissingFontDiagnostics.Add("glyph:" + group.Key.FamilyName))
-        {
-            const int maxListedCodepoints = 12;
-            string listed = string.Join(", ", missing.Take(maxListedCodepoints).Select(code => "U+" + code.ToString("X4")));
-            if (missing.Count > maxListedCodepoints)
-            {
-                listed += ", and " + (missing.Count - maxListedCodepoints).ToString(CultureInfo.InvariantCulture) + " more";
-            }
-
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                "FONT_MISSING_GLYPHS",
-                OoxPdfSeverity.Warning,
-                missing.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + group.Key.FamilyName + " have no glyph in any usable face (" + listed + ") and show as question mark.",
-                PartName: null,
-                SlideIndex: null,
-                PageIndex: null,
-                Feature: group.Key.FamilyName,
-                Fallback: "Question-mark substitution"));
-        }
+        ReportMissingGlyphSubstitution(group.Key.FamilyName, missing, fontResolver, diagnosticSink);
 
         if (font.MapCodePoint(0x3F) == 0)
         {
@@ -421,16 +400,46 @@ internal sealed partial class PptxRenderer
         return withQuestionMark;
     }
 
+    // RV01: codepoints with no glyph in any usable face are named once per family;
+    // substituted marks show as question mark.
+    private static void ReportMissingGlyphSubstitution(string familyName, List<int> missing, PresentationFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        missing.Sort();
+        if (fontResolver.ReportedMissingFontDiagnostics.Add("glyph:" + familyName))
+        {
+            const int maxListedCodepoints = 12;
+            string listed = string.Join(", ", missing.Take(maxListedCodepoints).Select(code => "U+" + code.ToString("X4")));
+            if (missing.Count > maxListedCodepoints)
+            {
+                listed += ", and " + (missing.Count - maxListedCodepoints).ToString(CultureInfo.InvariantCulture) + " more";
+            }
+
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "FONT_MISSING_GLYPHS",
+                OoxPdfSeverity.Warning,
+                missing.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + familyName + " have no glyph in any usable face (" + listed + ") and show as question mark.",
+                PartName: null,
+                SlideIndex: null,
+                PageIndex: null,
+                Feature: familyName,
+                Fallback: "Question-mark substitution"));
+        }
+    }
+
     // RV01: emission splits spans by glyph typeface, so families that only appear on
-    // split runs need fallback coverage when unresolvable. Embedded entries stay
-    // exactly as prepared: resolvable spans without entries keep current behavior.
+    // split runs need coverage when preparation skipped them: unresolvable families
+    // take the diagnosed built-in fallback, while resolvable families gain embedded
+    // subsets so their glyphs do not vanish at the emission lookup.
     private static void AddSplitFallbackFaces(
         Dictionary<FontRequest, RenderedFont> fonts,
         IEnumerable<PptxPositionedTextSpan> spans,
         PresentationFontResolver fontResolver,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        List<PdfFontResource> resources,
+        string resourcePrefix)
     {
+        var embeddableUses = new List<TextFontUse>();
         foreach (PptxPositionedTextSpan emissionSpan in spans.SelectMany(SplitSpanByGlyphTypeface))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -459,6 +468,9 @@ internal sealed partial class PptxRenderer
             (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(key, cancellationToken);
             if (resolved is not null && resolved.Value.Font.HasTrueTypeOutlines)
             {
+                // RV01 residual follow-up: resolvable split families that were never prepared
+                // get embedded subsets instead of vanishing at emission.
+                embeddableUses.Add(new TextFontUse(key.FamilyName, key.Bold, key.Italic, emissionSpan.GlyphSpan.Glyphs.Select(glyph => glyph.CodePoint).ToArray()));
                 continue;
             }
 
@@ -468,6 +480,17 @@ internal sealed partial class PptxRenderer
             fonts[key] = new RenderedFont(fallbackName, null, fallbackResolution, false, false, new PdfFallbackFontResource(fallbackName, face));
             fontResolver.UsedFallbackFaces.Add(face);
             ReportMissingFontFallback(key.FamilyName, fontResolver, diagnosticSink);
+        }
+
+        if (embeddableUses.Count != 0)
+        {
+            RenderedFonts embeddedSplitFonts = CreateRenderedFonts(embeddableUses, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, resources, includeFallbackFaces: true);
+            foreach (KeyValuePair<FontRequest, RenderedFont> entry in embeddedSplitFonts.Fonts)
+            {
+                fonts[entry.Key] = entry.Value;
+            }
+
+            resources.AddRange(embeddedSplitFonts.Resources);
         }
     }
 
@@ -511,13 +534,38 @@ internal sealed partial class PptxRenderer
                 substituted.Add(use);
                 continue;
             }
-            foreach (IGrouping<string, (int CodePoint, string? Typeface)> split in use.CodePoints
-                         .Select(codePoint => (CodePoint: codePoint, Typeface: estimator.ResolveGlyphFont(use.FamilyName, use.Bold, use.Italic, codePoint)?.Typeface))
+            (int CodePoint, string? Typeface)[] resolvedCodepoints = use.CodePoints
+                .Select(codePoint => (CodePoint: codePoint, Typeface: estimator.ResolveGlyphFont(use.FamilyName, use.Bold, use.Italic, codePoint)?.Typeface))
+                .ToArray();
+            List<int>? droppedCodepoints = null;
+            foreach ((int CodePoint, string? Typeface) resolved in resolvedCodepoints)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!string.IsNullOrEmpty(resolved.Typeface) || PdfFallbackFont.IsNonRenderedControl(resolved.CodePoint))
+                {
+                    continue;
+                }
+
+                droppedCodepoints ??= new List<int>();
+                if (!droppedCodepoints.Contains(resolved.CodePoint))
+                {
+                    droppedCodepoints.Add(resolved.CodePoint);
+                }
+            }
+
+            foreach (IGrouping<string, (int CodePoint, string? Typeface)> split in resolvedCodepoints
                          .Where(resolved => !string.IsNullOrEmpty(resolved.Typeface))
                          .GroupBy(resolved => resolved.Typeface!, StringComparer.OrdinalIgnoreCase))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 substituted.Add(new TextFontUse(split.Key, use.Bold, use.Italic, split.Select(resolved => resolved.CodePoint).ToArray()));
+            }
+
+            if (droppedCodepoints is not null)
+            {
+                // RV01 residual: runes no usable face covers are named with the
+                // substitution diagnostic instead of vanishing from preparation.
+                ReportMissingGlyphSubstitution(use.FamilyName, droppedCodepoints, fontResolver, diagnosticSink);
             }
 
             if (reported.Add(new FontRequest(use.FamilyName, use.Bold, use.Italic)))

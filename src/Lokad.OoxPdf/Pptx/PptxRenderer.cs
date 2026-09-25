@@ -91,8 +91,9 @@ internal sealed partial class PptxRenderer
             // RV01: emission looks up split-run families, so cover families that only appear after the glyph-typeface split.
             RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false);
             Dictionary<FontRequest, RenderedFont> slideFonts = new(renderedFonts.Fonts, FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
-            AddSplitFallbackFaces(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken);
-            renderedFonts = new RenderedFonts(slideFonts, renderedFonts.Resources);
+            var slideResources = new List<PdfFontResource>(renderedFonts.Resources);
+            AddSplitFallbackFaces(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken, slideResources, "F");
+            renderedFonts = new RenderedFonts(slideFonts, slideResources);
 
             // Hidden master shapes stay unpainted when the slide opts out (S01).
             if (context.SceneSlide.ShowMasterShapes)

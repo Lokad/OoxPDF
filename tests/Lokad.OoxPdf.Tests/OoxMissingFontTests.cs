@@ -124,6 +124,161 @@ internal static class OoxMissingFontTests
         }
     }
 
+    // RV01 (slide spans path): a CFF run with estimator-unresolvable runes keeps its
+    // covered runes through the per-glyph fallback (embedded and CID-extractable) while
+    // the uncovered rune renders as a built-in question mark named by FONT_MISSING_GLYPHS.
+    // The CFF family itself stays diagnosed (unsupported outlines plus no usable face).
+    public static void CffUnresolvableRunesSubstituteQuestionMark()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="7315200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="CffFamily"/></a:rPr><a:t>A中B</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+        });
+        var resolver = new CffSingleFallbackResolver(TestFontBuilder.CreateCffKindFont(), TestFontBuilder.CreateTestFont());
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        string extracted = ExtractCidMappedText(pdf);
+        TestAssert.Contains("AB", extracted);
+        string fallbackExtracted = ExtractWinAnsiText(pdf);
+        TestAssert.Contains("?", fallbackExtracted);
+        OoxPdfDiagnostic missing = diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS");
+        TestAssert.Contains("U+4E2D", missing.Message);
+        TestAssert.Contains("CffFamily", missing.Message);
+        TestAssert.True(diagnostics.Any(d => d.Id == "FONT_NO_USABLE_FACE" && d.Message.Contains("CffFamily", StringComparison.Ordinal)), "The CFF family must stay diagnosed.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "FONT_UNSUPPORTED_OUTLINES" && d.Message.Contains("CffFamily", StringComparison.Ordinal)), "The CFF substitution must stay diagnosed.");
+    }
+
+    private sealed class CffSingleFallbackResolver(byte[] cffBytes, byte[] fallbackBytes) : IFontResolver, IFontCatalog
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            bool cff = request.FamilyName.Equals("CffFamily", StringComparison.OrdinalIgnoreCase);
+            return new FontFaceResolution(request.FamilyName, cff ? "CffFamily" : "FallbackFamily", new FontStyleKey(request.Bold, request.Italic, 400, 0, false), new MemoryFontProgramSource(cff ? "cff-test" : "tt-test", cff ? cffBytes : fallbackBytes), IsFallback: false);
+        }
+
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
+        {
+            return [Resolve(new FontRequest("FallbackFamily"))];
+        }
+    }
+
+    // RV01 (runs-path follow-up): chart runs with estimator-unresolvable runes keep
+    // them as default-family runs so emission substitutes a diagnosed question mark.
+    public static void CffChartUnresolvableRunesSubstituteQuestionMark()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/charts/chart1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="CffFamily"/></a:rPr><a:t>A中B</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:bubbleChart>
+                  <c:dLbls><c:showVal val="0"/><c:showBubbleSize val="1"/><c:dLblPos val="t"/><c:numFmt formatCode="0"/></c:dLbls>
+                  <c:ser>
+                    <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                    <c:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></c:spPr>
+                    <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:xVal>
+                    <c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:yVal>
+                    <c:bubbleSize><c:numLit><c:formatCode>0</c:formatCode><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt></c:numLit></c:bubbleSize>
+                  </c:ser>
+                </c:bubbleChart></c:plotArea></c:chart></c:chartSpace>
+                """
+        });
+        var resolver = new CffSingleFallbackResolver(TestFontBuilder.CreateCffKindFont(), TestFontBuilder.CreateTestFont());
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        // The title splits into three runs (covered, unresolvable, covered), so the
+        // 18pt title resource paints three text shows: A, the substituted mark, B.
+        // Data labels render at 8.52pt, so the title-size count is exact.
+        TestAssert.Equal(3, Regex.Matches(pdf, "/CT\\d+ 18 Tf").Count);
+        // The unresolvable rune is prepared as a question mark in an embedded subset.
+        TestAssert.Contains("<0001> <003F>", pdf);
+        string extracted = ExtractCidMappedText(pdf);
+        TestAssert.Contains("B", extracted);
+        OoxPdfDiagnostic missing = diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS");
+        TestAssert.Contains("U+4E2D", missing.Message);
+    }
+    // RV01 (slide spans path): a split family that resolves to an embeddable face only
+    // at emission gains an embedded subset instead of vanishing at the font lookup.
+    public static void ResolvableSplitFamiliesEmbedInsteadOfVanishing()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="7315200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="RunFam"/></a:rPr><a:t>AB</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+        });
+        var resolver = new UnresolvablePrimaryResolver(TestFontBuilder.CreateTestFont());
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        string extracted = ExtractCidMappedText(pdf);
+        TestAssert.Contains("AB", extracted);
+    }
+
+    private sealed class UnresolvablePrimaryResolver(byte[] fallbackBytes) : IFontResolver, IFontCatalog
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            bool missing = request.FamilyName.Equals("RunFam", StringComparison.OrdinalIgnoreCase);
+            return new FontFaceResolution(request.FamilyName, missing ? "RunFam" : "DiscFam", new FontStyleKey(request.Bold, request.Italic, 400, 0, false), new MemoryFontProgramSource(missing ? "empty-test" : "tt-test", missing ? Array.Empty<byte>() : fallbackBytes), IsFallback: false);
+        }
+
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
+        {
+            return [Resolve(new FontRequest("DiscFam"))];
+        }
+    }
     public static void MissingFontsPreservePptxText()
     {
         // RV01: the PPTX audit shows the same silent loss; text stays visible and
