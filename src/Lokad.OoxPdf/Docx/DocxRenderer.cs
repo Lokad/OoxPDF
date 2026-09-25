@@ -70,10 +70,11 @@ internal sealed partial class DocxRenderer
     // Word balloon text starts at (bodyEndDesign + gap) times the lane-fit scale
     // (implied gap 35.1/35.6/36.0/35.8 across the four datasets).
     private const double WordCompatibleAllMarkupBalloonLaneGapPoints = 35.6d;
-    // Office A/B (same datasets plus dense balloon rects): balloon bodies are 233pt design
-    // wide (R72 176.6, R207 212.4, dense 14x 180.9: implied 232.7/233.0/233.1).
-    // The gray lane hugs balloon bodies instead (see the background inset below).
-    private const double WordCompatibleAllMarkupBalloonBodyWidthPoints = 233d;
+    // Office A/B (margin-variant R72/R207 probes plus mirrored/dense/landscape/author references,
+    // Word-COM rendered across five print scales): balloon bodies are 230.2pt design wide
+    // (emission widths 170.73/174.58/178.80/184.92/209.88 at scales 0.7423/0.7575/0.7762/0.8028/0.9114).
+    // The prior 233pt value fitted our own candidate widths, never an Office measurement.
+    private const double WordCompatibleAllMarkupBalloonBodyWidthPoints = 230.2d;
     private const double WordCompatibleAllMarkupBalloonLaneBackgroundBalloonInsetPoints = 22.56d;
     private const double WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints = 0.03357d;
     private const double WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints = 2.541d;

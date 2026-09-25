@@ -265,15 +265,15 @@ internal static class DocxMarkupTests
         TestAssert.True(
             Math.Abs((narrowLaneX - wideLaneX) - 35.2d) < 1.5d,
             $"Right-lane balloons should move with the scaled body end across right margins. Narrow={narrowLaneX}, Wide={wideLaneX}.");
-        // Office A/B (same refs plus dense balloon rects): bodies are 233pt design wide
-        // (R72 176.6, R207 212.4, dense 14x 180.9), not the fixed layout width.
+        // Office A/B (margin-variant R72/R207 probes plus mirrored/dense/landscape/author references:
+        // bodies are 230.2pt design wide (R72 174.58, R207 209.88), not the fixed layout width.
         double narrowWidth = RightBalloonBodyWidth(CreateRightMarginBalloonDocument(72d));
         double wideWidth = RightBalloonBodyWidth(CreateRightMarginBalloonDocument(207d));
         TestAssert.True(
-            Math.Abs(narrowWidth - (233d * narrowScale)) < 2d,
+            Math.Abs(narrowWidth - (230.2d * narrowScale)) < 2d,
             $"Right-lane balloon bodies should scale with the print scale. Width={narrowWidth}.");
         TestAssert.True(
-            Math.Abs(wideWidth - (233d * wideScale)) < 2d,
+            Math.Abs(wideWidth - (230.2d * wideScale)) < 2d,
             $"Right-lane balloon bodies should widen on narrower bodies. Width={wideWidth}.");
     }
 

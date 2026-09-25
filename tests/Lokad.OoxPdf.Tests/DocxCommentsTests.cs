@@ -447,6 +447,30 @@ internal static class DocxCommentsTests
             "Word-compatible all-markup should not draw legacy yellow comment marker boxes.");
     }
 
+    public static void DocxWordCompatibleBalloonBodiesUseOfficeMeasuredWidth()
+    {
+        string input = DocxTests.WriteCommentAuthorColorProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(
+            fontResolver: null,
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+
+        DocxMarkupBalloonPlacementSnapshot[] balloons = renderer.InspectMarkupBalloons(document).Where(placement => placement.Kind == "Comment").ToArray();
+        TestAssert.True(balloons.Length == 3, "The author-color probe should place three comment balloons, observed " + balloons.Length + ".");
+
+        // Office A/B (margin-variant probes plus mirrored/dense/landscape/author references,
+        // Word-COM rendered): balloon bodies are 230.2pt design wide across six datasets.
+        foreach (DocxMarkupBalloonPlacementSnapshot balloon in balloons)
+        {
+            TestAssert.True(
+                Math.Abs(balloon.Width / printScale - 230.2d) <= 0.5d,
+                "Word-compatible balloon bodies should be 230.2pt design wide; observed " + (balloon.Width / printScale).ToString(CultureInfo.InvariantCulture) + ".");
+        }
+    }
+
     public static void DocxWordCompatibleLaneBackgroundHugsBalloonBodies()
     {
         string input = DocxTests.WriteCommentAuthorColorProbeDocx();
