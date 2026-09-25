@@ -1,0 +1,30 @@
+{
+  "id": "pptx-ladder-07-svg-extensions",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-extensions.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "images",
+    "svg-extensions",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "minStructuralSimilarity": 0.985,
+    "minForegroundColorHistogramCorrelation": 0.85,
+    "maxMeanAbsoluteError": 2.5,
+    "maxChangedPixelRatioAtThreshold16": 0.09,
+    "minForegroundRecall": 0.99
+  },
+  "allowedUnsupportedFeatures": [],
+  "support": {
+    "minStructuralSimilarity": 0.985,
+    "minForegroundColorHistogramCorrelation": 0.85,
+    "minForegroundRecall": 0.99
+  }
+}

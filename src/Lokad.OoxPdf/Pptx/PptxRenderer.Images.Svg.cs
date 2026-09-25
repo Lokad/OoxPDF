@@ -441,8 +441,10 @@ internal sealed partial class PptxRenderer
                 .Elements()
                 .Where(element => element.Name.LocalName == "stop")
                 .Select(ReadSvgGradientStop)
-                .Where(stop => stop.Color is not null)
-                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? default))
+                // RV07: a missing stop-color defaults to black (PowerPoint normalizes black
+                // stops by dropping the attribute); present-but-unparseable colors still filter out.
+                .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
+                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0)))
                 .OrderBy(stop => stop.Offset)
                 .ToArray();
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
@@ -476,9 +478,11 @@ internal sealed partial class PptxRenderer
         return gradients;
     }
 
-    private static (double Offset, RgbColor? Color) ReadSvgGradientStop(XElement stop)
+    private static (double Offset, RgbColor? Color, bool HasColorAttribute) ReadSvgGradientStop(XElement stop)
     {
-        return (ReadSvgOffset((string?)stop.Attribute("offset")), RgbColor.TryParse(((string?)stop.Attribute("stop-color"))?.TrimStart('#'), out RgbColor color) ? color : null);
+        string? stopColorAttribute = (string?)stop.Attribute("stop-color");
+        RgbColor? stopColor = RgbColor.TryParse(stopColorAttribute?.TrimStart('#'), out RgbColor parsedStopColor) ? parsedStopColor : null;
+        return (ReadSvgOffset((string?)stop.Attribute("offset")), stopColor, !string.IsNullOrWhiteSpace(stopColorAttribute));
     }
 
     private static double ReadSvgOffset(string? value)

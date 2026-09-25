@@ -865,6 +865,28 @@ internal static class PptxImagesTests
         TestAssert.Contains("0.298 0 0.698 rg", pdf);
     }
 
+    // RV07: a missing stop-color defaults to black (PowerPoint normalizes black stops by
+    // dropping the attribute).
+    public static void PptxSyntheticSvgMissingStopColorDefaultsToBlack()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#FFFFFF"/>
+                <stop offset="1"/>
+              </linearGradient>
+              <path d="M0 0 H100 V100 H0 Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 g", pdf);
+        TestAssert.Contains("0.012 g", pdf);
+        TestAssert.True(diagnostics.All(d => d.Id != "SVG_UNSUPPORTED_CONTENT"), "Defaulted black stops must not diagnose.");
+    }
+
     // RV07: gradient transforms shift the sampled vector.
     public static void PptxSyntheticSvgGradientTransformShiftsVector()
     {
