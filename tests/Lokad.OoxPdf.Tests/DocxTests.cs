@@ -1563,6 +1563,71 @@ internal static class DocxTests
         });
     }
 
+    internal static string WriteCommentAuthorColorProbeDocx()
+    {
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Zebra anchor </w:t></w:r>
+                      <w:commentRangeStart w:id="1"/>
+                      <w:r><w:t>marked range</w:t></w:r>
+                      <w:commentRangeEnd w:id="1"/>
+                      <w:r><w:commentReference w:id="1"/></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:t>Apple anchor </w:t></w:r>
+                      <w:commentRangeStart w:id="2"/>
+                      <w:r><w:t>marked range</w:t></w:r>
+                      <w:commentRangeEnd w:id="2"/>
+                      <w:r><w:commentReference w:id="2"/></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:t>Zebra again </w:t></w:r>
+                      <w:commentRangeStart w:id="3"/>
+                      <w:r><w:t>marked range</w:t></w:r>
+                      <w:commentRangeEnd w:id="3"/>
+                      <w:r><w:commentReference w:id="3"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="1" w:author="Zebra" w:initials="Z"><w:p><w:r><w:t>First body.</w:t></w:r></w:p></w:comment>
+                  <w:comment w:id="2" w:author="Apple" w:initials="A"><w:p><w:r><w:t>Second body.</w:t></w:r></w:p></w:comment>
+                  <w:comment w:id="3" w:author="Zebra" w:initials="Z"><w:p><w:r><w:t>Third body.</w:t></w:r></w:p></w:comment>
+                </w:comments>
+                """
+        });
+    }
+
     internal static string WriteCommentAnchorAccountingProbeDocx()
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

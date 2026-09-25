@@ -20,6 +20,10 @@ internal sealed record DocxMarkupContext(
     double WordCompatibleTextXOffset = 0d,
     double WordCompatibleTextYOffset = 0d)
 {
+    // RV06: first-seen comment-author palette slots by comment w:id, built once
+    // per conversion from the laid-out related stories. Empty until the renderer
+    // attaches document state; readers fall back to slot 0 (the review color).
+    public IReadOnlyDictionary<string, int> CommentAuthorPaletteSlots { get; init; } = new Dictionary<string, int>();
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {
         DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;

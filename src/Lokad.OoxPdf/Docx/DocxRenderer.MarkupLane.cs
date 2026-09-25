@@ -174,13 +174,15 @@ internal sealed partial class DocxRenderer
                 TryResolveWordCompatibleCommentRangeBounds(line, range, ResolveTextEmissionXOffset(markupContext), out double startX, out double endX))
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
-                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics);
+                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot));
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
                 TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
-                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics);
+                int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot));
             }
         }
 
@@ -292,21 +294,22 @@ internal sealed partial class DocxRenderer
         double startX,
         double endX,
         double baselineY,
-        PdfGraphicsBuilder graphics)
+        PdfGraphicsBuilder graphics,
+        DocxMarkupBalloonRgb fillRgb,
+        DocxMarkupBalloonRgb strokeRgb)
     {
-        DocxMarkupBalloonRgb color = WordCompatibleAllMarkupReviewStrokeRgb;
         double bottomTickY = baselineY + WordCompatibleAllMarkupCommentRangeBottomTickYOffsetPoints;
         double verticalBottomY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalBottomYOffsetPoints;
         double verticalTopY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalTopYOffsetPoints;
         double topTickY = baselineY + WordCompatibleAllMarkupCommentRangeTopTickYOffsetPoints;
-        graphics.SetFillRgb(WordCompatibleAllMarkupReviewFillRgb.Red, WordCompatibleAllMarkupReviewFillRgb.Green, WordCompatibleAllMarkupReviewFillRgb.Blue);
+        graphics.SetFillRgb(fillRgb.Red, fillRgb.Green, fillRgb.Blue);
         graphics.FillRectangle(
             Math.Max(0d, startX - WordCompatibleAllMarkupCommentRangeFillXInsetPoints),
             baselineY + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
             Math.Max(0d, endX - startX),
             WordCompatibleAllMarkupCommentRangeFillHeightPoints);
-        graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        graphics.SetStrokeRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
+        graphics.SetFillRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetLineWidth(WordCompatibleAllMarkupCommentRangeStrokeWidthPoints);
         graphics.StrokeLine(
             startX + WordCompatibleAllMarkupCommentRangeTickLengthPoints,
@@ -398,7 +401,7 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static string NormalizeRevisionAuthorBucketKey(string? author)
+    internal static string NormalizeRevisionAuthorBucketKey(string? author)
     {
         string? value = FirstNonEmpty(author);
         if (value is null)

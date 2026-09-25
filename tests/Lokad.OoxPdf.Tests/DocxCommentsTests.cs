@@ -447,6 +447,65 @@ internal static class DocxCommentsTests
             "Word-compatible all-markup should not draw legacy yellow comment marker boxes.");
     }
 
+    public static void DocxCommentAuthorPaletteFollowsFirstSeenCommentIdOrder()
+    {
+        IReadOnlyDictionary<string, int> slots = DocxRenderer.BuildCommentAuthorPaletteSlots(
+        [
+            ("5", "Coral"),
+            ("1", "Zebra"),
+            ("2", "Apple"),
+            ("3", "Zebra"),
+            ("4", "Mango"),
+        ]);
+
+        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "3"));
+        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "3"));
+        TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"));
+        TestAssert.Equal(((byte)209, (byte)52, (byte)56), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "1"));
+        TestAssert.Equal(((byte)213, (byte)237, (byte)255), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "2"));
+        TestAssert.Equal(((byte)0, (byte)120, (byte)212), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "2"));
+        TestAssert.Equal(((byte)234, (byte)223, (byte)244), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "4"));
+        TestAssert.Equal(((byte)236, (byte)253, (byte)215), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "5"));
+        TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "unknown"));
+    }
+
+    public static void DocxCommentAuthorPaletteCyclesAfterTwentyDistinctAuthors()
+    {
+        var comments = new List<(string? Id, string? Author)>();
+        for (int i = 1; i <= 21; i++)
+        {
+            comments.Add((i.ToString(CultureInfo.InvariantCulture), "Author" + i.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        IReadOnlyDictionary<string, int> slots = DocxRenderer.BuildCommentAuthorPaletteSlots(comments);
+
+        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "21"));
+        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "21"));
+        TestAssert.True(
+            !DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "2").Equals(DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "21")),
+            "The twenty-first distinct author should cycle back to the first palette entry.");
+    }
+
+    public static void DocxWordCompatibleBalloonsUseFirstSeenAuthorColors()
+    {
+        string input = DocxTests.WriteCommentAuthorColorProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+
+        PdfPage page = new DocxRenderer(
+                fontResolver: null,
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .RenderBlankPages(document, null, CancellationToken.None)
+            .Single();
+
+        TestAssert.Contains("0.835 0.929 1 rg", page.Content);
+        TestAssert.Contains("0 0.471 0.831 RG", page.Content);
+        TestAssert.True(
+            DocxTests.CountOccurrences(page.Content, "0.973 0.863 0.867 rg") >= 2,
+            "Both Zebra balloons should reuse the first-seen author fill color.");
+    }
+
     public static void DocxWordCompatibleAllMarkupRendersCommentRangeBracketsAcrossTextFlows()
     {
         DocxParagraph bodyParagraph = DocxTests.CreateCommentRangeParagraph("Body range", "1");

@@ -876,6 +876,10 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink, cancellationToken);
 
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), cancellationToken);
+        // RV06: comment balloons and range washes wear first-seen author colors;
+        // the slots ride the markup context so static emission helpers can resolve
+        // them per comment reference without signature changes.
+        markupContext = markupContext with { CommentAuthorPaletteSlots = BuildCommentAuthorPaletteSlots(SelectCommentAuthorsForPalette(layout.RelatedStories)) };
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
         DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);

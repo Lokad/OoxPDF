@@ -454,6 +454,15 @@ internal sealed partial class DocxRenderer
                         string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout, replies ?? []);
                         DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
                         DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
+                        // RV06: Word-compatible comment balloons wear the first-seen
+                        // author color; other profiles keep the legacy cream palette.
+                        int commentAuthorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
+                        DocxMarkupBalloonRgb commentFillRgb = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                            ? CommentAuthorFillRgb(commentAuthorSlot)
+                            : new DocxMarkupBalloonRgb(255, 250, 220);
+                        DocxMarkupBalloonRgb commentStrokeRgb = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                            ? CommentAuthorStrokeRgb(commentAuthorSlot)
+                            : new DocxMarkupBalloonRgb(217, 151, 0);
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                             DocxMarkupBalloonKind.Comment,
                             TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
@@ -465,8 +474,8 @@ internal sealed partial class DocxRenderer
                             anchorLine.X - 2d,
                             anchorLine.X + Math.Max(0d, anchorLine.Width) + 2d,
                             sequence++,
-                            new DocxMarkupBalloonRgb(255, 250, 220),
-                            new DocxMarkupBalloonRgb(217, 151, 0),
+                            commentFillRgb,
+                            commentStrokeRgb,
                             new DocxMarkupBalloonRgb(70, 70, 70),
                             new DocxMarkupBalloonRgb(0, 0, 0),
                             CandidateCount: 1, RevisionCandidateCount: 0, CommentCandidateCount: 1,
@@ -1083,18 +1092,32 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonPlacement placement,
         DocxMarkupContext markupContext)
     {
-        return !placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext)
-            ? WordCompatibleAllMarkupReviewFillRgb
-            : placement.FillRgb;
+        // RV06: Word-compatible comment balloons wear the first-seen author fill
+        // carried by the candidate; revision balloons keep the review fill.
+        if (!placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext))
+        {
+            return placement.Kind == DocxMarkupBalloonKind.Comment
+                ? placement.FillRgb
+                : WordCompatibleAllMarkupReviewFillRgb;
+        }
+
+        return placement.FillRgb;
     }
 
     private static DocxMarkupBalloonRgb ResolveMarkupBalloonBodyStrokeRgb(
         DocxMarkupBalloonPlacement placement,
         DocxMarkupContext markupContext)
     {
-        return !placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext)
-            ? WordCompatibleAllMarkupReviewStrokeRgb
-            : placement.StrokeRgb;
+        // RV06: Word-compatible comment balloons wear the first-seen author stroke
+        // carried by the candidate; revision balloons keep the review stroke.
+        if (!placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext))
+        {
+            return placement.Kind == DocxMarkupBalloonKind.Comment
+                ? placement.StrokeRgb
+                : WordCompatibleAllMarkupReviewStrokeRgb;
+        }
+
+        return placement.StrokeRgb;
     }
 
     private static double ResolveMarkupBalloonBodyStrokeWidth(DocxMarkupContext markupContext)
