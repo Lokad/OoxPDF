@@ -129,10 +129,15 @@ internal sealed partial class DocxLayoutEngine
             // RV05 calibration (Word 16.0): image top pins to the natural line top.
             double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (storyMidLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
             cursorY -= extraAbove;
+            // RV06 footnote-align probe: Office centers/rights drawable related-story
+            // text too, letting trailing spaces overflow past the edge.
+            double lineAlignWidth = effective.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
+                ? MeasureDrawableTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d)
+                : lineWidth;
             double lineX = effective.Alignment switch
             {
-                DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
-                DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
+                DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth) / 2d,
+                DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                 _ => paragraphX
             };
             double baselineOffset = storyBaselineOffset;
@@ -212,6 +217,50 @@ internal sealed partial class DocxLayoutEngine
             paragraphX = continuationTextStartOffset;
             paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             cursorY -= lineHeight;
+        }
+
+        // RV06 footnote-align probe: related stories keep one row-end space beyond
+        // authored trailing too.
+        if (paragraph.Images.Count == 0 &&
+            paragraph.InlineTextBoxes.Count == 0 &&
+            lines.Length > 0 &&
+            lines[^1].Text.EndsWith(' ') &&
+            textSpans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character))))
+        {
+            for (int storyLineIndex = layouts.Count - 1; storyLineIndex >= 0; storyLineIndex--)
+            {
+                if (layouts[storyLineIndex] is not DocxTextLineLayout storyLastLine ||
+                    !ReferenceEquals(storyLastLine.SourceParagraph, paragraph) ||
+                    storyLastLine.Text.Length == 0)
+                {
+                    continue;
+                }
+
+                double storySpaceWidth = textMeasurer.MeasureText(firstRun, " ", fontSize);
+                layouts[storyLineIndex] = storyLastLine with
+                {
+                    Text = storyLastLine.Text + " ",
+                    Width = storyLastLine.Width + storySpaceWidth,
+                    Segments =
+                    [
+                        .. storyLastLine.Segments,
+                        new DocxTextSegmentLayout(
+                            " ",
+                            firstRun,
+                            storyLastLine.X + storyLastLine.Width,
+                            storySpaceWidth,
+                            fontSize,
+                            0d,
+                            0d,
+                            DocxTextStateCharacterSpacingSource.None,
+                            true,
+                            -1,
+                            0,
+                            DocxTextSegmentRole.BreakSpill),
+                    ],
+                };
+                break;
+            }
         }
 
         return (layouts, placedImages, startCursorY - cursorY);
