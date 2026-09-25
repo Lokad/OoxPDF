@@ -1258,6 +1258,30 @@ internal static class DocxImagesTests
         TestAssert.True(Math.Abs(imageItem.Y + imageItem.Height - textItem.Y) < 0.5, "Image bottom must sit on the text baseline: imageBottom=" + (imageItem.Y + imageItem.Height) + " baseline=" + textItem.Y);
     }
 
+    // RV05: a taller-than-line image shifts its auto-spaced line down so the image top
+    // pins to the natural line top, while the advance below stays at the line height
+    // (Word 16.0 calibration: pitch below unchanged, pitch above grown).
+    public static void DocxTallInlineImageShiftsLineDownKeepingAdvance()
+    {
+        var beforeRun = new DocxTextRun("BEFORE", 10d, null, false, false, false, null, null) { SourceRunIndex = 0 };
+        var afterRun = new DocxTextRun("AFTER", 10d, null, false, false, false, null, null) { SourceRunIndex = 2 };
+        var tallImage = new DocxInlineImage(24d, 18d, "image/png", new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "word/media/image1.png") { SourceRunIndex = 1 };
+        DocxParagraph imageParagraph = DocxTests.CreateDocxLayoutParagraph("BEFORE", 10d, 10d) with { Runs = new[] { beforeRun, afterRun }, Images = new[] { tallImage }, LineSpacingPoints = null };
+        DocxParagraph secondParagraph = DocxTests.CreateDocxLayoutParagraph("SECOND", 10d, 10d) with { LineSpacingPoints = null };
+        DocxDocument imageDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(imageParagraph), new DocxParagraphElement(secondParagraph) }, new DocxTable[0]);
+        DocxLayoutSnapshot imageSnapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(imageDocument, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
+        DocxLayoutItemSnapshot firstLine = imageSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").First();
+        DocxLayoutItemSnapshot secondLine = imageSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").Skip(1).First();
+        double lineHeight = firstLine.LineHeightPoints ?? 0d;
+        TestAssert.True(Math.Abs((firstLine.Y - secondLine.Y) - lineHeight) < 0.001, "Advance below the image line must stay at the line height: firstY=" + firstLine.Y + " secondY=" + secondLine.Y + " lineHeight=" + lineHeight);
+        DocxParagraph plainParagraph = DocxTests.CreateDocxLayoutParagraph("BEFOREAFTER", 10d, 10d) with { LineSpacingPoints = null };
+        DocxDocument plainDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(plainParagraph), new DocxParagraphElement(secondParagraph) }, new DocxTable[0]);
+        DocxLayoutSnapshot plainSnapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(plainDocument, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
+        DocxLayoutItemSnapshot naturalFirst = plainSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").First();
+        double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(10d, lineHeight, false);
+        TestAssert.True(Math.Abs((naturalFirst.Y - firstLine.Y) - (18d - baselineOffset)) < 0.001, "Image line must shift down by image height minus ascent: naturalY=" + naturalFirst.Y + " shiftedY=" + firstLine.Y);
+    }
+
     // RV05: end-to-end emission order for mid-line images through the public converter.
     public static void DocxInlineImageEmitsBetweenSurroundingText()
     {

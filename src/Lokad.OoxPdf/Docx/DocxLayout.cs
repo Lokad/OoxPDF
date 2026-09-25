@@ -613,17 +613,22 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxWrappedTextLine line = lines[lineIndex];
-                    double lineAdvance = midLinePlan?.GrownHeights[lineIndex] ?? lineHeight;
+                    // RV05 calibration (Word 16.0): the image top pins to the natural line top,
+                    // so an auto-spaced line shifts down by image height minus ascent here; the
+                    // advance below never grows. Exact spacing stays rigid (no shift).
+                    double extraAbove = IsExactLineSpacing(effective) ? 0d : (midLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
                     if (firstLine)
                     {
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
                     }
 
-                    if (cursorY - lineAdvance < CurrentFrameBottom() && HasCurrentColumnContent())
+                    if (cursorY - extraAbove - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
                     {
                         AdvanceColumnOrPage();
                         EnsureFootnoteReserveForSourceBlock(elementIndex);
                     }
+
+                    cursorY -= extraAbove;
 
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     double lineX = effective.Alignment switch
@@ -712,7 +717,7 @@ internal sealed partial class DocxLayoutEngine
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                    cursorY -= lineAdvance;
+                    cursorY -= lineHeight;
                 }
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)

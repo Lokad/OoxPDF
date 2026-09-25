@@ -82,7 +82,7 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages) LayoutRelatedStoryParagraphTextLines(
+    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight) LayoutRelatedStoryParagraphTextLines(
         DocxParagraph paragraph,
         double fixedScale,
         int sourceBlockIndex,
@@ -99,7 +99,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count == 0)
         {
-            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>());
+            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d);
         }
 
         double fontSize = GetParagraphFontSize(paragraph);
@@ -120,12 +120,15 @@ internal sealed partial class DocxLayoutEngine
         DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, lineHeight);
         var layouts = new List<DocxTextLineLayout>(lines.Length);
         var placedImages = new List<DocxInlineImageLayout>();
+        double startCursorY = cursorY;
         bool firstLine = true;
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             DocxWrappedTextLine line = lines[lineIndex];
             double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
-            double lineAdvance = storyMidLinePlan?.GrownHeights[lineIndex] ?? lineHeight;
+            // RV05 calibration (Word 16.0): image top pins to the natural line top.
+            double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (storyMidLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
+            cursorY -= extraAbove;
             double lineX = effective.Alignment switch
             {
                 DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
@@ -159,7 +162,7 @@ internal sealed partial class DocxLayoutEngine
                 SourceParagraphIndex: sourceParagraphIndex,
                 SourceLineIndex: lineIndex,
                 Story: story,
-                LineHeight: lineAdvance,
+                LineHeight: lineHeight,
                 AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                 IsFirstParagraphLine: firstLine,
                 EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
@@ -195,10 +198,10 @@ internal sealed partial class DocxLayoutEngine
             firstLine = false;
             paragraphX = continuationTextStartOffset;
             paragraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
-            cursorY -= lineAdvance;
+            cursorY -= lineHeight;
         }
 
-        return (layouts, placedImages);
+        return (layouts, placedImages, startCursorY - cursorY);
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> CreateFloatingDrawingLayouts(

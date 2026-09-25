@@ -140,7 +140,8 @@ internal sealed partial class DocxLayoutEngine
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
                 for (int estimateLineIndex = 0; estimateLineIndex < estimateLines.Length; estimateLineIndex++)
                 {
-                    contentHeight += estimatePlan?.GrownHeights[estimateLineIndex] ?? lineHeight;
+                    double estimateShift = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (estimatePlan?.ShiftAboveHeights[estimateLineIndex] ?? 0d);
+                    contentHeight += lineHeight + estimateShift;
                 }
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
@@ -358,7 +359,9 @@ internal sealed partial class DocxLayoutEngine
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, context.TextMeasurer);
                     }
 
-                    double lineAdvance = midLinePlan?.GrownHeights[lineIndex] ?? lineHeight;
+                    // RV05 calibration (Word 16.0): image top pins to the natural line top.
+                    double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (midLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
+                    cursorY -= extraAbove;
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
@@ -429,7 +432,7 @@ internal sealed partial class DocxLayoutEngine
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
-                    cursorY -= lineAdvance;
+                    cursorY -= lineHeight;
                 }
             }
 
@@ -839,7 +842,8 @@ internal sealed partial class DocxLayoutEngine
             singlePlan = CreateMidLinePlan(paragraph, textSpans, singleLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)), lineHeight);
             for (int singleLineIndex = 0; singleLineIndex < singleLines.Length; singleLineIndex++)
             {
-                height += singlePlan?.GrownHeights[singleLineIndex] ?? lineHeight;
+                double singleShift = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (singlePlan?.ShiftAboveHeights[singleLineIndex] ?? 0d);
+                height += lineHeight + singleShift;
             }
         }
         else if (paragraph.Images.Count == 0)

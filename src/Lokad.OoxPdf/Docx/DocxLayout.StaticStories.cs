@@ -242,6 +242,10 @@ internal sealed partial class DocxLayoutEngine
                         DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
                         _ => x
                     };
+                    // RV05 calibration (Word 16.0): image top pins to the natural line top.
+                    double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (staticMidLinePlan?.ShiftAboveHeights[staticLineIndex] ?? 0d);
+                    cursorY -= extraAbove;
+
                     double ascender = line.Spans.Max(span => staticMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                     double descender = line.Spans.Max(span => staticMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                     DocxEffectiveParagraphProperties staticEffective = paragraph.EffectiveProperties;
@@ -280,7 +284,6 @@ internal sealed partial class DocxLayoutEngine
 
                         staticBaselineY = cursorY - staticBaselineOffset;
                     }
-                    double lineAdvance = staticMidLinePlan?.GrownHeights[staticLineIndex] ?? staticLineHeight;
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
                     lines.Add(new DocxTextLineLayout(
                         line.Text,
@@ -290,7 +293,7 @@ internal sealed partial class DocxLayoutEngine
                         staticBaselineY,
                         lineWidth,
                         segments,
-                        LineHeight: lineAdvance,
+                        LineHeight: staticLineHeight,
                         AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: sourceLineIndex == 0,
                         SourceLineIndex: sourceLineIndex,
@@ -321,7 +324,7 @@ internal sealed partial class DocxLayoutEngine
                         }
                     }
                     sourceLineIndex++;
-                    cursorY -= lineAdvance;
+                    cursorY -= staticLineHeight;
                 }
             }
 

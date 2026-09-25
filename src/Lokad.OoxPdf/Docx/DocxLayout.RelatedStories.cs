@@ -671,7 +671,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages) = LayoutRelatedStoryParagraphTextLines(
+            (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight) = LayoutRelatedStoryParagraphTextLines(
                 paragraph,
                 paragraphSpacingScale,
                 elementIndex,
@@ -686,7 +686,7 @@ internal sealed partial class DocxLayoutEngine
                 pageCount);
             textLines.AddRange(paragraphLines);
             inlineImages.AddRange(placedStoryImages);
-            cursorY -= paragraphLines.Sum(line => line.LineHeight ?? 0d);
+            cursorY -= paragraphUsedHeight;
             if (paragraphLines.Count == 0 && paragraph.Images.Count == 0)
             {
                 double fontSize = GetParagraphFontSize(paragraph);

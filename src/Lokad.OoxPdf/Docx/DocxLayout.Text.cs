@@ -655,7 +655,7 @@ internal sealed partial class DocxLayoutEngine
     // in a text-mixed paragraph attach to the wrapped line spanning their character
     // offset instead of emitting as blocks after paragraph text.
     private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height);
-    private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] GrownHeights, bool[] PlacedMask);
+    private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] ShiftAboveHeights, bool[] PlacedMask);
     private static DocxMidLinePlan? CreateMidLinePlan(
         DocxParagraph paragraph,
         IReadOnlyList<DocxTextSpan> textSpans,
@@ -698,12 +698,12 @@ internal sealed partial class DocxLayoutEngine
         }
         List<DocxMidLineImage>[] imagesByLine = new List<DocxMidLineImage>[lines.Length];
         double[] lineImageWidths = new double[lines.Length];
-        double[] grownHeights = new double[lines.Length];
+        double[] shiftAboveHeights = new double[lines.Length];
         bool[] placedMask = new bool[paragraph.Images.Count];
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             imagesByLine[lineIndex] = new List<DocxMidLineImage>();
-            grownHeights[lineIndex] = lineHeight;
+            shiftAboveHeights[lineIndex] = 0d;
         }
         foreach ((int imageIndex, DocxInlineImage image) in affined)
         {
@@ -733,9 +733,11 @@ internal sealed partial class DocxLayoutEngine
             double height = image.HeightPoints * width / Math.Max(1d, image.WidthPoints);
             imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height));
             lineImageWidths[targetLine] += width;
-            grownHeights[targetLine] = Math.Max(grownHeights[targetLine], baselineOffset + height);
+            // RV05 calibration (Word 16.0): the image top pins to the natural line top,
+            // so the baseline drops by image height minus ascent; the advance below never grows.
+            shiftAboveHeights[targetLine] = Math.Max(shiftAboveHeights[targetLine], height - baselineOffset);
             placedMask[imageIndex] = true;
         }
-        return new DocxMidLinePlan(imagesByLine, lineImageWidths, grownHeights, placedMask);
+        return new DocxMidLinePlan(imagesByLine, lineImageWidths, shiftAboveHeights, placedMask);
     }
 }
