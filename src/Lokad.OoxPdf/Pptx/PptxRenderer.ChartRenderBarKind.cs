@@ -73,7 +73,8 @@ internal sealed partial class PptxRenderer
                     };
                 }
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
-                RenderBarChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied);
+                int? barStyleId = ReadChartStyleId(chartXml);
+                RenderBarChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barStyleId);
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -132,7 +133,8 @@ internal sealed partial class PptxRenderer
                         ChartShapeStyle.Empty,
                         extraValueExtents,
                         valueAxisLabelsVisible: false,
-                        manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied);
+                        manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
+                        barStyleId);
                     RenderBarDataLabels(
                         theme,
                         colorMap,

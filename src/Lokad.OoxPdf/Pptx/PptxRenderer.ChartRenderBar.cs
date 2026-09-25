@@ -23,7 +23,7 @@ internal sealed partial class PptxRenderer
             plotBox.Height + PptxChartMetricRules.BarPlotClipPad);
     }
 
-    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool horizontalBars, ChartBarPlotOptions plotOptions, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied)
+    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool horizontalBars, ChartBarPlotOptions plotOptions, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied, int? chartStyleId)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -159,7 +159,11 @@ internal sealed partial class PptxRenderer
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
                     double barY = Math.Min(columnBaseY, valueY);
                     double barHeight = Math.Abs(valueY - columnBaseY);
-                    FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
+                    bool hasExplicitFill = (seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is not null) || HasExplicitChartPointFill(pointFills, seriesIndex, category);
+                    if (!TryPaintStyleColumnGradient(graphics, plotClipBox, chartStyleId, hasExplicitFill, fill, value, barX, barY, barWidth, barHeight))
+                    {
+                        FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
+                    }
                     StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
                 }
             }
@@ -1401,6 +1405,62 @@ internal sealed partial class PptxRenderer
         {
             graphics.RestoreState();
         }
+    }
+
+    // RV04: effective-style-18/26 clustered columns paint a vertical base-relative
+    // gradient sampled from Office bar references; other styles, explicit fills,
+    // unmeasured bases, transparent fills and non-positive columns keep the flat
+    // rectangle. Stacked and horizontal bars keep the flat path.
+    private static bool TryPaintStyleColumnGradient(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, int? chartStyleId, bool hasExplicitFill, ChartSeriesFill fill, double value, double barX, double barY, double barWidth, double barHeight)
+    {
+        if ((chartStyleId != 18 && chartStyleId != 26 && chartStyleId != 118 && chartStyleId != 126) ||
+            hasExplicitFill ||
+            fill.PatternPreset is not null ||
+            fill.Alpha < 1d ||
+            value < 0d ||
+            barWidth <= 0d ||
+            barHeight <= 0d)
+        {
+            return false;
+        }
+
+        if (!TryReadStyleColumnGradientStops(fill.Color, out RgbColor top, out RgbColor bottom))
+        {
+            return false;
+        }
+
+        RenderInChartPlotAreaClip(graphics, plotBox, () =>
+        {
+            graphics.SaveState();
+            graphics.ClipRectangle(barX, barY, barWidth, barHeight);
+            graphics.PaintAxialShading(barX, barY + barHeight, barX, barY, top.Red, top.Green, top.Blue, bottom.Red, bottom.Green, bottom.Blue);
+            graphics.RestoreState();
+        });
+        return true;
+    }
+
+    // RV04: style-18/26 column gradient stops sampled from Office bar references at
+    // two theme bases (blue accent1, orange accent2); the visible profile runs light
+    // at the bar top to dark at the baseline. Other bases keep the flat fill.
+    private static bool TryReadStyleColumnGradientStops(RgbColor baseColor, out RgbColor top, out RgbColor bottom)
+    {
+        top = default;
+        bottom = default;
+        if (baseColor.Equals(new RgbColor(21, 96, 130)))
+        {
+            top = new RgbColor(73, 116, 145);
+            bottom = new RgbColor(8, 88, 124);
+            return true;
+        }
+
+        if (baseColor.Equals(new RgbColor(233, 113, 50)))
+        {
+            top = new RgbColor(237, 130, 86);
+            bottom = new RgbColor(225, 94, 25);
+            return true;
+        }
+
+        return false;
     }
 
     private static ChartSeriesStroke DefaultChartGridlineStroke(bool major)
