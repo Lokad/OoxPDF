@@ -1369,6 +1369,36 @@ function Select-GraphicRects($Operations, [scriptblock] $Predicate, [string] $Su
     }
 }
 
+function Select-DistinctGraphicRects {
+    param(
+        [Parameter(ValueFromPipeline = $true)]
+        $Rect
+    )
+    begin { $seen = @{} }
+    process {
+        if ($null -eq $Rect) {
+            return
+        }
+        $key = [string]$Rect.Page + "|" + [Math]::Round([double]$Rect.MinX, 2) + "|" + [Math]::Round([double]$Rect.MinY, 2) + "|" + [Math]::Round([double]$Rect.MaxX, 2) + "|" + [Math]::Round([double]$Rect.MaxY, 2)
+        if (-not $seen.ContainsKey($key)) {
+            $seen[$key] = $true
+            $Rect
+        }
+    }
+}
+
+function Test-PageSizedGraphicRect($Rect, $MediaBoxes, [double] $Tolerance = 1d) {
+    $box = Get-MediaBoxForPage $MediaBoxes ([int]$Rect.Page)
+    if ($null -eq $box) {
+        return $false
+    }
+
+    return [Math]::Abs([double]$Rect.MinX - [double]$box.MinX) -le $Tolerance -and
+        [Math]::Abs([double]$Rect.MinY - [double]$box.MinY) -le $Tolerance -and
+        [Math]::Abs([double]$Rect.MaxX - [double]$box.MaxX) -le $Tolerance -and
+        [Math]::Abs([double]$Rect.MaxY - [double]$box.MaxY) -le $Tolerance
+}
+
 function New-RectDeltaSummary([string] $Name, $ReferenceRects, $CandidateRects, $ComparisonRows) {
     $deltaRows = @($ComparisonRows | Where-Object { $_.Status -ne "ok" })
     $targetDeltaRows = @($ComparisonRows | Where-Object { $_.TargetDelta -eq $true })
@@ -3410,8 +3440,8 @@ $regionDeltaSummary = @(New-RegionDeltaSummary `
         -ReferenceBalloonGraphics $referenceBalloonBodyGraphics `
         -CandidateBalloons $candidateBalloons)
 
-$referenceTableRects = @(Select-GraphicRects $referenceGraphicsOperationItems -Predicate { param($op) Test-TableLikeGraphic $op } -Subtype "table-grid")
-$candidateTableRects = @(Select-GraphicRects $candidateGraphicsOperationItems -Predicate { param($op) Test-TableLikeGraphic $op } -Subtype "table-grid")
+$referenceTableRects = @(Select-GraphicRects $referenceGraphicsOperationItems -Predicate { param($op) Test-TableLikeGraphic $op } -Subtype "table-grid" | Where-Object { -not (Test-PageSizedGraphicRect $_ $referenceMediaBoxes) } | Select-DistinctGraphicRects)
+$candidateTableRects = @(Select-GraphicRects $candidateGraphicsOperationItems -Predicate { param($op) Test-TableLikeGraphic $op } -Subtype "table-grid" | Where-Object { -not (Test-PageSizedGraphicRect $_ $candidateMediaBoxes) } | Select-DistinctGraphicRects)
 $tableGridComparison = @(Compare-RectLists $referenceTableRects $candidateTableRects $TableGridBoundsTolerance)
 $tableGridDeltaSummary = New-RectDeltaSummary "table-grid" $referenceTableRects $candidateTableRects $tableGridComparison
 $tableGridDeltaCountForGate = if ($candidateLayoutTableCount -eq 0) { $null } else { $tableGridDeltaSummary.DeltaCount }
