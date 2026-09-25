@@ -1890,4 +1890,78 @@ internal static class DocxMarkupTests
             TestAssert.True(Math.Abs(segments[index].X - (segments[index - 1].X + segments[index - 1].Width)) < 0.05d, "Mid-line body segments should chain exactly with no asymptote shift.");
         }
     }
+
+    public static void DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets()
+    {
+        // RV06 revpos-small probe (10pt WC): Office chains insertion/deletion runs
+        // exactly (all within 0.1); the June-era +2.707/+2.140 X offsets only added
+        // error (insertion sat 2.08 right, deletion 2.75 right).
+        var insertionRevision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", "2026-09-26T00:00:00Z", "ins", null, []);
+        var deletionRevision = new DocxRevisionInfo(DocxRevisionKind.Deletion, "3", "Reviewer", "2026-09-26T00:00:00Z", "del", null, []);
+        DocxParagraph insertionParagraph = CreateChainedRevisionParagraph("ChangedTo", insertionRevision);
+        DocxParagraph deletionParagraph = CreateChainedRevisionParagraph("ChangedFrom", deletionRevision);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(insertionParagraph),
+                new DocxParagraphElement(deletionParagraph)
+            ],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        DocxTextEmissionLineSnapshot[] lines = new DocxRenderer(
+                fontResolver: null,
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+                markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document)
+            .Lines
+            .Where(line => !line.IsStaticStory && line.TextLength != 0)
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        foreach (DocxTextEmissionLineSnapshot line in lines)
+        {
+            DocxTextEmissionSegmentSnapshot[] segments = line.Segments
+                .Where(segment => !segment.IsTerminalLineSpace)
+                .ToArray();
+            TestAssert.True(segments.Length >= 2, "Revision body text should emit at least two segments.");
+            for (int index = 1; index < segments.Length; index++)
+            {
+                TestAssert.True(Math.Abs(segments[index].X - (segments[index - 1].X + segments[index - 1].Width)) < 0.05d, "Revision runs should chain exactly with no invented offsets.");
+            }
+        }
+
+        static DocxParagraph CreateChainedRevisionParagraph(string revisedText, DocxRevisionInfo revision)
+        {
+            return new DocxParagraph(
+                [
+                    new DocxTextRun("Prefix ", 10d, null, false, false, false, null, null),
+                    new DocxTextRun(revisedText, 10d, null, false, false, false, null, null)
+                    {
+                        Revision = revision
+                    }
+                ],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                0d,
+                1d,
+                12d,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty,
+                null);
+        }
+    }
 }

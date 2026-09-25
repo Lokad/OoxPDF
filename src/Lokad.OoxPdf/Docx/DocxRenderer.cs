@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -58,8 +58,11 @@ internal sealed partial class DocxRenderer
     // X-offset only added error (comment runs sat 2.6pt left) and stays zeroed.
     private const double WordCompatibleAllMarkupBodyXOffsetAsymptotePoints = 0d;
     private const double WordCompatibleAllMarkupBodyXOffsetDecayPoints = 55.0d;
-    private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 2.707d;
-    private const double WordCompatibleAllMarkupInsertionXOffsetPoints = 2.140d;
+    // RV06 revpos-small probe (10pt WC): Office chains insertion/deletion runs
+    // exactly (all within 0.1), so the June-era +2.707/+2.140 X offsets only added
+    // error and stay zeroed.
+    private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 0d;
+    private const double WordCompatibleAllMarkupInsertionXOffsetPoints = 0d;
     // Balloon title lands on the anchor row minus ~0.5 (Office: dense/c14/mirrored/threaded refs).
     // = doc-adaptive baseline shift + title rule (top inset 11.15 - height 20.48 + first baseline 11.27 + 0.5).
     private const double WordCompatibleAllMarkupBalloonAnchorRowInsetPoints = 2.44d;
