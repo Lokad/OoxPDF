@@ -887,6 +887,9 @@ internal static class DocxMarkupTests
         TestAssert.True(Math.Abs(wordSegment.PdfCharacterSpacing) < 0.0001d, "Word-compatible body tracking should stay out of PDF Tc.");
         // Office A/B (W5-K1 dense ref: Word kern tightens 23pt total over the body while the
         // legacy 0.071-per-gap tracking widened it 102pt): no invented per-gap tracking.
+        // RV06 asymptote probes (spill-matrix 26 ops, style-split boundary, revision runs):
+        // Office advances already match ours per op, so the June-era -3pt body X-offset
+        // asymptote only added error (comment runs sat 2.6pt left) and stays zeroed.
         TestAssert.True(
             Math.Abs(wordSegment.PositioningCharacterSpacing) < 0.0001d,
             "Word-compatible all-markup should not invent body tracking beyond font kerning.");
@@ -897,8 +900,8 @@ internal static class DocxMarkupTests
             Math.Abs(wordSegment.AdvanceProfile.TextStateCharacterSpacingGapTotal) < 0.0001d,
             "Word-compatible body tracking should not become PDF text-state spacing.");
         TestAssert.True(
-            wordVisible[1].X - wordVisible[0].X < preserveVisible[1].X - preserveVisible[0].X - 0.2d,
-            "Word-compatible all-markup should shift later body text operations toward Office-like emitted x origins.");
+            Math.Abs((wordVisible[1].X - wordVisible[0].X) - (preserveVisible[1].X - preserveVisible[0].X)) < 0.05d,
+            "Word-compatible all-markup should chain body segments exactly like preserve layout.");
     }
 
     public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTracking()
@@ -1829,5 +1832,62 @@ internal static class DocxMarkupTests
         TestAssert.True(
             Math.Abs(line.Segments[1].X - (36d + 100d * 0.842391d)) < 0.001d,
             "Tab text should start at the margin plus the scaled tab stop. X=" + line.Segments[1].X);
+    }
+
+    public static void DocxWordCompatibleBodySegmentsChainWithoutAsymptoteShift()
+    {
+        // RV06 comment-run residual: Office advances already match our own, so
+        // mid-line body segments must start exactly where the previous segment
+        // ends (the June-era -3pt body X-offset asymptote is stale).
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
+        if (font is null)
+        {
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
+        }
+
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Alpha ", 10d, null, false, false, false, null, null), new DocxTextRun("Beta", 10d, null, false, false, false, null, null)],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var document = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(
+            new DocxTests.SingleResolutionFontResolver(font.Value.Resolution),
+            OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxTextEmissionSegmentSnapshot[] segments = renderer.InspectTextEmission(document).Lines
+            .First(line => !line.IsStaticStory && line.TextLength != 0)
+            .Segments
+            .Where(segment => !segment.IsTerminalLineSpace)
+            .ToArray();
+        TestAssert.True(segments.Length >= 2, "Two-run body text should emit at least two segments.");
+        for (int index = 1; index < segments.Length; index++)
+        {
+            TestAssert.True(Math.Abs(segments[index].X - (segments[index - 1].X + segments[index - 1].Width)) < 0.05d, "Mid-line body segments should chain exactly with no asymptote shift.");
+        }
     }
 }

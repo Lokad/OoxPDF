@@ -53,7 +53,10 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupInsertionPositioningCharacterSpacingPoints = 0d;
     private const double WordCompatibleAllMarkupDeletionPositioningCharacterSpacingPoints = 0d;
     private const double WordCompatibleAllMarkupShortWordPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupBodyXOffsetAsymptotePoints = -3.0d;
+    // RV06 asymptote probes: Office advances already match ours per op (spill-matrix,
+    // style-split boundary, revision runs), so the June-era -3pt progressive body
+    // X-offset only added error (comment runs sat 2.6pt left) and stays zeroed.
+    private const double WordCompatibleAllMarkupBodyXOffsetAsymptotePoints = 0d;
     private const double WordCompatibleAllMarkupBodyXOffsetDecayPoints = 55.0d;
     private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 2.707d;
     private const double WordCompatibleAllMarkupInsertionXOffsetPoints = 2.140d;
