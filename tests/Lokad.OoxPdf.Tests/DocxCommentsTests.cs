@@ -489,6 +489,30 @@ internal static class DocxCommentsTests
         }
     }
 
+    private sealed class CffTitleResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return new FontFaceResolution(
+                request.FamilyName,
+                "CffTitleFamily",
+                new FontStyleKey(Bold: true, Italic: false, WeightClass: 700, FaceIndex: 0, HasMathTable: false),
+                new MemoryFontProgramSource("test:cff-title-face", TestFontBuilder.CreateCffKindFont()),
+                IsFallback: false);
+        }
+    }
+
+    public static void DocxBalloonTitleFaceRejectsCffBoldFaces()
+    {
+        var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        // A CFF-outlined face parses and measures but cannot back an embedded subset,
+        // so it must fall back exactly like an unloadable stub.
+        TestAssert.True(
+            DocxRenderer.ResolveBalloonTitleFace(new CffTitleResolver(), context, CancellationToken.None) is null,
+            "A CFF-outlined bold title face must fall back to the label face.");
+    }
+
     public static void DocxBalloonTitleFaceRejectsUnloadableBoldFaces()
     {
         var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -505,6 +529,12 @@ internal static class DocxCommentsTests
             var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             FontFaceResolution? resolution = DocxRenderer.ResolveBalloonTitleFace(new WindowsFontResolver(), context, CancellationToken.None);
             OpenTypeFont? font = resolution is null ? null : FontProgramLoader.Load(resolution, CancellationToken.None);
+            // Mirror the production outlines gate: CFF/outlineless faces measure advances
+            // but cannot back an embedded title subset.
+            if (font is not null && !font.HasTrueTypeOutlines)
+            {
+                return -1d;
+            }
             if (font is null)
             {
                 return -1d;
