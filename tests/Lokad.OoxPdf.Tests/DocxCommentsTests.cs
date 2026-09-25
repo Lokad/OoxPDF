@@ -476,6 +476,33 @@ internal static class DocxCommentsTests
             "Mirrored even pages should keep the authored left margin without a left review reserve; observed " + layout.Pages[1].MarginLeft.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-comment-unresolved.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(
+            fontResolver: null,
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot[] balloons = renderer.InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(2, balloons.Length);
+        // Office wraps the second body after "for" (Segoe UI Bold titles leave no room on the
+        // first row) while Aptos titles fit it on one row (12.61pt tall); Segoe titles grow it
+        TestAssert.True(
+            balloons[1].Height > 16d,
+            "The second body should wrap to a second row like Office; observed Height=" + balloons[1].Height.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     public static void DocxWordCompatibleBalloonBodiesUseOfficeMeasuredWidth()
     {
         string input = DocxTests.WriteCommentAuthorColorProbeDocx();

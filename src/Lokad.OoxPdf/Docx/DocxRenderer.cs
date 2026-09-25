@@ -193,9 +193,14 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
+        if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
+        {
+            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, effectiveMarkupContext) };
+        }
+        (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource) = EnsureMarkupBalloonTextResources(layout, fontResources, effectiveMarkupContext, CancellationToken.None);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         DocxRunFontResource? balloonLabelResource = ResolveMarkupLabelFontResource(fontResources);
-        PdfEmbeddedFont? balloonLabelEmbedded = balloonLabelResource?.Embedded;
+        PdfEmbeddedFont? balloonLabelEmbedded = balloonTitleResource?.Embedded ?? balloonLabelResource?.Embedded;
         PdfEmbeddedFont? balloonBodyEmbedded = (ResolveMarkupBodyFontResource(fontResources) ?? balloonLabelResource)?.Embedded;
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, CancellationToken.None);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
@@ -896,8 +901,14 @@ internal sealed partial class DocxRenderer
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.
         markupContext = markupContext with { CommentAuthorPaletteSlots = BuildCommentAuthorPaletteSlots(SelectCommentAuthorsForPalette(layout.RelatedStories)) };
+        // RV06: balloon titles resolve Segoe UI Bold once per conversion when balloons exist;
+        // the face rides the markup context into the balloon text subset below.
+        if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && HasWordCompatibleBalloonContent(document, markupContext))
+        {
+            markupContext = markupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, markupContext) };
+        }
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
-        DocxRunFontResource? balloonTextResource = EnsureMarkupBalloonTextResource(layout, fontResources, markupContext, cancellationToken);
+        (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
@@ -973,6 +984,7 @@ internal sealed partial class DocxRenderer
                 fontResources,
                 markupContext,
                 balloonTextResource,
+                balloonTitleResource,
                 cancellationToken);
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)

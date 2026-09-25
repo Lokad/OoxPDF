@@ -1,5 +1,7 @@
 namespace Lokad.OoxPdf.Docx;
 
+using Lokad.OoxPdf.Fonts;
+
 internal sealed record DocxMarkupContext(
     OoxPdfDocxMarkupMode Mode,
     OoxPdfDocxMarkupGeometryMode GeometryMode,
@@ -24,6 +26,9 @@ internal sealed record DocxMarkupContext(
     // per conversion from the laid-out related stories. Empty until the renderer
     // attaches document state; readers fall back to slot 0 (the review color).
     public IReadOnlyDictionary<string, int> CommentAuthorPaletteSlots { get; init; } = new Dictionary<string, int>();
+    // RV06: resolved Segoe UI Bold face for balloon titles (Office sets titles in Segoe
+    // UI Bold, bodies in the document face). Null keeps the label face everywhere.
+    public FontFaceResolution? BalloonTitleFaceResolution { get; init; }
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {
         DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;
