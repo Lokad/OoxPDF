@@ -522,6 +522,25 @@ internal static class DocxCommentsTests
             "A bold-marked but unloadable title face (server-SKU Segoe stub) must fall back to the label face.");
     }
 
+    private static bool HasUsableAptosBodyFace()
+    {
+        try
+        {
+            FontFaceResolution resolved = new WindowsFontResolver().Resolve(new FontRequest("Aptos"));
+            if (resolved.IsFallback)
+            {
+                return false;
+            }
+
+            OpenTypeFont? font = FontProgramLoader.Load(resolved, CancellationToken.None);
+            return font is not null && font.HasTrueTypeOutlines;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     private static double MeasureSegoeTitleDesignAdvance()
     {
         try
@@ -565,6 +584,13 @@ internal static class DocxCommentsTests
         // The wrap parity needs Office-matching title advances; environments whose Segoe UI
         // Bold file is missing, unloadable, or metrically divergent keep the label face and
         // skip like other font-environmental tests (the measured design advance is reported).
+        // Wrap parity needs the full Office stack: Segoe titles set the first-row width
+        // while Aptos bodies set the wrap itself (CI server SKUs ship neither reliably).
+        if (!HasUsableAptosBodyFace())
+        {
+            TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
+        }
+
         double titleAdvance = MeasureSegoeTitleDesignAdvance();
         if (titleAdvance < 78d)
         {
