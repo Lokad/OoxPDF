@@ -1052,7 +1052,7 @@ internal static class DocxHyperlinksTests
         TestAssert.Equal("https://example.invalid/docx", merged[0].Uri);
         TestAssert.True(Math.Abs(merged[0].X - first.X) < 0.001d, "The merged rectangle should start at the first hyperlink fragment.");
         TestAssert.True(Math.Abs((merged[0].X + merged[0].Width) - (second.X + second.Width)) < 0.001d, "The merged rectangle should end at the last hyperlink fragment.");
-        TestAssert.True(Math.Abs(merged[0].Height - ((10.33d + 12.5d) * 10d / 11d)) < 0.001d, "The merged rectangle should span the Office line slot height.");
+        TestAssert.True(Math.Abs(merged[0].Height - 12d) < 0.001d, "The merged rectangle should span its line slot plus trailing paragraph space.");
     }
 
     private static (double X, double Width) RenderCoveringLinkFragment(int startRun, int runCount)

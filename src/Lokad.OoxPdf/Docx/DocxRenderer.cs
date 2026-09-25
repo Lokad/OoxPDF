@@ -1193,7 +1193,10 @@ internal sealed partial class DocxRenderer
                     }
 
                     previousLineTop = heldTop;
-                    previousLineBottomFallback = heldBl - HyperlinkRectBottomEm * heldFs;
+                    // RV06: a page-last rectangle covers its line slot plus trailing paragraph space.
+                    double heldSlotHeight = line.LineHeight ?? ((HyperlinkRectTopEm + HyperlinkRectBottomEm) * heldFs);
+                    double heldAfterSpacing = line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
+                    previousLineBottomFallback = heldTop - heldSlotHeight - heldAfterSpacing;
                     previousDelta = heldBl - line.BaselineY;
                 }
             }
