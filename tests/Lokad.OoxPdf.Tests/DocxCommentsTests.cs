@@ -2592,7 +2592,7 @@ internal static class DocxCommentsTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:comment w:id="9" w:author="Probe" w:initials="PB" w:date="2026-06-01T00:00:00Z">
-                    <w:p><w:r><w:t>A deliberately long balloon body with many words to force several wrapped rows inside the narrow margin lane plus the final tail phrase for full-body verification</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>A deliberately long balloon body with many words to force several wrapped rows inside the narrow margin lane plus additional sentences that keep wrapping across many more rows on any plausible font plus the final tail phrase for full-body verification</w:t></w:r></w:p>
                   </w:comment>
                 </w:comments>
                 """,
