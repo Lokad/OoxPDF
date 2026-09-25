@@ -229,7 +229,7 @@ internal sealed partial class DocxRenderer
     // fallback/unresolvable result keeps the label face everywhere (including off-Windows). A
     // non-bold family member is also rejected: server SKUs may ship Segoe UI without its
     // Bold face, and narrower non-bold advances would silently under-wrap titles.
-    internal static FontFaceResolution? ResolveBalloonTitleFace(IFontResolver fontResolver, DocxMarkupContext markupContext)
+    internal static FontFaceResolution? ResolveBalloonTitleFace(IFontResolver fontResolver, DocxMarkupContext markupContext, CancellationToken cancellationToken)
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(markupContext))
         {
@@ -237,7 +237,15 @@ internal sealed partial class DocxRenderer
         }
 
         FontFaceResolution resolved = fontResolver.Resolve(new FontRequest("Segoe UI", Bold: true));
-        return resolved.IsFallback || !resolved.Bold ? null : resolved;
+        if (resolved.IsFallback || !resolved.Bold)
+        {
+            return null;
+        }
+
+        // The face file itself must load with embeddable outlines: server SKUs can carry
+        // an unloadable Segoe UI Bold stub that still resolves bold.
+        OpenTypeFont? titleFont = LoadFont(resolved, new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>(), cancellationToken);
+        return titleFont is not null && titleFont.HasTrueTypeOutlines ? resolved : null;
     }
 
     private static DocxRunFontResource? ResolveMarkupLabelFontResource(DocxFontResources fontResources)

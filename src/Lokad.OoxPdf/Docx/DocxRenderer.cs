@@ -195,7 +195,7 @@ internal sealed partial class DocxRenderer
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
         {
-            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, effectiveMarkupContext) };
+            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, effectiveMarkupContext, CancellationToken.None) };
         }
         (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource) = EnsureMarkupBalloonTextResources(layout, fontResources, effectiveMarkupContext, CancellationToken.None);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
@@ -905,7 +905,7 @@ internal sealed partial class DocxRenderer
         // the face rides the markup context into the balloon text subset below.
         if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && HasWordCompatibleBalloonContent(document, markupContext))
         {
-            markupContext = markupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, markupContext) };
+            markupContext = markupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, markupContext, cancellationToken) };
         }
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
         (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);

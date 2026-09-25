@@ -476,13 +476,35 @@ internal static class DocxCommentsTests
             "Mirrored even pages should keep the authored left margin without a left review reserve; observed " + layout.Pages[1].MarginLeft.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    private sealed class BoldUnresolvedTitleResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return new FontFaceResolution(
+                request.FamilyName,
+                request.FamilyName,
+                new FontStyleKey(Bold: true, Italic: false, WeightClass: 700, FaceIndex: 0, HasMathTable: false),
+                new MemoryFontProgramSource("test:unloadable-title-face", ReadOnlyMemory<byte>.Empty),
+                IsFallback: false);
+        }
+    }
+
+    public static void DocxBalloonTitleFaceRejectsUnloadableBoldFaces()
+    {
+        var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        TestAssert.True(
+            DocxRenderer.ResolveBalloonTitleFace(new BoldUnresolvedTitleResolver(), context, CancellationToken.None) is null,
+            "A bold-marked but unloadable title face (server-SKU Segoe stub) must fall back to the label face.");
+    }
+
     public static void DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles()
     {
         // The wrap parity needs the Office title face; environments without a real Segoe UI
         // Bold face keep the label face and skip like other font-environmental tests. The
         // probe uses the production resolution seam so skips track real behavior.
         DocxMarkupContext probeContext = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        if (DocxRenderer.ResolveBalloonTitleFace(new WindowsFontResolver(), probeContext) is null)
+        if (DocxRenderer.ResolveBalloonTitleFace(new WindowsFontResolver(), probeContext, CancellationToken.None) is null)
         {
             TestAssert.Skip("Environmental precondition not met: Segoe UI Bold is not installed.");
         }
