@@ -363,10 +363,15 @@ internal sealed partial class DocxLayoutEngine
                     double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (midLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
                     cursorY -= extraAbove;
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
+                    // RV06 table-align probe: Office centers/rights the drawable cell
+                    // text too, letting trailing spaces overflow past the edge.
+                    double lineAlignWidth = paragraph.EffectiveProperties.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
+                        ? MeasureDrawableTextSpansForLayout(line.Spans, fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d)
+                        : lineWidth;
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
-                        DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
-                        DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
+                        DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth) / 2d,
+                        DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                         _ => paragraphX
                     };
                     DocxParagraphLineShape lineShape = CreateParagraphLineShape(
@@ -445,6 +450,53 @@ internal sealed partial class DocxLayoutEngine
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
                     cursorY -= lineHeight;
+                }
+
+                // RV06 table-align probe: cells keep one row-end space beyond authored
+                // trailing too. No spill here (breaks inside cells stay queued); skip
+                // shrink-to-fit cells whose width contract is explicit.
+                if (paragraph.Images.Count == 0 &&
+                    paragraph.InlineTextBoxes.Count == 0 &&
+                    !cell.FitText &&
+                    wrappedLines.Length > 0 &&
+                    wrappedLines[^1].Text.EndsWith(' ') &&
+                    textSpans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character))) &&
+                    context.TextMeasurer is not null)
+                {
+                    for (int cellLineIndex = lines.Count - 1; cellLineIndex >= 0; cellLineIndex--)
+                    {
+                        if (lines[cellLineIndex] is not DocxTextLineLayout cellLastLine ||
+                            !ReferenceEquals(cellLastLine.SourceParagraph, paragraph) ||
+                            cellLastLine.Text.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        double cellSpaceWidth = context.TextMeasurer.MeasureText(firstRun, " ", fontSize);
+                        lines[cellLineIndex] = cellLastLine with
+                        {
+                            Text = cellLastLine.Text + " ",
+                            Width = cellLastLine.Width + cellSpaceWidth,
+                            Segments =
+                            [
+                                .. cellLastLine.Segments,
+                                new DocxTextSegmentLayout(
+                                    " ",
+                                    firstRun,
+                                    cellLastLine.X + cellLastLine.Width,
+                                    cellSpaceWidth,
+                                    fontSize,
+                                    0d,
+                                    0d,
+                                    DocxTextStateCharacterSpacingSource.None,
+                                    true,
+                                    -1,
+                                    0,
+                                    DocxTextSegmentRole.BreakSpill),
+                            ],
+                        };
+                        break;
+                    }
                 }
             }
 
