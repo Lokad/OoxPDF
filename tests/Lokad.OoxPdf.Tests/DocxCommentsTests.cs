@@ -447,6 +447,28 @@ internal static class DocxCommentsTests
             "Word-compatible all-markup should not draw legacy yellow comment marker boxes.");
     }
 
+    public static void DocxWordCompatibleLaneBackgroundHugsBalloonBodies()
+    {
+        string input = DocxTests.WriteCommentAuthorColorProbeDocx();
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(
+            fontResolver: null,
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        double balloonMinX = renderer.InspectMarkupBalloons(document).Where(placement => placement.Kind == "Comment").Min(placement => placement.X);
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        Match background = Regex.Match(page.Content, @"0\.949 g\r?\n(?<x>[\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");
+        double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+
+        TestAssert.True(background.Success, "Word-compatible all-markup should paint the gray lane background.");
+        double backgroundX = double.Parse(background.Groups["x"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(
+            Math.Abs(backgroundX - (balloonMinX - 22.56d * printScale)) <= 0.05d,
+            "Word-compatible lane background should hug balloon bodies at a 22.56pt design inset (Office A/B across four print scales); backgroundX=" + backgroundX.ToString(CultureInfo.InvariantCulture) + " balloonMinX=" + balloonMinX.ToString(CultureInfo.InvariantCulture) + " scale=" + printScale.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     public static void DocxCommentAuthorPaletteFollowsFirstSeenCommentIdOrder()
     {
         IReadOnlyDictionary<string, int> slots = DocxRenderer.BuildCommentAuthorPaletteSlots(

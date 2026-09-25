@@ -1174,9 +1174,10 @@ internal static class DocxMarkupTests
             .ToArray();
 
         TestAssert.True(pages.Length >= 2, "The mirrored-margin fixture should render odd and even review pages.");
-        // Office (W5-X1): the gray lane is 259.4pt design wide ending at the page edge; the mirrored
-        // fixture (s = 612 / 824.5) prints it at 259.4 * s = 192.544 wide from x = 612 - 192.544 - 0.37.
-        TestAssert.Contains("419.086 89.475 192.544 614.25 re f", pages[0].Content);
+        // Office (mirrored/dense/landscape/author COM refs across four print scales): the gray lane hugs
+        // balloon bodies at a 22.56pt design inset; the mirrored odd page (s = 612 / 824.5) starts it at
+        // balloon-body 437.36 minus 22.56 * s = 420.615 (Office 420.60).
+        TestAssert.Contains("420.615 89.475 191.015 614.25 re f", pages[0].Content);
         TestAssert.Contains("0.37 89.475 199.7 614.25 re f", pages[1].Content);
     }
 

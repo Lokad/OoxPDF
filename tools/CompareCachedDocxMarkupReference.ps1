@@ -1600,7 +1600,11 @@ function Select-ReferenceMarkupLaneRects($ReferenceBalloonGraphics, $ReferenceMe
         $mediaByPage[$i + 1] = $mediaBoxes[$i]
     }
 
-    foreach ($group in @($ReferenceBalloonGraphics | Where-Object { $_.Page -ne $null } | Group-Object -Property Page)) {
+    # RV06 lane calibration: lane occupancy is painted area (lane background fills and
+    # balloon bodies), not connector/bracket strokes. Bare Stroke segments (balloon stems
+    # reach past the background, e.g. 413.04 vs a 416.40 background) must not widen the
+    # occupied union.
+    foreach ($group in @($ReferenceBalloonGraphics | Where-Object { $_.Page -ne $null -and $_.Subtype -ne "Stroke" } | Group-Object -Property Page)) {
         $page = [int]$group.Name
         $pageWidth = if ($mediaByPage.ContainsKey($page) -and $mediaByPage[$page].Width -ne $null) { [double]$mediaByPage[$page].Width } else { 0d }
         $items = @($group.Group | Where-Object {
@@ -3446,10 +3450,13 @@ $candidateLayoutBodyFrameRects = @(Select-LayoutBodyFrameRects $candidateLayoutS
 $candidateLayoutColumnFrameRects = @(Select-LayoutColumnFrameRects $candidateLayoutSnapshot)
 $candidateLayoutMarkupLaneRects = @(Select-LayoutMarkupLaneRects $candidateLayoutSnapshot)
 $referenceMarkupLaneRects = @(Select-ReferenceMarkupLaneRects $referenceBalloonGraphics $referenceMediaBoxes)
-$markupLaneHorizontalComparison = @(Compare-MarkupLaneHorizontalRects $referenceMarkupLaneRects $candidateLayoutMarkupLaneRects $MarkupMarginTolerance)
-$markupLaneHorizontalDeltaSummary = New-MarkupLaneHorizontalDeltaSummary $referenceMarkupLaneRects $candidateLayoutMarkupLaneRects $markupLaneHorizontalComparison
-$bodyFrameLaneEdgeComparison = @(Compare-BodyFrameLaneEdgeRects $referenceMarkupLaneRects $candidateLayoutBodyFrameRects $candidateLayoutMarkupLaneRects $BodyFrameTolerance)
-$bodyFrameLaneEdgeDeltaSummary = New-BodyFrameLaneEdgeDeltaSummary $referenceMarkupLaneRects $candidateLayoutBodyFrameRects $candidateLayoutMarkupLaneRects $bodyFrameLaneEdgeComparison
+# RV06 lane calibration: edge comparisons use painted occupancy on both sides (the layout
+# placement rect is narrower than the painted background by construction).
+$candidateOccupiedLaneRects = @(Select-ReferenceMarkupLaneRects $candidateBalloonGraphics $candidateMediaBoxes)
+$markupLaneHorizontalComparison = @(Compare-MarkupLaneHorizontalRects $referenceMarkupLaneRects $candidateOccupiedLaneRects $MarkupMarginTolerance)
+$markupLaneHorizontalDeltaSummary = New-MarkupLaneHorizontalDeltaSummary $referenceMarkupLaneRects $candidateOccupiedLaneRects $markupLaneHorizontalComparison
+$bodyFrameLaneEdgeComparison = @(Compare-BodyFrameLaneEdgeRects $referenceMarkupLaneRects $candidateLayoutBodyFrameRects $candidateOccupiedLaneRects $BodyFrameTolerance)
+$bodyFrameLaneEdgeDeltaSummary = New-BodyFrameLaneEdgeDeltaSummary $referenceMarkupLaneRects $candidateLayoutBodyFrameRects $candidateOccupiedLaneRects $bodyFrameLaneEdgeComparison
 $referenceBalloonBodyGraphics = @(Select-BalloonBodyGraphicCandidates $referenceGraphicsOperationItems $referenceMarkupLaneRects)
 $candidateBalloonBodyGraphics = @(Select-BalloonBodyGraphicCandidates $candidateGraphicsOperationItems $candidateLayoutMarkupLaneRects)
 $balloonComparison = @(Compare-RectLists $referenceBalloonBodyGraphics $candidateBalloons $BalloonBoundsTolerance)
@@ -3582,6 +3589,7 @@ Write-JsonFile (Join-Path $geometryDir "layout-body-frame-rects.json") $candidat
 Write-JsonFile (Join-Path $geometryDir "layout-column-frame-rects.json") $candidateLayoutColumnFrameRects
 Write-JsonFile (Join-Path $geometryDir "layout-markup-lane-rects.json") $candidateLayoutMarkupLaneRects
 Write-JsonFile (Join-Path $geometryDir "reference-markup-lane-rects.json") $referenceMarkupLaneRects
+Write-JsonFile (Join-Path $geometryDir "candidate-occupied-lane-rects.json") $candidateOccupiedLaneRects
 Write-JsonFile (Join-Path $geometryDir "markup-lane-horizontal-comparison.json") $markupLaneHorizontalComparison
 Write-JsonFile (Join-Path $geometryDir "markup-lane-horizontal-summary.json") $markupLaneHorizontalDeltaSummary
 Write-JsonFile (Join-Path $geometryDir "body-frame-lane-edge-comparison.json") $bodyFrameLaneEdgeComparison
