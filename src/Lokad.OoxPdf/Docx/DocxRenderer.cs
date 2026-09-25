@@ -1074,14 +1074,15 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)
         {
             var annotations = new List<PdfLinkAnnotation>();
-            // RV06: measured Word hyperlink rectangle geometry: horizontal pads
-            // 2.22-2.41pt per side at 11pt, line tops at baseline plus 11.29-11.36pt,
-            // non-last bottoms tiling the next page line top, last-line bottoms at
-            // baseline minus 13.60-13.67pt (a single-spaced page-last sample stops at
-            // 11.36pt instead; line-height-dependent bottoms stay open).
-            const double HyperlinkRectHorizontalPadEm = 2.3 / 11.0;
-            const double HyperlinkRectTopEm = 11.33 / 11.0;
-            const double HyperlinkRectBottomEm = 13.64 / 11.0;
+            // RV06: measured Word hyperlink rectangle geometry, em-stable across 11/12pt:
+            // horizontal pads about 0.20em per side, line tops at baseline plus 0.939em,
+            // non-last bottoms tiling the next page line top, default last-line bottoms at
+            // baseline minus 1.136em. (Office renders style-less runs at 12pt, matching the
+            // reader default; single-spaced and exact-height page-last bottoms of 0.947em
+            // and 1.271em show line-height-dependent bottoms that stay open.)
+            const double HyperlinkRectHorizontalPadEm = 2.2 / 11.0;
+            const double HyperlinkRectTopEm = 10.33 / 11.0;
+            const double HyperlinkRectBottomEm = 12.5 / 11.0;
             List<(DocxHyperlinkSpan Link, double MinX, double MaxX)>? previousLineLinks = null;
             double previousLineTop = 0d;
             double previousLineBottomFallback = 0d;

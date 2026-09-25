@@ -626,10 +626,10 @@ internal static class DocxTablesTests
         PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
-            Math.Abs(annotation.X - (linkSegment.X - (2.3d * 10d / 11d))) < 0.001d,
+            Math.Abs(annotation.X - (linkSegment.X - (2.2d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup table-cell hyperlink annotations should use emitted table-cell segment x coordinates.");
         TestAssert.True(
-            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.3d * 10d / 11d))) < 0.001d,
+            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.2d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup table-cell hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
