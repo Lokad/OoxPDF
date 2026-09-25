@@ -649,10 +649,15 @@ internal sealed partial class DocxLayoutEngine
                     cursorY -= extraAbove;
 
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
+                    // RV06 align matrix: Office centers/rights the drawable text, letting
+                    // authored and added trailing spaces overflow past the edge.
+                    double lineAlignWidth = effective.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
+                        ? MeasureDrawableTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d)
+                        : lineWidth;
                     double lineX = effective.Alignment switch
                     {
-                        DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineWidth) / 2d,
-                        DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineWidth),
+                        DocxTextAlignment.Center => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth) / 2d,
+                        DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                         _ => paragraphX
                     };
                     double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective));

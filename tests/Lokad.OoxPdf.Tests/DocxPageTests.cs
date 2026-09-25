@@ -2107,4 +2107,42 @@ internal static class DocxPageTests
         TestAssert.Equal(2, tailLines.Length);
         TestAssert.Equal("Tail    ", tailLines[0].Text);
     }
+
+    public static void DocxAlignedTrailingLinesShareDrawableLinePositions()
+    {
+        // RV06 align matrix: Office centers/rights drawable text, letting authored
+        // and added trailing spaces overflow past the edge.
+        DocxParagraph centerTrail = DocxTests.CreateDocxLayoutParagraph("C trail   ", 10d, 12d) with { Alignment = DocxTextAlignment.Center };
+        DocxParagraph centerClean = DocxTests.CreateDocxLayoutParagraph("C trail", 10d, 12d) with { Alignment = DocxTextAlignment.Center };
+        DocxParagraph rightTrail = DocxTests.CreateDocxLayoutParagraph("R trail   ", 10d, 12d) with { Alignment = DocxTextAlignment.Right };
+        DocxParagraph rightClean = DocxTests.CreateDocxLayoutParagraph("R trail", 10d, 12d) with { Alignment = DocxTextAlignment.Right };
+        var document = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [
+                new DocxParagraphElement(centerTrail),
+                new DocxParagraphElement(centerClean),
+                new DocxParagraphElement(rightTrail),
+                new DocxParagraphElement(rightClean)
+            ],
+            [centerTrail, centerClean, rightTrail, rightClean],
+            []);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+        TestAssert.Equal(4, lines.Length);
+        TestAssert.Equal(lines[1].X, lines[0].X);
+        TestAssert.Equal(lines[3].X, lines[2].X);
+    }
 }
