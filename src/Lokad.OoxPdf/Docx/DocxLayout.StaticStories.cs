@@ -219,17 +219,23 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs);
             int sourceLineIndex = 0;
+            var placedStaticImages = new List<DocxInlineImage>();
             if (spans.Length != 0)
             {
-                foreach (DocxWrappedTextLine line in WrapStaticTextLines(spans, width, textMeasurer))
+                DocxWrappedTextLine[] staticLines = WrapStaticTextLines(spans, width, textMeasurer).ToArray();
+                // RV05: ordered inline atoms (static header/footer path). Affined images in
+                // text-mixed paragraphs attach to wrapped lines at run position.
+                DocxMidLinePlan? staticMidLinePlan = CreateStaticMidLinePlan(paragraph, spans, staticLines, width, isHeader, staticMetrics, unscaledLineMetrics, paragraphSpacingScale, cancellationToken);
+                for (int staticLineIndex = 0; staticLineIndex < staticLines.Length; staticLineIndex++)
                 {
+                    DocxWrappedTextLine line = staticLines[staticLineIndex];
                     cancellationToken.ThrowIfCancellationRequested();
                     if (line.Spans.Count == 0)
                     {
                         continue;
                     }
 
-                    double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer);
+                    double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer) + (staticMidLinePlan?.LineImageWidths[staticLineIndex] ?? 0d);
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
                         DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
@@ -274,6 +280,7 @@ internal sealed partial class DocxLayoutEngine
 
                         staticBaselineY = cursorY - staticBaselineOffset;
                     }
+                    double lineAdvance = staticMidLinePlan?.GrownHeights[staticLineIndex] ?? staticLineHeight;
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
                     lines.Add(new DocxTextLineLayout(
                         line.Text,
@@ -283,7 +290,7 @@ internal sealed partial class DocxLayoutEngine
                         staticBaselineY,
                         lineWidth,
                         segments,
-                        LineHeight: staticLineHeight,
+                        LineHeight: lineAdvance,
                         AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: sourceLineIndex == 0,
                         SourceLineIndex: sourceLineIndex,
@@ -295,14 +302,37 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraphIndex: paragraphIndex,
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         LineHeightSource: DocxLineHeightSource.StaticWindowsExtents, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
+                    if (staticMidLinePlan is not null)
+                    {
+                        foreach (DocxMidLineImage placed in staticMidLinePlan.ImagesByLine[staticLineIndex])
+                        {
+                            double beforeWidth = MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), textMeasurer);
+                            images.Add(new DocxInlineImageLayout(
+                                placed.Image,
+                                lineX + beforeWidth,
+                                staticBaselineY - placed.Height,
+                                placed.Width,
+                                placed.Height,
+                                pageNumber,
+                                SourceBlockIndex: null,
+                                SourceParagraphIndex: paragraphIndex,
+                                Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType)));
+                            placedStaticImages.Add(placed.Image);
+                        }
+                    }
                     sourceLineIndex++;
-                    cursorY -= staticLineHeight;
+                    cursorY -= lineAdvance;
                 }
             }
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (placedStaticImages.Any(placed => ReferenceEquals(placed, image)))
+                {
+                    continue;
+                }
+
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
                 double imageX = paragraph.EffectiveProperties.Alignment switch
@@ -378,6 +408,63 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray(), cursorY, pendingSpacingAfter);
+
+        // RV05: ordered inline atoms (static header/footer path). Growth uses the
+        // largest per-line advance and baseline displacement, matching the scalar
+        // convention of the body path; positioning stays per-line exact.
+        DocxMidLinePlan? CreateStaticMidLinePlan(DocxParagraph planParagraph, DocxTextSpan[] planSpans, DocxWrappedTextLine[] planLines, double planWidth, bool planIsHeader, IDocxStaticTextMetricsProvider planMetrics, IDocxLineMetricsProvider? planUnscaledMetrics, double planScale, CancellationToken planCancellationToken)
+        {
+            bool hasAffined = false;
+            foreach (DocxInlineImage planImage in planParagraph.Images)
+            {
+                planCancellationToken.ThrowIfCancellationRequested();
+                if (planImage.SourceRunIndex >= 0)
+                {
+                    hasAffined = true;
+                    break;
+                }
+            }
+
+            if (!hasAffined || planLines.Length == 0)
+            {
+                return null;
+            }
+
+            double planFontSize = GetParagraphFontSize(planParagraph);
+            bool useSingleHeight = planUnscaledMetrics is not null && planParagraph.EffectiveProperties.LineSpacingPoints is null;
+            double maxHeight = 0d;
+            double maxDisplacement = 0d;
+            if (planUnscaledMetrics is not null && useSingleHeight)
+            {
+                double rawSingle = planUnscaledMetrics.MeasureSingleLineHeight(planParagraph.Runs.FirstOrDefault(), planFontSize);
+                double autoFactor = ResolveAutoLineSpacingFactor(planParagraph, out _);
+                maxHeight = rawSingle * autoFactor * planScale;
+                maxDisplacement = DocxLineMetrics.ResolveBodyBaselineOffset(planFontSize, rawSingle * autoFactor, hasExplicitLineSpacing: false);
+                if (HasNoSpacingElement(planParagraph.EffectiveProperties) && Math.Abs(planFontSize - 11d) < 0.000000001d)
+                {
+                    maxDisplacement += UntokenedParagraphBaselineExtraPoints;
+                }
+            }
+
+            foreach (DocxWrappedTextLine planLine in planLines)
+            {
+                planCancellationToken.ThrowIfCancellationRequested();
+                if (planLine.Spans.Count == 0)
+                {
+                    continue;
+                }
+
+                double ascender = planLine.Spans.Max(span => planMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
+                double descender = planLine.Spans.Max(span => planMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
+                if (!useSingleHeight)
+                {
+                    maxHeight = Math.Max(maxHeight, ascender + descender);
+                    maxDisplacement = Math.Max(maxDisplacement, planIsHeader ? ascender : -descender);
+                }
+            }
+
+            return CreateMidLinePlan(planParagraph, planSpans, planLines, planWidth, planWidth, maxDisplacement, maxHeight);
+        }
 
         DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs)
         {
