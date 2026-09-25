@@ -285,6 +285,18 @@ internal sealed partial class DocxLayoutEngine
                         staticBaselineY = cursorY - staticBaselineOffset;
                     }
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
+                    IReadOnlyList<DocxTextSegmentLayout> emissionSegments = segments;
+                    if (staticMidLinePlan is not null && staticMidLinePlan.ImagesByLine[staticLineIndex].Count != 0)
+                    {
+                        var imageShifts = new List<(double BoundaryX, double Shift)>();
+                        foreach (DocxMidLineImage placed in staticMidLinePlan.ImagesByLine[staticLineIndex])
+                        {
+                            double shiftBeforeWidth = MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), textMeasurer);
+                            imageShifts.Add((shiftBeforeWidth, placed.Width));
+                        }
+
+                        emissionSegments = ShiftSegmentsPastMidLineImages(segments, line.Spans, paragraph, sourceLineIndex == 0, lineX, imageShifts);
+                    }
                     lines.Add(new DocxTextLineLayout(
                         line.Text,
                         line.Spans[0].StyleRun,
@@ -292,7 +304,7 @@ internal sealed partial class DocxLayoutEngine
                         lineX,
                         staticBaselineY,
                         lineWidth,
-                        segments,
+                        emissionSegments,
                         LineHeight: staticLineHeight,
                         AppliedBeforeSpacing: sourceLineIndex == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: sourceLineIndex == 0,

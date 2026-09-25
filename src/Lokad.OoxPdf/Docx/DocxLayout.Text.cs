@@ -252,6 +252,49 @@ internal sealed partial class DocxLayoutEngine
         return plainWidth + prefixSpaces * extraPerSpace;
     }
 
+    // RV05: true inline flow. Segments starting at or past a placed image move right by its
+    // width, so following text starts after the image instead of overlapping it. Numbered
+    // first lines and tabbed lines keep unshifted segments.
+    private static IReadOnlyList<DocxTextSegmentLayout> ShiftSegmentsPastMidLineImages(
+        IReadOnlyList<DocxTextSegmentLayout> segments,
+        IReadOnlyList<DocxTextSpan> lineSpans,
+        DocxParagraph paragraph,
+        bool firstLine,
+        double lineX,
+        IReadOnlyList<(double BoundaryX, double Shift)> imageShifts)
+    {
+        if (imageShifts.Count == 0 || (firstLine && paragraph.ListLabel is not null))
+        {
+            return segments;
+        }
+
+        foreach (DocxTextSpan span in lineSpans)
+        {
+            if (span.Text.IndexOf((char)9) >= 0)
+            {
+                return segments;
+            }
+        }
+
+        var shifted = new List<DocxTextSegmentLayout>(segments.Count);
+        foreach (DocxTextSegmentLayout segment in segments)
+        {
+            double start = segment.X - lineX;
+            double delta = 0d;
+            foreach ((double boundaryX, double shift) in imageShifts)
+            {
+                if (start >= boundaryX - 0.01)
+                {
+                    delta += shift;
+                }
+            }
+
+            shifted.Add(delta == 0d ? segment : segment with { X = segment.X + delta });
+        }
+
+        return shifted;
+    }
+
     private static bool ShouldJustifyTextLine(
         DocxTextAlignment alignment,
         bool isLastLine,

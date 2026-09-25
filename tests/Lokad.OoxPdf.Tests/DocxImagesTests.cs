@@ -1340,6 +1340,63 @@ internal static class DocxImagesTests
         TestAssert.True(imageX > firstX && imageX < lastX, "Image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " last=" + lastX);
     }
 
+    // RV05: true inline flow. Text following a mid-line image starts after the image end,
+    // not at the run position (Word 16.0: AFTER at 193.37 = image end 193.34).
+    public static void DocxInlineImageAdvancesFollowingText()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                <Default Extension="xml" ContentType="application/xml"/>
+                <Default Extension="png" ContentType="image/png"/>
+                <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>BEFORE</w:t></w:r>
+                      <w:r><w:drawing><wp:inline><wp:extent cx="914400" cy="914400"/><wp:docPr id="1" name="Picture 1"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="image1.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdImage1"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+                      <w:r><w:t>AFTER</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
+            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
+        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+        TestAssert.True(starts.Count >= 2 && imagePlacement.Success, "Expected positioned text and a placed image, found " + starts.Count + " text starts and image " + imagePlacement.Success);
+        double afterX = double.Parse(starts[1].Groups[1].Value, CultureInfo.InvariantCulture);
+        double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(Math.Abs((afterX - imageX) - 72d) < 0.5, "Following text must start after the 72pt image end: after=" + afterX + " image=" + imageX);
+    }
+
     // RV05: table-cell paragraphs place affined images mid-line like body text.
     // Line 1 holds BEFORE, AFTER and its terminal space; the reader-owned implicit
     // terminal table paragraph emits separately afterwards.
@@ -1404,6 +1461,7 @@ internal static class DocxImagesTests
         double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
         TestAssert.True(Math.Abs(secondY - firstY) < 0.01 && Math.Abs(thirdY - firstY) < 0.01, "Cell image must share its surrounding text line: firstY=" + firstY + " secondY=" + secondY + " thirdY=" + thirdY);
         TestAssert.True(imageX > firstX && imageX < thirdX, "Cell image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " lineEnd=" + thirdX);
+        TestAssert.True(Math.Abs((double.Parse(starts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Cell following text must start after the 72pt image end: image=" + imageX);
     }
 
     // RV05: related-story (footnote) paragraphs place affined images mid-line like body text.
@@ -1481,6 +1539,7 @@ internal static class DocxImagesTests
         double lineEndX = double.Parse(bottomStarts[bottomStarts.Length - 1].Groups[1].Value, CultureInfo.InvariantCulture);
         double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
         TestAssert.True(imageX > firstX && imageX < lineEndX, "Footnote image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " lineEnd=" + lineEndX);
+        TestAssert.True(Math.Abs((double.Parse(bottomStarts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Footnote following text must start after the 72pt image end: image=" + imageX);
     }
 
     // RV05: static-story (header) paragraphs place affined images mid-line like body text.
@@ -1559,6 +1618,7 @@ internal static class DocxImagesTests
         double lineEndX = double.Parse(topStarts[topStarts.Length - 1].Groups[1].Value, CultureInfo.InvariantCulture);
         double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
         TestAssert.True(imageX > firstX && imageX < lineEndX, "Header image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " lineEnd=" + lineEndX);
+        TestAssert.True(Math.Abs((double.Parse(topStarts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Header following text must start after the 72pt image end: image=" + imageX);
     }
 
     // RV05: on justified lines the image must sit at the stretched run position,
@@ -1617,6 +1677,6 @@ internal static class DocxImagesTests
         // Line 1 emits one op per word (justified spaces are gaps): AAA, BBB, then CCC.
         double afterX = double.Parse(starts[2].Groups[1].Value, CultureInfo.InvariantCulture);
         double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(Math.Abs(imageX - afterX) < 0.5, "Justified image must sit at its stretched run position: image=" + imageX + " after=" + afterX);
+        TestAssert.True(Math.Abs((afterX - imageX) - 72d) < 0.5, "Justified image must sit at its stretched run position with following text after the 72pt image end: image=" + imageX + " after=" + afterX);
     }
 }

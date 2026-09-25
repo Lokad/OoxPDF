@@ -668,6 +668,32 @@ internal sealed partial class DocxLayoutEngine
                         ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale),
                         defaultTabStopPoints * paragraphSpacingScale,
                         pages.Count + 1);
+                    IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
+                    List<DocxInlineImageLayout>? lineImages = null;
+                    List<(double BoundaryX, double Shift)>? imageShifts = null;
+                    if (midLinePlan is not null && midLinePlan.ImagesByLine[lineIndex].Count != 0)
+                    {
+                        double textBaselineY = cursorY - baselineOffset;
+                        imageShifts = new List<(double BoundaryX, double Shift)>();
+                        lineImages = new List<DocxInlineImageLayout>();
+                        foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
+                        {
+                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
+                            imageShifts.Add((beforeWidth, placed.Width));
+                            lineImages.Add(new DocxInlineImageLayout(
+                                placed.Image,
+                                lineX + beforeWidth,
+                                textBaselineY - placed.Height,
+                                placed.Width,
+                                placed.Height,
+                                pages.Count + 1,
+                                SourceBlockIndex: elementIndex,
+                                SourceParagraphIndex: 0, Story: null));
+                        }
+
+                        emissionSegments = ShiftSegmentsPastMidLineImages(lineShape.Segments, line.Spans, paragraph, firstLine, lineX, imageShifts);
+                    }
+
                     currentItems.Add(new DocxTextLineLayout(
                         lineShape.Text,
                         firstRun,
@@ -675,7 +701,7 @@ internal sealed partial class DocxLayoutEngine
                         lineShape.X,
                         cursorY - baselineOffset,
                         lineShape.Width,
-                        lineShape.Segments,
+                        emissionSegments,
                         SourceBlockIndex: elementIndex,
                         SourceParagraphIndex: 0,
                         SourceLineIndex: lineIndex,
@@ -696,22 +722,9 @@ internal sealed partial class DocxLayoutEngine
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
                         Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false));
-                    if (midLinePlan is not null)
+                    if (lineImages is not null)
                     {
-                        double textBaselineY = cursorY - baselineOffset;
-                        foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
-                        {
-                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
-                            currentItems.Add(new DocxInlineImageLayout(
-                                placed.Image,
-                                lineX + beforeWidth,
-                                textBaselineY - placed.Height,
-                                placed.Width,
-                                placed.Height,
-                                pages.Count + 1,
-                                SourceBlockIndex: elementIndex,
-                                SourceParagraphIndex: 0, Story: null));
-                        }
+                        currentItems.AddRange(lineImages);
                     }
                     activeColumnHasContent = true;
                     firstLine = false;

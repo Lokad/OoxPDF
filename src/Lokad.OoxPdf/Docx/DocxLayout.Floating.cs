@@ -150,6 +150,19 @@ internal sealed partial class DocxLayoutEngine
                 ScaleTabStopPositions(effective.TabStops, fixedScale),
                 defaultTabStopPoints * fixedScale,
                 pageNumber);
+            IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
+            if (storyMidLinePlan is not null && storyMidLinePlan.ImagesByLine[lineIndex].Count != 0)
+            {
+                var imageShifts = new List<(double BoundaryX, double Shift)>();
+                foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])
+                {
+                    double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber);
+                    imageShifts.Add((shiftBeforeWidth, placed.Width));
+                }
+
+                emissionSegments = ShiftSegmentsPastMidLineImages(lineShape.Segments, line.Spans, paragraph, firstLine, lineX, imageShifts);
+            }
+
             layouts.Add(new DocxTextLineLayout(
                 lineShape.Text,
                 firstRun,
@@ -157,7 +170,7 @@ internal sealed partial class DocxLayoutEngine
                 lineShape.X,
                 cursorY - baselineOffset,
                 lineShape.Width,
-                lineShape.Segments,
+                emissionSegments,
                 SourceBlockIndex: sourceBlockIndex,
                 SourceParagraphIndex: sourceParagraphIndex,
                 SourceLineIndex: lineIndex,
