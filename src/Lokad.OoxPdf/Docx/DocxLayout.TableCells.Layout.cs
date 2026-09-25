@@ -413,7 +413,7 @@ internal sealed partial class DocxLayoutEngine
                     {
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                         {
-                            double beforeWidth = MeasureTextSpansForLayout(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber);
+                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber);
                             placedImages.Add(new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth,

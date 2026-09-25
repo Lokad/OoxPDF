@@ -198,6 +198,60 @@ internal sealed partial class DocxLayoutEngine
         return MeasureTextSpansForLayout(drawableSpans, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
     }
 
+    // RV05: justified-stretch X refinement. Mid-line images on justified lines sit at
+    // the stretched run position: the unjustified prefix measurement plus the distributed
+    // stretch of every justification space before the image offset. Numbered first lines
+    // keep the plain measurement (their segments are not stretched).
+    private static double MeasureMidLineBeforeWidth(
+        IReadOnlyList<DocxTextSpan> lineSpans,
+        int lineCharOffset,
+        DocxParagraph paragraph,
+        bool firstLine,
+        bool finalWrappedLine,
+        double paragraphWidth,
+        double fontSize,
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<DocxTabStop> tabStops,
+        double defaultTabStopPoints,
+        int? dynamicFieldPageNumber)
+    {
+        double plainWidth = MeasureTextSpansForLayout(SliceTextSpans(lineSpans, 0, lineCharOffset), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
+        if (firstLine && paragraph.ListLabel is not null)
+        {
+            return plainWidth;
+        }
+
+        double drawableLineWidth = MeasureDrawableTextSpansForLayout(lineSpans, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
+        if (!ShouldJustifyTextLine(paragraph.EffectiveProperties.Alignment, finalWrappedLine, drawableLineWidth, paragraphWidth, lineSpans))
+        {
+            return plainWidth;
+        }
+
+        int stretchableSpaces = CountStretchableJustificationSpaces(lineSpans);
+        double extraPerSpace = Math.Max(0d, paragraphWidth - drawableLineWidth) / stretchableSpaces;
+        int drawableLength = FindDrawableTextLength(lineSpans);
+        int prefixLength = Math.Min(lineCharOffset, drawableLength);
+        int seen = 0;
+        int prefixSpaces = 0;
+        foreach (DocxTextSpan span in lineSpans)
+        {
+            foreach (char c in span.Text)
+            {
+                if (seen++ >= prefixLength)
+                {
+                    break;
+                }
+
+                if (IsJustificationSpace(c))
+                {
+                    prefixSpaces++;
+                }
+            }
+        }
+
+        return plainWidth + prefixSpaces * extraPerSpace;
+    }
+
     private static bool ShouldJustifyTextLine(
         DocxTextAlignment alignment,
         bool isLastLine,

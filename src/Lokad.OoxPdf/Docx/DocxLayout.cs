@@ -696,9 +696,7 @@ internal sealed partial class DocxLayoutEngine
                         double textBaselineY = cursorY - baselineOffset;
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                         {
-                            // Justified stretch of preceding spaces is not included; line stays exact for
-                            // left/center/right alignment and off by at most the distributed stretch when justified.
-                            double beforeWidth = MeasureTextSpansForLayout(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
+                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
                             currentItems.Add(new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth,
