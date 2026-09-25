@@ -2990,4 +2990,53 @@ internal static class DocxTablesTests
         TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment(null));
         TestAssert.Equal(DocxTableCellVerticalAlignment.Top, DocxTableCell.ParseVerticalAlignment("justified"));
     }
+    // RV06 (Office gate): autofit tables distribute column widths by content instead
+    // of the declared grid (fails: second column starts at the grid position).
+    public static void DocxAutofitTableDistributesWidthsByContent()
+    {
+        TestAssert.Skip("RV06: autofit distribution not implemented; unskip to reproduce the Office-measured split.");
+        string input = FindCase("docx-markup-review.docx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        if (!pdf.Contains("Aptos", StringComparison.Ordinal))
+        {
+            TestAssert.Skip("Environmental precondition not met: (Aptos not embedded)");
+        }
+
+        // Header-row cell clips: the first column anchors at the table edge while
+        // Office autofit moves the second column to its measured split.
+        var rows = new List<(double Y, double X)>();
+        foreach (Match match in Regex.Matches(pdf, @"(\d+\.?\d*) (\d+\.?\d*) \d+\.?\d* \d+\.?\d* re W n"))
+        {
+            rows.Add((
+                double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture),
+                double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)));
+        }
+
+        TestAssert.True(rows.Count != 0, "Expected table cell clips.");
+        double headerY = rows.Max(row => row.Y);
+        double[] xs = rows.Where(row => Math.Abs(row.Y - headerY) < 2d).Select(row => row.X).Distinct().OrderBy(x => x).ToArray();
+        TestAssert.Equal(2, xs.Length);
+        TestAssert.True(Math.Abs(xs[0] - 72d) < 2d, "The first column must anchor at the table edge.");
+        TestAssert.True(xs[1] > 185d && xs[1] < 196d, "Autofit must split columns at the Office-measured position.");
+    }
+
+    private static string FindCase(string name)
+    {
+        string[] candidates = new[]
+        {
+            Path.Combine("tests", "Lokad.OoxPdf.Tests", "Cases", name),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name),
+        };
+        foreach (string candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("Case file not found: " + name);
+    }
 }
