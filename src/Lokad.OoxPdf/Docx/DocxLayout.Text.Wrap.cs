@@ -18,6 +18,87 @@ internal sealed partial class DocxLayoutEngine
     // instead of searching unbounded or silently changing breaks.
     private const int MaxSearchProbesPerLine = 128;
 
+    // RV05: image-driven breaking. Character offset of an affined image in the concatenated
+    // paragraph text, shared by wrapping and mid-line placement.
+    private static int ResolveInlineImageCharOffset(
+        DocxParagraph paragraph,
+        IReadOnlyList<DocxTextSpan> textSpans,
+        DocxInlineImage image)
+    {
+        int position = 0;
+        foreach (DocxTextSpan span in textSpans)
+        {
+            if (span.SourceTextRunIndex >= 0 && span.SourceTextRunIndex < paragraph.Runs.Count && paragraph.Runs[span.SourceTextRunIndex].SourceRunIndex < image.SourceRunIndex)
+            {
+                position += span.Text.Length;
+            }
+        }
+
+        return position;
+    }
+
+    // RV05: image-driven breaking. Affined image widths by character offset, stably sorted
+    // (OrderBy is stable, so same-offset images keep document order). Callers pass the list
+    // into wrapping; the range index requires sorted offsets.
+    private static List<(int CharOffset, double Width)> ResolveInlineImageWrapWidths(
+        DocxParagraph paragraph,
+        IReadOnlyList<DocxTextSpan> textSpans)
+    {
+        var widths = new List<(int CharOffset, double Width)>();
+        for (int i = 0; i < paragraph.Images.Count; i++)
+        {
+            if (paragraph.Images[i].SourceRunIndex >= 0)
+            {
+                widths.Add((ResolveInlineImageCharOffset(paragraph, textSpans, paragraph.Images[i]), paragraph.Images[i].WidthPoints));
+            }
+        }
+
+        return widths.OrderBy(entry => entry.CharOffset).ToList();
+    }
+
+    // RV05: image-driven breaking. Sorted offsets with prefix sums backing range width
+    // lookups shared by the body and static wrappers.
+    private static (int[] Offsets, double[] PrefixSums) BuildInlineImageWrapIndex(
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths)
+    {
+        if (inlineImageWidths is null || inlineImageWidths.Count == 0)
+        {
+            return ([], [0d]);
+        }
+
+        var offsets = new int[inlineImageWidths.Count];
+        var prefixSums = new double[inlineImageWidths.Count + 1];
+        for (int i = 0; i < inlineImageWidths.Count; i++)
+        {
+            offsets[i] = inlineImageWidths[i].CharOffset;
+            prefixSums[i + 1] = prefixSums[i] + inlineImageWidths[i].Width;
+        }
+
+        return (offsets, prefixSums);
+    }
+
+    private static double ImageWidthInRange((int[] Offsets, double[] PrefixSums) index, int rangeStart, int rangeEnd)
+    {
+        if (index.Offsets.Length == 0 || rangeEnd <= rangeStart)
+        {
+            return 0d;
+        }
+
+        int lo = Array.BinarySearch(index.Offsets, rangeStart);
+        if (lo < 0)
+        {
+            lo = ~lo;
+        }
+
+        int hi = Array.BinarySearch(index.Offsets, rangeEnd);
+        if (hi < 0)
+        {
+            hi = ~hi;
+        }
+
+        return index.PrefixSums[hi] - index.PrefixSums[lo];
+    }
+
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(
         IReadOnlyList<DocxTextSpan> spans,
         double firstLineMaxWidth,
@@ -28,7 +109,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         bool allowOverwideTokenBreaks,
         int? dynamicFieldPageNumber,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
@@ -38,7 +120,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, inlineImageWidths))
             {
                 yielded = true;
                 yield return line;
@@ -77,7 +159,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         bool allowOverwideTokenBreaks,
         int? dynamicFieldPageNumber,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
     {
         // slice widths are memoized by text coordinates for this segment so
         // repeated measures of the same slice (whole-token checks, preferred/overwide
@@ -118,6 +201,12 @@ internal sealed partial class DocxLayoutEngine
         // once when added, and extents chain contiguously (lineStart always sits at a
         // token boundary or inside the re-examined remainder token), so the running OR
         // equals a fresh scan exactly.
+        // RV05: image-driven breaking. Sorted image offsets with prefix sums make range
+        // width lookups logarithmic; text measurement and memoization stay untouched.
+        var imageWrapIndex = BuildInlineImageWrapIndex(inlineImageWidths);
+        int[] imageOffsets = imageWrapIndex.Offsets;
+        double[] imagePrefixSums = imageWrapIndex.PrefixSums;
+
         bool lineHasNonWhitespace = false;
         int lineIndex = 0;
         for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
@@ -128,10 +217,47 @@ internal sealed partial class DocxLayoutEngine
             if (lineLength > 0 &&
                 lineHasNonWhitespace &&
                 !token.IsBreakableWhitespace &&
-                MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, candidateLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) > maxWidth(lineIndex))
+                MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, candidateLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength) > maxWidth(lineIndex))
             {
+                // RV05: image-driven breaking. A line-owning image that overflows the remainder
+                // breaks onto the next line at its own offset (words stay whole); overwide images
+                // that fit no line keep the overwide-text convention and overflow.
+                int imageBreakOffset = -1;
+                for (int imageBreakIndex = 0; imageBreakIndex < imageOffsets.Length; imageBreakIndex++)
+                {
+                    int imageOffset = imageOffsets[imageBreakIndex];
+                    if (imageOffset <= lineStart)
+                    {
+                        continue;
+                    }
+
+                    if (imageOffset >= lineStart + candidateLength)
+                    {
+                        break;
+                    }
+
+                    double overflowingImageWidth = imagePrefixSums[imageBreakIndex + 1] - imagePrefixSums[imageBreakIndex];
+                    double beforeImageWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, imageOffset - lineStart, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, imageOffset);
+                    if (beforeImageWidth <= maxWidth(lineIndex) && beforeImageWidth + overflowingImageWidth > maxWidth(lineIndex) && overflowingImageWidth <= maxWidth(lineIndex + 1))
+                    {
+                        imageBreakOffset = imageOffset;
+                        break;
+                    }
+                }
+
+                if (imageBreakOffset > lineStart)
+                {
+                    yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
+                    lineIndex++;
+                    lineStart = imageBreakOffset;
+                    lineLength = 0;
+                    lineHasNonWhitespace = false;
+                    tokenIndex--;
+                    continue;
+                }
+
                 // Word also breaks an overlong token after a hyphen (or slash) when the prefix fits the remaining width; previously only line-leading overwide tokens used preferred breaks.
-                double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
+                double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + lineLength);
                 double remainingWidth = maxWidth(lineIndex) - usedWidth;
                 if (remainingWidth > 0d &&
                     TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, out int preferredBreakLength))

@@ -1407,7 +1407,7 @@ internal static class DocxTextWrapTests
             ?? throw new InvalidOperationException("Expected WrapWords.");
         try
         {
-            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, widths, 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken]);
+            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, widths, 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken, null]);
             return ((System.Collections.IEnumerable)result!).Cast<DocxWrappedTextLine>().ToArray();
         }
         catch (TargetInvocationException ex)

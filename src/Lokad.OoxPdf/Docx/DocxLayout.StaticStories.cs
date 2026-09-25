@@ -222,7 +222,7 @@ internal sealed partial class DocxLayoutEngine
             var placedStaticImages = new List<DocxInlineImage>();
             if (spans.Length != 0)
             {
-                DocxWrappedTextLine[] staticLines = WrapStaticTextLines(spans, width, textMeasurer).ToArray();
+                DocxWrappedTextLine[] staticLines = WrapStaticTextLines(spans, width, textMeasurer, ResolveInlineImageWrapWidths(paragraph, spans)).ToArray();
                 // RV05: ordered inline atoms (static header/footer path). Affined images in
                 // text-mixed paragraphs attach to wrapped lines at run position.
                 DocxMidLinePlan? staticMidLinePlan = CreateStaticMidLinePlan(paragraph, spans, staticLines, width, isHeader, staticMetrics, unscaledLineMetrics, paragraphSpacingScale, cancellationToken);
@@ -538,7 +538,8 @@ internal sealed partial class DocxLayoutEngine
     private static IEnumerable<DocxWrappedTextLine> WrapStaticTextLines(
         IReadOnlyList<DocxTextSpan> spans,
         double maxWidth,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int segmentStart = 0;
@@ -547,7 +548,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapStaticWords(text, spans, segmentStart, segmentLength, maxWidth, textMeasurer))
+            foreach (DocxWrappedTextLine line in WrapStaticWords(text, spans, segmentStart, segmentLength, maxWidth, textMeasurer, inlineImageWidths))
             {
                 yielded = true;
                 yield return line;
@@ -573,7 +574,8 @@ internal sealed partial class DocxLayoutEngine
         int segmentStart,
         int segmentLength,
         double maxWidth,
-        IDocxTextMeasurer textMeasurer)
+        IDocxTextMeasurer textMeasurer,
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
     {
         IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
         if (tokens.Count == 0)
@@ -592,20 +594,57 @@ internal sealed partial class DocxLayoutEngine
         // RV13: memoize static slice widths by text coordinates; repeated
         // measures of the same slice shape once.
         var measureMemo = new Dictionary<(int Start, int Length), double>();
+        var imageWrapIndex = BuildInlineImageWrapIndex(inlineImageWidths);
+        int[] imageOffsets = imageWrapIndex.Offsets;
+        double[] imagePrefixSums = imageWrapIndex.PrefixSums;
         int lineStart = tokens[0].Start;
         int lineLength = 0;
         // RV13: maintain whitespace presence incrementally instead of
         // rescanning the whole line per token. Added extents chain
         // contiguously from lineStart, so the running OR equals a fresh scan.
         bool lineHasNonWhitespace = false;
-        foreach (TextToken token in tokens)
+        for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
         {
+            TextToken token = tokens[tokenIndex];
             int candidateLength = token.Start + token.Length - lineStart;
             if (lineLength > 0 &&
                 lineHasNonWhitespace &&
                 !token.IsBreakableWhitespace &&
-                MeasureStaticSlice(measureMemo, spans, lineStart, candidateLength, textMeasurer, spanStarts) > maxWidth)
+                MeasureStaticSlice(measureMemo, spans, lineStart, candidateLength, textMeasurer, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength) > maxWidth)
             {
+                int imageBreakOffset = -1;
+                for (int imageBreakIndex = 0; imageBreakIndex < imageOffsets.Length; imageBreakIndex++)
+                {
+                    int imageOffset = imageOffsets[imageBreakIndex];
+                    if (imageOffset <= lineStart)
+                    {
+                        continue;
+                    }
+
+                    if (imageOffset >= lineStart + candidateLength)
+                    {
+                        break;
+                    }
+
+                    double overflowingImageWidth = imagePrefixSums[imageBreakIndex + 1] - imagePrefixSums[imageBreakIndex];
+                    double beforeImageWidth = MeasureStaticSlice(measureMemo, spans, lineStart, imageOffset - lineStart, textMeasurer, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, imageOffset);
+                    if (beforeImageWidth <= maxWidth && beforeImageWidth + overflowingImageWidth > maxWidth && overflowingImageWidth <= maxWidth)
+                    {
+                        imageBreakOffset = imageOffset;
+                        break;
+                    }
+                }
+
+                if (imageBreakOffset > lineStart)
+                {
+                    yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
+                    lineStart = imageBreakOffset;
+                    lineLength = 0;
+                    lineHasNonWhitespace = false;
+                    tokenIndex--;
+                    continue;
+                }
+
                 yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
                 lineStart = token.Start;
                 lineLength = token.Length;

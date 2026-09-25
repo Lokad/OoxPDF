@@ -750,26 +750,35 @@ internal sealed partial class DocxLayoutEngine
         }
         foreach ((int imageIndex, DocxInlineImage image) in affined)
         {
-            int position = 0;
-            foreach (DocxTextSpan span in textSpans)
-            {
-                if (span.SourceTextRunIndex >= 0 && span.SourceTextRunIndex < paragraph.Runs.Count && paragraph.Runs[span.SourceTextRunIndex].SourceRunIndex < image.SourceRunIndex)
-                {
-                    position += span.Text.Length;
-                }
-            }
+            int position = ResolveInlineImageCharOffset(paragraph, textSpans, image);
+            // RV05: image-driven breaking can start a line exactly at the image offset;
+            // that line wins over the line ending there, so the plan agrees with wrapping.
             int lineStart = 0;
-            int targetLine = lines.Length - 1;
-            int lineOffset = lineCharLengths[targetLine];
+            int targetLine = -1;
+            int lineOffset = 0;
             for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
             {
-                if (position <= lineStart + lineCharLengths[lineIndex])
+                if (lineStart == position)
+                {
+                    targetLine = lineIndex;
+                    lineOffset = 0;
+                    break;
+                }
+
+                if (position < lineStart + lineCharLengths[lineIndex])
                 {
                     targetLine = lineIndex;
                     lineOffset = position - lineStart;
                     break;
                 }
+
                 lineStart += lineCharLengths[lineIndex];
+            }
+
+            if (targetLine < 0)
+            {
+                targetLine = lines.Length - 1;
+                lineOffset = lineCharLengths[targetLine];
             }
             double maxWidth = targetLine == 0 ? firstLineMaxWidth : continuationLineMaxWidth;
             double width = Math.Min(maxWidth, image.WidthPoints);

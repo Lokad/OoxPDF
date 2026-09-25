@@ -1397,6 +1397,24 @@ internal static class DocxImagesTests
         TestAssert.True(Math.Abs((afterX - imageX) - 72d) < 0.5, "Following text must start after the 72pt image end: after=" + afterX + " image=" + imageX);
     }
 
+    // RV05: image-driven breaking. An image that does not fit the line remainder
+    // breaks onto the next line instead of overflowing past the margin.
+    public static void DocxMidLineImageForcesBreakBeforeItself()
+    {
+        var wideRun = new DocxTextRun("AAAA", 10d, null, false, false, false, null, "Wide") { SourceRunIndex = 0 };
+        var tailRun = new DocxTextRun("BBBBB CCCCC DDDDD EEEEE FFFFF GGGGG", 10d, null, false, false, false, null, null) { SourceRunIndex = 2 };
+        var breakImage = new DocxInlineImage(24d, 18d, "image/png", new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "word/media/image1.png") { SourceRunIndex = 1 };
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAAA", 10d, 10d) with { Runs = new[] { wideRun, tailRun }, Images = new[] { breakImage }, LineSpacingPoints = null };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(paragraph) }, new DocxTable[0]);
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
+        DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").ToArray();
+        TestAssert.True(textLines.Length >= 2, "Expected wrapped lines, found " + textLines.Length);
+        TestAssert.Equal(4, textLines[0].TextLength);
+        DocxLayoutItemSnapshot breakImageItem = snapshot.Pages[0].Items.Single(item => item.Kind == "InlineImage");
+        TestAssert.True(Math.Abs(breakImageItem.Y + breakImageItem.Height - textLines[1].Y) < 0.5, "Image must sit on the second line baseline: imageBottom=" + (breakImageItem.Y + breakImageItem.Height) + " baseline=" + textLines[1].Y);
+        TestAssert.True(Math.Abs(breakImageItem.X - textLines[1].X) < 0.01, "Image must start the second line: imageX=" + breakImageItem.X + " lineX=" + textLines[1].X);
+    }
+
     // RV05: table-cell paragraphs place affined images mid-line like body text.
     // Line 1 holds BEFORE, AFTER and its terminal space; the reader-owned implicit
     // terminal table paragraph emits separately afterwards.
