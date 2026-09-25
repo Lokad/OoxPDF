@@ -15,7 +15,9 @@ param(
 
     [switch] $UseEffectiveMatrix,
 
-    [switch] $CompareDecodedText
+    [switch] $CompareDecodedText,
+
+    [switch] $MergeSameLineOperations
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,8 +50,42 @@ function TextContent($op) {
     return [string]$op.Payload
 }
 
+function Merge-SameLineOperations($Operations) {
+    $sorted = @($Operations | Sort-Object -Property @{ Expression = { [int]$_.PageNumber }; Ascending = $true }, @{ Expression = { [Math]::Round((TextY $_), 1) }; Ascending = $true }, @{ Expression = { (TextX $_) }; Ascending = $true })
+    $merged = New-Object System.Collections.Generic.List[object]
+    $current = $null
+    $currentLineKey = $null
+    $currentEndX = 0d
+    foreach ($op in $sorted) {
+        $lineKey = [string]$op.PageNumber + "|" + [Math]::Round((TextY $op), 1)
+        $opEndX = (TextX $op) + [double]$op.EmittedAdvancePoints
+        if ($null -ne $current -and $currentLineKey -eq $lineKey -and ((TextX $op) - $currentEndX) -le 1d) {
+            $current.DecodedText = (TextContent $current) + (TextContent $op)
+            $current.Payload = [string]$current.Payload + [string]$op.Payload
+            $current.EmittedAdvancePoints = [double]$current.EmittedAdvancePoints + [double]$op.EmittedAdvancePoints
+            $current.NaturalWidthPoints = [double]$current.NaturalWidthPoints + [double]$op.NaturalWidthPoints
+            $current.AdjustmentTotalPoints = [double]$current.AdjustmentTotalPoints + [double]$op.AdjustmentTotalPoints
+            $current.NetSpacingGapTotalPoints = [double]$current.NetSpacingGapTotalPoints + [double]$op.NetSpacingGapTotalPoints
+            $current.CharacterSpacingGapTotalPoints = [double]$current.CharacterSpacingGapTotalPoints + [double]$op.CharacterSpacingGapTotalPoints
+            $current.DecodedRuneCount = [int]$current.DecodedRuneCount + [int]$op.DecodedRuneCount
+            $current.TextChunkCount = [int]$current.TextChunkCount + [int]$op.TextChunkCount
+            $currentEndX = [Math]::Max($currentEndX, $opEndX)
+            continue
+        }
+        if ($null -ne $current) { $merged.Add($current) }
+        $current = $op.PSObject.Copy()
+        $currentLineKey = $lineKey
+        $currentEndX = $opEndX
+    }
+    if ($null -ne $current) { $merged.Add($current) }
+    return $merged.ToArray()
+}
 $referenceOps = Read-JsonArray $Reference
 $candidateOps = Read-JsonArray $Candidate
+if ($MergeSameLineOperations) {
+    $referenceOps = Merge-SameLineOperations $referenceOps
+    $candidateOps = Merge-SameLineOperations $candidateOps
+}
 $rows = New-Object System.Collections.Generic.List[object]
 $failures = 0
 

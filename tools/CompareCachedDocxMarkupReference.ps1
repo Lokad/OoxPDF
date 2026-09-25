@@ -1929,9 +1929,52 @@ function Sort-TextOperationsForGate($Operations) {
             @{ Expression = { if ($_.DecodedRuneCount -ne $null) { [int]$_.DecodedRuneCount } else { 0 } } })
 }
 
+function Merge-SameLineTextOperations($Operations) {
+    $sorted = @($Operations | Sort-Object -Property `
+        @{ Expression = { if ($_.PageNumber -ne $null) { [int]$_.PageNumber } else { 0 } } }, `
+        @{ Expression = { $y = Get-DoubleMetric $_ @("EffectiveY", "Y"); if ($null -eq $y) { 0d } else { [Math]::Round($y, 1) } } }, `
+        @{ Expression = { $x = Get-DoubleMetric $_ @("EffectiveX", "X"); if ($null -eq $x) { 0d } else { $x } } })
+    $merged = New-Object System.Collections.Generic.List[object]
+    $current = $null
+    $currentLineKey = $null
+    $currentEndX = 0d
+    foreach ($op in $sorted) {
+        $opX = Get-DoubleMetric $op @("EffectiveX", "X")
+        $opY = Get-DoubleMetric $op @("EffectiveY", "Y")
+        $opAdvance = Get-DoubleMetric $op @("EmittedAdvancePoints")
+        if ($null -eq $opX) { $opX = 0d }
+        if ($null -eq $opY) { $opY = 0d }
+        if ($null -eq $opAdvance) { $opAdvance = 0d }
+        $pageKey = 0
+        if ($op.PageNumber -ne $null) { $pageKey = [int]$op.PageNumber }
+        $lineKey = [string]$pageKey + "|" + [Math]::Round($opY, 1)
+        $opEndX = $opX + $opAdvance
+        if ($null -ne $current -and $currentLineKey -eq $lineKey -and ($opX - $currentEndX) -le 1d) {
+            $current.DecodedText = [string]$current.DecodedText + [string]$op.DecodedText
+            $current.Payload = [string]$current.Payload + [string]$op.Payload
+            $current.EmittedAdvancePoints = [double]$current.EmittedAdvancePoints + $opAdvance
+            $current.NaturalWidthPoints = [double]$current.NaturalWidthPoints + [double]$op.NaturalWidthPoints
+            $current.AdjustmentTotalPoints = [double]$current.AdjustmentTotalPoints + [double]$op.AdjustmentTotalPoints
+            $current.NetSpacingGapTotalPoints = [double]$current.NetSpacingGapTotalPoints + [double]$op.NetSpacingGapTotalPoints
+            $current.CharacterSpacingGapTotalPoints = [double]$current.CharacterSpacingGapTotalPoints + [double]$op.CharacterSpacingGapTotalPoints
+            $current.DecodedRuneCount = [int]$current.DecodedRuneCount + [int]$op.DecodedRuneCount
+            $current.TextChunkCount = [int]$current.TextChunkCount + [int]$op.TextChunkCount
+            $currentEndX = [Math]::Max($currentEndX, $opEndX)
+            continue
+        }
+        if ($null -ne $current) { $merged.Add($current) }
+        $current = $op.PSObject.Copy()
+        $currentLineKey = $lineKey
+        $currentEndX = $opEndX
+    }
+    if ($null -ne $current) { $merged.Add($current) }
+    return $merged.ToArray()
+}
 function New-TextGateDeltaSummary($ReferenceTextOperations, $CandidateTextOperations) {
     $reference = @(Sort-TextOperationsForGate $ReferenceTextOperations)
     $candidate = @(Sort-TextOperationsForGate $CandidateTextOperations)
+    $reference = @(Merge-SameLineTextOperations $reference)
+    $candidate = @(Merge-SameLineTextOperations $candidate)
     $pairCount = [Math]::Min($reference.Count, $candidate.Count)
     $maxBaselineDelta = $null
     $maxXDelta = $null
@@ -3312,6 +3355,7 @@ if ((Test-Path -LiteralPath $referenceTextOperations) -and (Test-Path -LiteralPa
         -FontSizeTolerance $TextFontSizeTolerance `
         -CharacterSpacingTolerance $TextCharacterSpacingTolerance `
         -MatchByPosition `
+        -MergeSameLineOperations `
         -UseEffectiveMatrix *> $textLog
     $textComparisonExitCode = $LASTEXITCODE
 }
