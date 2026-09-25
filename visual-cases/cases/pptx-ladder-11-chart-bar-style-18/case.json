@@ -16,10 +16,10 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 2.2,
+    "maxMeanAbsoluteError": 2.0,
     "minStructuralSimilarity": 0.90,
     "minForegroundRecall": 0.88,
-    "maxChangedPixelRatioAtThreshold16": 0.06,
-    "minForegroundColorHistogramCorrelation": 0.85
+    "maxChangedPixelRatioAtThreshold16": 0.03,
+    "minForegroundColorHistogramCorrelation": 0.95
   }
 }

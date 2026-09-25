@@ -1839,6 +1839,7 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Sh1 sh", pdf);
         TestAssert.Contains("ShadingType 2", pdf);
+        TestAssert.Contains("/Bounds [", pdf);
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
 
@@ -2020,6 +2021,55 @@ internal static class PptxChartRenderingTests
         OoxPdfConverter.Convert(input, output);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.DoesNotContain("1 G", pdf);
+    }
+    // RV04: style-18 horizontal bars paint the same vertical base-relative gradient
+    // (fails: flat solid, no shading resource).
+    public static void BarStyle18HorizontalBarPaintsGradient()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:barChart>
+              <c:barDir val="bar"/>
+              <c:grouping val="clustered"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Sh2 sh", pdf);
+        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
+    }
+
+    // RV04: style-18 stacked columns paint each segment with its own bar-relative
+    // gradient instead of one flat compound path (fails: flat solid, no shading).
+    public static void BarStyle18StackedColumnPaintsPerSegmentGradient()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:barChart>
+              <c:barDir val="col"/>
+              <c:grouping val="stacked"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Sh2 sh", pdf);
+        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
     public static void PptxSyntheticBarChartLegendSwatchesUseSeriesStroke()
     {

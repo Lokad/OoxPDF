@@ -123,11 +123,11 @@ internal sealed partial class PptxRenderer
             {
                 if (stacked)
                 {
-                    RenderStackedHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth);
+                    RenderStackedHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, chartStyleId);
                 }
                 else
                 {
-                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, plotOptions.Overlap);
+                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, plotOptions.Overlap, chartStyleId);
                 }
 
                 return;
@@ -135,7 +135,7 @@ internal sealed partial class PptxRenderer
 
             if (stacked)
             {
-                RenderStackedColumns(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth);
+                RenderStackedColumns(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, chartStyleId);
                 return;
             }
 
@@ -159,12 +159,12 @@ internal sealed partial class PptxRenderer
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
                     double barY = Math.Min(columnBaseY, valueY);
                     double barHeight = Math.Abs(valueY - columnBaseY);
-                    bool hasExplicitFill = (seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is not null) || HasExplicitChartPointFill(pointFills, seriesIndex, category);
-                    if (!TryPaintStyleColumnGradient(graphics, plotClipBox, chartStyleId, hasExplicitFill, fill, value, barX, barY, barWidth, barHeight))
+                    bool isStyleDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) && !HasExplicitChartPointFill(pointFills, seriesIndex, category);
+                    if (!(isStyleDriven && TryGetStyleBarGradientStops(chartStyleId, fill, out IReadOnlyList<PdfShadingStop> stops) && PaintBarGradientRect(graphics, plotClipBox, barX, barY, barWidth, barHeight, stops)))
                     {
                         FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
                     }
-                    PaintStyleColumnOutline(graphics, plotClipBox, chartStyleId, hasExplicitFill, fill, barX, barY, barWidth, barHeight);
+                    PaintStyleColumnOutline(graphics, plotClipBox, chartStyleId, !isStyleDriven, fill, barX, barY, barWidth, barHeight);
                     StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
                 }
             }
@@ -1408,24 +1408,53 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // RV04: effective-style-18/26 clustered columns paint a vertical base-relative
-    // gradient sampled from Office bar references; other styles, explicit fills,
-    // unmeasured bases, transparent fills and non-positive columns keep the flat
-    // rectangle. Stacked and horizontal bars keep the flat path.
-    private static bool TryPaintStyleColumnGradient(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, int? chartStyleId, bool hasExplicitFill, ChartSeriesFill fill, double value, double barX, double barY, double barWidth, double barHeight)
+    // RV04: effective-style-18/26 bars paint a vertical base-relative gradient sampled
+    // from Office bar references: every painted series rect (clustered bar, stack segment,
+    // horizontal bar) carries bar-relative Coords spanning twice its height from its
+    // bottom edge, so the visible bottom half runs light-middle-dark. Other styles,
+    // transparent or patterned fills and unmeasured bases keep the flat path.
+    private static bool TryGetStyleBarGradientStops(int? chartStyleId, ChartSeriesFill fill, out IReadOnlyList<PdfShadingStop> stops)
     {
+        stops = Array.Empty<PdfShadingStop>();
         if ((chartStyleId != 18 && chartStyleId != 26 && chartStyleId != 118 && chartStyleId != 126) ||
-            hasExplicitFill ||
             fill.PatternPreset is not null ||
-            fill.Alpha < 1d ||
-            value < 0d ||
-            barWidth <= 0d ||
-            barHeight <= 0d)
+            fill.Alpha < 1d)
         {
             return false;
         }
 
-        if (!TryReadStyleColumnGradientStops(fill.Color, out RgbColor top, out RgbColor bottom))
+        if (fill.Color.Equals(new RgbColor(21, 96, 130)))
+        {
+            stops = StyleBarGradientStops(new RgbColor(73, 116, 145), new RgbColor(16, 98, 135), new RgbColor(8, 88, 124));
+            return true;
+        }
+
+        if (fill.Color.Equals(new RgbColor(233, 113, 50)))
+        {
+            stops = StyleBarGradientStops(new RgbColor(237, 130, 86), new RgbColor(242, 110, 41), new RgbColor(225, 94, 25));
+            return true;
+        }
+
+        return false;
+    }
+
+    // RV04: five-knot forward stitch matching the visible bottom half of the Office
+    // symmetric profile (dark, middle, light, middle, dark at quarter offsets).
+    private static IReadOnlyList<PdfShadingStop> StyleBarGradientStops(RgbColor light, RgbColor middle, RgbColor dark)
+    {
+        return
+        [
+            new PdfShadingStop(0d, dark.Red, dark.Green, dark.Blue),
+            new PdfShadingStop(0.25d, middle.Red, middle.Green, middle.Blue),
+            new PdfShadingStop(0.5d, light.Red, light.Green, light.Blue),
+            new PdfShadingStop(0.75d, middle.Red, middle.Green, middle.Blue),
+            new PdfShadingStop(1d, dark.Red, dark.Green, dark.Blue),
+        ];
+    }
+
+    private static bool PaintBarGradientRect(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double barX, double barY, double barWidth, double barHeight, IReadOnlyList<PdfShadingStop> stops)
+    {
+        if (barWidth <= 0d || barHeight <= 0d)
         {
             return false;
         }
@@ -1434,7 +1463,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.SaveState();
             graphics.ClipRectangle(barX, barY, barWidth, barHeight);
-            graphics.PaintAxialShading(barX, barY + barHeight, barX, barY, top.Red, top.Green, top.Blue, bottom.Red, bottom.Green, bottom.Blue);
+            graphics.PaintAxialShading(barX, barY + 2d * barHeight, barX, barY, stops);
             graphics.RestoreState();
         });
         return true;
@@ -1464,30 +1493,6 @@ internal sealed partial class PptxRenderer
             graphics.StrokeRectangle(barX, barY, barWidth, barHeight);
             graphics.RestoreState();
         });
-    }
-
-    // RV04: style-18/26 column gradient stops sampled from Office bar references at
-    // two theme bases (blue accent1, orange accent2); the visible profile runs light
-    // at the bar top to dark at the baseline. Other bases keep the flat fill.
-    private static bool TryReadStyleColumnGradientStops(RgbColor baseColor, out RgbColor top, out RgbColor bottom)
-    {
-        top = default;
-        bottom = default;
-        if (baseColor.Equals(new RgbColor(21, 96, 130)))
-        {
-            top = new RgbColor(73, 116, 145);
-            bottom = new RgbColor(8, 88, 124);
-            return true;
-        }
-
-        if (baseColor.Equals(new RgbColor(233, 113, 50)))
-        {
-            top = new RgbColor(237, 130, 86);
-            bottom = new RgbColor(225, 94, 25);
-            return true;
-        }
-
-        return false;
     }
 
     private static ChartSeriesStroke DefaultChartGridlineStroke(bool major)
@@ -1659,7 +1664,7 @@ internal sealed partial class PptxRenderer
         return patternPreset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent, int? chartStyleId)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent, overlapPercent);
@@ -1681,13 +1686,21 @@ internal sealed partial class PptxRenderer
                 double barX = Math.Min(zeroX, valueX);
                 double barWidth = Math.Abs(valueX - zeroX);
                 double barY = categoryY + seriesIndex * step;
-                FillChartRectangleInPlotClip(graphics, plotBox, barX, barY, barWidth, barHeight, fill);
+                bool isStyleDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) && !HasExplicitChartPointFill(pointFills, seriesIndex, category);
+                if (isStyleDriven && TryGetStyleBarGradientStops(chartStyleId, fill, out IReadOnlyList<PdfShadingStop> stops))
+                {
+                    PaintBarGradientRect(graphics, plotBox, barX, barY, barWidth, barHeight, stops);
+                }
+                else
+                {
+                    FillChartRectangleInPlotClip(graphics, plotBox, barX, barY, barWidth, barHeight, fill);
+                }
                 StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
             }
         }
     }
 
-    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, int? chartStyleId)
     {
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = GetStackedBarWidth(categoryWidth, gapWidthPercent);
@@ -1732,9 +1745,21 @@ internal sealed partial class PptxRenderer
                 strokeSegments.Add(new ChartStackedBarSegment(seriesIndex, category, categoryX, segmentY, barWidth, segmentHeight, value));
             }
 
+            bool seriesDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) &&
+                (seriesIndex >= pointFills.Count || pointFills[seriesIndex].Count == 0);
             foreach (ChartStackedBarFillRun run in fillRuns)
             {
-                FillChartRectanglesAsCompoundPathInPlotClip(graphics, plotBox, run.Rectangles, run.Fill);
+                if (seriesDriven && TryGetStyleBarGradientStops(chartStyleId, run.Fill, out IReadOnlyList<PdfShadingStop> stops))
+                {
+                    foreach (ChartRectangle rectangle in run.Rectangles)
+                    {
+                        PaintBarGradientRect(graphics, plotBox, rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height, stops);
+                    }
+                }
+                else
+                {
+                    FillChartRectanglesAsCompoundPathInPlotClip(graphics, plotBox, run.Rectangles, run.Fill);
+                }
             }
         }
 
@@ -1770,7 +1795,7 @@ internal sealed partial class PptxRenderer
         fillRuns.Add(new ChartStackedBarFillRun(fill, rectangles));
     }
 
-    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent)
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, int? chartStyleId)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetStackedBarWidth(categoryHeight, gapWidthPercent);
@@ -1815,9 +1840,21 @@ internal sealed partial class PptxRenderer
                 strokeSegments.Add(new ChartStackedBarSegment(seriesIndex, category, segmentX, categoryY, segmentWidth, barHeight, value));
             }
 
+            bool seriesDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) &&
+                (seriesIndex >= pointFills.Count || pointFills[seriesIndex].Count == 0);
             foreach (ChartStackedBarFillRun run in fillRuns)
             {
-                FillChartRectanglesAsCompoundPathInPlotClip(graphics, plotBox, run.Rectangles, run.Fill);
+                if (seriesDriven && TryGetStyleBarGradientStops(chartStyleId, run.Fill, out IReadOnlyList<PdfShadingStop> stops))
+                {
+                    foreach (ChartRectangle rectangle in run.Rectangles)
+                    {
+                        PaintBarGradientRect(graphics, plotBox, rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height, stops);
+                    }
+                }
+                else
+                {
+                    FillChartRectanglesAsCompoundPathInPlotClip(graphics, plotBox, run.Rectangles, run.Fill);
+                }
             }
         }
 
