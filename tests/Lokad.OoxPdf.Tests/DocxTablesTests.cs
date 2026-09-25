@@ -515,6 +515,56 @@ internal static class DocxTablesTests
         TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text.");
     }
 
+    public static void DocxRendererEmitsTableCellHyperlinkAnnotationsNextToFields()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr><w:tblW w:w="9000" w:type="dxa"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="4500"/><w:gridCol w:w="4500"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:hyperlink r:id="rIdTable"><w:r><w:t>table link</w:t></w:r></w:hyperlink></w:p></w:tc>
+                        <w:tc><w:p><w:fldSimple w:instr=" REF FieldTarget "><w:r><w:t>table field</w:t></w:r></w:fldSimple></w:p></w:tc>
+
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdTable" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/table" TargetMode="External"/>
+                </Relationships>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        System.Collections.Generic.List<PdfLinkAnnotation> all = page.Annotations.ToList();
+        TestAssert.True(all.Any(annotation => annotation.Uri == "https://example.invalid/table"), "annots=" + System.String.Join(";", all.Select(annotation => (annotation.Uri ?? "null") + "@" + annotation.X)));
+        PdfLinkAnnotation annotation = all.Single(annotation => annotation.Uri == "https://example.invalid/table");
+        TestAssert.True(annotation.Width > 0d, "The annotation should cover table-cell hyperlink text next to fields.");
+    }
+
     public static void DocxWordCompatibleAllMarkupUsesEmittedAdvanceForTableCellHyperlinkAnnotations()
     {
         const string linkText = "LinkedWords";
@@ -576,10 +626,10 @@ internal static class DocxTablesTests
         PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
-            Math.Abs(annotation.X - linkSegment.X) < 0.001d,
+            Math.Abs(annotation.X - (linkSegment.X - (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup table-cell hyperlink annotations should use emitted table-cell segment x coordinates.");
         TestAssert.True(
-            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup table-cell hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
@@ -3122,3 +3172,4 @@ internal static class DocxTablesTests
         throw new InvalidOperationException("Case file not found: " + name);
     }
 }
+

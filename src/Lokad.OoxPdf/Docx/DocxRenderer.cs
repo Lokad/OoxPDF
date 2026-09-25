@@ -1074,9 +1074,35 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)
         {
             var annotations = new List<PdfLinkAnnotation>();
+            // RV06: measured Word hyperlink rectangle geometry: horizontal pads
+            // 2.22-2.41pt per side at 11pt, line tops at baseline plus 11.29-11.36pt,
+            // non-last bottoms tiling the next page line top, last-line bottoms at
+            // baseline minus 13.60-13.67pt (a single-spaced page-last sample stops at
+            // 11.36pt instead; line-height-dependent bottoms stay open).
+            const double HyperlinkRectHorizontalPadEm = 2.3 / 11.0;
+            const double HyperlinkRectTopEm = 11.33 / 11.0;
+            const double HyperlinkRectBottomEm = 13.64 / 11.0;
+            List<(DocxHyperlinkSpan Link, double MinX, double MaxX)>? previousLineLinks = null;
+            double previousLineTop = 0d;
+            double previousLineBottomFallback = 0d;
+            double? previousDelta = null;
             foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // RV06: Office tiles link rectangles down to the next page line top across all
+                // lines, so a held line flushes here even when the current line has no links.
+                if (previousLineLinks is not null && previousDelta is not null)
+                {
+                    double flushNextTop = line.BaselineY + previousDelta.Value + HyperlinkRectTopEm * line.FontSize;
+                    // RV06: tile only into lines below the held line; side-by-side table-cell
+                    // lines share one baseline, so they keep the full-height fallback instead.
+                    double flushBottom = flushNextTop < previousLineTop
+                        ? Math.Max(flushNextTop, previousLineBottomFallback)
+                        : previousLineBottomFallback;
+                    EmitLineLinkRects(previousLineLinks, previousLineTop, flushBottom);
+                    previousLineLinks = null;
+                }
+
                 if (line.SourceParagraph is not { } paragraph ||
                     paragraph.Hyperlinks.Count == 0)
                 {
@@ -1084,9 +1110,10 @@ internal sealed partial class DocxRenderer
                 }
 
                 IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
-                // RV06: Office emits one link rectangle per hyperlink per line.
-                // Fragments of one hyperlink share a merged union rectangle.
-                var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MinY, double MaxX, double MaxY)>();
+                // RV06: Office emits one padded link rectangle per hyperlink per line and
+                // tiles them top-anchored down to the next page line top.
+                double lineLinkPad = HyperlinkRectHorizontalPadEm * line.FontSize;
+                var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX, double Top, double BaseBl, double BaseFs)>();
                 foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1101,29 +1128,19 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
 
-                    // RV01: fallback segments use diagnosed constants for link rectangles.
-                    double ascender;
-                    double descender;
-                    if (segment.FallbackFace is not null)
-                    {
-                        ascender = segment.FontSize * PdfFallbackFont.AscentEm;
-                        descender = segment.FontSize * PdfFallbackFont.DescentEm;
-                    }
-                    else if (segment.Resource is { } hyperlinkResource)
-                    {
-                        OpenTypeFont hyperlinkFont = hyperlinkResource.Embedded.Font;
-                        ascender = hyperlinkFont.Os2.WindowsAscender * segment.FontSize / hyperlinkFont.UnitsPerEm;
-                        descender = hyperlinkFont.Os2.WindowsDescender * segment.FontSize / hyperlinkFont.UnitsPerEm;
-                    }
-                    else
+                    // Fragments without a measurable font resource cannot anchor a rectangle.
+                    // RV01: fallback faces stay measurable through diagnosed constants downstream.
+                    if (segment.FallbackFace is null && segment.Resource is null)
                     {
                         continue;
                     }
+
                     double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
                     double fragmentMinX = segment.X;
-                    double fragmentMinY = segment.BaselineY - descender;
                     double fragmentMaxX = segment.X + annotationWidth;
-                    double fragmentMaxY = segment.BaselineY + ascender;
+                    double fragmentTop = segment.BaselineY + HyperlinkRectTopEm * segment.FontSize;
+                    double fragmentBl = segment.BaselineY;
+                    double fragmentFs = segment.FontSize;
                     bool linkTargetEmittable = IsExternalHyperlink(link) ||
                         (!string.IsNullOrEmpty(link.Anchor) && bookmarkDestinations.ContainsKey(link.Anchor));
                     if (!linkTargetEmittable)
@@ -1137,36 +1154,79 @@ internal sealed partial class DocxRenderer
                         {
                             continue;
                         }
-                        (DocxHyperlinkSpan _, double absorbedMinX, double absorbedMinY, double absorbedMaxX, double absorbedMaxY) = mergedLinkRects[mergedIndex];
+                        (DocxHyperlinkSpan _, double absorbedMinX, double absorbedMaxX, double absorbedTop, double absorbedBl, double absorbedFs) = mergedLinkRects[mergedIndex];
                         mergedLinkRects[mergedIndex] = (
                             link,
                             Math.Min(absorbedMinX, fragmentMinX),
-                            Math.Min(absorbedMinY, fragmentMinY),
                             Math.Max(absorbedMaxX, fragmentMaxX),
-                            Math.Max(absorbedMaxY, fragmentMaxY));
+                            Math.Max(absorbedTop, fragmentTop),
+                            fragmentTop > absorbedTop ? fragmentBl : absorbedBl,
+                            fragmentTop > absorbedTop ? fragmentFs : absorbedFs);
                         fragmentAbsorbed = true;
                         break;
                     }
                     if (!fragmentAbsorbed)
                     {
-                        mergedLinkRects.Add((link, fragmentMinX, fragmentMinY, fragmentMaxX, fragmentMaxY));
+                        mergedLinkRects.Add((link, fragmentMinX, fragmentMaxX, fragmentTop, fragmentBl, fragmentFs));
                     }
                 }
-                foreach ((DocxHyperlinkSpan mergedLink, double mergedMinX, double mergedMinY, double mergedMaxX, double mergedMaxY) in mergedLinkRects)
+                if (mergedLinkRects.Count > 0)
                 {
-                    if (IsExternalHyperlink(mergedLink))
+                    double heldTop = double.NegativeInfinity;
+                    double heldBl = 0d;
+                    double heldFs = 0d;
+                    foreach ((DocxHyperlinkSpan _, double _, double _, double mergedTop, double mergedBl, double mergedFs) in mergedLinkRects)
                     {
-                        annotations.Add(PdfLinkAnnotation.ToUri(mergedMinX, mergedMinY, mergedMaxX - mergedMinX, mergedMaxY - mergedMinY, mergedLink.Target ?? string.Empty));
+                        if (mergedTop > heldTop)
+                        {
+                            heldTop = mergedTop;
+                            heldBl = mergedBl;
+                            heldFs = mergedFs;
+                        }
                     }
-                    else if (!string.IsNullOrEmpty(mergedLink.Anchor) &&
-                        bookmarkDestinations.TryGetValue(mergedLink.Anchor, out PdfLinkDestination mergedDestination))
+
+                    previousLineLinks = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX)>(mergedLinkRects.Count);
+                    foreach ((DocxHyperlinkSpan mergedLink, double mergedMinX, double mergedMaxX, double _, double _, double _) in mergedLinkRects)
                     {
-                        annotations.Add(PdfLinkAnnotation.ToDestination(mergedMinX, mergedMinY, mergedMaxX - mergedMinX, mergedMaxY - mergedMinY, mergedDestination));
+                        previousLineLinks.Add((mergedLink, mergedMinX - lineLinkPad, mergedMaxX + lineLinkPad));
                     }
+
+                    previousLineTop = heldTop;
+                    previousLineBottomFallback = heldBl - HyperlinkRectBottomEm * heldFs;
+                    previousDelta = heldBl - line.BaselineY;
                 }
             }
 
+            if (previousLineLinks is not null)
+            {
+                EmitLineLinkRects(previousLineLinks, previousLineTop, previousLineBottomFallback);
+            }
+
             return annotations;
+
+        void EmitLineLinkRects(
+            List<(DocxHyperlinkSpan Link, double MinX, double MaxX)> emissions,
+            double top,
+            double bottom)
+        {
+            if (top - bottom <= 0d)
+            {
+                return;
+            }
+
+            foreach ((DocxHyperlinkSpan mergedLink, double mergedMinX, double mergedMaxX) in emissions)
+            {
+                if (IsExternalHyperlink(mergedLink))
+                {
+                    annotations.Add(PdfLinkAnnotation.ToUri(mergedMinX, bottom, mergedMaxX - mergedMinX, top - bottom, mergedLink.Target ?? string.Empty));
+                }
+                else if (!string.IsNullOrEmpty(mergedLink.Anchor) &&
+                    bookmarkDestinations.TryGetValue(mergedLink.Anchor, out PdfLinkDestination mergedDestination))
+                {
+                    annotations.Add(PdfLinkAnnotation.ToDestination(mergedMinX, bottom, mergedMaxX - mergedMinX, top - bottom, mergedDestination));
+                }
+            }
+        }
 
         bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
         {

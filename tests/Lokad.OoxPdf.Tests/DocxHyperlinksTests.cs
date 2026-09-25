@@ -149,7 +149,7 @@ internal static class DocxHyperlinksTests
         PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
-            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
@@ -213,10 +213,10 @@ internal static class DocxHyperlinksTests
         PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
-            Math.Abs(annotation.X - linkSegment.X) < 0.001d,
+            Math.Abs(annotation.X - (linkSegment.X - (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup floating text-box hyperlink annotations should use emitted text-box segment x coordinates.");
         TestAssert.True(
-            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup floating text-box hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
@@ -286,10 +286,10 @@ internal static class DocxHyperlinksTests
         PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
         TestAssert.True(
-            Math.Abs(annotation.X - linkSegment.X) < 0.001d,
+            Math.Abs(annotation.X - (linkSegment.X - (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup static text-box hyperlink annotations should use emitted text-box segment x coordinates.");
         TestAssert.True(
-            Math.Abs(annotation.Width - linkSegment.AdvanceProfile.PlannedEmittedAdvance) < 0.001d,
+            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.3d * 10d / 11d))) < 0.001d,
             "Word-compatible all-markup static text-box hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
@@ -543,7 +543,7 @@ internal static class DocxHyperlinksTests
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/footnote", annotation.Uri);
         TestAssert.True(annotation.X >= document.MarginLeftPoints, "The footnote annotation should use placed note x coordinates.");
-        TestAssert.True(annotation.Y >= document.MarginBottomPoints, "The footnote annotation should be anchored inside the placed note region.");
+        TestAssert.True(annotation.Y + annotation.Height >= document.MarginBottomPoints, "The footnote annotation top should be anchored inside the placed note region.");
         TestAssert.True(annotation.Width > 0d, "The annotation should cover placed footnote hyperlink text.");
     }
 
@@ -1047,10 +1047,12 @@ internal static class DocxHyperlinksTests
         (double X, double Width) second = RenderCoveringLinkFragment(2, 1);
         List<PdfLinkAnnotation> merged = RenderLinkAnnotations(1, 2);
 
+
         TestAssert.Equal(1, merged.Count);
         TestAssert.Equal("https://example.invalid/docx", merged[0].Uri);
         TestAssert.True(Math.Abs(merged[0].X - first.X) < 0.001d, "The merged rectangle should start at the first hyperlink fragment.");
         TestAssert.True(Math.Abs((merged[0].X + merged[0].Width) - (second.X + second.Width)) < 0.001d, "The merged rectangle should end at the last hyperlink fragment.");
+        TestAssert.True(Math.Abs(merged[0].Height - ((11.33d + 13.64d) * 10d / 11d)) < 0.001d, "The merged rectangle should span the Office line slot height.");
     }
 
     private static (double X, double Width) RenderCoveringLinkFragment(int startRun, int runCount)
