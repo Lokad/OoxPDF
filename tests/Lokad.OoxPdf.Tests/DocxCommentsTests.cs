@@ -2390,8 +2390,8 @@ internal static class DocxCommentsTests
 
     public static void DocxWordCompatibleBalloonHeightFitsWrappedBodyContent()
     {
-        // Office A/B (dense probe rects, Word-COM rendered): two-row comment balloons are
-        // 21.45 tall - heights must grow with the wrapped body rows.
+        // bodies: the 24-word body wraps to four rows at this lane width, and heights
+        // must grow with the wrapped body rows.
         DocxParagraph paragraph = DocxTests.CreateCommentMarkerParagraph("Wrapped balloon anchor text here", "1");
         DocxRelatedStory commentStory = new(
             DocxRelatedStoryKind.Comment,
@@ -2420,13 +2420,14 @@ internal static class DocxCommentsTests
         };
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
-        double expected = 9.21d + 9d * printScale * 1.2d + 3.4d;
+        
+        double expected = 9.21d + 3 * 9d * printScale * 1.2d + 3.4d;
 
         DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
 
-        TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit two text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit four text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
     }
 
     public static void DocxWordCompatibleBalloonHeightKeepsThreadedLegacyHeight()
@@ -2550,5 +2551,63 @@ internal static class DocxCommentsTests
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
         TestAssert.Equal(4, DocxTests.CountOccurrences(page.Content, "0.973 0.863 0.867 rg"));
+    }
+    public static void DocxWordCompatibleAllMarkupRendersFullLongCommentBalloonBody()
+    {
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Anchored text </w:t></w:r>
+                      <w:commentRangeStart w:id="9"/>
+                      <w:r><w:t>range here</w:t></w:r>
+                      <w:commentRangeEnd w:id="9"/>
+                      <w:r><w:commentReference w:id="9"/></w:r>
+                      <w:r><w:t> tail.</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="9" w:author="Probe" w:initials="PB" w:date="2026-06-01T00:00:00Z">
+                    <w:p><w:r><w:t>A deliberately long balloon body with many words to force several wrapped rows inside the narrow margin lane plus the final tail phrase for full-body verification</w:t></w:r></w:p>
+                  </w:comment>
+                </w:comments>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
+        TestAssert.True(balloon.Height > 30d, "Word-compatible balloons should grow past the two-row preview cap for long comment bodies. Height=" + balloon.Height.ToString(CultureInfo.InvariantCulture));
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        TestAssert.True(!page.Content.Contains("...", StringComparison.Ordinal), "Word-compatible balloons should render full comment bodies without truncation markers.");
     }
 }

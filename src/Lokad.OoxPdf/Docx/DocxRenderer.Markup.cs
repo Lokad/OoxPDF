@@ -451,7 +451,7 @@ internal sealed partial class DocxRenderer
                         commentStories.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout? storyLayout);
                         commentRepliesByParentId.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout[]? replies);
                         string commentBody = TrimBalloonText(BuildCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
-                        string wordCompatibleCommentBody = TrimBalloonText(BuildWordCompatibleCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
+                        string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout, replies ?? []);
                         DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
                         DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
@@ -1162,28 +1162,31 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        double secondBaselineY = firstBaselineY - lineGap;
-        DrawBalloonText(
-            graphics,
-            bodyResource,
-            lines[1],
-            textX,
-            secondBaselineY,
-            fontSize,
-            placement.BodyRgb.Red,
-            placement.BodyRgb.Green,
-            placement.BodyRgb.Blue,
-            WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints);
-        DrawBalloonText(
-            graphics,
-            bodyResource,
-            " ",
-            textX + labelResource.Embedded.MeasureTextPoints(lines[1], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
-            secondBaselineY,
-            fontSize,
-            placement.BodyRgb.Red,
-            placement.BodyRgb.Green,
-            placement.BodyRgb.Blue);
+        for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++)
+        {
+            double continuationBaselineY = firstBaselineY - lineIndex * lineGap;
+            DrawBalloonText(
+                graphics,
+                bodyResource,
+                lines[lineIndex],
+                textX,
+                continuationBaselineY,
+                fontSize,
+                placement.BodyRgb.Red,
+                placement.BodyRgb.Green,
+                placement.BodyRgb.Blue,
+                WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints);
+            DrawBalloonText(
+                graphics,
+                bodyResource,
+                " ",
+                textX + labelResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
+                continuationBaselineY,
+                fontSize,
+                placement.BodyRgb.Red,
+                placement.BodyRgb.Green,
+                placement.BodyRgb.Blue);
+        }
     }
 
     private static double ResolveWordCompatibleBalloonFirstBaselineY(DocxMarkupBalloonPlacement placement)

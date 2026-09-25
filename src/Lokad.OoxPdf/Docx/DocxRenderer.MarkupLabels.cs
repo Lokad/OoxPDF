@@ -66,15 +66,22 @@ internal sealed partial class DocxRenderer
         }
 
         string[] words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var lines = new List<string>();
         string firstLine = ConsumeBalloonWords(0, firstLineWidth, out int nextWordIndex);
         if (nextWordIndex >= words.Length)
         {
             return [firstLine];
         }
 
-        string secondLine = string.Join(" ", words.Skip(nextWordIndex));
-        secondLine = FitWordCompatibleBalloonLine(secondLine, continuationWidth, embedded, fontSize);
-        return [firstLine + " ", secondLine];
+        // RV06: Word-compatible balloons render full comment text across as many
+        // continuation rows as needed instead of truncating after the second row.
+        lines.Add(firstLine + " ");
+        while (nextWordIndex < words.Length)
+        {
+            lines.Add(ConsumeBalloonWords(nextWordIndex, continuationWidth, out nextWordIndex));
+        }
+
+        return lines.ToArray();
 
         string ConsumeBalloonWords(int startIndex, double maxWidth, out int nextWordIndex)
         {
