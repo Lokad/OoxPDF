@@ -474,7 +474,10 @@ internal sealed partial class PptxRenderer
     internal enum PptxGlyphTypefaceResolutionSource
     {
         Primary,
-        Fallback
+        Fallback,
+        // RV01: estimator-unresolvable runes keep a marker so emission substitutes
+        // a diagnosed question mark instead of dropping them.
+        Unresolved
     }
 
     internal enum TextAlignment

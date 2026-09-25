@@ -1118,11 +1118,40 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // RV01 residual: estimator-unresolvable runes render the prepared question mark
+    // instead of vanishing (diagnosed at preparation). Resolved through the same
+    // ToUnicode-backed map the extractor reads.
+    private static bool TryGetMarkerQuestionCid(PdfEmbeddedFont embedded, PptxTextGlyphLayout glyph, out ushort cid)
+    {
+        cid = 0;
+        if (glyph.GlyphId != 0 || glyph.TypefaceResolutionSource != PptxGlyphTypefaceResolutionSource.Unresolved)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<ushort, int> unicodeEntry in embedded.UnicodeByCid)
+        {
+            if (unicodeEntry.Value == 0x3F && unicodeEntry.Key != 0)
+            {
+                cid = unicodeEntry.Key;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string EncodeGlyphHex(PdfEmbeddedFont embedded, PptxTextGlyphSpanLayout span)
     {
         var builder = new StringBuilder(span.Glyphs.Count * 4);
         foreach (PptxTextGlyphLayout glyph in span.Glyphs)
         {
+            if (TryGetMarkerQuestionCid(embedded, glyph, out ushort markerCid))
+            {
+                builder.Append(markerCid.ToString("X4", CultureInfo.InvariantCulture));
+                continue;
+            }
+
             if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
             {
                 builder.Append(cid.ToString("X4", CultureInfo.InvariantCulture));
@@ -1144,6 +1173,12 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < span.Glyphs.Count; i++)
         {
             PptxTextGlyphLayout glyph = span.Glyphs[i];
+            if (TryGetMarkerQuestionCid(embedded, glyph, out ushort markerCid))
+            {
+                builder.Append('<').Append(markerCid.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+                continue;
+            }
+
             if (i > 0)
             {
                 PptxTextGlyphLayout previousGlyph = span.Glyphs[i - 1];

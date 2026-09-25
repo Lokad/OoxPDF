@@ -100,6 +100,11 @@ internal sealed partial class PptxRenderer
             ResolvedGlyphFont? resolved = advanceEstimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value);
             if (resolved is null || resolved.Font.UnitsPerEm == 0)
             {
+                // RV01 residual: estimator-unresolvable runes keep a zero-advance marker
+                // instead of vanishing; emission substitutes a diagnosed question mark with
+                // zero advance, so measured and emitted positions stay consistent.
+                glyphs.Add(new PptxTextGlyphLayout(rune.Value, null, PptxGlyphTypefaceResolutionSource.Unresolved, 0, 0d, 0d));
+                previousGlyph = 0;
                 continue;
             }
 

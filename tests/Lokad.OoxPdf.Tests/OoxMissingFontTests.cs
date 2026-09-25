@@ -78,6 +78,52 @@ internal static class OoxMissingFontTests
         TestAssert.Contains("U+4E2D", missing.Message);
     }
 
+    // RV01: estimator-unresolvable runes keep a zero-advance marker so emission
+    // substitutes a diagnosed question mark instead of dropping them.
+    public static void UnresolvableRunesSubstituteQuestionMark()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="7315200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="FaceA"/></a:rPr><a:t>A中B</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """,
+        });
+        var resolver = new SingleFamilyResolver("FaceA", TestFontBuilder.CreateTestFont());
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        string extracted = ExtractCidMappedText(pdf);
+        TestAssert.Contains("A?B", extracted);
+        OoxPdfDiagnostic missing = diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS");
+        TestAssert.Contains("U+4E2D", missing.Message);
+    }
+
+    private sealed class SingleFamilyResolver(string family, byte[] bytes) : IFontResolver, IFontCatalog
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            return new FontFaceResolution(request.FamilyName, family, new FontStyleKey(request.Bold, request.Italic, 400, 0, false), new MemoryFontProgramSource("test:" + family, bytes), IsFallback: false);
+        }
+
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
+        {
+            return [Resolve(new FontRequest(family))];
+        }
+    }
+
     public static void MissingFontsPreservePptxText()
     {
         // RV01: the PPTX audit shows the same silent loss; text stays visible and
