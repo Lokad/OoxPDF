@@ -507,7 +507,9 @@ internal static class DocxHeaderFooterTests
         DocxTextLineLayout[] staticLines = layout.Pages[0].StaticTextLines.ToArray();
         TestAssert.Equal(2, staticLines.Length);
         TestAssert.Equal("Alpha ", staticLines[0].Text);
-        TestAssert.Equal(15d, staticLines[0].X);
+        // RV06 wrapalign probe: Office centers drawable text even on wrapped
+        // non-last lines (break space excluded from the centering width).
+        TestAssert.Equal(17.5d, staticLines[0].X);
         TestAssert.Equal(178.6d, staticLines[0].BaselineY);
         TestAssert.Equal(0, staticLines[0].SourceParagraphIndex ?? -1);
         TestAssert.Equal(0, staticLines[0].SourceLineIndex ?? -1);
@@ -1810,4 +1812,33 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal(170.6d, Math.Round(headerLines[0].BaselineY, 4));
         TestAssert.Equal(11.5d, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
     }
-}
+
+    public static void DocxHeaderTrailingLinesShareDrawableLinePositions()
+    {
+        // RV06 header-align probe: Office centers/rights drawable header text and
+        // keeps one row-end space beyond authored trailing in headers too.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>""",
+            ["word/header1.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">H trail   </w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">H trail</w:t></w:r></w:p></w:hdr>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t>Body text</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxTextLineLayout[] headerLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .StaticTextLines
+            .ToArray();
+        DocxTextLineLayout trailLine = headerLines.Single(line => line.Text.EndsWith("   ", StringComparison.Ordinal));
+        DocxTextLineLayout cleanLine = headerLines.Single(line => line.Text == "H trail");
+        TestAssert.Equal("H trail    ", trailLine.Text);
+        TestAssert.Equal(cleanLine.X, trailLine.X);
+    }}

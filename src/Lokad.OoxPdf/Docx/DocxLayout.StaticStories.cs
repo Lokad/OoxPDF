@@ -236,10 +236,15 @@ internal sealed partial class DocxLayoutEngine
                     }
 
                     double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer) + (staticMidLinePlan?.LineImageWidths[staticLineIndex] ?? 0d);
+                    // RV06 header-align probe: Office centers/rights drawable header and
+                    // footer text too, letting trailing spaces overflow past the edge.
+                    double lineAlignWidth = paragraph.EffectiveProperties.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
+                        ? MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, FindDrawableTextLength(line.Spans)), textMeasurer) + (staticMidLinePlan?.LineImageWidths[staticLineIndex] ?? 0d)
+                        : lineWidth;
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
-                        DocxTextAlignment.Center => x + Math.Max(0d, width - lineWidth) / 2d,
-                        DocxTextAlignment.Right => x + Math.Max(0d, width - lineWidth),
+                        DocxTextAlignment.Center => x + Math.Max(0d, width - lineAlignWidth) / 2d,
+                        DocxTextAlignment.Right => x + Math.Max(0d, width - lineAlignWidth),
                         _ => x
                     };
                     // RV05 calibration (Word 16.0): image top pins to the natural line top.
@@ -317,6 +322,51 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraphIndex: paragraphIndex,
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         LineHeightSource: DocxLineHeightSource.StaticWindowsExtents, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
+                    // RV06 header-align probe: headers and footers keep one row-end space
+                    // beyond authored trailing on the last wrapped line too.
+                    if (paragraph.Images.Count == 0 &&
+                        paragraph.InlineTextBoxes.Count == 0 &&
+                        staticLineIndex == staticLines.Length - 1 &&
+                        line.Text.EndsWith(' ') &&
+                        spans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character))))
+                    {
+                        for (int headerLineIndex = lines.Count - 1; headerLineIndex >= 0; headerLineIndex--)
+                        {
+                            if (lines[headerLineIndex] is not DocxTextLineLayout staticLastLine ||
+                                !ReferenceEquals(staticLastLine.SourceParagraph, paragraph) ||
+                                staticLastLine.Text.Length == 0)
+                            {
+                                continue;
+                            }
+
+                            DocxTextRun staticStyleRun = line.Spans[0].StyleRun;
+                            double staticSpaceFontSize = line.Spans.Max(span => span.StyleRun.EffectiveProperties.FontSize);
+                            double staticSpaceWidth = textMeasurer.MeasureText(staticStyleRun, " ", staticSpaceFontSize);
+                            lines[headerLineIndex] = staticLastLine with
+                            {
+                                Text = staticLastLine.Text + " ",
+                                Width = staticLastLine.Width + staticSpaceWidth,
+                                Segments =
+                                [
+                                    .. staticLastLine.Segments,
+                                    new DocxTextSegmentLayout(
+                                        " ",
+                                        staticStyleRun,
+                                        staticLastLine.X + staticLastLine.Width,
+                                        staticSpaceWidth,
+                                        staticSpaceFontSize,
+                                        0d,
+                                        0d,
+                                        DocxTextStateCharacterSpacingSource.None,
+                                        true,
+                                        -1,
+                                        0,
+                                        DocxTextSegmentRole.BreakSpill),
+                                ],
+                            };
+                            break;
+                        }
+                    }
                     if (staticMidLinePlan is not null)
                     {
                         foreach (DocxMidLineImage placed in staticMidLinePlan.ImagesByLine[staticLineIndex])
