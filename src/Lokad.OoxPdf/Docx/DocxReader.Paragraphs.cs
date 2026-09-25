@@ -49,6 +49,7 @@ internal sealed partial class DocxReader
         var hyperlinkSpans = new List<DocxHyperlinkSpan>();
         var bookmarkAnchors = new List<DocxBookmarkAnchor>();
         var paragraphRevisions = new List<DocxRevisionInfo>();
+        var deletedText = new StringBuilder();
         AddRevision(paragraphRevisions, inheritedRevision);
         AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(paragraphProperties));
         XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
@@ -163,6 +164,12 @@ internal sealed partial class DocxReader
         {
             if (!IsIncludedRevisionContainer(container, markupMode))
             {
+                // RV06: excluded revision text still sizes table columns in Office.
+                foreach (XElement run in container.Descendants(WordprocessingNamespace + "r"))
+                {
+                    deletedText.Append(ReadRunText(run));
+                }
+
                 return;
             }
 
@@ -250,7 +257,8 @@ internal sealed partial class DocxReader
             Hyperlinks = hyperlinkSpans,
             BookmarkAnchors = bookmarkAnchors,
             Revisions = paragraphRevisions,
-            HasDeletedParagraphMark = hasDeletedParagraphMark
+            HasDeletedParagraphMark = hasDeletedParagraphMark,
+            DeletedText = deletedText.ToString()
         };
 
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)

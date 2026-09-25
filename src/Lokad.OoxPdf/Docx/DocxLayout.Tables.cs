@@ -442,15 +442,9 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        if (table.ColumnWidthsPoints.Count != 0)
-        {
-            double minGrid = table.ColumnWidthsPoints.Min();
-            double maxGrid = table.ColumnWidthsPoints.Max();
-            if (maxGrid - minGrid > 0.001d)
-            {
-                return null;
-            }
-        }
+        // RV06: Office autofit ignores the grid (even a differentiated one) and sizes
+        // by content, so grid uniformity never selects the legacy path here. Fixed layout
+        // keeps grid widths through the LayoutValue guard above.
 
         int columnCount = table.ColumnWidthsPoints.Count != 0
             ? table.ColumnWidthsPoints.Count
@@ -460,18 +454,18 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        double[] maxWidths = new double[columnCount];
         double[] pads = new double[columnCount];
+        double[]? bestRowTotals = null;
+        double bestRowTotal = 0d;
         foreach (DocxTableRow row in table.Rows)
         {
+            var rowTotals = new double[columnCount];
             for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
-                double cellMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale);
-                if (cellMax > maxWidths[cellIndex])
-                {
-                    maxWidths[cellIndex] = cellMax;
-                }
+                double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale);
+                double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
+                rowTotals[cellIndex] = cellVisibleMax + cellDeletedTotal;
 
                 double cellPad = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, fixedScale) +
                     ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, fixedScale) +
@@ -482,18 +476,29 @@ internal sealed partial class DocxLayoutEngine
                     pads[cellIndex] = cellPad;
                 }
             }
+
+            double rowTotal = rowTotals.Sum();
+            if (bestRowTotals is null || rowTotal > bestRowTotal)
+            {
+                bestRowTotals = rowTotals;
+                bestRowTotal = rowTotal;
+            }
         }
 
-        double totalMax = maxWidths.Sum();
-        double totalPad = pads.Sum();
-        double contentTarget = targetTableWidth - totalPad;
-        if (totalMax <= 0d || contentTarget <= 0d)
+        if (bestRowTotals is null || bestRowTotal <= 0d)
         {
             return null;
         }
 
-        return maxWidths
-            .Select((maxWidth, index) => pads[index] + contentTarget * maxWidth / totalMax)
+        double totalPad = pads.Sum();
+        double contentTarget = targetTableWidth - totalPad;
+        if (contentTarget <= 0d)
+        {
+            return null;
+        }
+
+        return bestRowTotals
+            .Select((rowTotal, index) => pads[index] + contentTarget * rowTotal / bestRowTotal)
             .ToArray();
     }
 
@@ -553,6 +558,41 @@ internal sealed partial class DocxLayoutEngine
 
         return maxWidth;
     }
+    // RV06: deleted/moveFrom text excluded from Runs by the markup view still sizes
+    // columns in Office autofit, so the reader preserves it per paragraph and it is
+    // measured here at the paragraph max font size.
+    private static double MeasureTableCellDeletedTextWidth(DocxTableCell cell, IDocxTextMeasurer textMeasurer)
+    {
+        double total = 0d;
+        foreach (DocxBodyElement bodyElement in GetTableCellLayoutBodyElements(cell))
+        {
+            if (bodyElement is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+
+            if (paragraph.DeletedText.Length == 0)
+            {
+                continue;
+            }
+
+            DocxTextRun? contextRun = null;
+            foreach (DocxTextRun candidate in paragraph.Runs)
+            {
+                if (candidate.Text.Length != 0)
+                {
+                    contextRun = candidate;
+                    break;
+                }
+            }
+            total += textMeasurer.MeasureText(contextRun ?? paragraph.Runs.FirstOrDefault(), paragraph.DeletedText, GetParagraphFontSize(paragraph));
+        }
+
+        return total;
+    }
+
     internal const int MaxLayoutGridColumns = 1024;
 
     private static int GetMaxGridColumnCount(DocxTable table)

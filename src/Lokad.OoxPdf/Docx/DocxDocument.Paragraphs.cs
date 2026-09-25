@@ -31,6 +31,11 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public bool HasDeletedParagraphMark { get; init; }
 
+    // RV06: text of revision containers excluded from Runs by the markup view
+    // (deleted text in Final view). Rendering keeps filtering it; table autofit
+    // measurement includes it because Office sizes columns with it.
+    public string DeletedText { get; init; } = string.Empty;
+
     public DocxEffectiveParagraphProperties EffectiveProperties => new(
         StyleId,
         Alignment,

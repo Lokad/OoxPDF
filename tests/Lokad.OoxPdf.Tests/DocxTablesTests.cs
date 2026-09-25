@@ -2994,7 +2994,6 @@ internal static class DocxTablesTests
     // of the declared grid (fails: second column starts at the grid position).
     public static void DocxAutofitTableDistributesWidthsByContent()
     {
-        TestAssert.Skip("RV06: autofit distribution not implemented; unskip to reproduce the Office-measured split.");
         string input = FindCase("docx-markup-review.docx");
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
@@ -3020,6 +3019,89 @@ internal static class DocxTablesTests
         TestAssert.Equal(2, xs.Length);
         TestAssert.True(Math.Abs(xs[0] - 72d) < 2d, "The first column must anchor at the table edge.");
         TestAssert.True(xs[1] > 185d && xs[1] < 196d, "Autofit must split columns at the Office-measured position.");
+    }
+
+    // RV06: table autofit measures deleted text, so the reader preserves Final-view
+    // excluded del runs for measurement (rendering keeps filtering them).
+    public static void DocxReaderPreservesDeletedTextForMeasurement()
+    {
+        string input = FindCase("docx-markup-review.docx");
+        using FileStream stream = File.OpenRead(input);
+        DocxDocument final = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        DocxTable finalTable = final.BodyElements.OfType<DocxTableElement>().First().Table;
+        DocxParagraph finalCell = ((DocxParagraphElement)finalTable.Rows[1].Cells[1].BodyElements[0]).Paragraph;
+        TestAssert.Equal("removed cell text", finalCell.DeletedText);
+        using FileStream originalStream = File.OpenRead(input);
+        DocxDocument original = new DocxReader().Read(OoxPackage.Open(originalStream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Original);
+        DocxTable originalTable = original.BodyElements.OfType<DocxTableElement>().First().Table;
+        DocxParagraph originalCell = ((DocxParagraphElement)originalTable.Rows[1].Cells[1].BodyElements[0]).Paragraph;
+        TestAssert.Equal("added cell text", originalCell.DeletedText);
+    }
+
+    // RV06 (Office gate): autofit ignores grid variation, so a differentiated grid
+    // with balanced content still splits by content (fails: second column at grid).
+    public static void DocxAutofitTableIgnoresGridVariation()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblPr>
+                        <w:tblW w:w="7200" w:type="dxa"/>
+                        <w:tblBorders>
+                          <w:top w:val="single" w:sz="6" w:color="808080"/>
+                          <w:left w:val="single" w:sz="6" w:color="808080"/>
+                          <w:bottom w:val="single" w:sz="6" w:color="808080"/>
+                          <w:right w:val="single" w:sz="6" w:color="808080"/>
+                          <w:insideH w:val="single" w:sz="6" w:color="808080"/>
+                          <w:insideV w:val="single" w:sz="6" w:color="808080"/>
+                        </w:tblBorders>
+                      </w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="6000"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc><w:p><w:r><w:t>Alpha Beta</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:p><w:r><w:t>Gamma Delta</w:t></w:r></w:p></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1800" w:bottom="1440" w:left="1440"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx });
+        string pdf = File.ReadAllText(output, Encoding.Latin1);
+        if (!pdf.Contains("Aptos", StringComparison.Ordinal))
+        {
+            TestAssert.Skip("Environmental precondition not met: (Aptos not embedded)");
+        }
+
+        var starts = new List<double>();
+        foreach (Match match in Regex.Matches(pdf, @"(\d+\.?\d*) \d+\.?\d* \d+\.?\d* \d+\.?\d* re W n"))
+        {
+            starts.Add(double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
+        }
+
+        double[] xs = starts.Distinct().OrderBy(x => x).ToArray();
+        TestAssert.Equal(2, xs.Length);
+        TestAssert.True(xs[1] > 222d && xs[1] < 239d, "Autofit must split balanced content at the Office-measured position, not the grid.");
     }
 
     private static string FindCase(string name)
