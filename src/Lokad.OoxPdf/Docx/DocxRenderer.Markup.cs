@@ -226,7 +226,9 @@ internal sealed partial class DocxRenderer
     // Office (comment/unresolved/dense/mirrored references, Word-COM rendered): balloon
     // titles set in Segoe UI Bold while bodies use the document face (unresolved titles
     // run 4.4pt wider than Aptos at the same size). Resolved once per conversion; a
-    // fallback/unresolvable result keeps the label face everywhere (including off-Windows).
+    // fallback/unresolvable result keeps the label face everywhere (including off-Windows). A
+    // non-bold family member is also rejected: server SKUs may ship Segoe UI without its
+    // Bold face, and narrower non-bold advances would silently under-wrap titles.
     internal static FontFaceResolution? ResolveBalloonTitleFace(IFontResolver fontResolver, DocxMarkupContext markupContext)
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(markupContext))
@@ -235,7 +237,7 @@ internal sealed partial class DocxRenderer
         }
 
         FontFaceResolution resolved = fontResolver.Resolve(new FontRequest("Segoe UI", Bold: true));
-        return resolved.IsFallback ? null : resolved;
+        return resolved.IsFallback || !resolved.Bold ? null : resolved;
     }
 
     private static DocxRunFontResource? ResolveMarkupLabelFontResource(DocxFontResources fontResources)
