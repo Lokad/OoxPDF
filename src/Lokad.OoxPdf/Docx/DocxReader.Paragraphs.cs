@@ -877,6 +877,25 @@ internal sealed partial class DocxReader
             runs.Sum(run => run.Text.Length)));
     }
 
+    // RV06: comment range markers sit between runs while consumers resolve offsets
+    // run-relatively, so paragraph-absolute capture sums are relativized here.
+    private static int RelativeRunTextOffset(List<DocxTextRun> runs, int sourceRunIndex)
+    {
+        int absoluteOffset = runs.Sum(run => run.Text.Length);
+        int prefixLength = 0;
+        foreach (DocxTextRun run in runs)
+        {
+            if (run.SourceRunIndex < 0 || run.SourceRunIndex >= sourceRunIndex)
+            {
+                continue;
+            }
+
+            prefixLength += run.Text.Length;
+        }
+
+        return System.Math.Max(0, absoluteOffset - prefixLength);
+    }
+
     private static void AddCommentRangeStart(
         XElement rangeStart,
         List<DocxCommentRangeStart> openCommentRanges,
@@ -886,7 +905,7 @@ internal sealed partial class DocxReader
         openCommentRanges.Add(new DocxCommentRangeStart(
             (string?)rangeStart.Attribute(WordprocessingNamespace + "id"),
             sourceRunIndex,
-            runs.Sum(run => run.Text.Length)));
+            RelativeRunTextOffset(runs, sourceRunIndex)));
     }
 
     private static void AddCommentRangeEnd(
@@ -909,7 +928,7 @@ internal sealed partial class DocxReader
             start?.SourceRunIndex,
             start?.TextOffset,
             sourceRunIndex,
-            runs.Sum(run => run.Text.Length),
+            RelativeRunTextOffset(runs, sourceRunIndex),
             ReferenceSourceRunIndex: null,
             ReferenceTextOffset: null));
     }

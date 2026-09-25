@@ -2485,4 +2485,70 @@ internal static class DocxCommentsTests
 
         TestAssert.True(Math.Abs(placement.Height - (20.48d + 8.37d)) < 0.05d, "Threaded balloons should keep the legacy height plus separator extra. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
     }
+
+    public static void DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>Before with a much longer lead-in text </w:t></w:r>
+                      <w:commentRangeStart w:id="7"/>
+                      <w:r><w:t>marked text</w:t></w:r>
+                      <w:commentRangeEnd w:id="7"/>
+                      <w:r><w:commentReference w:id="7"/></w:r>
+                      <w:r><w:t> after.</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:r><w:t>Second </w:t></w:r>
+                      <w:commentRangeStart w:id="8"/>
+                      <w:r><w:t>marked two</w:t></w:r>
+                      <w:commentRangeEnd w:id="8"/>
+                      <w:r><w:commentReference w:id="8"/></w:r>
+                      <w:r><w:t> tail.</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            ["word/comments.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:comment w:id="7" w:author="Probe" w:initials="PB" w:date="2026-06-01T00:00:00Z">
+                    <w:p><w:r><w:t>Probe comment.</w:t></w:r></w:p>
+                  </w:comment>
+                  <w:comment w:id="8" w:author="Probe" w:initials="PB" w:date="2026-06-01T00:00:00Z">
+                    <w:p><w:r><w:t>Second probe comment.</w:t></w:r></w:p>
+                  </w:comment>
+                </w:comments>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                </Relationships>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+        TestAssert.Equal(4, DocxTests.CountOccurrences(page.Content, "0.973 0.863 0.867 rg"));
+    }
 }
