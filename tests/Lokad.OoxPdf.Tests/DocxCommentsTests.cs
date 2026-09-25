@@ -1644,6 +1644,75 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxMarkupBalloonLayoutOverfullLaneAccountsEveryCandidate()
+    {
+        var bodyElements = new List<DocxBodyElement>();
+        var relatedStories = new List<DocxRelatedStory>();
+        for (int i = 0; i < 12; i++)
+        {
+            string id = (i + 1).ToString(CultureInfo.InvariantCulture);
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Anchor " + id, 10d, 12d) with
+            {
+                InlineReferences =
+                [
+                    new DocxInlineReference(DocxRelatedStoryKind.Comment, id, null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)
+                ],
+                Revisions =
+                [
+                    new DocxRevisionInfo(DocxRevisionKind.Insertion, id, "A", "2026-06-10T00:00:00Z", "ins", null, [])
+                ]
+            };
+            bodyElements.Add(new DocxParagraphElement(paragraph));
+
+            DocxParagraph commentParagraph = DocxTests.CreateDocxLayoutParagraph("Comment body " + id, 10d, 12d);
+            relatedStories.Add(new DocxRelatedStory(
+                DocxRelatedStoryKind.Comment,
+                "/word/comments.xml",
+                id,
+                [new DocxParagraphElement(commentParagraph)],
+                [],
+                [], null));
+        }
+
+        // A lane with no summary room at all: six 26pt balloons fill the 185pt page and the
+        // seventh overflows with room for nothing, so the pre-fix code drops six candidates.
+        var document = new DocxDocument(
+            200d,
+            185d,
+            50d,
+            15d,
+            10d,
+            10d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            bodyElements,
+            [],
+            [])
+        {
+            RelatedStories = relatedStories,
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+
+        DocxMarkupBalloonPlacementSnapshot[] placements = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .InspectMarkupBalloons(document)
+            .ToArray();
+
+        TestAssert.Equal(24, placements.Sum(placement => placement.CandidateCount));
+        TestAssert.True(placements.Any(placement => placement.IsOverflowSummary), "An overfull lane must still summarize instead of dropping candidates.");
+        DocxMarkupBalloonPlacementSnapshot[] balloons = placements
+            .Where(placement => !placement.IsOverflowSummary)
+            .OrderByDescending(placement => placement.Y)
+            .ToArray();
+        for (int i = 0; i < balloons.Length - 1; i++)
+        {
+            TestAssert.True(
+                balloons[i].Y >= balloons[i + 1].Y + balloons[i + 1].Height,
+                "Reclaimed lanes must not collide vertically.");
+        }
+    }
+
     public static void DocxMarkupBalloonLayoutGroupsNearbyRevisionAnchors()
     {
         var bodyElements = new List<DocxBodyElement>();

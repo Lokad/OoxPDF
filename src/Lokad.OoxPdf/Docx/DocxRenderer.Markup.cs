@@ -335,6 +335,7 @@ internal sealed partial class DocxRenderer
             double bandTopLimit = Math.Max(laneBand.TopLimit, page.MarginBottom + laneBand.MaxBalloonHeight);
             nextTop = Math.Min(nextTop, bandTopLimit);
             var overflowCandidates = new List<DocxMarkupBalloonCandidate>();
+            var placedBandCandidates = new List<DocxMarkupBalloonCandidate>();
             foreach (DocxMarkupBalloonCandidate candidate in laneBand.Candidates)
             {
                 double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
@@ -396,6 +397,7 @@ internal sealed partial class DocxRenderer
                     OverflowStartIndex: null, OverflowEndIndex: null, LaneBandIndex: laneBand.Index,
                     LaneBandCandidateCount: laneBand.CandidateCount));
                 nextTop = y - MarkupBalloonMinimumSpacingPoints;
+                placedBandCandidates.Add(candidate);
             }
 
             (nextTop, nextOverflowStartIndex) = AddOverflowContinuationPlacements(
@@ -406,7 +408,8 @@ internal sealed partial class DocxRenderer
                 nextTop,
                 laneBand.Index,
                 laneBand.CandidateCount,
-                nextOverflowStartIndex);
+                nextOverflowStartIndex,
+                placedBandCandidates);
         }
 
         return placements;
@@ -984,14 +987,15 @@ internal sealed partial class DocxRenderer
     }
 
     private static (double NextTop, int NextOverflowStartIndex) AddOverflowContinuationPlacements(
-        IReadOnlyList<DocxMarkupBalloonCandidate> overflowCandidates,
+        List<DocxMarkupBalloonCandidate> overflowCandidates,
         List<DocxMarkupBalloonPlacement> placements,
         DocxMarkupBalloonArea area,
         DocxLayoutPage page,
         double nextTop,
         int laneBandIndex,
         int laneBandCandidateCount,
-        int nextOverflowStartIndex)
+        int nextOverflowStartIndex,
+        List<DocxMarkupBalloonCandidate> placedBandCandidates)
     {
         if (overflowCandidates.Count == 0)
         {
@@ -1001,11 +1005,24 @@ internal sealed partial class DocxRenderer
         const double height = 12d;
         const double gap = 2d;
         int slotCount = Math.Max(0, (int)Math.Floor((nextTop - page.MarginBottom + gap) / (height + gap)));
+        // RV06: a packed lane can fill every point while candidates remain (tighter Office
+        // packing fits one more balloon than the summary room allows). Reclaim the lowest
+        // placed balloon of this band into the overflow set until one summary fits, so no
+        // candidate vanishes silently; the reclaimed balloon keeps its order at the front.
+        while (slotCount == 0 && overflowCandidates.Count != 0 && placedBandCandidates.Count != 0)
+        {
+            DocxMarkupBalloonCandidate reclaimed = placedBandCandidates[^1];
+            placedBandCandidates.RemoveAt(placedBandCandidates.Count - 1);
+            DocxMarkupBalloonPlacement reclaimedPlacement = placements[placements.Count - 1];
+            placements.RemoveAt(placements.Count - 1);
+            overflowCandidates.Insert(0, reclaimed);
+            nextTop = reclaimedPlacement.Y + reclaimedPlacement.Height + MarkupBalloonMinimumSpacingPoints;
+            slotCount = Math.Max(0, (int)Math.Floor((nextTop - page.MarginBottom + gap) / (height + gap)));
+        }
         if (slotCount == 0)
         {
             return (nextTop, nextOverflowStartIndex);
         }
-
         int continuationCount = Math.Min(slotCount, overflowCandidates.Count);
         int chunkSize = (int)Math.Ceiling(overflowCandidates.Count / (double)continuationCount);
         int overflowIndex = 0;
