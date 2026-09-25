@@ -1084,6 +1084,9 @@ internal sealed partial class DocxRenderer
                 }
 
                 IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
+                // RV06: Office emits one link rectangle per hyperlink per line.
+                // Fragments of one hyperlink share a merged union rectangle.
+                var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MinY, double MaxX, double MaxY)>();
                 foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1117,24 +1120,48 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
                     double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
-                    if (IsExternalHyperlink(link))
+                    double fragmentMinX = segment.X;
+                    double fragmentMinY = segment.BaselineY - descender;
+                    double fragmentMaxX = segment.X + annotationWidth;
+                    double fragmentMaxY = segment.BaselineY + ascender;
+                    bool linkTargetEmittable = IsExternalHyperlink(link) ||
+                        (!string.IsNullOrEmpty(link.Anchor) && bookmarkDestinations.ContainsKey(link.Anchor));
+                    if (!linkTargetEmittable)
                     {
-                        annotations.Add(PdfLinkAnnotation.ToUri(
-                            segment.X,
-                            segment.BaselineY - descender,
-                            annotationWidth,
-                            ascender + descender,
-                            link.Target ?? string.Empty));
+                        continue;
                     }
-                    else if (!string.IsNullOrEmpty(link.Anchor) &&
-                        bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination destination))
+                    bool fragmentAbsorbed = false;
+                    for (int mergedIndex = 0; mergedIndex < mergedLinkRects.Count; mergedIndex++)
                     {
-                        annotations.Add(PdfLinkAnnotation.ToDestination(
-                            segment.X,
-                            segment.BaselineY - descender,
-                            annotationWidth,
-                            ascender + descender,
-                            destination));
+                        if (!ReferenceEquals(mergedLinkRects[mergedIndex].Link, link))
+                        {
+                            continue;
+                        }
+                        (DocxHyperlinkSpan _, double absorbedMinX, double absorbedMinY, double absorbedMaxX, double absorbedMaxY) = mergedLinkRects[mergedIndex];
+                        mergedLinkRects[mergedIndex] = (
+                            link,
+                            Math.Min(absorbedMinX, fragmentMinX),
+                            Math.Min(absorbedMinY, fragmentMinY),
+                            Math.Max(absorbedMaxX, fragmentMaxX),
+                            Math.Max(absorbedMaxY, fragmentMaxY));
+                        fragmentAbsorbed = true;
+                        break;
+                    }
+                    if (!fragmentAbsorbed)
+                    {
+                        mergedLinkRects.Add((link, fragmentMinX, fragmentMinY, fragmentMaxX, fragmentMaxY));
+                    }
+                }
+                foreach ((DocxHyperlinkSpan mergedLink, double mergedMinX, double mergedMinY, double mergedMaxX, double mergedMaxY) in mergedLinkRects)
+                {
+                    if (IsExternalHyperlink(mergedLink))
+                    {
+                        annotations.Add(PdfLinkAnnotation.ToUri(mergedMinX, mergedMinY, mergedMaxX - mergedMinX, mergedMaxY - mergedMinY, mergedLink.Target ?? string.Empty));
+                    }
+                    else if (!string.IsNullOrEmpty(mergedLink.Anchor) &&
+                        bookmarkDestinations.TryGetValue(mergedLink.Anchor, out PdfLinkDestination mergedDestination))
+                    {
+                        annotations.Add(PdfLinkAnnotation.ToDestination(mergedMinX, mergedMinY, mergedMaxX - mergedMinX, mergedMaxY - mergedMinY, mergedDestination));
                     }
                 }
             }

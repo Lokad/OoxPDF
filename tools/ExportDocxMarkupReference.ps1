@@ -25,6 +25,9 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $inputFull = (Resolve-Path -LiteralPath $InputDocx).Path
+$outputFull = [IO.Path]::GetFullPath($OutputPdf)
+$outputDir = [IO.Path]::GetDirectoryName($outputFull)
+if (-not [IO.Directory]::Exists($outputDir)) { [void][IO.Directory]::CreateDirectory($outputDir) }
 $openPath = $inputFull
 $tempCopy = $null
 if ($RejectAll) {
@@ -37,7 +40,8 @@ try {
     $word.Visible = $false
     $word.DisplayAlerts = 0
     Write-Output ("Word version: " + $word.Version)
-    $doc = $word.Documents.OpenNoRepairDialog($openPath, $false, $true, $false)
+    $readOnlyOpen = -not $RejectAll
+    $doc = $word.Documents.OpenNoRepairDialog($openPath, $false, $readOnlyOpen, $false)
     if ($RejectAll) {
         $doc.Revisions.RejectAll()
     }
@@ -50,17 +54,22 @@ try {
     $view.MarkupMode = $MarkupMode
     $view.RevisionsMode = $RevisionsMode
     $view.ShowComments = $ShowComments
-    if ([IO.File]::Exists($OutputPdf)) {
-        [IO.File]::Delete($OutputPdf)
+    if ([IO.File]::Exists($outputFull)) {
+        [IO.File]::Delete($outputFull)
     }
-    $doc.SaveAs2($OutputPdf, 17)
+    $doc.SaveAs2($outputFull, 17)
     $doc.Close($false)
-    $length = (Get-Item -LiteralPath $OutputPdf).Length
-    $sha = (Get-FileHash -LiteralPath $OutputPdf -Algorithm SHA256).Hash
-    Write-Output ("Exported: " + $OutputPdf + " (" + $length + " bytes, sha256 " + $sha + ")")
+    $length = (Get-Item -LiteralPath $outputFull).Length
+    $sha = (Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash
+    Write-Output ("Exported: " + $outputFull + " (" + $length + " bytes, sha256 " + $sha + ")")
     Write-Output ("ExportSettings: Word/" + $word.Version + " ShowRevisions=" + $ShowRevisions + " RevisionsView=" + $RevisionsView + " MarkupMode=" + $MarkupMode + " RevisionsMode=" + $RevisionsMode + " ShowComments=" + $ShowComments + " RejectAll=" + [bool]$RejectAll + " (inherited MarkupMode=" + $inheritedMarkupMode + " RevisionsMode=" + $inheritedRevisionsMode + ")")
 } finally {
     try { $word.Quit() } catch { }
+    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($view) } catch { }
+    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) } catch { }
+    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) } catch { }
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
     if ($tempCopy -ne $null -and [IO.File]::Exists($tempCopy)) {
         [IO.File]::Delete($tempCopy)
     }

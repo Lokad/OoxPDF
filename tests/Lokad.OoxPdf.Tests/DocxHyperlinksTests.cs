@@ -1040,4 +1040,58 @@ internal static class DocxHyperlinksTests
         TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed body bookmark coordinates.");
         TestAssert.True(annotation.Width > 0d, "The annotation should cover static-story hyperlink text.");
     }
+
+    public static void DocxRendererMergesMultiRunHyperlinkAnnotationsPerLine()
+    {
+        (double X, double Width) first = RenderCoveringLinkFragment(1, 1);
+        (double X, double Width) second = RenderCoveringLinkFragment(2, 1);
+        List<PdfLinkAnnotation> merged = RenderLinkAnnotations(1, 2);
+
+        TestAssert.Equal(1, merged.Count);
+        TestAssert.Equal("https://example.invalid/docx", merged[0].Uri);
+        TestAssert.True(Math.Abs(merged[0].X - first.X) < 0.001d, "The merged rectangle should start at the first hyperlink fragment.");
+        TestAssert.True(Math.Abs((merged[0].X + merged[0].Width) - (second.X + second.Width)) < 0.001d, "The merged rectangle should end at the last hyperlink fragment.");
+    }
+
+    private static (double X, double Width) RenderCoveringLinkFragment(int startRun, int runCount)
+    {
+        PdfLinkAnnotation annotation = RenderLinkAnnotations(startRun, runCount).Single();
+        return (annotation.X, annotation.Width);
+    }
+
+    private static List<PdfLinkAnnotation> RenderLinkAnnotations(int startRun, int runCount)
+    {
+        DocxParagraph paragraph = CreateCoveringLinkParagraph(startRun, runCount);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        return page.Annotations.ToList();
+    }
+
+    private static DocxParagraph CreateCoveringLinkParagraph(int startRun, int runCount)
+    {
+        int textLength = startRun == 1 && runCount == 2 ? 4 : (startRun == 1 ? 3 : 1);
+        var runs = new[]
+        {
+            new DocxTextRun("Before ", 10d, null, false, false, false, null, null),
+            new DocxTextRun("Lin", 10d, null, false, false, false, null, null),
+            new DocxTextRun("k", 10d, null, false, false, false, null, null),
+            new DocxTextRun(" After", 10d, null, false, false, false, null, null)
+        };
+        return new DocxParagraph(
+            runs,
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            12d,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null)
+        {
+            Hyperlinks = [new DocxHyperlinkSpan("rIdLink", null, null, null, "https://example.invalid/docx", "External", null, startRun, runCount, startRun, runCount, textLength)]
+        };
+    }
 }
