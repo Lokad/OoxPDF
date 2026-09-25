@@ -498,15 +498,47 @@ internal static class DocxCommentsTests
             "A bold-marked but unloadable title face (server-SKU Segoe stub) must fall back to the label face.");
     }
 
+    private static double MeasureSegoeTitleDesignAdvance()
+    {
+        try
+        {
+            var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            FontFaceResolution? resolution = DocxRenderer.ResolveBalloonTitleFace(new WindowsFontResolver(), context, CancellationToken.None);
+            OpenTypeFont? font = resolution is null ? null : FontProgramLoader.Load(resolution, CancellationToken.None);
+            if (font is null)
+            {
+                return -1d;
+            }
+
+            const string probeTitle = "Commented [R22]:";
+            var glyphs = new HashSet<int>();
+            foreach (Rune rune in probeTitle.EnumerateRunes())
+            {
+                ushort glyph = font.MapCodePoint(rune.Value);
+                if (glyph != 0)
+                {
+                    glyphs.Add(rune.Value);
+                }
+            }
+
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs, CancellationToken.None);
+            return embedded.MeasureTextPoints(probeTitle, 9d);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+        {
+            return -1d;
+        }
+    }
+
     public static void DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles()
     {
-        // The wrap parity needs the Office title face; environments without a real Segoe UI
-        // Bold face keep the label face and skip like other font-environmental tests. The
-        // probe uses the production resolution seam so skips track real behavior.
-        DocxMarkupContext probeContext = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        if (DocxRenderer.ResolveBalloonTitleFace(new WindowsFontResolver(), probeContext, CancellationToken.None) is null)
+        // The wrap parity needs Office-matching title advances; environments whose Segoe UI
+        // Bold file is missing, unloadable, or metrically divergent keep the label face and
+        // skip like other font-environmental tests (the measured design advance is reported).
+        double titleAdvance = MeasureSegoeTitleDesignAdvance();
+        if (titleAdvance < 78d)
         {
-            TestAssert.Skip("Environmental precondition not met: Segoe UI Bold is not installed.");
+            TestAssert.Skip("Environmental precondition not met: Segoe UI Bold probe-title design advance is " + titleAdvance.ToString("0.##", CultureInfo.InvariantCulture) + ", not Office-like (≈82).");
         }
 
         string input = Path.GetFullPath(Path.Combine(
