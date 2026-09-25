@@ -2082,5 +2082,29 @@ internal static class DocxPageTests
             .ToArray();
         TestAssert.Equal(2, controlLines.Length);
         TestAssert.True(controlLines[0].Text.EndsWith(" ", StringComparison.Ordinal) == false, "no spill without break");
+        DocxParagraph tail = DocxTests.CreateDocxLayoutParagraph("Tail   ", 10d, 12d);
+        DocxParagraph tailAfter = DocxTests.CreateDocxLayoutParagraph("After", 10d, 12d);
+        var tailDocument = new DocxDocument(
+            300d,
+            300d,
+            30d,
+            30d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(tail), new DocxParagraphElement(tailAfter)],
+            [tail, tailAfter],
+            []);
+        DocxTextLineLayout[] tailLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(tailDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+        TestAssert.Equal(2, tailLines.Length);
+        TestAssert.Equal("Tail    ", tailLines[0].Text);
     }
 }

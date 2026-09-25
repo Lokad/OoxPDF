@@ -906,8 +906,9 @@ internal static class DocxTextWrapTests
             .ToArray();
 
         // Word measures terminal spaces but does not wrap for them (width probe 2026-09-06: a 99.3pt token stays on one 100pt line despite its 2.03pt terminal space).
+        // RV06 row-end matrix: Office keeps one row-end space beyond authored trailing.
         TestAssert.Equal(1, lines.Length);
-        TestAssert.Equal("aaaa bbbb cccc ", lines[0].Text);
+        TestAssert.Equal("aaaa bbbb cccc  ", lines[0].Text);
     }
 
     // count-based scaling tests plus R07 linear gate: deterministic unit-width measurer, line

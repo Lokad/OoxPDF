@@ -43,7 +43,8 @@ internal static class DocxTextSpacingTests
             .OfType<DocxTextLineLayout>()
             .Single();
 
-        TestAssert.Equal(" Alpha  Beta ", line.Text);
+        // RV06 row-end matrix: Office keeps one row-end space beyond authored trailing.
+        TestAssert.Equal(" Alpha  Beta  ", line.Text);
         TestAssert.True(line.Width > embedded.MeasureTextPoints("Alpha Beta", 11d), "Preserved spaces should contribute to layout width.");
     }
 

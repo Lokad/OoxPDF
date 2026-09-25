@@ -752,36 +752,29 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 // RV06: break-adjacent spacing rows (Word 16.0 spill-matrix and
-                // trailing-space probes): a non-empty text-only body paragraph
-                // immediately followed by a break-only page-break paragraph carries
-                // a two-space spill row on the same page past the after-spacing gap
-                // (second space at body-left plus 144 design points), plus one
-                // row-end space beyond authored trailing when the last wrapped line
-                // ends in trailing whitespace (clean-ending lines already carry the
-                // row-end space from the wrap pipeline). Content-independent across
-                // clean, trailing-space and comment-range paragraphs; the break-free
-                // control emits nothing. Scoped to text-only body paragraphs with a
-                // reader-built break-only BreakParagraph (hand-built null breaks and
-                // inline splits stay open, as do centered/right and table-cell
+                // trailing-space probes, plus the row-end matrix): every non-empty
+                // text-only body paragraph keeps exactly one row-end space beyond
+                // authored trailing on its last wrapped line (clean-ending lines
+                // already carry it from the wrap pipeline, break or not), and a
+                // paragraph immediately followed by a break-only page-break
+                // paragraph additionally carries a two-space spill row on the same
+                // page past the after-spacing gap (second space at body-left plus
+                // 144 design points). Content-independent across clean, trailing
+                // (one or three spaces) and comment-range paragraphs. Scoped to
+                // text-only body paragraphs (hand-built null breaks and inline
+                // splits stay open for spill, as do centered/right and table-cell
                 // patterns).
                 int breakSpillLineIndex = FindBreakSpillLineIndex(currentItems, paragraph);
+                bool breakParagraphHasVisibleText = textSpans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character)));
+                double breakSpaceWidth = textMeasurer.MeasureText(firstRun, " ", paragraphFontSize);
                 if (paragraph.Images.Count == 0 &&
                     paragraph.InlineTextBoxes.Count == 0 &&
                     lines.Length > 0 &&
-                    elementIndex + 1 < document.BodyElements.Count &&
-                    document.BodyElements[elementIndex + 1] is DocxPageBreakElement nextBreak &&
-                    nextBreak.BreakParagraph is { } nextBreakParagraph &&
-                    nextBreakParagraph.Images.Count == 0 &&
-                    nextBreakParagraph.InlineTextBoxes.Count == 0 &&
-                    nextBreakParagraph.Runs.All(static run => run.Text.Length == 0) &&
+                    lines[^1].Text.EndsWith(' ') &&
+                    breakParagraphHasVisibleText &&
                     breakSpillLineIndex >= 0)
                 {
                     DocxTextLineLayout breakLastLine = (DocxTextLineLayout)currentItems[breakSpillLineIndex];
-                    // Office keeps exactly one row-end space beyond authored trailing:
-                    // clean-ending lines already carry it from the wrap pipeline, so
-                    // only lines ending in authored trailing whitespace need it here.
-                    bool breakNeedsRowEndSpace = lines[^1].Text.EndsWith(' ');
-                    double breakSpaceWidth = textMeasurer.MeasureText(firstRun, " ", paragraphFontSize);
                     var breakRowEndSegment = new DocxTextSegmentLayout(
                         " ",
                         firstRun,
@@ -795,16 +788,25 @@ internal sealed partial class DocxLayoutEngine
                         -1,
                         0,
                         DocxTextSegmentRole.BreakSpill);
-                    if (breakNeedsRowEndSpace)
+                    currentItems[breakSpillLineIndex] = breakLastLine with
                     {
-                        currentItems[breakSpillLineIndex] = breakLastLine with
-                        {
-                            Text = breakLastLine.Text + " ",
-                            Width = breakLastLine.Width + breakSpaceWidth,
-                            Segments = [.. breakLastLine.Segments, breakRowEndSegment],
-                        };
-                    }
+                        Text = breakLastLine.Text + " ",
+                        Width = breakLastLine.Width + breakSpaceWidth,
+                        Segments = [.. breakLastLine.Segments, breakRowEndSegment],
+                    };
+                }
 
+                if (paragraph.Images.Count == 0 &&
+                    paragraph.InlineTextBoxes.Count == 0 &&
+                    lines.Length > 0 &&
+                    elementIndex + 1 < document.BodyElements.Count &&
+                    document.BodyElements[elementIndex + 1] is DocxPageBreakElement nextBreak &&
+                    nextBreak.BreakParagraph is { } nextBreakParagraph &&
+                    nextBreakParagraph.Images.Count == 0 &&
+                    nextBreakParagraph.InlineTextBoxes.Count == 0 &&
+                    nextBreakParagraph.Runs.All(static run => run.Text.Length == 0) &&
+                    breakSpillLineIndex >= 0)
+                {
                     // Office sets the spill row past the paragraph after-spacing gap,
                     // not on the immediate next line slot.
                     double breakSpillAfterSpacing = spacingProfile.ParagraphAfterSpacing;
