@@ -448,7 +448,23 @@ internal sealed partial class DocxLayoutEngine
             double separatorTop = cursorTop + FootnoteSeparatorGapPoints + separatorHeight;
             double separatorBottom = separatorTop - separatorHeight;
             DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorY: separatorBottom + FootnoteSeparatorRuleBottomOffsetPoints);
-            placedStories.Add(ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom));
+            placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom);
+            // RV06 footnote probe: Office renders the separator mark as a space at the
+            // rule end, mirroring the rule rectangle drawn from the same origin.
+            if (placedSeparator.TextLines.Count == 1 &&
+                placedSeparator.TextLines[0].Segments.Count == 1 &&
+                string.IsNullOrWhiteSpace(placedSeparator.TextLines[0].Segments[0].Text))
+            {
+                DocxTextLineLayout separatorLine = placedSeparator.TextLines[0];
+                DocxTextSegmentLayout markSegment = separatorLine.Segments[0];
+                double markX = placedSeparator.X + Math.Min(FootnoteSeparatorWidthPoints, placedSeparator.Width);
+                placedSeparator = placedSeparator with
+                {
+                    TextLines = [separatorLine with { Segments = [markSegment with { X = markX }] }],
+                };
+            }
+
+            placedStories.Add(placedSeparator);
         }
 
         bool firstStory = true;
