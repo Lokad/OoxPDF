@@ -478,6 +478,15 @@ internal static class DocxCommentsTests
 
     public static void DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles()
     {
+        // The wrap parity needs the Office title face; server SKUs (including CI
+        // windows-latest) do not ship Segoe UI Bold, so those environments keep the
+        // label face and skip like other font-environmental tests.
+        FontFaceResolution segoe = new WindowsFontResolver().Resolve(new FontRequest("Segoe UI", Bold: true));
+        if (segoe.IsFallback)
+        {
+            TestAssert.Skip("Environmental precondition not met: Segoe UI Bold is not installed.");
+        }
+
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
