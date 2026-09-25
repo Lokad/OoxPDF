@@ -579,6 +579,34 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxStackedBalloonsKeepOfficePackingGap()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "docx-markup-comment-unresolved.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var renderer = new DocxRenderer(
+            fontResolver: null,
+            markupMode: OoxPdfDocxMarkupMode.AllMarkup,
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+        DocxMarkupBalloonPlacementSnapshot[] balloons = renderer.InspectMarkupBalloons(document)
+            .Where(placement => placement.Kind == "Comment")
+            .ToArray();
+
+        TestAssert.Equal(2, balloons.Length);
+        // Office packs consecutive balloons ~0.87pt apart (dense 0.81-0.94, landscape
+        // 0.87-0.96, unresolved 0.82); the 3pt minimum pushes the second balloon 2pt low.
+        double secondTop = balloons[1].Y + balloons[1].Height;
+        TestAssert.True(
+            secondTop >= 619.2d && secondTop <= 621.2d,
+            "The packed second balloon should top near 620.2 like Office; observed top=" + secondTop.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     public static void DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles()
     {
         // The wrap parity needs Office-matching title advances; environments whose Segoe UI
@@ -1546,9 +1574,12 @@ internal static class DocxCommentsTests
                 [], null));
         }
 
+        // The page fits six 26pt balloons plus a 12pt overflow summary at the Office 0.87pt
+        // packing gap (tuned from the 3pt era); a fully overfull lane with no summary room
+        // is a separate queued hole (overflow candidates drop silently).
         var document = new DocxDocument(
             200d,
-            185d,
+            200d,
             50d,
             15d,
             10d,

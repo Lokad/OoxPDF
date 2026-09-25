@@ -99,7 +99,10 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupShortInsertionDecorationWidthInsetPoints = 1.434d;
     private const double WordCompatibleAllMarkupCommentRangeStrokeWidthPoints = 0.475d;
     private const double MarkupBalloonConnectorCollisionAnchorYThresholdPoints = 9d;
-    private const double MarkupBalloonMinimumSpacingPoints = 3d;
+    // Office A/B (dense/landscape/unresolved references, Word-COM rendered): packed
+    // consecutive balloons sit ~0.87pt apart (dense 0.81-0.94, landscape 0.87-0.96,
+    // unresolved 0.82); the unevidenced June 3pt minimum pushed packed balloons ~2pt low.
+    private const double MarkupBalloonMinimumSpacingPoints = 0.87d;
     private const double MarkupBalloonLaneBandSeparationPoints = 18d;
     private const int MarkupBalloonMaxNearbyRevisionGroupSize = 3;
     private const double WordCompatibleAllMarkupCommentRangeFillXInsetPoints = 0.30d;
