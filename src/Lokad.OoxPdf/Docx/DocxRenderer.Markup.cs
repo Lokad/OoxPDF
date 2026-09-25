@@ -25,12 +25,12 @@ internal sealed partial class DocxRenderer
             return true;
         }
 
-        // Word-compatible print shows insertions, deletions, and moves inline and reserves
-        // margin balloons for property (formatting) revisions and comments (Office A/B:
-        // dense-revisions, balloon-lane-bands, and review references carry zero
-        // insertion/deletion/move balloons alongside inline revision styling). A property
-        // change with no property elements (for example an empty rPrChange) is void: Word
-        // shows no balloon for it, so it cannot sustain one either.
+        // Declared Word-compatible view (RevisionsMode=1-like): insertions, deletions, and
+        // moves render inline while property (formatting) revisions and comments balloon.
+        // Office paints Deleted:/Inserted: balloons under RevisionsMode=0 instead (dense-revisions
+        // reference artifacts/rv06-lane/insp-dense*); that ballooning view needs its own
+        // rendering mode. A property change with no property elements (for example an empty
+        // rPrChange) is void: Word shows no balloon for it, so it cannot sustain one either.
         return revisions.Any(static revision => IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
     }
 

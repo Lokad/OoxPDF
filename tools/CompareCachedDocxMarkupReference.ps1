@@ -607,6 +607,7 @@ function Select-ReferenceBalloonGraphicCandidates($graphicsOperations) {
             MaxY = [double]$op.MaxY
             Width = $width
             Height = $height
+            FillColor = [string]$op.FillColor
             SourceOperator = $op.SourceOperator
         }
     }
@@ -1607,7 +1608,17 @@ function Select-ReferenceMarkupLaneRects($ReferenceBalloonGraphics, $ReferenceMe
     foreach ($group in @($ReferenceBalloonGraphics | Where-Object { $_.Page -ne $null -and $_.Subtype -ne "Stroke" } | Group-Object -Property Page)) {
         $page = [int]$group.Name
         $pageWidth = if ($mediaByPage.ContainsKey($page) -and $mediaByPage[$page].Width -ne $null) { [double]$mediaByPage[$page].Width } else { 0d }
-        $items = @($group.Group | Where-Object {
+        $pageHeight = if ($mediaByPage.ContainsKey($page) -and $mediaByPage[$page].Height -ne $null) { [double]$mediaByPage[$page].Height } else { 0d }
+        # RV06 lane calibration: when a gray lane-background wash is present it defines the
+        # occupied lane by itself. Revision washes and decorations paint the body too, so a
+        # blind union would drag the lane edge body-wards (landscape 397.13 vs a 585.72 wash).
+        $grayWash = @($group.Group | Where-Object {
+                [string]$_.FillColor -eq "g:0.949" -and
+                ([double]$_.MaxX - [double]$_.MinX) -ge 72d -and
+                ($pageHeight -le 0d -or ([double]$_.MaxY - [double]$_.MinY) -ge $pageHeight * 0.4d)
+            })
+        $laneItems = if ($grayWash.Count -ne 0) { $grayWash } else { $group.Group }
+        $items = @($laneItems | Where-Object {
                 if ($pageWidth -le 0d) {
                     $true
                 }
