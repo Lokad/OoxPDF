@@ -164,6 +164,7 @@ internal sealed partial class PptxRenderer
                     {
                         FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
                     }
+                    PaintStyleColumnOutline(graphics, plotClipBox, chartStyleId, hasExplicitFill, fill, barX, barY, barWidth, barHeight);
                     StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
                 }
             }
@@ -1437,6 +1438,32 @@ internal sealed partial class PptxRenderer
             graphics.RestoreState();
         });
         return true;
+    }
+
+    // RV04: effective-style-10 clustered columns stroke white 1pt round-join bar
+    // outlines sampled from Office bar references; other styles keep current strokes.
+    // Stacked and horizontal bars keep the current path.
+    private static void PaintStyleColumnOutline(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, int? chartStyleId, bool hasExplicitFill, ChartSeriesFill fill, double barX, double barY, double barWidth, double barHeight)
+    {
+        if ((chartStyleId != 10 && chartStyleId != 110) ||
+            hasExplicitFill ||
+            fill.PatternPreset is not null ||
+            fill.Alpha < 1d ||
+            barWidth <= 0d ||
+            barHeight <= 0d)
+        {
+            return;
+        }
+
+        RenderInChartPlotAreaClip(graphics, plotBox, () =>
+        {
+            graphics.SaveState();
+            graphics.SetLineWidth(1d);
+            graphics.SetStrokeRgb(255, 255, 255);
+            graphics.SetLineJoin(1);
+            graphics.StrokeRectangle(barX, barY, barWidth, barHeight);
+            graphics.RestoreState();
+        });
     }
 
     // RV04: style-18/26 column gradient stops sampled from Office bar references at
