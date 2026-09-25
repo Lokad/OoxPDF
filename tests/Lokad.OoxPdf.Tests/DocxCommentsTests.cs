@@ -650,6 +650,18 @@ internal static class DocxCommentsTests
             "The second body should wrap to a second row like Office; observed Height=" + balloons[1].Height.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxLayoutLineMetricScaleFollowsPrintScale()
+    {
+        var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) with
+        {
+            WordCompatiblePrintScale = 612d / 788.5d
+        };
+
+        // Office dense pitch (13.18 at 12pt) equals the per-doc scale, not the fitted
+        // compromise: line metrics must live in the same emission space as text widths.
+        TestAssert.Equal(context.WordCompatiblePrintScale, DocxRenderer.ResolveLayoutLineMetricScale(context));
+    }
+
     public static void DocxWordCompatibleBalloonBodiesUseOfficeMeasuredWidth()
     {
         string input = DocxTests.WriteCommentAuthorColorProbeDocx();

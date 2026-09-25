@@ -42,7 +42,6 @@ internal sealed record DocxMarkupBalloonPlacementSnapshot(
 internal sealed partial class DocxRenderer
 {
     internal const string DefaultDocumentTypefaceRequest = DocxFontFallbackRules.DefaultDocumentTypefaceRequest;
-    private const double WordCompatibleAllMarkupLineMetricScale = 0.79359971328d;
 
     private const double WordCompatibleAllMarkupMaxBodyTextFontSizePoints = 11.625d;
     // Office A/B (W5-K1 dense ref: Word kern tightens 23pt over the body; per-gap tracking is
@@ -861,17 +860,13 @@ internal sealed partial class DocxRenderer
         return UsesWordCompatibleAllMarkupTextProfile(markupContext);
     }
 
-    private static double ResolveLayoutLineMetricScale(DocxMarkupContext markupContext)
+    internal static double ResolveLayoutLineMetricScale(DocxMarkupContext markupContext)
     {
-        // Keep the fitted compromise: per-doc scaling was tried (W5-P2) and family-vetoed
-        // (R207-class pitch improved but dense-class regressed more). Word design line heights
-        // vary by resolved font (dense 17.65 vs R207 17.01 at the same 12pt), so no single
-        // scale fits all; per-font line-height modeling is queued instead.
-        return markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
-            markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            markupContext.ExpandsMarkupMargin
-            ? WordCompatibleAllMarkupLineMetricScale
-            : ResolveTextEmissionFontScale(markupContext);
+        // Office dense pitch (13.18 at 12pt single spacing) equals per-doc-scale metrics,
+        // not the fitted compromise: line metrics live in the same emission space as text
+        // widths (the old W5-P2 veto predates the per-font evidence; R207-class re-probing
+        // stays queued). Unscaled profiles keep scale 1 through the print scale itself.
+        return ResolveTextEmissionFontScale(markupContext);
     }
 
     private static bool HasBodyElements(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> elementsByType)
