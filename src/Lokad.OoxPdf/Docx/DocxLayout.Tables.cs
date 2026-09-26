@@ -55,7 +55,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                 }
 
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, explicitBreakBoundaries, "CellPageBreak", finishPage, paragraphSpacingScale, cellMemo);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, explicitBreakBoundaries, "CellPageBreak", finishPage, paragraphSpacingScale, 0d, cellMemo);
                 markBoundaryContent();
                 continue;
             }
@@ -63,9 +63,13 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight))
+                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, out double splitPitch))
             {
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, remainingPageHeight, "PageBoundary", finishPage, paragraphSpacingScale, cellMemo);
+                // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments keep
+                // whole lines that fit (floor capacity); the boundary is floored to whole
+                // line pitches so a fractional remainder never squeezes an extra line in.
+                double firstFragmentHeight = FloorTableRowFragmentHeightToPitch(remainingPageHeight, splitPitch);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, firstFragmentHeight, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo);
                 markBoundaryContent();
                 continue;
             }
@@ -88,8 +92,36 @@ internal sealed partial class DocxLayoutEngine
             markBoundaryContent();
         }
 
-        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight)
+        // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments pack whole
+        // lines by floor capacity. The pitch is the median positive baseline gap across
+        // the row's laid-out lines (robust to images shifting individual lines); unknown
+        // when fewer than two lines laid out, which never needs flooring anyway.
+        static double ResolveTableRowSplitPitch(List<double> baselines)
         {
+            baselines.Sort();
+            var gaps = new List<double>(baselines.Count);
+            for (int gapIndex = 1; gapIndex < baselines.Count; gapIndex++)
+            {
+                double gap = baselines[gapIndex] - baselines[gapIndex - 1];
+                if (gap > 0.001d)
+                {
+                    gaps.Add(gap);
+                }
+            }
+
+            if (gaps.Count == 0)
+            {
+                return 0d;
+            }
+
+            gaps.Sort();
+            return gaps[gaps.Count / 2];
+        }
+
+
+        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight, out double splitPitch)
+        {
+            splitPitch = 0d;
             if (textMeasurer is null)
             {
                 return false;
@@ -98,6 +130,7 @@ internal sealed partial class DocxLayoutEngine
             double fragmentBottomY = rowHeight - firstFragmentHeight;
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
+            var splitLineBaselines = new List<double>();
             for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
@@ -107,6 +140,7 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo).Lines;
+                splitLineBaselines.AddRange(textLines.Select(line => line.BaselineY));
                 bool HasTableCellKeepRuleBoundaryViolation()
                 {
                     if (textLines.Count == 0)
@@ -167,6 +201,7 @@ internal sealed partial class DocxLayoutEngine
                 bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
                 if (hasLineInFirstFragment && hasLineInContinuation)
                 {
+                    splitPitch = ResolveTableRowSplitPitch(splitLineBaselines);
                     return true;
                 }
             }
@@ -741,6 +776,7 @@ internal sealed partial class DocxLayoutEngine
         string fragmentReason,
         Action finishPage,
         double paragraphSpacingScale,
+        double splitPitch,
         DocxTableCellTextLinesMemo? cellMemo = null)
     {
         AddSplitTableRowLayout(
@@ -758,6 +794,7 @@ internal sealed partial class DocxLayoutEngine
             fragmentReason,
             finishPage,
             paragraphSpacingScale,
+            splitPitch,
             cellMemo);
     }
 
@@ -776,6 +813,7 @@ internal sealed partial class DocxLayoutEngine
         string fragmentReason,
         Action finishPage,
         double paragraphSpacingScale,
+        double splitPitch,
         DocxTableCellTextLinesMemo? cellMemo = null)
     {
         DocxTableLayoutFrame initialFrame = resolveFrame();
@@ -789,7 +827,7 @@ internal sealed partial class DocxLayoutEngine
         double continuationContentHeight = row.IsHeader
             ? initialFrame.PageContentHeight
             : Math.Max(1d, initialFrame.PageContentHeight - SumRepeatedTableHeaderRowsHeight());
-        IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, fragmentBoundariesFromRowTop, continuationContentHeight);
+        IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, fragmentBoundariesFromRowTop, continuationContentHeight, splitPitch);
         double consumedHeight = 0d;
         for (int fragmentIndex = 0; fragmentIndex < fragmentHeights.Count; fragmentIndex++)
         {
@@ -1007,7 +1045,22 @@ internal sealed partial class DocxLayoutEngine
 
     internal const int MaxTableRowFragments = 1000;
 
-    private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, IReadOnlyList<double> fragmentBoundariesFromRowTop, double pageContentHeight)
+    // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments pack whole
+    // lines by floor capacity. Flooring a fragment height to whole line pitches keeps
+    // exact fits bit-identical while fractional remainders stop squeezing an extra
+    // line in. Non-positive pitches (unknown) leave heights untouched.
+    private static double FloorTableRowFragmentHeightToPitch(double height, double pitch)
+    {
+        if (!(pitch > 0d) || !double.IsFinite(height) || !double.IsFinite(pitch))
+        {
+            return height;
+        }
+
+        double floored = Math.Floor(height / pitch) * pitch;
+        return floored >= pitch ? floored : height;
+    }
+
+    private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, IReadOnlyList<double> fragmentBoundariesFromRowTop, double pageContentHeight, double splitPitch = 0d)
     {
         // validate geometry before fragment expansion and require numeric
         // progress so extreme authored heights cannot append unbounded fragments.
@@ -1042,15 +1095,15 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
 
-            AddTableRowFragmentSegmentHeights(fragments, clampedBoundary - consumedHeight, fullPageHeight);
+            AddTableRowFragmentSegmentHeights(fragments, clampedBoundary - consumedHeight, fullPageHeight, splitPitch);
             consumedHeight = clampedBoundary;
         }
 
-        AddTableRowFragmentSegmentHeights(fragments, rowHeight - consumedHeight, fullPageHeight);
+        AddTableRowFragmentSegmentHeights(fragments, rowHeight - consumedHeight, fullPageHeight, splitPitch);
         return fragments.Count == 0 ? [Math.Max(1d, rowHeight)] : fragments;
     }
 
-    private static void AddTableRowFragmentSegmentHeights(List<double> fragments, double segmentHeight, double fullPageHeight)
+    private static void AddTableRowFragmentSegmentHeights(List<double> fragments, double segmentHeight, double fullPageHeight, double splitPitch = 0d)
     {
         if (!double.IsFinite(segmentHeight) || !double.IsFinite(fullPageHeight))
         {
@@ -1065,8 +1118,9 @@ internal sealed partial class DocxLayoutEngine
         // Require numeric progress: extreme doubles can make subtraction stop
         // changing the value and loop without bound (M06).
         double remainingHeight = segmentHeight;
+        double pageChunkHeight = FloorTableRowFragmentHeightToPitch(fullPageHeight, splitPitch);
         double lastRemaining = double.PositiveInfinity;
-        while (remainingHeight > fullPageHeight + 0.001d)
+        while (remainingHeight > pageChunkHeight + 0.001d)
         {
             if (fragments.Count >= MaxTableRowFragments)
             {
@@ -1080,10 +1134,10 @@ internal sealed partial class DocxLayoutEngine
             }
 
             lastRemaining = remainingHeight;
-            fragments.Add(fullPageHeight);
+            fragments.Add(pageChunkHeight);
             // conversion-wide cumulative charge per constructed fragment.
             OoxConversionBudget.Current?.ChargeTableFragments(1);
-            double next = remainingHeight - fullPageHeight;
+            double next = remainingHeight - pageChunkHeight;
             if (!(next < remainingHeight))
             {
                 throw new OoxPdfLimitExceededException("DOCX table row fragmentation cannot progress.");

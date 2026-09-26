@@ -1264,6 +1264,37 @@ internal static class DocxTablesLayoutTests
             $"The spill space should stay left-aligned in centered cells. spillX={cellLines[1].X} centeredX={cellLines[0].X}.");
     }
 
+    public static void DocxTableSplitFragmentsFitWholeLinesOnly()
+    {
+        // RV06 pagination probe (edge-page-auto, Word 16.0): a split fragment keeps
+        // only whole lines that fit its height (floor capacity); a line whose box
+        // crosses the fragment bottom belongs to the continuation, even when its
+        // baseline clears the edge. Pre-fix the packer kept baseline-clearing lines
+        // and overfilled by one line on fractional remainders.
+        DocxParagraph[] headParas = Enumerable.Range(1, 2)
+            .Select(index => DocxTests.CreateDocxLayoutParagraph("Head " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        DocxParagraph[] tallParas = Enumerable.Range(1, 10)
+            .Select(index => DocxTests.CreateDocxLayoutParagraph("Tall line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
+            .ToArray();
+        var rows = new List<DocxTableRow>();
+        rows.Add(new DocxTableRow([new DocxTableCell(string.Empty, [headParas[0]], null, null, null, null, [], DocxTableCellMargins.Empty)], 130.5d));
+        rows.Add(new DocxTableRow([new DocxTableCell(string.Empty, [headParas[1]], null, null, null, null, [], DocxTableCellMargins.Empty)], null));
+        rows.Add(new DocxTableRow([new DocxTableCell(string.Empty, tallParas, null, null, null, null, [], DocxTableCellMargins.Empty)], null));
+        DocxTable table = new(null, [90d], rows);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
+        TestAssert.Equal(3, firstPageRows.Length);
+        TestAssert.Equal(3, firstPageRows[2].Cells[0].TextLines.Count);
+        TestAssert.Equal(7, secondPageRows[0].Cells[0].TextLines.Count);
+        TestAssert.Equal(10, firstPageRows[2].Cells[0].TextLines.Count + secondPageRows[0].Cells[0].TextLines.Count);
+    }
+
     public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
     {
         DocxTable beforeNestedTable = DocxTests.CreateSingleCellTable("Before", 12d);
