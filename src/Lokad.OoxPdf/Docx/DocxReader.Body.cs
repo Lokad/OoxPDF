@@ -36,7 +36,14 @@ internal sealed partial class DocxReader
                     return;
                 }
 
-                elements.Add(new DocxImplicitParagraphElement(DocxBreakSourceKind.TerminalTable));
+                // Office sizes the terminal mark like unsized runs (edge-mark14c: Normal
+                // 14pt wins over hardcoded 11; style-less docs fall back to 12pt).
+                double markFontSize = ResolveRunProperties(null, null, null, styles, null).FontSize
+                    ?? DocxDefaults.UnstyledRunFontSizePoints;
+                elements.Add(new DocxImplicitParagraphElement(DocxBreakSourceKind.TerminalTable)
+                {
+                    MarkFontSizePoints = markFontSize
+                });
             }
 
         var elements = new List<DocxBodyElement>();

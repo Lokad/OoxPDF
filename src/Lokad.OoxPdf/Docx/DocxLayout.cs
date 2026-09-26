@@ -560,7 +560,7 @@ internal sealed partial class DocxLayoutEngine
             if (element is DocxImplicitParagraphElement implicitParagraph &&
                 implicitParagraph.SourceKind == DocxBreakSourceKind.TerminalTable)
             {
-                DocxTextRun markRun = DocxImplicitParagraphElement.CreateParagraphMarkRun();
+                DocxTextRun markRun = DocxImplicitParagraphElement.CreateParagraphMarkRun(implicitParagraph.MarkFontSizePoints);
                 double markFontSize = markRun.EffectiveProperties.FontSize;
                 double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(markFontSize, markFontSize, hasExplicitLineSpacing: false);
                 currentItems.Add(new DocxTextLineLayout(

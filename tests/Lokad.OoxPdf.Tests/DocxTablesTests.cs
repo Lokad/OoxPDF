@@ -73,6 +73,72 @@ internal static class DocxTablesTests
         TestAssert.True(!outerCell.BodyElements.OfType<DocxImplicitParagraphElement>().Any(), "The implicit terminal body paragraph is a document-body rule, not a table-cell body rule.");
     }
 
+    public static void DocxTerminalTableMarkFollowsUnsizedRunResolution()
+    {
+        // Office (edge-mark14c, Word 16.0): the terminal mark sizes like unsized runs,
+        // Normal size when styles resolve (14pt) and the unstyled default (12pt)
+        // otherwise, never the hardcoded legacy 11pt.
+        static double ReadTerminalMarkSize(bool withStyles)
+        {
+            var files = new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body>
+                        <w:tbl>
+                          <w:tblGrid><w:gridCol w:w="9360"/></w:tblGrid>
+                          <w:tr><w:tc><w:tcPr><w:tcW w:w="9360" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>Mark size probe</w:t></w:r></w:p></w:tc></w:tr>
+                        </w:tbl>
+                        <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                      </w:body>
+                    </w:document>
+                    """
+            };
+            if (withStyles)
+            {
+                files["[Content_Types].xml"] = files["[Content_Types].xml"].Replace(
+                    "</Types>",
+                    """<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+                    StringComparison.Ordinal);
+                files["word/_rels/document.xml.rels"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                    </Relationships>
+                    """;
+                files["word/styles.xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/><w:rPr><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:style>
+                    </w:styles>
+                    """;
+            }
+
+            string input = TestFixtures.WriteTempPackage(".docx", files);
+            using FileStream stream = File.OpenRead(input);
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+            return ((DocxImplicitParagraphElement)document.BodyElements.Single(element => element is DocxImplicitParagraphElement)).MarkFontSizePoints;
+        }
+
+        TestAssert.Equal(14d, ReadTerminalMarkSize(withStyles: true));
+        TestAssert.Equal(12d, ReadTerminalMarkSize(withStyles: false));
+    }
+
     public static void DocxReaderPreservesFontTableAlternatesAndThemeFonts()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

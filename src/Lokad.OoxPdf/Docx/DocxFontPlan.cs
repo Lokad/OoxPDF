@@ -38,7 +38,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             .SelectMany(GetParagraphFontRuns)
             .Concat(document.BodyElements
                 .OfType<DocxImplicitParagraphElement>()
-                .Select(_ => DocxImplicitParagraphElement.CreateParagraphMarkRun()))
+                .Select(element => DocxImplicitParagraphElement.CreateParagraphMarkRun(element.MarkFontSizePoints)))
             .ToArray();
 
         var resolvedRuns = new DocxResolvedRunTypeface[runs.Count];

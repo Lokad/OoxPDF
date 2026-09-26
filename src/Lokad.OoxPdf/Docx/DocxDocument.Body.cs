@@ -50,9 +50,18 @@ internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
 internal sealed record DocxImplicitParagraphElement(DocxBreakSourceKind SourceKind) : DocxBodyElement
 {
+    // Style-less mark size resolved at read time (Normal size when styles resolve,
+    // unstyled default otherwise); Office sizes the terminal mark like unsized runs.
+    public double MarkFontSizePoints { get; init; } = DocxDefaults.FontSizePoints;
+
     public static DocxTextRun CreateParagraphMarkRun()
     {
-        return new DocxTextRun(string.Empty, DocxDefaults.FontSizePoints, null, false, false, false, null, null);
+        return CreateParagraphMarkRun(DocxDefaults.FontSizePoints);
+    }
+
+    public static DocxTextRun CreateParagraphMarkRun(double fontSizePoints)
+    {
+        return new DocxTextRun(string.Empty, fontSizePoints, null, false, false, false, null, null);
     }
 }
 
