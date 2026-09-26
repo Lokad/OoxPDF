@@ -179,6 +179,9 @@ internal sealed partial class DocxLayoutEngine
     private const double FootnoteSeparatorThicknessPoints = 0.75d;
     // Word rule bottom sits this far above the separator space baseline (2.04 and 2.16 across probes).
     private const double FootnoteSeparatorRuleBottomOffsetPoints = 2.1d;
+    // RV06 endnote probes (3.76 and 3.72 across two probes): the endnote separator
+    // rule sits ~3.74 above the mark baseline versus 2.1 for footnotes.
+    private const double EndnoteSeparatorRuleBottomOffsetPoints = 3.74d;
     // Word separator space baselines sit within 0.15 of the separator block bottom on both probes; midpoint taken.
     private const double FootnoteSeparatorBaselineOffsetPoints = 0.15d;
     private const double UnpagedRelatedStoryCanvasHeightPoints = 100000d;

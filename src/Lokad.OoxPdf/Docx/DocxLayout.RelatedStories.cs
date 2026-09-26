@@ -198,7 +198,9 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex])));
+                IReadOnlyList<DocxRelatedStoryLayout> groupLayouts = resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex]));
+                Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(groupLayouts);
+                DocxRelatedStoryLayout? endnoteSeparatorLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
                 foreach (DocxInlineReferenceLocation location in sectionGroup)
                 {
@@ -211,7 +213,7 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
-                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, cancellationToken);
+                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, cancellationToken);
                 }
             }
 
@@ -276,12 +278,23 @@ internal sealed partial class DocxLayoutEngine
         List<DocxLayoutPage> outputPages,
         int sectionEndPageIndex,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories,
+        DocxRelatedStoryLayout? endnoteSeparatorLayout,
         CancellationToken cancellationToken)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
+        if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
+        {
+            // RV06 endnote probes: the separator space sits exactly one body pitch below
+            // the body baseline, so no extra gap applies above the separator (the start-top
+            // gap is added back); content keeps its gap below the separator.
+            (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, EndnoteSeparatorRuleBottomOffsetPoints);
+            activePlacedStories.Add(placedSeparator);
+            outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+            cursorTop = separatorBottom - FootnoteSeparatorGapPoints;
+        }
         foreach (DocxReferencedRelatedStoryLayout story in sectionEndStories)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -421,6 +434,37 @@ internal sealed partial class DocxLayoutEngine
         return placed with { TextLines = ShiftTextLines(placed.TextLines, bottom + FootnoteSeparatorBaselineOffsetPoints - currentBaseline, 0d) };
     }
 
+    // RV06 footnote/endnote probes: both draw the separator rule with a mark space
+    // at the rule end. Shared by footnote placement (rule 2.1 above the mark
+    // baseline) and section-end endnote placement (rule 3.74 above, two probes).
+    private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
+        DocxLayoutPage page,
+        int pageIndex,
+        DocxRelatedStoryLayout separatorLayout,
+        int sourceBlockIndex,
+        double separatorTop,
+        double ruleBottomOffsetPoints)
+    {
+        double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
+        double separatorBottom = separatorTop - separatorHeight;
+        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: separatorBottom + ruleBottomOffsetPoints);
+        placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom);
+        if (placedSeparator.TextLines.Count == 1 &&
+            placedSeparator.TextLines[0].Segments.Count == 1 &&
+            string.IsNullOrWhiteSpace(placedSeparator.TextLines[0].Segments[0].Text))
+        {
+            DocxTextLineLayout separatorLine = placedSeparator.TextLines[0];
+            DocxTextSegmentLayout markSegment = separatorLine.Segments[0];
+            double markX = placedSeparator.X + Math.Min(FootnoteSeparatorWidthPoints, placedSeparator.Width);
+            placedSeparator = placedSeparator with
+            {
+                TextLines = [separatorLine with { Segments = [markSegment with { X = markX }] }],
+            };
+        }
+
+        return (placedSeparator, separatorBottom);
+    }
+
     private static DocxPlacedRelatedStoryLayout PlaceRelatedStory(DocxLayoutPage page, int pageIndex, DocxRelatedStoryLayout storyLayout, int sourceBlockIndex)
     {
         double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
@@ -446,24 +490,7 @@ internal sealed partial class DocxLayoutEngine
         {
             double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
             double separatorTop = cursorTop + FootnoteSeparatorGapPoints + separatorHeight;
-            double separatorBottom = separatorTop - separatorHeight;
-            DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorY: separatorBottom + FootnoteSeparatorRuleBottomOffsetPoints);
-            placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom);
-            // RV06 footnote probe: Office renders the separator mark as a space at the
-            // rule end, mirroring the rule rectangle drawn from the same origin.
-            if (placedSeparator.TextLines.Count == 1 &&
-                placedSeparator.TextLines[0].Segments.Count == 1 &&
-                string.IsNullOrWhiteSpace(placedSeparator.TextLines[0].Segments[0].Text))
-            {
-                DocxTextLineLayout separatorLine = placedSeparator.TextLines[0];
-                DocxTextSegmentLayout markSegment = separatorLine.Segments[0];
-                double markX = placedSeparator.X + Math.Min(FootnoteSeparatorWidthPoints, placedSeparator.Width);
-                placedSeparator = placedSeparator with
-                {
-                    TextLines = [separatorLine with { Segments = [markSegment with { X = markX }] }],
-                };
-            }
-
+            (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, FootnoteSeparatorRuleBottomOffsetPoints);
             placedStories.Add(placedSeparator);
         }
 
