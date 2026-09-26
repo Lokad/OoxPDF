@@ -66,7 +66,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
         CancellationToken cancellationToken,
-        double printScale = 1d)
+        double printScale = 1d,
+        IDocxTextMeasurer? separatorMeasurer = null)
     {
         if (pages.Count == 0)
         {
@@ -147,7 +148,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories = PlaceFootnoteStories(page, pageIndex, pageFootnoteStories, footnoteSeparatorLayout);
+            IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories = PlaceFootnoteStories(page, pageIndex, pageFootnoteStories, footnoteSeparatorLayout, separatorMeasurer);
             pagesWithStories[pageIndex] = placedStories.Count == 0
                 ? page
                 : page with { PlacedRelatedStories = placedStories };
@@ -214,7 +215,7 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
-                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, cancellationToken, printScale);
+                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, cancellationToken, printScale, separatorMeasurer);
                 }
             }
 
@@ -262,7 +263,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     // RV06 endnote probes: document-end endnotes draw the separator rule
                     // with a mark like section-end endnotes (no extra gap above it).
-                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, EndnoteSeparatorRuleBottomOffsetPoints);
+                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                     cursorTop = separatorBottom - FootnoteSeparatorGapPoints;
@@ -291,7 +292,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories,
         DocxRelatedStoryLayout? endnoteSeparatorLayout,
         CancellationToken cancellationToken,
-        double printScale = 1d)
+        double printScale,
+        IDocxTextMeasurer? separatorMeasurer)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
@@ -302,7 +304,7 @@ internal sealed partial class DocxLayoutEngine
             // RV06 endnote probes: the separator space sits exactly one body pitch below
             // the body baseline, so no extra gap applies above the separator (the start-top
             // gap is added back); content keeps its gap below the separator.
-            (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, EndnoteSeparatorRuleBottomOffsetPoints);
+            (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer);
             activePlacedStories.Add(placedSeparator);
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             cursorTop = separatorBottom - FootnoteSeparatorGapPoints;
@@ -446,20 +448,60 @@ internal sealed partial class DocxLayoutEngine
         return placed with { TextLines = ShiftTextLines(placed.TextLines, bottom + FootnoteSeparatorBaselineOffsetPoints - currentBaseline, 0d) };
     }
 
-    // RV06 footnote/endnote probes: both draw the separator rule with a mark space
-    // at the rule end. Shared by footnote placement (rule 2.1 above the mark
-    // baseline) and section-end endnote placement (rule 3.74 above, two probes).
+    // RV06 footnote/endnote probes: both draw the separator rule with a mark space at the
+    // rule end. Geometry is shared by footnote, section-end endnote and document-end
+    // endnote placement; the rule follows OS/2 strikeout geometry below, with the legacy
+    // footnote (2.1pt) and endnote (3.74pt) offsets kept for measurers without font metrics.
+    private static (double RuleBottomOffsetPoints, double RuleThicknessPoints) ResolveSeparatorRuleGeometry(
+        DocxRelatedStoryKind kind,
+        DocxTextRun? markRun,
+        double markFontSizePoints,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
+        double legacyOffsetPoints = kind == DocxRelatedStoryKind.Endnote
+            ? EndnoteSeparatorRuleBottomOffsetPoints
+            : FootnoteSeparatorRuleBottomOffsetPoints;
+        if (separatorMeasurer is not null &&
+            markFontSizePoints > 0d &&
+            separatorMeasurer.TryGetStrikeoutRuleMetrics(markRun, out double positionEm, out double thicknessEm) &&
+            positionEm > 0d &&
+            thicknessEm > 0d)
+        {
+            double thicknessPoints = thicknessEm * markFontSizePoints;
+            return (Math.Max(0d, positionEm * markFontSizePoints - thicknessPoints), thicknessPoints);
+        }
+
+        return (legacyOffsetPoints, FootnoteSeparatorThicknessPoints);
+    }
+
+    private static (DocxTextRun? MarkRun, double MarkFontSizePoints) FindSeparatorMarkFont(IReadOnlyList<DocxTextLineLayout> textLines)
+    {
+        foreach (DocxTextLineLayout line in textLines)
+        {
+            if (line.Segments.Count != 0)
+            {
+                DocxTextRun markRun = line.Segments[0].StyleRun;
+                return (markRun, markRun.EffectiveProperties.FontSize);
+            }
+        }
+
+        return (null, 0d);
+    }
+
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
         DocxLayoutPage page,
         int pageIndex,
         DocxRelatedStoryLayout separatorLayout,
         int sourceBlockIndex,
         double separatorTop,
-        double ruleBottomOffsetPoints)
+        IDocxTextMeasurer? separatorMeasurer)
     {
         double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         double separatorBottom = separatorTop - separatorHeight;
+        (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
+        (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(separatorLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
         DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: separatorBottom + ruleBottomOffsetPoints);
+        placedSeparator = placedSeparator with { SeparatorThickness = ruleThicknessPoints };
         placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom);
         if (placedSeparator.TextLines.Count == 1 &&
             placedSeparator.TextLines[0].Segments.Count == 1 &&
@@ -488,7 +530,8 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage page,
         int pageIndex,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
-        DocxRelatedStoryLayout? separatorLayout)
+        DocxRelatedStoryLayout? separatorLayout,
+        IDocxTextMeasurer? separatorMeasurer)
     {
         if (footnoteStories.Count == 0)
         {
@@ -502,17 +545,32 @@ internal sealed partial class DocxLayoutEngine
         {
             double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
             double separatorTop = cursorTop + FootnoteSeparatorGapPoints + separatorHeight;
-            (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, FootnoteSeparatorRuleBottomOffsetPoints);
+            (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
             placedStories.Add(placedSeparator);
         }
 
         bool firstStory = true;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
-            double? separatorY = separatorLayout is null && firstStory
-                ? cursorTop + FootnoteSeparatorGapPoints + FootnoteSeparatorRuleBottomOffsetPoints
-                : null;
-            placedStories.Add(PlaceRelatedStoryAtTop(page, pageIndex, story.StoryLayout, story.Location.SourceBlockIndex, cursorTop, separatorY));
+            double? separatorY = null;
+            double separatorThickness = FootnoteSeparatorThicknessPoints;
+            if (separatorLayout is null && firstStory)
+            {
+                // Absent separator stories still draw the default rule, so the rule
+                // follows the first body run when strikeout metrics resolve.
+                (DocxTextRun? bodyRun, double bodyFontSizePoints) = FindSeparatorMarkFont(story.StoryLayout.TextLines);
+                (double syntheticOffsetPoints, double syntheticThicknessPoints) = ResolveSeparatorRuleGeometry(DocxRelatedStoryKind.Footnote, bodyRun, bodyFontSizePoints, separatorMeasurer);
+                separatorY = cursorTop + FootnoteSeparatorGapPoints + syntheticOffsetPoints;
+                separatorThickness = syntheticThicknessPoints;
+            }
+
+            DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(page, pageIndex, story.StoryLayout, story.Location.SourceBlockIndex, cursorTop, separatorY);
+            if (separatorY is not null)
+            {
+                placedStory = placedStory with { SeparatorThickness = separatorThickness };
+            }
+
+            placedStories.Add(placedStory);
             cursorTop -= ResolvePlacedStoryHeight(story.StoryLayout, page);
             firstStory = false;
         }

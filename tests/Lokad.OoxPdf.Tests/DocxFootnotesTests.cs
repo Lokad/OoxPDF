@@ -1261,6 +1261,144 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(144d, separatorLine.Segments[0].X - separatorLine.X);
     }
 
+    private sealed class StrikeoutFontResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            byte[] faceBytes = TestFontBuilder.CreateTestFont();
+            PatchStrikeoutMetrics(faceBytes, size: 50, position: 300);
+            return new FontFaceResolution(
+                request.FamilyName,
+                "StrikeFace",
+                new FontStyleKey(request.Bold, request.Italic),
+                new MemoryFontProgramSource("test:strikeface", faceBytes),
+                IsFallback: false);
+        }
+
+        private static void PatchStrikeoutMetrics(byte[] faceBytes, ushort size, short position)
+        {
+            // The shared synthetic face stores a placeholder strikeout size, so pin
+            // real OS/2 strikeout geometry (0.05em size, 0.30em position) in place.
+            int tableCount = (faceBytes[4] << 8) | faceBytes[5];
+            for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
+            {
+                int record = 12 + 16 * tableIndex;
+                if (faceBytes[record] == 0x4F && faceBytes[record + 1] == 0x53 && faceBytes[record + 2] == 0x2F && faceBytes[record + 3] == 0x32)
+                {
+                    int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
+                    faceBytes[offset + 26] = (byte)(size >> 8);
+                    faceBytes[offset + 27] = (byte)(size & 0xFF);
+                    faceBytes[offset + 28] = (byte)((position >> 8) & 0xFF);
+                    faceBytes[offset + 29] = (byte)(position & 0xFF);
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Synthetic test font is missing the OS/2 table.");
+        }
+    }
+
+    public static void DocxFootnoteSeparatorRuleFollowsStrikeoutMetrics()
+    {
+        // RV06 separator probes (Word 16.0, Times, Aptos and Calibri at 10, 12 and 14pt):
+        // the footnote separator rule follows OS/2 strikeout geometry, with the rule top
+        // at the strikeout position and the thickness at the strikeout size, instead of
+                // The patched synthetic face pins strikeout 0.30em and 0.05em,
+        // so the rule bottom must sit 0.25em above the separator bottom while the mark baseline
+        // rides 0.15pt above it.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:t>Note body</w:t></w:r></w:p></w:footnote></w:footnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new StrikeoutFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        DocxPlacedRelatedStoryLayout separator = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages[0]
+            .PlacedRelatedStories
+            .Single(story => story.SeparatorY is not null);
+        DocxTextLineLayout separatorLine = separator.TextLines.Single();
+        double markSize = separatorLine.Segments[0].StyleRun.EffectiveProperties.FontSize;
+        double ruleY = separator.SeparatorY ?? double.NaN;
+        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - (0.25d * markSize - 0.15d)) < 0.000001d, "Footnote rule bottom must sit 0.25em above the mark baseline.");
+        TestAssert.True(Math.Abs(separator.SeparatorThickness - 0.05d * markSize) < 0.000001d, "Footnote rule thickness must follow the strikeout size.");
+    }
+
+    public static void DocxFootnoteSeparatorRuleKeepsLegacyConstantsWithoutStrikeoutMetrics()
+    {
+        // Measurers without strikeout metrics keep the legacy footnote constants.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:t>Note body</w:t></w:r></w:p></w:footnote></w:footnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxPlacedRelatedStoryLayout separator = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0]
+            .PlacedRelatedStories
+            .Single(story => story.SeparatorY is not null);
+        DocxTextLineLayout separatorLine = separator.TextLines.Single();
+        double ruleY = separator.SeparatorY ?? double.NaN;
+        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - 1.95d) < 0.000001d, "Legacy footnote rule offset must stay 2.1pt above the separator bottom.");
+        TestAssert.Equal(0.75d, separator.SeparatorThickness);
+    }
+
+    public static void DocxEndnoteSeparatorRuleFollowsStrikeoutMetrics()
+    {
+        // RV06 endnote probes match the footnote strikeout rule, so section-end endnote
+        // separators share the same font-derived geometry instead of a fixed 3.74pt offset.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:endnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:endnotePr><w:pos w:val="sectEnd"/></w:endnotePr></w:sectPr></w:body></w:document>""",
+            ["word/endnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:endnote><w:endnote w:id="2"><w:p><w:r><w:t>Note body</w:t></w:r></w:p></w:endnote></w:endnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new StrikeoutFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None);
+        DocxPlacedRelatedStoryLayout separator = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Single(story => story.SeparatorY is not null);
+        DocxTextLineLayout separatorLine = separator.TextLines.Single();
+        double markSize = separatorLine.Segments[0].StyleRun.EffectiveProperties.FontSize;
+        double ruleY = separator.SeparatorY ?? double.NaN;
+        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - (0.25d * markSize - 0.15d)) < 0.000001d, "Endnote rule bottom must sit 0.25em above the mark baseline.");
+        TestAssert.True(Math.Abs(separator.SeparatorThickness - 0.05d * markSize) < 0.000001d, "Endnote rule thickness must follow the strikeout size.");
+    }
+
     public static void DocxEndnoteSeparatorIsPlacedWithRuleMark()
     {
         // RV06 endnote probes: Office draws the endnote separator rule with a mark

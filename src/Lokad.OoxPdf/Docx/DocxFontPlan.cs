@@ -201,6 +201,21 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         fonts = sharedFonts ?? new();
     }
 
+    public bool TryGetStrikeoutRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+    {
+        positionEm = 0d;
+        thicknessEm = 0d;
+        OpenTypeFont? font = ResolveFont(run);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return false;
+        }
+
+        positionEm = (double)font.Os2.StrikeoutPosition / font.UnitsPerEm;
+        thicknessEm = (double)font.Os2.StrikeoutSize / font.UnitsPerEm;
+        return positionEm > 0d && thicknessEm > 0d;
+    }
+
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -14,6 +14,17 @@ namespace Lokad.OoxPdf.Docx;
 internal interface IDocxTextMeasurer
 {
     double MeasureText(DocxTextRun? run, string text, double fontSize);
+
+    // RV06 separator probes (Word 16.0): footnote and endnote separator rules follow
+    // OS/2 strikeout geometry, with the rule top at the strikeout position and the rule
+    // thickness at the strikeout size. Providers without font metrics keep the default,
+    // so layout falls back to the legacy separator constants.
+    bool TryGetStrikeoutRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+    {
+        positionEm = 0d;
+        thicknessEm = 0d;
+        return false;
+    }
 }
 
 internal interface IDocxLineMetricsProvider
