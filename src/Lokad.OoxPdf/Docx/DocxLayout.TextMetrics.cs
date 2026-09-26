@@ -62,7 +62,6 @@ internal static class DocxLineMetrics
 {
     private const double WordSingleLineMinimumEm = 1.15d;
     private const double WordAutoLineBaselineOffsetEm = 0.94d;
-    private const double WordExactLineTextBottomInsetEm = 0.299d;
     private const double WordExactLineFirstBaselineRatio = 0.8d;
 
     public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
@@ -93,8 +92,11 @@ internal static class DocxLineMetrics
 
     public static double ResolveBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing)
     {
+        // RV06 pagination probe (edge-page-ex48-body, Word 16.0): Office drops the
+        // first baseline of exact-spaced body text to 0.8 x the exact line height,
+        // the same ratio as in-cell text; the 0.299em bottom inset sat 6pt too deep.
         return hasExplicitLineSpacing
-            ? Math.Max(0d, lineHeight - fontSize * WordExactLineTextBottomInsetEm)
+            ? Math.Max(0d, lineHeight * WordExactLineFirstBaselineRatio)
             : fontSize * WordAutoLineBaselineOffsetEm;
     }
 

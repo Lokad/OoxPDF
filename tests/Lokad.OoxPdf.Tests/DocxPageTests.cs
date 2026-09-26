@@ -2145,4 +2145,24 @@ internal static class DocxPageTests
         TestAssert.Equal(lines[1].X, lines[0].X);
         TestAssert.Equal(lines[3].X, lines[2].X);
     }
+
+    public static void DocxBodyExactFirstBaselineFollowsOfficeRatio()
+    {
+        // RV06 pagination probe (edge-page-ex48-body, Word 16.0): Office drops the
+        // first baseline of exact-spaced body text to 0.8 x the exact line height
+        // below the content top (38.4 at exact-48), while the renderer applies the
+        // 0.299em bottom inset (44.41 at 12pt). Pre-fix the baseline sits 6pt deep.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Probe", 12d, 48d) with
+        {
+            Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
+        };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+
+        double baselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+        TestAssert.True(
+            Math.Abs(baselineY - (190d - 38.4d)) < 0.001d,
+            $"Exact-48pt body first baseline should sit 38.4pt below the content top. baselineY={baselineY}.");
+    }
 }
