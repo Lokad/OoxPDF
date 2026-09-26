@@ -124,16 +124,60 @@ internal sealed partial class DocxLayoutEngine
         return Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
     }
 
-    private static double ResolveEndnoteStartTop(DocxLayoutPage page, IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories)
+    internal static double ResolveDesignBodyBottomForEndnoteStart(
+        double scaledBodyBottom,
+        double frameTop,
+        double? firstBaselineInset,
+        double printScale)
+    {
+        // RV06 anchor probe (edge-endanchor-5, Word 16.0): document-end endnote
+        // placement keys off the design body end, but the body lays out scaled
+        // (scaled pitches, unscaled first inset). Inverting the used height with
+        // the first-line inset recovers the design bottom exactly under that
+        // model (probe: 689.77 -> 683.75 at scale 0.75874); scale 1.0 and
+        // degenerate frames keep legacy behavior.
+        if (firstBaselineInset is not { } inset ||
+            Math.Abs(printScale - 1d) < 0.000000001d)
+        {
+            return scaledBodyBottom;
+        }
+
+        double scaledUsed = frameTop - scaledBodyBottom - inset;
+        if (!(scaledUsed > 0d))
+        {
+            return scaledBodyBottom;
+        }
+
+        double designBodyBottom = frameTop - inset - scaledUsed / printScale;
+        if (!(designBodyBottom <= scaledBodyBottom))
+        {
+            return scaledBodyBottom;
+        }
+
+        return designBodyBottom;
+    }
+
+    private static double ResolveEndnoteStartTop(
+        DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories,
+        double printScale = 1d)
     {
         double bodyBottom = page.Items.Count == 0
             ? page.Height - page.MarginTop
             : page.Items.Min(item => GetVerticalBounds(item).Y);
+        double? firstBaselineInset = page.Items.OfType<DocxTextLineLayout>().Select(line => (double?)line.BaselineY).FirstOrDefault() is { } firstBaseline
+            ? page.Height - page.MarginTop - firstBaseline
+            : null;
+        double designBodyBottom = ResolveDesignBodyBottomForEndnoteStart(
+            bodyBottom,
+            page.Height - page.MarginTop,
+            firstBaselineInset,
+            printScale);
         double placedStoryBottom = placedStories
             .Select(story => Math.Max(page.MarginBottom, story.TopY - story.Height))
             .DefaultIfEmpty(page.Height - page.MarginTop)
             .Min();
-        return Math.Min(bodyBottom, placedStoryBottom) - FootnoteSeparatorGapPoints;
+        return Math.Min(designBodyBottom, placedStoryBottom) - FootnoteSeparatorGapPoints;
     }
 
     private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)

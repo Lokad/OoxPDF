@@ -27,12 +27,12 @@ internal sealed partial class DocxRenderer
         ref int imageIndex,
         double pageHeight)
     {
-        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote
+        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Other stories keep
         // the body-shift path; tables inside mapped stories stay legacy.
         FloatingTextBoxEmissionMap storyMap = default;
-        bool mapStory = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote &&
+        bool mapStory = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
             FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out storyMap);
         if (story.SeparatorY is { } separatorY)
         {

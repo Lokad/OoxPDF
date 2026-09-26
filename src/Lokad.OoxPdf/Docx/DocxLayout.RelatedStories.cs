@@ -65,7 +65,8 @@ internal sealed partial class DocxLayoutEngine
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        double printScale = 1d)
     {
         if (pages.Count == 0)
         {
@@ -213,7 +214,7 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
-                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, cancellationToken);
+                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, cancellationToken, printScale);
                 }
             }
 
@@ -254,7 +255,7 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndPages = outputPages.ToList();
                 DocxLayoutPage activePage = documentEndPages[^1];
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
+                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale);
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
@@ -289,12 +290,13 @@ internal sealed partial class DocxLayoutEngine
         int sectionEndPageIndex,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories,
         DocxRelatedStoryLayout? endnoteSeparatorLayout,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        double printScale = 1d)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
+        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale);
         if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
         {
             // RV06 endnote probes: the separator space sits exactly one body pitch below
@@ -651,11 +653,11 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
-        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote
+        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Comments keep scaled
         // layout for the balloon path and textboxes keep their own design switch.
-        if (story.Kind is DocxRelatedStoryKind.Footnote &&
+        if (story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
             Math.Abs(paragraphSpacingScale - 1d) >= 0.000000001d)
         {
             textMeasurer = unscaledTextMeasurer ?? textMeasurer;

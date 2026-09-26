@@ -309,11 +309,11 @@ internal sealed partial class DocxRenderer
                 AddLine(line, isStaticStory: false, "Body", "Body", null);
             }
 
-            // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote
+            // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
             // story lines map uniformly like their emission so snapshots agree with
             // balloon anchors; other stories keep legacy coordinates.
             FloatingTextBoxEmissionMap? placedStoryMap = TryCreateFloatingTextBoxEmissionMap(effectiveMarkupContext, page.Height);
-            foreach (DocxTextLineLayout line in EnumerateMappedPlacedFootnoteStoryTextLines(page, placedStoryMap))
+            foreach (DocxTextLineLayout line in EnumerateMappedPlacedNoteStoryTextLines(page, placedStoryMap))
             {
                 AddLine(line, isStaticStory: false, "RelatedStory", line.Story?.ToKindString(), line.Story?.VariantType);
             }

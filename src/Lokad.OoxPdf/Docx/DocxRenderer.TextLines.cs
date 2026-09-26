@@ -45,7 +45,7 @@ internal sealed partial class DocxRenderer
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
-            .Concat(EnumerateMappedPlacedFootnoteStoryTextLines(page, map))
+            .Concat(EnumerateMappedPlacedNoteStoryTextLines(page, map))
             .Concat(EnumerateInlineTextBoxTextLines(page))
             .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(drawingPages.PageAll(pageIndex), map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
@@ -179,16 +179,16 @@ internal sealed partial class DocxRenderer
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
-            .Concat(EnumerateMappedPlacedFootnoteStoryTextLines(page, map))
+            .Concat(EnumerateMappedPlacedNoteStoryTextLines(page, map))
             .Concat(EnumerateInlineTextBoxTextLines(page))
             .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(floatingDrawings, map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
     }
 
-    // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote stories
+    // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote stories
     // lay out unscaled in design space, so balloon anchors from their lines map
     // uniformly like their emission; other stories keep legacy coordinates.
-    private static IEnumerable<DocxTextLineLayout> EnumerateMappedPlacedFootnoteStoryTextLines(
+    private static IEnumerable<DocxTextLineLayout> EnumerateMappedPlacedNoteStoryTextLines(
         DocxLayoutPage page,
         FloatingTextBoxEmissionMap? map)
     {
@@ -196,7 +196,7 @@ internal sealed partial class DocxRenderer
         {
             FloatingTextBoxEmissionMap? storyMap = null;
             if (map is { } availableMap &&
-                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote)
+                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
             {
                 storyMap = availableMap;
             }

@@ -324,6 +324,19 @@ internal static class DocxFootnotesTests
             $"Footnote story layout should stay design space. preserve={preserve[1]} scaled={scaled[1]}.");
     }
 
+    public static void DocxEndnoteStartTopRecoversDesignBodyBottom()
+    {
+        // RV06 anchor probe (edge-endanchor-5, Word 16.0): scaled body bottom
+        // 689.77 with frame top 720, first inset 11.28 and print scale 0.75874
+        // recovers the design body end 683.75; scale 1.0 and degenerate frames
+        // keep legacy behavior.
+        TestAssert.True(
+            Math.Abs(DocxLayoutEngine.ResolveDesignBodyBottomForEndnoteStart(689.77d, 720d, 11.28d, 0.75874d) - 683.75d) < 0.02d,
+            "Design body end should recover 683.75.");
+        TestAssert.Equal(100d, DocxLayoutEngine.ResolveDesignBodyBottomForEndnoteStart(100d, 720d, 11.28d, 1d));
+        TestAssert.Equal(700d, DocxLayoutEngine.ResolveDesignBodyBottomForEndnoteStart(700d, 720d, null, 0.75d));
+    }
+
     public static void DocxLayoutStacksMultipleFootnotesOnOnePage()
     {
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Anchor paragraph with two footnote markers", 10d, 12d) with
