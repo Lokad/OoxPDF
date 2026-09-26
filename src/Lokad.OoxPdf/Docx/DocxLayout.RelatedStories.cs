@@ -445,6 +445,10 @@ internal sealed partial class DocxLayoutEngine
 
     // Word lays separator stories compact around the rule and space instead of a full line box, so the
     // blank baseline rides at the story bottom (see constants in DocxLayout); shifting is rigid across lines.
+    // RV06 separator-bottom probes (Word 16.0, Times/Aptos/Calibri footnote points):
+    // Office footnote marks sit at the separator block bottom (ride ~0), so the
+    // rule-mark gap carries the full strikeout offset. Endnote marks keep the legacy
+    // 0.15pt ride that matches the Office endnote probes exactly.
     private static DocxPlacedRelatedStoryLayout ShiftSeparatorStoryToBaseline(DocxPlacedRelatedStoryLayout placed, double bottom)
     {
         if (placed.TextLines.Count == 0)
@@ -452,8 +456,11 @@ internal sealed partial class DocxLayoutEngine
             return placed;
         }
 
+        double ridePoints = placed.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote
+            ? FootnoteSeparatorBaselineOffsetPoints
+            : 0d;
         double currentBaseline = placed.TextLines[^1].BaselineY;
-        return placed with { TextLines = ShiftTextLines(placed.TextLines, bottom + FootnoteSeparatorBaselineOffsetPoints - currentBaseline, 0d) };
+        return placed with { TextLines = ShiftTextLines(placed.TextLines, bottom + ridePoints - currentBaseline, 0d) };
     }
 
     // RV06 footnote/endnote probes: both draw the separator rule with a mark space at the

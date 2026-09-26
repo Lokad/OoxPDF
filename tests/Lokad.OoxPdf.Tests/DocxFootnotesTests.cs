@@ -1305,7 +1305,7 @@ internal static class DocxFootnotesTests
         // at the strikeout position and the thickness at the strikeout size, instead of
                 // The patched synthetic face pins strikeout 0.30em and 0.05em,
         // so the rule bottom must sit 0.25em above the separator bottom while the mark baseline
-        // rides 0.15pt above it.
+        // rides at the separator bottom with no extra ride.
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
@@ -1332,7 +1332,7 @@ internal static class DocxFootnotesTests
         DocxTextLineLayout separatorLine = separator.TextLines.Single();
         double markSize = separatorLine.Segments[0].StyleRun.EffectiveProperties.FontSize;
         double ruleY = separator.SeparatorY ?? double.NaN;
-        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - (0.25d * markSize - 0.15d)) < 0.000001d, "Footnote rule bottom must sit 0.25em above the mark baseline.");
+        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - 0.25d * markSize) < 0.000001d, "Footnote rule bottom must sit 0.25em above the mark baseline with no ride.");
         TestAssert.True(Math.Abs(separator.SeparatorThickness - 0.05d * markSize) < 0.000001d, "Footnote rule thickness must follow the strikeout size.");
     }
 
@@ -1361,7 +1361,7 @@ internal static class DocxFootnotesTests
             .Single(story => story.SeparatorY is not null);
         DocxTextLineLayout separatorLine = separator.TextLines.Single();
         double ruleY = separator.SeparatorY ?? double.NaN;
-        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - 1.95d) < 0.000001d, "Legacy footnote rule offset must stay 2.1pt above the separator bottom.");
+        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - 2.1d) < 0.000001d, "Legacy footnote rule offset must stay 2.1pt above the separator bottom with no ride.");
         TestAssert.Equal(0.75d, separator.SeparatorThickness);
     }
 
