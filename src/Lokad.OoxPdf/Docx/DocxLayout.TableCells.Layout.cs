@@ -98,6 +98,7 @@ internal sealed partial class DocxLayoutEngine
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         bool previousParagraphHasText = false;
+        bool previousParagraphHasVisibleText = false;
         double previousTextFontSize = 0d;
         double previousTextLineHeight = 0d;
         foreach (DocxBodyElement bodyElement in bodyElements)
@@ -108,7 +109,27 @@ internal sealed partial class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 previousParagraphHasText = false;
+                previousParagraphHasVisibleText = false;
                 contentHeight += MeasureNestedTableHeight(tableElement.Table, textWidth, measureContext);
+                continue;
+            }
+
+            if (bodyElement is DocxPageBreakElement estimateBreak &&
+                estimateBreak.SourceKind == DocxBreakSourceKind.RunBreak)
+            {
+                // RV06 cellbreak probe: the spill row occupies one laid-out line, so the
+                // estimate must reserve it exactly like layout does. Any paragraph that
+                // emitted text lines counts, including mixed paragraphs that also carry
+                // block images (the text walk spills for those too).
+                if (previousParagraphHasVisibleText)
+                {
+                    contentHeight += previousTextLineHeight;
+                }
+
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
+                previousParagraphHasText = false;
+                previousParagraphHasVisibleText = false;
                 continue;
             }
 
@@ -185,6 +206,7 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
             previousParagraphHasText = currentHasVisibleText && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+            previousParagraphHasVisibleText = currentHasVisibleText;
         }
 
         contentHeight += pendingSpacingAfter;
@@ -303,6 +325,81 @@ internal sealed partial class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 cursorY -= MeasureNestedTableHeight(tableElement.Table, textWidth, context);
+                continue;
+            }
+
+            if (bodyElement is DocxPageBreakElement cellPageBreak &&
+                cellPageBreak.SourceKind == DocxBreakSourceKind.RunBreak)
+            {
+                // RV06 cellbreak probe: explicit page breaks inside table cells do not
+                // turn pages in Office; one spill space follows the previous line on the
+                // same page and content flows on (row-end spacing rides the shared paths).
+                if (previousParagraph is not null)
+                {
+                    for (int cellLineIndex = lines.Count - 1; cellLineIndex >= 0; cellLineIndex--)
+                    {
+                        if (lines[cellLineIndex] is not DocxTextLineLayout cellLastLine ||
+                            !ReferenceEquals(cellLastLine.SourceParagraph, previousParagraph) ||
+                            cellLastLine.Text.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        double spillFontSize = GetParagraphFontSize(previousParagraph);
+                        DocxLineHeightProfile spillProfile = ResolveLineHeightProfile(previousParagraph, spillFontSize, context.TextMeasurer);
+                        double spillLineHeight = cellLastLine.LineHeight ?? spillProfile.LineHeight;
+                        double spillX = cellX + paddingLeft + GetParagraphTextStartOffset(previousParagraph, context.ParagraphSpacingScale);
+                        double spillWidth = context.TextMeasurer.MeasureText(cellLastLine.StyleRun, " ", cellLastLine.FontSize);
+                        lines.Add(new DocxTextLineLayout(
+                            " ",
+                            cellLastLine.StyleRun,
+                            cellLastLine.FontSize,
+                            spillX,
+                            cursorY,
+                            spillWidth,
+                            [
+                                new DocxTextSegmentLayout(
+                                    " ",
+                                    cellLastLine.StyleRun,
+                                    spillX,
+                                    spillWidth,
+                                    cellLastLine.FontSize,
+                                    0d,
+                                    0d,
+                                    DocxTextStateCharacterSpacingSource.None,
+                                    true,
+                                    -1,
+                                    0,
+                                    DocxTextSegmentRole.BreakSpill),
+                            ],
+                            SourceBlockIndex: null,
+                            SourceParagraphIndex: cellLastLine.SourceParagraphIndex,
+                            SourceLineIndex: lines.Count,
+                            Story: DocxStoryId.TableCell(),
+                            LineHeight: spillLineHeight,
+                            AppliedBeforeSpacing: 0d,
+                            IsFirstParagraphLine: false,
+                            EndsWithIntraTokenBreak: false,
+                            SingleLineHeight: spillProfile.SingleLineHeight,
+                            ListLabelSingleLineHeight: spillProfile.ListLabelSingleLineHeight,
+                            BodyWindowsLineHeight: spillProfile.BodyWindowsLineHeight,
+                            ListLabelWindowsLineHeight: spillProfile.ListLabelWindowsLineHeight,
+                            EffectiveLineSpacingFactor: spillProfile.EffectiveLineSpacingFactor,
+                            LineSpacingFactorFloorApplied: spillProfile.LineSpacingFactorFloorApplied,
+                            LineHeightSource: spillProfile.Source,
+                            PendingAfterSpacing: null,
+                            ParagraphBeforeSpacing: null,
+                            ParagraphAfterSpacing: null,
+                            ContextualSpacingSuppressed: null,
+                            SourceParagraph: previousParagraph,
+                            EmitsTerminalParagraphMark: false));
+                        cursorY -= spillLineHeight;
+                        break;
+                    }
+                }
+
+                pendingSpacingAfter = 0d;
+                previousParagraph = null;
                 continue;
             }
 

@@ -937,7 +937,10 @@ internal sealed partial class DocxLayoutEngine
         int pageBreakIndex = -1;
         for (int index = 0; index < bodyElements.Count; index++)
         {
-            if (bodyElements[index] is DocxPageBreakElement)
+            // RV06 cellbreak probe: explicit run breaks inside table cells do not turn
+            // pages in Office; only other break provenances may fragment rows here.
+            if (bodyElements[index] is DocxPageBreakElement cellPageBreak &&
+                cellPageBreak.SourceKind != DocxBreakSourceKind.RunBreak)
             {
                 pageBreakIndex = index;
                 break;

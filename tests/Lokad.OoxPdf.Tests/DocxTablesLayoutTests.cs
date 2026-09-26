@@ -877,12 +877,14 @@ internal static class DocxTablesLayoutTests
     {
         DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
         DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
+        // RV06 cellbreak probe: explicit run breaks never fragment cell rows (Office
+        // flows through); only other provenances (like page-break-before) split here.
         var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
         {
             BodyElements =
             [
                 new DocxParagraphElement(before),
-                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
+                new DocxPageBreakElement(DocxBreakSourceKind.PageBreakBefore, "page", null),
                 new DocxParagraphElement(after)
             ]
         };
@@ -943,22 +945,18 @@ internal static class DocxTablesLayoutTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
         DocxTableRowLayout[] firstPageRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
-        DocxTableRowLayout[] secondPageRows = layout.Pages[1].Items.OfType<DocxTableRowLayout>().ToArray();
-        DocxTableRowLayout[] thirdPageRows = layout.Pages[2].Items.OfType<DocxTableRowLayout>().ToArray();
 
-        TestAssert.Equal(3, layout.Pages.Count);
-        TestAssert.Equal(3, rowFragments.Length);
-        TestAssert.Equal(1, firstPageRows.Length);
-        TestAssert.Equal(1, secondPageRows.Length);
-        TestAssert.Equal(1, thirdPageRows.Length);
-        TestAssert.Equal(0, firstPageRows[0].RowIndex);
-        TestAssert.Equal(1, secondPageRows[0].RowIndex);
-        TestAssert.Equal(0, secondPageRows[0].FragmentIndex);
-        TestAssert.Equal("CellPageBreak", secondPageRows[0].FragmentReason);
-        TestAssert.True(secondPageRows[0].Y - secondPageRows[0].Height >= 10d, "The first cell-page-break fragment must fit inside the new page content frame.");
-        TestAssert.Equal(1, thirdPageRows[0].RowIndex);
-        TestAssert.Equal(1, thirdPageRows[0].FragmentIndex);
-        TestAssert.Equal("CellPageBreak", thirdPageRows[0].FragmentReason);
+        // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
+        TestAssert.True(rowFragments.Length >= 1, "Flowing rows should still lay out across natural overflow.");
+        TestAssert.True(rowFragments.All(fragment => fragment.FragmentReason != "CellPageBreak"), "No fragment should come from an in-cell run break.");
+        TestAssert.Equal("Filler", firstPageRows[0].Cells.Single().TextLines.Single().Text);
+        string[] splitTexts = layout.Pages
+            .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
+            .Where(row => row.RowIndex == 1)
+            .SelectMany(row => row.Cells.Single().TextLines)
+            .Select(line => line.Text)
+            .ToArray();
+        TestAssert.Equal("Before| |After", string.Join("|", splitTexts));
     }
 
     public static void DocxTableLayoutStageSplitsOversizedCellPageBreakFragmentAcrossFreshPages()
@@ -994,33 +992,16 @@ internal static class DocxTablesLayoutTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxTableRowLayout[] rowFragments = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
 
-        TestAssert.Equal(3, layout.Pages.Count);
-        TestAssert.Equal(3, rowFragments.Length);
-        for (int fragmentIndex = 0; fragmentIndex < rowFragments.Length; fragmentIndex++)
-        {
-            TestAssert.Equal(fragmentIndex, rowFragments[fragmentIndex].FragmentIndex);
-            TestAssert.Equal(3, rowFragments[fragmentIndex].FragmentCount);
-            TestAssert.Equal("CellPageBreak", rowFragments[fragmentIndex].FragmentReason);
-        }
-
-        TestAssert.Equal(80d, rowFragments[0].Height);
-        TestAssert.Equal(20d, rowFragments[1].Height);
-        TestAssert.Equal(10d, rowFragments[2].Height);
-        TestAssert.Equal(8, rowFragments[0].Cells.Single().TextLines.Count);
-        TestAssert.Equal("Before1|Before2|Before3|Before4|Before5|Before6|Before7|Before8", string.Join("|", rowFragments[0].Cells.Single().TextLines.Select(line => line.Text)));
-        TestAssert.Equal("Before9|Before10", string.Join("|", rowFragments[1].Cells.Single().TextLines.Select(line => line.Text)));
-        TestAssert.Equal("After", rowFragments[2].Cells.Single().TextLines.Single().Text);
-
-        DocxTableRowSnapshot[] rowSnapshots = DocxLayoutSnapshot.FromLayout(layout).Pages
-            .SelectMany(page => page.TableRows)
-            .OrderBy(row => row.FragmentIndex)
+        // RV06 cellbreak probe: run breaks flow through; rows split only by natural
+        // overflow, never for the break. All content stays present in order with the
+        // spill row after the break.
+        TestAssert.True(rowFragments.Length >= 1, "Flowing rows should still lay out across natural overflow.");
+        TestAssert.True(rowFragments.All(fragment => fragment.FragmentReason != "CellPageBreak"), "No fragment should come from an in-cell run break.");
+        string[] oversizedTexts = rowFragments
+            .SelectMany(fragment => fragment.Cells.Single().TextLines)
+            .Select(line => line.Text)
             .ToArray();
-        TestAssert.Equal(0d, rowSnapshots[0].FragmentOffsetFromRowTop);
-        TestAssert.Equal(80d, rowSnapshots[1].FragmentOffsetFromRowTop);
-        TestAssert.Equal(100d, rowSnapshots[2].FragmentOffsetFromRowTop);
-        TestAssert.Equal(110d, rowSnapshots[0].FullRowHeight);
-        TestAssert.Equal(110d, rowSnapshots[1].FullRowHeight);
-        TestAssert.Equal(110d, rowSnapshots[2].FullRowHeight);
+        TestAssert.Equal("Before1|Before2|Before3|Before4|Before5|Before6|Before7|Before8|Before9|Before10| |After", string.Join("|", oversizedTexts));
     }
 
     public static void DocxTableLayoutStageUsesEarliestCellPageBreakAsRowBoundary()
@@ -1058,13 +1039,10 @@ internal static class DocxTablesLayoutTests
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
 
-        TestAssert.Equal(3, rowFragments.Length);
-        TestAssert.Equal("EarlyBefore", rowFragments[0].Cells[0].TextLines.Single().Text);
-        TestAssert.Equal("EarlyAfter", rowFragments[1].Cells[0].TextLines.Single().Text);
-        TestAssert.Equal("LaterFirst", rowFragments[0].Cells[1].TextLines.Single().Text);
-        TestAssert.Equal("LaterMiddle", rowFragments[1].Cells[1].TextLines.Single().Text);
-        TestAssert.Equal(0, rowFragments[2].Cells[0].TextLines.Count);
-        TestAssert.Equal("LaterAfter", rowFragments[2].Cells[1].TextLines.Single().Text);
+        // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
+        TestAssert.Equal(1, rowFragments.Length);
+        TestAssert.Equal("EarlyBefore| |EarlyAfter", string.Join("|", rowFragments[0].Cells[0].TextLines.Select(line => line.Text)));
+        TestAssert.Equal("LaterFirst|LaterMiddle| |LaterAfter", string.Join("|", rowFragments[0].Cells[1].TextLines.Select(line => line.Text)));
     }
 
     public static void DocxTableLayoutStageKeepsCellImagesOnAuthoredSideOfPageBreak()
@@ -1091,13 +1069,42 @@ internal static class DocxTablesLayoutTests
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
 
-        TestAssert.Equal(2, rowFragments.Length);
-        DocxInlineImageLayout firstImage = rowFragments[0].Cells.Single().InlineImages.Single();
-        DocxInlineImageLayout secondImage = rowFragments[1].Cells.Single().InlineImages.Single();
-        TestAssert.Equal(0, firstImage.SourceParagraphIndex ?? -1);
-        TestAssert.Equal(1, secondImage.SourceParagraphIndex ?? -1);
-        TestAssert.True(firstImage.Image == beforeImage, "The first row fragment should keep the image before the authored page break.");
-        TestAssert.True(secondImage.Image == afterImage, "The second row fragment should keep the image after the authored page break.");
+        // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
+        TestAssert.Equal(1, rowFragments.Length);
+        DocxInlineImageLayout[] images = rowFragments[0].Cells.Single().InlineImages.ToArray();
+        TestAssert.Equal(2, images.Length);
+        TestAssert.Equal(0, images[0].SourceParagraphIndex ?? -1);
+        TestAssert.Equal(1, images[1].SourceParagraphIndex ?? -1);
+        TestAssert.True(images[0].Image == beforeImage, "The single row should keep the image before the authored page break.");
+        TestAssert.True(images[1].Image == afterImage, "The single row should keep the image after the authored page break.");
+    }
+
+    public static void DocxTableRowHeightCountsBreakSpillAfterMixedParagraph()
+    {
+        // RV06 cellbreak probe: the height estimate must reserve the spill row
+        // whenever the previous paragraph emitted text lines, including a mixed
+        // paragraph that also carries a block image. A run break reserves exactly
+        // one laid-out line, like an empty paragraph does.
+        static double MeasureCellRowHeight(params DocxBodyElement[] elements)
+        {
+            var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            {
+                BodyElements = elements
+            };
+            DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().FullRowHeight;
+        }
+
+        var blockImage = new DocxInlineImage(10d, 6d, "image/png", [7, 8, 9], "/word/media/block.png");
+        DocxParagraph mixed = DocxTests.CreateDocxLayoutParagraph("Mixed", 10d, 10d) with { Images = [blockImage] };
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
+        DocxParagraph empty = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d);
+        TestAssert.Equal(
+            MeasureCellRowHeight(new DocxParagraphElement(mixed), new DocxParagraphElement(empty), new DocxParagraphElement(after)),
+            MeasureCellRowHeight(new DocxParagraphElement(mixed), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
     }
 
     public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
@@ -1122,13 +1129,14 @@ internal static class DocxTablesLayoutTests
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
 
-        TestAssert.Equal(2, rowFragments.Length);
-        DocxTableRowLayout firstNestedRow = rowFragments[0].Cells.Single().NestedRows.Single();
-        DocxTableRowLayout secondNestedRow = rowFragments[1].Cells.Single().NestedRows.Single();
-        TestAssert.Equal(0, firstNestedRow.Table.TableIndex);
-        TestAssert.Equal(1, secondNestedRow.Table.TableIndex);
-        TestAssert.Equal("Before", firstNestedRow.Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("After", secondNestedRow.Cells.Single().TextLines.Single().Text);
+        // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
+        TestAssert.Equal(1, rowFragments.Length);
+        DocxTableRowLayout[] nestedRows = rowFragments[0].Cells.Single().NestedRows.ToArray();
+        TestAssert.Equal(2, nestedRows.Length);
+        TestAssert.Equal(0, nestedRows[0].Table.TableIndex);
+        TestAssert.Equal(1, nestedRows[1].Table.TableIndex);
+        TestAssert.Equal("Before", nestedRows[0].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("After", nestedRows[1].Cells.Single().TextLines.Single().Text);
     }
 
     public static void DocxTableLayoutStageKeepsTableCellColumnBreakInline()
@@ -1194,13 +1202,17 @@ internal static class DocxTablesLayoutTests
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
 
-        TestAssert.Equal(3, rowFragments.Length);
-        TestAssert.Equal("Before", rowFragments[0].Cells[1].NestedRows.Single().Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("Middle", rowFragments[1].Cells[1].NestedRows.Single().Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("After", rowFragments[2].Cells[1].NestedRows.Single().Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal(0, rowFragments[0].Cells[1].NestedRows.Single().Table.TableIndex);
-        TestAssert.Equal(1, rowFragments[1].Cells[1].NestedRows.Single().Table.TableIndex);
-        TestAssert.Equal(2, rowFragments[2].Cells[1].NestedRows.Single().Table.TableIndex);
+        // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
+        TestAssert.Equal(1, rowFragments.Length);
+        TestAssert.Equal("EarlyBefore| |EarlyAfter", string.Join("|", rowFragments[0].Cells[0].TextLines.Select(line => line.Text)));
+        DocxTableRowLayout[] nestedRows = rowFragments[0].Cells[1].NestedRows.ToArray();
+        TestAssert.Equal(3, nestedRows.Length);
+        TestAssert.Equal("Before", nestedRows[0].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("Middle", nestedRows[1].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal("After", nestedRows[2].Cells.Single().TextLines.Single().Text);
+        TestAssert.Equal(0, nestedRows[0].Table.TableIndex);
+        TestAssert.Equal(1, nestedRows[1].Table.TableIndex);
+        TestAssert.Equal(2, nestedRows[2].Table.TableIndex);
     }
 
     public static void DocxTableLayoutStageSplitsNestedTableRowsAcrossCompetingCellPageBreak()
@@ -1235,22 +1247,16 @@ internal static class DocxTablesLayoutTests
             .SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .ToArray();
 
-        TestAssert.Equal(2, rowFragments.Length);
-        TestAssert.Equal(0, rowFragments[0].FragmentIndex);
-        TestAssert.Equal(1, rowFragments[1].FragmentIndex);
-        TestAssert.Equal("CellPageBreak", rowFragments[0].FragmentReason);
-        TestAssert.Equal("CellPageBreak", rowFragments[1].FragmentReason);
-
-        DocxTableRowLayout[] firstFragmentNestedRows = rowFragments[0].Cells[1].NestedRows.ToArray();
-        DocxTableRowLayout[] secondFragmentNestedRows = rowFragments[1].Cells[1].NestedRows.ToArray();
-        TestAssert.Equal(2, firstFragmentNestedRows.Length);
-        TestAssert.Equal(4, secondFragmentNestedRows.Length);
-        TestAssert.Equal("Nested1", firstFragmentNestedRows[0].Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("Nested2", firstFragmentNestedRows[1].Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("Nested3", secondFragmentNestedRows[0].Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("Nested6", secondFragmentNestedRows[3].Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal(0, firstFragmentNestedRows[0].Table.TableIndex);
-        TestAssert.Equal(0, secondFragmentNestedRows[0].Table.TableIndex);
+        // RV06 cellbreak probe: run breaks flow through; nested rows split only by
+        // natural overflow, never for the break. All content stays present in order.
+        TestAssert.True(rowFragments.Length >= 1, "Flowing rows should still lay out across natural overflow.");
+        TestAssert.True(rowFragments.All(fragment => fragment.FragmentReason != "CellPageBreak"), "No fragment should come from an in-cell run break.");
+        TestAssert.Equal("EarlyBefore| |EarlyAfter", string.Join("|", rowFragments.SelectMany(fragment => fragment.Cells[0].TextLines).Select(line => line.Text)));
+        string[] nestedTexts = rowFragments
+            .SelectMany(fragment => fragment.Cells[1].NestedRows)
+            .Select(row => row.Cells.Single().TextLines.Single().Text)
+            .ToArray();
+        TestAssert.Equal("Nested1|Nested2|Nested3|Nested4|Nested5|Nested6", string.Join("|", nestedTexts));
     }
 
     public static void DocxTableLayoutStageUsesCellMarginsForTextBox()

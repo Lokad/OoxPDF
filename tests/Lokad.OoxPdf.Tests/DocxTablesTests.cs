@@ -679,13 +679,12 @@ internal static class DocxTablesTests
         PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
-        TestAssert.Equal(2, pages.Length);
-        TestAssert.Equal(0, pages[0].Annotations.Count);
-        PdfLinkAnnotation annotation = pages[1].Annotations.Single();
+        // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
+        TestAssert.Equal(1, pages.Length);
+        PdfLinkAnnotation annotation = pages[0].Annotations.Single();
         TestAssert.Equal("https://example.invalid/split-cell", annotation.Uri);
-        TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "The visible split fragment should keep a non-empty hyperlink annotation.");
-        TestAssert.Equal("Before", layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().Text);
-        TestAssert.Equal("After Link", layout.Pages[1].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().Text);
+        TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "The flowed row should keep a non-empty hyperlink annotation.");
+        TestAssert.Equal("Before| |After Link", string.Join("|", layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Select(line => line.Text)));
     }
 
     public static void DocxRendererEmitsTableCellInternalHyperlinkDestinations()
@@ -3202,5 +3201,37 @@ internal static class DocxTablesTests
         TestAssert.Equal("T trail    ", cellLines[0].Text);
         TestAssert.Equal(cellLines[1].X, cellLines[0].X);
     }
-}
 
+    public static void DocxTableCellPageBreaksFlowWithSingleSpillRow()
+    {
+        // RV06 cellbreak probe: Office does not turn pages for explicit page breaks
+        // inside table cells; the previous line keeps its row-end space, one spill
+        // space follows on the same page, and content flows on.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="9360"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="9360" w:type="dxa"/></w:tcPr><w:p><w:r><w:t xml:space="preserve">Cell beta break</w:t></w:r></w:p><w:p><w:r><w:br w:type="page"/></w:r></w:p><w:p><w:r><w:t>Cell gamma after</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(1, layout.Pages.Count);
+        string[] cellTexts = layout.Pages[0].Items
+            .OfType<DocxTableRowLayout>()
+            .SelectMany(row => row.Cells)
+            .SelectMany(cell => cell.TextLines)
+            .Select(line => line.Text)
+            .ToArray();
+        TestAssert.Equal(3, cellTexts.Length);
+        TestAssert.Equal("Cell beta break", cellTexts[0]);
+        TestAssert.Equal(" ", cellTexts[1]);
+        TestAssert.Equal("Cell gamma after", cellTexts[2]);
+    }
+}
