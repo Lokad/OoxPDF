@@ -1107,6 +1107,91 @@ internal static class DocxTablesLayoutTests
             MeasureCellRowHeight(new DocxParagraphElement(mixed), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
     }
 
+    public static void DocxTableRowHeightCountsBreakSpillAfterEmptyParagraph()
+    {
+        // RV06 cellbreak probe (edge-t1, Word 16.0): an empty paragraph before an
+        // in-cell break still yields its line, and the break still spills one row
+        // after it, so the break reserves exactly what an empty paragraph does.
+        static double MeasureCellRowHeight(params DocxBodyElement[] elements)
+        {
+            var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            {
+                BodyElements = elements
+            };
+            DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().FullRowHeight;
+        }
+
+        DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
+        DocxParagraph empty = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d);
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
+        TestAssert.Equal(
+            MeasureCellRowHeight(new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxParagraphElement(empty), new DocxParagraphElement(after)),
+            MeasureCellRowHeight(new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
+    }
+
+    public static void DocxTableLayoutStagePlacesNestedTableBelowBreakSpillRow()
+    {
+        // RV06 cellbreak probe (edge-t3, Word 16.0): a nested table after an in-cell
+        // break sits where it would after an empty paragraph line, below the previous
+        // line plus one spill row. Pre-fix the nested walk skipped the break and the
+        // table floated one line too high.
+        static double MeasureNestedTop(DocxTable nested, params DocxBodyElement[] elements)
+        {
+            var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            {
+                BodyElements = elements
+            };
+            DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table, nested]);
+            return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().NestedRows.Single().Y;
+        }
+
+        DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
+        DocxParagraph empty = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d);
+        DocxTable probe = DocxTests.CreateSingleCellTable("Inside", 12d);
+        double emptyTop = MeasureNestedTop(probe, new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxTableElement(probe));
+        double breakTop = MeasureNestedTop(probe, new DocxParagraphElement(before), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxTableElement(probe));
+        TestAssert.True(
+            Math.Abs(breakTop - emptyTop) < 1e-9d,
+            $"The nested table after an in-cell break should sit where it would after an empty line. breakTop={breakTop} emptyTop={emptyTop}.");
+    }
+
+    public static void DocxTableCellBreakSpillStaysLeftAlignedInCenteredCells()
+    {
+        // RV06 cellbreak probe (edge-t2, Word 16.0): Office left-aligns the spill
+        // space even in centered cells; the spill uses the continuation text offset.
+        // Characterization lock: centering the spill would fail this.
+        DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d) with { Alignment = DocxTextAlignment.Center };
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d) with { Alignment = DocxTextAlignment.Center };
+        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
+        {
+            BodyElements =
+            [
+                new DocxParagraphElement(before),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
+                new DocxParagraphElement(after)
+            ]
+        };
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        DocxTableCellLayout laidCell = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+        DocxTextLineLayout[] cellLines = laidCell.TextLines.ToArray();
+        TestAssert.Equal(3, cellLines.Length);
+        TestAssert.True(cellLines[0].X > laidCell.X, "The centered line should start past the cell edge.");
+        TestAssert.True(
+            cellLines[1].X < cellLines[0].X,
+            $"The spill space should stay left-aligned in centered cells. spillX={cellLines[1].X} centeredX={cellLines[0].X}.");
+    }
+
     public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
     {
         DocxTable beforeNestedTable = DocxTests.CreateSingleCellTable("Before", 12d);
