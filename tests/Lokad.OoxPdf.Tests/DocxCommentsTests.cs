@@ -994,6 +994,80 @@ internal static class DocxCommentsTests
             "Word-compatible all-markup should draw comment range fill markers on wrapped continuation lines, not only on the line containing the range start.");
     }
 
+    public static void DocxWordCompatibleBalloonBodyStartsAtDrawnTitleEnd()
+    {
+        // Office A/B (28 balloons across the unresolved/long/all/dense/landscape/
+        // mirrored/original references, Word-COM rendered): balloon body first lines
+        // start where the drawn title ends (gap -0.10..+0.01) and titles carry no
+        // character spacing (cs=0 everywhere). The June-era 0.03357pt title tracking
+        // (fitted to narrow Aptos titles) and 2.541pt body offset (which absorbed the
+        // Aptos shortfall) are retired now that titles set Segoe UI Bold. The
+        // deterministic test face serves every family, so advances are exact: ASCII
+        // maps to 500-unit glyphs (only A=600, B=620 differ) at 1000 upm.
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Probe anchor text", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null, SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 6, DisplayText: null)
+            ]
+        };
+        DocxRelatedStory commentStory = new(
+            DocxRelatedStoryKind.Comment,
+            "/word/comments.xml",
+            "1",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Short probe body.", 10d, 12d))],
+            [],
+            [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer One", "RV", "2026-06-01T00:00:00Z", null, null, null, null)
+        };
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            207d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxParagraphElement(paragraph)],
+            [],
+            [])
+        {
+            RelatedStories = [commentStory],
+            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        PdfPage page = new DocxRenderer(
+            new TestFaceFontResolver(),
+            OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+
+        double balloonFontSize = 9d * 612d / 671.5d;
+        var ops = Regex.Matches(
+                page.Content,
+                @"/F(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[\d.\-]+) (?<y>[\d.\-]+) Tm\s*(?<op><[0-9A-F]+> ?Tj|\[.*?\] ?TJ)",
+                RegexOptions.Singleline)
+            .Where(match => Math.Abs(double.Parse(match.Groups["size"].Value, CultureInfo.InvariantCulture) - balloonFontSize) < 0.01d)
+            .Select(match => (
+                X: double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture),
+                Y: double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture),
+                Op: match.Groups["op"].Value))
+            .ToArray();
+        TestAssert.True(ops.Length >= 2, "The probe balloon should emit title and body text at the balloon size.");
+        double titleRowY = ops.Max(op => op.Y);
+        var titleRow = ops.Where(op => Math.Abs(op.Y - titleRowY) < 0.01d).OrderBy(op => op.X).ToArray();
+        TestAssert.True(titleRow.Length >= 2, "The title row should carry the title and the first body line.");
+        TestAssert.True(titleRow[0].Op.EndsWith("> Tj", StringComparison.Ordinal), "Balloon titles should render without tracking adjustments like Office (cs=0).");
+        // "Commented [RV1]: " is 17 test-face glyphs at 500 units: the body must start
+        // exactly where the drawn title ends (2.541pt too far pre-fix).
+        double expectedTitleWidth = 17d * 500d / 1000d * balloonFontSize;
+        TestAssert.True(
+            Math.Abs(titleRow[1].X - titleRow[0].X - expectedTitleWidth) < 0.05d,
+            $"The body first line should start where the drawn title ends. dx={titleRow[1].X - titleRow[0].X}.");
+    }
+
     public static void DocxWordCompatibleAllMarkupRendersGroupedCommentTextWithOfficeBalloonFont()
     {
         DocxParagraph boldSeedParagraph = new(
@@ -1069,12 +1143,13 @@ internal static class DocxCommentsTests
         TestAssert.True(
             DocxTests.CountOccurrences(page.Content, "8.203 Tf") >= 3,
             "Word-compatible grouped comment balloons should render Office-sized title and wrapped body text.");
-        // Title TJ adjustments are point-space tracking over the balloon font: -0.03357 * 1000 / 8.20253
-        // (9pt design over this document lane-fit scale 612 / 671.5), i.e. -4.09266, which "0.###"
-        // rounds to -4.093 (was -4.813 at 6.975pt).
+        // Office titles carry no character spacing (cs=0 on every sampled reference
+        // title op), so the June-era -4.093 title tracking is retired: titles render
+        // as plain glyph shows. DocxWordCompatibleBalloonBodyStartsAtDrawnTitleEnd
+        // pins the title origin and the tracking-free emission deterministically.
         TestAssert.True(
-            page.Content.Contains("-4.093", StringComparison.Ordinal),
-            "Word-compatible grouped comment balloon titles should use positioned glyph advances.");
+            !page.Content.Contains("-4.093", StringComparison.Ordinal),
+            "Word-compatible grouped comment balloon titles should not use positioned glyph tracking.");
         TestAssert.True(
             DocxTests.CountOccurrences(page.Content, "/F3 8.203 Tf") >= 1 && DocxTests.CountOccurrences(page.Content, "/F2 8.203 Tf") >= 2,
             "Word-compatible grouped comment balloons should keep the title on the dedicated balloon-label resource (same label typeface, fuller subset) and body text on the regular body resource.");

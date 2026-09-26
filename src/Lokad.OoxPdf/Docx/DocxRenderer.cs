@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -81,8 +81,20 @@ internal sealed partial class DocxRenderer
     // The prior 233pt value fitted our own candidate widths, never an Office measurement.
     private const double WordCompatibleAllMarkupBalloonBodyWidthPoints = 230.2d;
     private const double WordCompatibleAllMarkupBalloonLaneBackgroundBalloonInsetPoints = 22.56d;
-    private const double WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints = 0.03357d;
-    private const double WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints = 2.541d;
+    // Office A/B (28 balloons across the unresolved/long/all/dense/landscape/mirrored/
+    // original references, Word-COM rendered): balloon titles carry no character
+    // spacing (cs=0 on every sampled title op) and body first lines start where the
+    // drawn title ends (gap -0.10..+0.01). The June-era 0.03357pt title tracking and
+    // 2.541pt body offset fitted narrow Aptos titles and are retired now that titles
+    // set Segoe UI Bold (natural widths already match Office within 0.2pt).
+    private const double WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints = 0d;
+    // Office A/B (unresolved b2 wrap failure plus all/original marginal first rows,
+    // Word-COM rendered): balloon body rows stop 1.02..4.01pt before the body rect
+    // edge, so the first line keeps a ~2.5pt trailing pad past the 0.5pt wrap edge.
+    // This preserves the pre-fix wrap widths bit-for-bit while the emission origin
+    // above moves to the Office-true title end.
+    private const double WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints = 2.541d;
     private const double WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints = -0.02186d;
     private const double WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints = -2.968d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints = 11.27d;

@@ -125,7 +125,7 @@ internal sealed partial class DocxRenderer
             titleWidth +
             WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
         double rightEdge = balloonWidth - 0.5d;
-        firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX);
+        firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX - WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints);
         continuationWidth = Math.Max(0d, rightEdge - WordCompatibleAllMarkupBalloonTextInsetXPoints);
     }
 
