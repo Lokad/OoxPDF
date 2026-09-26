@@ -45,7 +45,7 @@ internal sealed partial class DocxRenderer
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
-            .Concat(EnumeratePlacedRelatedStoryTextLines(page))
+            .Concat(EnumerateMappedPlacedFootnoteStoryTextLines(page, map))
             .Concat(EnumerateInlineTextBoxTextLines(page))
             .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(drawingPages.PageAll(pageIndex), map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
@@ -179,10 +179,41 @@ internal sealed partial class DocxRenderer
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         return EnumerateStaticTextLines(page)
             .Concat(EnumerateBodyTextLines(page))
-            .Concat(EnumeratePlacedRelatedStoryTextLines(page))
+            .Concat(EnumerateMappedPlacedFootnoteStoryTextLines(page, map))
             .Concat(EnumerateInlineTextBoxTextLines(page))
             .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(floatingDrawings, map))
             .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
+    }
+
+    // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote stories
+    // lay out unscaled in design space, so balloon anchors from their lines map
+    // uniformly like their emission; other stories keep legacy coordinates.
+    private static IEnumerable<DocxTextLineLayout> EnumerateMappedPlacedFootnoteStoryTextLines(
+        DocxLayoutPage page,
+        FloatingTextBoxEmissionMap? map)
+    {
+        foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
+        {
+            FloatingTextBoxEmissionMap? storyMap = null;
+            if (map is { } availableMap &&
+                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote)
+            {
+                storyMap = availableMap;
+            }
+
+            foreach (DocxTextLineLayout line in story.TextLines)
+            {
+                yield return storyMap is { } lineMap ? lineMap.PrecompensateLine(line, 0d, 0d) : line;
+            }
+
+            foreach (DocxTableRowLayout row in story.TableRows)
+            {
+                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+                {
+                    yield return storyMap is { } cellMap ? cellMap.PrecompensateLine(cellLine, 0d, 0d) : cellLine;
+                }
+            }
+        }
     }
 
     // Inline-textbox content lives in absolute flow space (placed at layout time), so
@@ -328,25 +359,6 @@ internal sealed partial class DocxRenderer
                 foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
                 {
                     yield return boxCellLine;
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<DocxTextLineLayout> EnumeratePlacedRelatedStoryTextLines(DocxLayoutPage page)
-    {
-        foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
-        {
-            foreach (DocxTextLineLayout line in story.TextLines)
-            {
-                yield return line;
-            }
-
-            foreach (DocxTableRowLayout row in story.TableRows)
-            {
-                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
-                {
-                    yield return cellLine;
                 }
             }
         }

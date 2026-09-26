@@ -309,7 +309,11 @@ internal sealed partial class DocxRenderer
                 AddLine(line, isStaticStory: false, "Body", "Body", null);
             }
 
-            foreach (DocxTextLineLayout line in EnumeratePlacedRelatedStoryTextLines(page))
+            // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote
+            // story lines map uniformly like their emission so snapshots agree with
+            // balloon anchors; other stories keep legacy coordinates.
+            FloatingTextBoxEmissionMap? placedStoryMap = TryCreateFloatingTextBoxEmissionMap(effectiveMarkupContext, page.Height);
+            foreach (DocxTextLineLayout line in EnumerateMappedPlacedFootnoteStoryTextLines(page, placedStoryMap))
             {
                 AddLine(line, isStaticStory: false, "RelatedStory", line.Story?.ToKindString(), line.Story?.VariantType);
             }
@@ -1013,7 +1017,7 @@ internal sealed partial class DocxRenderer
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, layoutPage.Height);
-                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex);
+                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, layoutPage.Height);
                 RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, layoutPage.Height);
             }
 

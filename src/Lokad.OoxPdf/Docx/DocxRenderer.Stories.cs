@@ -24,19 +24,40 @@ internal sealed partial class DocxRenderer
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
-        ref int imageIndex)
+        ref int imageIndex,
+        double pageHeight)
     {
+        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote
+        // stories lay out unscaled in design space while emission maps uniformly
+        // (WC first baseline 236.62 = affine-mapped design). Other stories keep
+        // the body-shift path; tables inside mapped stories stay legacy.
+        FloatingTextBoxEmissionMap storyMap = default;
+        bool mapStory = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote &&
+            FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out storyMap);
         if (story.SeparatorY is { } separatorY)
         {
             graphics.SetFillRgb(0, 0, 0);
-            graphics.FillRectangle(story.X, separatorY, Math.Min(story.SeparatorWidth, story.Width), story.SeparatorThickness);
+            graphics.FillRectangle(
+                mapStory ? storyMap.MapEmissionX(story.X) : story.X,
+                mapStory ? storyMap.MapEmissionY(separatorY) : separatorY,
+                Math.Min(mapStory ? storyMap.ScaleExtent(story.SeparatorWidth) : story.SeparatorWidth, mapStory ? storyMap.ScaleExtent(story.Width) : story.Width),
+                story.SeparatorThickness);
         }
 
         graphics.SaveState();
-        graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
-        IReadOnlyList<DocxLayoutItem> items = story.TextLines
+        if (mapStory)
+        {
+            (double clipX, double clipY, double clipWidth, double clipHeight) = storyMap.MapClipRectangle(story.X, story.TopY, story.Width, story.Height);
+            graphics.ClipRectangle(clipX, clipY, clipWidth, clipHeight);
+        }
+        else
+        {
+            graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+        }
+
+        IReadOnlyList<DocxLayoutItem> items = (mapStory ? story.TextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : story.TextLines)
             .Cast<DocxLayoutItem>()
-            .Concat(story.InlineImages)
+            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, 0d, 0d, pageNumber)) : story.InlineImages)
             .Concat(story.TableRows)
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();

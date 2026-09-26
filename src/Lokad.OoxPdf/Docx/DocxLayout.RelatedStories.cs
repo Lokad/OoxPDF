@@ -651,6 +651,17 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
+        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote
+        // stories lay out unscaled in design space while emission maps uniformly
+        // (WC first baseline 236.62 = affine-mapped design). Comments keep scaled
+        // layout for the balloon path and textboxes keep their own design switch.
+        if (story.Kind is DocxRelatedStoryKind.Footnote &&
+            Math.Abs(paragraphSpacingScale - 1d) >= 0.000000001d)
+        {
+            textMeasurer = unscaledTextMeasurer ?? textMeasurer;
+            paragraphSpacingScale = 1d;
+        }
+
         var textLines = new List<DocxTextLineLayout>();
         var inlineImages = new List<DocxInlineImageLayout>();
         var tableRows = new List<DocxTableRowLayout>();

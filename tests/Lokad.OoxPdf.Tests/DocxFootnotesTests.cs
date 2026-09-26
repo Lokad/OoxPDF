@@ -246,11 +246,12 @@ internal static class DocxFootnotesTests
         TestAssert.True(bodyBottom >= footnoteTop, $"Body layout should reserve page space above placed footnotes; body bottom {bodyBottom} footnote top {footnoteTop}.");
     }
 
-    public static void DocxFootnoteMixedSizePitchTransitionsScaleWithPrintScale()
+    public static void DocxFootnoteStoryLaysOutUnscaledDesignSpace()
     {
-        // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a
-        // word-compatible print scale, footnote 12->15 exceeds by 0.65 and
-        // 15->12 undershoots by 0.69. Pre-fix the scaled layout matches preserve.
+        // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote stories lay
+        // out unscaled in design space while emission maps uniformly (WC first
+        // baseline 236.62 = affine-mapped design). Pre-fix the word-compatible
+        // story layout scaled metrics in place.
         DocxParagraph SizedLine(string text, double fontSize)
         {
             return DocxTests.CreateDocxLayoutParagraph(text, fontSize, 12d) with
@@ -311,14 +312,16 @@ internal static class DocxFootnotesTests
             return [lines[0].BaselineY - lines[1].BaselineY, lines[1].BaselineY - lines[2].BaselineY];
         }
 
+        // Footnote stories lay out unscaled in design space (emission maps
+        // uniformly); the scaled layout keeps full unscaled transitions.
         double[] preserve = Pitches(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, 1d);
         double[] scaled = Pitches(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.75d);
         TestAssert.True(
-            Math.Abs((scaled[0] - preserve[0]) - (14.1d - 11.28d) * (0.75d - 1d)) < 0.001d,
-            $"Footnote 12->15 pitch should shrink by the scaled transition. preserve={preserve[0]} scaled={scaled[0]}.");
+            Math.Abs(scaled[0] - preserve[0]) < 0.001d,
+            $"Footnote story layout should stay design space. preserve={preserve[0]} scaled={scaled[0]}.");
         TestAssert.True(
-            Math.Abs((scaled[1] - preserve[1]) - (11.28d - 14.1d) * (0.75d - 1d)) < 0.001d,
-            $"Footnote 15->12 pitch should grow by the scaled transition. preserve={preserve[1]} scaled={scaled[1]}.");
+            Math.Abs(scaled[1] - preserve[1]) < 0.001d,
+            $"Footnote story layout should stay design space. preserve={preserve[1]} scaled={scaled[1]}.");
     }
 
     public static void DocxLayoutStacksMultipleFootnotesOnOnePage()
