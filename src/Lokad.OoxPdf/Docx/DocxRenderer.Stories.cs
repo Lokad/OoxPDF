@@ -41,7 +41,7 @@ internal sealed partial class DocxRenderer
                 mapStory ? storyMap.MapEmissionX(story.X) : story.X,
                 mapStory ? storyMap.MapEmissionY(separatorY) : separatorY,
                 Math.Min(mapStory ? storyMap.ScaleExtent(story.SeparatorWidth) : story.SeparatorWidth, mapStory ? storyMap.ScaleExtent(story.Width) : story.Width),
-                story.SeparatorThickness);
+                mapStory ? storyMap.ScaleExtent(story.SeparatorThickness) : story.SeparatorThickness);
         }
 
         graphics.SaveState();
