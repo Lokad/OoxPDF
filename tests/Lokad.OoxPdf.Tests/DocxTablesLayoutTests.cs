@@ -1295,6 +1295,93 @@ internal static class DocxTablesLayoutTests
         TestAssert.Equal(10, firstPageRows[2].Cells[0].TextLines.Count + secondPageRows[0].Cells[0].TextLines.Count);
     }
 
+    public static void DocxTableCellExactFirstBaselineFollowsOfficeRatio()
+    {
+        // RV06 pagination probe (edge-page-ex36/ex48, Word 16.0): Office drops the
+        // first baseline of exact-spaced in-cell text to 0.8 x the exact line height
+        // below the content top (ex36: 28.8; ex48: 38.4), independent of the font
+        // ascent the renderer currently applies (12pt x 0.94 = 11.28). Pre-fix the
+        // first baseline sits at the auto-rule inset for both heights.
+        foreach ((double lineHeight, double expectedInset) in new[] { (36d, 28.8d), (48d, 38.4d) })
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Probe", 12d, lineHeight) with
+            {
+                Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
+            };
+            var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+            double baselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().BaselineY;
+            TestAssert.True(
+                Math.Abs(baselineY - (190d - expectedInset)) < 0.001d,
+                $"Exact-{lineHeight}pt first baseline should sit {expectedInset}pt below the content top. baselineY={baselineY}.");
+        }
+
+        // Characterization lock: atLeast keeps the auto-rule inset (no Office
+        // evidence for a distinct atLeast first baseline).
+        DocxParagraph atLeast = DocxTests.CreateDocxLayoutParagraph("Probe", 12d, 48d) with
+        {
+            Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "atLeast", null)
+        };
+        var atLeastCell = new DocxTableCell(string.Empty, [atLeast], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable atLeastTable = new(null, [90d], [new DocxTableRow([atLeastCell], null)]);
+        DocxDocument atLeastDocument = DocxTests.CreateLayoutTestDocument([new DocxTableElement(atLeastTable)], [atLeastTable]);
+        double atLeastBaselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(atLeastDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().BaselineY;
+        TestAssert.True(
+            Math.Abs(atLeastBaselineY - (190d - 12d * 0.94d)) < 0.001d,
+            $"AtLeast first baseline should keep the auto-rule inset. baselineY={atLeastBaselineY}.");
+    }
+
+    public static void DocxTableExactTallRowSplitsNineAndOneLikeOffice()
+    {
+        // RV06 pagination probe (edge-page-ex48, Word 16.0): a 10-line exact-48 row
+        // following two short exact-48 lines splits 9/1 across the page boundary
+        // (11 lines on page one). Pre-fix the row-level split gate saw no baseline
+        // below its unfloored boundary and pushed the whole row to page two.
+        DocxParagraph ExactLine(string text)
+        {
+            return DocxTests.CreateDocxLayoutParagraph(text, 12d, 48d) with
+            {
+                SpacingAfterPoints = 8d,
+                Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
+            };
+        }
+
+        var firstCell = new DocxTableCell(string.Empty, [ExactLine("Short 1"), ExactLine("Short 2")], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxParagraph[] tallParas = Enumerable.Range(1, 10)
+            .Select(index => ExactLine("Exact tall line " + index.ToString(CultureInfo.InvariantCulture) + " padding words"))
+            .ToArray();
+        var secondCell = new DocxTableCell(string.Empty, tallParas, null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [468d], [new DocxTableRow([firstCell], null), new DocxTableRow([secondCell], null)]);
+        DocxDocument document = new(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        int firstPageCellLines = layout.Pages[0].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
+        int secondPageCellLines = layout.Pages[1].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
+        TestAssert.Equal(11, firstPageCellLines);
+        TestAssert.Equal(1, secondPageCellLines);
+    }
+
     public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
     {
         DocxTable beforeNestedTable = DocxTests.CreateSingleCellTable("Before", 12d);

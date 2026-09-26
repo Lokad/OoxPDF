@@ -63,6 +63,7 @@ internal static class DocxLineMetrics
     private const double WordSingleLineMinimumEm = 1.15d;
     private const double WordAutoLineBaselineOffsetEm = 0.94d;
     private const double WordExactLineTextBottomInsetEm = 0.299d;
+    private const double WordExactLineFirstBaselineRatio = 0.8d;
 
     public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
     {
@@ -100,8 +101,25 @@ internal static class DocxLineMetrics
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
     {
         DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
+        if (firstTextParagraph is null)
+        {
+            return 0d;
+        }
+
+        // RV06 pagination probe (edge-page-ex24/ex36/ex48, Word 16.0): Office drops
+        // the first baseline of exact-spaced in-cell text to 0.8 x the exact line
+        // height below the content top (19.2/28.8/38.4), independent of the font
+        // ascent the auto rule applies. Font-size interaction past 12pt stays a
+        // probe follow-up; atLeast keeps the auto rule for lack of Office evidence.
+        DocxEffectiveParagraphProperties effective = firstTextParagraph.EffectiveProperties;
+        if (effective.LineSpacingPoints is { } exactLineHeight &&
+            !string.Equals(effective.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))
+        {
+            return exactLineHeight * WordExactLineFirstBaselineRatio;
+        }
+
         // Word places the in-cell first baseline with the body rule (shading probes 2026-09-06: in-cell offsets match winAscent like body text); the full-em inset sat 0.05em too deep.
-        return firstTextParagraph is null ? 0d : firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize) * WordAutoLineBaselineOffsetEm;
+        return firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize) * WordAutoLineBaselineOffsetEm;
     }
 }
 
