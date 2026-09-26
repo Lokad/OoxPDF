@@ -95,8 +95,14 @@ internal sealed partial class DocxRenderer
     // This preserves the pre-fix wrap widths bit-for-bit while the emission origin
     // above moves to the Office-true title end.
     private const double WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints = 2.541d;
-    private const double WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints = -0.02186d;
-    private const double WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints = -2.968d;
+    // Office A/B (all continuation rows across the unresolved/long/all/dense/
+    // landscape/mirrored/original references, Word-COM rendered): continuation
+    // lines carry no character spacing (cs=0; the -0.1..-0.76 adjustments are pair
+    // kerning, which the shared positioning encoder applies like the body path)
+    // and trailing spaces start where the drawn line ends (+/-0.1, never pulled
+    // back). Both June-era constants are retired.
+    private const double WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints = 0d;
+    private const double WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints = 0d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints = 11.27d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints = WordCompatibleAllMarkupBalloonHeightPoints - WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints;
     // Office A/B (tbxrev one-line plus dense two-line balloon rects, Word-COM rendered): reply-less balloon bodies fit the rendered text rows, so the top inset is the first-baseline inset above and 3.4pt pads the last baseline.

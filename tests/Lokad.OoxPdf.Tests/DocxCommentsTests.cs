@@ -1015,7 +1015,7 @@ internal static class DocxCommentsTests
             DocxRelatedStoryKind.Comment,
             "/word/comments.xml",
             "1",
-            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Short probe body.", 10d, 12d))],
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Short probe body plus continuation words.", 10d, 12d))],
             [],
             [], null)
         {
@@ -1066,6 +1066,21 @@ internal static class DocxCommentsTests
         TestAssert.True(
             Math.Abs(titleRow[1].X - titleRow[0].X - expectedTitleWidth) < 0.05d,
             $"The body first line should start where the drawn title ends. dx={titleRow[1].X - titleRow[0].X}.");
+        var continuationRow = ops.Where(op => op.Y < titleRowY - 0.01d).OrderBy(op => op.Y).ToArray();
+        TestAssert.True(continuationRow.Length >= 2, "The wrapped body should continue on a second row.");
+        double continuationY = continuationRow.Max(op => op.Y);
+        var continuationLine = continuationRow.Where(op => Math.Abs(op.Y - continuationY) < 0.01d).OrderBy(op => op.X).ToArray();
+        TestAssert.True(
+            Math.Abs(continuationLine[0].X - titleRow[0].X) < 0.05d,
+            "Continuation lines should start at the balloon text edge like Office.");
+        TestAssert.True(continuationLine[0].Op.EndsWith("> Tj", StringComparison.Ordinal), "Continuation lines should render without tracking adjustments like Office (cs=0).");
+        // The continuation "continuation words." is 19 test-face glyphs at 500 units;
+        // its trailing space must start where the drawn line ends (2.968pt pulled
+        // back pre-fix), matching Office spaces within 0.1pt.
+        double expectedContinuationWidth = 19d * 500d / 1000d * balloonFontSize;
+        TestAssert.True(
+            Math.Abs(continuationLine[1].X - continuationLine[0].X - expectedContinuationWidth) < 0.05d,
+            $"The continuation trailing space should start where the drawn line ends. dx={continuationLine[1].X - continuationLine[0].X}.");
     }
 
     public static void DocxWordCompatibleAllMarkupRendersGroupedCommentTextWithOfficeBalloonFont()

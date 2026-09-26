@@ -210,19 +210,18 @@ internal sealed partial class DocxRenderer
 
             return;
         }
-        if (Math.Abs(positioningCharacterSpacing) > 0.001d)
+        // Office balloon text carries no tracking: the shared encoder applies pair
+        // kerning like the body path and yields plain glyph shows when the face has
+        // no kerns for the line. Forcing applies only while an explicit spacing is set.
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(
+            text,
+            positioningCharacterSpacing,
+            fontSize,
+            forcePositioningArray: Math.Abs(positioningCharacterSpacing) > 0.001d,
+            kerningEnabled: true);
+        if (positioningArray is not null)
         {
-            string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(
-                text,
-                positioningCharacterSpacing,
-                fontSize,
-                forcePositioningArray: true,
-                kerningEnabled: false);
-            if (positioningArray is not null)
-            {
-                graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, positioningArray, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
-            }
-
+            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, positioningArray, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             return;
         }
 
