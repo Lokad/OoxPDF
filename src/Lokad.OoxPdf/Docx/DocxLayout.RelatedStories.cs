@@ -256,6 +256,16 @@ internal sealed partial class DocxLayoutEngine
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
                 double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories);
                 int activePageIndex = documentEndPages.Count - 1;
+                DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
+                if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
+                {
+                    // RV06 endnote probes: document-end endnotes draw the separator rule
+                    // with a mark like section-end endnotes (no extra gap above it).
+                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, EndnoteSeparatorRuleBottomOffsetPoints);
+                    activePlacedStories.Add(placedSeparator);
+                    documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+                    cursorTop = separatorBottom - FootnoteSeparatorGapPoints;
+                }
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
                     PlaceRelatedStorySlices(
