@@ -130,3 +130,27 @@ pwsh tools/RunDocxMarkupReferenceGate.ps1 -FailOnDeltas
 ```
 
 The cache-status output includes `missing-import-commands.ps1`, which lists only the references still absent from `artifacts/reference-cache/`.
+
+### Reference revision-view matching
+
+Word-compatible all-markup rendering declares a RevisionsMode-1-like view:
+insertions and deletions render inline with revision styling while comments and
+formatting revisions balloon. A reference exported with RevisionsMode=0 instead
+balloons deletions (`Deleted:` title rows) and hides them from body lines, so
+the gate compares different views: body wraps, op pairings, and page flow all
+shift for non-layout reasons. Export word-compatible all-markup references with
+`RevisionsMode=1` (bespoke `ExportDocxMarkupReference.ps1` knobs; the remaining
+four knobs stay pinned as usual) and record the full ExportSettings string at
+import time; re-import view-mismatched references with `-Force`.
+
+Verify the view before importing: a RevisionsMode-1 reference carries deleted
+text inline at body size with no `Deleted:`/`Inserted:` title operations, while
+a RevisionsMode-0 reference moves that text into balloon rows. Fixtures without
+revision markup (`w:ins`/`w:del`/moves in `document.xml`) are view-agnostic and
+need no re-export. Precedents: margin-dense-revisions and margin-landscape were re-imported
+view-matched (record the full ExportSettings string, back up the replaced entry,
+re-import with `-Force`). Comment-long and comment-unresolved carry no revision
+markup; the all reference already matches the inline-deletion class;
+links-fields-final is a final-mode case whose ShowRevisions=False reference
+already matches. Check the case manifest markup/geometry before importing: a
+mismatched variant key silently orphans the entry and no gate resolves it.
