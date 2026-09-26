@@ -127,9 +127,9 @@ internal sealed partial class DocxLayoutEngine
                 return false;
             }
 
-            double fragmentBottomY = rowHeight - firstFragmentHeight;
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
+            var laidOutCells = new List<(IReadOnlyList<DocxParagraph> Paragraphs, IReadOnlyList<DocxTextLineLayout> TextLines)>();
             var splitLineBaselines = new List<double>();
             for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
             {
@@ -140,7 +140,19 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo).Lines;
+                laidOutCells.Add((GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textLines));
                 splitLineBaselines.AddRange(textLines.Select(line => line.BaselineY));
+            }
+
+            // RV06 pagination probe (edge-page-ex48-r550, Word 16.0): test the floored
+            // capacity the execution packs, not the raw remainder. A boundary landing
+            // below the last baseline but above the row bottom still keeps whole lines.
+            splitPitch = ResolveTableRowSplitPitch(splitLineBaselines);
+            double flooredFirstFragmentHeight = FloorTableRowFragmentHeightToPitch(firstFragmentHeight, splitPitch);
+            double fragmentBottomY = rowHeight - flooredFirstFragmentHeight;
+
+            foreach ((IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> textLines) in laidOutCells)
+            {
                 bool HasTableCellKeepRuleBoundaryViolation()
                 {
                     if (textLines.Count == 0)
@@ -148,7 +160,6 @@ internal sealed partial class DocxLayoutEngine
                         return false;
                     }
             
-                    IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell));
                     foreach (IGrouping<int?, DocxTextLineLayout> group in textLines.GroupBy(line => line.SourceParagraphIndex))
                     {
                         if (group.Key is not { } paragraphIndex ||
@@ -197,11 +208,10 @@ internal sealed partial class DocxLayoutEngine
                     return false;
                 }
 
-                bool hasLineInFirstFragment = textLines.Any(line => firstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
+                bool hasLineInFirstFragment = textLines.Any(line => flooredFirstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
                 bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
                 if (hasLineInFirstFragment && hasLineInContinuation)
                 {
-                    splitPitch = ResolveTableRowSplitPitch(splitLineBaselines);
                     return true;
                 }
             }

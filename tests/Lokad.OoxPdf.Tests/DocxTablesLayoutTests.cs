@@ -1382,6 +1382,52 @@ internal static class DocxTablesLayoutTests
         TestAssert.Equal(1, secondPageCellLines);
     }
 
+    public static void DocxTableExactRowSplitsWhenBoundaryClearsLastBaseline()
+    {
+        // RV06 pagination probe (edge-page-ex48-r550, Word 16.0): with 550pt left
+        // for a 560pt exact-48 row, the boundary falls below the last baseline
+        // (17.6pt above the row bottom) but above the row bottom, and Office keeps
+        // the floored 9 lines on page one. Pre-fix the split gate tested the
+        // unfloored boundary, saw no baseline below it, and pushed the whole row.
+        DocxParagraph ExactLine(string text)
+        {
+            return DocxTests.CreateDocxLayoutParagraph(text, 12d, 48d) with
+            {
+                SpacingAfterPoints = 8d,
+                Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null)
+            };
+        }
+
+        var firstCell = new DocxTableCell(string.Empty, [ExactLine("Short 1"), ExactLine("Short 2")], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxParagraph[] tallParas = Enumerable.Range(1, 10)
+            .Select(index => ExactLine("Exact tall line " + index.ToString(CultureInfo.InvariantCulture) + " padding words"))
+            .ToArray();
+        var secondCell = new DocxTableCell(string.Empty, tallParas, null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [468d], [new DocxTableRow([firstCell], null), new DocxTableRow([secondCell], null)]);
+        DocxDocument document = new(
+            612d,
+            806d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            [new DocxTableElement(table)],
+            [],
+            [table]);
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        int firstPageCellLines = layout.Pages[0].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
+        int secondPageCellLines = layout.Pages[1].Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).Sum(cell => cell.TextLines.Count);
+        TestAssert.Equal(11, firstPageCellLines);
+        TestAssert.Equal(1, secondPageCellLines);
+    }
+
     public static void DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak()
     {
         DocxTable beforeNestedTable = DocxTests.CreateSingleCellTable("Before", 12d);
