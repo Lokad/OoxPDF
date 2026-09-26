@@ -328,6 +328,7 @@ internal sealed partial class DocxLayoutEngine
         var placedImages = new List<DocxInlineImageLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        double cellFirstBaselineInset = ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(bodyElements));
         int paragraphIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
@@ -464,6 +465,13 @@ internal sealed partial class DocxLayoutEngine
                 // RV05: ordered inline atoms (table-cell path). Affined images in
                 // text-mixed paragraphs attach to wrapped lines at run position.
                 DocxMidLinePlan? midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines, ResolveTableCellTextWrapWidth(cell, paragraphWidth), ResolveTableCellTextWrapWidth(cell, continuationParagraphWidth), DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)), lineHeight);
+                // RV06 pagination probe (edge-mixedcell, Word 16.0): Office stacks
+                // cell baselines with per-line font-size offsets (12->15 carries
+                // +2.82 at scale 1.0), while the renderer stacks pure line heights
+                // after the first-line inset. Each line corrects against the
+                // cell-first inset, scaled like the pitch; single-size cells
+                // self-zero.
+                double lineBaselineTransition = (DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)) - cellFirstBaselineInset) * context.ParagraphSpacingScale;
                 for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = wrappedLines[lineIndex];
@@ -519,7 +527,7 @@ internal sealed partial class DocxLayoutEngine
                         firstRun,
                         fontSize,
                         lineShape.X,
-                        cursorY,
+                        cursorY - lineBaselineTransition,
                         lineShape.Width,
                         emissionSegments,
                         SourceBlockIndex: null,

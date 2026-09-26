@@ -1337,6 +1337,48 @@ internal static class DocxTablesLayoutTests
             $"AtLeast first baseline should keep the auto-rule inset. baselineY={atLeastBaselineY}.");
     }
 
+    public static void DocxTableCellMixedSizeTransitionAppliesFontOffset()
+    {
+        // RV06 pagination probe (edge-mixedcell, Word 16.0): Office stacks cell
+        // baselines with per-line font-size offsets (12->15 pitch carries +2.82),
+        // while the renderer stacks pure line heights (middle baseline 2.77 high
+        // at scale 1.0). Pre-fix the scaled layout matches the preserve control
+        // on both pitches.
+        double TransitionDelta(OoxPdfDocxMarkupGeometryMode mode, double scale)
+        {
+            DocxParagraph SizedLine(string text, double fontSize)
+            {
+                return DocxTests.CreateDocxLayoutParagraph(text, fontSize, 12d) with
+                {
+                    LineSpacingPoints = null
+                };
+            }
+
+            double FirstPitch(IReadOnlyList<DocxParagraph> paras)
+            {
+                var cell = new DocxTableCell(string.Empty, paras, null, null, null, null, [], DocxTableCellMargins.Empty);
+                DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+                DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+                DocxTextLineLayout[] lines = new DocxLayoutEngine(mode, scale)
+                    .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                    .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.ToArray();
+                TestAssert.Equal(2, lines.Length);
+                return lines[0].BaselineY - lines[1].BaselineY;
+            }
+
+            double control = FirstPitch([SizedLine("Alpha", 12d), SizedLine("Zeta", 12d)]);
+            double mixed = FirstPitch([SizedLine("Alpha", 12d), SizedLine("Beta", 15d)]);
+            return mixed - control;
+        }
+
+        TestAssert.True(
+            Math.Abs(TransitionDelta(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, 1d) - 2.82d) < 0.001d,
+            "Cell 12->15 pitch should carry the full font-size transition at scale 1.0.");
+        TestAssert.True(
+            Math.Abs(TransitionDelta(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.75d) - 2.82d * 0.75d) < 0.001d,
+            "Cell 12->15 pitch should carry the scaled font-size transition.");
+    }
+
     public static void DocxTableExactTallRowSplitsNineAndOneLikeOffice()
     {
         // RV06 pagination probe (edge-page-ex48, Word 16.0): a 10-line exact-48 row
