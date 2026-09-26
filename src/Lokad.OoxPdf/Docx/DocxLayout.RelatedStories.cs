@@ -101,7 +101,8 @@ internal sealed partial class DocxLayoutEngine
         var storyLayoutsByWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
         RelatedStoryPageIndex referenceIndex = RelatedStoryPageIndex.Build(pages, cancellationToken);
-        var pagesWithStories = new DocxLayoutPage[pages.Count];
+        var outputPages = pages.ToList();
+        int outputShift = 0;
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
@@ -156,13 +157,14 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories = PlaceFootnoteStories(page, pageIndex, pageFootnoteStories, footnoteSeparatorLayout, separatorMeasurer);
-            pagesWithStories[pageIndex] = placedStories.Count == 0
-                ? page
-                : page with { PlacedRelatedStories = placedStories };
+            int outputIndex = pageIndex + outputShift;
+            int countBefore = outputPages.Count;
+            DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
+            PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer);
+            outputShift += outputPages.Count - countBefore;
         }
 
-        return AddPlacedEndnoteStories(pagesWithStories);
+        return AddPlacedEndnoteStories(outputPages);
 
         IReadOnlyList<DocxLayoutPage> AddPlacedEndnoteStories(IReadOnlyList<DocxLayoutPage> pages)
         {
@@ -406,25 +408,13 @@ internal sealed partial class DocxLayoutEngine
             {
                 MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage);
                 availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
-                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, continuationSeparatorLayout, separatorMeasurer);
+                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer);
                 availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
             }
 
-            int takeCount = 0;
-            double takeHeight = 0d;
-            while (lineIndex + takeCount < storyLayout.TextLines.Count &&
-                takeHeight + lineBoxes[lineIndex + takeCount] <= availableHeight + 0.001d)
-            {
-                takeHeight += lineBoxes[lineIndex + takeCount];
-                takeCount++;
-            }
-
-            if (takeCount == 0)
-            {
-                takeCount = 1;
-                takeHeight = lineBoxes[lineIndex];
-            }
-            else if (lineIndex + takeCount >= storyLayout.TextLines.Count)
+            int remainingLines = storyLayout.TextLines.Count - lineIndex;
+            (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight);
+            if (lineIndex + takeCount >= storyLayout.TextLines.Count)
             {
                 takeHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight - consumedHeight), availableHeight);
             }
@@ -446,7 +436,7 @@ internal sealed partial class DocxLayoutEngine
             if (lineIndex < storyLayout.TextLines.Count)
             {
                 MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage);
-                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, continuationSeparatorLayout, separatorMeasurer);
+                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer);
             }
         }
     }
@@ -516,6 +506,33 @@ internal sealed partial class DocxLayoutEngine
     // starts fresh at the continuation page top, so the mark baseline lands one
     // first-line inset below the top with no extra ride; rule geometry follows the
     // shared strikeout path and content keeps the footnote gap below the rule.
+    // Longest whole-line prefix (at least one line) fitting the capacity.
+    private static (int TakeCount, double TakeHeight) TakeStoryLines(double[] lineBoxes, int startLineIndex, int remainingLineCount, double capacityHeight)
+    {
+        int takeCount = 0;
+        double takeHeight = 0d;
+        while (takeCount < remainingLineCount &&
+            takeHeight + lineBoxes[startLineIndex + takeCount] <= capacityHeight + 0.001d)
+        {
+            takeHeight += lineBoxes[startLineIndex + takeCount];
+            takeCount++;
+        }
+
+        if (takeCount == 0)
+        {
+            takeCount = 1;
+            takeHeight = lineBoxes[startLineIndex];
+        }
+
+        return (takeCount, takeHeight);
+    }
+
+    // RV06 continuation probes (Word 16.0, footlong/endlong): continued notes open
+    // later pages with a full-width continuation rule plus end mark. Endnote
+    // continuations start fresh at the page top (mark one first-line inset below the
+    // top); footnote continuations bottom-anchor (mark one footnote gap above the
+    // content top, which sits one take above the margin). Rule geometry follows the
+    // shared strikeout path and content keeps the footnote gap below the rule.
     private static double PlaceContinuationSeparatorIfNeeded(
         List<DocxLayoutPage> outputPages,
         ref int activePageIndex,
@@ -523,6 +540,9 @@ internal sealed partial class DocxLayoutEngine
         ref List<DocxPlacedRelatedStoryLayout> activePlacedStories,
         double cursorTop,
         int sourceBlockIndex,
+        DocxRelatedStoryLayout bodyStoryLayout,
+        int bodyLineIndex,
+        double[] bodyLineBoxes,
         DocxRelatedStoryLayout? continuationSeparatorLayout,
         IDocxTextMeasurer? separatorMeasurer)
     {
@@ -531,12 +551,27 @@ internal sealed partial class DocxLayoutEngine
             return cursorTop;
         }
 
-        (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceContinuationSeparatorStory(
-            activePage, activePageIndex, continuationSeparatorLayout, sourceBlockIndex, cursorTop, separatorMeasurer);
+        (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
+        double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
+        double markBaselineY;
+        if (continuationSeparatorLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+        {
+            int remainingLines = bodyStoryLayout.TextLines.Count - bodyLineIndex;
+            (_, double takeHeight) = TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, Math.Max(0d, cursorTop - activePage.MarginBottom));
+            double contentTop = activePage.MarginBottom + takeHeight;
+            markBaselineY = contentTop + separatorGapPoints;
+        }
+        else
+        {
+            double firstInsetPoints = Math.Max(0d, -continuationSeparatorLayout.TextLines[0].BaselineY);
+            markBaselineY = cursorTop - firstInsetPoints;
+        }
+
+        (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceContinuationSeparatorStory(
+            activePage, activePageIndex, continuationSeparatorLayout, sourceBlockIndex, markBaselineY, separatorMeasurer);
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-        (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
-        return separatorBottom - ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
+        return markBaselineY - separatorGapPoints;
     }
 
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceContinuationSeparatorStory(
@@ -544,15 +579,15 @@ internal sealed partial class DocxLayoutEngine
         int pageIndex,
         DocxRelatedStoryLayout continuationLayout,
         int sourceBlockIndex,
-        double topY,
+        double markBaselineY,
         IDocxTextMeasurer? separatorMeasurer)
     {
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(continuationLayout.TextLines);
-        double firstInsetPoints = Math.Max(0d, -continuationLayout.TextLines[0].BaselineY);
-        double separatorBottom = topY - firstInsetPoints;
+        double firstInsetPoints = continuationLayout.TextLines.Count == 0 ? 0d : Math.Max(0d, -continuationLayout.TextLines[0].BaselineY);
+        double topY = markBaselineY + firstInsetPoints;
         (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
         double ruleWidthPoints = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
-        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, continuationLayout, sourceBlockIndex, topY, storyTopOffset: 0d, storyHeight: ResolvePlacedStoryHeight(continuationLayout, page), separatorY: separatorBottom + ruleBottomOffsetPoints);
+        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, continuationLayout, sourceBlockIndex, topY, storyTopOffset: 0d, storyHeight: ResolvePlacedStoryHeight(continuationLayout, page), separatorY: markBaselineY + ruleBottomOffsetPoints);
         placedSeparator = placedSeparator with
         {
             SeparatorThickness = ruleThicknessPoints,
@@ -571,7 +606,7 @@ internal sealed partial class DocxLayoutEngine
             };
         }
 
-        return (placedSeparator, separatorBottom);
+        return (placedSeparator, markBaselineY);
     }
 
     private static void MoveToRelatedStoryContinuationPage(
@@ -744,47 +779,94 @@ internal sealed partial class DocxLayoutEngine
         return PlaceRelatedStoryAtTop(page, pageIndex, storyLayout, sourceBlockIndex, topY, topY + FootnoteSeparatorGapPoints);
     }
 
-    private static IReadOnlyList<DocxPlacedRelatedStoryLayout> PlaceFootnoteStories(
+    // RV06 footlong probe (Word 16.0): footnote blocks taller than the body-anchored
+    // area spill off-page top because the block stacks unbounded from the margin. Clamp
+    // the stories top to the body bottom edge minus the separator height; short blocks
+    // keep the legacy bottom-anchored stacking bit-identically (the reserve holds body
+    // clear otherwise, so the clamp only bites on overflow). Stories that fit place
+    // whole as before; the first overflowing story and all later ones slice through
+    // the shared line-partition machinery with footnote continuation separators.
+    // Absent-separator stories keep legacy whole placement (synthetic rule preserved).
+    private static void PlaceFootnoteStories(
+        List<DocxLayoutPage> outputPages,
+        int outputIndex,
         DocxLayoutPage page,
-        int pageIndex,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
         DocxRelatedStoryLayout? separatorLayout,
+        DocxRelatedStoryLayout? continuationSeparatorLayout,
         IDocxTextMeasurer? separatorMeasurer)
     {
         if (footnoteStories.Count == 0)
         {
-            return [];
+            return;
         }
 
+        if (separatorLayout is null)
+        {
+            PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, separatorMeasurer);
+            return;
+        }
+
+        DocxLayoutPage activePage = outputPages[outputIndex];
+        int activePageIndex = outputIndex;
+        List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
+        double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, activePage));
+        double cursorTop = activePage.MarginBottom + bodyHeight;
+        double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, activePage);
+        (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
+        double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
+        double storiesTop = cursorTop;
+        double? bodyBottomEdge = BodyBottomEdge(page);
+        if (bodyBottomEdge.HasValue)
+        {
+            storiesTop = Math.Min(cursorTop, bodyBottomEdge.Value - separatorHeight);
+        }
+        double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
+        (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
+        activePlacedStories.Add(placedSeparator);
+        outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+        double contentTop = storiesTop;
+        foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+        {
+            double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            if (contentTop - storyHeight >= activePage.MarginBottom - 0.001d)
+            {
+                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop, separatorY: null);
+                activePlacedStories.Add(placedStory);
+                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+                contentTop -= storyHeight;
+            }
+            else
+            {
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer);
+            }
+        }
+    }
+
+    private static void PlaceFootnoteStoriesWithoutSeparator(
+        List<DocxLayoutPage> outputPages,
+        int outputIndex,
+        DocxLayoutPage page,
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
         double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, page));
         double cursorTop = page.MarginBottom + bodyHeight;
-        var placedStories = new List<DocxPlacedRelatedStoryLayout>(footnoteStories.Count + (separatorLayout is null ? 0 : 1));
-        if (separatorLayout is not null)
-        {
-            double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
-            (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
-            double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
-            double separatorTop = cursorTop + separatorGapPoints + separatorHeight;
-            (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
-            placedStories.Add(placedSeparator);
-        }
-
+        var placedStories = new List<DocxPlacedRelatedStoryLayout>(footnoteStories.Count + 1);
         bool firstStory = true;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
             double? separatorY = null;
             double separatorThickness = FootnoteSeparatorThicknessPoints;
-            if (separatorLayout is null && firstStory)
+            if (firstStory)
             {
-                // Absent separator stories still draw the default rule, so the rule
-                // follows the first body run when strikeout metrics resolve.
                 (DocxTextRun? bodyRun, double bodyFontSizePoints) = FindSeparatorMarkFont(story.StoryLayout.TextLines);
                 (double syntheticOffsetPoints, double syntheticThicknessPoints) = ResolveSeparatorRuleGeometry(DocxRelatedStoryKind.Footnote, bodyRun, bodyFontSizePoints, separatorMeasurer);
                 separatorY = cursorTop + ResolveSeparatorGapPoints(bodyRun, bodyFontSizePoints, separatorMeasurer) + syntheticOffsetPoints;
                 separatorThickness = syntheticThicknessPoints;
             }
 
-            DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(page, pageIndex, story.StoryLayout, story.Location.SourceBlockIndex, cursorTop, separatorY);
+            DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(page, outputIndex, story.StoryLayout, story.Location.SourceBlockIndex, cursorTop, separatorY);
             if (separatorY is not null)
             {
                 placedStory = placedStory with { SeparatorThickness = separatorThickness };
@@ -795,7 +877,27 @@ internal sealed partial class DocxLayoutEngine
             firstStory = false;
         }
 
-        return placedStories.ToArray();
+        if (placedStories.Count != 0)
+        {
+            outputPages[outputIndex] = page with { PlacedRelatedStories = placedStories };
+        }
+    }
+
+    // Body-anchored footnote area top: lowest body text baseline minus one em
+    // (GetVerticalBounds convention), so overflowing blocks clamp below body content.
+    private static double? BodyBottomEdge(DocxLayoutPage page)
+    {
+        double? bottomEdge = null;
+        foreach (DocxLayoutItem item in page.Items)
+        {
+            if (item is DocxTextLineLayout line)
+            {
+                double lineBottom = line.BaselineY - line.FontSize;
+                bottomEdge = bottomEdge.HasValue ? Math.Min(bottomEdge.Value, lineBottom) : lineBottom;
+            }
+        }
+
+        return bottomEdge;
     }
 
     private static DocxPlacedRelatedStoryLayout PlaceRelatedStoryAtTop(

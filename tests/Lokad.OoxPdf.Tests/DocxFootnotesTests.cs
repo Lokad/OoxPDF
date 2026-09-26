@@ -1510,9 +1510,6 @@ internal static class DocxFootnotesTests
 
     public static void DocxLongFootnoteSplitsAcrossPagesWithContinuationSeparator()
     {
-        // Unskip pointer: footnote pagination epic (slicing plus continuation
-        // separators) is queued in PLAN.md; this test pins its contract.
-        TestAssert.Skip("Queued: footnote stories do not split across pages yet.");
         // RV06 footlong probe (Word 16.0): a 60-paragraph footnote splits 24/25/11
         // across 3 pages with full-width continuation rules plus end marks, while the
         // renderer stacks every line on the reference page off-page with no
