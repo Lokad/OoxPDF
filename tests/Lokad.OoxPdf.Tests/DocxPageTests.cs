@@ -2146,6 +2146,49 @@ internal static class DocxPageTests
         TestAssert.Equal(lines[3].X, lines[2].X);
     }
 
+    public static void DocxBodyMixedSizePitchTransitionsScaleWithPrintScale()
+    {
+        // RV06 pagination probe (edge-mixed15, Word 16.0): under a word-compatible
+        // print scale, Office scales whole pitches including the font-size offset
+        // transition (12->15 exceeds by 0.75, 15->12 undershoots by 0.76 at
+        // scale 0.758), while the renderer leaves the transition unscaled. Pre-fix
+        // the preserve and scaled layouts agree on both pitches.
+        DocxParagraph SizedLine(string text, double fontSize)
+        {
+            // Auto spacing (null points): the layout helper otherwise pins an
+            // exact line height, which takes the 0.8x exact branch everywhere.
+            return DocxTests.CreateDocxLayoutParagraph(text, fontSize, 12d) with
+            {
+                LineSpacingPoints = null
+            };
+        }
+
+        double[] Pitches(OoxPdfDocxMarkupGeometryMode mode, double scale)
+        {
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [
+                    new DocxParagraphElement(SizedLine("Alpha", 12d)),
+                    new DocxParagraphElement(SizedLine("Beta", 15d)),
+                    new DocxParagraphElement(SizedLine("Gamma", 12d))
+                ],
+                []);
+            DocxTextLineLayout[] lines = new DocxLayoutEngine(mode, scale)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTextLineLayout>().ToArray();
+            TestAssert.Equal(3, lines.Length);
+            return [lines[0].BaselineY - lines[1].BaselineY, lines[1].BaselineY - lines[2].BaselineY];
+        }
+
+        double[] preserve = Pitches(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, 1d);
+        double[] scaled = Pitches(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.75d);
+        TestAssert.True(
+            Math.Abs((scaled[0] - preserve[0]) - (14.1d - 11.28d) * (0.75d - 1d)) < 0.001d,
+            $"12->15 pitch should shrink by the scaled transition. preserve={preserve[0]} scaled={scaled[0]}.");
+        TestAssert.True(
+            Math.Abs((scaled[1] - preserve[1]) - (11.28d - 14.1d) * (0.75d - 1d)) < 0.001d,
+            $"15->12 pitch should grow by the scaled transition. preserve={preserve[1]} scaled={scaled[1]}.");
+    }
+
     public static void DocxBodyExactFirstBaselineFollowsOfficeRatio()
     {
         // RV06 pagination probe (edge-page-ex48-body, Word 16.0): Office drops the

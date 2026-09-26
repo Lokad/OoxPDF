@@ -219,6 +219,7 @@ internal sealed partial class DocxLayoutEngine
     }
     private readonly bool reserveMarkupMargin;
     private readonly double paragraphSpacingScale;
+    private readonly bool scaleBaselineOffsetTransitions;
     private readonly bool retuneReserveToPrintScale;
     private readonly double reservePrintScale;
 
@@ -264,6 +265,7 @@ internal sealed partial class DocxLayoutEngine
             ? wordCompatiblePrintScale
             : 1d;
         retuneReserveToPrintScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+        scaleBaselineOffsetTransitions = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         reservePrintScale = wordCompatiblePrintScale;
     }
 
@@ -288,6 +290,7 @@ internal sealed partial class DocxLayoutEngine
         double cursorY = ResolvePageStartCursor();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        double? firstBodyLineBaselineOffset = null;
         bool activeColumnHasContent = false;
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
@@ -357,6 +360,7 @@ internal sealed partial class DocxLayoutEngine
             cursorY = ResolvePageStartCursor();
             pendingSpacingAfter = 0d;
             previousParagraph = null;
+            firstBodyLineBaselineOffset = null;
             activeColumnHasContent = false;
             currentPageFootnoteReserveHeight = 0d;
         }
@@ -416,6 +420,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY = ResolvePageStartCursor();
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstBodyLineBaselineOffset = null;
                 activeColumnHasContent = false;
                 currentPageFootnoteReserveHeight = 0d;
                 return;
@@ -468,6 +473,7 @@ internal sealed partial class DocxLayoutEngine
 
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstBodyLineBaselineOffset = null;
                 continue;
             }
 
@@ -481,6 +487,7 @@ internal sealed partial class DocxLayoutEngine
 
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstBodyLineBaselineOffset = null;
                 continue;
             }
 
@@ -504,6 +511,7 @@ internal sealed partial class DocxLayoutEngine
 
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstBodyLineBaselineOffset = null;
                 continue;
             }
 
@@ -513,6 +521,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstBodyLineBaselineOffset = null;
                 int itemCountBeforeTable = currentItems.Count;
                 int currentTableIndex = tableIndex++;
                 bool tableActiveFrameHasContent = false;
@@ -581,6 +590,7 @@ internal sealed partial class DocxLayoutEngine
                     EmitsTerminalParagraphMark: true));
                 activeColumnHasContent = true;
                 previousParagraph = null;
+                firstBodyLineBaselineOffset = null;
                 pendingSpacingAfter = 0d;
                 continue;
             }
@@ -679,6 +689,21 @@ internal sealed partial class DocxLayoutEngine
                         // (Times exact, Georgia minus 0.24) await the font-by-size
                         // inset matrix program.
                         baselineOffset += UntokenedParagraphBaselineExtraPoints;
+                    }
+                    double rawBaselineOffset = baselineOffset;
+                    firstBodyLineBaselineOffset ??= rawBaselineOffset;
+                    if (scaleBaselineOffsetTransitions && firstBodyLineBaselineOffset is { } firstOffset)
+                    {
+                        // RV06 pagination probe (edge-mixed15, Word 16.0): under a
+                        // word-compatible print scale, Office scales whole pitches
+                        // including the font-size offset transition, while the
+                        // renderer leaves transitions unscaled (12->15 exceeds by
+                        // 0.75, 15->12 undershoots by 0.76 at scale 0.758). The
+                        // block-first inset stays unscaled on both sides, so each
+                        // line corrects against the block-first offset; per-line
+                        // chaining would leak second differences across runs.
+                        // Same-size lines self-zero and other modes keep legacy.
+                        baselineOffset -= (baselineOffset - firstOffset) * (1d - paragraphSpacingScale);
                     }
                     DocxParagraphLineShape lineShape = CreateParagraphLineShape(
                         paragraph,
