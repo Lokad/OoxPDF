@@ -82,7 +82,7 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight) LayoutRelatedStoryParagraphTextLines(
+    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight, double BaselineOffset) LayoutRelatedStoryParagraphTextLines(
         DocxParagraph paragraph,
         double fixedScale,
         int sourceBlockIndex,
@@ -94,12 +94,14 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         int? pageNumber,
-        int? pageCount)
+        int? pageCount,
+        double? firstStoryBaselineOffset = null,
+        double transitionScale = 1d)
     {
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count == 0)
         {
-            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d);
+            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d, 0d);
         }
 
         double fontSize = GetParagraphFontSize(paragraph);
@@ -141,6 +143,15 @@ internal sealed partial class DocxLayoutEngine
                 _ => paragraphX
             };
             double baselineOffset = storyBaselineOffset;
+            if (firstStoryBaselineOffset is { } firstStoryOffset)
+            {
+                // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a
+                // word-compatible print scale, Office scales whole pitches
+                // including the font-size offset transition. Each line corrects
+                // against the story-block-first offset; same-size lines self-zero
+                // and scale 1.0 keeps legacy exactly.
+                baselineOffset -= (baselineOffset - firstStoryOffset) * (1d - transitionScale);
+            }
             DocxParagraphLineShape lineShape = CreateParagraphLineShape(
                 paragraph,
                 line,
@@ -263,7 +274,7 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        return (layouts, placedImages, startCursorY - cursorY);
+        return (layouts, placedImages, startCursorY - cursorY, storyBaselineOffset);
     }
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> CreateFloatingDrawingLayouts(

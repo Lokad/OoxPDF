@@ -246,6 +246,81 @@ internal static class DocxFootnotesTests
         TestAssert.True(bodyBottom >= footnoteTop, $"Body layout should reserve page space above placed footnotes; body bottom {bodyBottom} footnote top {footnoteTop}.");
     }
 
+    public static void DocxFootnoteMixedSizePitchTransitionsScaleWithPrintScale()
+    {
+        // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a
+        // word-compatible print scale, footnote 12->15 exceeds by 0.65 and
+        // 15->12 undershoots by 0.69. Pre-fix the scaled layout matches preserve.
+        DocxParagraph SizedLine(string text, double fontSize)
+        {
+            return DocxTests.CreateDocxLayoutParagraph(text, fontSize, 12d) with
+            {
+                LineSpacingPoints = null
+            };
+        }
+
+        double[] Pitches(OoxPdfDocxMarkupGeometryMode mode, double scale)
+        {
+            DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d) with
+            {
+                InlineReferences =
+                [
+                    new DocxInlineReference(
+                        DocxRelatedStoryKind.Footnote,
+                        "7",
+                        CustomMarkFollowsValue: null,
+                        DisplayText: "1",
+                        SourceRunIndex: 0,
+                        RunChildIndex: 1,
+                        TextOffsetInRun: 6)
+                ]
+            };
+            var footnoteStory = new DocxRelatedStory(
+                DocxRelatedStoryKind.Footnote,
+                "/word/footnotes.xml",
+                "7",
+                [
+                    new DocxParagraphElement(SizedLine("Alpha", 12d)),
+                    new DocxParagraphElement(SizedLine("Beta", 15d)),
+                    new DocxParagraphElement(SizedLine("Gamma", 12d))
+                ],
+                [],
+                [],
+                null);
+            var document = new DocxDocument(
+                220d,
+                200d,
+                10d,
+                10d,
+                10d,
+                10d,
+                DocxPageSettings.Empty,
+                [],
+                [],
+                [],
+                [new DocxParagraphElement(anchor)],
+                [],
+                [])
+            {
+                RelatedStories = [footnoteStory]
+            };
+            DocxTextLineLayout[] lines = new DocxLayoutEngine(mode, scale)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.SelectMany(page => page.PlacedRelatedStories).SelectMany(story => story.TextLines).ToArray();
+            TestAssert.Equal(3, lines.Length);
+            return [lines[0].BaselineY - lines[1].BaselineY, lines[1].BaselineY - lines[2].BaselineY];
+        }
+
+        double[] preserve = Pitches(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, 1d);
+        double[] scaled = Pitches(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.75d);
+        TestAssert.True(
+            Math.Abs((scaled[0] - preserve[0]) - (14.1d - 11.28d) * (0.75d - 1d)) < 0.001d,
+            $"Footnote 12->15 pitch should shrink by the scaled transition. preserve={preserve[0]} scaled={scaled[0]}.");
+        TestAssert.True(
+            Math.Abs((scaled[1] - preserve[1]) - (11.28d - 14.1d) * (0.75d - 1d)) < 0.001d,
+            $"Footnote 15->12 pitch should grow by the scaled transition. preserve={preserve[1]} scaled={scaled[1]}.");
+    }
+
     public static void DocxLayoutStacksMultipleFootnotesOnOnePage()
     {
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Anchor paragraph with two footnote markers", 10d, 12d) with

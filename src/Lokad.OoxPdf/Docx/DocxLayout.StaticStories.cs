@@ -151,6 +151,7 @@ internal sealed partial class DocxLayoutEngine
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        double? firstStaticLineBaselineOffset = null;
         int paragraphIndex = 0;
         int tableIndex = 0;
         for (int elementIndex = 0; elementIndex < story.BodyElements.Count; elementIndex++)
@@ -161,6 +162,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstStaticLineBaselineOffset = null;
                 var cellMemo = new DocxTableCellTextLinesMemo();
                 DocxTableLayoutFrame frame = CreateTableLayoutFrame(
                     tableElement.Table,
@@ -210,6 +212,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstStaticLineBaselineOffset = null;
                 continue;
             }
 
@@ -285,6 +288,18 @@ internal sealed partial class DocxLayoutEngine
                         if (HasNoSpacingElement(staticEffective) && Math.Abs(staticFontSize - 11d) < 0.000000001d)
                         {
                             staticBaselineOffset += UntokenedParagraphBaselineExtraPoints;
+                        }
+
+                        // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a
+                        // word-compatible print scale, Office scales whole pitches
+                        // including the font-size offset transition. Each line
+                        // corrects against the story-block-first offset; same-size
+                        // lines self-zero and scale 1.0 keeps legacy exactly.
+                        double rawStaticBaselineOffset = staticBaselineOffset;
+                        firstStaticLineBaselineOffset ??= rawStaticBaselineOffset;
+                        if (firstStaticLineBaselineOffset is { } firstStaticOffset)
+                        {
+                            staticBaselineOffset -= (staticBaselineOffset - firstStaticOffset) * (1d - paragraphSpacingScale);
                         }
 
                         staticBaselineY = cursorY - staticBaselineOffset;

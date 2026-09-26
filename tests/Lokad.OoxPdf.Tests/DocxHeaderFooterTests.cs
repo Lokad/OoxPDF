@@ -115,6 +115,49 @@ internal static class DocxHeaderFooterTests
         TestAssert.Equal(1, snapshot.Pages[0].TextLineCount);
     }
 
+    public static void DocxStaticHeaderMixedSizePitchTransitionsScaleWithPrintScale()
+    {
+        // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a
+        // word-compatible print scale, header 12->15 exceeds by 0.75 and 15->12
+        // undershoots by 0.69. Pre-fix the scaled layout matches preserve.
+        DocxParagraph SizedLine(string text, double fontSize)
+        {
+            return DocxTests.CreateDocxLayoutParagraph(text, fontSize, 12d) with
+            {
+                LineSpacingPoints = null
+            };
+        }
+
+        double[] Pitches(OoxPdfDocxMarkupGeometryMode mode, double scale)
+        {
+            DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            {
+                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["default"] = [SizedLine("Alpha", 12d), SizedLine("Beta", 15d), SizedLine("Gamma", 12d)]
+                }
+            };
+            DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
+            DocxTextLineLayout[] lines = new DocxLayoutEngine(mode, scale)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().StaticTextLines.ToArray();
+            TestAssert.Equal(3, lines.Length);
+            return [lines[0].BaselineY - lines[1].BaselineY, lines[1].BaselineY - lines[2].BaselineY];
+        }
+
+        // Static line heights scale through the spacing scale even in unit tests,
+        // so the assertion is whole-pitch scaling (transition included).
+        double[] preserve = Pitches(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, 1d);
+        double[] scaled = Pitches(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.75d);
+        TestAssert.True(
+            Math.Abs(scaled[0] - preserve[0] * 0.75d) < 0.001d,
+            $"Header 12->15 pitch should scale uniformly. preserve={preserve[0]} scaled={scaled[0]}.");
+        TestAssert.True(
+            Math.Abs(scaled[1] - preserve[1] * 0.75d) < 0.001d,
+            $"Header 15->12 pitch should scale uniformly. preserve={preserve[1]} scaled={scaled[1]}.");
+    }
+
     public static void DocxLayoutStageAddsStaticHeaderAfterEndnoteContinuationPages()
     {
         DocxParagraph header = new(

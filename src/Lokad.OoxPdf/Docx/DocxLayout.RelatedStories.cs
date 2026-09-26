@@ -657,6 +657,7 @@ internal sealed partial class DocxLayoutEngine
         double cursorY = 0d;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
+        double? firstRelatedLineBaselineOffset = null;
         int paragraphIndex = 0;
         int tableIndex = 0;
 
@@ -669,6 +670,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
+                firstRelatedLineBaselineOffset = null;
                 var cellMemo = new DocxTableCellTextLinesMemo();
                 DocxTableLayoutFrame frame = CreateTableLayoutFrame(
                     tableElement.Table,
@@ -724,7 +726,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight) = LayoutRelatedStoryParagraphTextLines(
+            (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight, double paragraphBaselineOffset) = LayoutRelatedStoryParagraphTextLines(
                 paragraph,
                 paragraphSpacingScale,
                 elementIndex,
@@ -736,7 +738,13 @@ internal sealed partial class DocxLayoutEngine
                 textMeasurer,
                 defaultTabStopPoints,
                 pageNumber,
-                pageCount);
+                pageCount,
+                firstRelatedLineBaselineOffset,
+                paragraphSpacingScale);
+            if (paragraphLines.Count != 0)
+            {
+                firstRelatedLineBaselineOffset ??= paragraphBaselineOffset;
+            }
             textLines.AddRange(paragraphLines);
             inlineImages.AddRange(placedStoryImages);
             cursorY -= paragraphUsedHeight;
