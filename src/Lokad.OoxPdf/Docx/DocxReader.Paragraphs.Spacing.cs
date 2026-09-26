@@ -51,7 +51,7 @@ internal sealed partial class DocxReader
 
         return TryReadLineBasedSpacing(paragraph.Spacing.AfterLinesValue, lineHeight, out double linePoints)
             ? linePoints
-            : WordDefaultSpacingAfterPoints;
+            : DocxDefaults.DefaultParagraphAfterSpacingPoints;
     }
 
     private static bool TryReadLineBasedSpacing(string? value, double lineHeight, out double points)

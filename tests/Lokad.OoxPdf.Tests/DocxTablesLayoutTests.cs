@@ -1102,9 +1102,44 @@ internal static class DocxTablesLayoutTests
         DocxParagraph mixed = DocxTests.CreateDocxLayoutParagraph("Mixed", 10d, 10d) with { Images = [blockImage] };
         DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
         DocxParagraph empty = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d);
+        // The break para is style-less, so it carries the document-default 8pt after
+        // (edge-t4, Word 16.0); the explicitly unspaced surroundings do not suppress it.
+        TestAssert.Equal(
+            50d,
+            MeasureCellRowHeight(new DocxParagraphElement(mixed), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
         TestAssert.Equal(
             MeasureCellRowHeight(new DocxParagraphElement(mixed), new DocxParagraphElement(empty), new DocxParagraphElement(after)),
-            MeasureCellRowHeight(new DocxParagraphElement(mixed), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
+            42d);
+    }
+
+    public static void DocxTableLayoutStagePlacesCellBlockImageBelowBreakSpillRow()
+    {
+        // RV06 cellbreak probe: the images walk mirrors the text walk at in-cell
+        // breaks, so a block image after the break sits exactly where it would after
+        // an empty default paragraph. The reference empty models the style-less break
+        // para with the document-default 8pt after (edge-t4, Word 16.0).
+        static double MeasureBlockImageY(params DocxBodyElement[] elements)
+        {
+            var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            {
+                BodyElements = elements
+            };
+            DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().InlineImages.Single().Y;
+        }
+
+        var afterImage = new DocxInlineImage(10d, 6d, "image/png", [4, 5, 6], "/word/media/after.png");
+        DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
+        DocxParagraph imageOnly = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d) with { Images = [afterImage] };
+        DocxParagraph breakModel = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d) with { SpacingAfterPoints = 8d };
+        double emptyY = MeasureBlockImageY(new DocxParagraphElement(before), new DocxParagraphElement(breakModel), new DocxParagraphElement(imageOnly));
+        double breakY = MeasureBlockImageY(new DocxParagraphElement(before), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(imageOnly));
+        TestAssert.True(
+            Math.Abs(breakY - emptyY) < 1e-9d,
+            $"The block image after an in-cell break should sit where it would after an empty line. breakY={breakY} emptyY={emptyY}.");
     }
 
     public static void DocxTableRowHeightCountsBreakSpillAfterEmptyParagraph()
@@ -1127,10 +1162,39 @@ internal static class DocxTablesLayoutTests
 
         DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
         DocxParagraph empty = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d);
+        // The break para is style-less, so the reference empty models it with the
+        // document-default 8pt after (edge-t4, Word 16.0).
+        DocxParagraph breakModel = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d) with { SpacingAfterPoints = 8d };
         DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
         TestAssert.Equal(
-            MeasureCellRowHeight(new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxParagraphElement(empty), new DocxParagraphElement(after)),
+            MeasureCellRowHeight(new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxParagraphElement(breakModel), new DocxParagraphElement(after)),
             MeasureCellRowHeight(new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
+    }
+
+    public static void DocxTableRowHeightFlowsSpacingAcrossInCellBreak()
+    {
+        // RV06 cellbreak probe (edge-t0, Word 16.0): style-less rows pitch 25pt =
+        // 17pt line plus 8pt after, so an in-cell break behaves as an empty default
+        // paragraph: pending after-spacing is consumed before the spill row and the
+        // default after-spacing applies after it (resetting would pitch 17pt).
+        static double MeasureCellRowHeight(params DocxBodyElement[] elements)
+        {
+            var cell = new DocxTableCell(string.Empty, [], null, null, null, null, [], DocxTableCellMargins.Empty)
+            {
+                BodyElements = elements
+            };
+            DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().FullRowHeight;
+        }
+
+        DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d) with { SpacingAfterPoints = 8d };
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 10d, 10d);
+        TestAssert.Equal(
+            46d,
+            MeasureCellRowHeight(new DocxParagraphElement(before), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(after)));
     }
 
     public static void DocxTableLayoutStagePlacesNestedTableBelowBreakSpillRow()
@@ -1153,13 +1217,21 @@ internal static class DocxTablesLayoutTests
         }
 
         DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
-        DocxParagraph empty = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d);
+        // The break para is style-less, so the reference empty models it with the
+        // document-default 8pt after (edge-t4, Word 16.0).
+        DocxParagraph breakModel = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 10d) with { SpacingAfterPoints = 8d };
         DocxTable probe = DocxTests.CreateSingleCellTable("Inside", 12d);
-        double emptyTop = MeasureNestedTop(probe, new DocxParagraphElement(before), new DocxParagraphElement(empty), new DocxTableElement(probe));
+        double emptyTop = MeasureNestedTop(probe, new DocxParagraphElement(before), new DocxParagraphElement(breakModel), new DocxTableElement(probe));
         double breakTop = MeasureNestedTop(probe, new DocxParagraphElement(before), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxTableElement(probe));
         TestAssert.True(
             Math.Abs(breakTop - emptyTop) < 1e-9d,
             $"The nested table after an in-cell break should sit where it would after an empty line. breakTop={breakTop} emptyTop={emptyTop}.");
+        DocxParagraph spaced = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d) with { SpacingAfterPoints = 8d };
+        double spacedEmptyTop = MeasureNestedTop(probe, new DocxParagraphElement(spaced), new DocxParagraphElement(breakModel), new DocxTableElement(probe));
+        double spacedBreakTop = MeasureNestedTop(probe, new DocxParagraphElement(spaced), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxTableElement(probe));
+        TestAssert.True(
+            Math.Abs(spacedBreakTop - spacedEmptyTop) < 1e-9d,
+            $"The nested table after an in-cell break should flow spacing like an empty line. breakTop={spacedBreakTop} emptyTop={spacedEmptyTop}.");
     }
 
     public static void DocxTableCellBreakSpillStaysLeftAlignedInCenteredCells()

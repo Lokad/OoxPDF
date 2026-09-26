@@ -122,13 +122,16 @@ internal sealed partial class DocxLayoutEngine
                 // a line for every paragraph with text spans (even all-empty ones
                 // materialize as a space line that the spill search finds), so any
                 // spans-carrying previous paragraph counts, including mixed paragraphs
-                // with block images and empty paragraphs.
+                // with block images and empty paragraphs. Spacing flows as for an empty
+                // default paragraph: pending is consumed, then the default after applies.
+                contentHeight += Math.Max(0d, pendingSpacingAfter);
+                pendingSpacingAfter = 0d;
                 if (previousParagraphHasTextLines)
                 {
                     contentHeight += previousTextLineHeight;
                 }
 
-                pendingSpacingAfter = 0d;
+                pendingSpacingAfter = DocxDefaults.DefaultParagraphAfterSpacingPoints * paragraphSpacingScale;
                 previousParagraph = null;
                 previousParagraphHasText = false;
                 previousParagraphHasTextLines = false;
@@ -342,7 +345,11 @@ internal sealed partial class DocxLayoutEngine
             {
                 // RV06 cellbreak probe: explicit page breaks inside table cells do not
                 // turn pages in Office; one spill space follows the previous line on the
-                // same page and content flows on (row-end spacing rides the shared paths).
+                // same page and content flows on. The break behaves as an empty paragraph
+                // with document defaults (edge-t0/t1: 25pt pitches = line plus 8pt after),
+                // so pending after-spacing is consumed, not reset.
+                cursorY -= Math.Max(0d, pendingSpacingAfter);
+                pendingSpacingAfter = 0d;
                 if (previousParagraph is not null)
                 {
                     for (int cellLineIndex = lines.Count - 1; cellLineIndex >= 0; cellLineIndex--)
@@ -407,7 +414,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                 }
 
-                pendingSpacingAfter = 0d;
+                pendingSpacingAfter = DocxDefaults.DefaultParagraphAfterSpacingPoints * context.ParagraphSpacingScale;
                 previousParagraph = null;
                 continue;
             }
@@ -712,6 +719,7 @@ internal sealed partial class DocxLayoutEngine
         bool previousParagraphHasText = false;
         double previousTextBaselineY = 0d;
         double previousTextFontSize = 0d;
+        double previousTextLineHeight = 0d;
         int paragraphIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
@@ -736,6 +744,27 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
 
+            if (bodyElement is DocxPageBreakElement inlineCellBreak &&
+                inlineCellBreak.SourceKind == DocxBreakSourceKind.RunBreak)
+            {
+                // RV06 cellbreak probe: mirror the text walk so block content after the
+                // break sits below the previous line plus one spill row, with spacing
+                // flowing as for an empty default paragraph. The spill height follows
+                // this walk's line-height convention (profile height).
+                cursorY -= Math.Max(0d, pendingSpacingAfter);
+                pendingSpacingAfter = 0d;
+                if (previousParagraph is not null &&
+                    CreateTextSpans(previousParagraph.Runs, pageNumber, pageCount).Count != 0)
+                {
+                    cursorY -= previousTextLineHeight;
+                }
+
+                pendingSpacingAfter = DocxDefaults.DefaultParagraphAfterSpacingPoints * paragraphSpacingScale;
+                previousParagraph = null;
+                previousParagraphHasText = false;
+                continue;
+            }
+
             if (bodyElement is not DocxParagraphElement paragraphElement)
             {
                 continue;
@@ -751,6 +780,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 double fontSize = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
+                previousTextLineHeight = lineHeight;
                 IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
                 if (textSpans.Count != 0)
                 {
@@ -950,8 +980,12 @@ internal sealed partial class DocxLayoutEngine
             {
                 // RV06 cellbreak probe: explicit page breaks inside table cells do not
                 // turn pages in Office; content after the break sits below the previous
-                // line plus one spill row, exactly like the text walk lays out. The spill
-                // height follows this walk's line-height convention (profile height).
+                // line plus one spill row, exactly like the text walk lays out. Spacing
+                // flows as for an empty default paragraph: pending is consumed, then the
+                // default after applies. The spill height follows this walk's line-height
+                // convention (profile height).
+                cursorY -= Math.Max(0d, pendingSpacingAfter);
+                pendingSpacingAfter = 0d;
                 if (previousParagraph is not null &&
                     CreateTextSpans(previousParagraph.Runs, pageNumber, pageCount).Count != 0)
                 {
@@ -959,7 +993,7 @@ internal sealed partial class DocxLayoutEngine
                     cursorY -= ResolveLineHeightProfile(previousParagraph, spillFontSize, textMeasurer).LineHeight;
                 }
 
-                pendingSpacingAfter = 0d;
+                pendingSpacingAfter = DocxDefaults.DefaultParagraphAfterSpacingPoints * paragraphSpacingScale;
                 previousParagraph = null;
                 continue;
             }

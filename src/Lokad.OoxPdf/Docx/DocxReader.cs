@@ -26,7 +26,7 @@ internal sealed partial class DocxReader
     // Normal styles resolve w:line 278 exactly; explicit w:line values pass through untouched).
     private const double WordUntokenedAutoLineSpacingFactor = 278d / 240d;
     private const double WordSpacingTokenAutoLineSpacingFactor = 278d / 240d;
-    private const double WordDefaultSpacingAfterPoints = 8d;
+
 
     private sealed class DocxComplexFieldState
     {
