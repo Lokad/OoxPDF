@@ -1198,7 +1198,11 @@ internal sealed partial class DocxReader
             inlineReferenceCounters.TryGetValue(kind, out int current);
             int next = current == 0 ? settings.NumberStart ?? 1 : current + 1;
             inlineReferenceCounters[kind] = next;
-            return FormatNoteReferenceNumber(next, settings.NumberFormatValue);
+            // RV06 endnote probe: ECMA-376 defaults differ by kind (decimal footnotes,
+            // lowerRoman endnotes); Office numbers the first style-less endnote "i".
+            string? numberFormat = settings.NumberFormatValue
+                ?? (kind == DocxRelatedStoryKind.Endnote ? "lowerRoman" : "decimal");
+            return FormatNoteReferenceNumber(next, numberFormat);
         }
 
         void AddInlineReferenceDisplayRun(

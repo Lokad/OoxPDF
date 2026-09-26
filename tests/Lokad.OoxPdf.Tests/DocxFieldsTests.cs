@@ -813,7 +813,7 @@ internal static class DocxFieldsTests
         TestAssert.True(endnote.Id == "7" && endnote.CustomMarkFollowsValue is null, "Simple-field endnote marker metadata should survive run-container parsing.");
         TestAssert.True(footnote.DisplayText is null, "Footnote references with customMarkFollows should not synthesize an automatic marker.");
         TestAssert.True(comment.DisplayText is null, "Comment references should stay structural until comment display rules are modeled.");
-        TestAssert.Equal("1", endnote.DisplayText ?? string.Empty);
+        TestAssert.Equal("i", endnote.DisplayText ?? string.Empty);
         TestAssert.Equal(1, footnote.SourceRunIndex);
         TestAssert.Equal(1, footnote.RunChildIndex);
         TestAssert.Equal(3, footnote.TextOffsetInRun);
@@ -878,11 +878,11 @@ internal static class DocxFieldsTests
         // RV06 footnote-align probe: style-less marks render at baseline in Office.
         TestAssert.Equal(string.Empty, first.Runs[1].VerticalAlignmentValue ?? string.Empty);
         TestAssert.Equal("Middle", first.Runs[2].Text);
-        TestAssert.Equal("1", first.Runs[3].Text);
+        TestAssert.Equal("i", first.Runs[3].Text);
         TestAssert.Equal(string.Empty, first.Runs[3].VerticalAlignmentValue ?? string.Empty);
         TestAssert.Equal("After", first.Runs[4].Text);
         TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote).DisplayText ?? string.Empty);
-        TestAssert.Equal("1", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
+        TestAssert.Equal("i", first.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
 
         DocxParagraph second = document.Paragraphs[1];
         TestAssert.Equal("2", second.Runs[1].Text);
@@ -891,7 +891,7 @@ internal static class DocxFieldsTests
         DocxStructureSnapshot snapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectStructure(document);
         DocxStructureInlineReferenceSnapshot[] references = snapshot.InlineReferences.ToArray();
         TestAssert.Equal("1", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "2").DisplayText ?? string.Empty);
-        TestAssert.Equal("1", references.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
+        TestAssert.Equal("i", references.Single(reference => reference.Kind == "Endnote").DisplayText ?? string.Empty);
         TestAssert.Equal("2", references.Single(reference => reference.Kind == "Footnote" && reference.Id == "4").DisplayText ?? string.Empty);
     }
 
