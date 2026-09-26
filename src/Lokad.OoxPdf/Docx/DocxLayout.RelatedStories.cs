@@ -13,7 +13,8 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyDictionary<int, double> CreateFootnoteReserveHeightBySourceBlock(
         DocxDocument document,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDocxTextMeasurer? separatorMeasurer = null)
     {
         var reserveHeightBySourceBlock = new Dictionary<int, double>();
         if (relatedStoryLayouts.Count == 0)
@@ -42,9 +43,16 @@ internal sealed partial class DocxLayoutEngine
                 {
                     if (!reservedFootnoteSeparator)
                     {
+                        double reserveGapPoints = FootnoteSeparatorGapPoints;
+                        if (footnoteSeparatorLayout is not null)
+                        {
+                            (DocxTextRun? reserveRun, double reserveFontSizePoints) = FindSeparatorMarkFont(footnoteSeparatorLayout.TextLines);
+                            reserveGapPoints = ResolveSeparatorGapPoints(reserveRun, reserveFontSizePoints, separatorMeasurer);
+                        }
+
                         reserveHeight += footnoteSeparatorLayout is null
-                            ? FootnoteSeparatorGapPoints
-                            : Math.Max(0d, footnoteSeparatorLayout.ContentHeight) + FootnoteSeparatorGapPoints;
+                            ? reserveGapPoints
+                            : Math.Max(0d, footnoteSeparatorLayout.ContentHeight) + reserveGapPoints;
                         reservedFootnoteSeparator = true;
                     }
 
@@ -474,6 +482,27 @@ internal sealed partial class DocxLayoutEngine
         return (legacyOffsetPoints, FootnoteSeparatorThicknessPoints);
     }
 
+    // RV06 separator-bottom probes (Word 16.0, Times, Aptos and Calibri at 10, 12 and 14pt,
+    // exact-24 bodies, split-font runs): the Office footnote gap above the body equals one
+    // single-spaced line box minus the first-baseline inset, so it derives from the mark
+    // font through the measurer. Measurers without single-line metrics keep the legacy
+    // 3pt footnote gap.
+    private static double ResolveSeparatorGapPoints(
+        DocxTextRun? markRun,
+        double markFontSizePoints,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (separatorMeasurer is not null &&
+            markFontSizePoints > 0d &&
+            separatorMeasurer.TryGetSingleLineEm(markRun, out double singleLineEm) &&
+            singleLineEm > DocxLineMetrics.WordAutoLineBaselineOffsetEm)
+        {
+            return (singleLineEm - DocxLineMetrics.WordAutoLineBaselineOffsetEm) * markFontSizePoints;
+        }
+
+        return FootnoteSeparatorGapPoints;
+    }
+
     private static (DocxTextRun? MarkRun, double MarkFontSizePoints) FindSeparatorMarkFont(IReadOnlyList<DocxTextLineLayout> textLines)
     {
         foreach (DocxTextLineLayout line in textLines)
@@ -544,7 +573,9 @@ internal sealed partial class DocxLayoutEngine
         if (separatorLayout is not null)
         {
             double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
-            double separatorTop = cursorTop + FootnoteSeparatorGapPoints + separatorHeight;
+            (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
+            double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
+            double separatorTop = cursorTop + separatorGapPoints + separatorHeight;
             (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(page, pageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
             placedStories.Add(placedSeparator);
         }
@@ -560,7 +591,7 @@ internal sealed partial class DocxLayoutEngine
                 // follows the first body run when strikeout metrics resolve.
                 (DocxTextRun? bodyRun, double bodyFontSizePoints) = FindSeparatorMarkFont(story.StoryLayout.TextLines);
                 (double syntheticOffsetPoints, double syntheticThicknessPoints) = ResolveSeparatorRuleGeometry(DocxRelatedStoryKind.Footnote, bodyRun, bodyFontSizePoints, separatorMeasurer);
-                separatorY = cursorTop + FootnoteSeparatorGapPoints + syntheticOffsetPoints;
+                separatorY = cursorTop + ResolveSeparatorGapPoints(bodyRun, bodyFontSizePoints, separatorMeasurer) + syntheticOffsetPoints;
                 separatorThickness = syntheticThicknessPoints;
             }
 

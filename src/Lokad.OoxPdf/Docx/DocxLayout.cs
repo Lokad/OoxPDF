@@ -314,7 +314,7 @@ internal sealed partial class DocxLayoutEngine
             double key = Math.Round(Math.Max(1d, bodyWidth), 3);
             if (!footnoteReserveHeightByBodyWidth.TryGetValue(key, out IReadOnlyDictionary<int, double>? reserveHeights))
             {
-                reserveHeights = CreateFootnoteReserveHeightBySourceBlock(document, GetRelatedStoryLayouts(key), cancellationToken);
+                reserveHeights = CreateFootnoteReserveHeightBySourceBlock(document, GetRelatedStoryLayouts(key), cancellationToken, unscaledTextMeasurer ?? textMeasurer);
                 footnoteReserveHeightByBodyWidth[key] = reserveHeights;
             }
 

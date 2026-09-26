@@ -216,6 +216,19 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         return positionEm > 0d && thicknessEm > 0d;
     }
 
+    public bool TryGetSingleLineEm(DocxTextRun? run, out double singleLineEm)
+    {
+        singleLineEm = 0d;
+        OpenTypeFont? font = ResolveFont(run);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return false;
+        }
+
+        singleLineEm = DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, 1d);
+        return singleLineEm > 0d;
+    }
+
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -25,6 +25,16 @@ internal interface IDocxTextMeasurer
         thicknessEm = 0d;
         return false;
     }
+
+    // RV06 separator-bottom probes (Word 16.0): the Office footnote gap above the
+    // body equals one single-spaced line box minus the first-baseline inset, so it
+    // derives from the mark font. Providers without font metrics keep the default,
+    // so layout falls back to the legacy gap constant.
+    bool TryGetSingleLineEm(DocxTextRun? run, out double singleLineEm)
+    {
+        singleLineEm = 0d;
+        return false;
+    }
 }
 
 internal interface IDocxLineMetricsProvider
@@ -72,7 +82,7 @@ internal static class DocxTextSpacing
 internal static class DocxLineMetrics
 {
     private const double WordSingleLineMinimumEm = 1.15d;
-    private const double WordAutoLineBaselineOffsetEm = 0.94d;
+    internal const double WordAutoLineBaselineOffsetEm = 0.94d;
     private const double WordExactLineFirstBaselineRatio = 0.8d;
 
     public static double MeasureOpenTypeSingleLineHeight(OpenTypeFont font, double fontSize)
