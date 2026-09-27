@@ -818,6 +818,32 @@ internal sealed partial class DocxLayoutEngine
     // whole as before; the first overflowing story and all later ones slice through
     // the shared line-partition machinery with footnote continuation separators.
     // Absent-separator stories keep legacy whole placement (synthetic rule preserved).
+    // RV06 p1-clamp probes (Word 16.0, b/ba/2para/bodyb sweeps): Office storiesTop is
+    // independent of body size/after/length/before and follows body start with
+    // footnote-side moves (fn0s/fna24). The clamp bottom hangs one first-footnote
+    // inset below body start (itself below the header zone) instead of one body em
+    // below the lowest body baseline.
+    private static double ResolveFootnoteClampBodyBottom(
+        DocxLayoutPage page,
+        int pageNumber,
+        int pageCount,
+        DocxRelatedStoryLayout firstStoryLayout,
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut)
+    {
+        double fullTop = page.Height - page.MarginTop;
+        double keepOut = headerKeepOut?.Invoke(page, pageNumber, pageCount) ?? double.PositiveInfinity;
+        // Mirror the header-displacement rule: body starts at the full top unless
+        // header content dips below it, in which case it starts at the header bottom.
+        double bodyStart = Math.Min(fullTop, keepOut);
+        double firstInset = 0d;
+        if (firstStoryLayout.TextLines.Count != 0)
+        {
+            firstInset = Math.Max(0d, -firstStoryLayout.TextLines[0].BaselineY);
+        }
+
+        return bodyStart - firstInset;
+    }
+
     private static void PlaceFootnoteStories(
         List<DocxLayoutPage> outputPages,
         int outputIndex,
@@ -849,11 +875,8 @@ internal sealed partial class DocxLayoutEngine
         (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
         double storiesTop = cursorTop;
-        double? bodyBottomEdge = BodyBottomEdge(page);
-        if (bodyBottomEdge.HasValue)
-        {
-            storiesTop = Math.Min(cursorTop, bodyBottomEdge.Value - separatorHeight);
-        }
+        double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, outputIndex + 1, outputPages.Count, footnoteStories[0].StoryLayout, headerKeepOut);
+        storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorHeight);
         double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
         (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
         activePlacedStories.Add(placedSeparator);
@@ -898,11 +921,11 @@ internal sealed partial class DocxLayoutEngine
         double cursorTop = activePage.MarginBottom + bodyHeight;
         double storiesTop = cursorTop;
         DocxRelatedStoryLayout firstLayout = footnoteStories[0].StoryLayout;
-        double? bodyBottomEdge = BodyBottomEdge(page);
-        if (firstLayout.TextLines.Count != 0 && bodyBottomEdge.HasValue)
+        double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, outputIndex + 1, outputPages.Count, firstLayout, headerKeepOut);
+        if (firstLayout.TextLines.Count != 0)
         {
             double firstBoxHeight = GetStoryTextLineBoxHeights(firstLayout)[0];
-            storiesTop = Math.Min(cursorTop, bodyBottomEdge.Value - firstBoxHeight);
+            storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
         }
         double contentTop = storiesTop;
         bool firstStory = true;
@@ -979,23 +1002,6 @@ internal sealed partial class DocxLayoutEngine
             outputPages[headPageIndex] = headPage with { PlacedRelatedStories = patchedStories };
             return;
         }
-    }
-
-    // Body-anchored footnote area top: lowest body text baseline minus one em
-    // (GetVerticalBounds convention), so overflowing blocks clamp below body content.
-    private static double? BodyBottomEdge(DocxLayoutPage page)
-    {
-        double? bottomEdge = null;
-        foreach (DocxLayoutItem item in page.Items)
-        {
-            if (item is DocxTextLineLayout line)
-            {
-                double lineBottom = line.BaselineY - line.FontSize;
-                bottomEdge = bottomEdge.HasValue ? Math.Min(bottomEdge.Value, lineBottom) : lineBottom;
-            }
-        }
-
-        return bottomEdge;
     }
 
     private static DocxPlacedRelatedStoryLayout PlaceRelatedStoryAtTop(
