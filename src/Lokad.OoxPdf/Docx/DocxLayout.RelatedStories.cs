@@ -877,6 +877,21 @@ internal sealed partial class DocxLayoutEngine
         double storiesTop = cursorTop;
         double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, outputIndex + 1, outputPages.Count, footnoteStories[0].StoryLayout, headerKeepOut);
         storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorHeight);
+        // RV06 p1-position probes (Word 16.0): Office seats the overflowing head block
+        // bottom-up (storiesTop = margin + takeHeight), so absolute positions match instead
+        // of leaving capacity slack above the margin. The head take still comes from the
+        // same clamped capacity, so take counts are unchanged; fitting stories keep the
+        // legacy whole placement bit-identically.
+        DocxRelatedStoryLayout firstStoryLayout = footnoteStories[0].StoryLayout;
+        if (firstStoryLayout.TextLines.Count != 0)
+        {
+            double[] headLineBoxes = GetStoryTextLineBoxHeights(firstStoryLayout);
+            (int headTakeCount, double headTakeHeight) = TakeStoryLines(headLineBoxes, 0, firstStoryLayout.TextLines.Count, Math.Max(0d, storiesTop - activePage.MarginBottom));
+            if (headTakeCount < firstStoryLayout.TextLines.Count)
+            {
+                storiesTop = activePage.MarginBottom + headTakeHeight;
+            }
+        }
         double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
         (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
         activePlacedStories.Add(placedSeparator);

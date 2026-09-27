@@ -1620,6 +1620,57 @@ internal static class DocxFootnotesTests
         TestAssert.True(longIndexes.Length == 22 && longIndexes[0] == 0 && longIndexes[^1] == 21, "Head page must take long lines 0..21 like Office. " + diagnosis);
     }
 
+    public static void DocxLongFootnoteHeadBlockSitsAtOfficePosition()
+    {
+        // RV06 p1-position probes (Word 16.0, h1/b-sweep): with takes exact, the head
+        // block must also sit at Office absolute positions (h1-Final rule 682.54 with
+        // mixed1 at 664.18), while the renderer seats the whole block ~8 high on
+        // capacity slack. Windows-only Aptos pins this like the take test.
+        if (!HasUsableAptosFootnoteFace())
+        {
+            TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
+        }
+
+        var footnoteParas = new StringBuilder();
+        footnoteParas.Append("<w:p><w:r><w:t xml:space=\"preserve\">Footnote twelve opening words</w:t></w:r></w:p>");
+        footnoteParas.Append("<w:p><w:r><w:rPr><w:b/><w:sz w:val=\"30\"/><w:szCs w:val=\"30\"/></w:rPr><w:t xml:space=\"preserve\">Footnote fifteen second line</w:t></w:r></w:p>");
+        for (int line = 0; line < 60; line++)
+        {
+            footnoteParas.Append("<w:p><w:r><w:t>Long note line " + line.ToString(CultureInfo.InvariantCulture) + " with words to fill pages.</w:t></w:r></w:p>");
+        }
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body text with a footnote reference</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r><w:r><w:t xml:space="preserve"> and </w:t></w:r><w:commentRangeStart w:id="1"/><w:r><w:t xml:space="preserve">a review note</w:t></w:r><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r><w:r><w:t xml:space="preserve"> trailing words.</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/header1.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t xml:space="preserve">Header twelve opening words</w:t></w:r></w:p></w:hdr>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2">""" + footnoteParas.ToString() + """</w:footnote></w:footnotes>""",
+            ["word/comments.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:p><w:r><w:t>Note</w:t></w:r></w:p></w:comment></w:comments>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new WindowsFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("Aptos")), CancellationToken.None, resolver);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None);
+        DocxLayoutPage page = layout.Pages[0];
+        DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(story => story.SeparatorY is not null);
+        DocxTextLineLayout mixedFirst = page.PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .First(line => line.Text.StartsWith("Footnote twelve opening", StringComparison.Ordinal));
+        TestAssert.True(Math.Abs((separator.SeparatorY ?? double.NaN) - 682.54d) < 1.5d, "Head separator rule must sit at the Office position; observed rule bottom=" + (separator.SeparatorY?.ToString(CultureInfo.InvariantCulture) ?? "?") + ".");
+        TestAssert.True(Math.Abs(mixedFirst.BaselineY - 664.18d) < 1.5d, "Head footnote content must start at the Office position; observed mixed1 baseline=" + mixedFirst.BaselineY.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     private static bool HasUsableAptosFootnoteFace()
     {
         try
@@ -1642,9 +1693,10 @@ internal static class DocxFootnotesTests
     {
         // RV06 p1-clamp probes (Word 16.0, b/ba/2para/bodyb sweeps): Office storiesTop
         // is independent of body size/after/length/before and follows body start with
-        // footnote-side moves, while the renderer hangs content one body em below the
-        // lowest body baseline. The clamp bottom hangs one first-footnote inset below
-        // body start instead, with the separator height unchanged.
+        // footnote-side moves, while the renderer hung content one body em below the
+        // lowest body baseline. Takes come from the same clamped capacity, but the
+        // overflowing head block seats bottom-up (storiesTop = margin + takeHeight)
+        // instead of leaving capacity slack above the margin.
         var footnoteParas = new StringBuilder();
         for (int line = 0; line < 60; line++)
         {
@@ -1668,14 +1720,11 @@ internal static class DocxFootnotesTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutPage page = layout.Pages[0];
-        double bodyStart = page.Height - page.MarginTop;
         DocxPlacedRelatedStoryLayout body = page.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
-        DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(story => story.SeparatorY is not null);
-        double firstInset = body.TextLines.Count == 0 ? 0d : Math.Max(0d, -body.StoryLayout.TextLines[0].BaselineY);
-        double separatorHeight = separator.Height;
-        double expectedTop = (bodyStart - firstInset) - separatorHeight;
-        TestAssert.True(Math.Abs(body.TopY - expectedTop) < 0.000001d, "Footnote content top must hang one first-footnote inset plus the separator height below body start; observed top=" + body.TopY.ToString(CultureInfo.InvariantCulture) + ", expected=" + expectedTop.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.Equal(28, body.TextLines.Count);
+        TestAssert.True(Math.Abs(body.TopY - body.Height - page.MarginBottom) < 0.000001d, "The overflowing head block must sit bottom-up on the margin; observed bottom=" + (body.TopY - body.Height).ToString(CultureInfo.InvariantCulture) + ".");
     }
+
     public static void DocxFootnoteSeparatorGapFollowsSingleLineMetrics()
     {
         // RV06 separator-bottom probes (Word 16.0, Times/Aptos/Calibri): the Office
