@@ -1945,4 +1945,190 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(1, separatorLine.Segments.Count);
         TestAssert.Equal(" ", separatorLine.Segments[0].Text);
         TestAssert.Equal(144d, separatorLine.Segments[0].X - separatorLine.X);
+    }
+
+    public static void DocxFootnoteRemainderAccountsSeparatorUntilPlaced()
+    {
+        DocxRelatedStory story = new(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            "31",
+            [],
+            [],
+            [], null);
+        var storyLayout = new DocxRelatedStoryLayout(story, 0, [], [], [], [], 0d);
+        var location = new DocxLayoutEngine.DocxInlineReferenceLocation(
+            0,
+            DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d),
+            new DocxInlineReference(DocxRelatedStoryKind.Footnote, "31", null, "1", 0, 1, 4));
+        var inFlight = new DocxLayoutEngine.InFlightRelatedStory(storyLayout, null, null, 0, location);
+        double[] lineBoxes = [10d, 10d, 10d, 10d, 10d];
+
+        double remainder = DocxLayoutEngine.FootnoteRemainderHeight(inFlight, lineBoxes, null);
+
+        TestAssert.Equal(53d, remainder);
+    }
+
+    public static void DocxFootnoteRemainderShrinksWithPlacedTakes()
+    {
+        DocxRelatedStory story = new(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            "32",
+            [],
+            [],
+            [], null);
+        DocxTextRun lineRun = new("Shared note", 10d, null, false, false, false, null, null);
+        DocxTextLineLayout RemainderLine(int index)
+        {
+            return new DocxTextLineLayout("Shared note line " + index.ToString(CultureInfo.InvariantCulture), lineRun, 10d, 72d, 700d - (12d * index), 200d, [], null, null, null, null, 12d, null, null, false, null, null, null, null, null, null, null, null, null, null, null, null, false);
+        }
+
+        var storyLayout = new DocxRelatedStoryLayout(story, 0, [RemainderLine(0), RemainderLine(1), RemainderLine(2), RemainderLine(3), RemainderLine(4)], [], [], [], 60d);
+        var location = new DocxLayoutEngine.DocxInlineReferenceLocation(
+            0,
+            DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d),
+            new DocxInlineReference(DocxRelatedStoryKind.Footnote, "32", null, "1", 0, 1, 4));
+        var inFlight = new DocxLayoutEngine.InFlightRelatedStory(storyLayout, null, null, 0, location)
+        {
+            PlacedLineCount = 2,
+            SeparatorPlaced = true
+        };
+        double[] lineBoxes = [10d, 10d, 10d, 10d, 10d];
+
+        double remainder = DocxLayoutEngine.FootnoteRemainderHeight(inFlight, lineBoxes, null);
+
+        TestAssert.Equal(30d, remainder);
+        TestAssert.Equal(3, inFlight.RemainingLineCount);
+        TestAssert.Equal(30d, inFlight.RemainingContentHeight(lineBoxes));
+    }
+
+    public static void DocxNarrowedFootnoteRemainderRebasesAtStoryOrigin()
+    {
+        DocxTextRun run = new("Shared note", 10d, null, false, false, false, null, null);
+        DocxTextLineLayout Line(string text, double baseline)
+        {
+            return new DocxTextLineLayout(text, run, 10d, 72d, baseline, 200d, [], null, null, null, null, 12d, null, null, false, null, null, null, null, null, null, null, null, null, null, null, null, false);
+        }
+
+        DocxRelatedStory story = new(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            "33",
+            [],
+            [],
+            [], null);
+        var storyLayout = new DocxRelatedStoryLayout(
+            story, 0, [Line("Shared note line zero", 700d), Line("Shared note line one", 688d), Line("Shared note line two", 676d)], [], [], [], 36d);
+
+        DocxRelatedStoryLayout narrowed = DocxLayoutEngine.NarrowStoryTextLinesForOffset(storyLayout, 1);
+
+        TestAssert.Equal(2, narrowed.TextLines.Count);
+        TestAssert.Equal(700d, narrowed.TextLines[0].BaselineY);
+        TestAssert.Equal(688d, narrowed.TextLines[1].BaselineY);
+        TestAssert.Equal(24d, narrowed.ContentHeight);
+    }
+
+    public static void DocxSharedFootnotePagesKeepBodyAboveNotes()
+    {
+        DocxDocument document = CreateInterleavingDocument(noteParagraphCount: 40, fillerParagraphCount: 60, footnoteId: "41");
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+
+        string[] placedTexts = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Select(line => line.Text)
+            .ToArray();
+        TestAssert.Equal(40, placedTexts.Length);
+        TestAssert.Equal(40, placedTexts.Distinct().Count());
+
+        foreach (DocxLayoutPageSnapshot page in snapshot.Pages)
+        {
+            if (page.Items.Count == 0 || page.PlacedFootnoteStoryCount == 0)
+            {
+                continue;
+            }
+
+            double bodyBottom = page.Items.Min(item => item.Y);
+            double footnoteTop = page.PlacedRelatedItems.Max(item => item.Y + item.Height);
+            TestAssert.True(bodyBottom >= footnoteTop, "Shared pages must keep body above placed notes.");
+        }
+    }
+
+    public static void DocxExhaustedFootnoteDrainUsesDedicatedPages()
+    {
+        DocxDocument document = CreateInterleavingDocument(noteParagraphCount: 200, fillerParagraphCount: 0, footnoteId: "42");
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        string[] placedTexts = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Select(line => line.Text)
+            .ToArray();
+        TestAssert.True(layout.Pages.Count > 2, "The long note must span several pages.");
+        TestAssert.Equal(200, placedTexts.Length);
+        TestAssert.Equal(200, placedTexts.Distinct().Count());
+        TestAssert.Equal(0, layout.Pages[^1].Items.Count);
+        TestAssert.True(layout.Pages[^1].PlacedRelatedStories.Count != 0, "The exhausted drain must append dedicated note pages.");
+    }
+
+    private static DocxDocument CreateInterleavingDocument(int noteParagraphCount, int fillerParagraphCount, string footnoteId)
+    {
+        DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    DocxRelatedStoryKind.Footnote,
+                    footnoteId,
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraphElement[] noteElements = Enumerable.Range(0, noteParagraphCount)
+            .Select(index => new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Shared note line " + index.ToString(CultureInfo.InvariantCulture) + " with trailing words", 10d, 12d)))
+            .ToArray();
+        var footnoteStory = new DocxRelatedStory(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            footnoteId,
+            noteElements,
+            [],
+            [], null);
+        var bodyElements = new List<DocxParagraphElement> { new DocxParagraphElement(anchor) };
+        var paragraphs = new List<DocxParagraph> { anchor };
+        for (int index = 0; index < fillerParagraphCount; index++)
+        {
+            DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler body line " + index.ToString(CultureInfo.InvariantCulture) + " keeps body flowing", 10d, 12d);
+            bodyElements.Add(new DocxParagraphElement(filler));
+            paragraphs.Add(filler);
+        }
+
+        return new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            bodyElements.ToArray(),
+            paragraphs.ToArray(),
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
     }}

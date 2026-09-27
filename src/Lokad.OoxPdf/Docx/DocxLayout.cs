@@ -281,6 +281,15 @@ internal sealed partial class DocxLayoutEngine
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
+        var inFlightNotes = new Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>();
+        var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
+        Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
+        var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
+        var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
+        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
+        double? bodyFirstBaselineMemo = null;
+        bool bodyFirstBaselineComputed = false;
+
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
         DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pageNumber: 1);
@@ -296,6 +305,20 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
         var relatedStoryLayoutsByBodyWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var footnoteReserveHeightByBodyWidth = new Dictionary<double, IReadOnlyDictionary<int, double>>();
+
+        IReadOnlyList<DocxRelatedStoryLayout> GetFootnoteStoryLayouts(DocxPageGeometry geometry)
+        {
+            return GetRelatedStoryLayouts(FootnoteStoryLayoutWidth(geometry));
+        }
+
+        // RV06 interleaving (Word 16.0, edge-footlong-mixed WC): Office keeps footnote
+        // text at the full body width while the review lane shrinks the body, so
+        // footnote takes match Final instead of wrapping to the narrowed lane.
+
+        static double FootnoteStoryLayoutWidth(DocxPageGeometry geometry)
+        {
+            return Math.Max(1d, geometry.BodyWidth + geometry.MarkupMarginReservePoints);
+        }
 
         IReadOnlyList<DocxRelatedStoryLayout> GetRelatedStoryLayouts(double bodyWidth)
         {
@@ -349,6 +372,7 @@ internal sealed partial class DocxLayoutEngine
                 [],
                 [],
                 currentItems.ToArray()));
+            PlaceInFlightFootnotesOnCompletingPage();
             // RV12: guard the page budget while paginating without consuming it, so
             // a tiny budget trips before the full layout is retained; emission still
             // charges once per final page and repagination never double-charges.
@@ -362,7 +386,7 @@ internal sealed partial class DocxLayoutEngine
             previousParagraph = null;
             firstBodyLineBaselineOffset = null;
             activeColumnHasContent = false;
-            currentPageFootnoteReserveHeight = 0d;
+            currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
         }
 
         double CurrentFrameBottom()
@@ -402,6 +426,388 @@ internal sealed partial class DocxLayoutEngine
             return displacement;
         }
 
+        IDocxTextMeasurer? separatorMeasurerForNotes = unscaledTextMeasurer ?? textMeasurer;
+
+        bool FootnoteReserveYieldsPageToDrain(double itemHeight)
+        {
+            if (HasCurrentColumnContent() || currentPageFootnoteReserveHeight <= 0d || cursorY - itemHeight >= CurrentFrameBottom())
+            {
+                return false;
+            }
+
+            bool drainableProgress = false;
+            foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
+            {
+                if (inFlight.RemainingLineCount <= 0 || inFlight.StoryLayout.TextLines.Count == 0)
+                {
+                    continue;
+                }
+
+                if (inFlight.Location.Reference.Id is null)
+                {
+                    continue;
+                }
+
+                var drainableKey = (inFlight.Location.Reference.Kind, inFlight.Location.Reference.Id);
+                if (!placedStoryKeys.Contains(drainableKey))
+                {
+                    continue;
+                }
+
+                int placedBefore = footnotePlacedLinesAtLastYield.TryGetValue(drainableKey, out int before) ? before : -1;
+                if (inFlight.PlacedLineCount > placedBefore)
+                {
+                    drainableProgress = true;
+                    footnotePlacedLinesAtLastYield[drainableKey] = inFlight.PlacedLineCount;
+                }
+            }
+
+            return drainableProgress;
+        }
+
+        void AdvanceForOverflowingItem(double itemHeight, int sourceBlockIndex)
+        {
+            AdvanceColumnOrPage();
+            RegisterInFlightFootnotesForSourceBlock(sourceBlockIndex);
+            while (!HasCurrentColumnContent() && cursorY - itemHeight < CurrentFrameBottom() && FootnoteReserveYieldsPageToDrain(itemHeight))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                AdvanceColumnOrPage();
+                RegisterInFlightFootnotesForSourceBlock(sourceBlockIndex);
+            }
+        }
+
+        double FootnoteRemainderTotal()
+        {
+            double total = 0d;
+            foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
+            {
+                total += FootnoteRemainderHeight(inFlight, GetStoryTextLineBoxHeights(inFlight.StoryLayout), separatorMeasurerForNotes);
+            }
+
+            return Math.Max(0d, total);
+        }
+
+        void RegisterInFlightFootnotesForSourceBlock(int sourceBlockIndex)
+        {
+            if (sourceBlockIndex >= 0 && sourceBlockIndex < document.BodyElements.Count && document.BodyElements[sourceBlockIndex] is DocxTableElement)
+            {
+                return;
+            }
+
+            if (!locationsByBlock.TryGetValue(sourceBlockIndex, out List<DocxInlineReferenceLocation>? blockLocations))
+            {
+                return;
+            }
+
+            IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
+            double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
+            if (!storyLookupByWidth.TryGetValue(widthKey, out Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>? storyByKey))
+            {
+                storyByKey = CreateRelatedStoryLookup(pageStoryLayouts);
+                storyLookupByWidth[widthKey] = storyByKey;
+            }
+
+            foreach (DocxInlineReferenceLocation location in blockLocations)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                DocxInlineReference reference = location.Reference;
+                if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null)
+                {
+                    continue;
+                }
+
+                var key = (reference.Kind, reference.Id);
+                if (placedStoryKeys.Contains(key) || inFlightNotes.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
+                {
+                    continue;
+                }
+
+                DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
+                DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
+                inFlightNotes[key] = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, sourceBlockIndex, location);
+            }
+
+            currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
+        }
+
+        void PlaceInFlightFootnotesOnCompletingPage()
+        {
+            if (inFlightNotes.Count == 0)
+            {
+                return;
+            }
+
+            var blocksOnPage = new HashSet<int>();
+            var pageSegments = new List<(int RunIndex, int Start, int End)>();
+            foreach (DocxLayoutItem item in currentItems)
+            {
+                if (item is not DocxTextLineLayout line)
+                {
+                    continue;
+                }
+
+                if (line.SourceBlockIndex is { } blockIndex)
+                {
+                    blocksOnPage.Add(blockIndex);
+                }
+
+                foreach (DocxTextSegmentLayout segment in line.Segments)
+                {
+                    int start = Math.Max(0, segment.SourceTextOffsetInRun);
+                    pageSegments.Add((segment.SourceTextRunIndex, start, start + segment.Text.Length));
+                }
+            }
+
+            IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
+            double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
+            if (!storyLookupByWidth.TryGetValue(widthKey, out Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>? storyByKey))
+            {
+                storyByKey = CreateRelatedStoryLookup(pageStoryLayouts);
+                storyLookupByWidth[widthKey] = storyByKey;
+            }
+
+            var pageFootnoteStories = new List<DocxReferencedRelatedStoryLayout>();
+            foreach (int blockIndex in blocksOnPage.OrderBy(index => index))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (blockIndex < 0 || blockIndex >= document.BodyElements.Count)
+                {
+                    continue;
+                }
+
+                if (document.BodyElements[blockIndex] is DocxTableElement)
+                {
+                    continue;
+                }
+
+                if (!locationsByBlock.TryGetValue(blockIndex, out List<DocxInlineReferenceLocation>? blockLocations))
+                {
+                    continue;
+                }
+
+                foreach (DocxInlineReferenceLocation location in blockLocations)
+                {
+                    DocxInlineReference reference = location.Reference;
+                    if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null)
+                    {
+                        continue;
+                    }
+
+                    var key = (reference.Kind, reference.Id);
+                    if (placedStoryKeys.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
+                    {
+                        continue;
+                    }
+
+                    if (storyLayout.TextLines.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    if (location.Reference.SourceRunIndex < 0)
+                    {
+                        continue;
+                    }
+
+                    bool matched = false;
+                    foreach ((int runIndex, int start, int end) in pageSegments)
+                    {
+                        if (runIndex == location.Reference.SourceRunIndex &&
+                            start <= location.Reference.TextOffsetInRun &&
+                            location.Reference.TextOffsetInRun < end)
+                        {
+                            matched = true;
+                            break;
+                        }
+                    }
+
+                    if (!matched)
+                    {
+                        continue;
+                    }
+
+                    pageFootnoteStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
+                }
+            }
+
+            var freshKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
+            foreach (DocxReferencedRelatedStoryLayout fresh in pageFootnoteStories)
+            {
+                if (fresh.Location.Reference.Id is not null)
+                {
+                    freshKeys.Add((fresh.Location.Reference.Kind, fresh.Location.Reference.Id));
+                }
+            }
+
+            var continuedStories = new List<DocxReferencedRelatedStoryLayout>();
+            foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (inFlight.RemainingLineCount <= 0 || inFlight.StoryLayout.TextLines.Count == 0)
+                {
+                    continue;
+                }
+
+                var continuedKey = (inFlight.Location.Reference.Kind, inFlight.Location.Reference.Id ?? string.Empty);
+                if (freshKeys.Contains(continuedKey))
+                {
+                    continue;
+                }
+
+                if (!placedStoryKeys.Contains(continuedKey))
+                {
+                    continue;
+                }
+
+                DocxRelatedStoryLayout narrowedLayout = NarrowStoryTextLinesForOffset(inFlight.StoryLayout, inFlight.PlacedLineCount);
+                continuedStories.Add(new DocxReferencedRelatedStoryLayout(inFlight.Location, narrowedLayout));
+            }
+
+            if (pageFootnoteStories.Count == 0 && continuedStories.Count == 0)
+            {
+                return;
+            }
+
+            DocxLayoutPage templatePage = pages[^1];
+            int templatePageNumber = pages.Count;
+            var sharedBatch = new List<DocxReferencedRelatedStoryLayout>(continuedStories.Count + pageFootnoteStories.Count);
+            sharedBatch.AddRange(continuedStories);
+            sharedBatch.AddRange(pageFootnoteStories);
+            var sharedPlacedBefore = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
+            foreach (DocxReferencedRelatedStoryLayout batched in sharedBatch)
+            {
+                if (batched.Location.Reference.Id is not null)
+                {
+                    var batchedKey = (batched.Location.Reference.Kind, batched.Location.Reference.Id);
+                    if (inFlightNotes.TryGetValue(batchedKey, out InFlightRelatedStory? batchedFlight))
+                    {
+                        sharedPlacedBefore[batchedKey] = batchedFlight.PlacedLineCount;
+                    }
+                }
+            }
+
+            var headScratchPages = new List<DocxLayoutPage> { templatePage };
+            DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
+            DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
+            IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
+            if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0)
+            {
+                DocxLayoutPage slicePage = headScratchPages[0];
+                int slicePageIndex = 0;
+                var slicePlacedStories = templatePage.PlacedRelatedStories.ToList();
+                double sliceCursorTop = Math.Min(templatePage.Height - templatePage.MarginTop, ResolveHeaderKeepOut(templatePage, templatePageNumber, templatePageNumber));
+                foreach (DocxReferencedRelatedStoryLayout continuedStory in sharedBatch)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    slicePage = headScratchPages[slicePageIndex];
+                    InFlightRelatedStory? continuedFlight = continuedStory.Location.Reference.Id is not null && inFlightNotes.TryGetValue((continuedStory.Location.Reference.Kind, continuedStory.Location.Reference.Id), out InFlightRelatedStory? continuedTracked) ? continuedTracked : null;
+                    sliceCursorTop = PlaceContinuationSeparatorIfNeeded(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, sliceCursorTop, continuedStory.Location.SourceBlockIndex, continuedStory.StoryLayout, 0, GetStoryTextLineBoxHeights(continuedStory.StoryLayout), continuationLayout, separatorMeasurer, paragraphSpacingScale);
+                    PlaceRelatedStorySlices(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, ref sliceCursorTop, continuedStory.StoryLayout, continuedStory.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationLayout, separatorMeasurer, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: true, inFlight: continuedFlight);
+                }
+            }
+            else if (separatorLayout is null)
+            {
+                PlaceFootnoteStoriesWithoutSeparator(
+                    headScratchPages,
+                    0,
+                    templatePage,
+                    sharedBatch,
+                    continuationLayout,
+                    separatorMeasurer,
+                    paragraphSpacingScale,
+                    ResolveHeaderKeepOut,
+                    sharedSlicePlacement: true,
+                    inFlightNotes: inFlightNotes,
+                    pageNumberOverride: templatePageNumber,
+                    pageCountOverride: templatePageNumber);
+            }
+            else
+            {
+                PlaceFootnoteStories(
+                    headScratchPages,
+                    0,
+                    templatePage,
+                    sharedBatch,
+                    separatorLayout,
+                    continuationLayout,
+                    separatorMeasurer,
+                    paragraphSpacingScale,
+                    ResolveHeaderKeepOut,
+                    sharedSlicePlacement: true,
+                    inFlightNotes: inFlightNotes,
+                    pageNumberOverride: templatePageNumber,
+                    pageCountOverride: templatePageNumber);
+            }
+
+            var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();
+            foreach (DocxPlacedRelatedStoryLayout placed in headScratchPages[0].PlacedRelatedStories)
+            {
+                harvestedStories.Add(placed);
+            }
+
+            if (harvestedStories.Count != 0)
+            {
+                pages[^1] = templatePage with { PlacedRelatedStories = harvestedStories.ToArray() };
+            }
+
+            foreach (KeyValuePair<(DocxRelatedStoryKind Kind, string Id), int> placedBefore in sharedPlacedBefore)
+            {
+                if (inFlightNotes.TryGetValue(placedBefore.Key, out InFlightRelatedStory? placedFlight) && placedFlight.PlacedLineCount > placedBefore.Value)
+                {
+                    placedStoryKeys.Add(placedBefore.Key);
+                }
+            }
+        }
+
+        void DrainRemainingInFlightFootnotes()
+        {
+            if (inFlightNotes.Count == 0 || pages.Count == 0)
+            {
+                return;
+            }
+
+            bool drainStarted = false;
+            int tailPageIndex = pages.Count - 1;
+            DocxLayoutPage tailPage = pages[^1];
+            var tailPlacedStories = new List<DocxPlacedRelatedStoryLayout>();
+            double tailCursorTop = 0d;
+            foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (inFlight.RemainingLineCount <= 0 || inFlight.StoryLayout.TextLines.Count == 0)
+                {
+                    continue;
+                }
+
+                if (inFlight.Location.Reference.Id is null || !placedStoryKeys.Contains((inFlight.Location.Reference.Kind, inFlight.Location.Reference.Id)))
+                {
+                    continue;
+                }
+
+                if (!drainStarted)
+                {
+                    drainStarted = true;
+                    MoveToRelatedStoryContinuationPage(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, insertContinuationAfterActivePage: false, ResolveHeaderKeepOut);
+                }
+
+                DocxRelatedStoryLayout narrowedLayout = NarrowStoryTextLinesForOffset(inFlight.StoryLayout, inFlight.PlacedLineCount);
+                double[] narrowedLineBoxes = GetStoryTextLineBoxHeights(narrowedLayout);
+                tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale);
+                PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight);
+            }
+        }
+
         void EnsureFootnoteReserveForSourceBlock(int sourceBlockIndex)
         {
             IReadOnlyDictionary<int, double> footnoteReserveHeightBySourceBlock = GetFootnoteReserveHeightBySourceBlock(page.BodyWidth);
@@ -422,7 +828,7 @@ internal sealed partial class DocxLayoutEngine
                 previousParagraph = null;
                 firstBodyLineBaselineOffset = null;
                 activeColumnHasContent = false;
-                currentPageFootnoteReserveHeight = 0d;
+                currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
                 return;
             }
 
@@ -457,9 +863,9 @@ internal sealed partial class DocxLayoutEngine
                     double breakFontSize = GetParagraphFontSize(breakParagraph);
                     double breakLineHeight = ResolveLineHeight(breakParagraph, breakFontSize, textMeasurer);
                     double paragraphAdvance = breakSpacingProfile.AppliedBeforeSpacing + breakLineHeight;
-                    if (cursorY - paragraphAdvance < CurrentFrameBottom() && HasCurrentColumnContent())
+                    if (cursorY - paragraphAdvance < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(paragraphAdvance)))
                     {
-                        AdvanceColumnOrPage();
+                        AdvanceForOverflowingItem(paragraphAdvance, elementIndex);
                     }
 
                     cursorY -= paragraphAdvance;
@@ -602,7 +1008,7 @@ internal sealed partial class DocxLayoutEngine
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-            EnsureFootnoteReserveForSourceBlock(elementIndex);
+            RegisterInFlightFootnotesForSourceBlock(elementIndex);
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -615,7 +1021,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale).Height <= CurrentFrameBottom())
             {
                 AdvanceColumnOrPage();
-                EnsureFootnoteReserveForSourceBlock(elementIndex);
+                RegisterInFlightFootnotesForSourceBlock(elementIndex);
             }
 
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
@@ -634,7 +1040,7 @@ internal sealed partial class DocxLayoutEngine
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, CurrentFrameBottom(), HasCurrentColumnContent()))
                 {
                     AdvanceColumnOrPage();
-                    EnsureFootnoteReserveForSourceBlock(elementIndex);
+                    RegisterInFlightFootnotesForSourceBlock(elementIndex);
                 }
 
                 // RV05: ordered inline atoms (body path). Affined images in text-mixed
@@ -653,10 +1059,9 @@ internal sealed partial class DocxLayoutEngine
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
                     }
 
-                    if (cursorY - extraAbove - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
+                    if (cursorY - extraAbove - lineHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + lineHeight)))
                     {
-                        AdvanceColumnOrPage();
-                        EnsureFootnoteReserveForSourceBlock(elementIndex);
+                        AdvanceForOverflowingItem(extraAbove + lineHeight, elementIndex);
                     }
 
                     cursorY -= extraAbove;
@@ -911,10 +1316,9 @@ internal sealed partial class DocxLayoutEngine
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
             {
-                if (cursorY - lineHeight < CurrentFrameBottom() && HasCurrentColumnContent())
+                if (cursorY - lineHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight)))
                 {
-                    AdvanceColumnOrPage();
-                    EnsureFootnoteReserveForSourceBlock(elementIndex);
+                    AdvanceForOverflowingItem(lineHeight, elementIndex);
                 }
 
                 cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
@@ -932,10 +1336,9 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 double imageWidth = Math.Min(width, image.WidthPoints);
                 double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-                if (cursorY - imageHeight < CurrentFrameBottom() && HasCurrentColumnContent())
+                if (cursorY - imageHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(imageHeight)))
                 {
-                    AdvanceColumnOrPage();
-                    EnsureFootnoteReserveForSourceBlock(elementIndex);
+                    AdvanceForOverflowingItem(imageHeight, elementIndex);
                 }
 
                 double imageX = effective.Alignment switch
@@ -960,10 +1363,9 @@ internal sealed partial class DocxLayoutEngine
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (cursorY - EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) < CurrentFrameBottom() && HasCurrentColumnContent())
+                if (cursorY - EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale))))
                 {
-                    AdvanceColumnOrPage();
-                    EnsureFootnoteReserveForSourceBlock(elementIndex);
+                    AdvanceForOverflowingItem(EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale), elementIndex);
                 }
 
                 DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
@@ -997,7 +1399,8 @@ internal sealed partial class DocxLayoutEngine
             FinishPage();
         }
 
-        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
+        DrainRemainingInFlightFootnotes();
+
         DocxStaticStoryLayoutResult? GetContinuationHeader(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
@@ -1018,15 +1421,6 @@ internal sealed partial class DocxLayoutEngine
                 headerLayout.InlineTextBoxes.Count != 0;
         }
 
-        double? bodyFirstBaseline = null;
-        if (pages.Count != 0)
-        {
-            foreach (DocxTextLineLayout bodyLine in DocxRenderer.EnumerateBodyTextLines(pages[0]))
-            {
-                bodyFirstBaseline = bodyFirstBaseline is null ? bodyLine.BaselineY : Math.Max(bodyFirstBaseline.Value, bodyLine.BaselineY);
-            }
-        }
-
         double ResolveHeaderKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             DocxStaticStoryLayoutResult? headerLayout = GetContinuationHeader(templatePage, pageNumber, pageCount);
@@ -1041,7 +1435,16 @@ internal sealed partial class DocxLayoutEngine
             // emission: static lines shift by the first-pin offset while footnote stories
             // map uniformly about the page center. The page height cancels, leaving the
             // first-pin baseline and the print scale (identity at unit scale).
-            double? firstPinBaseline = bodyFirstBaseline;
+            if (!bodyFirstBaselineComputed && pages.Count != 0)
+            {
+                bodyFirstBaselineComputed = true;
+                foreach (DocxTextLineLayout bodyLine in DocxRenderer.EnumerateBodyTextLines(pages[0]))
+                {
+                    bodyFirstBaselineMemo = bodyFirstBaselineMemo is null ? bodyLine.BaselineY : Math.Max(bodyFirstBaselineMemo.Value, bodyLine.BaselineY);
+                }
+            }
+
+            double? firstPinBaseline = bodyFirstBaselineMemo;
             if (pages.Count != 0)
             {
                 DocxStaticStoryLayoutResult? firstHeaderLayout = GetContinuationHeader(pages[0], 1, pageCount);
@@ -1060,8 +1463,7 @@ internal sealed partial class DocxLayoutEngine
             double takeScale = paragraphSpacingScale;
             return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale)) / takeScale;
         }
-
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut).ToArray();
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys).ToArray();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;
