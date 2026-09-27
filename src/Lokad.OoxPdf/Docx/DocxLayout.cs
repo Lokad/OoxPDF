@@ -490,11 +490,6 @@ internal sealed partial class DocxLayoutEngine
 
         void RegisterInFlightFootnotesForSourceBlock(int sourceBlockIndex)
         {
-            if (sourceBlockIndex >= 0 && sourceBlockIndex < document.BodyElements.Count && document.BodyElements[sourceBlockIndex] is DocxTableElement)
-            {
-                return;
-            }
-
             if (!locationsByBlock.TryGetValue(sourceBlockIndex, out List<DocxInlineReferenceLocation>? blockLocations))
             {
                 currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
@@ -564,23 +559,22 @@ internal sealed partial class DocxLayoutEngine
             }
 
             var blocksOnPage = new HashSet<int>();
-            var pageSegments = new List<(int RunIndex, int Start, int End)>();
+            var pageSegments = new List<(DocxTextLineLayout Line, int RunIndex, int Start, int End)>();
             foreach (DocxLayoutItem item in currentItems)
             {
-                if (item is not DocxTextLineLayout line)
+                foreach (DocxPageTextLineOwner owner in EnumerateTextLineOwners(item, null))
                 {
-                    continue;
-                }
+                    DocxTextLineLayout line = owner.Line;
+                    if (owner.SourceBlockIndex is { } blockIndex)
+                    {
+                        blocksOnPage.Add(blockIndex);
+                    }
 
-                if (line.SourceBlockIndex is { } blockIndex)
-                {
-                    blocksOnPage.Add(blockIndex);
-                }
-
-                foreach (DocxTextSegmentLayout segment in line.Segments)
-                {
-                    int start = Math.Max(0, segment.SourceTextOffsetInRun);
-                    pageSegments.Add((segment.SourceTextRunIndex, start, start + segment.Text.Length));
+                    foreach (DocxTextSegmentLayout segment in line.Segments)
+                    {
+                        int start = Math.Max(0, segment.SourceTextOffsetInRun);
+                        pageSegments.Add((line, segment.SourceTextRunIndex, start, start + segment.Text.Length));
+                    }
                 }
             }
 
@@ -597,11 +591,6 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (blockIndex < 0 || blockIndex >= document.BodyElements.Count)
-                {
-                    continue;
-                }
-
-                if (document.BodyElements[blockIndex] is DocxTableElement)
                 {
                     continue;
                 }
@@ -641,11 +630,12 @@ internal sealed partial class DocxLayoutEngine
                     }
 
                     bool matched = false;
-                    foreach ((int runIndex, int start, int end) in pageSegments)
+                    foreach ((DocxTextLineLayout segmentLine, int runIndex, int start, int end) in pageSegments)
                     {
                         if (runIndex == location.Reference.SourceRunIndex &&
                             start <= location.Reference.TextOffsetInRun &&
-                            location.Reference.TextOffsetInRun < end)
+                            location.Reference.TextOffsetInRun < end &&
+                            (segmentLine.SourceParagraph is null || ReferenceEquals(segmentLine.SourceParagraph, location.SourceParagraph)))
                         {
                             matched = true;
                             break;
@@ -946,6 +936,7 @@ internal sealed partial class DocxLayoutEngine
             if (element is DocxTableElement tableElement)
             {
                 EnsureFootnoteReserveForSourceBlock(elementIndex);
+                RegisterInFlightFootnotesForSourceBlock(elementIndex);
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;

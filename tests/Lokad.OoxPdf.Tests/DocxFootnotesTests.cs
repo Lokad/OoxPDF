@@ -2116,6 +2116,95 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(60, placedTexts.Distinct().Count());
     }
 
+    public static void DocxTableAnchoredFootnoteSharesBodyPages()
+    {
+        DocxParagraph cellAnchor = DocxTests.CreateDocxLayoutParagraph("Cell note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    DocxRelatedStoryKind.Footnote,
+                    "51",
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        var cell = new DocxTableCell(
+            string.Empty,
+            [cellAnchor, DocxTests.CreateDocxLayoutParagraph("Cell trailing line", 10d, 12d)],
+            null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [200d], [new DocxTableRow([cell], 30d)]);
+        DocxParagraphElement[] noteElements = Enumerable.Range(0, 120)
+            .Select(index => new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Shared note line " + index.ToString(CultureInfo.InvariantCulture) + " with trailing words", 10d, 12d)))
+            .ToArray();
+        var footnoteStory = new DocxRelatedStory(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            "51",
+            noteElements,
+            [],
+            [], null);
+        var bodyElements = new List<DocxParagraphElement> { };
+        var paragraphs = new List<DocxParagraph> { cellAnchor };
+        for (int index = 0; index < 60; index++)
+        {
+            DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler body line " + index.ToString(CultureInfo.InvariantCulture) + " keeps body flowing", 10d, 12d);
+            bodyElements.Add(new DocxParagraphElement(filler));
+            paragraphs.Add(filler);
+        }
+
+        var document = new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            new DocxBodyElement[] { new DocxTableElement(table) }.Concat(bodyElements).ToArray(),
+            paragraphs.ToArray(),
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        bool sharedPageExists = false;
+        foreach (DocxLayoutPage page in layout.Pages)
+        {
+            bool hasFiller = page.Items.OfType<DocxTextLineLayout>().Any(line => line.Text.StartsWith("Filler body line", StringComparison.Ordinal));
+            bool hasTable = page.Items.OfType<DocxTableRowLayout>().Any() || page.Items.OfType<DocxTextLineLayout>().Any(line => line.Text.StartsWith("Cell ", StringComparison.Ordinal));
+            bool hasNote = page.PlacedRelatedStories
+                .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                    (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+                .SelectMany(story => story.TextLines)
+                .Any();
+            if (hasFiller && hasNote && !hasTable)
+            {
+                sharedPageExists = true;
+            }
+        }
+
+        TestAssert.True(sharedPageExists, "Table-anchored notes must share body pages instead of dedicating continuation pages.");
+
+        string[] placedTexts = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Select(line => line.Text)
+            .ToArray();
+        TestAssert.Equal(120, placedTexts.Length);
+        TestAssert.Equal(120, placedTexts.Distinct().Count());
+    }
+
     private static DocxDocument CreateMidBodyInterleavingDocument(int fillersBefore, int noteParagraphCount, string footnoteId, int fillersAfter)
     {
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
