@@ -497,8 +497,14 @@ internal sealed partial class DocxLayoutEngine
 
             if (!locationsByBlock.TryGetValue(sourceBlockIndex, out List<DocxInlineReferenceLocation>? blockLocations))
             {
+                currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
                 return;
             }
+            // A block with page content already placed never reserves against notes
+            // it registers itself, so the ref-bearing paragraph shares its page with
+            // the note head instead of evicting itself; later blocks see the full
+            // remainder below. Blocks starting a fresh page keep the full bump, so
+            // small-note marker pagination is unchanged.
 
             IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
             double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
@@ -533,7 +539,21 @@ internal sealed partial class DocxLayoutEngine
                 inFlightNotes[key] = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, sourceBlockIndex, location);
             }
 
-            currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
+            double registeringBlockRemainder = 0d;
+            if (HasCurrentColumnContent())
+            {
+                foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
+                {
+                    if (inFlight.SourceBlockIndex != sourceBlockIndex)
+                    {
+                        continue;
+                    }
+
+                    registeringBlockRemainder += FootnoteRemainderHeight(inFlight, GetStoryTextLineBoxHeights(inFlight.StoryLayout), separatorMeasurerForNotes);
+                }
+            }
+
+            currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, Math.Max(0d, FootnoteRemainderTotal() - registeringBlockRemainder));
         }
 
         void PlaceInFlightFootnotesOnCompletingPage()
@@ -730,7 +750,8 @@ internal sealed partial class DocxLayoutEngine
                     sharedSlicePlacement: true,
                     inFlightNotes: inFlightNotes,
                     pageNumberOverride: templatePageNumber,
-                    pageCountOverride: templatePageNumber);
+                    pageCountOverride: templatePageNumber,
+                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter));
             }
             else
             {
@@ -747,7 +768,8 @@ internal sealed partial class DocxLayoutEngine
                     sharedSlicePlacement: true,
                     inFlightNotes: inFlightNotes,
                     pageNumberOverride: templatePageNumber,
-                    pageCountOverride: templatePageNumber);
+                    pageCountOverride: templatePageNumber,
+                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter));
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();

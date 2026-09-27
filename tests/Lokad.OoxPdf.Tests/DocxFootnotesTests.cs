@@ -2079,6 +2079,106 @@ internal static class DocxFootnotesTests
         TestAssert.True(layout.Pages[^1].PlacedRelatedStories.Count != 0, "The exhausted drain must append dedicated note pages.");
     }
 
+    public static void DocxMidBodyFootnoteAnchorKeepsPrecedingFillersOnPage()
+    {
+        const int fillersBefore = 30;
+        DocxDocument document = CreateMidBodyInterleavingDocument(fillersBefore, noteParagraphCount: 60, footnoteId: "43", fillersAfter: 30);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        int PageWithBlock(int blockIndex)
+        {
+            for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
+            {
+                foreach (DocxLayoutItem item in layout.Pages[pageIndex].Items)
+                {
+                    if (item is DocxTextLineLayout line && line.SourceBlockIndex == blockIndex)
+                    {
+                        return pageIndex;
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        TestAssert.True(PageWithBlock(fillersBefore - 1) >= 0, "Preceding fillers must be placed.");
+        TestAssert.Equal(PageWithBlock(fillersBefore - 1), PageWithBlock(fillersBefore));
+
+        string[] placedTexts = layout.Pages
+            .SelectMany(page => page.PlacedRelatedStories)
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Select(line => line.Text)
+            .ToArray();
+        TestAssert.Equal(60, placedTexts.Length);
+        TestAssert.Equal(60, placedTexts.Distinct().Count());
+    }
+
+    private static DocxDocument CreateMidBodyInterleavingDocument(int fillersBefore, int noteParagraphCount, string footnoteId, int fillersAfter)
+    {
+        DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
+        {
+            InlineReferences =
+            [
+                new DocxInlineReference(
+                    DocxRelatedStoryKind.Footnote,
+                    footnoteId,
+                    CustomMarkFollowsValue: null,
+                    DisplayText: "1",
+                    SourceRunIndex: 0,
+                    RunChildIndex: 1,
+                    TextOffsetInRun: 4)
+            ]
+        };
+        DocxParagraphElement[] noteElements = Enumerable.Range(0, noteParagraphCount)
+            .Select(index => new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Shared note line " + index.ToString(CultureInfo.InvariantCulture) + " with trailing words", 10d, 12d)))
+            .ToArray();
+        var footnoteStory = new DocxRelatedStory(
+            DocxRelatedStoryKind.Footnote,
+            "/word/footnotes.xml",
+            footnoteId,
+            noteElements,
+            [],
+            [], null);
+        var bodyElements = new List<DocxParagraphElement>();
+        var paragraphs = new List<DocxParagraph>();
+        for (int index = 0; index < fillersBefore; index++)
+        {
+            DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler body line " + index.ToString(CultureInfo.InvariantCulture) + " keeps body flowing", 10d, 12d);
+            bodyElements.Add(new DocxParagraphElement(filler));
+            paragraphs.Add(filler);
+        }
+
+        bodyElements.Add(new DocxParagraphElement(anchor));
+        paragraphs.Add(anchor);
+        for (int index = 0; index < fillersAfter; index++)
+        {
+            DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler body line " + (fillersBefore + index).ToString(CultureInfo.InvariantCulture) + " keeps body flowing", 10d, 12d);
+            bodyElements.Add(new DocxParagraphElement(filler));
+            paragraphs.Add(filler);
+        }
+
+        return new DocxDocument(
+            612d,
+            792d,
+            72d,
+            72d,
+            72d,
+            72d,
+            DocxPageSettings.Empty,
+            [],
+            [],
+            [],
+            bodyElements.ToArray(),
+            paragraphs.ToArray(),
+            [])
+        {
+            RelatedStories = [footnoteStory]
+        };
+    }
+
     private static DocxDocument CreateInterleavingDocument(int noteParagraphCount, int fillerParagraphCount, string footnoteId)
     {
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with

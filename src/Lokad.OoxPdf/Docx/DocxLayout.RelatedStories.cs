@@ -1034,7 +1034,8 @@ internal sealed partial class DocxLayoutEngine
         bool sharedSlicePlacement = false,
         Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>? inFlightNotes = null,
         int? pageNumberOverride = null,
-        int? pageCountOverride = null)
+        int? pageCountOverride = null,
+        double? sharedContentTop = null)
     {
         if (footnoteStories.Count == 0)
         {
@@ -1058,6 +1059,10 @@ internal sealed partial class DocxLayoutEngine
         double storiesTop = cursorTop;
         double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, footnoteStories[0].StoryLayout, headerKeepOut);
         storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorHeight);
+        if (sharedContentTop is not null)
+        {
+            storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
+        }
         // RV06 p1-position probes (Word 16.0): Office seats the overflowing head block
         // bottom-up (storiesTop = margin + takeHeight), so absolute positions match instead
         // of leaving capacity slack above the margin. The head take still comes from the
@@ -1142,7 +1147,8 @@ internal sealed partial class DocxLayoutEngine
         bool sharedSlicePlacement = false,
         Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>? inFlightNotes = null,
         int? pageNumberOverride = null,
-        int? pageCountOverride = null)
+        int? pageCountOverride = null,
+        double? sharedContentTop = null)
     {
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
@@ -1156,6 +1162,10 @@ internal sealed partial class DocxLayoutEngine
         {
             double firstBoxHeight = GetStoryTextLineBoxHeights(firstLayout)[0];
             storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
+        if (sharedContentTop is not null)
+        {
+            storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
+        }
         }
         double contentTop = storiesTop;
         bool firstStory = true;
