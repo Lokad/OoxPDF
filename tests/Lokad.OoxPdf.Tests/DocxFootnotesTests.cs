@@ -1513,6 +1513,56 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxLongFootnoteContinuationReservesHeaderZone()
+    {
+        // RV06 wclong header probes (Word 16.0, h1/h5/nohdr): continued notes leave
+        // the static header zone clear (h5 takes 22 vs 25 blind with the rule below
+        // all header baselines; nohdr agrees 25/25), while the renderer starts
+        // continuation pages at the full page top so the rule lands inside the
+        // header text. Every continuation rule must sit below the header baselines
+        // of its own page.
+        var headerParas = new StringBuilder();
+        for (int line = 0; line < 5; line++)
+        {
+            headerParas.Append("<w:p><w:r><w:t>Header line " + line.ToString(CultureInfo.InvariantCulture) + " words here</w:t></w:r></w:p>");
+        }
+        var footnoteParas = new StringBuilder();
+        for (int line = 0; line < 60; line++)
+        {
+            footnoteParas.Append("<w:p><w:r><w:t>Note body line " + line.ToString(CultureInfo.InvariantCulture) + " words here</w:t></w:r></w:p>");
+        }
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/header1.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">""" + headerParas.ToString() + """</w:hdr>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2">""" + footnoteParas.ToString() + """</w:footnote></w:footnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        var continuations = layout.Pages.SelectMany(page => page.PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                story.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator &&
+                story.SeparatorY is not null)
+            .Select(story => (Page: page, Story: story))).ToArray();
+        TestAssert.True(continuations.Length != 0, "Overflowing footnotes with headers must place continuation separators.");
+        foreach ((DocxLayoutPage page, DocxPlacedRelatedStoryLayout continuation) in continuations)
+        {
+            double[] headerBaselines = page.StaticTextLines.Select(line => line.BaselineY).ToArray();
+            TestAssert.True(headerBaselines.Length != 0, "Continuation pages must carry the static header.");
+            double lowestHeaderBaseline = headerBaselines.Min();
+            TestAssert.True(continuation.SeparatorY <= lowestHeaderBaseline - 1d, "Continuation rules must sit below the header baselines of their page.");
+        }
+    }
     public static void DocxFootnoteSeparatorGapFollowsSingleLineMetrics()
     {
         // RV06 separator-bottom probes (Word 16.0, Times/Aptos/Calibri): the Office

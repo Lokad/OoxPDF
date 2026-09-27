@@ -10,6 +10,61 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    // RV06 wclong header probes (Word 16.0, h1/h5/nohdr): continued notes leave the
+    // static header zone clear on continuation pages (h5 takes 22 vs 25 blind with
+    // the rule below the header text; nohdr agrees 25/25). The layout runs the same
+    // static machinery as the final pass, so takes and rendering agree; callers map
+    // the keep-out through the first-pin shift into take space. Null when no usable
+    // static measurer is available.
+    private static DocxStaticStoryLayoutResult? LayoutContinuationHeader(
+        DocxLayoutPage templatePage,
+        int pageNumber,
+        int pageCount,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        double paragraphSpacingScale,
+        IDocxTextMeasurer? unscaledTextMeasurer,
+        CancellationToken cancellationToken)
+    {
+        if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
+        {
+            return null;
+        }
+
+        IDocxLineMetricsProvider? unscaledLineMetrics =
+            (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
+        double bodyWidth = Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight);
+        DocxSelectedStaticStory selectedHeader = SelectStaticHeaderFooter(
+            templatePage.PageSettings.HeaderBodyElementsByType,
+            templatePage.PageSettings.HeaderParagraphsByType,
+            templatePage.PageSettings,
+            pageNumber);
+        DocxStaticStoryLayoutResult headerLayout = CreateStaticStoryLayout(
+            selectedHeader,
+            templatePage.MarginLeft,
+            bodyWidth,
+            templatePage.Height - ResolveHeaderDistance(templatePage),
+            true,
+            pageNumber,
+            pageCount,
+            textMeasurer,
+            staticMetrics,
+            defaultTabStopPoints,
+            paragraphSpacingScale,
+            unscaledLineMetrics,
+            cancellationToken);
+        bool hasVisibleContent = headerLayout.TextLines.Count != 0 ||
+            headerLayout.InlineImages.Count != 0 ||
+            headerLayout.TableRows.Count != 0 ||
+            headerLayout.InlineTextBoxes.Count != 0;
+        if (!hasVisibleContent)
+        {
+            return null;
+        }
+
+        return headerLayout;
+    }
+
     private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyDictionary<int, double> HeaderContentBottomByPage, IReadOnlyDictionary<int, double> FooterContentTopByPage) AddStaticContent(
         IReadOnlyList<DocxLayoutPage> pages,
         IDocxTextMeasurer? textMeasurer,

@@ -13,7 +13,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static IEnumerable<DocxTextLineLayout> EnumerateBodyTextLines(DocxLayoutPage page)
+    internal static IEnumerable<DocxTextLineLayout> EnumerateBodyTextLines(DocxLayoutPage page)
     {
         foreach (DocxLayoutItem item in page.Items)
         {

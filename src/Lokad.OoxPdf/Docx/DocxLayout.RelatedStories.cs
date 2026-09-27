@@ -75,7 +75,8 @@ internal sealed partial class DocxLayoutEngine
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
         CancellationToken cancellationToken,
         double printScale = 1d,
-        IDocxTextMeasurer? separatorMeasurer = null)
+        IDocxTextMeasurer? separatorMeasurer = null, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         if (pages.Count == 0)
         {
@@ -160,7 +161,7 @@ internal sealed partial class DocxLayoutEngine
             int outputIndex = pageIndex + outputShift;
             int countBefore = outputPages.Count;
             DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(pageRelatedStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
-            PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale);
+            PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale, headerKeepOut);
             outputShift += outputPages.Count - countBefore;
         }
 
@@ -226,7 +227,7 @@ internal sealed partial class DocxLayoutEngine
                 if (sectionEndStories.Count > 0)
                 {
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
-                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer);
+                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut);
                 }
             }
 
@@ -293,7 +294,8 @@ internal sealed partial class DocxLayoutEngine
                         insertContinuationAfterActivePage: false,
                         documentEndContinuationLayout,
                         separatorMeasurer,
-                        printScale);
+                        printScale,
+                        headerKeepOut);
                 }
 
                 return documentEndPages;
@@ -309,7 +311,8 @@ internal sealed partial class DocxLayoutEngine
         DocxRelatedStoryLayout? endnoteContinuationLayout,
         CancellationToken cancellationToken,
         double printScale,
-        IDocxTextMeasurer? separatorMeasurer)
+        IDocxTextMeasurer? separatorMeasurer, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
@@ -339,7 +342,8 @@ internal sealed partial class DocxLayoutEngine
                 insertContinuationAfterActivePage: true,
                 endnoteContinuationLayout,
                 separatorMeasurer,
-                printScale);
+                printScale,
+                headerKeepOut);
         }
     }
 
@@ -393,7 +397,8 @@ internal sealed partial class DocxLayoutEngine
         bool insertContinuationAfterActivePage,
         DocxRelatedStoryLayout? continuationSeparatorLayout = null,
         IDocxTextMeasurer? separatorMeasurer = null,
-        double printScale = 1d)
+        double printScale = 1d, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         if (storyLayout.TextLines.Count == 0)
         {
@@ -409,7 +414,7 @@ internal sealed partial class DocxLayoutEngine
             double availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
             if (availableHeight <= 0.001d)
             {
-                MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage);
+                MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
                 availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
                 cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale);
                 availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
@@ -438,7 +443,7 @@ internal sealed partial class DocxLayoutEngine
             cursorTop -= takeHeight + FootnoteSeparatorGapPoints;
             if (lineIndex < storyLayout.TextLines.Count)
             {
-                MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage);
+                MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
                 cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale);
             }
         }
@@ -452,7 +457,8 @@ internal sealed partial class DocxLayoutEngine
         ref double cursorTop,
         DocxRelatedStoryLayout storyLayout,
         int sourceBlockIndex,
-        bool insertContinuationAfterActivePage)
+        bool insertContinuationAfterActivePage, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         double remainingHeight = Math.Max(0d, storyLayout.ContentHeight);
         double storyTopOffset = 0d;
@@ -467,7 +473,7 @@ internal sealed partial class DocxLayoutEngine
                     ref activePage,
                     ref activePlacedStories,
                     ref cursorTop,
-                    insertContinuationAfterActivePage);
+                    insertContinuationAfterActivePage, headerKeepOut);
                 availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
             }
 
@@ -499,7 +505,7 @@ internal sealed partial class DocxLayoutEngine
                     ref activePage,
                     ref activePlacedStories,
                     ref cursorTop,
-                    insertContinuationAfterActivePage);
+                    insertContinuationAfterActivePage, headerKeepOut);
             }
         }
     }
@@ -548,7 +554,8 @@ internal sealed partial class DocxLayoutEngine
         double[] bodyLineBoxes,
         DocxRelatedStoryLayout? continuationSeparatorLayout,
         IDocxTextMeasurer? separatorMeasurer,
-        double printScale = 1d)
+        double printScale = 1d, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         if (continuationSeparatorLayout is null || continuationSeparatorLayout.TextLines.Count == 0)
         {
@@ -632,9 +639,11 @@ internal sealed partial class DocxLayoutEngine
         ref DocxLayoutPage activePage,
         ref List<DocxPlacedRelatedStoryLayout> activePlacedStories,
         ref double cursorTop,
-        bool insertContinuationAfterActivePage)
+        bool insertContinuationAfterActivePage, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
-        activePage = CreateEmptyContinuationPage(activePage);
+        DocxLayoutPage templatePage = activePage;
+        activePage = CreateEmptyContinuationPage(templatePage);
         if (insertContinuationAfterActivePage)
         {
             activePageIndex++;
@@ -647,7 +656,12 @@ internal sealed partial class DocxLayoutEngine
         }
 
         activePlacedStories = [];
-        cursorTop = activePage.Height - activePage.MarginTop;
+        // RV06 wclong header probes: continuation pages start below the static
+        // header zone instead of the full page top (absent without headers, so
+        // header-free documents keep legacy takes bit-identically).
+        double pageTop = activePage.Height - activePage.MarginTop;
+        double keepOutBottom = headerKeepOut?.Invoke(templatePage, activePageIndex + 1, outputPages.Count) ?? double.PositiveInfinity;
+        cursorTop = Math.Min(pageTop, keepOutBottom);
 
         DocxLayoutPage CreateEmptyContinuationPage(DocxLayoutPage template)
         {
@@ -812,7 +826,8 @@ internal sealed partial class DocxLayoutEngine
         DocxRelatedStoryLayout? separatorLayout,
         DocxRelatedStoryLayout? continuationSeparatorLayout,
         IDocxTextMeasurer? separatorMeasurer,
-        double printScale = 1d)
+        double printScale = 1d, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         if (footnoteStories.Count == 0)
         {
@@ -821,7 +836,7 @@ internal sealed partial class DocxLayoutEngine
 
         if (separatorLayout is null)
         {
-            PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale);
+            PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut);
             return;
         }
 
@@ -856,7 +871,7 @@ internal sealed partial class DocxLayoutEngine
             }
             else
             {
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale);
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut);
             }
         }
     }
@@ -873,7 +888,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
         DocxRelatedStoryLayout? continuationSeparatorLayout,
         IDocxTextMeasurer? separatorMeasurer,
-        double printScale = 1d)
+        double printScale = 1d, 
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
@@ -919,7 +935,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 int headPageIndex = activePageIndex;
                 int headCount = activePlacedStories.Count;
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale);
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut);
                 if (firstStory)
                 {
                     PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer);

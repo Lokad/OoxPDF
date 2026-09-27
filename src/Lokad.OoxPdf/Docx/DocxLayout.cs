@@ -997,7 +997,71 @@ internal sealed partial class DocxLayoutEngine
             FinishPage();
         }
 
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer).ToArray();
+        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
+        DocxStaticStoryLayoutResult? GetContinuationHeader(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        {
+            var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
+            if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
+            {
+                headerLayout = LayoutContinuationHeader(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
+                continuationHeaderByPage[headerKey] = headerLayout;
+            }
+
+            return headerLayout;
+        }
+
+        static bool ContinuationHeaderHasVisibleContent(DocxStaticStoryLayoutResult headerLayout)
+        {
+            return headerLayout.TextLines.Count != 0 ||
+                headerLayout.InlineImages.Count != 0 ||
+                headerLayout.TableRows.Count != 0 ||
+                headerLayout.InlineTextBoxes.Count != 0;
+        }
+
+        double? bodyFirstBaseline = null;
+        if (pages.Count != 0)
+        {
+            foreach (DocxTextLineLayout bodyLine in DocxRenderer.EnumerateBodyTextLines(pages[0]))
+            {
+                bodyFirstBaseline = bodyFirstBaseline is null ? bodyLine.BaselineY : Math.Max(bodyFirstBaseline.Value, bodyLine.BaselineY);
+            }
+        }
+
+        double ResolveHeaderKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        {
+            DocxStaticStoryLayoutResult? headerLayout = GetContinuationHeader(templatePage, pageNumber, pageCount);
+            if (headerLayout is null || !ContinuationHeaderHasVisibleContent(headerLayout))
+            {
+                return double.PositiveInfinity;
+            }
+
+            double keepOutLayout = headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing;
+            // The take loop consumes design line boxes while static layout stacks scaled
+            // advances, so the keep-out crosses into take space through the same maps as
+            // emission: static lines shift by the first-pin offset while footnote stories
+            // map uniformly about the page center. The page height cancels, leaving the
+            // first-pin baseline and the print scale (identity at unit scale).
+            double? firstPinBaseline = bodyFirstBaseline;
+            if (pages.Count != 0)
+            {
+                DocxStaticStoryLayoutResult? firstHeaderLayout = GetContinuationHeader(pages[0], 1, pageCount);
+                if (firstHeaderLayout is not null && firstHeaderLayout.TextLines.Count != 0)
+                {
+                    double firstHeaderBaseline = firstHeaderLayout.TextLines.Max(staticLine => staticLine.BaselineY);
+                    firstPinBaseline = firstPinBaseline is null ? firstHeaderBaseline : Math.Max(firstPinBaseline.Value, firstHeaderBaseline);
+                }
+            }
+
+            if (firstPinBaseline is null)
+            {
+                return keepOutLayout;
+            }
+
+            double takeScale = paragraphSpacingScale;
+            return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale)) / takeScale;
+        }
+
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut).ToArray();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;
