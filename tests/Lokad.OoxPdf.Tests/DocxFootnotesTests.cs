@@ -1446,6 +1446,73 @@ internal static class DocxFootnotesTests
 
 
 
+    public static void DocxWordCompatibleContinuationRuleSpansDesignBodyWidth()
+    {
+        // RV06 wclong probe (Word 16.0): word-compatible continuation rules span the
+        // full design body mapped once (Office 354.98 emitted), while the renderer
+        // emits the shrunk layout body mapped again (269.49 = shrunk times scale).
+        // The continuation rule width must be the design body (layout body plus the
+        // markup reserve) with the end mark at the rule end.
+        var footnoteParas = new StringBuilder();
+        for (int line = 0; line < 60; line++)
+        {
+            footnoteParas.Append("<w:p><w:r><w:t>Note body line " + line.ToString(CultureInfo.InvariantCulture) + " words here</w:t></w:r></w:p>");
+        }
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="2"/></w:r><w:r><w:commentRangeStart w:id="0"/></w:r><w:r><w:t xml:space="preserve">commented</w:t></w:r><w:r><w:commentRangeEnd w:id="0"/></w:r><w:r><w:commentReference w:id="0"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2">""" + footnoteParas.ToString() + """</w:footnote></w:footnotes>""",
+            ["word/comments.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="Reviewer" w:initials="R" w:date="2024-01-02T00:00:00Z"><w:p><w:r><w:t>Note</w:t></w:r></w:p></w:comment></w:comments>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.AllMarkup);
+        }
+        var resolver = new StrikeoutFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .Create(document, measurer, CancellationToken.None);
+        var continuations = layout.Pages.SelectMany(page => page.PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                story.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator &&
+                story.SeparatorY is not null)
+            .Select(story => (Page: page, Story: story))).ToArray();
+        TestAssert.True(continuations.Length != 0, "Overflowing WC footnotes must place continuation separators.");
+        foreach ((DocxLayoutPage page, DocxPlacedRelatedStoryLayout continuation) in continuations)
+        {
+            double designBody = page.Width - page.MarginLeft - page.MarginRight + page.MarkupMarginReservePoints;
+            TestAssert.True(Math.Abs(continuation.SeparatorWidth - designBody) < 0.01d, "WC continuation rule width must be the design body width.");
+            TestAssert.True(Math.Abs(continuation.Width - designBody) < 0.01d, "WC continuation story width must cover the design body for the rule clip.");
+            if (continuation.TextLines.Count == 1 && continuation.TextLines[0].Segments.Count == 1 &&
+                string.IsNullOrWhiteSpace(continuation.TextLines[0].Segments[0].Text))
+            {
+                double markX = continuation.TextLines[0].Segments[0].X;
+                TestAssert.True(Math.Abs(markX - (continuation.X + designBody)) < 0.01d, "WC continuation end mark must sit at the rule end.");
+            }
+        }
+        // Reserve-margin pages keep identity emission over the shrunk body, so the
+        // reserve must not join the continuation rule back there.
+        DocxLayout reserveLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+            .Create(document, measurer, CancellationToken.None);
+        var reserveContinuations = reserveLayout.Pages.SelectMany(page => page.PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                story.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator &&
+                story.SeparatorY is not null)
+            .Select(story => (Page: page, Story: story))).ToArray();
+        TestAssert.True(reserveContinuations.Length != 0, "Overflowing reserve-margin footnotes must place continuation separators.");
+        foreach ((DocxLayoutPage reservePage, DocxPlacedRelatedStoryLayout reserveContinuation) in reserveContinuations)
+        {
+            double shrunkBody = reservePage.Width - reservePage.MarginLeft - reservePage.MarginRight;
+            TestAssert.True(Math.Abs(reserveContinuation.SeparatorWidth - shrunkBody) < 0.01d, "Reserve-margin continuation rule width must stay in the shrunk body.");
+        }
+    }
+
     public static void DocxFootnoteSeparatorGapFollowsSingleLineMetrics()
     {
         // RV06 separator-bottom probes (Word 16.0, Times/Aptos/Calibri): the Office
