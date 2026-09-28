@@ -2208,4 +2208,36 @@ internal static class DocxPageTests
             Math.Abs(baselineY - (190d - 38.4d)) < 0.001d,
             $"Exact-48pt body first baseline should sit 38.4pt below the content top. baselineY={baselineY}.");
     }
+    public static void DocxEmptyBreakParagraphTurnsOnceAtExhaustedPage()
+    {
+        // Edge-breakline probes (Word COM references): an explicit page break in an
+        // empty paragraph consumes its line box, so at an exactly exhausted page the
+        // renderer turns once (empty middle page, tail on page 3 on both sides) and
+        // must not turn twice. Nine exact-20pt fillers fill the 180pt probe page
+        // exactly, forcing the zero-remainder turn.
+        var bodyElements = new List<DocxBodyElement>();
+        for (int index = 0; index < 9; index++)
+        {
+            DocxTextRun run = new("Filler", 10d, null, false, false, false, null, null);
+            bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+                [run], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
+                new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+                DocxParagraphKeepRules.Empty, null)));
+        }
+        DocxParagraph emptyBreak = new([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null);
+        bodyElements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", emptyBreak, null));
+        DocxTextRun tailRun = new("Tail", 10d, null, false, false, false, null, null);
+        bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+            [tailRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+            DocxParagraphKeepRules.Empty, null)));
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements, []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.True(layout.Pages[1].Items.Count == 0, "The zero-remainder turn must leave a single empty middle page.");
+        TestAssert.True(layout.Pages[2].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the third page after exactly one turn.");
+    }
+
+
 }
