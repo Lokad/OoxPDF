@@ -72,8 +72,19 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double effectiveLineSpacingFactor = ResolveAutoLineSpacingFactor(paragraph, out bool floorApplied);
+        // Word 16.0 body-grid probes (Times/Tahoma/Segoe UI 10/12/14pt plus the Aptos
+        // take discriminator): Office auto single-spaced line boxes take
+        // max(horizontal-header sum, singleLineEm) (Segoe pitch 23.40 vs 21.32 with
+        // hhea at 1.33 over singleLine floored at 1.15; Aptos take 24 keeps hhea at
+        // 1.22 where Windows extents at 1.28 would take 23), while the renderer boxed
+        // singleLineEm alone. Providers without hhea metrics fall back to the single
+        // line, so test doubles stay byte-identical. At-least lines keep the legacy
+        // natural height (unprobed for hhea-dominant fonts).
+        double hheaLineHeight = metricsProvider is not null
+            ? metricsProvider.MeasureHheaLineHeight(bodyRun, fontSize)
+            : singleLineHeight;
         return new DocxLineHeightProfile(
-            singleLineHeight * effectiveLineSpacingFactor,
+            Math.Max(singleLineHeight, hheaLineHeight) * effectiveLineSpacingFactor,
             singleLineHeight,
             listLabelSingleLineHeight,
             bodyWindowsLineHeight,

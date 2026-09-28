@@ -19,6 +19,7 @@ internal sealed partial class OpenTypeFont
         FontBounds bounds,
         ushort glyphCount,
         Os2Metrics os2,
+        HheaMetrics hhea,
         PostMetrics post,
         CmapFormat? cmap,
         ushort[] advances,
@@ -33,6 +34,7 @@ internal sealed partial class OpenTypeFont
         Bounds = bounds;
         GlyphCount = glyphCount;
         Os2 = os2;
+        Hhea = hhea;
         Post = post;
         this.cmap = cmap;
         this.advances = advances;
@@ -56,6 +58,8 @@ internal sealed partial class OpenTypeFont
     public ushort GlyphCount { get; }
 
     public Os2Metrics Os2 { get; }
+
+    public HheaMetrics Hhea { get; }
 
     public PostMetrics Post { get; }
 
@@ -118,11 +122,12 @@ internal sealed partial class OpenTypeFont
         string familyName = ReadFamilyName(bytes, tables);
         cancellationToken.ThrowIfCancellationRequested();
         Os2Metrics os2 = ReadOs2(bytes, tables);
+        HheaMetrics hhea = ReadHhea(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken);
-        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs, scalerTag);
+        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, hhea, post, cmap, advances, kerningPairs, scalerTag);
 
         }
         catch (InvalidDataException)
@@ -972,6 +977,15 @@ internal sealed partial class OpenTypeFont
             WindowsDescender: U16(bytes, os2.Offset + 76));
     }
 
+    private static HheaMetrics ReadHhea(byte[] bytes, Dictionary<string, TableRecord> tables)
+    {
+        TableRecord hhea = Required(tables, "hhea");
+        return new HheaMetrics(
+            HorizontalAscender: I16(bytes, hhea.Offset + 4),
+            HorizontalDescender: I16(bytes, hhea.Offset + 6),
+            HorizontalLineGap: I16(bytes, hhea.Offset + 8));
+    }
+
     private static PostMetrics ReadPost(byte[] bytes, Dictionary<string, TableRecord> tables)
     {
         TableRecord post = Required(tables, "post");
@@ -1106,6 +1120,11 @@ internal sealed partial class OpenTypeFont
 
     private readonly record struct TableRecord(int Offset, int Length);
 
+
+    internal readonly record struct HheaMetrics(
+        short HorizontalAscender,
+        short HorizontalDescender,
+        short HorizontalLineGap);
 
     internal readonly record struct Os2Metrics(
         ushort Version,

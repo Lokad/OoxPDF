@@ -40,6 +40,14 @@ internal interface IDocxTextMeasurer
 internal interface IDocxLineMetricsProvider
 {
     double MeasureSingleLineHeight(DocxTextRun? run, double fontSize);
+
+    // Horizontal-header line height for auto line boxes (Word 16.0 body-grid
+    // probes). Providers without hhea metrics keep the single-line height, so
+    // test doubles and fallbacks stay byte-identical.
+    double MeasureHheaLineHeight(DocxTextRun? run, double fontSize)
+    {
+        return MeasureSingleLineHeight(run, fontSize);
+    }
 }
 
 internal interface IDocxStaticTextMetricsProvider
@@ -95,6 +103,17 @@ internal static class DocxLineMetrics
         double units = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
 
         return Math.Max(fontSize * WordSingleLineMinimumEm, units * fontSize / font.UnitsPerEm);
+    }
+
+    public static double MeasureHheaLineHeight(OpenTypeFont font, double fontSize)
+    {
+        if (font.UnitsPerEm == 0)
+        {
+            return fontSize;
+        }
+
+        double units = font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender + font.Hhea.HorizontalLineGap;
+        return units * fontSize / font.UnitsPerEm;
     }
 
     public static double MeasureWindowsAscender(OpenTypeFont font, double fontSize)

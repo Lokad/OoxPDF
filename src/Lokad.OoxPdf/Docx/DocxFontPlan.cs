@@ -328,6 +328,21 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             : DocxLineMetrics.MeasureOpenTypeSingleLineHeight(font, fontSize);
     }
 
+    public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
+        {
+            return fontSize;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        return font is null
+            ? fontSize
+            : DocxLineMetrics.MeasureHheaLineHeight(font, fontSize);
+    }
+
     public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();

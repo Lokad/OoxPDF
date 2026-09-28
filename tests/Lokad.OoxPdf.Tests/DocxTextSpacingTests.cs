@@ -376,9 +376,16 @@ internal static class DocxTextSpacingTests
             font.Value.Font.Os2.TypographicDescender +
             font.Value.Font.Os2.TypographicLineGap;
         double expectedSingleLineHeight = Math.Max(11.5d, typographicUnits * 10d / font.Value.Font.UnitsPerEm);
-        double expected = expectedSingleLineHeight * 1.15d;
+        // Word 16.0 body-grid probes plus the Aptos take discriminator: auto boxes
+        // take max(horizontal-header sum, singleLineEm), so Windows extents alone
+        // must not drive the box (Aptos take 24) while hhea sums above singleLine do
+        // (Segoe pitch 23.40).
+        double hheaUnits = font.Value.Font.Hhea.HorizontalAscender -
+            font.Value.Font.Hhea.HorizontalDescender +
+            font.Value.Font.Hhea.HorizontalLineGap;
+        double expected = Math.Max(expectedSingleLineHeight, hheaUnits * 10d / font.Value.Font.UnitsPerEm) * 1.15d;
         double actual = lines[0].BaselineY - lines[1].BaselineY;
-        TestAssert.True(Math.Abs(actual - expected) < 0.01d, $"Auto DOCX line height should advance on the resolved typographic font line box, not the em size or Windows bounding box. Expected {expected}, actual {actual}.");
+        TestAssert.True(Math.Abs(actual - expected) < 0.01d, $"Auto DOCX line height should advance on max(hhea sum, typographic line box), not the em size or Windows bounding box. Expected {expected}, actual {actual}.");
     }
 
     public static void DocxLayoutStageConsumesEmptyParagraphLineBox()
@@ -1325,4 +1332,153 @@ internal static class DocxTextSpacingTests
         TestAssert.Equal(2, styleUsage.ContextualSpacingParagraphCount);
         TestAssert.Equal(2, styleUsage.AtLeastLineSpacingParagraphCount);
     }
+    public static void DocxAutoLineBoxUsesHheaLineHeightWhenLarger()
+    {
+        // Word 16.0 body-grid probes (Times/Tahoma/Segoe UI 10/12/14pt plus the
+        // Aptos take discriminator): Office auto single-spaced line boxes take
+        // max(horizontal-header sum, singleLineEm) times the spacing factor (Segoe
+        // pitch 23.40 vs 21.32 with hhea at 1.33 over singleLine floored at 1.15;
+        // Aptos take 24 keeps hhea at 1.22 where Windows extents at 1.28 would take
+        // 23), while the renderer boxes singleLineEm alone. The patched synthetic
+        // face pins the hhea sum at 1.5em over a 1.15em single line and 1.1em Windows
+        // extents, so body pitch must be 1.5*10*278/240 + 8.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">First body line words here</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">Second body line words here</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new HheaLineHeightFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        double pitch = lines[0].BaselineY - lines[1].BaselineY;
+        TestAssert.True(Math.Abs(pitch - 25.375d) < 0.000001d, "Auto line pitch must follow max hhea sum when larger; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    public static void DocxAutoLineBoxIgnoresWindowsExtents()
+    {
+        // Aptos take discriminator for the hhea maximum above: Windows extents at
+        // 1.28em over an hhea/singleLine at 1.22em must not move auto line boxes
+        // (Office Aptos take stays 24). The patched synthetic face pins win extents
+        // at 1.5em under a 1.15em single line and 1.0em hhea sum, so body pitch
+        // must stay 1.15*10*278/240 + 8.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">First body line words here</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">Second body line words here</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new WindowsExtentsFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        double pitch = lines[0].BaselineY - lines[1].BaselineY;
+        TestAssert.True(Math.Abs(pitch - 21.320833333333334d) < 0.000001d, "Auto line pitch must ignore Windows extents; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class WindowsExtentsFontResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            byte[] faceBytes = TestFontBuilder.CreateTestFont();
+            PatchWindowsExtents(faceBytes, ascender: 1100, descender: 400);
+            return new FontFaceResolution(
+                request.FamilyName,
+                "WinFace",
+                new FontStyleKey(request.Bold, request.Italic),
+                new MemoryFontProgramSource("test:winface", faceBytes),
+                IsFallback: false);
+        }
+
+        private static void PatchWindowsExtents(byte[] faceBytes, ushort ascender, ushort descender)
+        {
+            // hhea stays 800/-200/0 (1.0em sum) and typo/line metrics stay floored,
+            // so only the Windows-extents maximum could move the pitch (it must not).
+            int tableCount = (faceBytes[4] << 8) | faceBytes[5];
+            for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
+            {
+                int record = 12 + 16 * tableIndex;
+                if (faceBytes[record] == 0x4F && faceBytes[record + 1] == 0x53 && faceBytes[record + 2] == 0x2F && faceBytes[record + 3] == 0x32)
+                {
+                    int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
+                    faceBytes[offset + 74] = (byte)(ascender >> 8);
+                    faceBytes[offset + 75] = (byte)(ascender & 0xFF);
+                    faceBytes[offset + 76] = (byte)(descender >> 8);
+                    faceBytes[offset + 77] = (byte)(descender & 0xFF);
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Synthetic test font is missing the OS/2 table.");
+        }
+    }
+
+    private sealed class HheaLineHeightFontResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            byte[] faceBytes = TestFontBuilder.CreateTestFont();
+            PatchHheaMetrics(faceBytes, ascender: 1100, descender: -400);
+            return new FontFaceResolution(
+                request.FamilyName,
+                "HheaFace",
+                new FontStyleKey(request.Bold, request.Italic),
+                new MemoryFontProgramSource("test:hheaface", faceBytes),
+                IsFallback: false);
+        }
+
+        private static void PatchHheaMetrics(byte[] faceBytes, short ascender, short descender)
+        {
+            // The shared synthetic face (upm 1000, hhea 800/-200/0, typo 800/-200/0,
+            // win 900/200) floors singleLine at 1.15em; pin the hhea sum at 1.5em so
+            // the horizontal-header maximum discriminates from singleLine alone.
+            // hhea ascender/descender are signed FWords at table offsets 4 and 6.
+            int tableCount = (faceBytes[4] << 8) | faceBytes[5];
+            for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
+            {
+                int record = 12 + 16 * tableIndex;
+                if (faceBytes[record] == 0x68 && faceBytes[record + 1] == 0x68 && faceBytes[record + 2] == 0x65 && faceBytes[record + 3] == 0x61)
+                {
+                    int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
+                    faceBytes[offset + 4] = (byte)((ascender >> 8) & 0xFF);
+                    faceBytes[offset + 5] = (byte)(ascender & 0xFF);
+                    faceBytes[offset + 6] = (byte)((descender >> 8) & 0xFF);
+                    faceBytes[offset + 7] = (byte)(descender & 0xFF);
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Synthetic test font is missing the hhea table.");
+        }
+    }
+
 }
