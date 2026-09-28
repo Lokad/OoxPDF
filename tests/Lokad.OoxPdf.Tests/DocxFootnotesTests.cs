@@ -2414,6 +2414,28 @@ internal static class DocxFootnotesTests
         TestAssert.True(Math.Abs(ruleAfter0 - ruleDefault) < 0.000001d, "Footnote separator rule must match latent defaults; observed shift=" + Math.Abs(ruleAfter0 - ruleDefault).ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxEndnoteSeparatorIgnoresExactLineSpacing()
+    {
+        // RV06 exact-line probe (Word 16.0, edge-endsepspex): Office shifts the
+        // endnote block identically with exact-24 and auto separator lines
+        // (minus 8.76 both), so separator stories also ignore exact line rules
+        // while the renderer clamps the mark line box to 24pt (shift minus 3.76).
+        double topExact = LayoutEndnoteBodyTopWithSeparatorSpacing("<w:pPr><w:spacing w:line=\"480\" w:lineRule=\"exact\"/></w:pPr>");
+        double topAuto = LayoutEndnoteBodyTopWithSeparatorSpacing(string.Empty);
+        TestAssert.True(Math.Abs(topExact - topAuto) < 0.000001d, "Endnote separator exact line spacing must match auto lines; observed shift=" + Math.Abs(topExact - topAuto).ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    public static void DocxFootnoteSeparatorIgnoresExactLineSpacing()
+    {
+        // Shared story-layout path with endnote separators (Office evidence is
+        // endnote-only; no diverging footnote evidence): the footnote rule rides
+        // the separator bottom, so an exact line rule that Office ignores would
+        // move our rule with the taller story.
+        double ruleExact = LayoutFootnoteSeparatorRuleWithSpacing("<w:pPr><w:spacing w:line=\"480\" w:lineRule=\"exact\"/></w:pPr>");
+        double ruleAuto = LayoutFootnoteSeparatorRuleWithSpacing(string.Empty);
+        TestAssert.True(Math.Abs(ruleExact - ruleAuto) < 0.000001d, "Footnote separator exact line spacing must match auto lines; observed shift=" + Math.Abs(ruleExact - ruleAuto).ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     private static double LayoutEndnoteBodyTopWithSeparatorSpacing(string separatorParagraphProperties)
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

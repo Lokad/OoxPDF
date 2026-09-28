@@ -1506,6 +1506,21 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator &&
+                IsExactLineSpacing(paragraph.EffectiveProperties))
+            {
+                // RV06 exact-line probe (Word 16.0, edge-endsepex): Office shifts
+                // endnotes identically with exact-24 and auto separator lines, so
+                // separator stories ignore exact line rules while the renderer
+                // clamped the mark line box to 24pt (10pt content error). At-least
+                // rules stay flowing (unprobed).
+                paragraph = paragraph with
+                {
+                    LineSpacingPoints = null,
+                    Spacing = paragraph.Spacing with { LineValue = null, LineRuleValue = null },
+                };
+            }
+
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
             {
