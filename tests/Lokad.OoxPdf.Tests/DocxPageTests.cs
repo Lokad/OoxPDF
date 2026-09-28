@@ -2240,4 +2240,38 @@ internal static class DocxPageTests
     }
 
 
+    public static void DocxBreakSpillRowDoesNotConsumePageFit()
+    {
+        // Ladder-03 row-fragment case (Word COM reference): break-adjacent spacing
+        // rows are emitted without consuming page fit. Eight exact-19pt fillers plus
+        // an auto marker leave a sliver near 28pt; the spill row must not consume a
+        // line box on top or the following break turns a phantom empty page.
+        var bodyElements = new List<DocxBodyElement>();
+        for (int index = 0; index < 8; index++)
+        {
+            DocxTextRun run = new("Filler", 10d, null, false, false, false, null, null);
+            bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+                [run], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 19d,
+                new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+                DocxParagraphKeepRules.Empty, null)));
+        }
+        DocxTextRun markerRun = new("Marker text here   ", 10d, null, false, false, false, null, null);
+        bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+            [markerRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null,
+            DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null)));
+        DocxParagraph emptyBreak = new([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null);
+        bodyElements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", emptyBreak, null));
+        DocxTextRun tailRun = new("Tail", 10d, null, false, false, false, null, null);
+        bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+            [tailRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+            DocxParagraphKeepRules.Empty, null)));
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements, []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.True(layout.Pages[1].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the second page with no phantom page between.");
+    }
+
+
 }

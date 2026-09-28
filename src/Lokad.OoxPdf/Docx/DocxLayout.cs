@@ -1391,7 +1391,12 @@ internal sealed partial class DocxLayoutEngine
                         ContextualSpacingSuppressed: null,
                         SourceParagraph: paragraph,
                         Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false));
-                    cursorY -= breakSpillAfterSpacing + lineHeight;
+                    // Ladder-03 row-fragment case (Word COM reference): break-adjacent
+                    // spacing rows emit without consuming page fit. Consuming a line box
+                    // here shrinks the sliver below the following break advance and turns
+                    // a phantom empty page, while Office absorbs the spill row (probe B
+                    // starts p2 with no phantom). The row is already placed above, so
+                    // only the cursor advance is skipped.
                 }
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
