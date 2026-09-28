@@ -1507,6 +1507,23 @@ internal sealed partial class DocxLayoutEngine
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
+            if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
+            {
+                // RV06 endnote-spacing probes (Word 16.0, edge-endsepsp/endsepspb):
+                // Office holds separator-story output byte-identical across direct
+                // before/after 0 vs 24pt, so separator stories lay out with
+                // latent-default spacing while the renderer flowed direct values
+                // into the separator height (24pt content error on endnotes).
+                // Substitute latent defaults; docs without direct separator
+                // spacing resolve identically and stay byte-identical.
+                spacingProfile = spacingProfile with
+                {
+                    ParagraphBeforeSpacing = 0d,
+                    ParagraphAfterSpacing = DocxDefaults.DefaultParagraphAfterSpacingPoints * paragraphSpacingScale,
+                    AppliedBeforeSpacing = 0d,
+                };
+            }
+
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight, double paragraphBaselineOffset) = LayoutRelatedStoryParagraphTextLines(
