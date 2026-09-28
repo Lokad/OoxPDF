@@ -1091,13 +1091,6 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
-            {
-                if (story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? fresh) && !fresh.SeparatorPlaced)
-                {
-                    fresh.SeparatorPlaced = true;
-                }
-            }
         }
 
         if (drawHeadSeparator)
@@ -1112,6 +1105,15 @@ internal sealed partial class DocxLayoutEngine
         {
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
             double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0)
+            {
+                (DocxTextRun? continuationGapRun, double continuationGapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
+                double continuationGapPoints = ResolveSeparatorGapPoints(continuationGapRun, continuationGapFontSizePoints, separatorMeasurer);
+                (DocxPlacedRelatedStoryLayout placedContinuation, _) = PlaceContinuationSeparatorStory(activePage, activePageIndex, continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop + continuationGapPoints, separatorMeasurer, printScale);
+                activePlacedStories.Add(placedContinuation);
+                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+            }
+
             if (contentTop - storyHeight >= activePage.MarginBottom - 0.001d)
             {
                 DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop, separatorY: null);
@@ -1126,6 +1128,17 @@ internal sealed partial class DocxLayoutEngine
             else
             {
                 PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory);
+            }
+        }
+
+        if (inFlightNotes is not null)
+        {
+            foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+            {
+                if (story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? fresh) && !fresh.SeparatorPlaced)
+                {
+                    fresh.SeparatorPlaced = true;
+                }
             }
         }
     }
@@ -1173,11 +1186,22 @@ internal sealed partial class DocxLayoutEngine
         {
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
             double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            bool needsContinuationRule = false;
+            if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0)
+            {
+                needsContinuationRule = true;
+                (DocxTextRun? continuationGapRun, double continuationGapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
+                double continuationGapPoints = ResolveSeparatorGapPoints(continuationGapRun, continuationGapFontSizePoints, separatorMeasurer);
+                (DocxPlacedRelatedStoryLayout placedContinuation, _) = PlaceContinuationSeparatorStory(activePage, activePageIndex, continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop + continuationGapPoints, separatorMeasurer, printScale);
+                activePlacedStories.Add(placedContinuation);
+                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+            }
+
             if (contentTop - storyHeight >= activePage.MarginBottom - 0.001d)
             {
                 double? separatorY = null;
                 double separatorThickness = FootnoteSeparatorThicknessPoints;
-                if (firstStory)
+                if (firstStory && !needsContinuationRule)
                 {
                     (DocxTextRun? bodyRun, double bodyFontSizePoints) = FindSeparatorMarkFont(story.StoryLayout.TextLines);
                     (double syntheticOffsetPoints, double syntheticThicknessPoints) = ResolveSeparatorRuleGeometry(DocxRelatedStoryKind.Footnote, bodyRun, bodyFontSizePoints, separatorMeasurer);
@@ -1204,13 +1228,24 @@ internal sealed partial class DocxLayoutEngine
                 int headPageIndex = activePageIndex;
                 int headCount = activePlacedStories.Count;
                 PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory);
-                if (firstStory)
+                if (firstStory && !needsContinuationRule)
                 {
                     PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer);
                 }
             }
 
             firstStory = false;
+        }
+
+        if (inFlightNotes is not null)
+        {
+            foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+            {
+                if (story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? fresh) && !fresh.SeparatorPlaced)
+                {
+                    fresh.SeparatorPlaced = true;
+                }
+            }
         }
     }
 

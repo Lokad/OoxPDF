@@ -267,6 +267,32 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    internal static List<int> KeepChainBlockIndexes(IReadOnlyList<DocxBodyElement> elements, int elementIndex)
+    {
+        var chain = new List<int> { elementIndex };
+        if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
+        {
+            return chain;
+        }
+
+        DocxParagraph paragraph = paragraphElement.Paragraph;
+        int nextSearchIndex = elementIndex + 1;
+        while (paragraph.EffectiveProperties.KeepRules.KeepNext == true &&
+            TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
+        {
+            chain.Add(nextIndex);
+            if (next is not DocxParagraphElement nextParagraph)
+            {
+                break;
+            }
+
+            paragraph = nextParagraph.Paragraph;
+            nextSearchIndex = nextIndex + 1;
+        }
+
+        return chain;
+    }
+
     private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out DocxBodyElement? target)
     {
         bool found = TryFindNextKeepTarget(elements, startIndex, out _, out DocxBodyElement? indexedTarget);

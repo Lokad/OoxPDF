@@ -2205,6 +2205,57 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(120, placedTexts.Distinct().Count());
     }
 
+    public static void DocxKeepChainBlockIndexesFollowKeepNext()
+    {
+        DocxParagraph Keep(string text)
+        {
+            return DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d, keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+        }
+
+        DocxParagraph plain = DocxTests.CreateDocxLayoutParagraph("Plain", 10d, 12d);
+        var table = new DocxTable(null, [60d], [new DocxTableRow([new DocxTableCell("Cell", [plain], null, null, null, null, [], DocxTableCellMargins.Empty)], 30d)]);
+        IReadOnlyList<DocxBodyElement> elements = [new DocxParagraphElement(Keep("Keep zero")), new DocxParagraphElement(Keep("Keep one")), new DocxParagraphElement(plain), new DocxTableElement(table), new DocxParagraphElement(Keep("Keep four"))];
+
+        TestAssert.True(new List<int> { 0, 1, 2 }.SequenceEqual(DocxLayoutEngine.KeepChainBlockIndexes(elements, 0)), "Keep chain from 0 must span both keep paras plus the plain follower.");
+        TestAssert.True(new List<int> { 1, 2 }.SequenceEqual(DocxLayoutEngine.KeepChainBlockIndexes(elements, 1)), "Keep chain from 1 must span its keep para plus the plain follower.");
+        TestAssert.True(new List<int> { 2 }.SequenceEqual(DocxLayoutEngine.KeepChainBlockIndexes(elements, 2)), "Plain paragraphs carry no chain.");
+        TestAssert.True(new List<int> { 3 }.SequenceEqual(DocxLayoutEngine.KeepChainBlockIndexes(elements, 3)), "Table elements carry no chain.");
+        TestAssert.True(new List<int> { 4 }.SequenceEqual(DocxLayoutEngine.KeepChainBlockIndexes(elements, 4)), "Trailing keep with no follower carries no chain.");
+    }
+
+    public static void DocxSharedContinuedFootnotePagesCarryContinuationRules()
+    {
+        DocxDocument document = CreateInterleavingDocument(noteParagraphCount: 120, fillerParagraphCount: 60, footnoteId: "44", includeSeparators: true);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+        bool headPageSeen = false;
+        foreach (DocxLayoutPage page in layout.Pages)
+        {
+            bool hasNormalLines = page.PlacedRelatedStories
+                .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                    (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+                .SelectMany(story => story.TextLines)
+                .Any();
+            if (!hasNormalLines)
+            {
+                continue;
+            }
+
+            if (!headPageSeen)
+            {
+                headPageSeen = true;
+                continue;
+            }
+        TestAssert.True(
+                page.PlacedRelatedStories.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                    story.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator),
+                "Continued footnote pages must open with a continuation rule.");
+
+        }
+
+    }
+
     private static DocxDocument CreateMidBodyInterleavingDocument(int fillersBefore, int noteParagraphCount, string footnoteId, int fillersAfter)
     {
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
@@ -2268,7 +2319,7 @@ internal static class DocxFootnotesTests
         };
     }
 
-    private static DocxDocument CreateInterleavingDocument(int noteParagraphCount, int fillerParagraphCount, string footnoteId)
+    private static DocxDocument CreateInterleavingDocument(int noteParagraphCount, int fillerParagraphCount, string footnoteId, bool includeSeparators = false)
     {
         DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
         {
@@ -2295,6 +2346,14 @@ internal static class DocxFootnotesTests
             [],
             [], null);
         var bodyElements = new List<DocxParagraphElement> { new DocxParagraphElement(anchor) };
+        DocxRelatedStory? separatorStory = null;
+        DocxRelatedStory? continuationStory = null;
+        if (includeSeparators)
+        {
+            separatorStory = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "0", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Note separator mark", 10d, 12d))], [], [], DocxRelatedStoryType.Separator);
+            continuationStory = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Note continuation mark", 10d, 12d))], [], [], DocxRelatedStoryType.ContinuationSeparator);
+        }
+
         var paragraphs = new List<DocxParagraph> { anchor };
         for (int index = 0; index < fillerParagraphCount; index++)
         {
@@ -2318,6 +2377,6 @@ internal static class DocxFootnotesTests
             paragraphs.ToArray(),
             [])
         {
-            RelatedStories = [footnoteStory]
+            RelatedStories = separatorStory is null || continuationStory is null ? [footnoteStory] : [footnoteStory, separatorStory, continuationStory]
         };
     }}

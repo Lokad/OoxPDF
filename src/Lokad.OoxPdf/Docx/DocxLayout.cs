@@ -285,6 +285,7 @@ internal sealed partial class DocxLayoutEngine
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
         var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
+        var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
         double? bodyFirstBaselineMemo = null;
@@ -475,6 +476,71 @@ internal sealed partial class DocxLayoutEngine
                 AdvanceColumnOrPage();
                 RegisterInFlightFootnotesForSourceBlock(sourceBlockIndex);
             }
+        }
+
+        // Keep decisions look ahead: the chain about to move must reserve the notes
+        // its not-yet-laid follower blocks will register, measured exactly like the
+        // body reserve. Measured notes are consumed from future lookahead so follower
+        // checks on later pages do not re-advance the same chain; in-flight notes live
+        // in the body reserve and the checking block itself stays exempt like Register.
+        double KeepChainFootnoteReserve(int sourceBlockIndex)
+        {
+            double reserve = 0d;
+            IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
+            double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
+            if (!storyLookupByWidth.TryGetValue(widthKey, out Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>? storyByKey))
+            {
+                storyByKey = CreateRelatedStoryLookup(pageStoryLayouts);
+                storyLookupByWidth[widthKey] = storyByKey;
+            }
+
+            DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
+            DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
+            foreach (int chainBlock in KeepChainBlockIndexes(document.BodyElements, sourceBlockIndex))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (chainBlock == sourceBlockIndex)
+                {
+                    continue;
+                }
+
+                if (!locationsByBlock.TryGetValue(chainBlock, out List<DocxInlineReferenceLocation>? blockLocations))
+                {
+                    continue;
+                }
+
+                foreach (DocxInlineReferenceLocation location in blockLocations)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    DocxInlineReference reference = location.Reference;
+                    if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null)
+                    {
+                        continue;
+                    }
+
+                    var key = (reference.Kind, reference.Id);
+                    if (placedStoryKeys.Contains(key) || keepLookaheadYielded.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
+                    {
+                        continue;
+                    }
+
+                    if (storyLayout.TextLines.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    keepLookaheadYielded.Add(key);
+                    var transient = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, chainBlock, location);
+                    reserve += FootnoteRemainderHeight(transient, GetStoryTextLineBoxHeights(storyLayout), separatorMeasurerForNotes);
+                }
+            }
+
+            return Math.Max(0d, reserve);
         }
 
         double FootnoteRemainderTotal()
@@ -1031,7 +1097,7 @@ internal sealed partial class DocxLayoutEngine
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale).Height <= CurrentFrameBottom())
+                cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale).Height <= Math.Max(CurrentFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex)))
             {
                 AdvanceColumnOrPage();
                 RegisterInFlightFootnotesForSourceBlock(elementIndex);
