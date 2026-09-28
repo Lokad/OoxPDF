@@ -154,7 +154,11 @@ internal sealed partial class DocxLayoutEngine
             if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
             {
                 double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
-                double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false);
+                // Static first baselines join the hhea-ascender opt-in (Word 16.0 header
+                // grid: Tahoma sits 0.56 low with hheaAsc 1.0005); providers without hhea
+                // metrics keep legacy.
+                double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
+                double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
                 if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
                 {
                     firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
@@ -339,7 +343,8 @@ internal sealed partial class DocxLayoutEngine
                         double staticDesignLineHeight = rawSingleLineHeight * staticAutoFactor;
                         staticSingleLineHeight = rawSingleLineHeight;
                         staticLineHeight = staticDesignLineHeight * paragraphSpacingScale;
-                        double staticBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(staticFontSize, staticDesignLineHeight, hasExplicitLineSpacing: false);
+                        double? staticHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, staticFontSize, unscaledLineMetrics);
+                        double staticBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(staticFontSize, staticDesignLineHeight, hasExplicitLineSpacing: false, staticHheaAscender);
                         if (HasNoSpacingElement(staticEffective) && Math.Abs(staticFontSize - 11d) < 0.000000001d)
                         {
                             staticBaselineOffset += UntokenedParagraphBaselineExtraPoints;

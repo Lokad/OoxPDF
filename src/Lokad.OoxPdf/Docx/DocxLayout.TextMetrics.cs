@@ -158,9 +158,9 @@ internal static class DocxLineMetrics
             : Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d);
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider)
     {
-        if (measurer is not IDocxLineMetricsProvider provider || paragraph.Runs.Count == 0)
+        if (provider is null || paragraph.Runs.Count == 0)
         {
             return null;
         }
@@ -178,6 +178,11 @@ internal static class DocxLineMetrics
         }
 
         return widest is null ? null : (double?)provider.MeasureHheaAscender(widest, fontSize);
+    }
+
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
+    {
+        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider);
     }
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
