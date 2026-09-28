@@ -2212,7 +2212,7 @@ internal static class DocxPageTests
     {
         // Edge-breakline probes (Word COM references): an explicit page break in an
         // empty paragraph consumes its line box, so at an exactly exhausted page the
-        // renderer turns once (empty middle page, tail on page 3 on both sides) and
+        // renderer turns once (whitespace-only spill middle page, tail on page 3 on both sides) and
         // must not turn twice. Nine exact-20pt fillers fill the 180pt probe page
         // exactly, forcing the zero-remainder turn.
         var bodyElements = new List<DocxBodyElement>();
@@ -2235,10 +2235,11 @@ internal static class DocxPageTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         TestAssert.Equal(3, layout.Pages.Count);
-        TestAssert.True(layout.Pages[1].Items.Count == 0, "The zero-remainder turn must leave a single empty middle page.");
+        DocxTextLineLayout[] middlePageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+        TestAssert.True(middlePageLines.Length != 0, "The zero-remainder turn must carry the spill row to the middle page (Word COM breakline references: whitespace-only middle page).");
+        TestAssert.True(middlePageLines.All(line => string.IsNullOrWhiteSpace(line.Text)), "The middle page must carry no visible text after exactly one turn.");
         TestAssert.True(layout.Pages[2].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the third page after exactly one turn.");
     }
-
 
     public static void DocxBreakSpillRowDoesNotConsumePageFit()
     {
@@ -2273,5 +2274,44 @@ internal static class DocxPageTests
         TestAssert.True(layout.Pages[1].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the second page with no phantom page between.");
     }
 
+    public static void DocxBreakSpillRowTurnsPageWhenOverflowing()
+    {
+        // Fragment-threshold case (Word COM reference on
+        // docx-ladder-03-table-row-fragment-threshold): markerB spill paints below
+        // the bottom margin on our p2 while Office carries it to the p3 fragment
+        // top. An overflowing spill must turn the page like any other overflowing
+        // item instead of painting below the margin; fit accounting stays
+        // zero-consumption so the following break still fits on the fresh page.
+        // Eight exact-20pt fillers leave the auto marker fitting with a sliver the
+        // spill box cannot share.
+        var bodyElements = new List<DocxBodyElement>();
+        for (int index = 0; index < 8; index++)
+        {
+            DocxTextRun run = new("Filler", 10d, null, false, false, false, null, null);
+            bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+                [run], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
+                new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+                DocxParagraphKeepRules.Empty, null)));
+        }
+        bodyElements.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Marker text here   ", 10d, 12d)));
+        DocxParagraph emptyBreak = new([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null);
+        bodyElements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", emptyBreak, null));
+        DocxTextRun tailRun = new("Tail", 10d, null, false, false, false, null, null);
+        bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
+            [tailRun], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 20d,
+            new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+            DocxParagraphKeepRules.Empty, null)));
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(bodyElements, []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(3, layout.Pages.Count);
+        DocxTextLineLayout[] firstPageLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+        TestAssert.True(firstPageLines.Any(line => line.Text.StartsWith("Marker text here", StringComparison.Ordinal)), "Marker must stay on the first page.");
+        TestAssert.True(firstPageLines.All(line => line.Text != "  "), "Spill must not paint below the margin on the first page.");
+        DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+        DocxTextLineLayout spill = secondPageLines.Single(line => line.Text == "  ");
+        TestAssert.True(spill.BaselineY > 150d, "Spill must ride the second page top.");
+        TestAssert.True(layout.Pages[2].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the third page.");
+    }
 
 }

@@ -1336,6 +1336,18 @@ internal sealed partial class DocxLayoutEngine
                         breakSpillBaseline += UntokenedParagraphBaselineExtraPoints;
                     }
 
+                    // Fragment-threshold case (Word COM reference on
+                    // docx-ladder-03-table-row-fragment-threshold): markerB spill paints
+                    // below the bottom margin on our p2 while Office carries it to the
+                    // p3 fragment top. An overflowing spill turns the page like any
+                    // other overflowing item instead of painting below the margin; fit
+                    // accounting stays zero-consumption so the following break still
+                    // fits on the fresh page.
+                    if (cursorY - breakSpillAfterSpacing - lineHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight)))
+                    {
+                        AdvanceForOverflowingItem(lineHeight, elementIndex);
+                    }
+
                     currentItems.Add(new DocxTextLineLayout(
                         "  ",
                         firstRun,
