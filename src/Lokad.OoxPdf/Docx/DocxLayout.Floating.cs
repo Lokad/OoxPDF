@@ -116,7 +116,12 @@ internal sealed partial class DocxLayoutEngine
         double continuationParagraphWidth = Math.Max(1d, bodyWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, fixedScale));
         DocxTextRun firstRun = paragraph.Runs[0];
         DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
-        double storyBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective));
+        // Auto insets take max(hheaAscender, 0.94em) for footnote/endnote stories
+        // (Word 16.0 endnote grids); comment/textbox stories keep legacy (unprobed).
+        double? storyHheaAscender = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
+            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer)
+            : null;
+        double storyBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective), storyHheaAscender);
         // RV05: ordered inline atoms (related-story path). Affined images in
         // text-mixed paragraphs attach to wrapped lines at run position.
         DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, lineHeight);

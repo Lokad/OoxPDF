@@ -41,6 +41,14 @@ internal interface IDocxLineMetricsProvider
 {
     double MeasureSingleLineHeight(DocxTextRun? run, double fontSize);
 
+    // Horizontal-header ascender for auto first-baseline insets (Word 16.0
+    // body-grid probes). Providers without hhea metrics return zero so the
+    // legacy inset applies and test doubles stay byte-identical.
+    double MeasureHheaAscender(DocxTextRun? run, double fontSize)
+    {
+        return 0d;
+    }
+
     // Horizontal-header line height for auto line boxes (Word 16.0 body-grid
     // probes). Providers without hhea metrics keep the single-line height, so
     // test doubles and fallbacks stay byte-identical.
@@ -123,6 +131,13 @@ internal static class DocxLineMetrics
             : font.Os2.WindowsAscender * fontSize / font.UnitsPerEm;
     }
 
+    public static double MeasureHheaAscender(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0
+            ? 0d
+            : font.Hhea.HorizontalAscender * fontSize / font.UnitsPerEm;
+    }
+
     public static double MeasureWindowsDescender(OpenTypeFont font, double fontSize)
     {
         return font.UnitsPerEm == 0
@@ -130,14 +145,39 @@ internal static class DocxLineMetrics
             : font.Os2.WindowsDescender * fontSize / font.UnitsPerEm;
     }
 
-    public static double ResolveBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing)
+    public static double ResolveBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing, double? hheaAscenderPoints = null)
     {
         // RV06 pagination probe (edge-page-ex48-body, Word 16.0): Office drops the
         // first baseline of exact-spaced body text to 0.8 x the exact line height,
         // the same ratio as in-cell text; the 0.299em bottom inset sat 6pt too deep.
+        // Word 16.0 body-grid probes (Tahoma/Verdana/Segoe UI first baselines drift
+        // with hheaAsc while Times/Aptos hold the 0.94em rule): auto insets take
+        // max(hheaAscender, 0.94em). Opt-in per call site; null keeps legacy.
         return hasExplicitLineSpacing
             ? Math.Max(0d, lineHeight * WordExactLineFirstBaselineRatio)
-            : fontSize * WordAutoLineBaselineOffsetEm;
+            : Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d);
+    }
+
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
+    {
+        if (measurer is not IDocxLineMetricsProvider provider || paragraph.Runs.Count == 0)
+        {
+            return null;
+        }
+
+        DocxTextRun? widest = null;
+        double widestSize = -1d;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            double size = run.EffectiveProperties.FontSize;
+            if (size > widestSize)
+            {
+                widestSize = size;
+                widest = run;
+            }
+        }
+
+        return widest is null ? null : (double?)provider.MeasureHheaAscender(widest, fontSize);
     }
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)

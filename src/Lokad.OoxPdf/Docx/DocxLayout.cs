@@ -1157,7 +1157,8 @@ internal sealed partial class DocxLayoutEngine
                         DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                         _ => paragraphX
                     };
-                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective));
+                    double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, paragraphFontSize, textMeasurer);
+                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective), bodyHheaAscender);
                     if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
                     {
                         // Office A/B (w18/w20/w21/w26/w29/w32 untokened probes, Word-COM

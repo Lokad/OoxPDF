@@ -1442,6 +1442,39 @@ internal static class DocxTextSpacingTests
         }
     }
 
+    public static void DocxFirstBaselineUsesHheaAscenderWhenLarger()
+    {
+        // Word 16.0 body-grid probes (Tahoma/Verdana/Segoe UI first baselines drift
+        // with hheaAsc while Times/Aptos hold the 0.94em rule): auto first-baseline
+        // insets follow max(hheaAscender, 0.94em) (Tahoma 710.02 vs 710.60 at 10pt
+        // with hheaAsc 1.0005). The patched synthetic face pins hheaAsc at 1.1em, so
+        // the first baseline must sit at 720 - 11.0 with explicit top margin 72.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">Only body line words here</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new HheaLineHeightFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .ToArray();
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.True(Math.Abs(lines[0].BaselineY - 709.0d) < 0.000001d, "First baseline must follow max hhea ascender when larger; observed baseline=" + lines[0].BaselineY.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     private sealed class HheaLineHeightFontResolver : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
