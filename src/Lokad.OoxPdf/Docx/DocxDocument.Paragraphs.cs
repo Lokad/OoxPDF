@@ -36,6 +36,12 @@ internal sealed record DocxParagraph(
     // measurement includes it because Office sizes columns with it.
     public string DeletedText { get; init; } = string.Empty;
 
+    // Pilcrow (paragraph-mark) run size through the style cascade, excluding direct
+    // run formatting. Office sizes row-end and break-spill spaces at pilcrow size
+    // (spill probes 2026-09-28: marker-direct 9pt carries 12pt spills). Null keeps
+    // legacy run-size behavior (synthetic and unresolvable paragraphs).
+    public double? ParagraphMarkFontSize { get; init; }
+
     public DocxEffectiveParagraphProperties EffectiveProperties => new(
         StyleId,
         Alignment,

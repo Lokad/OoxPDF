@@ -184,14 +184,17 @@ internal sealed partial class DocxReader
 
         FinalizeOpenComplexFields();
 
+        // Pilcrow (paragraph-mark) size through the style cascade, excluding direct run
+        // formatting. Row-end and break-spill spaces resolve at pilcrow size in Word
+        // (spill probes 2026-09-28), so every paragraph carries it even when runs exist.
+        DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
+            paragraphMarkRunProperties,
+            paragraphStyleId,
+            characterStyleId: null,
+            styles,
+            tableCellStyle?.Run);
         if (runs.Count == 0 && images.Count == 0 && inlineTextBoxes.Count == 0)
         {
-            DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
-                paragraphMarkRunProperties,
-                paragraphStyleId,
-                characterStyleId: null,
-                styles,
-                tableCellStyle?.Run);
             DocxRunStyleResolution paragraphMarkStyleResolution = CreateRunStyleResolution(
                 paragraphMarkRunProperties,
                 paragraphStyleId,
@@ -258,7 +261,8 @@ internal sealed partial class DocxReader
             BookmarkAnchors = bookmarkAnchors,
             Revisions = paragraphRevisions,
             HasDeletedParagraphMark = hasDeletedParagraphMark,
-            DeletedText = deletedText.ToString()
+            DeletedText = deletedText.ToString(),
+            ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints
         };
 
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)

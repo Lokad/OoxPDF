@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -547,7 +547,11 @@ internal sealed partial class DocxRenderer
         double fontScale,
         bool useWordCompatibleTextProfile)
     {
-        double fontSize = GetSegmentFontSize(segment, line.FontSize) * fontScale;
+        // Spill sizing probes (Word COM references edge-spillsrc-break14/docdef16):
+        // emission-appended terminal line spaces resolve at pilcrow size through the
+        // style cascade (12pt trailing for a 9pt marker), not at the last layout
+        // segment size. Null pilcrows keep legacy behavior.
+        double fontSize = (line.SourceParagraph?.ParagraphMarkFontSize ?? GetSegmentFontSize(segment, line.FontSize)) * fontScale;
         return ShouldCapWordCompatibleAllMarkupTextFontSize(fontSize, useWordCompatibleTextProfile)
             ? 11d * fontScale
             : fontSize;

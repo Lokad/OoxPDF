@@ -2294,7 +2294,7 @@ internal static class DocxPageTests
                 DocxParagraphKeepRules.Empty, null)));
         }
         bodyElements.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Marker text here   ", 10d, 12d)));
-        DocxParagraph emptyBreak = new([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null);
+        DocxParagraph emptyBreak = new DocxParagraph([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null) with { ParagraphMarkFontSize = 12d };
         bodyElements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", emptyBreak, null));
         DocxTextRun tailRun = new("Tail", 10d, null, false, false, false, null, null);
         bodyElements.Add(new DocxParagraphElement(new DocxParagraph(
@@ -2310,8 +2310,56 @@ internal static class DocxPageTests
         TestAssert.True(firstPageLines.All(line => line.Text != "  "), "Spill must not paint below the margin on the first page.");
         DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
         DocxTextLineLayout spill = secondPageLines.Single(line => line.Text == "  ");
-        TestAssert.True(Math.Abs(spill.BaselineY - 180.6d) < 0.000001d, "Spill must open the second page one plain first-line inset below content top (190 minus 0.94em at 10pt); observed baseline=" + spill.BaselineY.ToString(CultureInfo.InvariantCulture));
+        TestAssert.True(Math.Abs(spill.BaselineY - 178.72d) < 0.000001d, "Spill must open the second page one plain first-line inset below content top (190 minus 0.94em at the 12pt break pilcrow); observed baseline=" + spill.BaselineY.ToString(CultureInfo.InvariantCulture));
         TestAssert.True(layout.Pages[2].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the third page.");
+    }
+    public static void DocxBreakSpillRowUsesPilcrowSizes()
+    {
+        // Spill sizing probes (Word COM references edge-spillsrc-break14 and
+        // edge-spillsrc-docdef16): Office sizes row-end and break-spill spaces at
+        // pilcrow size through the style cascade, not at direct run size (a 9pt
+        // marker carries 12pt spills; the tabbed second spill space follows the
+        // break pilcrow at 14). Pre-fix every spill segment renders at run size.
+        DocxParagraph marker = DocxTests.CreateDocxLayoutParagraph("Marker sized nine   ", 10d, 12d) with { ParagraphMarkFontSize = 14d };
+        DocxParagraph emptyBreak = new DocxParagraph([], [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null) with { ParagraphMarkFontSize = 12d };
+        DocxParagraph tail = DocxTests.CreateDocxLayoutParagraph("Tail", 10d, 12d);
+        var spillElements = new List<DocxBodyElement>
+        {
+            new DocxParagraphElement(marker),
+            DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", emptyBreak, null),
+            new DocxParagraphElement(tail)
+        };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(DocxTests.CreateLayoutTestDocument(spillElements, []), new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(2, layout.Pages.Count);
+        DocxTextLineLayout[] firstPageLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+        DocxTextLineLayout markerLine = firstPageLines.Single(line => line.Text.StartsWith("Marker sized nine", StringComparison.Ordinal));
+        TestAssert.Equal(14d, markerLine.Segments[markerLine.Segments.Count - 1].FontSize ?? -1d);
+        DocxTextLineLayout spill = firstPageLines.Single(line => line.Text == "  ");
+        TestAssert.Equal(12d, spill.FontSize);
+        TestAssert.Equal(14d, spill.Segments[0].FontSize ?? -1d);
+        TestAssert.Equal(12d, spill.Segments[1].FontSize ?? -1d);
+    }
+    public static void DocxTerminalLineSpaceUsesPilcrowSize()
+    {
+        // Spill sizing probes (Word COM references edge-spillsrc-break14 and
+        // edge-spillsrc-docdef16): emission-appended terminal line spaces resolve at
+        // pilcrow size through the style cascade (12pt trailing for a 9pt marker),
+        // not at the last layout segment size. Pre-fix the terminal space renders
+        // at run size. Null pilcrows keep legacy behavior.
+        DocxParagraph marker = DocxTests.CreateDocxLayoutParagraph("Marker sized nine", 10d, 12d) with { ParagraphMarkFontSize = 14d };
+        DocxParagraph tail = DocxTests.CreateDocxLayoutParagraph("Tail", 10d, 12d);
+        var spillElements = new List<DocxBodyElement>
+        {
+            new DocxParagraphElement(marker),
+            new DocxParagraphElement(tail)
+        };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(spillElements, []);
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
+        DocxTextEmissionLineSnapshot markerLine = emission.Lines.Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0);
+        TestAssert.Equal(1, markerLine.TerminalSpaceSegmentCount);
+        TestAssert.Equal(14d, markerLine.Segments[markerLine.Segments.Count - 1].FontSize);
     }
 
 }

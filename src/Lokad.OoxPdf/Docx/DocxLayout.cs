@@ -1284,7 +1284,13 @@ internal sealed partial class DocxLayoutEngine
                 // patterns).
                 int breakSpillLineIndex = FindBreakSpillLineIndex(currentItems, paragraph);
                 bool breakParagraphHasVisibleText = textSpans.Any(static span => span.Text.Any(static character => !char.IsWhiteSpace(character)));
-                double breakSpaceWidth = textMeasurer.MeasureText(firstRun, " ", paragraphFontSize);
+                // Spill sizing probes (Word COM references edge-spillsrc-break14/docdef16):
+                // row-end and spill spaces resolve at pilcrow size through the style cascade
+                // (a 9pt marker carries 12pt spills; the tabbed second spill space follows
+                // the break pilcrow at 14), not at direct run size. Null pilcrows keep the
+                // legacy run sizes (synthetic paragraphs).
+                double markerPilcrowSize = paragraph.ParagraphMarkFontSize ?? paragraphFontSize;
+                double markerSpaceWidth = textMeasurer.MeasureText(firstRun, " ", markerPilcrowSize);
                 if (paragraph.Images.Count == 0 &&
                     paragraph.InlineTextBoxes.Count == 0 &&
                     lines.Length > 0 &&
@@ -1297,8 +1303,8 @@ internal sealed partial class DocxLayoutEngine
                         " ",
                         firstRun,
                         breakLastLine.X + breakLastLine.Width,
-                        breakSpaceWidth,
-                        paragraphFontSize,
+                        markerSpaceWidth,
+                        markerPilcrowSize,
                         0d,
                         0d,
                         DocxTextStateCharacterSpacingSource.None,
@@ -1309,7 +1315,7 @@ internal sealed partial class DocxLayoutEngine
                     currentItems[breakSpillLineIndex] = breakLastLine with
                     {
                         Text = breakLastLine.Text + " ",
-                        Width = breakLastLine.Width + breakSpaceWidth,
+                        Width = breakLastLine.Width + markerSpaceWidth,
                         Segments = [.. breakLastLine.Segments, breakRowEndSegment],
                     };
                 }
@@ -1330,8 +1336,10 @@ internal sealed partial class DocxLayoutEngine
                     double breakSpillAfterSpacing = spacingProfile.ParagraphAfterSpacing;
                     double breakSpillX = x + continuationTextStartOffset;
                     double breakSpillTabX = breakSpillX + 144d * paragraphSpacingScale;
-                    double breakSpillBaseline = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective));
-                    if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
+                    double breakPilcrowSize = nextBreakParagraph.ParagraphMarkFontSize ?? GetParagraphFontSize(nextBreakParagraph);
+                    double breakSpaceWidth = textMeasurer.MeasureText(firstRun, " ", breakPilcrowSize);
+                    double breakSpillBaseline = DocxLineMetrics.ResolveBodyBaselineOffset(breakPilcrowSize, lineHeight, IsExactLineSpacing(effective));
+                    if (HasNoSpacingElement(effective) && Math.Abs(breakPilcrowSize - 11d) < 0.000000001d)
                     {
                         breakSpillBaseline += UntokenedParagraphBaselineExtraPoints;
                     }
@@ -1353,13 +1361,13 @@ internal sealed partial class DocxLayoutEngine
                     // (face-independent 0.94em: both spill spaces share one Y across faces with
                     // different hhea ascenders, and exact-24 continuations would sit 7.9 deeper).
                     double breakSpillBaselineY = breakSpillTurnedPage
-                        ? cursorY - paragraphFontSize * DocxLineMetrics.WordAutoLineBaselineOffsetEm
+                        ? cursorY - breakPilcrowSize * DocxLineMetrics.WordAutoLineBaselineOffsetEm
                         : cursorY - breakSpillAfterSpacing - breakSpillBaseline;
 
                     currentItems.Add(new DocxTextLineLayout(
                         "  ",
                         firstRun,
-                        paragraphFontSize,
+                        breakPilcrowSize,
                         breakSpillX,
                         breakSpillBaselineY,
                         (breakSpillTabX - breakSpillX) + breakSpaceWidth,
@@ -1368,8 +1376,8 @@ internal sealed partial class DocxLayoutEngine
                                 " ",
                                 firstRun,
                                 breakSpillX,
-                                breakSpaceWidth,
-                                paragraphFontSize,
+                                markerSpaceWidth,
+                                markerPilcrowSize,
                                 0d,
                                 0d,
                                 DocxTextStateCharacterSpacingSource.None,
@@ -1382,7 +1390,7 @@ internal sealed partial class DocxLayoutEngine
                                 firstRun,
                                 breakSpillTabX,
                                 breakSpaceWidth,
-                                paragraphFontSize,
+                                breakPilcrowSize,
                                 0d,
                                 0d,
                                 DocxTextStateCharacterSpacingSource.None,
