@@ -2310,7 +2310,7 @@ internal static class DocxPageTests
         TestAssert.True(firstPageLines.All(line => line.Text != "  "), "Spill must not paint below the margin on the first page.");
         DocxTextLineLayout[] secondPageLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
         DocxTextLineLayout spill = secondPageLines.Single(line => line.Text == "  ");
-        TestAssert.True(spill.BaselineY > 150d, "Spill must ride the second page top.");
+        TestAssert.True(Math.Abs(spill.BaselineY - 180.6d) < 0.000001d, "Spill must open the second page one plain first-line inset below content top (190 minus 0.94em at 10pt); observed baseline=" + spill.BaselineY.ToString(CultureInfo.InvariantCulture));
         TestAssert.True(layout.Pages[2].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Tail"), "Tail must start the third page.");
     }
 

@@ -1343,17 +1343,25 @@ internal sealed partial class DocxLayoutEngine
                     // other overflowing item instead of painting below the margin; fit
                     // accounting stays zero-consumption so the following break still
                     // fits on the fresh page.
-                    if (cursorY - breakSpillAfterSpacing - lineHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight)))
+                    bool breakSpillTurnedPage = cursorY - breakSpillAfterSpacing - lineHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight));
+                    if (breakSpillTurnedPage)
                     {
                         AdvanceForOverflowingItem(lineHeight, elementIndex);
                     }
+                    // Turned spills open the fresh page with a plain first-line inset:
+                    // uniform 11.3pt at 12pt across auto/exact probes and Aptos/Arial faces
+                    // (face-independent 0.94em: both spill spaces share one Y across faces with
+                    // different hhea ascenders, and exact-24 continuations would sit 7.9 deeper).
+                    double breakSpillBaselineY = breakSpillTurnedPage
+                        ? cursorY - paragraphFontSize * DocxLineMetrics.WordAutoLineBaselineOffsetEm
+                        : cursorY - breakSpillAfterSpacing - breakSpillBaseline;
 
                     currentItems.Add(new DocxTextLineLayout(
                         "  ",
                         firstRun,
                         paragraphFontSize,
                         breakSpillX,
-                        cursorY - breakSpillAfterSpacing - breakSpillBaseline,
+                        breakSpillBaselineY,
                         (breakSpillTabX - breakSpillX) + breakSpaceWidth,
                         [
                             new DocxTextSegmentLayout(
