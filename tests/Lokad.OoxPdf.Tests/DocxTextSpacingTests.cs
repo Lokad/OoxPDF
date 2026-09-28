@@ -1475,6 +1475,40 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs(lines[0].BaselineY - 709.0d) < 0.000001d, "First baseline must follow max hhea ascender when larger; observed baseline=" + lines[0].BaselineY.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxTableCellFirstBaselineUsesHheaAscenderWhenLarger()
+    {
+        // Word 16.0 cell-inset probes (Calibri/Tahoma single-cell first baselines
+        // 710.50 vs 710.02 at 10pt): in-cell first baselines follow the body rule,
+        // max(hheaAscender, 0.94em) (Tahoma gap 0.48 matches hheaAsc 1.0005 over
+        // Calibri 0.9521). The patched synthetic face pins hheaAsc at 1.1em, so the
+        // cell first baseline must sit at 190 minus 11.0 on the probe page geometry.
+        DocxTextRun run = new("Cell", 10d, null, false, false, false, null, null);
+        DocxParagraph paragraph = new(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+
+        var resolver = new HheaLineHeightFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        double baselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().BaselineY;
+        TestAssert.True(Math.Abs(baselineY - 179.0d) < 0.000001d, "Cell first baseline must follow max hhea ascender when larger; observed baseline=" + baselineY.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
     private sealed class HheaLineHeightFontResolver : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)

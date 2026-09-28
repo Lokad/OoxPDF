@@ -1696,9 +1696,9 @@ internal sealed partial class DocxLayoutEngine
             .Max();
     }
 
-    private static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
+    private static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
     {
-        return DocxLineMetrics.ResolveTableCellFirstBaselineInset(paragraphs);
+        return DocxLineMetrics.ResolveTableCellFirstBaselineInset(paragraphs, measurer);
     }
 
 }

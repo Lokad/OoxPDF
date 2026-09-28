@@ -277,7 +277,7 @@ internal sealed partial class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double paddingTop = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
-        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         bool pageStatic = !HasPageDynamicFields(bodyElements);
@@ -328,7 +328,7 @@ internal sealed partial class DocxLayoutEngine
         var placedImages = new List<DocxInlineImageLayout>();
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
-        double cellFirstBaselineInset = ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(bodyElements));
+        double cellFirstBaselineInset = ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(bodyElements), measurer);
         int paragraphIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
@@ -471,7 +471,10 @@ internal sealed partial class DocxLayoutEngine
                 // after the first-line inset. Each line corrects against the
                 // cell-first inset, scaled like the pitch; single-size cells
                 // self-zero.
-                double lineBaselineTransition = (DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)) - cellFirstBaselineInset) * context.ParagraphSpacingScale;
+                // Cell first baselines hang off this transition offset (the cell insets
+                // above cancel out of it), so it joins the hhea-ascender opt-in while the
+                // midline image-attach offset below keeps legacy (unprobed for images).
+                double lineBaselineTransition = (DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, measurer)) - cellFirstBaselineInset) * context.ParagraphSpacingScale;
                 for (int lineIndex = 0; lineIndex < wrappedLines.Length; lineIndex++)
                 {
                     DocxWrappedTextLine line = wrappedLines[lineIndex];
@@ -716,7 +719,7 @@ internal sealed partial class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double paddingTop = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
-        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;

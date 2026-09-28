@@ -180,7 +180,7 @@ internal static class DocxLineMetrics
         return widest is null ? null : (double?)provider.MeasureHheaAscender(widest, fontSize);
     }
 
-    public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs)
+    public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
     {
         DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
         if (firstTextParagraph is null)
@@ -201,7 +201,32 @@ internal static class DocxLineMetrics
         }
 
         // Word places the in-cell first baseline with the body rule (shading probes 2026-09-06: in-cell offsets match winAscent like body text); the full-em inset sat 0.05em too deep.
-        return firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize) * WordAutoLineBaselineOffsetEm;
+        // Word 16.0 cell-inset probes (Calibri/Tahoma single cells 710.50 vs 710.02 at
+        // 10pt): the rule is max(hheaAscender, 0.94em) (Tahoma gap 0.48 matches hheaAsc
+        // 1.0005 over Calibri 0.9521). Opt-in measurer; null keeps legacy.
+        double maxSize = firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize);
+        double? hheaAscender = null;
+        if (measurer is IDocxLineMetricsProvider provider)
+        {
+            DocxTextRun? widest = null;
+            double widestSize = -1d;
+            foreach (DocxTextRun run in firstTextParagraph.Runs)
+            {
+                double size = run.EffectiveProperties.FontSize;
+                if (size > widestSize)
+                {
+                    widestSize = size;
+                    widest = run;
+                }
+            }
+
+            if (widest is not null)
+            {
+                hheaAscender = provider.MeasureHheaAscender(widest, maxSize);
+            }
+        }
+
+        return Math.Max(maxSize * WordAutoLineBaselineOffsetEm, hheaAscender ?? 0d);
     }
 }
 
