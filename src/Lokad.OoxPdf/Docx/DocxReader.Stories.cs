@@ -267,6 +267,31 @@ internal sealed partial class DocxReader
             }
         }
 
+        // RV06 height-model probes (absent-separator endnotes, Word COM reference
+        // edge-endsepheight-absent): Word normalizes separator-less endnote parts with
+        // a default separator (absent renders identically to mark: same rule, same
+        // placement), while the renderer skips placement entirely. Synthesize the missing
+        // separator through the normal story parser from an empty paragraph, so cascade
+        // sizing matches author-written empty separators exactly. Footnote parts keep
+        // legacy absent behavior (validated corpus). Id 0 is Word's separator convention
+        // and separator matching requires a non-null Id.
+        if (kind == DocxRelatedStoryKind.Endnote &&
+            stories.Count > 0 &&
+            stories.All(story => story.Type != DocxRelatedStoryType.Separator))
+        {
+            XElement syntheticSeparator = new(
+                WordprocessingNamespace + storyElementName,
+                new XAttribute(WordprocessingNamespace + "type", "separator"),
+                new XAttribute(WordprocessingNamespace + "id", "0"),
+                new XElement(WordprocessingNamespace + "p"));
+            DocxRelatedStory defaultSeparator = ReadRelatedStory(kind, part.Name, syntheticSeparator, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
+            defaultSeparator = defaultSeparator with { IsSynthetic = true };
+            if (defaultSeparator.BodyElements.Count > 0)
+            {
+                stories.Add(defaultSeparator);
+            }
+        }
+
         return stories;
     }
 

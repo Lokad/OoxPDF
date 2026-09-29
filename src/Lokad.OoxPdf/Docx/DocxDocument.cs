@@ -58,6 +58,11 @@ internal sealed record DocxRelatedStory(
     DocxRelatedStoryType? Type)
 {
     public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
+    // RV06 absent-separator normalization: Word injects a default separator into
+    // separator-less endnote parts, so the reader synthesizes one (Id 0, empty
+    // paragraph resolved through the style cascade). Synthetic stories carry no
+    // source revisions or diagnostics provenance; tests exempt them explicitly.
+    public bool IsSynthetic { get; init; }
     public bool IsNormalStoryType => Type is null || Type == DocxRelatedStoryType.Normal;
     public DocxCommentMetadata? CommentMetadata { get; init; }
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0

@@ -1559,7 +1559,7 @@ internal static class DocxRevisionsTests
             visible: ["Header inserted", "Header deleted", "Footer inserted", "Footer deleted", "Comment inserted", "Comment deleted", "Footnote inserted", "Footnote deleted", "Endnote inserted", "Endnote deleted"],
             hidden: []);
 
-        TestAssert.True(allDocument.RelatedStories.All(story => story.Paragraphs.All(paragraph => paragraph.Revisions.Count != 0 || paragraph.Runs.Any(run => run.Revision is not null))), "All-markup related story revisions should preserve private-safe provenance after filtering.");
+        TestAssert.True(allDocument.RelatedStories.Where(story => !story.IsSynthetic).All(story => story.Paragraphs.All(paragraph => paragraph.Revisions.Count != 0 || paragraph.Runs.Any(run => run.Revision is not null))), "All-markup related story revisions should preserve private-safe provenance after filtering; the synthetic default separator carries no source revisions.");
 
         static string StaticStoryText(DocxDocument document)
         {

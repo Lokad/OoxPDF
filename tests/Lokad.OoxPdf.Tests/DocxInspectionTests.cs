@@ -956,7 +956,9 @@ internal static class DocxInspectionTests
         TestAssert.Equal(3, endnoteReference.SourceRunIndex);
         TestAssert.Equal(0, endnoteReference.RunChildIndex);
         TestAssert.Equal(0, endnoteReference.TextOffsetInRun);
-        TestAssert.Equal(3, document.RelatedStories.Count);
+        TestAssert.Equal(4, document.RelatedStories.Count);
+        DocxRelatedStory syntheticSeparator = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Endnote && story.Type == DocxRelatedStoryType.Separator);
+        TestAssert.True(syntheticSeparator.IsSynthetic && syntheticSeparator.Id == "0", "Separator-less endnote parts gain a synthetic default separator through Word normalization.");
         DocxRelatedStory commentStory = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment);
         TestAssert.True(commentStory.PartName == "/word/comments.xml" && commentStory.Id == "1" && commentStory.BodyElements.Count == 3 && commentStory.Paragraphs.Count == 2 && commentStory.Tables.Count == 1, "Comment bodies should be preserved as related DOCX stories.");
         TestAssert.Equal(1, commentStory.Paragraphs.Sum(paragraph => paragraph.Hyperlinks.Count));
@@ -999,7 +1001,9 @@ internal static class DocxInspectionTests
         TestAssert.True(endnoteReferenceSnapshot.ResolvedStoryKind == "Endnote" && endnoteReferenceSnapshot.ResolvedStoryPartName == "/word/endnotes.xml" && endnoteReferenceSnapshot.ResolvedStoryId == "3" && endnoteReferenceSnapshot.ResolvedStoryTextLength == 12, "Endnote reference snapshot should resolve to the endnote story body.");
 
         DocxLayoutSnapshot layoutSnapshot = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
-        TestAssert.Equal(3, layoutSnapshot.RelatedStories.Count);
+        TestAssert.Equal(4, layoutSnapshot.RelatedStories.Count);
+        DocxRelatedStoryLayoutSnapshot syntheticLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Endnote" && story.Type == "separator");
+        TestAssert.True(syntheticLayout.Id == "0", "Layout snapshots carry the synthetic default endnote separator.");
         DocxRelatedStoryLayoutSnapshot commentLayout = layoutSnapshot.RelatedStories.Single(story => story.Kind == "Comment");
         TestAssert.True(commentLayout.PartName == "/word/comments.xml" && commentLayout.Id == "1" && commentLayout.BlockCount == 3 && commentLayout.ParagraphCount == 2 && commentLayout.TableCount == 1, "Related-story layout snapshots should preserve comment story ownership without flattening it into body layout.");
         TestAssert.True(commentLayout.TextLineCount >= 2 && commentLayout.TableCellTextLineCount >= 1 && commentLayout.TableRowCount == 1 && commentLayout.FloatingDrawingCount == 1 && commentLayout.TextLength == 37 && commentLayout.ContentHeight > 0d, "Comment story layout should measure paragraph text and table rows while preserving unpaged anchored drawing ownership.");
@@ -1007,7 +1011,7 @@ internal static class DocxInspectionTests
         TestAssert.True(commentLayout.SourceBlocks.Count == 3 && commentLayout.SourceBlocks.Any(block => block.Kind == "Table" && block.TableRowCount == 1) && commentLayout.SourceBlocks.Count(block => block.Kind == "Paragraph") == 2, "Related-story snapshots should expose private-safe source-block summaries without assigning fake page indexes.");
         TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Footnote" && story.PartName == "/word/footnotes.xml" && story.Id == "2" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Footnote story layout should be measured as related-story content.");
         TestAssert.True(layoutSnapshot.RelatedStories.Any(story => story.Kind == "Endnote" && story.PartName == "/word/endnotes.xml" && story.Id == "3" && story.TextLineCount >= 1 && story.TableRowCount == 0 && story.ContentHeight > 0d), "Endnote story layout should be measured as related-story content.");
-        TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) == 2 && layoutSnapshot.Pages.Sum(page => page.PlacedFootnoteStoryCount) == 1 && layoutSnapshot.Pages.Sum(page => page.PlacedEndnoteStoryCount) == 1, "Resolved footnote story bodies should be placed on the marker page while endnotes become document-end page-owned story content.");
+TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) == 3 && layoutSnapshot.Pages.Sum(page => page.PlacedFootnoteStoryCount) == 1 && layoutSnapshot.Pages.Sum(page => page.PlacedEndnoteStoryCount) == 1, "Resolved footnote story bodies should be placed on the marker page while endnotes become document-end page-owned story content.");
         DocxLayoutPageSnapshot footnotePage = layoutSnapshot.Pages.Single(page => page.PlacedFootnoteStoryCount == 1);
         DocxLayoutPageSnapshot endnotePage = layoutSnapshot.Pages.Single(page => page.PlacedEndnoteStoryCount == 1);
         TestAssert.True(footnotePage.PlacedRelatedStories.Any(story => story.Kind == "Footnote" && story.SourceBlockIndex == 0) && endnotePage.PlacedRelatedStories.Any(story => story.Kind == "Endnote" && story.SourceBlockIndex == -1), "Placed related-story snapshots should expose marker-owned footnotes and document-end endnotes without flattening them into body items.");

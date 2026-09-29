@@ -310,6 +310,13 @@ internal sealed partial class DocxLayoutEngine
                     // same helper as footnote reserves; empty separators resolve through their
                     // pilcrow-carrying line and fall back to the legacy constant.
                     (DocxTextRun? endnoteMarkRun, double endnoteMarkSize) = FindSeparatorMarkFont(documentEndSeparatorLayout.TextLines);
+                    // An overflowing separator would strand its rule at the margin while content
+                    // slices onto fresh pages (Office keeps separator and content together);
+                    // turn first, mirroring overflowing-item placement everywhere else.
+                    if (ResolveSizeDrivenSeparatorHeight(documentEndSeparatorLayout, activePage) > cursorTop - activePage.MarginBottom)
+                    {
+                        MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
+                    }
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
@@ -919,6 +926,28 @@ internal sealed partial class DocxLayoutEngine
     // while replacing the laid-out box slope with the inset slope.
     private const double EndnoteSeparatorSlopePivotPoints = 12d;
 
+    // Shared by the document-end overflow turn below: the fit check must measure the
+    // same size-driven height that placement will consume, not the laid-out height.
+    private static double ResolveSizeDrivenSeparatorHeight(DocxRelatedStoryLayout separatorLayout, DocxLayoutPage page)
+    {
+        double laidOutHeight = ResolvePlacedStoryHeight(separatorLayout, page);
+        if (separatorLayout.TextLines.Count == 0)
+        {
+            return laidOutHeight;
+        }
+        (DocxTextRun? _, double pivotMarkSize) = FindSeparatorMarkFont(separatorLayout.TextLines);
+        if (pivotMarkSize <= 0d)
+        {
+            return laidOutHeight;
+        }
+        DocxTextLineLayout firstSeparatorLine = separatorLayout.TextLines[0];
+        double firstLineBox = firstSeparatorLine.LineHeight ?? firstSeparatorLine.SingleLineHeight ?? firstSeparatorLine.FontSize;
+        double firstInset = DocxLineMetrics.WordAutoLineBaselineOffsetEm * pivotMarkSize;
+        double lineBoxAtPivot = firstLineBox * EndnoteSeparatorSlopePivotPoints / pivotMarkSize;
+        double insetAtPivot = DocxLineMetrics.WordAutoLineBaselineOffsetEm * EndnoteSeparatorSlopePivotPoints;
+        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot));
+    }
+
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
         DocxLayoutPage page,
         int pageIndex,
@@ -929,18 +958,9 @@ internal sealed partial class DocxLayoutEngine
         bool useSizeDrivenPlacementHeight = false)
     {
         double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
-        if (useSizeDrivenPlacementHeight && separatorLayout.TextLines.Count > 0)
+        if (useSizeDrivenPlacementHeight)
         {
-            (DocxTextRun? _, double pivotMarkSize) = FindSeparatorMarkFont(separatorLayout.TextLines);
-            if (pivotMarkSize > 0d)
-            {
-                DocxTextLineLayout firstSeparatorLine = separatorLayout.TextLines[0];
-                double firstLineBox = firstSeparatorLine.LineHeight ?? firstSeparatorLine.SingleLineHeight ?? firstSeparatorLine.FontSize;
-                double firstInset = DocxLineMetrics.WordAutoLineBaselineOffsetEm * pivotMarkSize;
-                double lineBoxAtPivot = firstLineBox * EndnoteSeparatorSlopePivotPoints / pivotMarkSize;
-                double insetAtPivot = DocxLineMetrics.WordAutoLineBaselineOffsetEm * EndnoteSeparatorSlopePivotPoints;
-                separatorHeight = Math.Max(0d, separatorHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot));
-            }
+            separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page);
         }
         double separatorBottom = separatorTop - separatorHeight;
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
