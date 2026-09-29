@@ -2696,6 +2696,100 @@ internal static class DocxFootnotesTests
         return lines[0].BaselineY - lines[1].BaselineY;
     }
 
+    public static void DocxFootnoteLineHeightSelfGatesWithoutSmallRun()
+    {
+        // RV06 box-law instruments: two big-ascender runs with matching descenders
+        // carry no descender deficit, so the line keeps the uniform pitch while the
+        // same helper with a small-ascender second run grows by the deficit extra.
+        double control = LayoutFootnotePitchWithSelfGateFaces("Tahoma", "Calibri");
+        double bigPair = LayoutFootnotePitchWithSelfGateFaces("Tahoma", "BigTop");
+        TestAssert.True(Math.Abs(control - 20.40d) < 0.01d, "Mixed control pitch must keep the descender deficit extra; control=" + control.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(bigPair - 19.58d) < 0.01d, "Big-ascender pair pitch must self-gate to the uniform value; bigPair=" + bigPair.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    public static void DocxFootnoteLineHeightSelfGatesWithDeepOwnDescender()
+    {
+        // RV06 box-law instruments (Palatino-like): the max-ascender run carrying the
+        // deepest descender leaves a non-positive deficit, so the line keeps the
+        // uniform pitch while the same helper with a shallow second run grows.
+        double control = LayoutFootnotePitchWithSelfGateFaces("Tahoma", "Calibri");
+        double deepOwn = LayoutFootnotePitchWithSelfGateFaces("DeepDsc", "Calibri");
+        TestAssert.True(Math.Abs(control - 20.40d) < 0.01d, "Mixed control pitch must keep the descender deficit extra; control=" + control.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(deepOwn - 19.58d) < 0.01d, "Deep-descender max-ascender pitch must self-gate to the uniform value; deepOwn=" + deepOwn.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class SelfGateTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => 10d;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => 10d;
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => SelfGateAscenderEm(run) * fontSize;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => SelfGateDescenderEm(run) * fontSize;
+
+        private static double SelfGateAscenderEm(DocxTextRun? run)
+        {
+            if (string.Equals(run?.FontFamily, "DeepDsc", StringComparison.Ordinal))
+            {
+                return 1.05d;
+            }
+
+            if (string.Equals(run?.FontFamily, "Calibri", StringComparison.Ordinal))
+            {
+                return 0.9d;
+            }
+
+            return 1.0d;
+        }
+
+        private static double SelfGateDescenderEm(DocxTextRun? run)
+        {
+            if (string.Equals(run?.FontFamily, "DeepDsc", StringComparison.Ordinal))
+            {
+                return 0.35d;
+            }
+
+            if (string.Equals(run?.FontFamily, "Calibri", StringComparison.Ordinal))
+            {
+                return 0.27d;
+            }
+
+            return 0.2d;
+        }
+    }
+
+    private static double LayoutFootnotePitchWithSelfGateFaces(string firstFamily, string secondFamily)
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="F1" w:hAnsi="F1"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body one start tail one</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="F2" w:hAnsi="F2"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve"> mixed tail one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="F1" w:hAnsi="F1"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body two start tail two</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="F2" w:hAnsi="F2"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve"> mixed tail two</w:t></w:r></w:p></w:footnote></w:footnotes>""".Replace("F1", firstFamily).Replace("F2", secondFamily)
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new SelfGateTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxTextLineLayout[] lines = layout.Pages[0].PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Where(line => line.Text.StartsWith("Note body", StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        return lines[0].BaselineY - lines[1].BaselineY;
+    }
+
     public static void DocxFootnoteContentGapFollowsContentFont()
     {
         double control = LayoutFootnoteContentGapWithFamilies("Calibri", "Calibri");
