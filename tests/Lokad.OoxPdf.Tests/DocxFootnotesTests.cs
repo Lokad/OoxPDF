@@ -3123,7 +3123,7 @@ internal static class DocxFootnotesTests
     {
         // RV06 size sweep (Word 16.0, cal9-a0 takes 47 against 48 while 10pt and
         // first-10pt boundaries hold exact): uniform 9pt-after-0 head takes 53 under the
-        // 4.7pt uniform reserve against 54 under the 2.5pt reserve; the Office-anchored
+        // 4.0pt uniform reserve against 54 under the 2.5pt reserve; the Office-anchored
         // take-fewer direction is pinned by the cal9-a0 47/13 probe takes with size-10
         // 43/17 and first-10 36/24 holding exact.
         int ninePtHeadTake = LayoutFootnoteUniformHeadTakeWithAfterAndSize(0, 0);

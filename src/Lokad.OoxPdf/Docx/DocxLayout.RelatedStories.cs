@@ -1255,11 +1255,11 @@ internal sealed partial class DocxLayoutEngine
 
         // RV06 take-battery probes (Word 16.0, after-spacing, size and Palatino takes):
         // Office head takes fit one more line than clamp-minus-separator allows on Calibri
-        // uniform notes, and the 9pt boundary needs total trim above 3.73 while the 10pt
-        // and first-10pt boundaries tolerate total trim up to 5.62, so the clamp carries a
-        // uniform 4.7pt Office-fitted reserve shaved from the take side only; fitting
-        // stories keep cursor-driven placement bit-identically.
-        return bodyStart - firstInset - 4.7;
+        // uniform notes, and the 9pt boundary needs total trim above 3.73 while the after-12
+        // boundary tolerates total trim up to 4.22 with cal-pal to 4.44 and 10pt to 5.62, so the
+        // clamp carries a uniform 4.0pt Office-fitted reserve shaved from the take side only;
+        // fitting stories keep cursor-driven placement bit-identically.
+        return bodyStart - firstInset - 4.0;
     }
 
     // RV06 interleaving: narrowed remainder view for in-flight continuation. The take
