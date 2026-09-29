@@ -1001,6 +1001,43 @@ internal sealed partial class DocxLayoutEngine
         return ascenderDeficitEm * EndnoteSeparatorSmallAscSupplementSlope * smallSizePoints;
     }
 
+    private static double ResolveFootnoteContentGapPoints(
+        IReadOnlyList<DocxTextLineLayout> contentTextLines,
+        double markFontSizePoints,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
+        double contentGapMax = 0d;
+        foreach (DocxTextLineLayout line in contentTextLines)
+        {
+            foreach (DocxTextSegmentLayout segment in line.Segments)
+            {
+                if (string.IsNullOrWhiteSpace(segment.Text))
+                {
+                    continue;
+                }
+
+                DocxTextRun run = segment.StyleRun;
+                contentGapMax = System.Math.Max(contentGapMax, ResolveSeparatorGapPoints(run, markFontSizePoints, separatorMeasurer));
+            }
+        }
+
+        return contentGapMax;
+    }
+
+    private static double ResolveFootnoteContentGapPoints(
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
+        double markFontSizePoints,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
+        double contentGapMax = 0d;
+        foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+        {
+            contentGapMax = System.Math.Max(contentGapMax, ResolveFootnoteContentGapPoints(story.StoryLayout.TextLines, markFontSizePoints, separatorMeasurer));
+        }
+
+        return contentGapMax;
+    }
+
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
         DocxLayoutPage page,
         int pageIndex,
@@ -1203,6 +1240,8 @@ internal sealed partial class DocxLayoutEngine
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
         }
+        double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapFontSizePoints, separatorMeasurer);
+        double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
         double contentTop = storiesTop;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
@@ -1219,7 +1258,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (contentTop - storyHeight >= activePage.MarginBottom - 0.001d)
             {
-                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop, separatorY: null);
+                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop - footnoteContentPushdownPoints, separatorY: null);
                 activePlacedStories.Add(placedStory);
                 outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                 contentTop -= storyHeight;
