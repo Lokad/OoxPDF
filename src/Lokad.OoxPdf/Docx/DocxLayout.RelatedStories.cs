@@ -323,7 +323,7 @@ internal sealed partial class DocxLayoutEngine
                     double endnoteContentGapPoints = 0d;
                     foreach (DocxRelatedStoryLayout endnoteContentLayout in documentEndStories)
                     {
-                        endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkSize, separatorMeasurer));
+                        endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkRun, endnoteMarkSize, separatorMeasurer));
                     }
 
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
@@ -1048,6 +1048,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static double ResolveFootnoteContentGapPoints(
         IReadOnlyList<DocxTextLineLayout> contentTextLines,
+        DocxTextRun? markRun,
         double markFontSizePoints,
         IDocxTextMeasurer? separatorMeasurer)
     {
@@ -1063,6 +1064,7 @@ internal sealed partial class DocxLayoutEngine
 
                 DocxTextRun run = segment.StyleRun;
                 contentGapMax = System.Math.Max(contentGapMax, ResolveSeparatorGapPoints(run, markFontSizePoints, separatorMeasurer));
+                contentGapMax = System.Math.Max(contentGapMax, ResolveWascContentGapSupplement(run, markRun, markFontSizePoints, separatorMeasurer));
             }
         }
 
@@ -1071,16 +1073,48 @@ internal sealed partial class DocxLayoutEngine
 
     private static double ResolveFootnoteContentGapPoints(
         IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
+        DocxTextRun? markRun,
         double markFontSizePoints,
         IDocxTextMeasurer? separatorMeasurer)
     {
         double contentGapMax = 0d;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
-            contentGapMax = System.Math.Max(contentGapMax, ResolveFootnoteContentGapPoints(story.StoryLayout.TextLines, markFontSizePoints, separatorMeasurer));
+            contentGapMax = System.Math.Max(contentGapMax, ResolveFootnoteContentGapPoints(story.StoryLayout.TextLines, markRun, markFontSizePoints, separatorMeasurer));
         }
 
         return contentGapMax;
+    }
+
+    // RV06 fnwrap content-gap probes (Word 16.0): Office hangs big-ascender content
+    // lower by the Windows-ascender excess over the mark, so the supplement competes
+    // with the single-line gap through the caller max and vanishes without static
+    // metrics, keeping those paths byte-identical.
+    private static double ResolveWascContentGapSupplement(
+        DocxTextRun run,
+        DocxTextRun? markRun,
+        double markFontSizePoints,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (markRun is null || markFontSizePoints <= 0d || separatorMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
+        {
+            return 0d;
+        }
+
+        double runAscenderPoints = staticMetrics.MeasureWindowsAscender(run, markFontSizePoints);
+        double markAscenderPoints = staticMetrics.MeasureWindowsAscender(markRun, markFontSizePoints);
+        if (runAscenderPoints <= 0d || markAscenderPoints <= 0d)
+        {
+            return 0d;
+        }
+
+        double excessPoints = System.Math.Max(0d, runAscenderPoints - markAscenderPoints);
+        if (excessPoints <= 0d)
+        {
+            return 0d;
+        }
+
+        return ResolveSeparatorGapPoints(markRun, markFontSizePoints, separatorMeasurer) + excessPoints;
     }
 
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
@@ -1286,7 +1320,7 @@ internal sealed partial class DocxLayoutEngine
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
         }
-        double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapFontSizePoints, separatorMeasurer);
+        double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapRun, gapFontSizePoints, separatorMeasurer);
         double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
         double contentTop = storiesTop;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
