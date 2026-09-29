@@ -2441,4 +2441,16 @@ internal static class DocxPageTests
         TestAssert.True(Math.Abs(placedTop - (bodyBaseline + 12d * 0.94d - 72d)) < 0.000001d, "Paragraph-anchored boxes must hang off baseline plus first-line inset; placedTop=" + placedTop.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxFloatingTextBoxContentInsetsIncludeHalfStrokeWidth()
+    {
+        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
+        // content starts inside the border (0.5pt stroke shifts content by 0.25 on each
+        // axis: text at 162.26 vs 162.00 with an 18pt left inset). Pre-fix insets ignore
+        // the stroke.
+        DocxParagraph boxParagraph = DocxTests.CreateDocxLayoutParagraph("Box text", 12d, 12d) with { LineSpacingPoints = null };
+        DocxFloatingDrawing drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(boxParagraph)]) with { TextBoxInsetLeftValue = "228600", TextBoxInsetTopValue = "0", TextBoxStrokeWidthEmuValue = "6350" };
+        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
+        TestAssert.True(Math.Abs(insetLeft - 18.25d) < 0.000001d && Math.Abs(insetTop - 0.25d) < 0.000001d, "Stroked textbox content must start inside the border; insets=" + insetLeft.ToString(CultureInfo.InvariantCulture) + "/" + insetTop.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
 }

@@ -28,7 +28,10 @@ internal sealed record DocxFloatingDrawing(
     string? TextBoxInsetLeftValue = null,
     string? TextBoxInsetTopValue = null,
     string? TextBoxInsetRightValue = null,
-    string? TextBoxInsetBottomValue = null)
+    string? TextBoxInsetBottomValue = null,
+    // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox content
+    // starts inside the border, so layout pads content by half the outline width.
+    string? TextBoxStrokeWidthEmuValue = null)
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public IReadOnlyList<DocxBodyElement> TextBoxBodyElements { get; init; } = [];

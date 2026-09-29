@@ -395,10 +395,15 @@ internal sealed partial class DocxLayoutEngine
 
     internal static void ResolveTextBoxContentInsets(DocxFloatingDrawing drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)
     {
-        insetLeft = ReadInsetEmuPoints(drawing.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu);
-        insetTop = ReadInsetEmuPoints(drawing.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu);
-        insetRight = ReadInsetEmuPoints(drawing.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu);
-        insetBottom = ReadInsetEmuPoints(drawing.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu);
+        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
+        // content starts inside the border, so every inset grows by half the outline
+        // width (0.5pt stroke shifts text by 0.25 on both axes). Un-outlined shapes
+        // resolve zero and keep legacy insets bit-identically.
+        double halfStrokePoints = (ReadEmuPoints(drawing.TextBoxStrokeWidthEmuValue) ?? 0d) / 2d;
+        insetLeft = ReadInsetEmuPoints(drawing.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
+        insetTop = ReadInsetEmuPoints(drawing.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
+        insetRight = ReadInsetEmuPoints(drawing.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
+        insetBottom = ReadInsetEmuPoints(drawing.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
     }
 
     internal static void ResolveInlineTextBoxContentInsets(DocxInlineTextBox textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)

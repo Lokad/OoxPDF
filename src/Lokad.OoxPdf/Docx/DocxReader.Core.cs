@@ -365,6 +365,13 @@ internal sealed partial class DocxReader
         XElement? textBoxBodyProperties = anchor
             .Descendants(WordprocessingShapeNamespace + "bodyPr")
             .FirstOrDefault();
+        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
+        // content starts inside the border, so the outline width joins the insets.
+        // First outlined a:ln wins; un-outlined shapes keep legacy insets.
+        string? textBoxStrokeWidthEmuValue = anchor
+            .Descendants(DrawingNamespace + "ln")
+            .Select(element => (string?)element.Attribute("w"))
+            .FirstOrDefault(width => width is not null);
         IReadOnlyList<DocxBodyElement> textBoxBodyElements = ReadTextBoxBodyElements(
             anchor,
             styles,
@@ -402,7 +409,8 @@ internal sealed partial class DocxReader
             (string?)textBoxBodyProperties?.Attribute("lIns"),
             (string?)textBoxBodyProperties?.Attribute("tIns"),
             (string?)textBoxBodyProperties?.Attribute("rIns"),
-            (string?)textBoxBodyProperties?.Attribute("bIns"))
+            (string?)textBoxBodyProperties?.Attribute("bIns"),
+            TextBoxStrokeWidthEmuValue: textBoxStrokeWidthEmuValue)
         {
             Revisions = RevisionList(revision),
             TextBoxBodyElements = textBoxBodyElements
