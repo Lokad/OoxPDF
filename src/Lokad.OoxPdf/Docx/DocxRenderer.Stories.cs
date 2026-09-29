@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -243,6 +244,15 @@ internal sealed partial class DocxRenderer
         {
             graphics.ClipRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight);
         }
+        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked frames paint
+        // their outline under the text. Uniform-map pages keep legacy borderless output
+        // until scaled stroking is probed.
+        if (!uniformMap && TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
+        {
+            graphics.SetStrokeRgb(strokeRed, strokeGreen, strokeBlue);
+            graphics.SetLineWidth(strokeWidth);
+            graphics.StrokeRectangle(placedX, placedTop - height, width, height);
+        }
 
         IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
             .Select(line => uniformMap
@@ -272,6 +282,33 @@ internal sealed partial class DocxRenderer
         }
 
         graphics.RestoreState();
+    }
+
+    private static bool TryResolveTextBoxStroke(DocxFloatingDrawing drawing, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
+    {
+        strokeWidth = 0d;
+        strokeRed = 0;
+        strokeGreen = 0;
+        strokeBlue = 0;
+        if (width <= 0d || height <= 0d || string.IsNullOrEmpty(drawing.TextBoxStrokeColorHex) || drawing.TextBoxStrokeColorHex.Length != 6)
+        {
+            return false;
+        }
+
+        if (!long.TryParse(drawing.TextBoxStrokeWidthEmuValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long strokeEmu) || strokeEmu <= 0L)
+        {
+            return false;
+        }
+
+        if (!byte.TryParse(drawing.TextBoxStrokeColorHex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeRed) ||
+            !byte.TryParse(drawing.TextBoxStrokeColorHex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeGreen) ||
+            !byte.TryParse(drawing.TextBoxStrokeColorHex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeBlue))
+        {
+            return false;
+        }
+
+        strokeWidth = OoxUnits.EmuToPoints(strokeEmu);
+        return strokeWidth > 0d;
     }
 
     private static void RenderInlineTextBox(

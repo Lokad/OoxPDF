@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pptx;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
@@ -368,10 +369,11 @@ internal sealed partial class DocxReader
         // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
         // content starts inside the border, so the outline width joins the insets.
         // First outlined a:ln wins; un-outlined shapes keep legacy insets.
-        string? textBoxStrokeWidthEmuValue = anchor
+        XElement? textBoxOutline = anchor
             .Descendants(DrawingNamespace + "ln")
-            .Select(element => (string?)element.Attribute("w"))
-            .FirstOrDefault(width => width is not null);
+            .FirstOrDefault(element => element.Attribute("w") is not null);
+        string? textBoxStrokeWidthEmuValue = (string?)textBoxOutline?.Attribute("w");
+        string? textBoxStrokeColorHex = ResolveTextBoxOutlineColorHex(textBoxOutline);
         IReadOnlyList<DocxBodyElement> textBoxBodyElements = ReadTextBoxBodyElements(
             anchor,
             styles,
@@ -410,11 +412,39 @@ internal sealed partial class DocxReader
             (string?)textBoxBodyProperties?.Attribute("tIns"),
             (string?)textBoxBodyProperties?.Attribute("rIns"),
             (string?)textBoxBodyProperties?.Attribute("bIns"),
-            TextBoxStrokeWidthEmuValue: textBoxStrokeWidthEmuValue)
+            TextBoxStrokeWidthEmuValue: textBoxStrokeWidthEmuValue,
+            TextBoxStrokeColorHex: textBoxStrokeColorHex)
         {
             Revisions = RevisionList(revision),
             TextBoxBodyElements = textBoxBodyElements
         };
+    }
+
+    // Single caller; kept static: resolved outline color hex (RRGGBB) for frame stroking.
+    // Solid srgb colors resolve verbatim; presets resolve through the shared table.
+    // Scheme/system colors and transforms stay out (null keeps legacy borderless
+    // rendering) until separately probed.
+    private static string? ResolveTextBoxOutlineColorHex(XElement? outline)
+    {
+        XElement? solidFill = outline?.Element(DrawingNamespace + "solidFill");
+        if (solidFill is null)
+        {
+            return null;
+        }
+
+        string? srgb = (string?)solidFill.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
+        if (RgbColor.TryParse(srgb, out RgbColor parsed))
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0:X2}{1:X2}{2:X2}", parsed.Red, parsed.Green, parsed.Blue);
+        }
+
+        string? preset = (string?)solidFill.Element(DrawingNamespace + "prstClr")?.Attribute("val");
+        if (PptxPresetColors.TryResolve(preset, out RgbColor presetColor))
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0:X2}{1:X2}{2:X2}", presetColor.Red, presetColor.Green, presetColor.Blue);
+        }
+
+        return null;
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.

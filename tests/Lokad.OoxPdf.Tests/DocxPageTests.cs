@@ -2450,6 +2450,28 @@ internal static class DocxPageTests
         DocxLayoutEngine.ResolveInlineTextBoxContentInsets(textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
         TestAssert.True(Math.Abs(insetLeft - 12.25d) < 0.000001d && Math.Abs(insetTop - 9.25d) < 0.000001d, "Stroked inline content must start inside the border; insets=" + insetLeft.ToString(CultureInfo.InvariantCulture) + "/" + insetTop.ToString(CultureInfo.InvariantCulture) + ".");
     }
+    public static void DocxReaderPreservesFloatingTextBoxOutline()
+    {
+        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked floating
+        // boxes must carry outline width and color so frame stroking can paint them.
+        // Pre-fix both resolve null and borders vanish.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><w:body><w:p><w:r><w:t xml:space="preserve">Body text</w:t></w:r><w:r><w:drawing><wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="1" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>914400</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>914400</wp:posOffset></wp:positionV><wp:extent cx="2743200" cy="914400"/><wp:wrapSquare wrapText="bothSides"/><wp:docPr id="1" name="Box"/><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln w="6350"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Box</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
+        TestAssert.Equal("6350", drawing.TextBoxStrokeWidthEmuValue ?? string.Empty);
+        TestAssert.Equal("FF0000", drawing.TextBoxStrokeColorHex ?? string.Empty);
+    }
     public static void DocxFloatingTextBoxContentInsetsIncludeHalfStrokeWidth()
     {
         // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox

@@ -31,7 +31,11 @@ internal sealed record DocxFloatingDrawing(
     string? TextBoxInsetBottomValue = null,
     // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox content
     // starts inside the border, so layout pads content by half the outline width.
-    string? TextBoxStrokeWidthEmuValue = null)
+    string? TextBoxStrokeWidthEmuValue = null,
+    // RV05 floatbox frame stroking: resolved outline color hex (RRGGBB) for border
+    // painting. Null keeps legacy borderless rendering (un-outlined shapes, missing or
+    // unresolvable colors).
+    string? TextBoxStrokeColorHex = null)
 {
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public IReadOnlyList<DocxBodyElement> TextBoxBodyElements { get; init; } = [];
