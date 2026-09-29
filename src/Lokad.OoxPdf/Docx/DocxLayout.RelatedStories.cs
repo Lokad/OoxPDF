@@ -417,6 +417,18 @@ internal sealed partial class DocxLayoutEngine
         return heights;
     }
 
+    private static double[] GetStoryLineAfterSpacings(DocxRelatedStoryLayout storyLayout)
+    {
+        double[] afters = new double[storyLayout.TextLines.Count];
+        for (int lineIndex = 0; lineIndex < afters.Length; lineIndex++)
+        {
+            DocxTextLineLayout line = storyLayout.TextLines[lineIndex];
+            afters[lineIndex] = Math.Max(0d, line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d);
+        }
+
+        return afters;
+    }
+
     private static DocxRelatedStoryLayout NarrowStoryTextLines(DocxRelatedStoryLayout storyLayout, int startLineIndex, int lineCount)
     {
         if (startLineIndex == 0 && lineCount >= storyLayout.TextLines.Count)
@@ -503,6 +515,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double[] lineBoxes = GetStoryTextLineBoxHeights(storyLayout);
+        double[] lineAfters = GetStoryLineAfterSpacings(storyLayout);
         int lineIndex = 0;
         double consumedHeight = 0d;
         while (lineIndex < storyLayout.TextLines.Count)
@@ -522,7 +535,8 @@ internal sealed partial class DocxLayoutEngine
             }
 
             int remainingLines = storyLayout.TextLines.Count - lineIndex;
-            (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight);
+            double[]? fitAfters = printScale >= 1d ? lineAfters : null;
+            (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
             if (lineIndex + takeCount >= storyLayout.TextLines.Count)
             {
                 takeHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight - consumedHeight), availableHeight);
@@ -627,14 +641,31 @@ internal sealed partial class DocxLayoutEngine
     // first-line inset below the top with no extra ride; rule geometry follows the
     // shared strikeout path and content keeps the footnote gap below the rule.
     // Longest whole-line prefix (at least one line) fitting the capacity.
-    private static (int TakeCount, double TakeHeight) TakeStoryLines(double[] lineBoxes, int startLineIndex, int remainingLineCount, double capacityHeight)
+    // RV06 after-spacing sweep (Word 16.0, seven after values): take needs exclude the
+    // take last-line trailing after-spacing while take heights keep full boxes for
+    // placement, so final takes and null after-spacing callers resolve byte-identically.
+    // The exclusion applies on unscaled takes only; word-compatible spacing-scale takes
+    // stay legacy pending their own probe series, so callers pass null below scale 1.
+    private static (int TakeCount, double TakeHeight) TakeStoryLines(double[] lineBoxes, int startLineIndex, int remainingLineCount, double capacityHeight, double[]? lineAfterSpacings = null)
     {
         int takeCount = 0;
         double takeHeight = 0d;
-        while (takeCount < remainingLineCount &&
-            takeHeight + lineBoxes[startLineIndex + takeCount] <= capacityHeight + 0.001d)
+        int lastLineIndex = startLineIndex + remainingLineCount - 1;
+        while (takeCount < remainingLineCount)
         {
-            takeHeight += lineBoxes[startLineIndex + takeCount];
+            int lineIndex = startLineIndex + takeCount;
+            double fitHeight = takeHeight + lineBoxes[lineIndex];
+            if (lineAfterSpacings is not null && lineIndex < lastLineIndex)
+            {
+                fitHeight -= Math.Max(0d, lineAfterSpacings[lineIndex]);
+            }
+
+            if (fitHeight > capacityHeight + 0.001d)
+            {
+                break;
+            }
+
+            takeHeight += lineBoxes[lineIndex];
             takeCount++;
         }
 
@@ -679,7 +710,15 @@ internal sealed partial class DocxLayoutEngine
         if (continuationSeparatorLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
         {
             int remainingLines = bodyStoryLayout.TextLines.Count - bodyLineIndex;
-            (_, double takeHeight) = TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, Math.Max(0d, cursorTop - activePage.MarginBottom));
+            // RV06 continuation probes: the footnote bottom-anchor query charges the rule
+            // overhead net of already-reserved top space, so continuation takes do not place
+            // the rule for free while header keep-out pages keep their exact takes; the endnote
+            // top-anchor branch already nets first inset plus gap through cursorTop.
+            double[]? bodyFitAfters = printScale >= 1d ? GetStoryLineAfterSpacings(bodyStoryLayout) : null;
+            double continuationOverhead = ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer);
+            double reservedTopSpace = Math.Max(0d, activePage.Height - activePage.MarginTop - cursorTop);
+            double netOverhead = Math.Max(0d, continuationOverhead - reservedTopSpace);
+            (_, double takeHeight) = TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, Math.Max(0d, cursorTop - activePage.MarginBottom - netOverhead), bodyFitAfters);
             double contentTop = activePage.MarginBottom + takeHeight;
             markBaselineY = contentTop + separatorGapPoints;
         }
@@ -1218,7 +1257,8 @@ internal sealed partial class DocxLayoutEngine
         if (firstStoryLayout.TextLines.Count != 0)
         {
             double[] headLineBoxes = GetStoryTextLineBoxHeights(firstStoryLayout);
-            (int headTakeCount, double headTakeHeight) = TakeStoryLines(headLineBoxes, 0, firstStoryLayout.TextLines.Count, Math.Max(0d, storiesTop - activePage.MarginBottom));
+            double[]? headFitAfters = printScale >= 1d ? GetStoryLineAfterSpacings(firstStoryLayout) : null;
+            (int headTakeCount, double headTakeHeight) = TakeStoryLines(headLineBoxes, 0, firstStoryLayout.TextLines.Count, Math.Max(0d, storiesTop - activePage.MarginBottom), headFitAfters);
             if (headTakeCount < firstStoryLayout.TextLines.Count)
             {
                 storiesTop = activePage.MarginBottom + headTakeHeight;
