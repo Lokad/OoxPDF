@@ -2817,6 +2817,20 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(22, headTake);
     }
 
+    public static void DocxFootnoteContinuationTakeChargesRideTolerance()
+    {
+        // RV06 take-battery probes (Word 16.0, cal9-a8 laps 0.72 with cal-pal 0.36 while
+        // a4 refuses the next line at lap 4.54): the take-side charge is the emitted rule
+        // ride net of a 2.1pt overflow tolerance with full-box needs, rather than the full
+        // rule block with trailing-after exclusion. At 24pt after-spacing the full-box
+        // needs dominate, so the first continuation page takes 17 lines against 18 under
+        // the legacy exclusion-plus-full-block model; the Office-anchored take-more
+        // direction is pinned by the cal9-a8 29/31 and cal-pal 23/24/13 probe takes.
+        // Same synthetic note shape as the overhead test at 24pt after-spacing.
+        int continuationTake = LayoutFootnoteTakeWithAfterSpacingAndAfter(1, 480);
+        TestAssert.Equal(17, continuationTake);
+    }
+
     public static void DocxFootnoteContinuationTakeChargesRuleOverhead()
     {
         // RV06 continuation probes: the footnote bottom-anchor query charges the rule

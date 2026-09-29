@@ -492,6 +492,28 @@ internal sealed partial class DocxLayoutEngine
         return gapPoints + Math.Max(firstInsetPoints, ruleBottomOffsetPoints + ruleThicknessPoints);
     }
 
+    // RV06 take-battery probes (Word 16.0, after-spacing and Palatino takes): Office
+    // continuation takes lap the rule block into the top margin (cal9-a8 laps 0.72 and
+    // cal-pal laps 0.36 above the frame top) while a4 refuses the next line at lap 4.54,
+    // and the story-final line keeps its after-spacing so no constant full-block charge
+    // fits the battery; the take-side charge is the emitted rule ride (gap plus rule
+    // offset plus thickness; first-line insets never ride above content) net of a 2.1pt
+    // overflow tolerance, floored at zero so mark-less separators keep legacy takes.
+    private static double ContinuationTakeCharge(
+        DocxRelatedStoryLayout? continuationLayout,
+        IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (continuationLayout is null || continuationLayout.TextLines.Count == 0)
+        {
+            return 0d;
+        }
+
+        (DocxTextRun? takeGapRun, double takeGapFontSizePoints) = FindSeparatorMarkFont(continuationLayout.TextLines);
+        double takeGapPoints = ResolveSeparatorGapPoints(takeGapRun, takeGapFontSizePoints, separatorMeasurer);
+        (double takeRuleBottomOffsetPoints, double takeRuleThicknessPoints) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, takeGapRun, takeGapFontSizePoints, separatorMeasurer);
+        return Math.Max(0d, takeGapPoints + takeRuleBottomOffsetPoints + takeRuleThicknessPoints - 2.1);
+    }
+
     private static void PlaceRelatedStorySlices(
         List<DocxLayoutPage> outputPages,
         ref int activePageIndex,
@@ -720,10 +742,17 @@ internal sealed partial class DocxLayoutEngine
             // the rule for free while header keep-out pages keep their exact takes; the endnote
             // top-anchor branch already nets first inset plus gap through cursorTop.
             double[]? bodyFitAfters = printScale >= 1d ? GetStoryLineAfterSpacings(bodyStoryLayout) : null;
-            double continuationOverhead = ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer);
+            // RV06 take-battery probes (Word 16.0): the bottom-anchor take counts full
+            // boxes against the ride-sized take charge above, since the story-final line
+            // keeps its after-spacing under any constant full-block charge; word-compatible
+            // takes stay legacy pending the balloon lane, so scaled pages keep the shared
+            // full-block charge with null needs exactly as today.
+            double continuationOverhead = printScale >= 1d
+                ? ContinuationTakeCharge(continuationSeparatorLayout, separatorMeasurer)
+                : ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer);
             double reservedTopSpace = Math.Max(0d, activePage.Height - activePage.MarginTop - cursorTop);
             double netOverhead = Math.Max(0d, continuationOverhead - reservedTopSpace);
-            (_, double takeHeight) = TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, Math.Max(0d, cursorTop - activePage.MarginBottom - netOverhead), bodyFitAfters);
+            (_, double takeHeight) = TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, Math.Max(0d, cursorTop - activePage.MarginBottom - netOverhead), printScale >= 1d ? null : bodyFitAfters);
             double contentTop = activePage.MarginBottom + takeHeight;
             markBaselineY = contentTop + separatorGapPoints;
         }
