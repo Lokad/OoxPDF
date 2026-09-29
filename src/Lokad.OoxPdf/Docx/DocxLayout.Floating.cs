@@ -119,7 +119,7 @@ internal sealed partial class DocxLayoutEngine
         // Auto insets take max(hheaAscender, 0.94em) for footnote/endnote stories
         // (Word 16.0 endnote grids); comment/textbox stories keep legacy (unprobed).
         double? storyHheaAscender = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
-            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer)
+            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false)
             : null;
         double storyBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective), storyHheaAscender);
         // RV05: ordered inline atoms (related-story path). Affined images in

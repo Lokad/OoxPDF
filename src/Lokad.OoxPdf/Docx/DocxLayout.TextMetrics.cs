@@ -158,7 +158,11 @@ internal static class DocxLineMetrics
             : Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d);
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider)
+    // Related-story content (footnotes/endnotes) keeps order-blind min-hhea selection:
+    // Office footnote first baselines stay invariant across same-size mixed runs in every
+    // order (edge-fnmix edge-fnmix3: 85.46 everywhere), which neither max-hhea nor widest-run
+    // tie-breaking reproduces. Mixed-size takes stay a separate probe.
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider, bool selectMaxHhea = true)
     {
         if (provider is null || paragraph.Runs.Count == 0)
         {
@@ -171,6 +175,25 @@ internal static class DocxLineMetrics
         // 12pt run shifts a Calibri body by 0.73pt, while a Tahoma 10pt run leaves it
         // unchanged at own-size 10.005 below the floor). Uniform documents resolve
         // identically; only mixed-font lines change.
+        if (!selectMaxHhea)
+        {
+            // Related-story content keeps order-blind legacy behavior: Office footnote
+            // first baselines stay invariant across same-size mixed runs in every order
+            // (edge-fnmix3 tahfirst/calfirst: 85.46 both), which neither max-hhea nor
+            // widest-run tie-breaking reproduces. Mixed-size takes stay a separate probe.
+            double? minAscender = null;
+            foreach (DocxTextRun run in paragraph.Runs)
+            {
+                double ascender = provider.MeasureHheaAscender(run, run.EffectiveProperties.FontSize);
+                if (minAscender is null || ascender < minAscender.Value)
+                {
+                    minAscender = ascender;
+                }
+            }
+
+            return minAscender;
+        }
+
         double? maxAscender = null;
         foreach (DocxTextRun run in paragraph.Runs)
         {
@@ -184,9 +207,9 @@ internal static class DocxLineMetrics
         return maxAscender;
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer, bool selectMaxHhea = true)
     {
-        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider);
+        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider, selectMaxHhea);
     }
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
