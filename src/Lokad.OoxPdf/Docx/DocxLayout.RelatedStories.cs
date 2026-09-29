@@ -1214,7 +1214,11 @@ internal sealed partial class DocxLayoutEngine
             firstInset = Math.Max(0d, -firstStoryLayout.TextLines[0].BaselineY);
         }
 
-        return bodyStart - firstInset;
+        // RV06 take-battery probes (Word 16.0, after-spacing and size sweeps): Office
+        // head takes fit one more line than clamp-minus-separator allows on Calibri
+        // uniform notes, so the clamp carries a 2.5pt Office-fitted reserve shaved from
+        // the take side only; fitting stories keep cursor-driven placement bit-identically.
+        return bodyStart - firstInset - 2.5;
     }
 
     // RV06 interleaving: narrowed remainder view for in-flight continuation. The take
