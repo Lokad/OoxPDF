@@ -617,7 +617,10 @@ internal sealed record DocxInlineTextBox(
     string? TextBoxInsetLeftValue = null,
     string? TextBoxInsetTopValue = null,
     string? TextBoxInsetRightValue = null,
-    string? TextBoxInsetBottomValue = null)
+    string? TextBoxInsetBottomValue = null,
+    // RV05 inline-box probe (edge-inlinebox, Word COM): stroked inline textbox
+    // content starts inside the border like floating boxes.
+    string? TextBoxStrokeWidthEmuValue = null)
 {
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];

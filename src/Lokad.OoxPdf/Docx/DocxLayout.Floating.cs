@@ -408,10 +408,14 @@ internal sealed partial class DocxLayoutEngine
 
     internal static void ResolveInlineTextBoxContentInsets(DocxInlineTextBox textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)
     {
-        insetLeft = ReadInsetEmuPoints(textBox.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu);
-        insetTop = ReadInsetEmuPoints(textBox.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu);
-        insetRight = ReadInsetEmuPoints(textBox.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu);
-        insetBottom = ReadInsetEmuPoints(textBox.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu);
+        // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
+        // content starts inside the border like floating boxes. Un-outlined shapes
+        // resolve zero and keep legacy insets bit-identically.
+        double halfStrokePoints = (ReadEmuPoints(textBox.TextBoxStrokeWidthEmuValue) ?? 0d) / 2d;
+        insetLeft = ReadInsetEmuPoints(textBox.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
+        insetTop = ReadInsetEmuPoints(textBox.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
+        insetRight = ReadInsetEmuPoints(textBox.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
+        insetBottom = ReadInsetEmuPoints(textBox.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
     }
 
     // Inline boxes join the scaled body flow uniformly (Office: the w6-inline probe shows

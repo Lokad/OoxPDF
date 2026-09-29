@@ -207,13 +207,21 @@ internal sealed partial class DocxReader
             XElement? textBoxBodyProperties = inline
                 .Descendants(WordprocessingShapeNamespace + "bodyPr")
                 .FirstOrDefault();
+            // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
+            // textbox content starts inside the border like floating boxes. First
+            // outlined a:ln wins; un-outlined shapes keep legacy insets.
+            string? textBoxStrokeWidthEmuValue = inline
+                .Descendants(DrawingNamespace + "ln")
+                .Select(element => (string?)element.Attribute("w"))
+                .FirstOrDefault(width => width is not null);
             textBoxes.Add(new DocxInlineTextBox(
                 (string?)extent?.Attribute("cx"),
                 (string?)extent?.Attribute("cy"),
                 (string?)textBoxBodyProperties?.Attribute("lIns"),
                 (string?)textBoxBodyProperties?.Attribute("tIns"),
                 (string?)textBoxBodyProperties?.Attribute("rIns"),
-                (string?)textBoxBodyProperties?.Attribute("bIns"))
+                (string?)textBoxBodyProperties?.Attribute("bIns"),
+                TextBoxStrokeWidthEmuValue: textBoxStrokeWidthEmuValue)
             {
                 Revisions = RevisionList(revision),
                 BodyElements = ReadRelatedStoryBodyElements(
