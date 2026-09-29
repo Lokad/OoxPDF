@@ -2875,6 +2875,69 @@ internal static class DocxFootnotesTests
         return (separator.TopY - separator.Height) - content.TopY;
     }
 
+    public static void DocxFootnoteContentGapYieldsToCoveredInset()
+    {
+        // RV06 Tah-Verdana probes: the Windows excess must yield where the first-line
+        // inset already covers it, so Tahoma-first Verdana-second content keeps the
+        // shared value while uniform big-ascender content keeps its excess.
+        double control = LayoutFootnoteContentGapWithCoveredInset("Calibri", "Calibri");
+        double mixed = LayoutFootnoteContentGapWithCoveredInset("Calibri", "Tahoma", "Verdana");
+        TestAssert.True(Math.Abs(control - 3.37d) < 0.01d, "Uniform footnote gap must keep the shared value; control=" + control.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(mixed - 3.37d) < 0.01d, "Covered-inset content gap must yield to the shared value; mixed=" + mixed.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class FamilyCoveredInsetTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => inner is IDocxLineMetricsProvider lineMetrics ? lineMetrics.MeasureSingleLineHeight(run, fontSize) : fontSize;
+
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize)
+        {
+            double em = string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? 1.0005d : string.Equals(run?.FontFamily, "Verdana", StringComparison.Ordinal) ? 1.0054d : 0.75d;
+            return em * fontSize;
+        }
+
+        public bool TryGetSingleLineEm(DocxTextRun? run, out double value)
+        {
+            value = 1.2207d;
+            return true;
+        }
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)
+        {
+            double em = string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? 1.0005d : string.Equals(run?.FontFamily, "Verdana", StringComparison.Ordinal) ? 1.0054d : 0.9521d;
+            return em * fontSize;
+        }
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => inner is IDocxStaticTextMetricsProvider staticMetrics ? staticMetrics.MeasureWindowsDescender(run, fontSize) : fontSize * 0.2d;
+    }
+
+    private static double LayoutFootnoteContentGapWithCoveredInset(string markFamily, string firstFamily, string secondFamily = "")
+    {
+        string secondRun = string.IsNullOrEmpty(secondFamily) ? "" : "<w:r><w:rPr><w:rFonts w:ascii=\"F2\" w:hAnsi=\"F2\"/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/></w:rPr><w:t xml:space=\"preserve\"> mixed tail</w:t></w:r>";
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:rPr><w:rFonts w:ascii="MFAM" w:hAnsi="MFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="F1" w:hAnsi="F1"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body one start tail one</w:t></w:r>" + secondRun + "</w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="F1" w:hAnsi="F1"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body two start tail two</w:t></w:r>" + secondRun + "</w:p></w:footnote></w:footnotes>""".Replace("MFAM", markFamily).Replace("F1", firstFamily).Replace("F2", secondFamily)
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new FamilyCoveredInsetTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+        DocxPlacedRelatedStoryLayout content = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
+        return (separator.TopY - separator.Height) - content.TopY;
+    }
+
     public static void DocxEndnoteTakeExcludesTrailingAfterSpacing()
     {
         // RV06 after-spacing sweep: endnote takes exclude the take last-line

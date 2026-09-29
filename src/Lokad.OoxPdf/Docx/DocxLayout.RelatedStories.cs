@@ -1052,6 +1052,16 @@ internal sealed partial class DocxLayoutEngine
         double markFontSizePoints,
         IDocxTextMeasurer? separatorMeasurer)
     {
+        double coveredInsetExcessPoints = 0d;
+        foreach (DocxTextLineLayout firstLine in contentTextLines)
+        {
+            if (firstLine.Segments.Count != 0)
+            {
+                coveredInsetExcessPoints = System.Math.Max(0d, System.Math.Max(0d, -firstLine.BaselineY) - DocxLineMetrics.WordAutoLineBaselineOffsetEm * markFontSizePoints);
+                break;
+            }
+        }
+
         double contentGapMax = 0d;
         foreach (DocxTextLineLayout line in contentTextLines)
         {
@@ -1064,7 +1074,7 @@ internal sealed partial class DocxLayoutEngine
 
                 DocxTextRun run = segment.StyleRun;
                 contentGapMax = System.Math.Max(contentGapMax, ResolveSeparatorGapPoints(run, markFontSizePoints, separatorMeasurer));
-                contentGapMax = System.Math.Max(contentGapMax, ResolveWascContentGapSupplement(run, markRun, markFontSizePoints, separatorMeasurer));
+                contentGapMax = System.Math.Max(contentGapMax, ResolveWascContentGapSupplement(run, markRun, markFontSizePoints, separatorMeasurer, coveredInsetExcessPoints));
             }
         }
 
@@ -1089,12 +1099,15 @@ internal sealed partial class DocxLayoutEngine
     // RV06 fnwrap content-gap probes (Word 16.0): Office hangs big-ascender content
     // lower by the Windows-ascender excess over the mark, so the supplement competes
     // with the single-line gap through the caller max and vanishes without static
-    // metrics, keeping those paths byte-identical.
+    // metrics, keeping those paths byte-identical. The excess yields to first-inset
+    // space the layout already placed (Tah-Verdana mixes), so covered insets do not
+    // double-count Office single excess.
     private static double ResolveWascContentGapSupplement(
         DocxTextRun run,
         DocxTextRun? markRun,
         double markFontSizePoints,
-        IDocxTextMeasurer? separatorMeasurer)
+        IDocxTextMeasurer? separatorMeasurer,
+        double coveredInsetExcessPoints = 0d)
     {
         if (markRun is null || markFontSizePoints <= 0d || separatorMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -1109,12 +1122,13 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double excessPoints = System.Math.Max(0d, runAscenderPoints - markAscenderPoints);
-        if (excessPoints <= 0d)
+        double netExcessPoints = System.Math.Max(0d, excessPoints - coveredInsetExcessPoints);
+        if (netExcessPoints <= 0d)
         {
             return 0d;
         }
 
-        return ResolveSeparatorGapPoints(markRun, markFontSizePoints, separatorMeasurer) + excessPoints;
+        return ResolveSeparatorGapPoints(markRun, markFontSizePoints, separatorMeasurer) + netExcessPoints;
     }
 
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
