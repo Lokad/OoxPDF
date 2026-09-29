@@ -2489,6 +2489,7 @@ internal static class DocxFootnotesTests
             return true;
         }
     }
+
     private static double LayoutEndnoteSeparatorContentGapWithMarkSize(int docDefaultsHalfPoints, double singleLineEm)
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
@@ -2536,6 +2537,44 @@ internal static class DocxFootnotesTests
         return layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator).Height;
     }
 
+    public static void DocxEndnoteSeparatorTextMatchesMarkEmission()
+    {
+        // RV06 height-model probes (Word COM reference edge-endsepheight-text):
+        // Office drops non-mark separator text while drawing the rule (text variant
+        // renders the same 12 ops as the mark variant with no dashes); the renderer
+        // emits the dashes as extra text shows. Pre-fix the text variant shows more.
+        (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
+        if (font is null)
+        {
+            TestAssert.Skip("Environmental precondition not met: (font is null)");
+        }
+
+        var resolver = new DocxTests.SingleResolutionFontResolver(font.Value.Resolution);
+        int markShows = CountSeparatorVariantTextShows("<w:p><w:r><w:separator/></w:r></w:p>", resolver);
+        int textShows = CountSeparatorVariantTextShows("<w:p><w:r><w:t xml:space=\"preserve\">---</w:t></w:r></w:p>", resolver);
+        TestAssert.Equal(markShows, textShows);
+    }
+
+    private static int CountSeparatorVariantTextShows(string separatorParagraph, DocxTests.SingleResolutionFontResolver resolver)
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with endnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:endnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/endnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:type="separator" w:id="0">SEPPARA</w:endnote><w:endnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:endnote><w:endnote w:id="2"><w:p><w:r><w:t>Note body one</w:t></w:r></w:p><w:p><w:r><w:t>Note body two</w:t></w:r></w:p></w:endnote></w:endnotes>""".Replace("SEPPARA", separatorParagraph)
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        PdfPage page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        return DocxTests.CountPdfTextShows(page.Content);
+    }
     public static void DocxFootnoteSeparatorIgnoresExactLineSpacing()
     {
         // Shared story-layout path with endnote separators (Office evidence is

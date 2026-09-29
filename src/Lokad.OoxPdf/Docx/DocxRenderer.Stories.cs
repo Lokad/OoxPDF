@@ -55,7 +55,13 @@ internal sealed partial class DocxRenderer
             graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
         }
 
-        IReadOnlyList<DocxLayoutItem> items = (mapStory ? story.TextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : story.TextLines)
+        // RV06 height-model probes (Word COM reference edge-endsepheight-text): Office
+        // drops non-mark separator text while drawing the rule. Skip text-bearing separator lines
+        // at emission (layout keeps them so placement boxes stay Office-true); endnotes only,
+        // footnotes keep legacy behavior until separately probed.
+        bool suppressSeparatorText = story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator;
+        System.Collections.Generic.IEnumerable<DocxTextLineLayout> storyTextLines = suppressSeparatorText ? story.TextLines.Select(line => RewriteSeparatorTextLineAsMarkSpace(line, story, fontResources)) : story.TextLines;
+        IReadOnlyList<DocxLayoutItem> items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
             .Cast<DocxLayoutItem>()
             .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, 0d, 0d, pageNumber)) : story.InlineImages)
             .Concat(story.TableRows)
@@ -71,6 +77,27 @@ internal sealed partial class DocxRenderer
         }
 
         graphics.RestoreState();
+    }
+
+    // Separator text lines render as a single pilcrow-sized mark space at the rule tab
+    // position (Office drops the text but keeps one space); whitespace-only mark lines pass
+    // through unchanged. Layout keeps the text lines so placement boxes stay Office-true.
+    private static DocxTextLineLayout RewriteSeparatorTextLineAsMarkSpace(DocxTextLineLayout line, DocxPlacedRelatedStoryLayout story, DocxFontResources fontResources)
+    {
+        if (!line.Text.Any(character => !char.IsWhiteSpace(character)))
+        {
+            return line;
+        }
+        double pilcrowSize = line.SourceParagraph?.ParagraphMarkFontSize ?? line.FontSize;
+        double markX = story.X + Math.Min(144d, story.Width);
+        if (line.Segments.Count == 0)
+        {
+            return line with { Text = " ", X = markX };
+        }
+        DocxTextSegmentLayout firstSegment = line.Segments[0];
+        double spaceWidth = fontResources.TextMeasurer?.MeasureText(firstSegment.StyleRun, " ", pilcrowSize) ?? firstSegment.Width;
+        DocxTextSegmentLayout markSpace = firstSegment with { Text = " ", X = markX, Width = spaceWidth, FontSize = pilcrowSize };
+        return line with { Text = " ", Width = spaceWidth, Segments = [markSpace] };
     }
 
     private static void RenderFloatingDrawings(
