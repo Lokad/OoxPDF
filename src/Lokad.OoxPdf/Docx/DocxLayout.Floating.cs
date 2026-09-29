@@ -207,7 +207,6 @@ internal sealed partial class DocxLayoutEngine
                 EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
                 LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
                 LineHeightSource: lineHeightProfile.Source,
-                TakeLineHeight: lineHeightProfile.TakeLineHeight,
                 PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
                 ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,

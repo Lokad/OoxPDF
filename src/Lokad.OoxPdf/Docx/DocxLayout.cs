@@ -98,8 +98,7 @@ internal sealed record DocxLineHeightProfile(
     double? ListLabelWindowsLineHeight,
     double? EffectiveLineSpacingFactor,
     bool LineSpacingFactorFloorApplied,
-    DocxLineHeightSource Source,
-    double? TakeLineHeight = null);
+    DocxLineHeightSource Source);
 
 internal enum DocxLineHeightSource
 {

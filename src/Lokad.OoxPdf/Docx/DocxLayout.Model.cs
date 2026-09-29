@@ -63,8 +63,7 @@ internal sealed record DocxTextLineLayout(
     DocxParagraph? SourceParagraph,
     DocxLineHeightSource? LineHeightSource,
     bool EmitsTerminalParagraphMark,
-    double? FirstLineInsetPoints = null,
-    double? TakeLineHeight = null) : DocxLayoutItem;
+    double? FirstLineInsetPoints = null) : DocxLayoutItem;
 
 internal sealed record DocxTextSegmentLayout(
     string Text,
