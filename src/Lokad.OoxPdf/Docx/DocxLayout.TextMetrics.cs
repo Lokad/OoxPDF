@@ -49,6 +49,15 @@ internal interface IDocxLineMetricsProvider
         return 0d;
     }
 
+    // Horizontal-header ascender for pilcrow-driven body first baselines (Word 16.0
+    // body-pilcrow probes): providers without family-keyed metrics keep the default,
+    // so layout falls back to run-only behavior and test doubles stay byte-identical.
+    bool TryGetHheaAscenderByFamily(string? family, double fontSizePoints, out double ascenderPoints)
+    {
+        ascenderPoints = 0d;
+        return false;
+    }
+
     // Horizontal-header line height for auto line boxes (Word 16.0 body-grid
     // probes). Providers without hhea metrics keep the single-line height, so
     // test doubles and fallbacks stay byte-identical.
@@ -158,7 +167,7 @@ internal static class DocxLineMetrics
             : Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d);
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider, bool includeParagraphMark = false)
     {
         if (provider is null || paragraph.Runs.Count == 0)
         {
@@ -177,12 +186,31 @@ internal static class DocxLineMetrics
             }
         }
 
-        return widest is null ? null : (double?)provider.MeasureHheaAscender(widest, fontSize);
+        double? widestAscender = widest is null ? null : (double?)provider.MeasureHheaAscender(widest, fontSize);
+        if (!includeParagraphMark || paragraph.ParagraphMarkFontFamily is null)
+        {
+            return widestAscender;
+        }
+
+        // RV05 body-pilcrow probes (Word 16.0, edge-endsepgrid-tah/vdn): Office sizes
+        // body first baselines through the pilcrow font, so the pilcrow joins the widest
+        // run as an inset candidate. It contributes its family (em) sized at the paragraph
+        // size like every other line font: Office holds the Tahoma body shift constant
+        // across 10/12/14pt docDefaults sizes (edge-endsepgrid-tah20/24/28 bodies all at
+        // 707.98). Paragraphs without a resolved pilcrow family, or providers without
+        // family-keyed metrics, keep legacy run-only behavior. A synthesized run cannot be
+        // measured because production typeface resolution is keyed by planned-run identity.
+        if (provider.TryGetHheaAscenderByFamily(paragraph.ParagraphMarkFontFamily, fontSize, out double pilcrowAscender))
+        {
+            return Math.Max(widestAscender ?? 0d, pilcrowAscender);
+        }
+
+        return widestAscender;
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer, bool includeParagraphMark = false)
     {
-        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider);
+        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider, includeParagraphMark);
     }
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)

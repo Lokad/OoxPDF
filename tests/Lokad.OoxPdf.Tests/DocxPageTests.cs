@@ -2362,4 +2362,60 @@ internal static class DocxPageTests
         TestAssert.Equal(14d, markerLine.Segments[markerLine.Segments.Count - 1].FontSize);
     }
 
+    public static void DocxBodyFirstBaselineFollowsPilcrowFont()
+    {
+        // RV05 body-pilcrow probes (Word COM references edge-endsepgrid-tah/vdn):
+        // Office sizes the body first-baseline inset through the pilcrow font, not the
+        // run font: identical Calibri-direct bodies sit 0.73pt lower under Tahoma
+        // docDefaults (max(1.0005, 0.94) vs max(0.75, 0.94) at 12pt). Pre-fix both
+        // baselines are equal because layout only consults run fonts.
+        double calBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Calibri", 24);
+        double tahBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Tahoma", 24);
+        TestAssert.True(Math.Abs((calBaseline - tahBaseline) - 0.73d) < 0.05d, "Body first baseline must follow the pilcrow font; observed shift=" + (calBaseline - tahBaseline).ToString(CultureInfo.InvariantCulture) + ".");
+        double calTallBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Calibri", 28);
+        double tahTallBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Tahoma", 28);
+        TestAssert.True(Math.Abs((calTallBaseline - tahTallBaseline) - 0.73d) < 0.05d, "Body pilcrow shift must not scale with docDefaults size; observed shift=" + (calTallBaseline - tahTallBaseline).ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class PilcrowHheaTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => inner is IDocxLineMetricsProvider lineMetrics ? lineMetrics.MeasureSingleLineHeight(run, fontSize) : fontSize;
+
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize)
+        {
+            double em = run?.FontFamily == "Tahoma" ? 1.0005d : 0.75d;
+            return em * fontSize;
+        }
+
+        public bool TryGetHheaAscenderByFamily(string? family, double fontSizePoints, out double ascenderPoints)
+        {
+            ascenderPoints = (family == "Tahoma" ? 1.0005d : 0.75d) * fontSizePoints;
+            return true;
+        }
+    }
+
+    private static double LayoutBodyFirstBaselineWithDocDefaultsFamily(string family, int docDefaultsHalfPoints)
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
+            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="FAM" w:hAnsi="FAM"/><w:sz w:val="SZ"/><w:szCs w:val="SZ"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>""".Replace("FAM", family).Replace("SZ", docDefaultsHalfPoints.ToString(CultureInfo.InvariantCulture)),
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body text</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new PilcrowHheaTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        return layout.Pages.Single().Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+    }
+
 }
