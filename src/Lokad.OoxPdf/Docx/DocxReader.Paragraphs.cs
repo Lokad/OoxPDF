@@ -262,8 +262,7 @@ internal sealed partial class DocxReader
             Revisions = paragraphRevisions,
             HasDeletedParagraphMark = hasDeletedParagraphMark,
             DeletedText = deletedText.ToString(),
-            ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
-            ParagraphMarkFontFamily = paragraphMarkRun.FontFamily
+            ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints
         };
 
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)

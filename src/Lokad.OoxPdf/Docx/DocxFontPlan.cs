@@ -229,36 +229,6 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         return singleLineEm > 0d;
     }
 
-    public bool TryGetHheaAscenderByFamily(string? family, double fontSizePoints, out double ascenderPoints)
-    {
-        ascenderPoints = 0d;
-        if (string.IsNullOrEmpty(family) || fontSizePoints <= 0d || fontResolver is null)
-        {
-            return false;
-        }
-
-        // RV05 body-pilcrow probes: pilcrow typefaces are not planned runs, so family
-        // resolution goes through the resolver directly (regular weight/style: ascender
-        // metrics do not vary across faces). Fallback resolutions measure nothing so
-        // missing pilcrow fonts keep legacy run-only behavior instead of borrowing
-        // another family’s metrics.
-        cancellationToken.ThrowIfCancellationRequested();
-        FontFaceResolution resolution = fontResolver.Resolve(new FontRequest(family));
-        if (resolution.IsFallback)
-        {
-            return false;
-        }
-
-        OpenTypeFont? font = LoadFont(resolution);
-        if (font is null)
-        {
-            return false;
-        }
-
-        ascenderPoints = DocxLineMetrics.MeasureHheaAscender(font, fontSizePoints);
-        return ascenderPoints > 0d;
-    }
-
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -2362,22 +2362,23 @@ internal static class DocxPageTests
         TestAssert.Equal(14d, markerLine.Segments[markerLine.Segments.Count - 1].FontSize);
     }
 
-    public static void DocxBodyFirstBaselineFollowsPilcrowFont()
+    public static void DocxBodyFirstBaselineFollowsMaxHheaRun()
     {
-        // RV05 body-pilcrow probes (Word COM references edge-endsepgrid-tah/vdn):
-        // Office sizes the body first-baseline inset through the pilcrow font, not the
-        // run font: identical Calibri-direct bodies sit 0.73pt lower under Tahoma
-        // docDefaults (max(1.0005, 0.94) vs max(0.75, 0.94) at 12pt). Pre-fix both
-        // baselines are equal because layout only consults run fonts.
-        double calBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Calibri", 24);
-        double tahBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Tahoma", 24);
-        TestAssert.True(Math.Abs((calBaseline - tahBaseline) - 0.73d) < 0.05d, "Body first baseline must follow the pilcrow font; observed shift=" + (calBaseline - tahBaseline).ToString(CultureInfo.InvariantCulture) + ".");
-        double calTallBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Calibri", 28);
-        double tahTallBaseline = LayoutBodyFirstBaselineWithDocDefaultsFamily("Tahoma", 28);
-        TestAssert.True(Math.Abs((calTallBaseline - tahTallBaseline) - 0.73d) < 0.05d, "Body pilcrow shift must not scale with docDefaults size; observed shift=" + (calTallBaseline - tahTallBaseline).ToString(CultureInfo.InvariantCulture) + ".");
+        // RV05 bodymix probes (Word COM references edge-bodymix-cal/tah plus the
+        // mixed-size edge-bodymix10-tah probe): Office sizes the body first-baseline
+        // inset through the max-hhea run, not the widest run by size: a direct Tahoma
+        // 12pt run inside a Calibri body sits 0.73pt lower (max(1.0005, 0.94) vs
+        // max(0.75, 0.94) at 12pt), while a Tahoma 10pt run leaves the baseline
+        // unchanged (own-size 10.005 stays below the 11.28 floor). Pre-fix both pairs
+        // are equal because layout takes the widest run by size.
+        double calBaseline = LayoutBodyFirstBaselineMixedRun("Calibri", 24);
+        double tahBaseline = LayoutBodyFirstBaselineMixedRun("Tahoma", 24);
+        TestAssert.True(Math.Abs((calBaseline - tahBaseline) - 0.73d) < 0.05d, "Body first baseline must follow the max-hhea run; observed shift=" + (calBaseline - tahBaseline).ToString(CultureInfo.InvariantCulture) + ".");
+        double tahSmallBaseline = LayoutBodyFirstBaselineMixedRun("Tahoma", 20);
+        TestAssert.True(Math.Abs(tahSmallBaseline - calBaseline) < 0.05d, "Body max-hhea must resolve at own size; observed shift=" + (tahSmallBaseline - calBaseline).ToString(CultureInfo.InvariantCulture) + ".");
     }
 
-    private sealed class PilcrowHheaTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
+    private sealed class MixedHheaTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
 
@@ -2388,23 +2389,17 @@ internal static class DocxPageTests
             double em = run?.FontFamily == "Tahoma" ? 1.0005d : 0.75d;
             return em * fontSize;
         }
-
-        public bool TryGetHheaAscenderByFamily(string? family, double fontSizePoints, out double ascenderPoints)
-        {
-            ascenderPoints = (family == "Tahoma" ? 1.0005d : 0.75d) * fontSizePoints;
-            return true;
-        }
     }
 
-    private static double LayoutBodyFirstBaselineWithDocDefaultsFamily(string family, int docDefaultsHalfPoints)
+    private static double LayoutBodyFirstBaselineMixedRun(string midFamily, int midHalfPoints)
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
             ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
             ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
-            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="FAM" w:hAnsi="FAM"/><w:sz w:val="SZ"/><w:szCs w:val="SZ"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>""".Replace("FAM", family).Replace("SZ", docDefaultsHalfPoints.ToString(CultureInfo.InvariantCulture)),
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body text</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body start words </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="FAM" w:hAnsi="FAM"/><w:sz w:val="SZ"/><w:szCs w:val="SZ"/></w:rPr><w:t xml:space="preserve">middle mixed words</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve"> and trailing words.</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""".Replace("FAM", midFamily).Replace("SZ", midHalfPoints.ToString(CultureInfo.InvariantCulture)),
         });
         DocxDocument document;
         using (FileStream stream = File.OpenRead(input))
@@ -2414,7 +2409,7 @@ internal static class DocxPageTests
         }
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new PilcrowHheaTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+            .Create(document, new MixedHheaTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
         return layout.Pages.Single().Items.OfType<DocxTextLineLayout>().Single().BaselineY;
     }
 

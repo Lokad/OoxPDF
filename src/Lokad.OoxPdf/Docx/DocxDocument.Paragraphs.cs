@@ -42,13 +42,6 @@ internal sealed record DocxParagraph(
     // legacy run-size behavior (synthetic and unresolvable paragraphs).
     public double? ParagraphMarkFontSize { get; init; }
 
-    // Pilcrow (paragraph-mark) run family through the style cascade, excluding direct
-    // run formatting. Office sizes body first baselines through the pilcrow font
-    // (body-pilcrow probes 2026-09-29: Tahoma/Verdana docDefaults lower identical
-    // Calibri-direct bodies by up to 0.7pt). Null keeps legacy run-only behavior
-    // (synthetic and unresolvable paragraphs).
-    public string? ParagraphMarkFontFamily { get; init; }
-
     public DocxEffectiveParagraphProperties EffectiveProperties => new(
         StyleId,
         Alignment,

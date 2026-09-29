@@ -49,15 +49,6 @@ internal interface IDocxLineMetricsProvider
         return 0d;
     }
 
-    // Horizontal-header ascender for pilcrow-driven body first baselines (Word 16.0
-    // body-pilcrow probes): providers without family-keyed metrics keep the default,
-    // so layout falls back to run-only behavior and test doubles stay byte-identical.
-    bool TryGetHheaAscenderByFamily(string? family, double fontSizePoints, out double ascenderPoints)
-    {
-        ascenderPoints = 0d;
-        return false;
-    }
-
     // Horizontal-header line height for auto line boxes (Word 16.0 body-grid
     // probes). Providers without hhea metrics keep the single-line height, so
     // test doubles and fallbacks stay byte-identical.
@@ -167,50 +158,35 @@ internal static class DocxLineMetrics
             : Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d);
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider, bool includeParagraphMark = false)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider)
     {
         if (provider is null || paragraph.Runs.Count == 0)
         {
             return null;
         }
 
-        DocxTextRun? widest = null;
-        double widestSize = -1d;
+        // RV05 bodymix probes (Word COM references edge-bodymix-cal/tah plus the
+        // mixed-size edge-bodymix10-tah probe): Office sizes first-baseline insets through
+        // the max-hhea run at its own size, not the widest run by size (a direct Tahoma
+        // 12pt run shifts a Calibri body by 0.73pt, while a Tahoma 10pt run leaves it
+        // unchanged at own-size 10.005 below the floor). Uniform documents resolve
+        // identically; only mixed-font lines change.
+        double? maxAscender = null;
         foreach (DocxTextRun run in paragraph.Runs)
         {
-            double size = run.EffectiveProperties.FontSize;
-            if (size > widestSize)
+            double ascender = provider.MeasureHheaAscender(run, run.EffectiveProperties.FontSize);
+            if (maxAscender is null || ascender > maxAscender.Value)
             {
-                widestSize = size;
-                widest = run;
+                maxAscender = ascender;
             }
         }
 
-        double? widestAscender = widest is null ? null : (double?)provider.MeasureHheaAscender(widest, fontSize);
-        if (!includeParagraphMark || paragraph.ParagraphMarkFontFamily is null)
-        {
-            return widestAscender;
-        }
-
-        // RV05 body-pilcrow probes (Word 16.0, edge-endsepgrid-tah/vdn): Office sizes
-        // body first baselines through the pilcrow font, so the pilcrow joins the widest
-        // run as an inset candidate. It contributes its family (em) sized at the paragraph
-        // size like every other line font: Office holds the Tahoma body shift constant
-        // across 10/12/14pt docDefaults sizes (edge-endsepgrid-tah20/24/28 bodies all at
-        // 707.98). Paragraphs without a resolved pilcrow family, or providers without
-        // family-keyed metrics, keep legacy run-only behavior. A synthesized run cannot be
-        // measured because production typeface resolution is keyed by planned-run identity.
-        if (provider.TryGetHheaAscenderByFamily(paragraph.ParagraphMarkFontFamily, fontSize, out double pilcrowAscender))
-        {
-            return Math.Max(widestAscender ?? 0d, pilcrowAscender);
-        }
-
-        return widestAscender;
+        return maxAscender;
     }
 
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer, bool includeParagraphMark = false)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
     {
-        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider, includeParagraphMark);
+        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider);
     }
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
