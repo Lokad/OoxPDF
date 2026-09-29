@@ -313,7 +313,7 @@ internal sealed partial class DocxLayoutEngine
                     // An overflowing separator would strand its rule at the margin while content
                     // slices onto fresh pages (Office keeps separator and content together);
                     // turn first, mirroring overflowing-item placement everywhere else.
-                    if (ResolveSizeDrivenSeparatorHeight(documentEndSeparatorLayout, activePage) > cursorTop - activePage.MarginBottom)
+                    if (ResolveSizeDrivenSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer) > cursorTop - activePage.MarginBottom)
                     {
                         MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
@@ -928,14 +928,14 @@ internal sealed partial class DocxLayoutEngine
 
     // Shared by the document-end overflow turn below: the fit check must measure the
     // same size-driven height that placement will consume, not the laid-out height.
-    private static double ResolveSizeDrivenSeparatorHeight(DocxRelatedStoryLayout separatorLayout, DocxLayoutPage page)
+    private static double ResolveSizeDrivenSeparatorHeight(DocxRelatedStoryLayout separatorLayout, DocxLayoutPage page, IDocxTextMeasurer? separatorMeasurer)
     {
         double laidOutHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         if (separatorLayout.TextLines.Count == 0)
         {
             return laidOutHeight;
         }
-        (DocxTextRun? _, double pivotMarkSize) = FindSeparatorMarkFont(separatorLayout.TextLines);
+        (DocxTextRun? markRun, double pivotMarkSize) = FindSeparatorMarkFont(separatorLayout.TextLines);
         if (pivotMarkSize <= 0d)
         {
             return laidOutHeight;
@@ -945,7 +945,27 @@ internal sealed partial class DocxLayoutEngine
         double firstInset = DocxLineMetrics.WordAutoLineBaselineOffsetEm * pivotMarkSize;
         double lineBoxAtPivot = firstLineBox * EndnoteSeparatorSlopePivotPoints / pivotMarkSize;
         double insetAtPivot = DocxLineMetrics.WordAutoLineBaselineOffsetEm * EndnoteSeparatorSlopePivotPoints;
-        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot));
+        double singleLineDeficitCorrection = ResolveSeparatorSingleLineDeficitCorrection(markRun, pivotMarkSize, separatorMeasurer);
+        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot) + singleLineDeficitCorrection);
+    }
+
+    // RV06 four-family separator grids (Word COM references edge-endsepgrid-cal/tmr/tah/vdn
+    // at 10/12/14pt): Office separator height carries a singleLine-deficit slope term against
+    // the validated Calibri anchor that no laid-out box spread explains (Times, Tahoma and
+    // Verdana share singleLineEm 1.15 yet place about 0.7pt lower at 12pt with matching content
+    // boxes, rule thickness, rule offsets and below-gaps). The term vanishes for the validated
+    // family and for measurers without single-line metrics, so those paths stay byte-identical.
+    private const double EndnoteSeparatorReferenceSingleLineEm = 1.2207d;
+    private const double EndnoteSeparatorSingleLineDeficitSlope = 0.84d;
+
+    private static double ResolveSeparatorSingleLineDeficitCorrection(DocxTextRun? markRun, double pivotMarkSize, IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (pivotMarkSize <= 0d || separatorMeasurer is null || !separatorMeasurer.TryGetSingleLineEm(markRun, out double singleLineEm) || singleLineEm <= 0d)
+        {
+            return 0d;
+        }
+
+        return Math.Max(0d, EndnoteSeparatorReferenceSingleLineEm - singleLineEm) * EndnoteSeparatorSingleLineDeficitSlope * pivotMarkSize;
     }
 
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
@@ -960,7 +980,7 @@ internal sealed partial class DocxLayoutEngine
         double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         if (useSizeDrivenPlacementHeight)
         {
-            separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page);
+            separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page, separatorMeasurer);
         }
         double separatorBottom = separatorTop - separatorHeight;
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
