@@ -286,23 +286,33 @@ internal sealed partial class DocxRenderer
 
     private static bool TryResolveTextBoxStroke(DocxFloatingDrawing drawing, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
     {
+        return TryResolveTextBoxStrokeGeometry(drawing.TextBoxStrokeWidthEmuValue, drawing.TextBoxStrokeColorHex, width, height, out strokeWidth, out strokeRed, out strokeGreen, out strokeBlue);
+    }
+
+    private static bool TryResolveInlineTextBoxStroke(DocxInlineTextBox textBox, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
+    {
+        return TryResolveTextBoxStrokeGeometry(textBox.TextBoxStrokeWidthEmuValue, textBox.TextBoxStrokeColorHex, width, height, out strokeWidth, out strokeRed, out strokeGreen, out strokeBlue);
+    }
+
+    private static bool TryResolveTextBoxStrokeGeometry(string? strokeWidthEmuValue, string? strokeColorHex, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
+    {
         strokeWidth = 0d;
         strokeRed = 0;
         strokeGreen = 0;
         strokeBlue = 0;
-        if (width <= 0d || height <= 0d || string.IsNullOrEmpty(drawing.TextBoxStrokeColorHex) || drawing.TextBoxStrokeColorHex.Length != 6)
+        if (width <= 0d || height <= 0d || string.IsNullOrEmpty(strokeColorHex) || strokeColorHex.Length != 6)
         {
             return false;
         }
 
-        if (!long.TryParse(drawing.TextBoxStrokeWidthEmuValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long strokeEmu) || strokeEmu <= 0L)
+        if (!long.TryParse(strokeWidthEmuValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long strokeEmu) || strokeEmu <= 0L)
         {
             return false;
         }
 
-        if (!byte.TryParse(drawing.TextBoxStrokeColorHex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeRed) ||
-            !byte.TryParse(drawing.TextBoxStrokeColorHex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeGreen) ||
-            !byte.TryParse(drawing.TextBoxStrokeColorHex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeBlue))
+        if (!byte.TryParse(strokeColorHex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeRed) ||
+            !byte.TryParse(strokeColorHex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeGreen) ||
+            !byte.TryParse(strokeColorHex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out strokeBlue))
         {
             return false;
         }
@@ -339,6 +349,14 @@ internal sealed partial class DocxRenderer
         double clipTop = box.BoxTop - ResolveTextEmissionBaselineOffset(markupContext);
         graphics.SaveState();
         graphics.ClipRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
+        // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
+        // frames paint their outline under the text like floating boxes.
+        if (TryResolveInlineTextBoxStroke(box.TextBox, box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out byte inlineStrokeRed, out byte inlineStrokeGreen, out byte inlineStrokeBlue))
+        {
+            graphics.SetStrokeRgb(inlineStrokeRed, inlineStrokeGreen, inlineStrokeBlue);
+            graphics.SetLineWidth(inlineStrokeWidth);
+            graphics.StrokeRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
+        }
         IReadOnlyList<DocxLayoutItem> items = box.TextLines
             .Cast<DocxLayoutItem>()
             .Concat(box.InlineImages)

@@ -620,7 +620,10 @@ internal sealed record DocxInlineTextBox(
     string? TextBoxInsetBottomValue = null,
     // RV05 inline-box probe (edge-inlinebox, Word COM): stroked inline textbox
     // content starts inside the border like floating boxes.
-    string? TextBoxStrokeWidthEmuValue = null)
+    string? TextBoxStrokeWidthEmuValue = null,
+    // RV05 inline frame stroking: resolved outline color hex (RRGGBB). Null keeps
+    // legacy borderless rendering.
+    string? TextBoxStrokeColorHex = null)
 {
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
