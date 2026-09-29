@@ -206,6 +206,26 @@ internal static class OoxmlTests
         TestAssert.True(!document.Descendants().Any(e => e.Name.LocalName == "AlternateContent" || e.Name.LocalName == "Choice" || e.Name.LocalName == "Fallback"), "Exactly one representation should survive.");
     }
 
+    public static void AlternateContentUnderstoodWpsChoiceWins()
+    {
+        // RV05 Word-authored floating textboxes (edge-floatbox.docx, Word COM): the
+        // anchor hides in mc:Choice Requires="wps" with a VML Fallback. The resolver
+        // must keep the wps representation so the floating textbox parses; pre-fix it
+        // falls back to VML and the box text leaks into body flow.
+        System.Xml.Linq.XDocument document = System.Xml.Linq.XDocument.Parse("""
+            <root xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <mc:AlternateContent>
+                <mc:Choice Requires="wps"><wps:wsp>ChoiceBox</wps:wsp></mc:Choice>
+                <mc:Fallback><w:a>FallbackText</w:a></mc:Fallback>
+              </mc:AlternateContent>
+            </root>
+            """);
+
+        OoxMarkupCompatibility.ResolveAlternateContent(document);
+
+        System.Xml.Linq.XNamespace wps = "http://schemas.microsoft.com/office/word/2010/wordprocessingShape";
+        TestAssert.Equal("ChoiceBox", string.Concat(document.Descendants(wps + "wsp").Select(e => e.Value)));
+    }
     public static void AlternateContentUnknownChoiceFallsBack()
     {
         System.Xml.Linq.XDocument document = System.Xml.Linq.XDocument.Parse("""

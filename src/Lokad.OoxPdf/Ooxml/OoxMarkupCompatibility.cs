@@ -21,6 +21,12 @@ internal static class OoxMarkupCompatibility
             "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
             "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
 
+            // RV05 Word-authored floating textboxes (edge-floatbox.docx, Word COM): the
+            // anchor hides in mc:Choice Requires="wps" with a VML Fallback. Keeping the
+            // wps representation routes the box through floating layout instead of leaking
+            // its text into body flow; other 2010-era namespaces stay on fallback.
+            "http://schemas.microsoft.com/office/word/2010/wordprocessingShape",
+
             "urn:schemas-microsoft-com:vml"
         ],
         StringComparer.Ordinal);
