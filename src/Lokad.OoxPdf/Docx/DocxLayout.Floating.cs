@@ -835,7 +835,10 @@ internal sealed partial class DocxLayoutEngine
     {
         return item switch
         {
-            DocxTextLineLayout text => (text.BaselineY, text.FontSize),
+            // RV05 floatbox probe: paragraph tops hang the first baseline plus the
+            // first-line inset. Lines without a stored inset keep the legacy font-size
+            // bound; the shared bound keeps both index builders in agreement.
+            DocxTextLineLayout text => (text.BaselineY, text.IsFirstParagraphLine == true && text.FirstLineInsetPoints is double inset ? inset : text.FontSize),
             DocxInlineImageLayout image => (image.Y, image.Height),
             DocxTableRowLayout row => (row.Y, row.Height),
             _ => (0d, 0d)

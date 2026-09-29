@@ -1257,7 +1257,13 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph,
-                        Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false));
+                        Story: DocxStoryId.Body(), EmitsTerminalParagraphMark: false,
+                        // RV05 floatbox probe (Word COM reference edge-floatbox):
+                        // paragraph-relative boxes anchor to the paragraph top, which is
+                        // the first baseline plus the first-line inset, not plus the font
+                        // size. Only body first lines carry it; other paths keep legacy
+                        // bounds until separately probed.
+                        FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null));
                     if (lineImages is not null)
                     {
                         currentItems.AddRange(lineImages);

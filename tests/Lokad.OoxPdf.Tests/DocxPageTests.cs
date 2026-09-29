@@ -2413,4 +2413,32 @@ internal static class DocxPageTests
         return layout.Pages.Single().Items.OfType<DocxTextLineLayout>().Single().BaselineY;
     }
 
+    public static void DocxParagraphAnchoredBoxUsesFirstLineInsetForReferenceTop()
+    {
+        // RV05 floatbox probe (Word COM reference edge-floatbox): paragraph-relative
+        // boxes anchor to the paragraph top, which is the first baseline plus the
+        // first-line inset, not plus the font size (12pt Calibri: 11.28 vs 12, a 0.72
+        // gap). Pre-fix the placed box rides 0.72 high.
+        DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 12d, 12d) with { LineSpacingPoints = null };
+        DocxFloatingDrawing drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(anchor)]) with { VerticalRelativeFromValue = "paragraph", VerticalOffsetValue = "914400" };
+        DocxDocument document = new(
+            300d,
+            300d,
+            30d,
+            90d,
+            30d,
+            30d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [],
+            [],
+            [new DocxParagraphElement(anchor)],
+            [anchor],
+            []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        double bodyBaseline = layout.Pages.Single().Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+        double placedTop = layout.FloatingDrawings.Single().PlacedTop ?? double.NaN;
+        TestAssert.True(Math.Abs(placedTop - (bodyBaseline + 12d * 0.94d - 72d)) < 0.000001d, "Paragraph-anchored boxes must hang off baseline plus first-line inset; placedTop=" + placedTop.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
 }
