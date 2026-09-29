@@ -320,7 +320,13 @@ internal sealed partial class DocxLayoutEngine
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-                    cursorTop = separatorBottom - ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer);
+                    double endnoteContentGapPoints = 0d;
+                    foreach (DocxRelatedStoryLayout endnoteContentLayout in documentEndStories)
+                    {
+                        endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkSize, separatorMeasurer));
+                    }
+
+                    cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
