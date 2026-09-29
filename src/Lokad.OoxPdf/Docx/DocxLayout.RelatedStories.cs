@@ -946,7 +946,8 @@ internal sealed partial class DocxLayoutEngine
         double lineBoxAtPivot = firstLineBox * EndnoteSeparatorSlopePivotPoints / pivotMarkSize;
         double insetAtPivot = DocxLineMetrics.WordAutoLineBaselineOffsetEm * EndnoteSeparatorSlopePivotPoints;
         double singleLineDeficitCorrection = ResolveSeparatorSingleLineDeficitCorrection(markRun, pivotMarkSize, separatorMeasurer);
-        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot) + singleLineDeficitCorrection);
+        double smallAscSupplement = ResolveSeparatorSmallAscSupplement(markRun, pivotMarkSize, separatorMeasurer);
+        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot) + singleLineDeficitCorrection + smallAscSupplement);
     }
 
     // RV06 four-family separator grids (Word COM references edge-endsepgrid-cal/tmr/tah/vdn
@@ -966,6 +967,38 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return Math.Max(0d, EndnoteSeparatorReferenceSingleLineEm - singleLineEm) * EndnoteSeparatorSingleLineDeficitSlope * pivotMarkSize;
+    }
+
+    private const double EndnoteSeparatorReferenceWindowsAscenderEm = 0.9521d;
+    private const double EndnoteSeparatorSmallAscSupplementSlope = 2.0d;
+
+    private static double ResolveSeparatorSmallAscSupplement(DocxTextRun? markRun, double pivotMarkSize, IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (pivotMarkSize <= 0d || separatorMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
+        {
+            return 0d;
+        }
+
+        double windowsAscenderPoints = staticMetrics.MeasureWindowsAscender(markRun, pivotMarkSize);
+        if (windowsAscenderPoints <= 0d)
+        {
+            return 0d;
+        }
+
+        double windowsAscenderEm = windowsAscenderPoints / pivotMarkSize;
+        double ascenderDeficitEm = EndnoteSeparatorReferenceWindowsAscenderEm - windowsAscenderEm;
+        if (ascenderDeficitEm <= 0d)
+        {
+            return 0d;
+        }
+
+        double smallSizePoints = EndnoteSeparatorSlopePivotPoints - pivotMarkSize;
+        if (smallSizePoints <= 0d)
+        {
+            return 0d;
+        }
+
+        return ascenderDeficitEm * EndnoteSeparatorSmallAscSupplementSlope * smallSizePoints;
     }
 
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceSeparatorStoryWithMark(
