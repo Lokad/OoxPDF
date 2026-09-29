@@ -59,6 +59,19 @@ internal static class FontTests
         TestAssert.True(font.GetAdvanceWidth(glyph) > 0, "Expected a positive advance width for 'A'.");
     }
 
+    public static void OpenTypeParserReadsOs2SelectionFlags()
+    {
+        // RV06 Aptos probes: only Aptos sets OS/2 USE_TYPO_METRICS among probed families,
+        // so the parser must surface fsSelection for the content-gap gate.
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        (int Offset, int Length) range = TestFontBuilder.GetTableRange(bytes, "OS/2");
+        TestAssert.True(range.Length >= 78, "Expected the synthetic OS/2 table to cover fsSelection.");
+        bytes[range.Offset + 62] = 0x00;
+        bytes[range.Offset + 63] = 0x80;
+        TestAssert.Equal((ushort)0x80, OpenTypeFont.Load(bytes).Os2.SelectionFlags);
+        TestAssert.Equal((ushort)0, OpenTypeFont.Load(TestFontBuilder.CreateTestFont()).Os2.SelectionFlags);
+    }
+
     public static void OpenTypeFontLoadObservesCancelledToken()
     {
         // Q01: table parsing must honor cancellation instead of expanding

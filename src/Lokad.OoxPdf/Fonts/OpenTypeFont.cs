@@ -974,7 +974,8 @@ internal sealed partial class OpenTypeFont
             TypographicDescender: I16(bytes, os2.Offset + 70),
             TypographicLineGap: I16(bytes, os2.Offset + 72),
             WindowsAscender: U16(bytes, os2.Offset + 74),
-            WindowsDescender: U16(bytes, os2.Offset + 76));
+            WindowsDescender: U16(bytes, os2.Offset + 76),
+            SelectionFlags: U16(bytes, os2.Offset + 62));
     }
 
     private static HheaMetrics ReadHhea(byte[] bytes, Dictionary<string, TableRecord> tables)
@@ -1136,7 +1137,8 @@ internal sealed partial class OpenTypeFont
         short TypographicDescender,
         short TypographicLineGap,
         ushort WindowsAscender,
-        ushort WindowsDescender);
+        ushort WindowsDescender,
+        ushort SelectionFlags);
 
     internal readonly record struct FontBounds(short XMin, short YMin, short XMax, short YMax);
 

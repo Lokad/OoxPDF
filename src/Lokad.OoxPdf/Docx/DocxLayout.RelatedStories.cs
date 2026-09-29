@@ -1148,6 +1148,16 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
+        // RV06 Aptos probes (Word 16.0, uniform Aptos lacks the excess while Segoe keeps
+        // 1.524 of it with Verdana present at 0.64): only Aptos sets OS/2 USE_TYPO_METRICS
+        // among probed families, so runs whose resolved face requests typographic metrics
+        // skip the Windows-ascender supplement instead of keying it by magnitude.
+        if (separatorMeasurer is IDocxTypographicMetricsProvider typographic &&
+            typographic.UseTypographicMetrics(run))
+        {
+            return 0d;
+        }
+
         double runAscenderPoints = staticMetrics.MeasureWindowsAscender(run, markFontSizePoints);
         double markAscenderPoints = staticMetrics.MeasureWindowsAscender(markRun, markFontSizePoints);
         if (runAscenderPoints <= 0d || markAscenderPoints <= 0d)

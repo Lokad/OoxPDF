@@ -65,6 +65,16 @@ internal interface IDocxStaticTextMetricsProvider
     double MeasureWindowsDescender(DocxTextRun? run, double fontSize);
 }
 
+// RV06 Aptos probes (Word 16.0, uniform Aptos first baseline 0.61 high with the
+// Windows-ascender supplement standing while Segoe uniform keeps it): only Aptos sets
+// OS/2 USE_TYPO_METRICS among probed families, so runs whose resolved face requests
+// typographic metrics skip the Windows-ascender content-gap supplement. Opt-in per
+// provider; measurers without the interface keep legacy behavior byte-identically.
+internal interface IDocxTypographicMetricsProvider
+{
+    bool UseTypographicMetrics(DocxTextRun? run);
+}
+
 internal static class DocxTextSpacing
 {
     public static double AddCharacterSpacing(double measuredWidth, DocxTextRun? run, string text)

@@ -178,7 +178,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 
 }
 
-internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxTypographicMetricsProvider
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
     private readonly FontFaceResolution? fallbackResolution;
@@ -370,6 +370,13 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         cancellationToken.ThrowIfCancellationRequested();
         OpenTypeFont? font = ResolveFont(run);
         return font is null ? 0d : DocxLineMetrics.MeasureWindowsDescender(font, fontSize);
+    }
+
+    public bool UseTypographicMetrics(DocxTextRun? run)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OpenTypeFont? font = ResolveFont(run);
+        return font is not null && (font.Os2.SelectionFlags & 0x80) != 0;
     }
 
     private IReadOnlyList<OpenTypeFont?> ResolveCandidateFonts(DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)

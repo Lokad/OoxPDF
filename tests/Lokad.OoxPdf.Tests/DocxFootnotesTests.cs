@@ -2900,7 +2900,34 @@ internal static class DocxFootnotesTests
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => inner is IDocxStaticTextMetricsProvider staticMetrics ? staticMetrics.MeasureWindowsDescender(run, fontSize) : fontSize * 0.2d;
     }
 
+    private sealed class TypoWascTextMeasurer(IDocxTextMeasurer inner, bool useTypographicMetrics) : IDocxTextMeasurer, IDocxStaticTextMetricsProvider, IDocxTypographicMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public bool TryGetSingleLineEm(DocxTextRun? run, out double value)
+        {
+            value = 1.2207d;
+            return true;
+        }
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => (string.Equals(run?.FontFamily, "BigAsc", StringComparison.Ordinal) ? 1.05d : 0.9521d) * fontSize;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => inner is IDocxStaticTextMetricsProvider staticMetrics ? staticMetrics.MeasureWindowsDescender(run, fontSize) : fontSize * 0.2d;
+
+        public bool UseTypographicMetrics(DocxTextRun? run) => useTypographicMetrics;
+    }
+
+    private static double LayoutFootnoteContentGapWithTypographicAscender(string markFamily, string contentFamily)
+    {
+        return LayoutFootnoteContentGapWithWindowsAscender(markFamily, contentFamily, true);
+    }
+
     private static double LayoutFootnoteContentGapWithWindowsAscender(string markFamily, string contentFamily)
+    {
+        return LayoutFootnoteContentGapWithWindowsAscender(markFamily, contentFamily, false);
+    }
+
+    private static double LayoutFootnoteContentGapWithWindowsAscender(string markFamily, string contentFamily, bool useTypographicMetrics)
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -2918,10 +2945,24 @@ internal static class DocxFootnotesTests
         }
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new FamilyWascTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+            .Create(document, new TypoWascTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), useTypographicMetrics), CancellationToken.None);
         DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
         DocxPlacedRelatedStoryLayout content = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
         return (separator.TopY - separator.Height) - content.TopY;
+    }
+
+    public static void DocxFootnoteContentGapSkipsTypographicSupplement()
+    {
+        // RV06 Aptos probes (Word 16.0, uniform Aptos lacks the excess while Segoe keeps
+        // 1.524 of it): only Aptos sets OS/2 USE_TYPO_METRICS among probed families, so a
+        // typographic content face with big-ascender metrics keeps the shared gap value
+        // while the same face without the flag gains the Windows excess.
+        double control = LayoutFootnoteContentGapWithWindowsAscender("Calibri", "Calibri");
+        double flagged = LayoutFootnoteContentGapWithTypographicAscender("Calibri", "BigAsc");
+        double unflagged = LayoutFootnoteContentGapWithWindowsAscender("Calibri", "BigAsc");
+        TestAssert.True(Math.Abs(control - 3.37d) < 0.01d, "Uniform footnote gap must keep the shared value; control=" + control.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(flagged - 3.37d) < 0.01d, "Typographic content gap must skip the supplement; flagged=" + flagged.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(unflagged - 4.54d) < 0.01d, "Unflagged big-ascender content gap must keep the Windows excess; unflagged=" + unflagged.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     public static void DocxFootnoteContentGapYieldsToCoveredInset()
