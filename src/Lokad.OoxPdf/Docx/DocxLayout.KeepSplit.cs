@@ -189,9 +189,12 @@ internal sealed partial class DocxLayoutEngine
 
             anyTextRun = true;
             double size = run.EffectiveProperties.FontSize;
-            double single = metricsProvider is not null ? metricsProvider.MeasureSingleLineHeight(run, size) : size;
-            double hhea = metricsProvider is not null ? metricsProvider.MeasureHheaLineHeight(run, size) : single;
-            double ownBox = System.Math.Max(single, hhea);
+            double hhea = metricsProvider is not null ? metricsProvider.MeasureHheaLineHeight(run, size) : size;
+            // RV06 shape probes (Word 16.0, Corsiva/YiBaiti/Haett/Arial/Ebrima): Office
+            // uniform pitches follow the per-family hhea box with no single-line floor,
+            // so the max-ascender own box is the hhea box; the legacy max stands where
+            // static metrics are absent.
+            double ownBox = hhea;
             double asc = staticMetrics.MeasureWindowsAscender(run, size);
             double desc = staticMetrics.MeasureWindowsDescender(run, size);
             if (desc > maxDescPoints)
