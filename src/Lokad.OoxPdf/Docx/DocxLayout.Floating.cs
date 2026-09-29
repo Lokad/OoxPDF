@@ -105,7 +105,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double fontSize = GetParagraphFontSize(paragraph);
-        DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+        DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, selectMaxAcrossRuns: story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote);
         double lineHeight = lineHeightProfile.LineHeight;
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
         double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);

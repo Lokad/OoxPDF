@@ -21,7 +21,7 @@ internal sealed partial class DocxLayoutEngine
         return ResolveLineHeightProfile(paragraph, fontSize, textMeasurer).LineHeight;
     }
 
-    private static DocxLineHeightProfile ResolveLineHeightProfile(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
+    private static DocxLineHeightProfile ResolveLineHeightProfile(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer, bool selectMaxAcrossRuns = false)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
         if (effective.LineSpacingPoints is { } exactLineHeight && IsExactLineSpacing(effective))
@@ -44,7 +44,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxLineMetricsProvider? metricsProvider = textMeasurer as IDocxLineMetricsProvider;
         IDocxStaticTextMetricsProvider? staticMetrics = textMeasurer as IDocxStaticTextMetricsProvider;
         double singleLineHeight = metricsProvider is not null
-            ? metricsProvider.MeasureSingleLineHeight(bodyRun, fontSize)
+            ? ResolveProfileSingleLineHeight(paragraph, fontSize, metricsProvider, bodyRun, selectMaxAcrossRuns)
             : fontSize;
         double? listLabelSingleLineHeight = metricsProvider is not null && listLabelRun is not null
             ? metricsProvider.MeasureSingleLineHeight(listLabelRun, listLabelRun.EffectiveProperties.FontSize)
@@ -81,7 +81,7 @@ internal sealed partial class DocxLayoutEngine
         // line, so test doubles stay byte-identical. At-least lines keep the legacy
         // natural height (unprobed for hhea-dominant fonts).
         double hheaLineHeight = metricsProvider is not null
-            ? metricsProvider.MeasureHheaLineHeight(bodyRun, fontSize)
+            ? ResolveProfileHheaLineHeight(paragraph, fontSize, metricsProvider, bodyRun, singleLineHeight, selectMaxAcrossRuns)
             : singleLineHeight;
         return new DocxLineHeightProfile(
             Math.Max(singleLineHeight, hheaLineHeight) * effectiveLineSpacingFactor,
@@ -92,6 +92,56 @@ internal sealed partial class DocxLayoutEngine
             effectiveLineSpacingFactor,
             floorApplied,
             DocxLineHeightSource.BodySingleLineAuto);
+    }
+
+    private static double ResolveProfileSingleLineHeight(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? metricsProvider, DocxTextRun? bodyRun, bool selectMaxAcrossRuns)
+    {
+        if (metricsProvider is null)
+        {
+            return fontSize;
+        }
+
+        if (selectMaxAcrossRuns == false || paragraph.Runs.Count == 0)
+        {
+            return metricsProvider.MeasureSingleLineHeight(bodyRun, fontSize);
+        }
+
+        double maxHeight = 0d;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            double height = metricsProvider.MeasureSingleLineHeight(run, run.EffectiveProperties.FontSize);
+            if (height > maxHeight)
+            {
+                maxHeight = height;
+            }
+        }
+
+        return maxHeight > 0d ? maxHeight : metricsProvider.MeasureSingleLineHeight(bodyRun, fontSize);
+    }
+
+    private static double ResolveProfileHheaLineHeight(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? metricsProvider, DocxTextRun? bodyRun, double singleLineHeight, bool selectMaxAcrossRuns)
+    {
+        if (metricsProvider is null)
+        {
+            return singleLineHeight;
+        }
+
+        if (selectMaxAcrossRuns == false || paragraph.Runs.Count == 0)
+        {
+            return metricsProvider.MeasureHheaLineHeight(bodyRun, fontSize);
+        }
+
+        double maxHeight = 0d;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            double height = metricsProvider.MeasureHheaLineHeight(run, run.EffectiveProperties.FontSize);
+            if (height > maxHeight)
+            {
+                maxHeight = height;
+            }
+        }
+
+        return maxHeight > 0d ? maxHeight : singleLineHeight;
     }
 
     private static bool IsExactLineSpacing(DocxEffectiveParagraphProperties effective)
