@@ -2875,6 +2875,54 @@ internal static class DocxFootnotesTests
         return (separator.TopY - separator.Height) - content.TopY;
     }
 
+    public static void DocxEndnoteTakeExcludesTrailingAfterSpacing()
+    {
+        // RV06 after-spacing sweep: endnote takes exclude the take last-line
+        // trailing after-spacing like footnote takes, so the head page takes one
+        // more mixed line than the full-box fit allows at 16pt after-spacing.
+        int headTake = LayoutEndnoteTakeWithAfterSpacingAndAfter(0, 320);
+        TestAssert.Equal(22, headTake);
+    }
+
+    public static void DocxEndnoteContinuationTakeExcludesTrailingAfterSpacing()
+    {
+        // Same exclusion on endnote continuation takes with identical head takes
+        // on both sides at 12pt after-spacing, isolating the continuation leg.
+        int continuationTake = LayoutEndnoteTakeWithAfterSpacingAndAfter(1, 240);
+        TestAssert.Equal(26, continuationTake);
+    }
+
+    private static int LayoutEndnoteTakeWithAfterSpacingAndAfter(int pageIndex, int afterTwips)
+    {
+        var noteParas = new System.Text.StringBuilder();
+        for (int line = 0; line < 60; line++)
+        {
+            noteParas.Append("<w:p><w:pPr><w:spacing w:after=\"" + afterTwips.ToString(CultureInfo.InvariantCulture) + "\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/></w:rPr><w:t xml:space=\"preserve\">Note body line " + line.ToString(CultureInfo.InvariantCulture) + " start tail</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii=\"Tahoma\" w:hAnsi=\"Tahoma\"/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/></w:rPr><w:t xml:space=\"preserve\"> mixed tail</w:t></w:r></w:p>");
+        }
+
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:endnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:endnotePr><w:pos w:val="sectEnd"/></w:endnotePr></w:sectPr></w:body></w:document>""",
+            ["word/endnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:endnote><w:endnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:endnote><w:endnote w:id="2">""" + noteParas.ToString() + """</w:endnote></w:endnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DescDeficitTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        return layout.Pages[pageIndex].PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Count();
+    }
+
     public static void DocxFootnoteFirstBaselineIgnoresLaterRunFonts()
     {
         // RV05 fnmix probes (Word COM references edge-fnmix/edge-fnmix3: note first
