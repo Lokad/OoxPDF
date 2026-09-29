@@ -1243,11 +1243,13 @@ internal sealed partial class DocxLayoutEngine
             firstInset = Math.Max(0d, -firstStoryLayout.TextLines[0].BaselineY);
         }
 
-        // RV06 take-battery probes (Word 16.0, after-spacing and size sweeps): Office
-        // head takes fit one more line than clamp-minus-separator allows on Calibri
-        // uniform notes, so the clamp carries a 2.5pt Office-fitted reserve shaved from
-        // the take side only; fitting stories keep cursor-driven placement bit-identically.
-        return bodyStart - firstInset - 2.5;
+        // RV06 take-battery probes (Word 16.0, after-spacing, size and Palatino takes):
+        // Office head takes fit one more line than clamp-minus-separator allows on Calibri
+        // uniform notes, and the 9pt boundary needs total trim above 3.73 while the 10pt
+        // and first-10pt boundaries tolerate total trim up to 5.62, so the clamp carries a
+        // uniform 4.7pt Office-fitted reserve shaved from the take side only; fitting
+        // stories keep cursor-driven placement bit-identically.
+        return bodyStart - firstInset - 4.7;
     }
 
     // RV06 interleaving: narrowed remainder view for in-flight continuation. The take

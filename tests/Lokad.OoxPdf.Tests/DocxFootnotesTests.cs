@@ -3078,6 +3078,17 @@ internal static class DocxFootnotesTests
             .Count();
     }
 
+    public static void DocxFootnoteNinePtHeadTakeReservesClampMargin()
+    {
+        // RV06 size sweep (Word 16.0, cal9-a0 takes 47 against 48 while 10pt and
+        // first-10pt boundaries hold exact): uniform 9pt-after-0 head takes 53 under the
+        // 4.7pt uniform reserve against 54 under the 2.5pt reserve; the Office-anchored
+        // take-fewer direction is pinned by the cal9-a0 47/13 probe takes with size-10
+        // 43/17 and first-10 36/24 holding exact.
+        int ninePtHeadTake = LayoutFootnoteUniformHeadTakeWithAfterAndSize(0, 0);
+        TestAssert.Equal(53, ninePtHeadTake);
+    }
+
     public static void DocxFootnoteHeadTakeReservesClampMargin()
     {
         // RV06 take-battery probes (Word 16.0): Office head takes fit one more
@@ -3090,10 +3101,15 @@ internal static class DocxFootnotesTests
 
     private static int LayoutFootnoteUniformHeadTakeWithAfter(int afterTwips)
     {
+        return LayoutFootnoteUniformHeadTakeWithAfterAndSize(afterTwips, 24);
+    }
+
+    private static int LayoutFootnoteUniformHeadTakeWithAfterAndSize(int afterTwips, int sizeHalfPoints)
+    {
         var footnoteParas = new System.Text.StringBuilder();
         for (int line = 0; line < 60; line++)
         {
-            footnoteParas.Append("<w:p><w:pPr><w:spacing w:after=\"" + afterTwips.ToString(CultureInfo.InvariantCulture) + "\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/></w:rPr><w:t xml:space=\"preserve\">Note body line " + line.ToString(CultureInfo.InvariantCulture) + " uniform tail</w:t></w:r></w:p>");
+            footnoteParas.Append("<w:p><w:pPr><w:spacing w:after=\"" + afterTwips.ToString(CultureInfo.InvariantCulture) + "\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"" + sizeHalfPoints.ToString(CultureInfo.InvariantCulture) + "\"/><w:szCs w:val=\"" + sizeHalfPoints.ToString(CultureInfo.InvariantCulture) + "\"/></w:rPr><w:t xml:space=\"preserve\">Note body line " + line.ToString(CultureInfo.InvariantCulture) + " uniform tail</w:t></w:r></w:p>");
         }
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
