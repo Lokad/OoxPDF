@@ -83,8 +83,14 @@ internal sealed partial class DocxLayoutEngine
         double hheaLineHeight = metricsProvider is not null
             ? ResolveProfileHheaLineHeight(paragraph, fontSize, metricsProvider, bodyRun, singleLineHeight, selectMaxAcrossRuns)
             : singleLineHeight;
+        double autoLineHeight = Math.Max(singleLineHeight, hheaLineHeight) * effectiveLineSpacingFactor;
+        if (selectMaxAcrossRuns)
+        {
+            (double relatedBase, double relatedExtra) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hheaLineHeight, metricsProvider, staticMetrics);
+            autoLineHeight = (relatedBase + relatedExtra) * effectiveLineSpacingFactor;
+        }
         return new DocxLineHeightProfile(
-            Math.Max(singleLineHeight, hheaLineHeight) * effectiveLineSpacingFactor,
+            autoLineHeight,
             singleLineHeight,
             listLabelSingleLineHeight,
             bodyWindowsLineHeight,
@@ -109,6 +115,11 @@ internal sealed partial class DocxLayoutEngine
         double maxHeight = 0d;
         foreach (DocxTextRun run in paragraph.Runs)
         {
+            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            {
+                continue;
+            }
+
             double height = metricsProvider.MeasureSingleLineHeight(run, run.EffectiveProperties.FontSize);
             if (height > maxHeight)
             {
@@ -134,6 +145,11 @@ internal sealed partial class DocxLayoutEngine
         double maxHeight = 0d;
         foreach (DocxTextRun run in paragraph.Runs)
         {
+            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            {
+                continue;
+            }
+
             double height = metricsProvider.MeasureHheaLineHeight(run, run.EffectiveProperties.FontSize);
             if (height > maxHeight)
             {
@@ -142,6 +158,63 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return maxHeight > 0d ? maxHeight : singleLineHeight;
+    }
+
+    private const double RelatedStoryDescDeficitSlope = 0.84d;
+
+    private static (double BaseBox, double ExtraPoints) ResolveRelatedStoryBoxAndDeficit(
+        DocxParagraph paragraph,
+        double legacySingleLineHeight,
+        double legacyHheaLineHeight,
+        IDocxLineMetricsProvider? metricsProvider,
+        IDocxStaticTextMetricsProvider? staticMetrics)
+    {
+        double legacyBase = System.Math.Max(legacySingleLineHeight, legacyHheaLineHeight);
+        if (staticMetrics is null || paragraph.Runs.Count == 0)
+        {
+            return (legacyBase, 0d);
+        }
+
+        bool anyTextRun = false;
+        double maxAscPoints = double.NegativeInfinity;
+        double maxAscOwnBox = legacyBase;
+        double maxAscOwnDesc = 0d;
+        double maxDescPoints = 0d;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            {
+                continue;
+            }
+
+            anyTextRun = true;
+            double size = run.EffectiveProperties.FontSize;
+            double single = metricsProvider is not null ? metricsProvider.MeasureSingleLineHeight(run, size) : size;
+            double hhea = metricsProvider is not null ? metricsProvider.MeasureHheaLineHeight(run, size) : single;
+            double ownBox = System.Math.Max(single, hhea);
+            double asc = staticMetrics.MeasureWindowsAscender(run, size);
+            double desc = staticMetrics.MeasureWindowsDescender(run, size);
+            if (desc > maxDescPoints)
+            {
+                maxDescPoints = desc;
+            }
+
+            if (asc > maxAscPoints)
+            {
+                maxAscPoints = asc;
+                maxAscOwnBox = ownBox;
+                maxAscOwnDesc = desc;
+            }
+        }
+
+        if (anyTextRun == false)
+        {
+            return (legacyBase, 0d);
+        }
+
+        double deficit = maxDescPoints - maxAscOwnDesc;
+        double extra = deficit > 0d ? deficit * RelatedStoryDescDeficitSlope : 0d;
+        return (maxAscOwnBox, extra);
     }
 
     private static bool IsExactLineSpacing(DocxEffectiveParagraphProperties effective)
