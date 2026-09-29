@@ -506,7 +506,8 @@ internal sealed partial class DocxLayoutEngine
         double printScale = 1d, 
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
         bool stopAfterCurrentPage = false,
-        InFlightRelatedStory? inFlight = null)
+        InFlightRelatedStory? inFlight = null,
+        double headContentPushdownPoints = 0d)
     {
         if (storyLayout.TextLines.Count == 0)
         {
@@ -543,6 +544,10 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxRelatedStoryLayout sliceLayout = NarrowStoryTextLines(storyLayout, lineIndex, takeCount);
+            // RV06 mixlong probes (Word 16.0): overflowing head slices hang content below
+            // the take-driven rule like fitting notes instead of seating at storiesTop,
+            // while takes, take heights and the cursor chain keep full boxes.
+            double placementTop = lineIndex == 0 ? cursorTop - Math.Max(0d, headContentPushdownPoints) : cursorTop;
             if (inFlight is not null)
             {
                 inFlight.PlacedLineCount += takeCount;
@@ -553,7 +558,7 @@ internal sealed partial class DocxLayoutEngine
                 activePageIndex,
                 sliceLayout,
                 sourceBlockIndex,
-                cursorTop,
+                placementTop,
                 consumedHeight,
                 takeHeight,
                 separatorY: null));
@@ -1363,7 +1368,7 @@ internal sealed partial class DocxLayoutEngine
             }
             else
             {
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory);
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, headContentPushdownPoints: footnoteContentPushdownPoints);
             }
         }
 
