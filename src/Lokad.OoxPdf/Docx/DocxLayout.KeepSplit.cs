@@ -97,7 +97,8 @@ internal sealed partial class DocxLayoutEngine
             listLabelWindowsLineHeight,
             effectiveLineSpacingFactor,
             floorApplied,
-            DocxLineHeightSource.BodySingleLineAuto);
+            DocxLineHeightSource.BodySingleLineAuto,
+            TakeLineHeight: selectMaxAcrossRuns ? Math.Max(singleLineHeight, hheaLineHeight) * effectiveLineSpacingFactor : null);
     }
 
     private static double ResolveProfileSingleLineHeight(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? metricsProvider, DocxTextRun? bodyRun, bool selectMaxAcrossRuns)

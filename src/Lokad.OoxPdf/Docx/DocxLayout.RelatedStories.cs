@@ -406,7 +406,7 @@ internal sealed partial class DocxLayoutEngine
         for (int lineIndex = 0; lineIndex < heights.Length; lineIndex++)
         {
             DocxTextLineLayout line = storyLayout.TextLines[lineIndex];
-            double boxHeight = line.LineHeight ?? line.SingleLineHeight ?? line.FontSize;
+            double boxHeight = line.TakeLineHeight ?? line.LineHeight ?? line.SingleLineHeight ?? line.FontSize;
             double afterSpacing = line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
             double beforeSpacing = line.IsFirstParagraphLine == true && line.ContextualSpacingSuppressed != true
                 ? line.ParagraphBeforeSpacing ?? line.AppliedBeforeSpacing ?? 0d
