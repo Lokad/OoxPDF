@@ -82,16 +82,18 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static double? ResolveRelatedStoryFirstInsetPoints(DocxParagraph paragraph, IDocxTextMeasurer textMeasurer, IDocxHheaLineGapProvider gapProvider)
+    private static double? ResolveRelatedStoryFirstInsetPoints(DocxParagraph paragraph, IDocxTextMeasurer textMeasurer, IDocxHheaLineGapProvider gapProvider, bool selectMaxHheaRun = false)
     {
         if (textMeasurer is not IDocxLineMetricsProvider lineMetrics || paragraph.Runs.Count == 0)
         {
             return null;
         }
 
-        // RV06 take battery (Word 16.0, a12 21/21/18): mixed notes keep the legacy
-        // floor so take capacities hold, while uniform notes resolve their own summed
-        // inset; a single distinct family-plus-size keeps the new path order-blind.
+        // RV06 take battery (Word 16.0, a12 21/21/18): footnote slash endnote mixed notes
+        // keep the legacy floor so take capacities hold, while uniform notes resolve their
+        // own summed inset; a single distinct family-plus-size keeps the new path order-blind.
+        // Textbox mixed notes resolve the max-hhea run instead (take-neutral: textbox takes
+        // never drain pages).
         string? insetFamily = null;
         double insetSize = 0d;
         bool uniformRuns = true;
@@ -115,42 +117,72 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        if (!uniformRuns || insetFamily is null)
+        DocxTextRun? insetRun = null;
+        double insetRunSize = 0d;
+        if (uniformRuns && insetFamily is not null)
+        {
+            foreach (DocxTextRun run in paragraph.Runs)
+            {
+                if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+                {
+                    continue;
+                }
+
+                insetRun = run;
+                insetRunSize = insetSize;
+                break;
+            }
+        }
+        else if (selectMaxHheaRun)
+        {
+            // RV06 floatmix probes (Word 16.0, Tahoma slash Calibri orders): Office
+            // mixed-textbox insets follow the max-hhea run at its own size (both orders
+            // read the Tahoma value), unlike footnote mixed notes which keep the legacy
+            // floor so take capacities hold.
+            double maxAscenderPoints = double.NegativeInfinity;
+            foreach (DocxTextRun run in paragraph.Runs)
+            {
+                if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+                {
+                    continue;
+                }
+
+                double ascender = lineMetrics.MeasureHheaAscender(run, run.EffectiveProperties.FontSize);
+                if (ascender > maxAscenderPoints)
+                {
+                    maxAscenderPoints = ascender;
+                    insetRun = run;
+                    insetRunSize = run.EffectiveProperties.FontSize;
+                }
+            }
+        }
+
+        if (insetRun is null)
         {
             return null;
         }
 
-        foreach (DocxTextRun run in paragraph.Runs)
+        // RV06 gap slice (Palatino/Algerian first baselines) plus Calibri-class tie
+        // (content single-em 1.220703125 against reference 1.2207): gap-overflowing notes
+        // keep the legacy floor, so the new path applies only while content single-em
+        // stays at or below the mark reference within float representation.
+        if (insetRunSize > 0d && lineMetrics.MeasureSingleLineHeight(insetRun, insetRunSize) / insetRunSize > EndnoteSeparatorReferenceSingleLineEm + 1e-4)
         {
-            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
-            {
-                continue;
-            }
-
-            // RV06 gap slice (Palatino/Algerian first baselines) plus Calibri-class tie
-            // (content single-em 1.220703125 against reference 1.2207): gap-overflowing notes
-            // keep the legacy floor, so the new path applies only while content single-em
-            // stays at or below the mark reference within float representation.
-            if (insetSize > 0d && lineMetrics.MeasureSingleLineHeight(run, insetSize) / insetSize > EndnoteSeparatorReferenceSingleLineEm + 1e-4)
-            {
-                return null;
-            }
-
-            if (textMeasurer is IDocxStaticTextMetricsProvider staticMetrics &&
-                textMeasurer is IDocxHheaDescenderProvider)
-            {
-                // RV06 descender probes (Word 16.0, Informal Roman 10/12/14pt size matrix
-                // plus Consolas, Magneto and Calibri resolved sheets): Office bottom bearing
-                // follows the Windows descender even when the hhea descender runs deeper,
-                // so the inset is the hhea box minus the Windows descender; the hhea
-                // provider gate stays since full-metric measurers serve both faces together.
-                return lineMetrics.MeasureHheaLineHeight(run, insetSize) - staticMetrics.MeasureWindowsDescender(run, insetSize);
-            }
-
-            return lineMetrics.MeasureHheaAscender(run, insetSize) + gapProvider.MeasureHheaLineGap(run, insetSize);
+            return null;
         }
 
-        return null;
+        if (textMeasurer is IDocxStaticTextMetricsProvider staticMetrics &&
+            textMeasurer is IDocxHheaDescenderProvider)
+        {
+            // RV06 descender probes (Word 16.0, Informal Roman 10/12/14pt size matrix
+            // plus Consolas, Magneto and Calibri resolved sheets): Office bottom bearing
+            // follows the Windows descender even when the hhea descender runs deeper,
+            // so the inset is the hhea box minus the Windows descender; the hhea
+            // provider gate stays since full-metric measurers serve both faces together.
+            return lineMetrics.MeasureHheaLineHeight(insetRun, insetRunSize) - staticMetrics.MeasureWindowsDescender(insetRun, insetRunSize);
+        }
+
+        return lineMetrics.MeasureHheaAscender(insetRun, insetRunSize) + gapProvider.MeasureHheaLineGap(insetRun, insetRunSize);
     }
 
     private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight, double BaselineOffset) LayoutRelatedStoryParagraphTextLines(
@@ -200,7 +232,7 @@ internal sealed partial class DocxLayoutEngine
         // stays byte-identical.
         double storyBaselineOffset = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
             textMeasurer is IDocxHheaLineGapProvider gapProvider &&
-            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider) is double relatedFirstInset
+            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider, story?.Kind is DocxStoryKind.TextBox) is double relatedFirstInset
             ? relatedFirstInset
             : DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective), storyHheaAscender);
         // RV05: ordered inline atoms (related-story path). Affined images in

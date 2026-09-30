@@ -2825,6 +2825,68 @@ internal static class DocxFootnotesTests
         TestAssert.True(Math.Abs(baseline - -11.6d) < 0.02d, "Textbox first baseline must sit at the tier inset; baseline=" + baseline.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxTextBoxFirstInsetFollowsMaxHheaRun()
+    {
+        // RV06 floatmix probes (Word 16.0, Tahoma slash Calibri orders): Office
+        // mixed-textbox insets follow the max-hhea run at its own size (both orders
+        // read the high-box value), unlike footnote mixed notes which keep legacy.
+        double hiFirst = LayoutMixedTextBoxFirstBaseline("MixHi", "MixLo");
+        double loFirst = LayoutMixedTextBoxFirstBaseline("MixLo", "MixHi");
+        TestAssert.True(Math.Abs(hiFirst - -11.6d) < 0.02d, "Max-first mixed baselines must sit at the max tier inset; hiFirst=" + hiFirst.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(loFirst - -11.6d) < 0.02d, "Min-first mixed baselines must sit at the max tier inset; loFirst=" + loFirst.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class MixMaxTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => 12d;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "MixHi", StringComparison.Ordinal) ? 14d : 10d;
+
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "MixHi", StringComparison.Ordinal) ? 12d : 9d;
+
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => 0d;
+
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => 2.4d;
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * 0.9d;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => 2.4d;
+    }
+
+    private static double LayoutMixedTextBoxFirstBaseline(string firstFamily, string secondFamily)
+    {
+        var runA = new DocxTextRun("Box note one ", 12d, null, false, false, false, null, firstFamily);
+        var runB = new DocxTextRun("mixed tail", 12d, null, false, false, false, null, secondFamily);
+        var paragraph = new DocxParagraph(
+            [runA, runB],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var anchor = DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d);
+        var drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(paragraph)]);
+        var document = new DocxDocument(
+            612d, 792d, 72d, 72d, 72d, 72d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [], [], [new DocxParagraphElement(anchor)], [], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new MixMaxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxFloatingDrawingLayout placed = layout.FloatingDrawings.Single();
+        TestAssert.True(placed.TextBoxLayout is not null, "Floating drawing must carry its textbox story layout.");
+        DocxTextLineLayout first = placed.TextBoxLayout.TextLines.First(line => line.Text.StartsWith("Box note", StringComparison.Ordinal));
+        return first.BaselineY;
+    }
+
     private static double LayoutTextBoxFirstBaselineWithDescFaces(string family)
     {
         var run = new DocxTextRun("Box note one", 12d, null, false, false, false, null, family);
