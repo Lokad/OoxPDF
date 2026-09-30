@@ -63,6 +63,11 @@ internal interface IDocxHheaLineGapProvider
     double MeasureHheaLineGap(DocxTextRun? run, double fontSize);
 }
 
+internal interface IDocxHheaDescenderProvider
+{
+    double MeasureHheaDescender(DocxTextRun? run, double fontSize);
+}
+
 internal interface IDocxStaticTextMetricsProvider
 {
     double MeasureWindowsAscender(DocxTextRun? run, double fontSize);
@@ -151,6 +156,13 @@ internal static class DocxLineMetrics
         return font.UnitsPerEm == 0
             ? 0d
             : font.Hhea.HorizontalLineGap * fontSize / font.UnitsPerEm;
+    }
+
+    public static double MeasureHheaDescender(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0
+            ? 0d
+            : -font.Hhea.HorizontalDescender * fontSize / font.UnitsPerEm;
     }
 
     public static double MeasureHheaAscender(OpenTypeFont font, double fontSize)
