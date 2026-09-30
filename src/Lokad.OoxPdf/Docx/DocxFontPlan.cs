@@ -178,7 +178,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 
 }
 
-internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxTypographicMetricsProvider
+internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxTypographicMetricsProvider, IDocxHheaLineGapProvider
 {
     private readonly IReadOnlyList<DocxResolvedRunTypeface> runs;
     private readonly FontFaceResolution? fallbackResolution;
@@ -356,6 +356,21 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         return font is null
             ? 0d
             : DocxLineMetrics.MeasureHheaAscender(font, fontSize);
+    }
+
+    public double MeasureHheaLineGap(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
+        {
+            return 0d;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        return font is null
+            ? 0d
+            : DocxLineMetrics.MeasureHheaLineGap(font, fontSize);
     }
 
     public double MeasureWindowsAscender(DocxTextRun? run, double fontSize)

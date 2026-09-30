@@ -82,6 +82,65 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    private static double? ResolveRelatedStoryFirstInsetPoints(DocxParagraph paragraph, IDocxTextMeasurer textMeasurer, IDocxHheaLineGapProvider gapProvider)
+    {
+        if (textMeasurer is not IDocxLineMetricsProvider lineMetrics || paragraph.Runs.Count == 0)
+        {
+            return null;
+        }
+
+        // RV06 take battery (Word 16.0, a12 21/21/18): mixed notes keep the legacy
+        // floor so take capacities hold, while uniform notes resolve their own summed
+        // inset; a single distinct family-plus-size keeps the new path order-blind.
+        string? insetFamily = null;
+        double insetSize = 0d;
+        bool uniformRuns = true;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            {
+                continue;
+            }
+
+            double size = run.EffectiveProperties.FontSize;
+            if (insetFamily is null)
+            {
+                insetFamily = run.FontFamily ?? string.Empty;
+                insetSize = size;
+            }
+            else if (!string.Equals(insetFamily, run.FontFamily ?? string.Empty, StringComparison.Ordinal) || insetSize != size)
+            {
+                uniformRuns = false;
+                break;
+            }
+        }
+
+        if (!uniformRuns || insetFamily is null)
+        {
+            return null;
+        }
+
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            {
+                continue;
+            }
+
+            // RV06 gap slice (Palatino/Algerian first baselines): gap-overflowing notes
+            // keep the legacy floor, so the new path applies only while content single-em
+            // stays at or below the mark reference.
+            if (insetSize > 0d && lineMetrics.MeasureSingleLineHeight(run, insetSize) / insetSize > EndnoteSeparatorReferenceSingleLineEm)
+            {
+                return null;
+            }
+
+            return lineMetrics.MeasureHheaAscender(run, insetSize) + gapProvider.MeasureHheaLineGap(run, insetSize);
+        }
+
+        return null;
+    }
+
     private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight, double BaselineOffset) LayoutRelatedStoryParagraphTextLines(
         DocxParagraph paragraph,
         double fixedScale,
@@ -121,7 +180,16 @@ internal sealed partial class DocxLayoutEngine
         double? storyHheaAscender = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
             ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false)
             : null;
-        double storyBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective), storyHheaAscender);
+        // RV06 shape probes (Word 16.0, eighteen families) plus take battery (a12
+        // 21/21/18): uniform-note first insets follow hhea ascender plus hhea gap with
+        // no 0.94em floor, while mixed notes keep the legacy floor so take capacities
+        // hold; gap-aware measurers resolve uniform notes directly and every other path
+        // stays byte-identical.
+        double storyBaselineOffset = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote &&
+            textMeasurer is IDocxHheaLineGapProvider gapProvider &&
+            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider) is double relatedFirstInset
+            ? relatedFirstInset
+            : DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective), storyHheaAscender);
         // RV05: ordered inline atoms (related-story path). Affined images in
         // text-mixed paragraphs attach to wrapped lines at run position.
         DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, lineHeight);
