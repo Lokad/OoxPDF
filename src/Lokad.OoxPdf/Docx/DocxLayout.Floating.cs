@@ -135,24 +135,31 @@ internal sealed partial class DocxLayoutEngine
         }
         else if (selectMaxHheaRun)
         {
-            // RV06 floatmix probes (Word 16.0, Tahoma slash Calibri orders): Office
-            // mixed-textbox insets follow the max-hhea run at its own size (both orders
-            // read the Tahoma value), unlike footnote mixed notes which keep the legacy
-            // floor so take capacities hold.
-            double maxAscenderPoints = double.NegativeInfinity;
+            // RV06 floatmixsz probes (Word 16.0, Tahoma 10/14pt mixed with Calibri 12pt, both orders): Office
+            // mixed-textbox insets take the max tier across runs (Tah10 reads Cal-tier, Tah14 and Tah12
+            // read Tah-tier), unlike footnote mixed notes which keep the legacy floor so take capacities hold.
+            double maxTierPoints = double.NegativeInfinity;
             foreach (DocxTextRun run in paragraph.Runs)
             {
                 if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
                 {
                     continue;
                 }
-
-                double ascender = lineMetrics.MeasureHheaAscender(run, run.EffectiveProperties.FontSize);
-                if (ascender > maxAscenderPoints)
+                double size = run.EffectiveProperties.FontSize;
+                double tier;
+                if (textMeasurer is IDocxStaticTextMetricsProvider staticSel && textMeasurer is IDocxHheaDescenderProvider)
                 {
-                    maxAscenderPoints = ascender;
+                    tier = lineMetrics.MeasureHheaLineHeight(run, size) - staticSel.MeasureWindowsDescender(run, size);
+                }
+                else
+                {
+                    tier = lineMetrics.MeasureHheaAscender(run, size) + gapProvider.MeasureHheaLineGap(run, size);
+                }
+                if (tier > maxTierPoints)
+                {
+                    maxTierPoints = tier;
                     insetRun = run;
-                    insetRunSize = run.EffectiveProperties.FontSize;
+                    insetRunSize = size;
                 }
             }
         }

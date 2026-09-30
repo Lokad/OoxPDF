@@ -2902,11 +2902,13 @@ internal static class DocxFootnotesTests
         TestAssert.True(Math.Abs(baseline - -11.6d) < 0.02d, "Textbox first baseline must sit at the tier inset; baseline=" + baseline.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
-    public static void DocxTextBoxFirstInsetFollowsMaxHheaRun()
+    public static void DocxTextBoxFirstInsetFollowsMaxTier()
     {
-        // RV06 floatmix probes (Word 16.0, Tahoma slash Calibri orders): Office
-        // mixed-textbox insets follow the max-hhea run at its own size (both orders
-        // read the high-box value), unlike footnote mixed notes which keep legacy.
+        // RV06 floatmixsz probes (Word 16.0, Tahoma 10/14pt mixed with Calibri 12pt, both orders): Office
+        // mixed-textbox insets take the max tier across runs (Tah10 reads Cal-tier, Tah14 reads Tah-tier),
+        // unlike footnote mixed notes which keep the legacy floor so take capacities hold. The crossed
+        // synthetic (high ascender on the low tier and vice versa) separates tier selection from
+        // ascender selection. Pre-fix both orders read the ascender winner.
         double hiFirst = LayoutMixedTextBoxFirstBaseline("MixHi", "MixLo");
         double loFirst = LayoutMixedTextBoxFirstBaseline("MixLo", "MixHi");
         TestAssert.True(Math.Abs(hiFirst - -11.6d) < 0.02d, "Max-first mixed baselines must sit at the max tier inset; hiFirst=" + hiFirst.ToString(CultureInfo.InvariantCulture) + ".");
@@ -2919,7 +2921,7 @@ internal static class DocxFootnotesTests
 
         public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => 12d;
 
-        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "MixHi", StringComparison.Ordinal) ? 14d : 10d;
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "MixHi", StringComparison.Ordinal) ? 11d : 14d;
 
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "MixHi", StringComparison.Ordinal) ? 12d : 9d;
 
