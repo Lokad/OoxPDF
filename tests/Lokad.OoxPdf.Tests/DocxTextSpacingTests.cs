@@ -1509,15 +1509,23 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs(baselineY - 179.0d) < 0.000001d, "Cell first baseline must follow max hhea ascender when larger; observed baseline=" + baselineY.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
-    public static void DocxTableCellFirstBaselineIgnoresHheaWithMidlineImage()
+    public static void DocxTableCellFirstLineFitsImageHeight()
     {
-        // RV06 cellmidline probes (Word 16.0, Tahoma slash Calibri image-bearing cells):
-        // Office image-bearing first lines ignore the hhea supplement (both families at
-        // 678.82), so the start inset keeps the legacy floor where the first paragraph
-        // carries affined midline images; imageless cells keep the hhea-aware inset.
-        double tah = LayoutCellFirstBaselineWithMidlineImage("Tahoma");
-        double cal = LayoutCellFirstBaselineWithMidlineImage("Calibri");
-        TestAssert.True(Math.Abs(tah - cal) < 0.05d, "Image-cell first baselines must ignore hhea across families; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
+        // RV06 cellmidline size matrix (Word 16.0): first-line totals follow
+        // max(hhea-aware inset, image height), so a 24-by-18 image dominates both
+        // families equally while a smaller image leaves the hhea difference standing.
+        double tah = LayoutCellFirstBaselineWithMidlineImage("Tahoma", 24d, 18d);
+        double cal = LayoutCellFirstBaselineWithMidlineImage("Calibri", 24d, 18d);
+        TestAssert.True(Math.Abs(tah - cal) < 0.05d, "Image-dominated first baselines must match across families; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    public static void DocxTableCellFirstLineKeepsHheaInsetBelowImageHeight()
+    {
+        // The 12-by-9 image sits below both hhea-aware insets, so the Tahoma minus
+        // Calibri first-baseline gap keeps the 0.605 hhea excess instead of vanishing.
+        double tah = LayoutCellFirstBaselineWithMidlineImage("Tahoma", 12d, 9d);
+        double cal = LayoutCellFirstBaselineWithMidlineImage("Calibri", 12d, 9d);
+        TestAssert.True(Math.Abs((cal - tah) - 0.605d) < 0.05d, "Inset-dominated first baselines must keep the hhea gap; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     private sealed class MidlineCellTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
@@ -1531,11 +1539,11 @@ internal static class DocxTextSpacingTests
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 1.0005d : fontSize * 0.75d;
     }
 
-    private static double LayoutCellFirstBaselineWithMidlineImage(string family)
+    private static double LayoutCellFirstBaselineWithMidlineImage(string family, double imageWidthPoints, double imageHeightPoints)
     {
         var runA = new DocxTextRun("Cell A", 10d, null, false, false, false, null, family) { SourceRunIndex = 0 };
         var runB = new DocxTextRun(" tail B", 10d, null, false, false, false, null, family) { SourceRunIndex = 2 };
-        var image = new DocxInlineImage(24d, 18d, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
+        var image = new DocxInlineImage(imageWidthPoints, imageHeightPoints, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
         var paragraph = new DocxParagraph(
             [runA, runB],
             [image],

@@ -160,7 +160,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxWrappedTextLine[] estimateLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
                 int lineCount = estimateLines.Length;
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
-                estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)), lineHeight);
+                estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer)), lineHeight);
                 previousTextFontSize = fontSize;
                 previousTextLineHeight = lineHeight;
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
@@ -277,13 +277,7 @@ internal sealed partial class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double paddingTop = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
-        // RV06 cellmidline probes (Word 16.0, Tahoma slash Calibri image-bearing cells):
-        // Office image-bearing first lines ignore the hhea supplement (both families at
-        // 678.82), so the start inset keeps the legacy floor where the first text paragraph
-        // carries affined midline images; imageless cells keep the hhea-aware inset.
-        DocxParagraph? firstImageParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
-        bool firstParagraphHasImages = firstImageParagraph is not null && firstImageParagraph.Images.Any(image => image.SourceRunIndex >= 0);
-        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, firstParagraphHasImages ? null : textMeasurer);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         bool pageStatic = !HasPageDynamicFields(bodyElements);
@@ -470,7 +464,11 @@ internal sealed partial class DocxLayoutEngine
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, wrappedLines.Length);
                 // RV05: ordered inline atoms (table-cell path). Affined images in
                 // text-mixed paragraphs attach to wrapped lines at run position.
-                DocxMidLinePlan? midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines, ResolveTableCellTextWrapWidth(cell, paragraphWidth), ResolveTableCellTextWrapWidth(cell, continuationParagraphWidth), DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)), lineHeight);
+                // RV06 cellmidline size matrix (Tahoma small slash medium slash large images): first-line
+                // totals follow max(hhea-aware inset, image height), so the attach shift rides the
+                // hhea-aware inset like the transition; estimate, image and single-line paths
+                // below use the same form for coherence.
+                DocxMidLinePlan? midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines, ResolveTableCellTextWrapWidth(cell, paragraphWidth), ResolveTableCellTextWrapWidth(cell, continuationParagraphWidth), DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, measurer)), lineHeight);
                 // RV06 pagination probe (edge-mixedcell, Word 16.0): Office stacks
                 // cell baselines with per-line font-size offsets (12->15 carries
                 // +2.82 at scale 1.0), while the renderer stacks pure line heights
@@ -725,13 +723,7 @@ internal sealed partial class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double paddingTop = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
-        // RV06 cellmidline probes (Word 16.0, Tahoma slash Calibri image-bearing cells):
-        // Office image-bearing first lines ignore the hhea supplement (both families at
-        // 678.82), so the start inset keeps the legacy floor where the first text paragraph
-        // carries affined midline images; imageless cells keep the hhea-aware inset.
-        DocxParagraph? firstImageParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
-        bool firstParagraphHasImages = firstImageParagraph is not null && firstImageParagraph.Images.Any(image => image.SourceRunIndex >= 0);
-        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, firstParagraphHasImages ? null : textMeasurer);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;
@@ -811,7 +803,7 @@ internal sealed partial class DocxLayoutEngine
                     double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     DocxWrappedTextLine[] wrappedLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
-                    midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)), lineHeight);
+                    midLinePlan = CreateMidLinePlan(paragraph, textSpans, wrappedLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer)), lineHeight);
                     int wrappedLineCount = wrappedLines.Length;
                     if (wrappedLineCount != 0)
                     {
@@ -1085,7 +1077,7 @@ internal sealed partial class DocxLayoutEngine
             double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale) - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
             height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, context.TextMeasurer);
             DocxWrappedTextLine[] singleLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: context.PageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
-            singlePlan = CreateMidLinePlan(paragraph, textSpans, singleLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties)), lineHeight);
+            singlePlan = CreateMidLinePlan(paragraph, textSpans, singleLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, context.TextMeasurer)), lineHeight);
             for (int singleLineIndex = 0; singleLineIndex < singleLines.Length; singleLineIndex++)
             {
                 double singleShift = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (singlePlan?.ShiftAboveHeights[singleLineIndex] ?? 0d);
