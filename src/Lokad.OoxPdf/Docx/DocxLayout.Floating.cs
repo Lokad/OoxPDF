@@ -127,10 +127,11 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
 
-            // RV06 gap slice (Palatino/Algerian first baselines): gap-overflowing notes
+            // RV06 gap slice (Palatino/Algerian first baselines) plus Calibri-class tie
+            // (content single-em 1.220703125 against reference 1.2207): gap-overflowing notes
             // keep the legacy floor, so the new path applies only while content single-em
-            // stays at or below the mark reference.
-            if (insetSize > 0d && lineMetrics.MeasureSingleLineHeight(run, insetSize) / insetSize > EndnoteSeparatorReferenceSingleLineEm)
+            // stays at or below the mark reference within float representation.
+            if (insetSize > 0d && lineMetrics.MeasureSingleLineHeight(run, insetSize) / insetSize > EndnoteSeparatorReferenceSingleLineEm + 1e-4)
             {
                 return null;
             }

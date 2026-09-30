@@ -1086,9 +1086,26 @@ internal sealed partial class DocxLayoutEngine
         double markFontSizePoints,
         IDocxTextMeasurer? separatorMeasurer)
     {
+        // RV06 mixed-gap probes (Word 16.0, Pal/Cal orders with r2f diff minus 1.20):
+        // Office content gap follows the first paragraph, so later paragraphs do not
+        // widen the gap; single-paragraph notes resolve identically.
+        int firstParagraphIndex = int.MaxValue;
+        foreach (DocxTextLineLayout firstParaLine in contentTextLines)
+        {
+            if (firstParaLine.SourceParagraphIndex.HasValue && firstParaLine.SourceParagraphIndex.Value < firstParagraphIndex)
+            {
+                firstParagraphIndex = firstParaLine.SourceParagraphIndex.Value;
+            }
+        }
+
         double coveredInsetExcessPoints = 0d;
         foreach (DocxTextLineLayout firstLine in contentTextLines)
         {
+            if (firstLine.SourceParagraphIndex.HasValue && firstLine.SourceParagraphIndex.Value != firstParagraphIndex)
+            {
+                continue;
+            }
+
             if (firstLine.Segments.Count != 0)
             {
                 coveredInsetExcessPoints = System.Math.Max(0d, System.Math.Max(0d, -firstLine.BaselineY) - DocxLineMetrics.WordAutoLineBaselineOffsetEm * markFontSizePoints);
@@ -1099,6 +1116,11 @@ internal sealed partial class DocxLayoutEngine
         double contentGapMax = 0d;
         foreach (DocxTextLineLayout line in contentTextLines)
         {
+            if (line.SourceParagraphIndex.HasValue && line.SourceParagraphIndex.Value != firstParagraphIndex)
+            {
+                continue;
+            }
+
             foreach (DocxTextSegmentLayout segment in line.Segments)
             {
                 if (string.IsNullOrWhiteSpace(segment.Text))
