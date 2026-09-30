@@ -277,7 +277,13 @@ internal sealed partial class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double paddingTop = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
-        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
+        // RV06 cellmidline probes (Word 16.0, Tahoma slash Calibri image-bearing cells):
+        // Office image-bearing first lines ignore the hhea supplement (both families at
+        // 678.82), so the start inset keeps the legacy floor where the first text paragraph
+        // carries affined midline images; imageless cells keep the hhea-aware inset.
+        DocxParagraph? firstImageParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
+        bool firstParagraphHasImages = firstImageParagraph is not null && firstImageParagraph.Images.Any(image => image.SourceRunIndex >= 0);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, firstParagraphHasImages ? null : textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         bool pageStatic = !HasPageDynamicFields(bodyElements);
@@ -719,7 +725,13 @@ internal sealed partial class DocxLayoutEngine
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
         double paddingTop = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale);
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
-        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
+        // RV06 cellmidline probes (Word 16.0, Tahoma slash Calibri image-bearing cells):
+        // Office image-bearing first lines ignore the hhea supplement (both families at
+        // 678.82), so the start inset keeps the legacy floor where the first text paragraph
+        // carries affined midline images; imageless cells keep the hhea-aware inset.
+        DocxParagraph? firstImageParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
+        bool firstParagraphHasImages = firstImageParagraph is not null && firstImageParagraph.Images.Any(image => image.SourceRunIndex >= 0);
+        double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, firstParagraphHasImages ? null : textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
         double cursorY = startBaselineY;

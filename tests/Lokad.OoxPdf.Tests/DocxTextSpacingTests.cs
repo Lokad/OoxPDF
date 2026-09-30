@@ -1509,6 +1509,54 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs(baselineY - 179.0d) < 0.000001d, "Cell first baseline must follow max hhea ascender when larger; observed baseline=" + baselineY.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxTableCellFirstBaselineIgnoresHheaWithMidlineImage()
+    {
+        // RV06 cellmidline probes (Word 16.0, Tahoma slash Calibri image-bearing cells):
+        // Office image-bearing first lines ignore the hhea supplement (both families at
+        // 678.82), so the start inset keeps the legacy floor where the first paragraph
+        // carries affined midline images; imageless cells keep the hhea-aware inset.
+        double tah = LayoutCellFirstBaselineWithMidlineImage("Tahoma");
+        double cal = LayoutCellFirstBaselineWithMidlineImage("Calibri");
+        TestAssert.True(Math.Abs(tah - cal) < 0.05d, "Image-cell first baselines must ignore hhea across families; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class MidlineCellTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize;
+
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 1.0005d : fontSize * 0.75d;
+    }
+
+    private static double LayoutCellFirstBaselineWithMidlineImage(string family)
+    {
+        var runA = new DocxTextRun("Cell A", 10d, null, false, false, false, null, family) { SourceRunIndex = 0 };
+        var runB = new DocxTextRun(" tail B", 10d, null, false, false, false, null, family) { SourceRunIndex = 2 };
+        var image = new DocxInlineImage(24d, 18d, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
+        var paragraph = new DocxParagraph(
+            [runA, runB],
+            [image],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new MidlineCellTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().BaselineY;
+    }
+
     private sealed class HheaLineHeightFontResolver : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
