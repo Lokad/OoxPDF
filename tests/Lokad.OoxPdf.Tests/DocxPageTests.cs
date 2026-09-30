@@ -2362,6 +2362,53 @@ internal static class DocxPageTests
         TestAssert.Equal(14d, markerLine.Segments[markerLine.Segments.Count - 1].FontSize);
     }
 
+    public static void DocxBodyFirstBaselineFollowsTierAMax()
+    {
+        // RV06 big-gap body probes (Word COM references edge-endsepgrid-fort/palb/bauh with Calibri bodies): Office body
+        // first-baseline insets follow the max tier-A across runs, so a big-gap mark run drops the baseline
+        // 1.80pt below the uniform level while uniform content keeps the shared value. Pre-fix both read equal.
+        double control = LayoutBodyFirstBaselineTierAMark("Calibri", 24);
+        double marked = LayoutBodyFirstBaselineTierAMark("GapTier", 24);
+        TestAssert.True(Math.Abs((control - marked) - 1.80d) < 0.02d, "Body first baseline must follow the max tier-A run; observed shift=" + (control - marked).ToString(CultureInfo.InvariantCulture) + ".");
+    }
+    private static double LayoutBodyFirstBaselineTierAMark(string midFamily, int midHalfPoints)
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
+            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body start words </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="FAM" w:hAnsi="FAM"/><w:sz w:val="SZ"/><w:szCs w:val="SZ"/></w:rPr><w:t xml:space="preserve">middle mixed words</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve"> and trailing words.</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""".Replace("FAM", midFamily).Replace("SZ", midHalfPoints.ToString(CultureInfo.InvariantCulture)),
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new GapTierTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        return layout.Pages.Single().Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+    }
+    private sealed class GapTierTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxHheaDescenderProvider, IDocxHheaLineGapProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => inner is IDocxLineMetricsProvider lineMetrics ? lineMetrics.MeasureSingleLineHeight(run, fontSize) : fontSize;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => (string.Equals(run?.FontFamily, "GapTier", StringComparison.Ordinal) ? 1.30d : 1.0d) * fontSize;
+
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => (string.Equals(run?.FontFamily, "GapTier", StringComparison.Ordinal) ? 0.8799d : 0.75d) * fontSize;
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => (string.Equals(run?.FontFamily, "GapTier", StringComparison.Ordinal) ? 0.21d : 0.2d) * fontSize;
+
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => 0d;
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "GapTier", StringComparison.Ordinal) ? 0.2642d * fontSize : 0d;
+    }
     public static void DocxBodyFirstBaselineFollowsMaxHheaRun()
     {
         // RV05 bodymix probes (Word COM references edge-bodymix-cal/tah plus the

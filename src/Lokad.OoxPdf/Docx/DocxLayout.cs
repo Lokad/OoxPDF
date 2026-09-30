@@ -1158,7 +1158,8 @@ internal sealed partial class DocxLayoutEngine
                         _ => paragraphX
                     };
                     double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, paragraphFontSize, textMeasurer);
-                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective), bodyHheaAscender);
+                    double? bodyTierAMax = DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, textMeasurer);
+                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
                     if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
                     {
                         // Office A/B (w18/w20/w21/w26/w29/w32 untokened probes, Word-COM

@@ -179,7 +179,7 @@ internal static class DocxLineMetrics
             : font.Os2.WindowsDescender * fontSize / font.UnitsPerEm;
     }
 
-    public static double ResolveBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing, double? hheaAscenderPoints = null)
+    public static double ResolveBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing, double? hheaAscenderPoints = null, double? bodyTierAMaxPoints = null)
     {
         // RV06 pagination probe (edge-page-ex48-body, Word 16.0): Office drops the
         // first baseline of exact-spaced body text to 0.8 x the exact line height,
@@ -189,7 +189,7 @@ internal static class DocxLineMetrics
         // max(hheaAscender, 0.94em). Opt-in per call site; null keeps legacy.
         return hasExplicitLineSpacing
             ? Math.Max(0d, lineHeight * WordExactLineFirstBaselineRatio)
-            : Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d);
+            : Math.Max(Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d), bodyTierAMaxPoints ?? 0d);
     }
 
     // Related-story content (footnotes/endnotes) keeps order-blind min-hhea selection:
@@ -244,6 +244,48 @@ internal static class DocxLineMetrics
     internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer, bool selectMaxHhea = true)
     {
         return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider, selectMaxHhea);
+    }
+
+    // RV06 big-gap body probes (Word COM references edge-endsepgrid-fort/palb/bauh/sitka with Calibri
+    // bodies): Office body first-baseline insets follow the max tier-A (hhea box minus Windows
+    // descender) across runs at own sizes, not max-hhea (Forte/Palatino/Bauhaus bodies sit 0.9-3.5
+    // deeper while Magneto/Constantia and all small-gap families hold the validated levels).
+    // Full-metric measurers only; the caller keeps the legacy floor so all other paths stay identical.
+    internal static double? ResolveBodyTierAMaxPoints(DocxParagraph paragraph, IDocxTextMeasurer? measurer)
+    {
+        if (measurer is not IDocxLineMetricsProvider lineMetrics ||
+            measurer is not IDocxHheaLineGapProvider gapMetrics ||
+            measurer is not IDocxStaticTextMetricsProvider staticMetrics ||
+            measurer is not IDocxHheaDescenderProvider ||
+            paragraph.Runs.Count == 0)
+        {
+            return null;
+        }
+
+        double? maxTier = null;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            double size = run.EffectiveProperties.FontSize;
+            // Gap-less faces keep the legacy max-hhea path: synthetic and zero-gap families resolve
+            // identically there, so only faces carrying hhea line gap take the tier-A branch.
+            if (gapMetrics.MeasureHheaLineGap(run, size) <= 0d)
+            {
+                continue;
+            }
+            double tier = lineMetrics.MeasureHheaLineHeight(run, size) - staticMetrics.MeasureWindowsDescender(run, size);
+            // Sub-em tiers keep the legacy path: Calibri/Times/Magneto and the synthetic faces resolve
+            // below a full em, so only full-em tiers take the branch.
+            if (!(size > 0d) || tier < size)
+            {
+                continue;
+            }
+            if (maxTier is null || tier > maxTier.Value)
+            {
+                maxTier = tier;
+            }
+        }
+
+        return maxTier;
     }
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
