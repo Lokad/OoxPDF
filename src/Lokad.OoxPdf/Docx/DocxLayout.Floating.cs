@@ -137,13 +137,14 @@ internal sealed partial class DocxLayoutEngine
             }
 
             if (textMeasurer is IDocxStaticTextMetricsProvider staticMetrics &&
-                textMeasurer is IDocxHheaDescenderProvider descenderProvider)
+                textMeasurer is IDocxHheaDescenderProvider)
             {
-                // RV06 descender probes (Word 16.0, Magneto/Calibri/Informal resolved sheets):
-                // Office bottom bearing follows the deeper descender, so the inset is the
-                // hhea box minus the maximum descender; equal descenders resolve
-                // identically to the ascender-plus-gap form.
-                return lineMetrics.MeasureHheaLineHeight(run, insetSize) - System.Math.Max(descenderProvider.MeasureHheaDescender(run, insetSize), staticMetrics.MeasureWindowsDescender(run, insetSize));
+                // RV06 descender probes (Word 16.0, Informal Roman 10/12/14pt size matrix
+                // plus Consolas, Magneto and Calibri resolved sheets): Office bottom bearing
+                // follows the Windows descender even when the hhea descender runs deeper,
+                // so the inset is the hhea box minus the Windows descender; the hhea
+                // provider gate stays since full-metric measurers serve both faces together.
+                return lineMetrics.MeasureHheaLineHeight(run, insetSize) - staticMetrics.MeasureWindowsDescender(run, insetSize);
             }
 
             return lineMetrics.MeasureHheaAscender(run, insetSize) + gapProvider.MeasureHheaLineGap(run, insetSize);
