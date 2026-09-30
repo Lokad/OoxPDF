@@ -1262,12 +1262,12 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(144d, separatorLine.Segments[0].X - separatorLine.X);
     }
 
-    private sealed class StrikeoutFontResolver : IFontResolver
+    private sealed class StrikeoutFontResolver(int strikeoutSize = 50, int strikeoutPosition = 300) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
             byte[] faceBytes = TestFontBuilder.CreateTestFont();
-            PatchStrikeoutMetrics(faceBytes, size: 50, position: 300);
+            PatchStrikeoutMetrics(faceBytes, (ushort)strikeoutSize, (short)strikeoutPosition);
             return new FontFaceResolution(
                 request.FamilyName,
                 "StrikeFace",
@@ -1335,6 +1335,44 @@ internal static class DocxFootnotesTests
         double ruleY = separator.SeparatorY ?? double.NaN;
         TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - 0.25d * markSize) < 0.000001d, "Footnote rule bottom must sit 0.25em above the mark baseline with no ride.");
         TestAssert.True(Math.Abs(separator.SeparatorThickness - 0.05d * markSize) < 0.000001d, "Footnote rule thickness must follow the strikeout size.");
+    }
+
+    public static void DocxFootnoteSeparatorRuleSnapsThicknessToPixelGrid()
+    {
+        // RV06 rule-thickness probes (Word 16.0, Times grids plus Tahoma slash Calibri 14pt):
+        // Office rule thickness snaps strikeout size to whole 600dpi pixels (seven points exact),
+        // so a 0.067em synthetic face at explicit 10pt marks renders 0.60 instead of 0.67,
+                // The patched synthetic face pins strikeout 0.25em position and 0.067em size at
+        // explicit 10pt marks, so the thickness must snap 0.67 to the 5-pixel 0.60.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rIdS1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with note</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:t>Note body</w:t></w:r></w:p></w:footnote></w:footnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new StrikeoutFontResolver(67, 250);
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        DocxPlacedRelatedStoryLayout separator = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages[0]
+            .PlacedRelatedStories
+            .Single(story => story.SeparatorY is not null);
+        DocxTextLineLayout separatorLine = separator.TextLines.Single();
+        double markSize = separatorLine.Segments[0].StyleRun.EffectiveProperties.FontSize;
+        double ruleY = separator.SeparatorY ?? double.NaN;
+        TestAssert.True(Math.Abs(markSize - 10d) < 0.000001d, "Separator marks must resolve at explicit 10pt; markSize=" + markSize.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(separator.SeparatorThickness - 0.72d) < 0.000001d, "Rule thickness must snap 0.67 to the 6-pixel 0.72; thickness=" + separator.SeparatorThickness.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     public static void DocxFootnoteSeparatorRuleKeepsLegacyConstantsWithoutStrikeoutMetrics()

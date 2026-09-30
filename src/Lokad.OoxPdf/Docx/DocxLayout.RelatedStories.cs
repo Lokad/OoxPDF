@@ -950,13 +950,18 @@ internal sealed partial class DocxLayoutEngine
         double legacyOffsetPoints = kind == DocxRelatedStoryKind.Endnote
             ? EndnoteSeparatorRuleBottomOffsetPoints
             : FootnoteSeparatorRuleBottomOffsetPoints;
+        // RV06 rule-thickness probes (Word 16.0, Times grids at 8 slash 10 slash 12pt plus
+        // Tahoma slash Calibri 14pt grids): Office rule thickness snaps OS slash 2 strikeout size
+        // to whole 600dpi pixels (0.36 slash 0.48 slash 0.60 against 0.398 slash 0.498 slash 0.598;
+        // 0.72 slash 0.84 slash 0.96 against 0.697 slash 0.889 slash 0.916, all seven exact).
+        const double rulePixelPoints = 72d / 600d;
         if (separatorMeasurer is not null &&
             markFontSizePoints > 0d &&
             separatorMeasurer.TryGetStrikeoutRuleMetrics(markRun, out double positionEm, out double thicknessEm) &&
             positionEm > 0d &&
             thicknessEm > 0d)
         {
-            double thicknessPoints = thicknessEm * markFontSizePoints;
+            double thicknessPoints = System.Math.Round(thicknessEm * markFontSizePoints / rulePixelPoints, System.MidpointRounding.AwayFromZero) * rulePixelPoints;
             return (Math.Max(0d, positionEm * markFontSizePoints - thicknessPoints), thicknessPoints);
         }
 
