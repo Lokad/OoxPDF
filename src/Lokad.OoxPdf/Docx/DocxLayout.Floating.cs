@@ -188,16 +188,17 @@ internal sealed partial class DocxLayoutEngine
         DocxTextRun firstRun = paragraph.Runs[0];
         DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
         // Auto insets take max(hheaAscender, 0.94em) for footnote/endnote stories
-        // (Word 16.0 endnote grids); comment/textbox stories keep legacy (unprobed).
+        // (Word 16.0 endnote grids); comment stories keep legacy (unprobed).
         double? storyHheaAscender = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
             ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false)
             : null;
         // RV06 shape probes (Word 16.0, eighteen families) plus take battery (a12
-        // 21/21/18): uniform-note first insets follow hhea ascender plus hhea gap with
+        // 21/21/18) plus floatinset probes (Tahoma slash Calibri slash Informal textboxes):
+        // uniform-note first insets follow hhea box minus Windows descender with
         // no 0.94em floor, while mixed notes keep the legacy floor so take capacities
         // hold; gap-aware measurers resolve uniform notes directly and every other path
         // stays byte-identical.
-        double storyBaselineOffset = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote &&
+        double storyBaselineOffset = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
             textMeasurer is IDocxHheaLineGapProvider gapProvider &&
             ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider) is double relatedFirstInset
             ? relatedFirstInset

@@ -2815,6 +2815,47 @@ internal static class DocxFootnotesTests
         return lines[0].BaselineY;
     }
 
+    public static void DocxTextBoxFirstInsetFollowsWindowsDescender()
+    {
+        // RV06 floatinset probes (Word 16.0, Tahoma slash Calibri slash Informal floating
+        // textboxes): Office textbox first insets follow the hhea-box-minus-Windows-descender
+        // tier, so a uniform synthetic face keeps its tier inset in textbox stories
+        // instead of the legacy floor.
+        double baseline = LayoutTextBoxFirstBaselineWithDescFaces("BoxTbx");
+        TestAssert.True(Math.Abs(baseline - -11.6d) < 0.02d, "Textbox first baseline must sit at the tier inset; baseline=" + baseline.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private static double LayoutTextBoxFirstBaselineWithDescFaces(string family)
+    {
+        var run = new DocxTextRun("Box note one", 12d, null, false, false, false, null, family);
+        var paragraph = new DocxParagraph(
+            [run],
+            [],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var anchor = DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d);
+        var drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(paragraph)]);
+        var document = new DocxDocument(
+            612d, 792d, 72d, 72d, 72d, 72d,
+            DocxPageSettings.Empty,
+            [drawing],
+            [], [], [new DocxParagraphElement(anchor)], [], []);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DescMostTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxFloatingDrawingLayout placed = layout.FloatingDrawings.Single();
+        TestAssert.True(placed.TextBoxLayout is not null, "Floating drawing must carry its textbox story layout.");
+        DocxTextLineLayout first = placed.TextBoxLayout.TextLines.First(line => line.Text.StartsWith("Box note", StringComparison.Ordinal));
+        return first.BaselineY;
+    }
+
     public static void DocxFootnoteFirstInsetKeepsLegacyAboveMarkSingleEm()
     {
         // RV06 gap-slice guard (Palatino/Algerian first baselines): uniform notes whose
