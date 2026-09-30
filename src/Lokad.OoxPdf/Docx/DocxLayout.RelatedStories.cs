@@ -313,11 +313,11 @@ internal sealed partial class DocxLayoutEngine
                     // An overflowing separator would strand its rule at the margin while content
                     // slices onto fresh pages (Office keeps separator and content together);
                     // turn first, mirroring overflowing-item placement everywhere else.
-                    if (ResolveSizeDrivenSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer) > cursorTop - activePage.MarginBottom)
+                    if (ResolveSizeDrivenSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories) > cursorTop - activePage.MarginBottom)
                     {
                         MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
-                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true);
+                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                     double endnoteContentGapPoints = 0d;
@@ -1012,7 +1012,7 @@ internal sealed partial class DocxLayoutEngine
 
     // Shared by the document-end overflow turn below: the fit check must measure the
     // same size-driven height that placement will consume, not the laid-out height.
-    private static double ResolveSizeDrivenSeparatorHeight(DocxRelatedStoryLayout separatorLayout, DocxLayoutPage page, IDocxTextMeasurer? separatorMeasurer)
+    private static double ResolveSizeDrivenSeparatorHeight(DocxRelatedStoryLayout separatorLayout, DocxLayoutPage page, IDocxTextMeasurer? separatorMeasurer, IReadOnlyList<DocxRelatedStoryLayout>? contentStoriesForHhea = null)
     {
         double laidOutHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         if (separatorLayout.TextLines.Count == 0)
@@ -1031,9 +1031,79 @@ internal sealed partial class DocxLayoutEngine
         double insetAtPivot = DocxLineMetrics.WordAutoLineBaselineOffsetEm * EndnoteSeparatorSlopePivotPoints;
         double singleLineDeficitCorrection = ResolveSeparatorSingleLineDeficitCorrection(markRun, pivotMarkSize, separatorMeasurer);
         double smallAscSupplement = ResolveSeparatorSmallAscSupplement(markRun, pivotMarkSize, separatorMeasurer);
-        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot) + singleLineDeficitCorrection + smallAscSupplement);
+        double hheaAscenderExcess = System.Math.Min(ResolveSeparatorHheaAscenderExcess(markRun, pivotMarkSize, separatorMeasurer), ResolveContentHheaAscenderExcess(contentStoriesForHhea, separatorMeasurer));
+        return Math.Max(0d, laidOutHeight - firstLineBox + firstInset + (lineBoxAtPivot - insetAtPivot) + singleLineDeficitCorrection + smallAscSupplement + hheaAscenderExcess);
     }
 
+    // RV06 endnote block-shift probes (Word COM references: five-family mark axis on pinned Tahoma content plus Tahoma-mark size sweep, genuine embeds both sides): Office document-end separator totals run about 0.8 taller on Tahoma/Verdana marks, flat across 8/10/14pt marks, while Calibri/Times/Georgia/Arial and the other probed families sit inside 0.25. The excess keys on hhea ascender over the auto-inset floor the layout already assumes. Gated on hhea metrics; measurers without them keep byte-identical behavior.
+    private const double EndnoteSeparatorHheaAscenderExcessSlope = 1.27d;
+
+    private static double ResolveSeparatorHheaAscenderExcess(DocxTextRun? markRun, double pivotMarkSize, IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (pivotMarkSize <= 0d || separatorMeasurer is not IDocxLineMetricsProvider metrics)
+        {
+            return 0d;
+        }
+
+        double hheaAscenderEm = metrics.MeasureHheaAscender(markRun, pivotMarkSize) / pivotMarkSize;
+        if (!(hheaAscenderEm > DocxLineMetrics.WordAutoLineBaselineOffsetEm))
+        {
+            return 0d;
+        }
+
+        return (hheaAscenderEm - DocxLineMetrics.WordAutoLineBaselineOffsetEm) * EndnoteSeparatorHheaAscenderExcessSlope * pivotMarkSize;
+    }
+
+    // The excess needs both sides Tahoma-like (Calibri on either side of the mark/content pair holds the validated level while Tahoma on both raises it about 0.8): the caller meets the mark-side term above with the content-side term below in the minimum, so single-sided Tahoma keeps the legacy level.
+    private static double ResolveContentHheaAscenderExcess(IReadOnlyList<DocxRelatedStoryLayout>? contentStories, IDocxTextMeasurer? separatorMeasurer)
+    {
+        if (contentStories is null || contentStories.Count == 0 || separatorMeasurer is not IDocxLineMetricsProvider metrics)
+        {
+            return double.PositiveInfinity;
+        }
+
+        double excessMax = 0d;
+        bool hasRuns = false;
+        foreach (DocxRelatedStoryLayout story in contentStories)
+        {
+            int firstParagraphIndex = int.MaxValue;
+            foreach (DocxTextLineLayout line in story.TextLines)
+            {
+                if (line.SourceParagraphIndex.HasValue && line.SourceParagraphIndex.Value < firstParagraphIndex)
+                {
+                    firstParagraphIndex = line.SourceParagraphIndex.Value;
+                }
+            }
+            foreach (DocxTextLineLayout line in story.TextLines)
+            {
+                if (line.SourceParagraphIndex.HasValue && line.SourceParagraphIndex.Value != firstParagraphIndex)
+                {
+                    continue;
+                }
+                foreach (DocxTextSegmentLayout segment in line.Segments)
+                {
+                    if (string.IsNullOrWhiteSpace(segment.Text))
+                    {
+                        continue;
+                    }
+                    DocxTextRun run = segment.StyleRun;
+                    double runSize = run.EffectiveProperties.FontSize;
+                    if (!(runSize > 0d))
+                    {
+                        continue;
+                    }
+                    double runExcessEm = metrics.MeasureHheaAscender(run, runSize) / runSize - DocxLineMetrics.WordAutoLineBaselineOffsetEm;
+                    hasRuns = true;
+                    if (runExcessEm > 0d)
+                    {
+                        excessMax = System.Math.Max(excessMax, runExcessEm * EndnoteSeparatorHheaAscenderExcessSlope * runSize);
+                    }
+                }
+            }
+        }
+
+        return hasRuns ? excessMax : double.PositiveInfinity;
+    }
     // RV06 four-family separator grids (Word COM references edge-endsepgrid-cal/tmr/tah/vdn
     // at 10/12/14pt): Office separator height carries a singleLine-deficit slope term against
     // the validated Calibri anchor that no laid-out box spread explains (Times, Tahoma and
@@ -1209,12 +1279,13 @@ internal sealed partial class DocxLayoutEngine
         int sourceBlockIndex,
         double separatorTop,
         IDocxTextMeasurer? separatorMeasurer,
-        bool useSizeDrivenPlacementHeight = false)
+        bool useSizeDrivenPlacementHeight = false,
+        IReadOnlyList<DocxRelatedStoryLayout>? contentStoriesForHhea = null)
     {
         double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         if (useSizeDrivenPlacementHeight)
         {
-            separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page, separatorMeasurer);
+            separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page, separatorMeasurer, contentStoriesForHhea);
         }
         double separatorBottom = separatorTop - separatorHeight;
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
