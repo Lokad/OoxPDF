@@ -3483,6 +3483,38 @@ internal static class DocxFootnotesTests
         return LayoutFootnoteContentGapWithWindowsAscender(markFamily, contentFamily, false);
     }
 
+    public static void DocxFootnoteContentGapScalesShelterWithRunSize()
+    {
+        // RV06 endnote mark-size probes (m28/m28c): the inset shelter must scale with the run size, so big marks on small content keep the run-sized shelter instead of releasing the supplement early. Same-size pairs behave identically either way.
+        double same = LayoutFootnoteContentGapWithSizedWindowsAscender("Calibri", 28, "BigAsc", 28);
+        double mixed = LayoutFootnoteContentGapWithSizedWindowsAscender("Calibri", 28, "BigAsc", 20);
+        TestAssert.True(Math.Abs(same - 5.30d) < 0.02d, "Same-size content gap must keep the mark-sized shelter; same=" + same.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(mixed - 4.91d) < 0.02d, "Mixed-size content gap must shelter with the run size; mixed=" + mixed.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+    private static double LayoutFootnoteContentGapWithSizedWindowsAscender(string markFamily, int markHalfPoints, string contentFamily, int contentHalfPoints)
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rIdS1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""",
+            ["word/styles.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="MFAM" w:hAnsi="MFAM"/><w:sz w:val="MSZ"/><w:szCs w:val="MSZ"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>""".Replace("MFAM", markFamily).Replace("MSZ", markHalfPoints.ToString(CultureInfo.InvariantCulture)),
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:rPr><w:rFonts w:ascii="MFAM" w:hAnsi="MFAM"/><w:sz w:val="MSZ"/><w:szCs w:val="MSZ"/></w:rPr><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="CFAM" w:hAnsi="CFAM"/><w:sz w:val="CSZ"/><w:szCs w:val="CSZ"/></w:rPr><w:t xml:space="preserve">Note body one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="CFAM" w:hAnsi="CFAM"/><w:sz w:val="CSZ"/><w:szCs w:val="CSZ"/></w:rPr><w:t xml:space="preserve">Note body two</w:t></w:r></w:p></w:footnote></w:footnotes>""".Replace("MFAM", markFamily).Replace("CFAM", contentFamily).Replace("MSZ", markHalfPoints.ToString(CultureInfo.InvariantCulture)).Replace("CSZ", contentHalfPoints.ToString(CultureInfo.InvariantCulture))
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new TypoWascTextMeasurer(new DocxTests.FamilyWidthTextMeasurer(), false), CancellationToken.None);
+        DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+        DocxPlacedRelatedStoryLayout content = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
+        return (separator.TopY - separator.Height) - content.TopY;
+    }
     private static double LayoutFootnoteContentGapWithWindowsAscender(string markFamily, string contentFamily, bool useTypographicMetrics)
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

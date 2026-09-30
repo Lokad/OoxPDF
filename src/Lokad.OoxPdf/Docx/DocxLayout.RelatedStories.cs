@@ -1173,7 +1173,7 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        double coveredInsetExcessPoints = 0d;
+        double firstInsetPoints = 0d;
         foreach (DocxTextLineLayout firstLine in contentTextLines)
         {
             if (firstLine.SourceParagraphIndex.HasValue && firstLine.SourceParagraphIndex.Value != firstParagraphIndex)
@@ -1183,7 +1183,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (firstLine.Segments.Count != 0)
             {
-                coveredInsetExcessPoints = System.Math.Max(0d, System.Math.Max(0d, -firstLine.BaselineY) - DocxLineMetrics.WordAutoLineBaselineOffsetEm * markFontSizePoints);
+                firstInsetPoints = System.Math.Max(0d, -firstLine.BaselineY);
                 break;
             }
         }
@@ -1204,8 +1204,13 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 DocxTextRun run = segment.StyleRun;
+                // RV06 endnote mark-size probes (m28/m28c): the inset shelter covers content-proportionally, so it scales with the run size while the mark-size form releases the supplement early on large marks.
+                double runFontSizePoints = run.EffectiveProperties.FontSize;
+                double runCoveredInsetExcessPoints = runFontSizePoints > 0d
+                    ? System.Math.Max(0d, firstInsetPoints - DocxLineMetrics.WordAutoLineBaselineOffsetEm * runFontSizePoints)
+                    : System.Math.Max(0d, firstInsetPoints - DocxLineMetrics.WordAutoLineBaselineOffsetEm * markFontSizePoints);
                 contentGapMax = System.Math.Max(contentGapMax, ResolveSeparatorGapPoints(run, markFontSizePoints, separatorMeasurer));
-                contentGapMax = System.Math.Max(contentGapMax, ResolveWascContentGapSupplement(run, markRun, markFontSizePoints, separatorMeasurer, coveredInsetExcessPoints));
+                contentGapMax = System.Math.Max(contentGapMax, ResolveWascContentGapSupplement(run, markRun, markFontSizePoints, separatorMeasurer, runCoveredInsetExcessPoints));
             }
         }
 
@@ -1233,6 +1238,8 @@ internal sealed partial class DocxLayoutEngine
     // metrics, keeping those paths byte-identical. The excess yields to first-inset
     // space the layout already placed (Tah-Verdana mixes), so covered insets do not
     // double-count Office single excess.
+    // RV06 endnote mark-size probes (m28/m28c): ascents and the inset shelter scale with
+    // the run size; the mark-size form released the supplement early on large marks.
     private static double ResolveWascContentGapSupplement(
         DocxTextRun run,
         DocxTextRun? markRun,
@@ -1255,8 +1262,9 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
-        double runAscenderPoints = staticMetrics.MeasureWindowsAscender(run, markFontSizePoints);
-        double markAscenderPoints = staticMetrics.MeasureWindowsAscender(markRun, markFontSizePoints);
+        double runFontSizePoints = run.EffectiveProperties.FontSize > 0d ? run.EffectiveProperties.FontSize : markFontSizePoints;
+        double runAscenderPoints = staticMetrics.MeasureWindowsAscender(run, runFontSizePoints);
+        double markAscenderPoints = staticMetrics.MeasureWindowsAscender(markRun, runFontSizePoints);
         if (runAscenderPoints <= 0d || markAscenderPoints <= 0d)
         {
             return 0d;
