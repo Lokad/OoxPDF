@@ -1528,6 +1528,43 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs((cal - tah) - 0.605d) < 0.05d, "Inset-dominated first baselines must keep the hhea gap; tah=" + tah.ToString(CultureInfo.InvariantCulture) + " cal=" + cal.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxTableCellMidlineImageBottomSitsAtBaseline()
+    {
+        // RV06 cellmidline size matrix (Word 16.0, blue-bounds raster measurement): Office
+        // cell image bottoms sit at the text baseline (Tahoma medium bounds 679.0 against
+        // baseline 678.82), while the renderer hangs a full image height below it.
+        var cell = LayoutImageCellWithFamily("Tahoma", 24d, 18d);
+        DocxTextLineLayout line = cell.TextLines.Single();
+        DocxInlineImageLayout image = cell.InlineImages.Single();
+        TestAssert.True(Math.Abs(image.Y - line.BaselineY) < 0.05d, "Image bottom must sit at the text baseline; imageY=" + image.Y.ToString(CultureInfo.InvariantCulture) + " baseline=" + line.BaselineY.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private static DocxTableCellLayout LayoutImageCellWithFamily(string family, double imageWidthPoints, double imageHeightPoints)
+    {
+        var runA = new DocxTextRun("Cell A", 10d, null, false, false, false, null, family) { SourceRunIndex = 0 };
+        var runB = new DocxTextRun(" tail B", 10d, null, false, false, false, null, family) { SourceRunIndex = 2 };
+        var image = new DocxInlineImage(imageWidthPoints, imageHeightPoints, "image/png", [0x89, 0x50, 0x4E, 0x47], "word/media/image1.png") { SourceRunIndex = 1 };
+        var paragraph = new DocxParagraph(
+            [runA, runB],
+            [image],
+            null,
+            DocxTextAlignment.Left,
+            null,
+            0d,
+            0d,
+            1.2d,
+            null,
+            DocxParagraphSpacing.Empty,
+            DocxParagraphKeepRules.Empty,
+            null);
+        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new MidlineCellTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+    }
+
     private sealed class MidlineCellTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);

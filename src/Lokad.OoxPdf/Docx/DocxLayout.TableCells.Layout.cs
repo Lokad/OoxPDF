@@ -562,10 +562,14 @@ internal sealed partial class DocxLayoutEngine
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                         {
                             double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber);
+                            // RV06 cellmidline size matrix (Word 16.0, blue-bounds raster measurement):
+                            // Office cell image bottoms sit at the text baseline (medium bounds 679.0
+                            // against baseline 678.82 both families, all sizes within 0.5), so midline
+                            // images anchor by the line baseline instead of hanging a full height below it.
                             placedImages.Add(new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth,
-                                cursorY - placed.Height,
+                                cursorY - lineBaselineTransition,
                                 placed.Width,
                                 placed.Height,
                                 pageIndex,
