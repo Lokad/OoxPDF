@@ -209,6 +209,71 @@ internal static class DocxLineMetrics
             : Math.Max(Math.Max(fontSize * WordAutoLineBaselineOffsetEm, hheaAscenderPoints ?? 0d), bodyTierAMaxPoints ?? 0d);
     }
 
+    // RV06 cell first-baseline box rule (Word 16.0, Harlow/Arial/Calibri size matrix at 11 and 12pt plus Palatino/Harlow mixed orders plus Tahoma/BookAntiqua/Bauhaus uniforms, genuine embeds throughout): Office pins the first-line box top at the cell content top, so the first baseline sits one full line box above the box bottom. Per non-typographic run that is max(Windows box, hhea box plus hhea gap) minus max descender, maximized across runs with no 0.94em floor. Fit table, candidate minus Office: Harlow plus 0.00 and plus 0.09, Arial minus 0.15 and minus 0.05, Calibri plus 0.02 and plus 0.01, Palatino minus 0.03 both mixed orders order-blind at Palatino level, Tahoma plus 0.03 and minus 0.02, Book Antiqua minus 0.14, Bauhaus minus 0.05 with its 673-unit gap lifting the hhea box. Gap-inclusion alone is falsified by Calibri (minus 0.65); ascender-only max is falsified by Arial (minus 1.35) and Bauhaus (minus 4.00); the floor alone is falsified by Harlow (plus 0.70) and Palatino (minus 1.34). Mixed-size cells keep the legacy floor slope (Office 12->15 transition carries exactly 0.94em at 2.82), so the gate admits size-uniform cells only. Full-metric quartet required, so provider-less doubles and the embedded single-font measurer keep legacy behavior byte-identically.
+    internal static bool TableCellFontSizesUniform(IReadOnlyList<DocxParagraph> cellParagraphs)
+    {
+        double? size = null;
+        foreach (DocxParagraph paragraph in cellParagraphs)
+        {
+            foreach (DocxTextRun run in paragraph.Runs)
+            {
+                double runSize = run.EffectiveProperties.FontSize;
+                if (size is null)
+                {
+                    size = runSize;
+                }
+                else if (runSize != size.Value)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    internal static double? ResolveTableCellFirstBaselinePoints(IReadOnlyList<DocxParagraph> cellParagraphs, DocxParagraph paragraph, double maxSize, IDocxTextMeasurer? measurer)
+    {
+        if (!TableCellFontSizesUniform(cellParagraphs) ||
+            measurer is not IDocxStaticTextMetricsProvider cellStatic ||
+            measurer is not IDocxLineMetricsProvider cellLines ||
+            measurer is not IDocxHheaDescenderProvider cellDesc ||
+            measurer is not IDocxHheaLineGapProvider cellGap ||
+            paragraph.Runs.Count == 0)
+        {
+            return null;
+        }
+
+        double? firstBaseline = null;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            if (measurer is IDocxTypographicMetricsProvider cellTypographic && cellTypographic.UseTypographicMetrics(run))
+            {
+                continue;
+            }
+
+            double windowsBox = cellStatic.MeasureWindowsAscender(run, maxSize) + cellStatic.MeasureWindowsDescender(run, maxSize);
+            double hheaBox = cellLines.MeasureHheaAscender(run, maxSize) + cellDesc.MeasureHheaDescender(run, maxSize) + cellGap.MeasureHheaLineGap(run, maxSize);
+            double descender = Math.Max(cellStatic.MeasureWindowsDescender(run, maxSize), cellDesc.MeasureHheaDescender(run, maxSize));
+            double runFirst = Math.Max(windowsBox, hheaBox) - descender;
+            firstBaseline = Math.Max(firstBaseline ?? 0d, runFirst);
+        }
+
+        return firstBaseline;
+    }
+
+    // Cell-visible first-baseline offset: the table-cell inset cancels out of the first-line transition, so the visible baseline rides this term at every cell BodyOffset site (transition, midline and estimate plans, single-line path). Size-uniform cells with full-metric measurers take the unfloored box rule; exact spacing, mixed-size cells, flagged-only content and partial doubles keep the legacy body offset byte-identically.
+    internal static double ResolveTableCellBodyBaselineOffset(double fontSize, double lineHeight, bool hasExplicitLineSpacing, IReadOnlyList<DocxParagraph> cellParagraphs, DocxParagraph paragraph, IDocxTextMeasurer? measurer)
+    {
+        if (!hasExplicitLineSpacing &&
+            ResolveTableCellFirstBaselinePoints(cellParagraphs, paragraph, fontSize, measurer) is { } cellFirst)
+        {
+            return cellFirst;
+        }
+
+        return ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing, ResolveHheaAscenderPoints(paragraph, fontSize, measurer));
+    }
+
     // Related-story content (footnotes/endnotes) keeps order-blind min-hhea selection:
     // Office footnote first baselines stay invariant across same-size mixed runs in every
     // order (edge-fnmix edge-fnmix3: 85.46 everywhere), which neither max-hhea nor widest-run
@@ -349,6 +414,12 @@ internal static class DocxLineMetrics
             {
                 hheaAscender = provider.MeasureHheaAscender(widest, maxSize);
             }
+        }
+
+        // The visible first baseline rides ResolveTableCellBodyBaselineOffset at the transition; the inset joins it there for non-top vertical alignment coherence while cancelling out of top-aligned first lines.
+        if (ResolveTableCellFirstBaselinePoints(paragraphs, firstTextParagraph, maxSize, measurer) is { } cellFirstInset)
+        {
+            return cellFirstInset;
         }
 
         return Math.Max(maxSize * WordAutoLineBaselineOffsetEm, hheaAscender ?? 0d);

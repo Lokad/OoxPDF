@@ -1832,6 +1832,60 @@ internal static class DocxTableCellsTests
     }
 
 
+    public static void DocxTableCellFirstBaselineFollowsBoxMinusDescender()
+    {
+        // RV06 cell box rule (Word 16.0, Harlow/Arial/Calibri size matrix plus Palatino/Harlow mixed orders): in-cell first baselines sit one full line box above the box bottom: per-run max(Windows box, hhea box plus hhea gap) minus max descender, maximized across runs with no 0.94em floor.
+        double hi = LayoutCellBoxFirst("HiAsc", "HiAsc");
+        double lo = LayoutCellBoxFirst("LoAsc", "LoAsc");
+        double mixHi = LayoutCellBoxFirst("HiAsc", "LoAsc");
+        double mixLo = LayoutCellBoxFirst("LoAsc", "HiAsc");
+        TestAssert.True(Math.Abs((hi - lo) - -2.16d) < 0.02d, "Uniform cell first gap must carry the box spread; observed=" + (hi - lo).ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs((mixHi - lo) - -2.16d) < 0.02d, "Mixed cell first must sit at the max-box level.");
+        TestAssert.True(Math.Abs(mixHi - mixLo) < 0.02d, "Mixed cell first must ignore run order.");
+    }
+
+    private static double LayoutCellBoxFirst(string firstFamily, string secondFamily)
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:tbl><w:tblPr><w:tblW w:w="4000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:rFonts w:ascii="F1" w:hAnsi="F1"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Cell box line one</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="F2" w:hAnsi="F2"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Cell box line two</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""".Replace("F1", firstFamily).Replace("F2", secondFamily)
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxTextLineLayout[] lines = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Where(line => line.Text.StartsWith("Cell box", StringComparison.Ordinal)).Take(1).ToArray();
+        TestAssert.Equal(1, lines.Length);
+        TestAssert.Equal(firstFamily, lines[0].StyleRun.FontFamily);
+        return lines[0].BaselineY;
+    }
+
+    private sealed class CellBoxTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxHheaDescenderProvider, IDocxHheaLineGapProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => 14d;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => 14d;
+
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "HiAsc", StringComparison.Ordinal) ? fontSize * 1.05d : fontSize * 0.5d;
+
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize * 0.1d;
+
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => 0d;
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "HiAsc", StringComparison.Ordinal) ? fontSize * 1.05d : fontSize * 0.87d;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize * 0.1d;
+    }
+
     public static void DocxTableCellPageFieldsEvaluatePerFragmentPage()
     {
         // W04: PAGE fields must evaluate against each fragment page. The static
@@ -2186,7 +2240,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72.48 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 72.48 709.202 Tm", pdf);
     }
 
     public static void DocxTableVerticalBordersCenterOnGridLines()
@@ -2220,7 +2274,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 108 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 108 709.202 Tm", pdf);
     }
 
     public static void DocxCompatGridAlignsOuterBorderAtMargin()
@@ -2258,7 +2312,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72.72 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 72.72 709.202 Tm", pdf);
         TestAssert.Contains("72 704.387 0.48 15.613 re f", pdf);
     }
 
@@ -2298,7 +2352,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 108.72 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 108.72 709.202 Tm", pdf);
         TestAssert.Contains("108 704.387 0.48 15.613 re f", pdf);
     }
     public static void DocxStyleMarginsPinTextAtMarginWithoutCompat()
@@ -2334,7 +2388,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 72 709.202 Tm", pdf);
         TestAssert.Contains("66.36 704.387 0.48 15.613 re f", pdf);
     }
 
@@ -2377,7 +2431,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 77.64 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 77.64 709.202 Tm", pdf);
     }
 
     public static void DocxDirectMarginsReplaceStyleMarginsForTextOffset()
@@ -2420,7 +2474,7 @@ internal static class DocxTableCellsTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 73.24 709.18 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 73.24 709.202 Tm", pdf);
     }
 
     public static void DocxTableRendererDoesNotDrawRowEdgeBordersAtSplitFragmentBoundaries()
