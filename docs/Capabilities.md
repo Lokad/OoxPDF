@@ -69,7 +69,7 @@ Partial or approximated:
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Advanced numbering formats, character-unit list indents, and complex bidirectional list layout are approximate.
-- Body-path inline images with recorded run affinity paint mid-line at run position with bottom-on-baseline placement; table and related-story paths still place them as blocks after paragraph text, and overwide images overflow past the margin.
+- Inline images with recorded run affinity paint mid-line at run position across body, table-cell, related-story, and static header/footer paths (tall images shift the line down keeping the advance below; justified lines add distributed stretch before the image offset), and overwide images overflow past the margin. Office calibration of image baseline and line growth remains approximate.
 - Missing-glyph and missing-font fallback renders deterministic standard-14 faces with capped diagnostics, including comment and revision balloon text (word-compatible balloon text still needs embedded faces).
 - Floating drawing wrap effects on nearby body text are still approximate even when anchor placement and exclusion geometry are inspected.
 - Some decorative table border styles, table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
