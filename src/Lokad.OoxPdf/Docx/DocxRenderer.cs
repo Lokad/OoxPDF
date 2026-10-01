@@ -927,6 +927,11 @@ internal sealed partial class DocxRenderer
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.
         markupContext = markupContext with { CommentAuthorPaletteSlots = BuildCommentAuthorPaletteSlots(SelectCommentAuthorsForPalette(layout.RelatedStories)) };
+        // RV16: comment/reply story lookup rides the markup context so per-page
+        // candidate collection resolves stories without rebuilding group dictionaries
+        // or re-sorting replies for every page. Skipped when comment balloons never
+        // render (the placement path early-outs before consulting it).
+        markupContext = markupContext with { CommentStoryIndex = markupContext.RendersCommentBalloons ? MarkupCommentStoryIndex.Build(layout.RelatedStories) : null };
         // RV06: balloon titles resolve Segoe UI Bold once per conversion when balloons exist;
         // the face rides the markup context into the balloon text subset below.
         if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && HasWordCompatibleBalloonContent(document, markupContext))

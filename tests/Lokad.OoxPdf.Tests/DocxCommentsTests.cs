@@ -3092,4 +3092,209 @@ internal static class DocxCommentsTests
         PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
         TestAssert.True(!page.Content.Contains("...", StringComparison.Ordinal), "Word-compatible balloons should render full comment bodies without truncation markers.");
     }
+
+    // RV16: comment/reply story indexing must occur once per conversion, not once per
+    // page. Threaded comment decks at two sizes pin linear AllMarkup scaling; per-page
+    // group-dictionary rebuilds quadrupled per doubling instead.
+    public static void AllMarkupThreadedCommentScalingStaysLinear()
+    {
+        long small = AllMarkupThreadedBytes(paragraphs: 1600, parents: 1000);
+        long large = AllMarkupThreadedBytes(paragraphs: 3200, parents: 2000);
+        TestAssert.True(large <= (long)(2.6d * small), $"Threaded comment scaling must stay linear, saw {small} then {large}.");
+    }
+
+    private static long AllMarkupThreadedBytes(int paragraphs, int parents)
+    {
+        string input = WriteThreadedScalingDocx(paragraphs, parents);
+        var options = new OoxPdfOptions { DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup };
+        string warm = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, warm, options);
+        File.Delete(warm);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output, options);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        File.Delete(output);
+        TestAssert.True(allocated > 0, "Conversion must allocate.");
+        return allocated;
+    }
+
+    private static string WriteThreadedScalingDocx(int paragraphs, int parents)
+    {
+        int step = paragraphs / parents;
+        var document = new System.Text.StringBuilder();
+        document.Append("<?xml version=");
+        document.Append((char)34);
+        document.Append("1.0");
+        document.Append((char)34);
+        document.Append(" encoding=");
+        document.Append((char)34);
+        document.Append("UTF-8");
+        document.Append((char)34);
+        document.Append("?><w:document xmlns:w=");
+        document.Append((char)34);
+        document.Append("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+        document.Append((char)34);
+        document.Append("><w:body>");
+        var comments = new System.Text.StringBuilder();
+        comments.Append("<?xml version=");
+        comments.Append((char)34);
+        comments.Append("1.0");
+        comments.Append((char)34);
+        comments.Append(" encoding=");
+        comments.Append((char)34);
+        comments.Append("UTF-8");
+        comments.Append((char)34);
+        comments.Append("?><w:comments xmlns:w=");
+        comments.Append((char)34);
+        comments.Append("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+        comments.Append((char)34);
+        comments.Append(" xmlns:w14=");
+        comments.Append((char)34);
+        comments.Append("http://schemas.microsoft.com/office/word/2010/wordml");
+        comments.Append((char)34);
+        comments.Append(">");
+        var extended = new System.Text.StringBuilder();
+        extended.Append("<?xml version=");
+        extended.Append((char)34);
+        extended.Append("1.0");
+        extended.Append((char)34);
+        extended.Append(" encoding=");
+        extended.Append((char)34);
+        extended.Append("UTF-8");
+        extended.Append((char)34);
+        extended.Append("?><w15:commentsEx xmlns:w15=");
+        extended.Append((char)34);
+        extended.Append("http://schemas.microsoft.com/office/word/2012/wordml");
+        extended.Append((char)34);
+        extended.Append(">");
+        var anchorIds = new System.Collections.Generic.Dictionary<int, int>();
+        for (int k = 0; k < parents; k++)
+        {
+            anchorIds[k * paragraphs / parents] = k + 1;
+        }
+
+        int replyId = 100001;
+        for (int p = 0; p < paragraphs; p++)
+        {
+            string filler = "Filler sentence number " + p + " for layout measurement across many pages.";
+            bool hasParent = anchorIds.TryGetValue(p, out int cid);
+            document.Append("<w:p><w:r><w:t>");
+            document.Append(filler);
+            document.Append(" </w:t></w:r>");
+            if (hasParent)
+            {
+                document.Append("<w:commentRangeStart w:id=");
+                document.Append((char)34);
+                document.Append(cid);
+                document.Append((char)34);
+                document.Append("/><w:r><w:t>reviewed phrase</w:t></w:r><w:commentRangeEnd w:id=");
+                document.Append((char)34);
+                document.Append(cid);
+                document.Append((char)34);
+                document.Append("/><w:r><w:commentReference w:id=");
+                document.Append((char)34);
+                document.Append(cid);
+                document.Append((char)34);
+                document.Append("/></w:r>");
+            }
+            document.Append("</w:p>");
+            if (hasParent)
+            {
+                string para = (10000000 + cid).ToString(CultureInfo.InvariantCulture);
+                comments.Append("<w:comment w:id=");
+                comments.Append((char)34);
+                comments.Append(cid);
+                comments.Append((char)34);
+                comments.Append(" w:author=");
+                comments.Append((char)34);
+                comments.Append("Reviewer");
+                comments.Append((char)34);
+                comments.Append(" w:initials=");
+                comments.Append((char)34);
+                comments.Append("R");
+                comments.Append((char)34);
+                comments.Append(" w:date=");
+                comments.Append((char)34);
+                comments.Append("2026-01-01T00:00:00Z");
+                comments.Append((char)34);
+                comments.Append("><w:p w14:paraId=");
+                comments.Append((char)34);
+                comments.Append(para);
+                comments.Append((char)34);
+                comments.Append("><w:r><w:t>Parent on paragraph ");
+                comments.Append(p);
+                comments.Append(".</w:t></w:r></w:p></w:comment>");
+                extended.Append("<w15:commentEx w15:paraId=");
+                extended.Append((char)34);
+                extended.Append(para);
+                extended.Append((char)34);
+                extended.Append(" w15:done=");
+                extended.Append((char)34);
+                extended.Append("0");
+                extended.Append((char)34);
+                extended.Append("/>");
+                for (int r = 0; r < 3; r++)
+                {
+                    string rpara = (20000000 + cid * 10 + r).ToString(CultureInfo.InvariantCulture);
+                    comments.Append("<w:comment w:id=");
+                    comments.Append((char)34);
+                    comments.Append(replyId);
+                    comments.Append((char)34);
+                    comments.Append(" w:author=");
+                    comments.Append((char)34);
+                    comments.Append("Reviewer");
+                    comments.Append((char)34);
+                    comments.Append(" w:initials=");
+                    comments.Append((char)34);
+                    comments.Append("R");
+                    comments.Append((char)34);
+                    comments.Append(" w:date=");
+                    comments.Append((char)34);
+                    comments.Append("2026-01-01T00:0");
+                    comments.Append(r);
+                    comments.Append(":00Z");
+                    comments.Append((char)34);
+                    comments.Append("><w:p w14:paraId=");
+                    comments.Append((char)34);
+                    comments.Append(rpara);
+                    comments.Append((char)34);
+                    comments.Append("><w:r><w:t>Reply ");
+                    comments.Append(r);
+                    comments.Append(" to parent ");
+                    comments.Append(cid);
+                    comments.Append(".</w:t></w:r></w:p></w:comment>");
+                    extended.Append("<w15:commentEx w15:paraId=");
+                    extended.Append((char)34);
+                    extended.Append(rpara);
+                    extended.Append((char)34);
+                    extended.Append(" w15:paraIdParent=");
+                    extended.Append((char)34);
+                    extended.Append(para);
+                    extended.Append((char)34);
+                    extended.Append(" w15:done=");
+                    extended.Append((char)34);
+                    extended.Append("0");
+                    extended.Append((char)34);
+                    extended.Append("/>");
+                    replyId++;
+                }
+            }
+        }
+        document.Append("</w:body></w:document>");
+        comments.Append("</w:comments>");
+        extended.Append("</w15:commentsEx>");
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = "<?xml version=" + (char)34 + "1.0" + (char)34 + " encoding=" + (char)34 + "UTF-8" + (char)34 + "?><Types xmlns=" + (char)34 + "http://schemas.openxmlformats.org/package/2006/content-types" + (char)34 + "><Default Extension=" + (char)34 + "rels" + (char)34 + " ContentType=" + (char)34 + "application/vnd.openxmlformats-package.relationships+xml" + (char)34 + "/><Default Extension=" + (char)34 + "xml" + (char)34 + " ContentType=" + (char)34 + "application/xml" + (char)34 + "/><Override PartName=" + (char)34 + "/word/document.xml" + (char)34 + " ContentType=" + (char)34 + "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" + (char)34 + "/><Override PartName=" + (char)34 + "/word/comments.xml" + (char)34 + " ContentType=" + (char)34 + "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml" + (char)34 + "/><Override PartName=" + (char)34 + "/word/commentsExtended.xml" + (char)34 + " ContentType=" + (char)34 + "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml" + (char)34 + "/></Types>",
+            ["_rels/.rels"] = "<?xml version=" + (char)34 + "1.0" + (char)34 + " encoding=" + (char)34 + "UTF-8" + (char)34 + "?><Relationships xmlns=" + (char)34 + "http://schemas.openxmlformats.org/package/2006/relationships" + (char)34 + "><Relationship Id=" + (char)34 + "rId1" + (char)34 + " Type=" + (char)34 + "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" + (char)34 + " Target=" + (char)34 + "word/document.xml" + (char)34 + "/></Relationships>",
+            ["word/_rels/document.xml.rels"] = "<?xml version=" + (char)34 + "1.0" + (char)34 + " encoding=" + (char)34 + "UTF-8" + (char)34 + "?><Relationships xmlns=" + (char)34 + "http://schemas.openxmlformats.org/package/2006/relationships" + (char)34 + "><Relationship Id=" + (char)34 + "rIdComments" + (char)34 + " Type=" + (char)34 + "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" + (char)34 + " Target=" + (char)34 + "comments.xml" + (char)34 + "/><Relationship Id=" + (char)34 + "rIdCommentsExtended" + (char)34 + " Type=" + (char)34 + "http://schemas.microsoft.com/office/2011/relationships/commentsExtended" + (char)34 + " Target=" + (char)34 + "commentsExtended.xml" + (char)34 + "/></Relationships>",
+            ["word/document.xml"] = document.ToString(),
+            ["word/comments.xml"] = comments.ToString(),
+            ["word/commentsExtended.xml"] = extended.ToString(),
+        });
+    }
 }

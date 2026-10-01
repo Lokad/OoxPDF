@@ -26,7 +26,7 @@ internal sealed partial class DocxRenderer
         return null;
     }
 
-    private static string? FormatCommentDate(string? value)
+    internal static string? FormatCommentDate(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

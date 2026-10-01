@@ -479,20 +479,11 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxMarkupBalloonCandidate> CollectMarkupBalloonCandidates(double textWidth)
         {
             var balloonCandidates = new List<DocxMarkupBalloonCandidate>();
-            Dictionary<string, DocxRelatedStoryLayout> commentStories = relatedStories
-                .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.Id is not null)
-                .GroupBy(story => story.Story.Id ?? string.Empty, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-            Dictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = relatedStories
-                .Where(story => story.Story.Kind == DocxRelatedStoryKind.Comment && story.Story.CommentMetadata?.ParentCommentId is not null)
-                .GroupBy(story => story.Story.CommentMetadata?.ParentCommentId ?? string.Empty, StringComparer.Ordinal)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group
-                        .OrderBy(story => FormatCommentDate(story.Story.CommentMetadata?.Date), StringComparer.Ordinal)
-                        .ThenBy(story => story.Story.Id, StringComparer.Ordinal)
-                        .ToArray(),
-                    StringComparer.Ordinal);
+            // RV16: story lookup rides the markup context (built once per conversion);
+            // entry paths without it fall back to a local build.
+            MarkupCommentStoryIndex storyIndex = markupContext.CommentStoryIndex ?? MarkupCommentStoryIndex.Build(relatedStories);
+            IReadOnlyDictionary<string, DocxRelatedStoryLayout> commentStories = storyIndex.CommentStories;
+            IReadOnlyDictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = storyIndex.CommentRepliesByParentId;
             var renderedComments = new HashSet<string>(StringComparer.Ordinal);
             var renderedRevisions = new HashSet<int>();
             var renderedTableRevisions = new HashSet<string>(StringComparer.Ordinal);

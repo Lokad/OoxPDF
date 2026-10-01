@@ -29,6 +29,11 @@ internal sealed record DocxMarkupContext(
     // RV06: resolved Segoe UI Bold face for balloon titles (Office sets titles in Segoe
     // UI Bold, bodies in the document face). Null keeps the label face everywhere.
     public FontFaceResolution? BalloonTitleFaceResolution { get; init; }
+    // RV16: comment/reply story lookup built once per conversion from the laid-out
+    // related stories; per-page candidate collection reads it instead of rebuilding
+    // group dictionaries for every page. Null keeps entry paths without it on the
+    // per-page fallback.
+    public MarkupCommentStoryIndex? CommentStoryIndex { get; init; }
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {
         DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;
