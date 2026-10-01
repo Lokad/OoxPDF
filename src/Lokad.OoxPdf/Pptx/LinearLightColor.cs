@@ -18,6 +18,13 @@ internal static class LinearLightColor
         return (byte)System.Math.Clamp((int)System.Math.Round(c * 255d, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
+    // Continuous sRGB encode for stop derivation (no byte rounding; callers round).
+    public static double ToSrgb(double linear)
+    {
+        double clamped = System.Math.Clamp(linear, 0d, 1d);
+        return clamped <= 0.0031308d ? clamped * 12.92d : 1.055d * System.Math.Pow(clamped, 1d / 2.4d) - 0.055d;
+    }
+
     // Linear-light tint toward white (table bands; fraction-curve upper-half form).
     public static RgbColor TintTowardWhite(RgbColor color, double weight)
     {

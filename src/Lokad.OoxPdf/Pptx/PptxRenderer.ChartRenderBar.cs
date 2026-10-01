@@ -1408,11 +1408,14 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // RV04: effective-style-18/26 bars paint a vertical base-relative gradient sampled
-    // from Office bar references: every painted series rect (clustered bar, stack segment,
+    // RV04: effective-style-18/26 bars paint a vertical base-relative gradient resolved
+    // from the series base: every painted series rect (clustered bar, stack segment,
     // horizontal bar) carries bar-relative Coords spanning twice its height from its
-    // bottom edge, so the visible bottom half runs light-middle-dark. Other styles,
-    // transparent or patterned fills and unmeasured bases keep the flat path.
+    // bottom edge, so the visible bottom half runs light-middle-dark. The six sampled
+    // theme bases below carry byte-exact Office triples; any other opaque base resolves
+    // through DeriveStyleBarGradientStops (mid exact, dark within 1 level, light within
+    // 2 over the 37-face PowerPoint 16.0 corpus in artifacts/rv04dark). Other styles,
+    // transparent or patterned fills keep the flat path.
     private static bool TryGetStyleBarGradientStops(int? chartStyleId, ChartSeriesFill fill, out IReadOnlyList<PdfShadingStop> stops)
     {
         stops = Array.Empty<PdfShadingStop>();
@@ -1435,7 +1438,93 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        return false;
+        if (fill.Color.Equals(new RgbColor(192, 0, 0)))
+        {
+            stops = StyleBarGradientStops(new RgbColor(203, 69, 69), new RgbColor(202, 0, 0), new RgbColor(187, 0, 0));
+            return true;
+        }
+
+        if (fill.Color.Equals(new RgbColor(112, 48, 160)))
+        {
+            stops = StyleBarGradientStops(new RgbColor(129, 83, 172), new RgbColor(113, 42, 166), new RgbColor(100, 31, 151));
+            return true;
+        }
+
+        if (fill.Color.Equals(new RgbColor(14, 40, 65)))
+        {
+            stops = StyleBarGradientStops(new RgbColor(72, 80, 94), new RgbColor(11, 40, 68), new RgbColor(7, 34, 61));
+            return true;
+        }
+
+        if (fill.Color.Equals(new RgbColor(255, 192, 0)))
+        {
+            stops = StyleBarGradientStops(new RgbColor(255, 199, 70), new RgbColor(255, 198, 0), new RgbColor(229, 182, 0));
+            return true;
+        }
+
+        (RgbColor derivedDark, RgbColor derivedMiddle, RgbColor derivedLight) = DeriveStyleBarGradientStops(fill.Color);
+        stops = StyleBarGradientStops(derivedLight, derivedMiddle, derivedDark);
+        return true;
+    }
+
+    // RV04: derived style-18/26 gradient stops for bases outside the sampled table.
+    // Corpus: 37 PowerPoint 16.0 (base, dark, mid, light) triples extracted from Office
+    // axial-shading stitching functions (artifacts/rv04dark). Mid is an exact sRGB
+    // saturation stretch about the face lightness; dark tracks a 0.763 linear-light
+    // factor plus a 0.184 saturation coupling, clipped to 229; light tracks a 0.98
+    // linear-light factor plus a 0.06 lift with a 0.008 coupling. Measured agreement:
+    // mid byte-exact on every face, dark within 1 level, light within 2.
+    internal static (RgbColor Dark, RgbColor Middle, RgbColor Light) DeriveStyleBarGradientStops(RgbColor baseColor)
+    {
+        double lightness = (System.Math.Max(baseColor.Red, System.Math.Max(baseColor.Green, baseColor.Blue)) +
+            System.Math.Min(baseColor.Red, System.Math.Min(baseColor.Green, baseColor.Blue))) / 2d;
+        return (
+            DeriveStyleDarkStop(baseColor, lightness),
+            DeriveStyleMiddleStop(baseColor, lightness),
+            DeriveStyleLightStop(baseColor, lightness));
+    }
+
+    private static RgbColor DeriveStyleMiddleStop(RgbColor baseColor, double lightness)
+    {
+        return new RgbColor(
+            StyleGradientChannel(lightness + 1.1d * (baseColor.Red - lightness), 0, 255),
+            StyleGradientChannel(lightness + 1.1d * (baseColor.Green - lightness), 0, 255),
+            StyleGradientChannel(lightness + 1.1d * (baseColor.Blue - lightness), 0, 255));
+    }
+
+    private static RgbColor DeriveStyleDarkStop(RgbColor baseColor, double lightness)
+    {
+        return new RgbColor(
+            DeriveStyleDarkChannel(baseColor.Red, lightness),
+            DeriveStyleDarkChannel(baseColor.Green, lightness),
+            DeriveStyleDarkChannel(baseColor.Blue, lightness));
+    }
+
+    private static byte DeriveStyleDarkChannel(byte channel, double lightness)
+    {
+        double staged = LinearLightColor.ToSrgb(0.763d * LinearLightColor.ToLinear(channel)) * 255d +
+            0.184d * (channel - lightness);
+        return StyleGradientChannel(staged, 0, 229);
+    }
+
+    private static RgbColor DeriveStyleLightStop(RgbColor baseColor, double lightness)
+    {
+        return new RgbColor(
+            DeriveStyleLightChannel(baseColor.Red, lightness),
+            DeriveStyleLightChannel(baseColor.Green, lightness),
+            DeriveStyleLightChannel(baseColor.Blue, lightness));
+    }
+
+    private static byte DeriveStyleLightChannel(byte channel, double lightness)
+    {
+        double staged = LinearLightColor.ToSrgb(0.98d * LinearLightColor.ToLinear(channel) + 0.06d) * 255d +
+            0.008d * (channel - lightness);
+        return StyleGradientChannel(staged, 0, 255);
+    }
+
+    private static byte StyleGradientChannel(double staged, int min, int max)
+    {
+        return (byte)System.Math.Clamp((int)System.Math.Round(staged, System.MidpointRounding.AwayFromZero), min, max);
     }
 
     // RV04: five-knot forward stitch matching the visible bottom half of the Office

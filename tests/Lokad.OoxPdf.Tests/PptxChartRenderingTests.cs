@@ -1872,9 +1872,9 @@ internal static class PptxChartRenderingTests
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
 
-    // RV04: style-18 columns keep the flat fill when the theme base has no sampled
-    // recipe (default theme accent).
-    public static void BarStyle18UnmeasuredBaseKeepsFlatFill()
+    // RV04: style-18 columns paint the derived Office gradient when the theme base has
+    // no sampled recipe (default theme accent resolves outside the measured table).
+    public static void BarStyle18DerivedStopsPaintGradientForUnmeasuredBase()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -1917,10 +1917,90 @@ internal static class PptxChartRenderingTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         OoxPdfConverter.Convert(input, output);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(!Regex.IsMatch(pdf, @"/Sh\d+ sh"), "Unmeasured theme bases must not gain shading resources.");
-        TestAssert.Contains("0.267 0.447 0.769 rg", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"/Sh\d+ sh"), "Derived stops must shade unmeasured theme bases.");
+        TestAssert.Contains("ShadingType 2", pdf);
+        TestAssert.DoesNotContain("0.267 0.447 0.769 rg", pdf);
     }
 
+    // RV04: derived style-18/26 mid stops are byte-exact on the 37-face Office corpus.
+    public static void BarStyle18DerivedMidStopsMatchOfficeExactly()
+    {
+        foreach (string row in StyleBarStopCorpus)
+        {
+            string[] parts = row.Split((char)58);
+            TestAssert.True(RgbColor.TryParse(parts[0], out RgbColor baseColor), row);
+            TestAssert.True(RgbColor.TryParse(parts[2], out RgbColor expected), row);
+            (_, RgbColor middle, _) = PptxRenderer.DeriveStyleBarGradientStops(baseColor);
+            TestAssert.Equal(expected, middle);
+        }
+    }
+
+    // RV04: derived dark stops stay within 1 level of Office on the 37-face corpus.
+    public static void BarStyle18DerivedDarkStopsStayWithinOneLevelOfOffice()
+    {
+        foreach (string row in StyleBarStopCorpus)
+        {
+            string[] parts = row.Split((char)58);
+            TestAssert.True(RgbColor.TryParse(parts[0], out RgbColor baseColor), row);
+            TestAssert.True(RgbColor.TryParse(parts[1], out RgbColor expected), row);
+            (RgbColor dark, _, _) = PptxRenderer.DeriveStyleBarGradientStops(baseColor);
+            TestAssert.True(System.Math.Abs(dark.Red - expected.Red) <= 1 && System.Math.Abs(dark.Green - expected.Green) <= 1 && System.Math.Abs(dark.Blue - expected.Blue) <= 1, row);
+        }
+    }
+
+    // RV04: derived light stops stay within 2 levels of Office on the 37-face corpus.
+    public static void BarStyle18DerivedLightStopsStayWithinTwoLevelsOfOffice()
+    {
+        foreach (string row in StyleBarStopCorpus)
+        {
+            string[] parts = row.Split((char)58);
+            TestAssert.True(RgbColor.TryParse(parts[0], out RgbColor baseColor), row);
+            TestAssert.True(RgbColor.TryParse(parts[3], out RgbColor expected), row);
+            (_, _, RgbColor light) = PptxRenderer.DeriveStyleBarGradientStops(baseColor);
+            TestAssert.True(System.Math.Abs(light.Red - expected.Red) <= 2 && System.Math.Abs(light.Green - expected.Green) <= 2 && System.Math.Abs(light.Blue - expected.Blue) <= 2, row);
+        }
+    }
+
+    private static readonly string[] StyleBarStopCorpus =
+    [
+        "156082:08587C:106287:497491",
+        "E97132:E15E19:F26E29:ED8256",
+        "C00000:BB0000:CA0000:CB4545",
+        "7030A0:641F97:712AA6:8153AC",
+        "0E2841:07223D:0B2844:48505E",
+        "FFC000:E5B600:FFC600:FFC746",
+        "000000:000000:000000:454545",
+        "000040:00003D:000043:45455E",
+        "000080:00007C:000086:454590",
+        "0000FF:0000E5:0000FF:4646FF",
+        "004000:003D00:004300:455E45",
+        "008000:007C00:008600:459045",
+        "00C000:00BB00:00CA00:45CB45",
+        "00FF00:00E500:00FF00:46FF46",
+        "00FFFF:00E5E5:00FFFF:46FFFF",
+        "0E2850:06214C:0B2753:475069",
+        "101010:0D0D0D:101010:484848",
+        "142850:0B214B:112753:495069",
+        "202020:1B1B1B:202020:4D4D4D",
+        "400000:3D0000:430000:5E4545",
+        "404040:383838:404040:5D5D5D",
+        "606060:545454:606060:747474",
+        "800000:7C0000:860000:904545",
+        "808000:7C7C00:868600:909045",
+        "808080:717171:808080:8E8E8E",
+        "A0A0A0:8D8D8D:A0A0A0:ABABAB",
+        "C0C0C0:AAAAAA:C0C0C0:C8C8C8",
+        "E0E0E0:C7C7C7:E0E0E0:E6E6E6",
+        "F0F0F0:D5D5D5:F0F0F0:F5F5F5",
+        "FF0000:E50000:FF0000:FF4646",
+        "FF00FF:E500E5:FF00FF:FF46FF",
+        "FF4000:E52C00:FF3A00:FF5E46",
+        "FF8000:E57100:FF8000:FF8E46",
+        "FFC800:E5BE00:FFCF00:FFCF46",
+        "FFE000:E5D800:FFEA00:FFE546",
+        "FFFF00:E5E500:FFFF00:FFFF46",
+        "FFFFFF:E2E2E2:FFFFFF:FFFFFF",
+    ];
     // RV04: explicit series fills win over the style gradient even when the explicit
     // color equals a sampled base.
     public static void BarStyle18ExplicitFillKeepsFlatFill()
