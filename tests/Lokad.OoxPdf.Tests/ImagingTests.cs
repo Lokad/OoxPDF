@@ -423,6 +423,37 @@ internal static class ImagingTests
         TestAssert.Equal(0, budget.PeakLiveImageBytes);
     }
 
+    public static void PngDecodeScratchStaysProportionalToPlanes()
+    {
+        // PNG working set (2026-10-01): IDAT staging plus inflated output carry
+        // exact capacities sized from the header, so decoding allocates the pixel
+        // planes plus the deterministic staging buffers plus small fixed overhead
+        // instead of doubling resize overlap on top.
+        uint s = 0x12345678u;
+        byte[] noise = new byte[512 * 512 * 4];
+        for (int i = 0; i < noise.Length; i++)
+        {
+            s ^= s << 13;
+            s ^= s >> 17;
+            s ^= s << 5;
+            noise[i] = (byte)s;
+        }
+
+        byte[] noisy = TestFixtures.CreateRgbaPng(512, 512, noise);
+        byte[] flat = TestFixtures.CreateRgbaPng(512, 512, new byte[512 * 512 * 4]);
+        foreach (byte[] png in new[] { noisy, flat })
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long start = GC.GetAllocatedBytesForCurrentThread();
+            using DecodedPixels owned = PngImage.ReadOwned(png, CancellationToken.None);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - start;
+            long planes = (long)owned.Rgb.Length + (owned.Alpha?.Length ?? 0);
+            TestAssert.True(allocated <= planes * 4L, "PNG decode scratch must stay proportional to planes; allocated=" + allocated + " planes=" + planes + ".");
+        }
+    }
+
     public static void ZeroLiveBudgetRejectsJpegPixelsWithZeroPeak()
     {
         // R02: a zero-byte live budget rejects the JPEG working-set reservation

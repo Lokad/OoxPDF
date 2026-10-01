@@ -52,7 +52,7 @@ internal sealed class PngImage
         int interlace = 0;
         byte[]? palette = null;
         byte[]? transparency = null;
-        using var idat = new MemoryStream();
+        var idatRanges = new List<(int Offset, int Length)>();
         int offset = Signature.Length;
         while (offset + 8 <= bytes.Length)
         {
@@ -92,7 +92,7 @@ internal sealed class PngImage
             }
             else if (type == "IDAT")
             {
-                idat.Write(data);
+                idatRanges.Add((offset - 4 - length, length));
             }
             else if (type == "IEND")
             {
@@ -108,6 +108,7 @@ internal sealed class PngImage
         // CONVERSION_RESOURCE_SUMMARY. Zero when the header is missing (existing
         // validation still throws below); outside a conversion scope this is a null
         // no-op and pixel caps still apply.
+        // Staging below carries exact header-sized capacities, so decode scratch stays within this estimate.
         bool hasAlpha = colorType is 3 or 4 or 6 || (colorType == 0 && transparency is { Length: >= 2 });
         long liveEstimate = width <= 0 || height <= 0
             ? 0
@@ -115,11 +116,29 @@ internal sealed class PngImage
         OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
         try
         {
-            // the IDAT accumulator already owns the compressed bytes; inflate
-            // from a read-only view instead of copying them into a second array.
-            using var input = new MemoryStream(idat.GetBuffer(), 0, (int)idat.Length, writable: false);
+            // IDAT payloads arrive as slices of the input buffer, so stage them once
+            // into an exactly-sized array instead of growing an accumulator with
+            // doubling resize overlap.
+            long compressedTotal = 0L;
+            foreach ((int Offset, int Length) range in idatRanges)
+            {
+                compressedTotal = checked(compressedTotal + range.Length);
+            }
+
+            byte[] compressed = new byte[checked((int)compressedTotal)];
+            int compressedFill = 0;
+            foreach ((int Offset, int Length) range in idatRanges)
+            {
+                bytes.AsSpan(range.Offset, range.Length).CopyTo(compressed.AsSpan(compressedFill));
+                compressedFill += range.Length;
+            }
+
+            using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
             using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-            using var output = new MemoryStream();
+            // The inflated size is deterministic from the dimensions, so carry
+            // an exactly-sized buffer instead of growing one with doubling
+            // resize overlap.
+            using var output = new MemoryStream(checked((int)maxInflated));
             CopyInflated(zlib, output, maxInflated, cancellationToken);
             // decode from the inflated buffer in place instead of trimming a
             // second full-size copy. The truncation guards below throw the same exception
