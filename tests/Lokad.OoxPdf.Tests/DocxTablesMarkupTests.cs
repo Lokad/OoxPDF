@@ -1011,7 +1011,8 @@ internal static class DocxTablesMarkupTests
         // W6-a1: the Word-compatible engine models production (scaled advances, metrics,
         // and grids), so the nested cell keeps two lines while reserve stays unscaled.
         TestAssert.True(
-            Math.Abs((reserveOuterRow.Height - wordOuterRow.Height) - 3.985352d) < 0.001d,
+            // RV06 line-box maximum: filler runs box the Windows extents, so the nested reserve-vs-compatible row delta composes the Windows-box line height (Office-gate verdict pending).
+            Math.Abs((reserveOuterRow.Height - wordOuterRow.Height) - 4.530d) < 0.001d,
             "Outer auto-height table rows should measure nested scaled spacing consistently. Delta=" + (reserveOuterRow.Height - wordOuterRow.Height));
     }
 

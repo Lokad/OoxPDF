@@ -546,7 +546,8 @@ internal static class DocxTextTests
         TestAssert.Equal("Beta", lines[2].Text);
         // Office A/B 2026-09-07 (probe-labsize bodysize/empty): styles-less unsized runs (including the empty
         // paragraph mark) resolve flat 12pt, and the fake-metrics lines equal font size by construction.
-        TestAssert.Equal(24d, Math.Round(lines[0].BaselineY - lines[2].BaselineY, 3));
+        // RV06 line-box maximum: filler runs box the Windows extents, so the two fake-metrics pitches equal the Windows box (2 times 14.4) by construction.
+        TestAssert.Equal(28.8d, Math.Round(lines[0].BaselineY - lines[2].BaselineY, 3));
     }
 
     public static void DocxBodyBaselineSitsLowerWithoutSpacingElement()

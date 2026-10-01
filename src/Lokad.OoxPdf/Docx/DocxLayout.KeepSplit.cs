@@ -83,7 +83,10 @@ internal sealed partial class DocxLayoutEngine
         double hheaLineHeight = metricsProvider is not null
             ? ResolveProfileHheaLineHeight(paragraph, fontSize, metricsProvider, bodyRun, singleLineHeight, selectMaxAcrossRuns)
             : singleLineHeight;
-        double autoLineHeight = Math.Max(singleLineHeight, hheaLineHeight) * effectiveLineSpacingFactor;
+        // RV06 line-box probes (Word 16.0, 20 fitting-shape families plus Elephant body): Office auto line boxes take max(Windows ascender plus descender, hhea box) with ties moot, so the Windows box joins the base maximum; runs whose resolved face requests typographic metrics (Aptos take 24 keeps the hhea box) skip it like the content-gap supplement, and providers without static or line metrics keep the legacy maximum bit-identically (the Windows box only joins measured maxima).
+        bool skipWindowsBox = metricsProvider is null || (textMeasurer is IDocxTypographicMetricsProvider typographic && typographic.UseTypographicMetrics(bodyRun));
+        double? windowsBaseBox = staticMetrics is not null && !skipWindowsBox ? bodyWindowsLineHeight : null;
+        double autoLineHeight = Math.Max(Math.Max(singleLineHeight, hheaLineHeight), windowsBaseBox ?? double.NegativeInfinity) * effectiveLineSpacingFactor;
         if (selectMaxAcrossRuns)
         {
             (double relatedBase, double relatedExtra) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hheaLineHeight, metricsProvider, staticMetrics);
@@ -194,9 +197,11 @@ internal sealed partial class DocxLayoutEngine
             // uniform pitches follow the per-family hhea box with no single-line floor,
             // so the max-ascender own box is the hhea box; the legacy max stands where
             // static metrics are absent.
-            double ownBox = hhea;
             double asc = staticMetrics.MeasureWindowsAscender(run, size);
             double desc = staticMetrics.MeasureWindowsDescender(run, size);
+            // RV06 line-box probes (Word 16.0): Office per-run line boxes take max(Windows ascender plus descender, hhea box), so the Windows extents join each run candidate; runs whose resolved face requests typographic metrics keep the hhea box like the content-gap supplement, and families with Windows extents inside the hhea box resolve bit-identically, as do runs measured without line metrics.
+            bool skipRunWindowsBox = metricsProvider is IDocxTypographicMetricsProvider runTypographic && runTypographic.UseTypographicMetrics(run);
+            double ownBox = (metricsProvider is null || skipRunWindowsBox) ? hhea : System.Math.Max(hhea, asc + desc);
             if (desc > maxDescPoints)
             {
                 maxDescPoints = desc;

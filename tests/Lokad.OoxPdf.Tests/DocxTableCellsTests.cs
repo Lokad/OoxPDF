@@ -1826,8 +1826,9 @@ internal static class DocxTableCellsTests
         DocxTableRowLayout[] rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         DocxTableRowLayout[] tallRows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
         TestAssert.Equal(2, tallRows.Length);
-        TestAssert.Equal(12.6d, Math.Round(tallRows[0].Height, 4));
-        TestAssert.Equal(11.6d, Math.Round(tallRows[1].Height, 4));
+        // RV06 line-box maximum: row heights compose the Windows-box line height (tall-minus-flat keeps the 1.0 label-ascender excess).
+        TestAssert.Equal(14.92d, Math.Round(tallRows[0].Height, 4));
+        TestAssert.Equal(13.92d, Math.Round(tallRows[1].Height, 4));
     }
 
 

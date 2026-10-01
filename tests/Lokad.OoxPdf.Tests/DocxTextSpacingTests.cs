@@ -817,14 +817,14 @@ internal static class DocxTextSpacingTests
         TestAssert.Equal(0d, textLines[0].ParagraphAfterSpacingPoints ?? -1d);
         TestAssert.True(textLines[0].ContextualSpacingSuppressed == false, "First paragraph should report that contextual spacing suppression did not apply.");
         TestAssert.Equal(1.16d, textLines[0].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 11.6d) < 0.0001d, "Effective line height should be the measured single-line height multiplied by the effective factor.");
+        TestAssert.True(Math.Abs((textLines[0].LineHeightPoints ?? 0d) - 13.92d) < 0.0001d, "Effective line height should be the maximum measured box (Windows extents join here) multiplied by the effective factor.");
         TestAssert.True(textLines[0].LineSpacingFactorFloorApplied == true, "Default-auto list paragraphs should report the Word-compatible auto-line floor.");
         TestAssert.Equal(0d, textLines[1].PendingAfterSpacingPoints ?? -1d);
         TestAssert.Equal(0d, textLines[1].ParagraphBeforeSpacingPoints ?? -1d);
         TestAssert.Equal(1.16d, textLines[1].EffectiveLineSpacingFactor ?? 0d);
         TestAssert.True(textLines[1].LineSpacingFactorFloorApplied == true, "List paragraphs report the floor without requiring positive before spacing (Office line-height probe 2026-09-06).");
         TestAssert.Equal(1.15d, textLines[2].EffectiveLineSpacingFactor ?? 0d);
-        TestAssert.True(Math.Abs((textLines[2].LineHeightPoints ?? 0d) - 11.5d) < 0.0001d, "Explicit w:line factors are honored as-authored for lists (Office explicit-115 probe 2026-09-06: explicit 1.15 pitches 14.04 at 10pt Calibri).");
+        TestAssert.True(Math.Abs((textLines[2].LineHeightPoints ?? 0d) - 13.8d) < 0.0001d, "Explicit w:line factors are honored as-authored for lists (Office explicit-115 probe 2026-09-06: explicit 1.15 pitches 14.04 at 10pt Calibri).");
         TestAssert.True(textLines[2].LineSpacingFactorFloorApplied == false, "Explicit w:line list paragraphs should not report the default-auto floor.");
         TestAssert.Equal(1.2d, textLines[3].EffectiveLineSpacingFactor ?? 0d);
         TestAssert.True(textLines[3].LineSpacingFactorFloorApplied == false, "Above-minimum default-auto list paragraphs should keep their factor without reporting the floor.");
@@ -954,7 +954,8 @@ internal static class DocxTextSpacingTests
         TestAssert.Equal(12d, line.BodyWindowsLineHeightPoints ?? 0d);
         TestAssert.Equal(14d, line.ListLabelWindowsLineHeightPoints ?? 0d);
         // Explicit w:line 276 (1.15) is honored as-authored for lists (Office explicit-115 probe 2026-09-06).
-        TestAssert.Equal(11.5d, Math.Round(line.LineHeightPoints ?? 0d, 2));
+        // RV06 line-box maximum: the profile boxes the body Windows extents (12) with the explicit factor still honored as-authored.
+        TestAssert.Equal(13.8d, Math.Round(line.LineHeightPoints ?? 0d, 2));
         TestAssert.Equal("BodySingleLineAuto", line.LineHeightSource ?? string.Empty);
         TestAssert.True((line.ListLabelWindowsLineHeightPoints ?? 0d) > (line.BodyWindowsLineHeightPoints ?? 0d), "Snapshot should expose when list-label Windows extents exceed body extents.");
     }
@@ -1372,11 +1373,12 @@ internal static class DocxTextSpacingTests
 
     public static void DocxAutoLineBoxIgnoresWindowsExtents()
     {
-        // Aptos take discriminator for the hhea maximum above: Windows extents at
-        // 1.28em over an hhea/singleLine at 1.22em must not move auto line boxes
-        // (Office Aptos take stays 24). The patched synthetic face pins win extents
-        // at 1.5em under a 1.15em single line and 1.0em hhea sum, so body pitch
-        // must stay 1.15*10*278/240 + 8.
+        // USE_TYPO_METRICS carve-out for the hhea maximum above: a face requesting
+        // typographic metrics (Aptos, whose take stays 24 with hhea at 1.22em over
+        // Windows extents at 1.28em) skips the Windows box, so with the flag set the
+        // patched synthetic face (win extents at 1.5em over a 1.15em single line and
+        // 1.0em hhea sum) keeps body pitch at 1.15*10*278/240 + 8. Faces without the
+        // flag prefer the Windows box (see PrefersWindowsExtents).
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
@@ -1390,7 +1392,7 @@ internal static class DocxTextSpacingTests
             document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         }
 
-        var resolver = new WindowsExtentsFontResolver();
+        var resolver = new WindowsExtentsFontResolver(patchTypographicSelection: true);
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver);
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -1405,12 +1407,51 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs(pitch - 21.320833333333334d) < 0.000001d, "Auto line pitch must ignore Windows extents; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
-    private sealed class WindowsExtentsFontResolver : IFontResolver
+    public static void DocxAutoLineBoxPrefersWindowsExtents()
+    {
+        // Windows-box preference for the hhea maximum above: faces without
+        // USE_TYPO_METRICS (Baskerville/BookAntiqua/Elephant pitch probes) take
+        // max(Windows box, hhea box), so without the flag the patched synthetic
+        // face (win extents at 1.5em over a 1.15em single line and 1.0em hhea sum)
+        // moves body pitch to 1.5*10*278/240 + 8.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">First body line words here</w:t></w:r></w:p><w:p><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">Second body line words here</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+
+        var resolver = new WindowsExtentsFontResolver(patchTypographicSelection: false);
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver);
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None)
+            .Pages[0]
+            .Items
+            .OfType<DocxTextLineLayout>()
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, lines.Length);
+        double pitch = lines[0].BaselineY - lines[1].BaselineY;
+        TestAssert.True(Math.Abs(pitch - 25.375d) < 0.000001d, "Auto line pitch must prefer the Windows box; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private sealed class WindowsExtentsFontResolver(bool patchTypographicSelection) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
             byte[] faceBytes = TestFontBuilder.CreateTestFont();
             PatchWindowsExtents(faceBytes, ascender: 1100, descender: 400);
+            if (patchTypographicSelection)
+            {
+                PatchTypographicSelection(faceBytes);
+            }
             return new FontFaceResolution(
                 request.FamilyName,
                 "WinFace",
@@ -1440,6 +1481,23 @@ internal static class DocxTextSpacingTests
 
             throw new InvalidOperationException("Synthetic test font is missing the OS/2 table.");
         }
+    }
+
+    private static void PatchTypographicSelection(byte[] faceBytes)
+    {
+        // OS/2 fsSelection bit 7 (USE_TYPO_METRICS).
+        int tableCount = (faceBytes[4] << 8) | faceBytes[5];
+        for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
+        {
+            int record = 12 + 16 * tableIndex;
+            if (faceBytes[record] == 0x4F && faceBytes[record + 1] == 0x53 && faceBytes[record + 2] == 0x2F && faceBytes[record + 3] == 0x32)
+            {
+                int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
+                faceBytes[offset + 63] = (byte)(faceBytes[offset + 63] | 0x80);
+                return;
+            }
+        }
+        throw new InvalidOperationException("Synthetic test font is missing the OS/2 table.");
     }
 
     public static void DocxFirstBaselineUsesHheaAscenderWhenLarger()

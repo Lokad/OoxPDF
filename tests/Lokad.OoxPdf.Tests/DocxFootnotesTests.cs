@@ -1759,7 +1759,8 @@ internal static class DocxFootnotesTests
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutPage page = layout.Pages[0];
         DocxPlacedRelatedStoryLayout body = page.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
-        TestAssert.Equal(28, body.TextLines.Count);
+        // RV06 line-box maximum: filler runs box the Windows extents (1.2em), so the clamped take counts fewer lines with bottom-up seating intact.
+        TestAssert.Equal(25, body.TextLines.Count);
         TestAssert.True(Math.Abs(body.TopY - body.Height - page.MarginBottom) < 0.000001d, "The overflowing head block must sit bottom-up on the margin; observed bottom=" + (body.TopY - body.Height).ToString(CultureInfo.InvariantCulture) + ".");
     }
 
@@ -2731,6 +2732,60 @@ internal static class DocxFootnotesTests
         return lines[0].BaselineY - lines[1].BaselineY;
     }
 
+    public static void DocxLineHeightPrefersWindowsBoxOverHhea()
+    {
+        // RV06 line-box probes (Word 16.0): Office auto line boxes take max(Windows box, hhea box).
+        (double footnotePitch, double bodyPitch) = LayoutWinBoxPitches();
+        TestAssert.True(Math.Abs(footnotePitch - 23.98d) < 0.02d, "Footnote line height must prefer the Windows box.");
+        TestAssert.True(Math.Abs(bodyPitch - 23.98d) < 0.02d, "Body line height must prefer the Windows box.");
+    }
+
+    private static (double FootnotePitch, double BodyPitch) LayoutWinBoxPitches()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii="WinBox" w:hAnsi="WinBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body winbox line one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="WinBox" w:hAnsi="WinBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body winbox line two</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="WinBox" w:hAnsi="WinBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note winbox line one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="WinBox" w:hAnsi="WinBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note winbox line two</w:t></w:r></w:p></w:footnote></w:footnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new WinBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxTextLineLayout[] footnoteLines = layout.Pages[0].PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Where(line => line.Text.StartsWith("Note winbox", StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, footnoteLines.Length);
+        DocxTextLineLayout[] bodyLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>()
+            .Where(line => line.Text.StartsWith("Body winbox", StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, bodyLines.Length);
+        return (footnoteLines[0].BaselineY - footnoteLines[1].BaselineY, bodyLines[0].BaselineY - bodyLines[1].BaselineY);
+    }
+
+    private sealed class WinBoxTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => 10d;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => 12d;
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * 0.9d;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize * 0.25d;
+    }
+
     private sealed class DescDeficitTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
@@ -2739,7 +2794,8 @@ internal static class DocxFootnotesTests
 
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => 10d;
 
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize : fontSize * 0.9d;
+        // Windows extents stay inside the 10pt hhea box so the deficit mechanism stays isolated under the line-box maximum (Tahoma ascender still leads for order-invariance).
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 0.6d : fontSize * 0.5d;
 
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 0.2d : fontSize * 0.27d;
     }
@@ -2798,7 +2854,8 @@ internal static class DocxFootnotesTests
 
         public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => 2.4d;
 
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * 0.9d;
+        // Windows extents stay inside the hhea box so the inset mechanism stays isolated under the line-box maximum.
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * 0.8d;
 
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "DescMost", StringComparison.Ordinal) ? 3.6d : 2.4d;
     }
@@ -3088,7 +3145,8 @@ internal static class DocxFootnotesTests
 
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "BigBox", StringComparison.Ordinal) ? 14d : 10d;
 
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize : fontSize * 0.9d;
+        // Windows extents stay inside the hhea box so the floor mechanism stays isolated under the line-box maximum (Tahoma ascender still leads).
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 0.6d : fontSize * 0.5d;
 
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => string.Equals(run?.FontFamily, "Tahoma", StringComparison.Ordinal) ? fontSize * 0.2d : fontSize * 0.27d;
     }
@@ -3152,7 +3210,8 @@ internal static class DocxFootnotesTests
 
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => 10d;
 
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => SelfGateAscenderEm(run) * fontSize;
+        // Windows extents stay inside the hhea box so the self-gate mechanism stays isolated under the line-box maximum (ascender order preserved).
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => SelfGateAscenderEm(run) * fontSize * 0.45d;
 
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => SelfGateDescenderEm(run) * fontSize;
 
