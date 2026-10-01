@@ -729,6 +729,42 @@ internal static class PptxChartRenderingTests
         "FF4000:FF2D00",
         "FFC800:FFDE00",
     ];
+
+    // RV04: the derived radar light stop matches Office-measured bytes on the
+    // theme-recolor corpus (artifacts/rv04radar); the legacy linear top misses
+    // these faces by up to 23 levels.
+    public static void RadarDerivedLightStopsMatchOfficeExactly()
+    {
+        foreach (string row in RadarLightStopCorpus)
+        {
+            string[] parts = row.Split((char)58);
+            TestAssert.True(RgbColor.TryParse(parts[0], out RgbColor baseColor), row);
+            TestAssert.True(RgbColor.TryParse(parts[1], out RgbColor expected), row);
+            TestAssert.Equal(expected, PptxRenderer.DeriveRadarLightStop(baseColor));
+        }
+    }
+
+    private static readonly string[] RadarLightStopCorpus =
+    [
+        "000000:BCBCBC",
+        "808080:CDCDCD",
+        "0000FF:6767FF",
+        "00FF00:67FF67",
+        "FF0000:FF6767",
+        "208050:A9E0BC",
+        "208080:A9E0E0",
+        "206040:B2CFBD",
+        "607060:C1CDC1",
+        "60A080:AFECCA",
+        "107010:ACD8AC",
+        "156B15:AED5AE",
+        "176917:AFD4AF",
+        "404040:C0C0C0",
+        "488848:AFE0AF",
+        "589858:AFE8AF",
+        "608860:B9DBB9",
+        "202020:BDBDBD",
+    ];
     public static void PptxSyntheticRadarFilledOutlineNeedsExplicitLine()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

@@ -182,10 +182,10 @@ internal sealed partial class PptxRenderer
     }
 
     // Effective-style-18 series recipe: a vertical light-to-dark gradient. The top stop
-    // keeps the two-face linear calibration (within 8 levels on light bases; dark bases
-    // need their own derivation corpus). The bottom stop resolves through
-    // DeriveRadarDarkStop, byte-exact on all 16 faces of the PowerPoint 16.0
-    // theme-recolor corpus in artifacts/rv04radar (the old linear bottom missed dark
+    // resolves through DeriveRadarLightStop (per-channel rank derivation over the 109-face
+    // PowerPoint 16.0 corpus in artifacts/rv04radar; mid channels above max 160 keep the
+    // legacy affine top). The bottom stop resolves through DeriveRadarDarkStop,
+    // byte-exact on all 16 faces of the same corpus (the old linear bottom missed dark
     // bases by up to 18 levels).
     private static bool TryReadStyle18SeriesGradient(int? chartStyleId, RgbColor baseColor, out RgbColor top, out RgbColor bottom)
     {
@@ -196,7 +196,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        top = ApplyChartStyleGradientStop(baseColor, 0.88d, 0.315d);
+        top = DeriveRadarLightStop(baseColor);
         bottom = DeriveRadarDarkStop(baseColor);
         return true;
     }
@@ -218,20 +218,77 @@ internal sealed partial class PptxRenderer
             DeriveRadarDarkChannel(baseColor.Blue, lightness));
     }
 
+    // RV04: derived radar light stop. Corpus: 109 PowerPoint 16.0 (base, light)
+    // pairs with light extracted from Office sampled-shading endpoints
+    // (artifacts/rv04radar). Per-channel rank mapping about the face lightness
+    // L=(max+min)/2: gray faces follow 188+0.0019L+0.001023L-squared (exact on
+    // all 9); min channels follow the min-0 quadratic 187.86-0.0135L-0.00512L-
+    // squared plus min*L*c(min,L) with c=0.00632372-0.0000109710L+0.0000103250min
+    // (every corpus row within 1 level); max channels follow the C0 quadratic
+    // 188-0.025M+0.0025M-squared minus 0.03125min+0.000977min-squared (within 1
+    // on every unclipped face); mid channels interpolate t-to-the-e with
+    // e=1.413+0.004607range-0.00403L. Mid channels above max 160 keep the
+    // legacy affine top (the clipped max endpoint breaks the interpolation
+    // there; clip-regime derivation queued separately). Byte-exact on 42 corpus
+    // faces with documented plus-minus-1 classes elsewhere.
+    internal static RgbColor DeriveRadarLightStop(RgbColor baseColor)
+    {
+        int minimum = Math.Min(baseColor.Red, Math.Min(baseColor.Green, baseColor.Blue));
+        int maximum = Math.Max(baseColor.Red, Math.Max(baseColor.Green, baseColor.Blue));
+        double lightness = (maximum + minimum) / 2d;
+        if (minimum == maximum)
+        {
+            byte gray = RadarLightByte(188d + 0.0019d * lightness + 0.001023d * lightness * lightness);
+            return new RgbColor(gray, gray, gray);
+        }
+
+        double liftSlope = 0.00632372d - 0.0000109710d * lightness + 0.0000103250d * minimum;
+        byte minimumLight = minimum == 0
+            ? RadarLightByte(187.86d - 0.0135d * lightness - 0.00512d * lightness * lightness)
+            : RadarLightByte(187.86d - 0.0135d * lightness - 0.00512d * lightness * lightness + minimum * lightness * liftSlope);
+        byte maximumLight = RadarLightByte(188d - 0.025d * maximum + 0.0025d * maximum * maximum - 0.03125d * minimum - 0.000977d * minimum * minimum);
+        double exponent = 1.413d + 0.004607d * (maximum - minimum) - 0.00403d * lightness;
+        return new RgbColor(
+            DeriveRadarLightChannel(baseColor.Red, minimum, maximum, minimumLight, maximumLight, exponent),
+            DeriveRadarLightChannel(baseColor.Green, minimum, maximum, minimumLight, maximumLight, exponent),
+            DeriveRadarLightChannel(baseColor.Blue, minimum, maximum, minimumLight, maximumLight, exponent));
+    }
+
+    private static byte DeriveRadarLightChannel(byte channel, int minimum, int maximum, byte minimumLight, byte maximumLight, double exponent)
+    {
+        if (channel == minimum)
+        {
+            return minimumLight;
+        }
+
+        if (channel == maximum)
+        {
+            return maximumLight;
+        }
+
+        if (maximum > 160)
+        {
+            return RadarLegacyTopChannel(channel);
+        }
+
+        double position = (channel - minimum) / (double)(maximum - minimum);
+        return RadarLightByte(minimumLight + (maximumLight - minimumLight) * Math.Pow(position, exponent));
+    }
+
+    private static byte RadarLightByte(double value)
+    {
+        return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
+    }
+
+    private static byte RadarLegacyTopChannel(byte channel)
+    {
+        return RadarLightByte(channel * 0.88d + 255d * 0.315d);
+    }
+
     private static byte DeriveRadarDarkChannel(byte channel, double lightness)
     {
         double staged = lightness + 1.298d * (channel - lightness);
         return (byte)System.Math.Clamp((int)System.Math.Round(staged, System.MidpointRounding.AwayFromZero), 0, 255);
-    }
-
-    private static RgbColor ApplyChartStyleGradientStop(RgbColor baseColor, double multiplier, double offset)
-    {
-        return new RgbColor(
-            GradientStopByte(baseColor.Red * multiplier + 255d * offset),
-            GradientStopByte(baseColor.Green * multiplier + 255d * offset),
-            GradientStopByte(baseColor.Blue * multiplier + 255d * offset));
-
-        static byte GradientStopByte(double value) => (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
     }
 
     private static void PaintRadarSeriesGradient(PdfGraphicsBuilder graphics, (double X, double Y)[] points, RgbColor top, RgbColor bottom)
