@@ -1434,7 +1434,7 @@ internal static class DocxFootnotesTests
         DocxTextLineLayout separatorLine = separator.TextLines.Single();
         double markSize = separatorLine.Segments[0].StyleRun.EffectiveProperties.FontSize;
         double ruleY = separator.SeparatorY ?? double.NaN;
-        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - (0.25d * markSize - 0.15d)) < 0.000001d, "Endnote rule bottom must sit 0.25em above the mark baseline.");
+        TestAssert.True(Math.Abs(ruleY - separatorLine.BaselineY - 0.25d * markSize) < 0.000001d, "Endnote rule bottom must sit 0.25em above the mark baseline with no ride.");
         TestAssert.True(Math.Abs(separator.SeparatorThickness - 0.05d * markSize) < 0.000001d, "Endnote rule thickness must follow the strikeout size.");
     }
 
