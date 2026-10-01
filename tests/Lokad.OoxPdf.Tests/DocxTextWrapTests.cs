@@ -1299,6 +1299,60 @@ internal static class DocxTextWrapTests
         return GC.GetAllocatedBytesForCurrentThread() - before;
     }
 
+    private static IReadOnlyList<DocxWrappedTextLine> WrapSpansWithCounters(string token, DocxTextSpan[] spans, Func<int, double> widths, bool allowOverwide, IDocxTextMeasurer measurer, DocxLayoutEngine.WrapScanCounters counters)
+    {
+        return WrapSpansWithWidths(token, spans, widths, allowOverwide, measurer, default, counters);
+    }
+
+    // RV13: break-opportunity scans must scale linearly at tens of thousands of
+    // characters. A long token without opportunities forces per-line remainder walks;
+    // with an opportunity index the evaluations track the precompute plus bounded
+    // growth instead of quadrupling per doubling.
+    public static void EmergencyWrapOpportunityScansScaleLinearly()
+    {
+        (long opportunity16K, long safe16K) = WrapOpportunityScans(16384);
+        (long opportunity32K, long safe32K) = WrapOpportunityScans(32768);
+        (long opportunity64K, long safe64K) = WrapOpportunityScans(65536);
+        TestAssert.True(opportunity32K <= (long)(2.5d * opportunity16K), $"Opportunity scans must scale linearly, saw {opportunity16K} then {opportunity32K}.");
+        TestAssert.True(opportunity64K <= (long)(2.5d * opportunity32K), $"Opportunity scans must scale linearly, saw {opportunity32K} then {opportunity64K}.");
+        TestAssert.True(safe32K <= (long)(3d * safe16K), $"Safe scans must scale linearly, saw {safe16K} then {safe32K}.");
+        TestAssert.True(safe64K <= (long)(3d * safe32K), $"Safe scans must scale linearly, saw {safe32K} then {safe64K}.");
+    }
+
+    private static (long OpportunityEvaluations, long SafeEvaluations) WrapOpportunityScans(int length)
+    {
+        string token = new string((char)97, length);
+        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
+        var counters = new DocxLayoutEngine.WrapScanCounters();
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithCounters(token, SingleSpan(token), _ => 10d, true, measurer, counters);
+        TestAssert.True(lines.Count > 0, "Token must produce lines.");
+        return (counters.OpportunityEvaluations, counters.SafeEvaluations);
+    }
+
+    // RV13: the opportunity index must preserve exact break decisions on mixed
+    // opportunity shapes (dense hyphens, long gaps, terminal runs).
+    public static void EmergencyWrapOpportunityIndexPreservesBreaks()
+    {
+        var builder = new System.Text.StringBuilder();
+        builder.Append((char)97, 300);
+        for (int i = 0; i < 8; i++)
+        {
+            builder.Append((char)45);
+            builder.Append((char)97, 60);
+        }
+        builder.Append((char)97, 200);
+        string token = builder.ToString();
+        var measurer = new ProfilingMeasurer((run, text) => text.Length * 1d);
+        IReadOnlyList<DocxWrappedTextLine> lines = WrapSpansWithWidths(token, SingleSpan(token), _ => 10d, true, measurer);
+        AssertCoverage(token, lines);
+        AssertAllLinesFit(lines, _ => 10d, (run, text) => text.Length * 1d);
+        TestAssert.Equal(106, lines.Count);
+        TestAssert.Equal(token.Substring(0, 10), lines[0].Text);
+        TestAssert.Equal("-", lines[30].Text);
+        TestAssert.Equal(token.Substring(token.Length - 10, 10), lines[105].Text);
+    }
+
+
     private static DocxTextSpan[] SingleSpan(string token)
     {
         var run = new DocxTextRun(token, 11d, null, false, false, false, null, "Test");
@@ -1402,13 +1456,13 @@ internal static class DocxTextWrapTests
     {
         return WrapSpansWithWidths(token, spans, _ => width, allowOverwide, measurer, cancellationToken);
     }
-    private static IReadOnlyList<DocxWrappedTextLine> WrapSpansWithWidths(string token, DocxTextSpan[] spans, Func<int, double> widths, bool allowOverwide, IDocxTextMeasurer measurer, CancellationToken cancellationToken = default)
+    private static IReadOnlyList<DocxWrappedTextLine> WrapSpansWithWidths(string token, DocxTextSpan[] spans, Func<int, double> widths, bool allowOverwide, IDocxTextMeasurer measurer, CancellationToken cancellationToken = default, DocxLayoutEngine.WrapScanCounters? counters = null)
     {
         MethodInfo wrap = typeof(DocxLayoutEngine).GetMethod("WrapWords", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected WrapWords.");
         try
         {
-            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, widths, 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken, null]);
+            object? result = wrap.Invoke(null, [token, spans, 0, token.Length, widths, 11d, measurer, Array.Empty<DocxTabStop>(), 36d, allowOverwide, null, cancellationToken, counters ?? new DocxLayoutEngine.WrapScanCounters(), null]);
             return ((System.Collections.IEnumerable)result!).Cast<DocxWrappedTextLine>().ToArray();
         }
         catch (TargetInvocationException ex)
