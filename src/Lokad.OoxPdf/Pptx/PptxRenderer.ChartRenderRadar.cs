@@ -37,9 +37,10 @@ internal sealed partial class PptxRenderer
                 graphics.SaveState();
                 graphics.SetAlpha(fill.Alpha, 1d);
                 if ((seriesIndex < seriesFills.Count ? seriesFills[seriesIndex] : null) is null &&
-                    TryReadStyle18SeriesGradient(chartStyleId, fill.Color, out RgbColor gradientTop, out RgbColor gradientBottom))
+                    TryReadStyle18SeriesGradient(chartStyleId, fill.Color, out IReadOnlyList<PdfShadingStop>? gradientStops) &&
+                    gradientStops is not null)
                 {
-                    PaintRadarSeriesGradient(graphics, points, gradientTop, gradientBottom);
+                    PaintRadarSeriesGradient(graphics, points, gradientStops);
                 }
                 else
                 {
@@ -187,17 +188,15 @@ internal sealed partial class PptxRenderer
     // legacy affine top). The bottom stop resolves through DeriveRadarDarkStop,
     // byte-exact on all 16 faces of the same corpus (the old linear bottom missed dark
     // bases by up to 18 levels).
-    private static bool TryReadStyle18SeriesGradient(int? chartStyleId, RgbColor baseColor, out RgbColor top, out RgbColor bottom)
+    private static bool TryReadStyle18SeriesGradient(int? chartStyleId, RgbColor baseColor, out IReadOnlyList<PdfShadingStop>? stops)
     {
-        top = default;
-        bottom = default;
+        stops = null;
         if (chartStyleId != 18)
         {
             return false;
         }
 
-        top = DeriveRadarLightStop(baseColor);
-        bottom = DeriveRadarDarkStop(baseColor);
+        stops = RadarSeriesGradientStops(baseColor);
         return true;
     }
 
@@ -275,10 +274,79 @@ internal sealed partial class PptxRenderer
         return RadarLightByte(minimumLight + (maximumLight - minimumLight) * Math.Pow(position, exponent));
     }
 
+    // RV04: one interior radar knot at the shared position: per-channel values
+    // follow rank laws in (dark, span) space, so knots stay consistent with the
+    // derived endpoints by construction. S is clamped to the unit interval.
+    private static PdfShadingStop RadarGradientKnot(RgbColor baseColor, RgbColor top, RgbColor bottom, int minimum, int maximum, double position)
+    {
+        return new PdfShadingStop(position,
+            RadarKnotChannel(baseColor.Red, top.Red, bottom.Red, minimum, maximum, position),
+            RadarKnotChannel(baseColor.Green, top.Green, bottom.Green, minimum, maximum, position),
+            RadarKnotChannel(baseColor.Blue, top.Blue, bottom.Blue, minimum, maximum, position));
+    }
+
+    private static byte RadarKnotChannel(byte channel, byte light, byte dark, int minimum, int maximum, double position)
+    {
+        int span = light - dark;
+        double shape;
+        if (channel == minimum && minimum <= 16)
+        {
+            shape = position <= 0.25d ? 0.932d : position <= 0.5d ? 0.727d : 0.408d;
+        }
+        else if (channel == minimum)
+        {
+            shape = position <= 0.25d ? 0.85762d + 0.0004266d * span : position <= 0.5d ? 0.45251d + 0.001574d * span : -0.02107d + 0.0023557d * span;
+        }
+        else if (channel == maximum)
+        {
+            shape = position <= 0.25d ? 0.84444d + 0.0004858d * span : position <= 0.5d ? 0.4499d + 0.0013903d * span : 0.09789d + 0.0010169d * span;
+        }
+        else
+        {
+            shape = position <= 0.25d ? 0.84904d + 0.0004757d * span : position <= 0.5d ? 0.45559d + 0.0014421d * span : 0.06242d + 0.0014961d * span;
+        }
+
+        shape = Math.Clamp(shape, 0d, 1d);
+        return RadarLightByte(dark + shape * span);
+    }
     private static byte RadarLightByte(double value)
     {
         return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
     }
+
+    // RV04: radar series gradient stops: a five-stop forward stitch (light, q1,
+    // mid, q3, dark at quarter offsets) matching the visible half of the Office
+    // symmetric profile. Interior knots resolve per-channel rank laws over the
+    // 109-face corpus (artifacts/rv04radar): min-small (min<=16) min channels use
+    // the universal 0.932/0.727/0.408 profile; other min channels, max channels and
+    // mid channels use span-linear laws per slice. Faces above max 192 keep the
+    // legacy two-stop (clip regime queued separately). Endpoints ride the shipped
+    // light/dark derivation, so knots stay consistent with them by construction.
+    internal static IReadOnlyList<PdfShadingStop> RadarSeriesGradientStops(RgbColor baseColor)
+    {
+        RgbColor top = DeriveRadarLightStop(baseColor);
+        RgbColor bottom = DeriveRadarDarkStop(baseColor);
+        int minimum = Math.Min(baseColor.Red, Math.Min(baseColor.Green, baseColor.Blue));
+        int maximum = Math.Max(baseColor.Red, Math.Max(baseColor.Green, baseColor.Blue));
+        if (maximum > 192)
+        {
+            return
+            [
+                new PdfShadingStop(0d, top.Red, top.Green, top.Blue),
+                new PdfShadingStop(1d, bottom.Red, bottom.Green, bottom.Blue),
+            ];
+        }
+
+        return
+        [
+            new PdfShadingStop(0d, top.Red, top.Green, top.Blue),
+            RadarGradientKnot(baseColor, top, bottom, minimum, maximum, 0.25d),
+            RadarGradientKnot(baseColor, top, bottom, minimum, maximum, 0.5d),
+            RadarGradientKnot(baseColor, top, bottom, minimum, maximum, 0.75d),
+            new PdfShadingStop(1d, bottom.Red, bottom.Green, bottom.Blue),
+        ];
+    }
+
 
     private static byte RadarLegacyTopChannel(byte channel)
     {
@@ -291,7 +359,7 @@ internal sealed partial class PptxRenderer
         return (byte)System.Math.Clamp((int)System.Math.Round(staged, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
-    private static void PaintRadarSeriesGradient(PdfGraphicsBuilder graphics, (double X, double Y)[] points, RgbColor top, RgbColor bottom)
+    private static void PaintRadarSeriesGradient(PdfGraphicsBuilder graphics, (double X, double Y)[] points, IReadOnlyList<PdfShadingStop> stops)
     {
         if (points.Length == 0)
         {
@@ -308,16 +376,17 @@ internal sealed partial class PptxRenderer
             centerX += x;
         }
 
-        if (maxY - minY <= 0.001d)
+        if (maxY - minY <= 0.001d || stops.Count == 0)
         {
-            graphics.SetFillRgb(top.Red, top.Green, top.Blue);
+            PdfShadingStop flat = stops.Count == 0 ? new PdfShadingStop(0d, 0, 0, 0) : stops[0];
+            graphics.SetFillRgb(flat.Red, flat.Green, flat.Blue);
             graphics.FillPolygon(points);
             return;
         }
 
         centerX /= points.Length;
         graphics.ClipPolygon(points);
-        graphics.PaintAxialShading(centerX, maxY, centerX, minY, top.Red, top.Green, top.Blue, bottom.Red, bottom.Green, bottom.Blue);
+        graphics.PaintAxialShading(centerX, maxY, centerX, minY, stops);
     }
 
     private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)

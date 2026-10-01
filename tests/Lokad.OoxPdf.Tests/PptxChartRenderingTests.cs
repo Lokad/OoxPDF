@@ -765,6 +765,32 @@ internal static class PptxChartRenderingTests
         "608860:B9DBB9",
         "202020:BDBDBD",
     ];
+    // RV04: style-18 radar fills paint a 5-stop forward stitch whose interior
+    // knots match Office sampled-shading quarter samples: q1/mid within 2 levels,
+    // q3 within 4 (the min-channel lower knot is the documented weak joint).
+    public static void RadarSeriesGradientKnotsMatchOfficeSamples()
+    {
+        AssertKnots("208050", (158, 214, 177), (123, 188, 146), (70, 157, 104));
+        AssertKnots("406040", (173, 193, 173), (139, 162, 139), (91, 122, 91));
+        AssertKnots("309060", (155, 224, 181), (123, 199, 152), (73, 171, 115));
+    }
+
+    private static void AssertKnots(string baseHex, (int, int, int) q1, (int, int, int) mid, (int, int, int) q3)
+    {
+        TestAssert.True(RgbColor.TryParse(baseHex, out RgbColor baseColor), baseHex);
+        IReadOnlyList<PdfShadingStop> stops = PptxRenderer.RadarSeriesGradientStops(baseColor);
+        TestAssert.Equal(5, stops.Count);
+        AssertKnot(stops[1], q1, baseHex, 2);
+        AssertKnot(stops[2], mid, baseHex, 2);
+        AssertKnot(stops[3], q3, baseHex, 4);
+    }
+
+    private static void AssertKnot(PdfShadingStop stop, (int, int, int) expected, string face, int tolerance)
+    {
+        TestAssert.True(Math.Abs(stop.Red - expected.Item1) <= tolerance, face);
+        TestAssert.True(Math.Abs(stop.Green - expected.Item2) <= tolerance, face);
+        TestAssert.True(Math.Abs(stop.Blue - expected.Item3) <= tolerance, face);
+    }
     public static void PptxSyntheticRadarFilledOutlineNeedsExplicitLine()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
