@@ -181,9 +181,12 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // Effective-style-18 series recipe calibrated from cached Office references: a vertical
-    // light-to-dark gradient expressed as linear transforms of the series base color
-    // so themed documents keep their hue. The same recipe fits both ladder series.
+    // Effective-style-18 series recipe: a vertical light-to-dark gradient. The top stop
+    // keeps the two-face linear calibration (within 8 levels on light bases; dark bases
+    // need their own derivation corpus). The bottom stop resolves through
+    // DeriveRadarDarkStop, byte-exact on all 16 faces of the PowerPoint 16.0
+    // theme-recolor corpus in artifacts/rv04radar (the old linear bottom missed dark
+    // bases by up to 18 levels).
     private static bool TryReadStyle18SeriesGradient(int? chartStyleId, RgbColor baseColor, out RgbColor top, out RgbColor bottom)
     {
         top = default;
@@ -194,8 +197,31 @@ internal sealed partial class PptxRenderer
         }
 
         top = ApplyChartStyleGradientStop(baseColor, 0.88d, 0.315d);
-        bottom = ApplyChartStyleGradientStop(baseColor, 1.2832d, -0.1427d);
+        bottom = DeriveRadarDarkStop(baseColor);
         return true;
+    }
+
+    // RV04: derived radar dark stop. Corpus: 16 PowerPoint 16.0 (base, dark) pairs with
+    // dark extracted from Office sampled-shading nadirs (artifacts/rv04radar): dark is a
+    // 1.298 saturation stretch about the face lightness, clipped to byte range. The 1.3
+    // value is excluded by the series-1 rounding boundaries (62.5 would round to 62 and
+    // 205.5 to 206 against Office 63 and 205); 1.298 sits mid-window of the
+    // Office-consistent interval and agrees byte-exactly on every face. Pure, gray and
+    // extreme channels resolve through the same clip, so no table is needed.
+    internal static RgbColor DeriveRadarDarkStop(RgbColor baseColor)
+    {
+        double lightness = (System.Math.Max(baseColor.Red, System.Math.Max(baseColor.Green, baseColor.Blue)) +
+            System.Math.Min(baseColor.Red, System.Math.Min(baseColor.Green, baseColor.Blue))) / 2d;
+        return new RgbColor(
+            DeriveRadarDarkChannel(baseColor.Red, lightness),
+            DeriveRadarDarkChannel(baseColor.Green, lightness),
+            DeriveRadarDarkChannel(baseColor.Blue, lightness));
+    }
+
+    private static byte DeriveRadarDarkChannel(byte channel, double lightness)
+    {
+        double staged = lightness + 1.298d * (channel - lightness);
+        return (byte)System.Math.Clamp((int)System.Math.Round(staged, System.MidpointRounding.AwayFromZero), 0, 255);
     }
 
     private static RgbColor ApplyChartStyleGradientStop(RgbColor baseColor, double multiplier, double offset)

@@ -686,6 +686,49 @@ internal static class PptxChartRenderingTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Sh1 sh", pdf);
     }
+    // RV04: the derived radar dark stop paints Office-measured bytes (series 1 of the
+    // filled ladder deck resolves 4F81BD outside any sampled table).
+    public static void RadarDerivedDarkStopPaintsOfficeDarkBase()
+    {
+        string input = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-ladder-11-chart-radar-filled-port.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(Regex.IsMatch(pdf, @"/Sh\d+ sh"), "Radar gradient must paint shading resources.");
+        TestAssert.Contains("/C1 [0.247 0.502 0.804]", pdf);
+    }
+
+    // RV04: the derived radar dark stop is byte-exact on the 16-face Office corpus.
+    public static void RadarDerivedDarkStopsMatchOfficeExactly()
+    {
+        foreach (string row in RadarDarkStopCorpus)
+        {
+            string[] parts = row.Split((char)58);
+            TestAssert.True(RgbColor.TryParse(parts[0], out RgbColor baseColor), row);
+            TestAssert.True(RgbColor.TryParse(parts[1], out RgbColor expected), row);
+            TestAssert.Equal(expected, PptxRenderer.DeriveRadarDarkStop(baseColor));
+        }
+    }
+
+    private static readonly string[] RadarDarkStopCorpus =
+    [
+        "4F81BD:3F80CD",
+        "C0504D:D1403C",
+        "FF0000:FF0000",
+        "00FF00:00FF00",
+        "0000FF:0000FF",
+        "FFFF00:FFFF00",
+        "00FFFF:00FFFF",
+        "FF00FF:FF00FF",
+        "000000:000000",
+        "FFFFFF:FFFFFF",
+        "808080:808080",
+        "404040:404040",
+        "C0C0C0:C0C0C0",
+        "00C000:00DD00",
+        "FF4000:FF2D00",
+        "FFC800:FFDE00",
+    ];
     public static void PptxSyntheticRadarFilledOutlineNeedsExplicitLine()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
