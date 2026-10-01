@@ -342,6 +342,20 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             ? fontSize
             : DocxLineMetrics.MeasureHheaLineHeight(font, fontSize);
     }
+    public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        DocxResolvedRunTypeface? resolved = ResolveRun(run);
+        if ((resolved?.Resolution ?? fallbackResolution) is not FontFaceResolution resolution)
+        {
+            return 0d;
+        }
+
+        OpenTypeFont? font = LoadFont(resolution);
+        return font is null
+            ? 0d
+            : DocxLineMetrics.MeasureTypographicLineHeight(font, fontSize);
+    }
 
     public double MeasureHheaAscender(DocxTextRun? run, double fontSize)
     {

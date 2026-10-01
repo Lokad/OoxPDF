@@ -83,10 +83,17 @@ internal sealed partial class DocxLayoutEngine
         double hheaLineHeight = metricsProvider is not null
             ? ResolveProfileHheaLineHeight(paragraph, fontSize, metricsProvider, bodyRun, singleLineHeight, selectMaxAcrossRuns)
             : singleLineHeight;
-        // RV06 line-box probes (Word 16.0, 20 fitting-shape families plus Elephant body): Office auto line boxes take max(Windows ascender plus descender, hhea box) with ties moot, so the Windows box joins the base maximum; runs whose resolved face requests typographic metrics (Aptos take 24 keeps the hhea box) skip it like the content-gap supplement, and providers without static or line metrics keep the legacy maximum bit-identically (the Windows box only joins measured maxima).
-        bool skipWindowsBox = metricsProvider is null || (textMeasurer is IDocxTypographicMetricsProvider typographic && typographic.UseTypographicMetrics(bodyRun));
+        // RV06 line-box probes (Word 16.0, 20 fitting-shape families plus Elephant body): Office auto line boxes take max(Windows ascender plus descender, hhea box) with ties moot, so the Windows box joins the base maximum; runs whose resolved face requests typographic metrics box the unfloored typo box alone (Abadi pitches track typoFull 1.0698 against hhea 1.3047; Aptos and Gabriola agree either way), and providers without static or line metrics keep the legacy maximum bit-identically (the Windows box only joins measured maxima).
+        double measuredTypographicBox = 0d;
+        bool requestTypographicBox = false;
+        if (textMeasurer is IDocxTypographicMetricsProvider typographic && typographic.UseTypographicMetrics(bodyRun))
+        {
+            requestTypographicBox = true;
+            measuredTypographicBox = typographic.MeasureTypographicLineHeight(bodyRun, fontSize);
+        }
+        bool skipWindowsBox = metricsProvider is null || requestTypographicBox;
         double? windowsBaseBox = staticMetrics is not null && !skipWindowsBox ? bodyWindowsLineHeight : null;
-        double autoLineHeight = Math.Max(Math.Max(singleLineHeight, hheaLineHeight), windowsBaseBox ?? double.NegativeInfinity) * effectiveLineSpacingFactor;
+        double autoLineHeight = ((requestTypographicBox && measuredTypographicBox > 0d) ? measuredTypographicBox : Math.Max(Math.Max(singleLineHeight, hheaLineHeight), windowsBaseBox ?? double.NegativeInfinity)) * effectiveLineSpacingFactor;
         if (selectMaxAcrossRuns)
         {
             (double relatedBase, double relatedExtra) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hheaLineHeight, metricsProvider, staticMetrics);
@@ -199,9 +206,16 @@ internal sealed partial class DocxLayoutEngine
             // static metrics are absent.
             double asc = staticMetrics.MeasureWindowsAscender(run, size);
             double desc = staticMetrics.MeasureWindowsDescender(run, size);
-            // RV06 line-box probes (Word 16.0): Office per-run line boxes take max(Windows ascender plus descender, hhea box), so the Windows extents join each run candidate; runs whose resolved face requests typographic metrics keep the hhea box like the content-gap supplement, and families with Windows extents inside the hhea box resolve bit-identically, as do runs measured without line metrics.
-            bool skipRunWindowsBox = metricsProvider is IDocxTypographicMetricsProvider runTypographic && runTypographic.UseTypographicMetrics(run);
-            double ownBox = (metricsProvider is null || skipRunWindowsBox) ? hhea : System.Math.Max(hhea, asc + desc);
+            // RV06 line-box probes (Word 16.0): Office per-run line boxes take max(Windows ascender plus descender, hhea box), so the Windows extents join each run candidate; runs whose resolved face requests typographic metrics box the unfloored typo box alone (Abadi pitches track typoFull 1.0698 against hhea 1.3047), and families with Windows extents inside the hhea box resolve bit-identically, as do runs measured without line metrics.
+            double measuredRunTypographicBox = 0d;
+            bool requestRunTypographicBox = false;
+            if (metricsProvider is IDocxTypographicMetricsProvider runTypographic && runTypographic.UseTypographicMetrics(run))
+            {
+                requestRunTypographicBox = true;
+                measuredRunTypographicBox = runTypographic.MeasureTypographicLineHeight(run, size);
+            }
+            bool skipRunWindowsBox = metricsProvider is null || requestRunTypographicBox;
+            double ownBox = (requestRunTypographicBox && measuredRunTypographicBox > 0d) ? measuredRunTypographicBox : ((metricsProvider is null || skipRunWindowsBox) ? hhea : System.Math.Max(hhea, asc + desc));
             if (desc > maxDescPoints)
             {
                 maxDescPoints = desc;

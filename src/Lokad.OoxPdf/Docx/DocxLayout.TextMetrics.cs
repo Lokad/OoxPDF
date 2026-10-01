@@ -83,6 +83,12 @@ internal interface IDocxStaticTextMetricsProvider
 internal interface IDocxTypographicMetricsProvider
 {
     bool UseTypographicMetrics(DocxTextRun? run);
+
+    // Unfloored typographic line box for auto line boxes (Word 16.0 Abadi probes): runs whose resolved face requests typographic metrics box the typo box alone. Providers without typo metrics report zero so legacy maxima apply bit-identically.
+    double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize)
+    {
+        return 0d;
+    }
 }
 
 internal static class DocxTextSpacing
@@ -131,6 +137,17 @@ internal static class DocxLineMetrics
         double units = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
 
         return Math.Max(fontSize * WordSingleLineMinimumEm, units * fontSize / font.UnitsPerEm);
+    }
+
+    public static double MeasureTypographicLineHeight(OpenTypeFont font, double fontSize)
+    {
+        if (font.UnitsPerEm == 0)
+        {
+            return fontSize;
+        }
+
+        double units = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
+        return units * fontSize / font.UnitsPerEm;
     }
 
     public static double MeasureHheaLineHeight(OpenTypeFont font, double fontSize)

@@ -1377,7 +1377,7 @@ internal static class DocxTextSpacingTests
         // typographic metrics (Aptos, whose take stays 24 with hhea at 1.22em over
         // Windows extents at 1.28em) skips the Windows box, so with the flag set the
         // patched synthetic face (win extents at 1.5em over a 1.15em single line and
-        // 1.0em hhea sum) keeps body pitch at 1.15*10*278/240 + 8. Faces without the
+        // 1.0em hhea sum) boxes the 1.0em typo box alone for body pitch at 1.0*10*278/240 + 8. Faces without the
         // flag prefer the Windows box (see PrefersWindowsExtents).
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -1404,7 +1404,7 @@ internal static class DocxTextSpacingTests
             .ToArray();
         TestAssert.Equal(2, lines.Length);
         double pitch = lines[0].BaselineY - lines[1].BaselineY;
-        TestAssert.True(Math.Abs(pitch - 21.320833333333334d) < 0.000001d, "Auto line pitch must ignore Windows extents; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
+        TestAssert.True(Math.Abs(pitch - 19.583333333333336d) < 0.000001d, "Auto line pitch must ignore Windows extents; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
     public static void DocxAutoLineBoxPrefersWindowsExtents()

@@ -2786,6 +2786,64 @@ internal static class DocxFootnotesTests
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize * 0.25d;
     }
 
+    public static void DocxLineHeightPrefersTypographicBoxOverHhea()
+    {
+        // RV06 line-box probes (Word 16.0): Abadi runs box the unfloored typo box alone (typoFull 1.0698 against hhea 1.3047 with single floored at 1.15).
+        (double footnotePitch, double bodyPitch) = LayoutTypoBoxPitches();
+        TestAssert.True(Math.Abs(footnotePitch - 22.87d) < 0.02d, "Footnote line height must prefer the typographic box.");
+        TestAssert.True(Math.Abs(bodyPitch - 22.87d) < 0.02d, "Body line height must prefer the typographic box.");
+    }
+
+    private static (double FootnotePitch, double BodyPitch) LayoutTypoBoxPitches()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:rPr><w:rFonts w:ascii="TypoBox" w:hAnsi="TypoBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body typobox line one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="TypoBox" w:hAnsi="TypoBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Body typobox line two</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
+            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="TypoBox" w:hAnsi="TypoBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note typobox line one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="TypoBox" w:hAnsi="TypoBox"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note typobox line two</w:t></w:r></w:p></w:footnote></w:footnotes>"""
+        });
+        DocxDocument document;
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        }
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new TypoBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        DocxTextLineLayout[] footnoteLines = layout.Pages[0].PlacedRelatedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
+            .SelectMany(story => story.TextLines)
+            .Where(line => line.Text.StartsWith("Note typobox", StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, footnoteLines.Length);
+        DocxTextLineLayout[] bodyLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>()
+            .Where(line => line.Text.StartsWith("Body typobox", StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        TestAssert.Equal(2, bodyLines.Length);
+        return (footnoteLines[0].BaselineY - footnoteLines[1].BaselineY, bodyLines[0].BaselineY - bodyLines[1].BaselineY);
+    }
+
+    private sealed class TypoBoxTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxTypographicMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
+
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => 13.8d;
+
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => 15.66d;
+
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => 10.96d;
+
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => 2.89d;
+
+        public bool UseTypographicMetrics(DocxTextRun? run) => true;
+
+        public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize) => 12.84d;
+    }
+
     private sealed class DescDeficitTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => inner.MeasureText(run, text, fontSize);
