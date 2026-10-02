@@ -205,8 +205,8 @@ internal sealed partial class PptxRenderer
                     if (chartStyleId == 26 || chartStyleId == 126)
                     {
                         // RV04: style-26 draws no line markers at all (Office renders none
-                        // with plot marker=1, none, or series-explicit symbols); explicit
-                        // fill/line styling under style-26 stays unprobed.
+                        // with plot marker=1, none, or series-explicit symbols); explicit marker
+                        // fills still win in legend keys, which take the flat path there.
                         continue;
                     }
 
@@ -901,7 +901,7 @@ internal sealed partial class PptxRenderer
     // RV04: style-18 marker gradient fill: one axial shading per marker with Coords
     // spanning twice the marker height from its bottom edge, clipped to the marker
     // shape (Office paints PatternType-2 shadings over diamond/square/triangle/circle
-    // and dot markers; stars keep the flat path until the asterisk-geometry slice).
+    //, dot and dash markers; plus/x/star keep the flat path as stroked diameters).
     private static bool PaintStyleMarkerGradient(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxSceneChartMarkerSymbol symbol, double x, double y, double size, IReadOnlyList<PdfShadingStop> stops)
     {
         if (size <= 0d)
@@ -914,7 +914,8 @@ internal sealed partial class PptxRenderer
             symbol != PptxSceneChartMarkerSymbol.Square &&
             symbol != PptxSceneChartMarkerSymbol.Triangle &&
             symbol != PptxSceneChartMarkerSymbol.Circle &&
-            symbol != PptxSceneChartMarkerSymbol.Dot)
+            symbol != PptxSceneChartMarkerSymbol.Dot &&
+            symbol != PptxSceneChartMarkerSymbol.Dash)
         {
             return false;
         }
@@ -932,7 +933,11 @@ internal sealed partial class PptxRenderer
             }
             else if (symbol == PptxSceneChartMarkerSymbol.Dot)
             {
-                graphics.ClipRectangle(x, y - size / 10d, size / 2d, size / 5d);
+                graphics.ClipRectangle(x, y - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d) / 2d, PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 2d), PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d));
+            }
+            else if (symbol == PptxSceneChartMarkerSymbol.Dash)
+            {
+                graphics.ClipRectangle(x - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size) / 2d, y - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d) / 2d, PptxChartMarkerMetricRules.QuantizeMarkerExtent(size), PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d));
             }
             else if (symbol == PptxSceneChartMarkerSymbol.Diamond)
             {
@@ -986,9 +991,14 @@ internal sealed partial class PptxRenderer
             switch (symbol)
             {
                 case PptxSceneChartMarkerSymbol.Dot:
-                    // RV04: dots render as data-anchored rectangles (Office paints s/2 by
-                    // s/5 rects starting at the data point with centered height, not ellipses).
-                    graphics.FillRectangle(x, y - size / 10d, size / 2d, size / 5d);
+                    // RV04: dots render as data-anchored quantized rectangles (Office paints
+                    // s/2 by s/5 rects on a 0.12pt grid starting at the data point).
+                    graphics.FillRectangle(x, y - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d) / 2d, PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 2d), PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d));
+                    break;
+                case PptxSceneChartMarkerSymbol.Dash:
+                    // RV04: dashes render as centered quantized bars (Office paints gradient
+                    // bars size-wide with dot-rule heights, not stroked center lines).
+                    graphics.FillRectangle(x - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size) / 2d, y - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d) / 2d, PptxChartMarkerMetricRules.QuantizeMarkerExtent(size), PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d));
                     break;
                 case PptxSceneChartMarkerSymbol.Square:
                     graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
@@ -1037,7 +1047,7 @@ internal sealed partial class PptxRenderer
         switch (symbol)
         {
             case PptxSceneChartMarkerSymbol.Dash:
-                graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
+                graphics.StrokeRectangle(x - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size) / 2d, y - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d) / 2d, PptxChartMarkerMetricRules.QuantizeMarkerExtent(size), PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d));
                 break;
             case PptxSceneChartMarkerSymbol.Plus:
                 graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
@@ -1071,7 +1081,7 @@ internal sealed partial class PptxRenderer
                 graphics.StrokeLine(x - size / 2d, y + size / 2d, x + size / 2d, y - size / 2d);
                 break;
             case PptxSceneChartMarkerSymbol.Dot:
-                graphics.StrokeRectangle(x, y - size / 10d, size / 2d, size / 5d);
+                graphics.StrokeRectangle(x, y - PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d) / 2d, PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 2d), PptxChartMarkerMetricRules.QuantizeMarkerExtent(size / 5d));
                 break;
             default:
                 graphics.StrokeEllipse(x - size / 2d, y - size / 2d, size, size);
@@ -1091,7 +1101,6 @@ internal sealed partial class PptxRenderer
     {
         return symbol is PptxSceneChartMarkerSymbol.Plus or
             PptxSceneChartMarkerSymbol.X or
-            PptxSceneChartMarkerSymbol.Dash or
             PptxSceneChartMarkerSymbol.Star;
     }
 

@@ -12,6 +12,20 @@ internal static class PptxChartMarkerMetricRules
     // explicit size 5 digit-for-digit); bare auto markers and styled markers keep their
     // own defaults.
     public const double UnsetMarkerSize = 5d;
+    // Marker rect extents land on a 0.12pt grid with ties down (COM dot/dash ladders:
+    // all 20 measured rect dims fit; the ties at 37.5 and 12.5 go to 37 and 12).
+    public const double MarkerExtentQuantum = 0.12d;
+    public static double QuantizeMarkerExtent(double value)
+    {
+        decimal scaled = (decimal)value / 0.12m;
+        decimal floored = decimal.Floor(scaled);
+        if (scaled - floored > 0.5m)
+        {
+            floored += 1m;
+        }
+
+        return (double)(floored * 0.12m);
+    }
     public const double AutoLineChartMarkerSize = 7d;
     public const double StyledLineChartMarkerSize = 9d;
     // Office default scatter markers step with per-series point density. Series with
