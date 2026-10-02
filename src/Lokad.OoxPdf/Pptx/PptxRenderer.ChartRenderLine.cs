@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -28,6 +28,10 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
+        // RV04: style-18 (transitional 18, c14 118) line series stroke the raw theme base
+        // (Office emits no luminance tint on the polyline); other styles keep the calibrated
+        // 97.5% tint. Marker outlines keep the legacy tint; legend entries are untouched.
+        bool lineStyleSkipsUnstyledTint = chartStyleId == 18 || chartStyleId == 118;
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
         double valueAxisCrossingY = 0d;
@@ -104,7 +108,7 @@ internal sealed partial class PptxRenderer
                 // Unstyled series lines default to round caps/joins (Office line forensics);
                 // explicitly styled lines keep DrawingML attr defaults (combo contract).
                 bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
-                ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
+                ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = lineStyleSkipsUnstyledTint ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
                 SetChartStroke(graphics, lineStroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
