@@ -7,6 +7,10 @@ internal static class PptxChartMarkerMetricRules
     private static readonly string[] AutoLineChartMarkerSymbols = ["diamond", "square", "triangle", "x", "star", "circle"];
 
     public const double DefaultChartMarkerSize = 4d;
+    // Explicit dot/star markers without a size element draw at the nominal size-5
+    // geometry (COM decks: no-size dot rects and star diameters match explicit size 5
+    // digit-for-digit); other unsettled symbols keep the size-4 default.
+    public const double UnsetMarkerDotStarSize = 5d;
     public const double AutoLineChartMarkerSize = 7d;
     public const double StyledLineChartMarkerSize = 9d;
     // Office default scatter markers step with per-series point density. Series with
@@ -62,7 +66,7 @@ internal static class PptxChartMarkerMetricRules
         return "circle";
     }
 
-    public static double ResolveSize(string? sizeValue, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, bool markerDefined, bool hasShapeProperties, int scatterPointCount)
+    public static double ResolveSize(string? sizeValue, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, bool markerDefined, bool hasShapeProperties, int scatterPointCount, PptxSceneChartMarkerSymbol symbol, bool symbolDefined)
     {
         if (sizeValue is not null &&
             double.TryParse(sizeValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
@@ -75,6 +79,18 @@ internal static class PptxChartMarkerMetricRules
             return scatterPointCount < DenseScatterMarkerMinimumPointCount
                 ? SparseScatterDefaultMarkerSize
                 : AutoLineChartMarkerSize;
+        }
+
+        // Explicit dot/star markers without a size element draw at the nominal size-5
+        // geometry (COM decks: no-size dot rects and star diameters match explicit size 5
+        // digit-for-digit), except styled (spPr) markers which keep the style-9 size; other
+        // unsettled symbols keep the size-4 default, and auto (non-explicit) symbols keep
+        // the auto size even when they resolve to dot/star shapes.
+        if (sizeValue is null && markerDefined && symbolDefined && !hasShapeProperties
+            && plotKind == PptxSceneChartPlotKind.Line
+            && (symbol is PptxSceneChartMarkerSymbol.Dot or PptxSceneChartMarkerSymbol.Star))
+        {
+            return UnsetMarkerDotStarSize;
         }
 
         if (plotKind != PptxSceneChartPlotKind.Line || !chartMarkersEnabled)

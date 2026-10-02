@@ -2733,6 +2733,48 @@ internal static class PptxChartRenderingTests
         TestAssert.DoesNotContain("12.96 12.96 re", pdf);
     }
 
+    // RV04: explicit dot/star markers without a size element draw at the nominal
+    // size-5 geometry (Office paints no-size dots as 2.52 by 0.96 rects and no-size
+    // star diameters at 5.04, matching explicit size 5 digit-for-digit).
+    public static void LineStyle18MissingDotStarSizesDrawNominalFive()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Dots</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:marker><c:symbol val="dot"/></c:marker>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Stars</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt></c:numLit></c:val>
+                <c:marker><c:symbol val="star"/></c:marker>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("2.5 1 re", pdf);
+        bool hasFivePointVertical = false;
+        foreach (Match m in Regex.Matches(pdf, @"^([\d.]+) ([\d.]+) m \1 ([\d.]+) l S\r?$", RegexOptions.Multiline))
+        {
+            double y1 = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+            double y2 = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
+            if (Math.Abs(Math.Abs(y2 - y1) - 5d) < 0.001d)
+            {
+                hasFivePointVertical = true;
+            }
+        }
+        TestAssert.True(hasFivePointVertical, "Expected a 5pt vertical asterisk diameter.");
+    }
+
     // RV04: style-18 columns paint the derived Office gradient when the theme base has
     // no sampled recipe (default theme accent resolves outside the measured table).
     public static void BarStyle18DerivedStopsPaintGradientForUnmeasuredBase()
