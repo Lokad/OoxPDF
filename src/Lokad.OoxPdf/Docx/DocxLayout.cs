@@ -1215,10 +1215,13 @@ internal sealed partial class DocxLayoutEngine
                         {
                             double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1);
                             imageShifts.Add((beforeWidth, placed.Width));
+                            // RV05 calibration (Word 16.0 fnimg probe): Office image bottoms sit
+                            // at the text baseline, so midline images anchor by the line baseline
+                            // instead of hanging a full height below it (cell path precedent).
                             lineImages.Add(new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth,
-                                textBaselineY - placed.Height,
+                                textBaselineY,
                                 placed.Width,
                                 placed.Height,
                                 pages.Count + 1,

@@ -340,7 +340,10 @@ internal sealed partial class DocxLayoutEngine
                     placedImages.Add(new DocxInlineImageLayout(
                         placed.Image,
                         lineX + beforeWidth,
-                        cursorY - baselineOffset - placed.Height,
+                        // RV05 calibration (Word 16.0 fnimg probe): Office footnote image bottoms sit
+                        // at the text baseline (image cm bottom 85.7 against baseline 85.584), so
+                        // related-story midline images anchor by the line baseline like cells.
+                        cursorY - baselineOffset,
                         placed.Width,
                         placed.Height,
                         PageIndex: 0,
