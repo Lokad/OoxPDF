@@ -94,15 +94,15 @@ internal sealed partial class PptxRenderer
         int unpaintableStrokes = 0;
         int invalidStrokePresentations = 0;
         int vectorEffectStrokes = 0;
-        foreach (XElement path in svg.Descendants().Where(element => element.Name.LocalName == "path"))
+        foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate)))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? data = (string?)path.Attribute("d");
+            string? data = element.Name.LocalName == "path" ? (string?)element.Attribute("d") : ConvertSvgShapeToPathData(element);
             if (string.IsNullOrWhiteSpace(data))
             {
                 continue;
             }
-            if (!TryReadSvgPathTransform(path, out SvgTransform transform))
+            if (!TryReadSvgPathTransform(element, out SvgTransform transform))
             {
                 unsupportedTransforms++;
                 continue;
@@ -112,7 +112,7 @@ internal sealed partial class PptxRenderer
             {
                 unsupportedCommands.Add(badCommand.Value);
             }
-            bool hasFill = TryReadSvgFill(path, gradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId);
+            bool hasFill = TryReadSvgFill(element, gradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId);
             if (!hasFill)
             {
                 if (fillFailure == SvgFillFailure.UnresolvedGradient && gradientId is not null)
@@ -124,7 +124,7 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
-            SvgStroke stroke = ReadSvgStroke(path, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect);
+            SvgStroke stroke = ReadSvgStroke(element, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect);
             if (strokeFailure == SvgStrokeFailure.UnresolvedGradient)
             {
                 gradientStrokes++;
@@ -292,7 +292,7 @@ internal sealed partial class PptxRenderer
     }
     private static bool IsSupportedSvgElement(string name)
     {
-        return name is "svg" or "defs" or "g" or "title" or "desc" or "metadata" or "style" or "path" or "linearGradient" or "radialGradient" or "stop";
+        return name is "svg" or "defs" or "g" or "title" or "desc" or "metadata" or "style" or "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon" or "linearGradient" or "radialGradient" or "stop";
     }
     private static bool IsSvgDefinitionElement(XElement element)
     {
@@ -1257,6 +1257,172 @@ internal sealed partial class PptxRenderer
         double SvgY(double value) => imageY + imageHeight - (value - minY) * scaleY;
     }
 
+    // RV07: basic shapes convert to path data and paint through the shared
+    // path pipeline. Circles, ellipses and rounded corners use the kappa
+    // bezier approximation as a platform-independent literal; spec-invalid
+    // geometry returns null and renders nothing like Office. Text stays out
+    // of scope behind the unsupported-element diagnostic.
+    private const double SvgCircleKappa = 0.5522847498;
+    private static bool IsSvgPaintableElement(XElement element)
+    {
+        return element.Name.LocalName is "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon";
+    }
+    private static string? ConvertSvgShapeToPathData(XElement element)
+    {
+        return element.Name.LocalName switch
+        {
+            "rect" => ConvertSvgRectToPathData(element),
+            "circle" => ConvertSvgCircleToPathData(element),
+            "ellipse" => ConvertSvgEllipseToPathData(element),
+            "line" => ConvertSvgLineToPathData(element),
+            "polyline" => ConvertSvgPointsToPathData(element, false),
+            "polygon" => ConvertSvgPointsToPathData(element, true),
+            _ => (string?)element.Attribute("d"),
+        };
+    }
+    private static bool TryReadSvgShapeCoordinate(XElement element, string name, double fallback, out double value)
+    {
+        string? text = (string?)element.Attribute(name);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            value = fallback;
+            return true;
+        }
+        return double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+    private static string SvgPathNumber(double value)
+    {
+        return value.ToString(CultureInfo.InvariantCulture);
+    }
+    private static string? ConvertSvgRectToPathData(XElement element)
+    {
+        if (!TryReadSvgShapeCoordinate(element, "x", 0d, out double x)
+            || !TryReadSvgShapeCoordinate(element, "y", 0d, out double y)
+            || !TryReadSvgShapeCoordinate(element, "width", 0d, out double width)
+            || !TryReadSvgShapeCoordinate(element, "height", 0d, out double height))
+        {
+            return null;
+        }
+        if (width <= 0d || height <= 0d)
+        {
+            return null;
+        }
+        string? rxText = (string?)element.Attribute("rx");
+        string? ryText = (string?)element.Attribute("ry");
+        double rx = 0d;
+        double ry = 0d;
+        if (rxText is not null && !double.TryParse(rxText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out rx))
+        {
+            return null;
+        }
+        if (ryText is not null && !double.TryParse(ryText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out ry))
+        {
+            return null;
+        }
+        if (rxText is null && ryText is not null)
+        {
+            rx = ry;
+        }
+        if (ryText is null && rxText is not null)
+        {
+            ry = rx;
+        }
+        if (rx < 0d || ry < 0d)
+        {
+            return null;
+        }
+        rx = Math.Min(rx, width / 2d);
+        ry = Math.Min(ry, height / 2d);
+        if (rx == 0d || ry == 0d)
+        {
+            return "M" + SvgPathNumber(x) + " " + SvgPathNumber(y) + "H" + SvgPathNumber(x + width) + "V" + SvgPathNumber(y + height) + "H" + SvgPathNumber(x) + "Z";
+        }
+        double kx = SvgCircleKappa * rx;
+        double ky = SvgCircleKappa * ry;
+        return "M" + SvgPathNumber(x + rx) + " " + SvgPathNumber(y)
+            + "H" + SvgPathNumber(x + width - rx)
+            + "C" + SvgPathNumber(x + width - rx + kx) + " " + SvgPathNumber(y) + " " + SvgPathNumber(x + width) + " " + SvgPathNumber(y + ry - ky) + " " + SvgPathNumber(x + width) + " " + SvgPathNumber(y + ry)
+            + "V" + SvgPathNumber(y + height - ry)
+            + "C" + SvgPathNumber(x + width) + " " + SvgPathNumber(y + height - ry + ky) + " " + SvgPathNumber(x + width - rx + kx) + " " + SvgPathNumber(y + height) + " " + SvgPathNumber(x + width - rx) + " " + SvgPathNumber(y + height)
+            + "H" + SvgPathNumber(x + rx)
+            + "C" + SvgPathNumber(x + rx - kx) + " " + SvgPathNumber(y + height) + " " + SvgPathNumber(x) + " " + SvgPathNumber(y + height - ry + ky) + " " + SvgPathNumber(x) + " " + SvgPathNumber(y + height - ry)
+            + "V" + SvgPathNumber(y + ry)
+            + "C" + SvgPathNumber(x) + " " + SvgPathNumber(y + ry - ky) + " " + SvgPathNumber(x + rx - kx) + " " + SvgPathNumber(y) + " " + SvgPathNumber(x + rx) + " " + SvgPathNumber(y)
+            + "Z";
+    }
+    private static string? ConvertSvgCircleToPathData(XElement element)
+    {
+        if (!TryReadSvgShapeCoordinate(element, "cx", 0d, out double cx)
+            || !TryReadSvgShapeCoordinate(element, "cy", 0d, out double cy)
+            || !TryReadSvgShapeCoordinate(element, "r", 0d, out double radius)
+            || radius <= 0d)
+        {
+            return null;
+        }
+        return ConvertSvgEllipseBody(cx, cy, radius, radius);
+    }
+    private static string? ConvertSvgEllipseToPathData(XElement element)
+    {
+        if (!TryReadSvgShapeCoordinate(element, "cx", 0d, out double cx)
+            || !TryReadSvgShapeCoordinate(element, "cy", 0d, out double cy)
+            || !TryReadSvgShapeCoordinate(element, "rx", 0d, out double rx)
+            || !TryReadSvgShapeCoordinate(element, "ry", 0d, out double ry)
+            || rx <= 0d || ry <= 0d)
+        {
+            return null;
+        }
+        return ConvertSvgEllipseBody(cx, cy, rx, ry);
+    }
+    private static string ConvertSvgEllipseBody(double cx, double cy, double rx, double ry)
+    {
+        double kx = SvgCircleKappa * rx;
+        double ky = SvgCircleKappa * ry;
+        return "M" + SvgPathNumber(cx + rx) + " " + SvgPathNumber(cy)
+            + "C" + SvgPathNumber(cx + rx) + " " + SvgPathNumber(cy + ky) + " " + SvgPathNumber(cx + kx) + " " + SvgPathNumber(cy + ry) + " " + SvgPathNumber(cx) + " " + SvgPathNumber(cy + ry)
+            + "C" + SvgPathNumber(cx - kx) + " " + SvgPathNumber(cy + ry) + " " + SvgPathNumber(cx - rx) + " " + SvgPathNumber(cy + ky) + " " + SvgPathNumber(cx - rx) + " " + SvgPathNumber(cy)
+            + "C" + SvgPathNumber(cx - rx) + " " + SvgPathNumber(cy - ky) + " " + SvgPathNumber(cx - kx) + " " + SvgPathNumber(cy - ry) + " " + SvgPathNumber(cx) + " " + SvgPathNumber(cy - ry)
+            + "C" + SvgPathNumber(cx + kx) + " " + SvgPathNumber(cy - ry) + " " + SvgPathNumber(cx + rx) + " " + SvgPathNumber(cy - ky) + " " + SvgPathNumber(cx + rx) + " " + SvgPathNumber(cy)
+            + "Z";
+    }
+    private static string? ConvertSvgLineToPathData(XElement element)
+    {
+        if (!TryReadSvgShapeCoordinate(element, "x1", 0d, out double x1)
+            || !TryReadSvgShapeCoordinate(element, "y1", 0d, out double y1)
+            || !TryReadSvgShapeCoordinate(element, "x2", 0d, out double x2)
+            || !TryReadSvgShapeCoordinate(element, "y2", 0d, out double y2))
+        {
+            return null;
+        }
+        return "M" + SvgPathNumber(x1) + " " + SvgPathNumber(y1) + "L" + SvgPathNumber(x2) + " " + SvgPathNumber(y2);
+    }
+    private static string? ConvertSvgPointsToPathData(XElement element, bool closed)
+    {
+        System.Text.RegularExpressions.MatchCollection numbers = SvgNumberRegex().Matches((string?)element.Attribute("points") ?? string.Empty);
+        if (numbers.Count < 4 || numbers.Count % 2 == 1)
+        {
+            return null;
+        }
+        var points = new List<double>();
+        foreach (System.Text.RegularExpressions.Match number in numbers)
+        {
+            if (!double.TryParse(number.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double coordinate))
+            {
+                return null;
+            }
+            points.Add(coordinate);
+        }
+        System.Text.StringBuilder data = new System.Text.StringBuilder();
+        data.Append("M").Append(SvgPathNumber(points[0])).Append((char)32).Append(SvgPathNumber(points[1]));
+        for (int index = 2; index < points.Count; index += 2)
+        {
+            data.Append("L").Append(SvgPathNumber(points[index])).Append((char)32).Append(SvgPathNumber(points[index + 1]));
+        }
+        if (closed)
+        {
+            data.Append("Z");
+        }
+        return data.ToString();
+    }
     private static bool TryReadSvgPoint(MatchCollection tokens, ref int index, bool relative, double currentX, double currentY, out double x, out double y)
     {
         if (!TryReadSvgNumber(tokens, ref index, out double rawX) ||

@@ -443,7 +443,7 @@ internal static class PptxImagesTests
             ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
                 <svg viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">
                   <path d="M0 0 L20 0 L20 10 L0 10 Z" fill="#112233"/>
-                  <circle cx="10" cy="5" r="4" fill="#445566"/>
+                  <text x="10" y="5">Hello</text>
                   <path d="M0 0 Q10 10 20 0 Z" fill="#778899"/>
                 </svg>
                 """)
@@ -457,7 +457,7 @@ internal static class PptxImagesTests
         });
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("circle", StringComparison.Ordinal)), "Unsupported SVG element must diagnose.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("text", StringComparison.Ordinal)), "Unsupported SVG element must diagnose.");
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("Q", StringComparison.Ordinal)), "Unsupported SVG path command must diagnose.");
     }
 
@@ -1056,6 +1056,131 @@ internal static class PptxImagesTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "Functional color must diagnose.");
+    }
+
+    // RV07: rect elements render their box instead of diagnosing.
+    public static void PptxSyntheticSvgRectRendersBox()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="100" height="50" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("72 468 m", pdf);
+        TestAssert.Contains("216 396 l", pdf);
+    }
+
+    // RV07: circle elements render beziers instead of diagnosing.
+    public static void PptxSyntheticSvgCircleRendersBeziers()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="25" r="10" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("158.4 432 m", pdf);
+        TestAssert.Contains(" c\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: ellipse elements render beziers instead of diagnosing.
+    public static void PptxSyntheticSvgEllipseRendersBeziers()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="50" cy="25" rx="20" ry="10" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("172.8 432 m", pdf);
+    }
+
+    // RV07: line elements stroke their segment instead of diagnosing.
+    public static void PptxSyntheticSvgLineRendersSegment()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <line x1="10" y1="10" x2="90" y2="40" fill="none" stroke="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("86.4 453.6 m", pdf);
+        TestAssert.Contains("201.6 410.4 l", pdf);
+    }
+
+    // RV07: polyline elements stroke their points instead of diagnosing.
+    public static void PptxSyntheticSvgPolylineRendersPoints()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <polyline points="10,10 90,10 90,40" fill="none" stroke="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("201.6 453.6 l", pdf);
+        TestAssert.Contains("201.6 410.4 l", pdf);
+    }
+
+    // RV07: polygon elements fill their closed points instead of diagnosing.
+    public static void PptxSyntheticSvgPolygonRendersClosedPoints()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="10,10 90,10 50,40" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("86.4 453.6 m", pdf);
+        TestAssert.Contains("144 410.4 l", pdf);
+    }
+
+    // RV07: rounded rect corners render beziers instead of diagnosing.
+    public static void PptxSyntheticSvgRoundedRectRendersCorners()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="10" width="80" height="30" rx="5" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("93.6 453.6 m", pdf);
+        TestAssert.Contains(" c\n", pdf.Replace("\r\n", "\n"));
     }
 
     // RV07: dashed strokes render their pattern instead of solid fallback.
