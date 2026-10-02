@@ -59,21 +59,21 @@ Do not commit generated visual artifacts unless they are intentionally small fix
 ## Family Parity Targets (Q07 triage, 2026-09-22)
 
 Each family has an explicit target classification so needs-review triage has a
-destination. Counts below track the manifest state as of 2026-09-24 (triage rounds 1-14 baselined 2026-09-22)
-(118 locked, 9 locked-text-ops, 214 approximate, 0 needs-review across 341
-cases; family rows overlap on shared patterns so their totals exceed 341). Two approximate cases joined since: pptx-ladder-11-chart-bar-style-18 (9c134d2d) and pptx-ladder-07-svg-extensions (a8da17c9).
+destination. Counts below track the manifest state as of 2026-10-02 (triage rounds 1-14 baselined 2026-09-22)
+(118 locked, 9 locked-text-ops, 215 approximate, 0 needs-review across 342
+cases; family rows overlap on shared patterns so their totals exceed 342). Three approximate cases joined since: pptx-ladder-11-chart-bar-style-18 (9c134d2d), pptx-ladder-07-svg-extensions (a8da17c9), and pptx-ladder-11-chart-line-span-port (9dfdcb06).
 
 | Family | Cases | Target | Rationale |
 |---|---|---|---|
 | pptx-images | 13 / 0 / 2 / 0 | Locked except known-approx effects | Pixel-faithful embedding; effectively there |
-| pptx-charts | 28 / 0 / 33 / 0 | Tier-1 ports locked; rest approximate with recorded gaps | Matches the Tier-1/Tier-2 split in Capabilities.md; triage complete 2026-09-22 |
+| pptx-charts | 28 / 0 / 34 / 0 | Tier-1 ports locked; rest approximate with recorded gaps | Matches the Tier-1/Tier-2 split in Capabilities.md; triage complete 2026-09-22 |
 | pptx-typography | 15 / 9 / 71 / 0 | Approximate by default; exact ports lock | Font-metric approximations are structural; text-ops locks pin emission; run-merging fix aligns op grouping with Office |
 | pptx-tables | 9 / 0 / 7 / 0 | Mixed; first-pass built-ins lock, rich styles approximate | Per Capabilities table-style scope; triage complete 2026-09-22 |
 | pptx-shapes | 21 / 0 / 12 / 0 | Approximate; small preset geometry only | Preset-geometry scope in Capabilities.md; triage complete 2026-09-22 |
 | pptx-composition | 10 / 0 / 3 / 0 | Mixed; master/layout inheritance locks case by case | Triage complete 2026-09-22 |
 | pptx-effects | 5 / 0 / 4 / 0 | Mixed; raster shadows/glows and gradient approximations render, other effects approximate | Per Capabilities effects scope; triage complete 2026-09-22 |
 | pptx-smoke | 6 / 0 / 0 / 0 | Locked | Blank/size discovery must stay exact |
-| docx-layout | 11 / 0 / 82 / 0 | Mixed; greedy-wrap approximations stay approximate | Latin greedy wrapping scope in Capabilities.md; triage complete 2026-09-22 |
+| docx-layout | 11 / 0 / 49 / 0 | Mixed; greedy-wrap approximations stay approximate | Latin greedy wrapping scope in Capabilities.md; markup cases tracked under docx-markup |
 | docx-markup | 0 / 0 / 33 / 0 (gated via reference cache) | Approximate with margin modes tracked | Reference-cache workflow below |
 
 Columns are locked / locked-text-ops / approximate / needs-review.
@@ -83,13 +83,13 @@ Columns are locked / locked-text-ops / approximate / needs-review.
 Named limitation, intended next improvement, and gate for each approximate family. Counts are the current validated state.
 
 - pptx-images: SVG vectors stay approximate (strip tessellation with diagnosed fallbacks); next is SVG stroke rendering and reference-pixel gradient and transform cases (need Office references). Gate: family 15/15, pptx-images group, structural color assertions.
-- pptx-charts: Tier-2 behavior stays approximate (trendlines, secondary axes, leader-line labels, percent stacking) with calibrated unstyled-series shading; next is other chart families and styles with held-out Office calibration. Gate: family 61/61, pptx-charts group, structure, color, and label checks plus pixels.
+- pptx-charts: Tier-2 behavior stays approximate (trendlines, secondary axes, leader-line labels, percent stacking) with calibrated gallery-line styling (raw 5/7pt strokes, Hermite smoothing, gradient markers, nominal-5 sizeless defaults); next is other chart families and styles with held-out Office calibration. Gate: family 62/62, pptx-charts group, structure, color, and label checks plus pixels.
 - pptx-typography: font metrics stay structural approximations with autofit and overflow handling approximate; next is held-out Office calibration for the remaining approximate ports. Gate: family 95/95, pptx-typography group, text operations and line starts plus pixels.
 - pptx-tables: rich table styles stay approximate while mixed-run word wrap is fixed; next is held-out Office calibration for rich-style cells. Gate: pptx-tables group, text operations and line starts plus pixels.
 - pptx-shapes: small preset geometry only with scene-only custom geometry; next is held-out Office calibration for further geometry kinds. Gate: family 33/33, pptx-shapes group, path-operation assertions plus pixels.
 - pptx-composition: master and layout inheritance locks case by case; next is extending locked inheritance coverage. Gate: family gates plus pixels.
 - pptx-effects: raster shadows and glows approximate, other effects unsupported with diagnostics; next is held-out Office calibration for further effects. Gate: family 9/9 plus pixels.
-- docx-layout: Latin greedy wrapping with mid-line images across body, table-cell, related-story and static paths plus approximate columns, notes, and floating wrap; next is Office calibration of image baseline and line growth. Gate: family 60/60, docx-text groups, words and line starts plus pixels.
+- docx-layout: Latin greedy wrapping with mid-line images across body, table-cell, related-story and static paths plus approximate columns, notes, and floating wrap; Office calibration of image baseline, line growth, and justification is complete; remaining scope is explicit non-goals. Gate: family 60/60, docx-text groups, words and line starts plus pixels.
 - docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text; next is word-compatible Office calibration (references unavailable here). Gate: cached Office gates plus layout snapshots.
 
 ### Lock policy
