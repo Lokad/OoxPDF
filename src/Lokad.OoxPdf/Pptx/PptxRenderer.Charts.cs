@@ -22,7 +22,10 @@ internal sealed partial class PptxRenderer
     private const double ChartLineDefaultStrokeWidth = 2.25d;
     private const double ChartSeriesInheritedStrokeWidth = 3d;
     private const double ChartFilledSeriesInheritedStrokeWidth = 0.75d;
-    private const double ChartMarkerInheritedStrokeWidth = 0.75d;
+    // Explicit marker outlines without a width stroke at 1pt (COM smooth and legend
+    // decks: red rims all measure 1pt); unstyled marker outlines keep the 0.75pt default
+    // through ChartMarkerOutlineStroke, which only applies when no explicit line exists.
+    private const double ChartMarkerInheritedStrokeWidth = 1d;
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver,
         PptxRenderContext context,

@@ -2475,6 +2475,94 @@ internal static class PptxChartRenderingTests
         TestAssert.DoesNotContain("0.91 0.427 0.173 RG", pdf);
     }
 
+    // RV04: explicit marker outlines win under the smooth package and in gallery
+    // legend keys (Office strokes red rims with default fills; characterization pins of
+    // already-correct behavior).
+    public static void LineSmoothExplicitMarkerOutlineStrokesRed()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:marker><c:symbol val="circle"/><c:size val="9"/><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:marker>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="1"/>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        MatchCollection rims = Regex.Matches(pdf, @"1 0 0 RG\r?\n([\d.]+) w", RegexOptions.Multiline);
+        TestAssert.Equal(2, rims.Count);
+        foreach (Match rim in rims)
+        {
+            TestAssert.Equal("1", rim.Groups[1].Value);
+        }
+    }
+
+    public static void LineStyle26LegendExplicitMarkerOutlineStrokesRed()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="26"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:marker><c:symbol val="circle"/><c:size val="9"/><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:marker>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+    }
+
+    // RV04: explicit marker fills win over gallery legend gradients (Office paints
+    // a red flat circle for a red-filled marker key under style-26 while the other keys
+    // keep their pattern fills; characterization pin of already-correct behavior).
+    public static void LineStyle26LegendExplicitMarkerFillPaintsFlat()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="26"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:marker><c:symbol val="circle"/><c:size val="9"/><c:spPr><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></c:spPr></c:marker>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
     // RV04: an explicit plot-level smooth=0 does not veto an explicitly
     // smoothed series (Office smooths every series with 3pt raw strokes when one
     // series carries smooth=1 under plot smooth=0); inherited straight is not explicit.
@@ -3404,7 +3492,7 @@ internal static class PptxChartRenderingTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(Regex.IsMatch(pdf, @"0\.671 0\.804 0\.937 RG\s+0\.75 w"), "Expected line-chart marker <a:ln> without @w to inherit Office's 0.75 pt marker-outline width.");
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.671 0\.804 0\.937 RG\s+1 w"), "Expected line-chart marker <a:ln> without @w to inherit the 1 pt explicit-outline width (COM square deck falsified the 0.75 pt extension, which covers unstyled outlines only).");
         TestAssert.True(!Regex.IsMatch(pdf, @"0\.671 0\.804 0\.937 RG\s+3 w"), "Marker <a:ln> without @w should not use the 3 pt series-line inherited width.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Line chart marker stroke defaults should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line chart marker stroke defaults should not emit unsupported chart diagnostics.");
