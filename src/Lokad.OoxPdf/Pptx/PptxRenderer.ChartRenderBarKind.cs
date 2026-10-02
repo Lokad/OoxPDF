@@ -201,7 +201,7 @@ internal sealed partial class PptxRenderer
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,
                         lineValueExtents,
-                        ReadSceneOrXmlChartTextStyle(theme, sceneChart, comboCategoryAxis.SceneAxis, chartXml, comboCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, barStyleId, PlotMarkersExplicitOff(linePlot, comboLineChart));
+                        ReadSceneOrXmlChartTextStyle(theme, sceneChart, comboCategoryAxis.SceneAxis, chartXml, comboCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, barStyleId);
                     RenderLineDataLabels(
                         theme,
                         colorMap,

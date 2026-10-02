@@ -2186,21 +2186,27 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.IsMatch(pdf, @"^7 w\r?$", RegexOptions.Multiline), "Expected a 7pt style-26 series stroke.");
         TestAssert.True(Regex.IsMatch(pdf, @" c\r?$", RegexOptions.Multiline), "Expected smoothed style-26 series curves.");
     }
-    // RV04: an explicit plot-level marker=0 suppresses forced style-18 markers
-    // (Office draws no markers on the marker=0 style-18 probe; only the polyline
-    // emits the raw series color).
-    public static void LineStyle18ExplicitMarkerOffDrawsNoMarkers()
+    // RV04: series-level symbol=none suppresses forced style-18 markers for that
+    // series only (Office draws no series-0 markers on the symbol=none probe while
+    // series 1 keeps its forced markers; plot-level marker markup never suppresses
+    // gallery forcing).
+    public static void LineStyle18ExplicitSeriesNoneDrawsNoMarkers()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
               <c:grouping val="standard"/>
               <c:varyColors val="0"/>
-              <c:marker val="0"/>
               <c:ser>
                 <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
                 <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
                 <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:marker><c:symbol val="none"/></c:marker>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
               </c:ser>
               <c:axId val="10"/><c:axId val="20"/>
             </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
@@ -2209,6 +2215,7 @@ internal static class PptxChartRenderingTests
         OoxPdfConverter.Convert(input, output);
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Equal(1, Regex.Matches(pdf, @"0\.082 0\.376 0\.51 RG").Count);
+        TestAssert.Equal(3, Regex.Matches(pdf, @"0\.914 0\.443 0\.196 RG").Count);
     }
     // RV04: style-26 draws no gallery markers even with plot-level marker=1
     // (Office renders no markers on the marker=1 style-26 probe; only the raw

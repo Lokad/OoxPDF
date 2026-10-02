@@ -104,8 +104,8 @@ internal sealed partial class PptxRenderer
                 : null;
             // RV04: gallery legend keys force auto markers at the fixed legend size when
             // the series defines none (COM-built legend decks show markers even where the
-            // plot shows none); series-explicit markers keep rendering. Plot-level marker=0
-            // with a legend stays unprobed.
+            // plot shows none, and plot marker markup never suppresses gallery forcing -
+            // only series-level markup wins); series-explicit markers keep rendering.
             if (IsGalleryLineChartStyle(chartStyleId) && marker is { } undefinedMarker && undefinedMarker.SymbolKind == PptxSceneChartMarkerSymbol.None && !undefinedMarker.IsDefined)
             {
                 marker = undefinedMarker with

@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool plotMarkersExplicitOff)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -165,12 +165,13 @@ internal sealed partial class PptxRenderer
                 {
                     ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
                     bool smoothForcedMarker = smoothAppearance && !marker.IsDefined;
-                    if (lineStyleGalleryMarkers && !plotMarkersExplicitOff && !marker.IsDefined)
+                    if (lineStyleGalleryMarkers && !marker.IsDefined)
                     {
                         // RV04: style-18 sizes undefined markers at the 12.96pt gallery size
                         // and forces auto symbols when markup defines none (Office draws 12.96
-                        // with no marker markup and with plot-level marker=1, and none with an
-                        // explicit plot-level marker=0); series-explicit markers keep winning.
+                        // with no marker markup and with plot-level marker=1; the plot-level
+                        // marker element never suppresses gallery forcing, only series-level
+                        // markup wins). Series-explicit markers keep winning.
                         marker = marker with
                         {
                             SymbolKind = marker.SymbolKind == PptxSceneChartMarkerSymbol.None
@@ -256,21 +257,6 @@ internal sealed partial class PptxRenderer
         {
             StrokeStraightChartPath(graphics, points);
         }
-    }
-
-    // RV04: explicit plot-level marker=0 suppresses forced gallery markers (Office
-    // draws no markers on the marker=0 style-18 probe); an absent marker element
-    // leaves forcing enabled. Mirrors the scene/XML source selection used for marker
-    // styles so both paths agree.
-    private static bool PlotMarkersExplicitOff(PptxSceneChartPlot? linePlot, XElement chartElement)
-    {
-        if (linePlot is not null)
-        {
-            return linePlot.MarkersEnabled == false;
-        }
-
-        return chartElement.Element(ChartNamespace + "marker") is { } markerElement &&
-            !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(markerElement);
     }
 
     // RV04: gallery polyline widths: style-18 strokes at 5pt, style-26 at 7pt,
