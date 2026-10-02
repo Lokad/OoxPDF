@@ -155,14 +155,17 @@ internal sealed partial class PptxRenderer
                 foreach ((double pointX, double pointY) in markers)
                 {
                     ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
-                    if (lineStyleGalleryMarkers && !plotMarkersExplicitOff && marker.SymbolKind == PptxSceneChartMarkerSymbol.None && !marker.IsDefined)
+                    if (lineStyleGalleryMarkers && !plotMarkersExplicitOff && !marker.IsDefined)
                     {
-                        // RV04: style-18 forces gallery markers (Office draws auto symbols
-                        // at 12.96pt with no marker markup, and none with an explicit
-                        // plot-level marker=0); explicit marker markup keeps winning.
+                        // RV04: style-18 sizes undefined markers at the 12.96pt gallery size
+                        // and forces auto symbols when markup defines none (Office draws 12.96
+                        // with no marker markup and with plot-level marker=1, and none with an
+                        // explicit plot-level marker=0); series-explicit markers keep winning.
                         marker = marker with
                         {
-                            SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(seriesIndex),
+                            SymbolKind = marker.SymbolKind == PptxSceneChartMarkerSymbol.None
+                                ? PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(seriesIndex)
+                                : marker.SymbolKind,
                             Size = PptxChartMarkerMetricRules.StyleLineMarkerSize,
                         };
                     }
