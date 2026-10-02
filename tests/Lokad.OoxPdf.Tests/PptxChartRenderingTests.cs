@@ -2744,6 +2744,84 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("1 0 0 rg", pdf);
     }
 
+    // RV04: zero-mode blanks plot as zero with contiguous full-thirds smoothing (Office
+    // draws the hole slot at zero in one subpath; zero-filled points are real plotted
+    // points, so no control halves apply; characterization pin of confirmed behavior).
+    public static void LineStyle18ZeroFragmentSmoothsThroughZero()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt><c:pt idx="3"><c:v>D</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>4</c:v></c:pt><c:pt idx="3"><c:v>3</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:dispBlanksAs val="zero"/></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        MatchCollection paths = Regex.Matches(pdf, @"^([\d.]+) ([\d.]+) m\r?$\s*^([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c\r?$\s*^([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c\r?$\s*^([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c\r?$", RegexOptions.Multiline);
+        TestAssert.Equal(1, paths.Count);
+        double x0 = double.Parse(paths[0].Groups[1].Value, CultureInfo.InvariantCulture);
+        double c1 = double.Parse(paths[0].Groups[3].Value, CultureInfo.InvariantCulture);
+        double c2 = double.Parse(paths[0].Groups[5].Value, CultureInfo.InvariantCulture);
+        double x1 = double.Parse(paths[0].Groups[7].Value, CultureInfo.InvariantCulture);
+        double c3 = double.Parse(paths[0].Groups[9].Value, CultureInfo.InvariantCulture);
+        double c4 = double.Parse(paths[0].Groups[11].Value, CultureInfo.InvariantCulture);
+        double x2 = double.Parse(paths[0].Groups[13].Value, CultureInfo.InvariantCulture);
+        double c5 = double.Parse(paths[0].Groups[15].Value, CultureInfo.InvariantCulture);
+        double c6 = double.Parse(paths[0].Groups[17].Value, CultureInfo.InvariantCulture);
+        double x3 = double.Parse(paths[0].Groups[19].Value, CultureInfo.InvariantCulture);
+                TestAssert.True(Math.Abs((c1 - x0) / (x1 - x0) - 1d / 3d) < 0.02, "seg1 start third");
+        TestAssert.True(Math.Abs((x1 - c2) / (x1 - x0) - 1d / 3d) < 0.02, "seg1 end third");
+        TestAssert.True(Math.Abs((c3 - x1) / (x2 - x1) - 1d / 3d) < 0.02, "seg2 start third");
+        TestAssert.True(Math.Abs((x2 - c4) / (x2 - x1) - 1d / 3d) < 0.02, "seg2 end third");
+        TestAssert.True(Math.Abs((c5 - x2) / (x3 - x2) - 1d / 3d) < 0.02, "seg3 start third");
+        TestAssert.True(Math.Abs((x3 - c6) / (x3 - x2) - 1d / 3d) < 0.02, "seg3 end third");
+    }
+
+    // RV04: consecutive-hole spans ease with mean-thirds joints (Office spans
+    // two holes in ratios one sixth, two ninths, two thirds with full-thirds tails;
+    // the single rendered subpath is C1-identical to the Office hole-per-subpath split).
+    public static void LineStyle18MultiHoleSpanUsesMeanThirds()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt><c:pt idx="3"><c:v>D</c:v></c:pt><c:pt idx="4"><c:v>E</c:v></c:pt><c:pt idx="5"><c:v>F</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="3"><c:v>4</c:v></c:pt><c:pt idx="4"><c:v>3</c:v></c:pt><c:pt idx="5"><c:v>5</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        MatchCollection paths = Regex.Matches(pdf, @"^([\d.]+) ([\d.]+) m\r?$\s*^([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c\r?$\s*^([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c\r?$\s*^([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c\r?$", RegexOptions.Multiline);
+        TestAssert.Equal(1, paths.Count);
+        double sx = double.Parse(paths[0].Groups[1].Value, CultureInfo.InvariantCulture);
+        double s1 = double.Parse(paths[0].Groups[3].Value, CultureInfo.InvariantCulture);
+        double e1 = double.Parse(paths[0].Groups[5].Value, CultureInfo.InvariantCulture);
+        double jx = double.Parse(paths[0].Groups[7].Value, CultureInfo.InvariantCulture);
+        double s2 = double.Parse(paths[0].Groups[9].Value, CultureInfo.InvariantCulture);
+        double tx = double.Parse(paths[0].Groups[13].Value, CultureInfo.InvariantCulture);
+        double dx1 = jx - sx;
+        double dx2 = tx - jx;
+        TestAssert.True(Math.Abs((s1 - sx) / dx1 - 1d / 6d) < 0.02, "double-span start sixth");
+        TestAssert.True(Math.Abs((jx - e1) / dx1 - 2d / 9d) < 0.02, "double-span joint two ninths");
+        TestAssert.True(Math.Abs((s2 - jx) / dx2 - 2d / 3d) < 0.02, "trailing joint two thirds");
+    }
     // RV04: style-18 explicit dots gradient-fill like circles (Office paints dot
     // shadings with the shared table; dot geometry stays an ellipse pending the
     // marker-shape slice, and stars keep flat fills until the asterisk slice).
