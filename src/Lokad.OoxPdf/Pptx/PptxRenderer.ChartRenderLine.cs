@@ -149,7 +149,6 @@ internal sealed partial class PptxRenderer
 
                 foreach ((double pointX, double pointY) in markers)
                 {
-                    graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
                     ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
                     if (lineStyleSkipsUnstyledTint && marker.SymbolKind == PptxSceneChartMarkerSymbol.None && !marker.IsDefined)
                     {
@@ -168,7 +167,25 @@ internal sealed partial class PptxRenderer
                     RgbColor markerOutline = defaultSeriesStroke
                         ? (lineStyleSkipsUnstyledTint ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
                         : stroke.Color;
-                    DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, marker, stroke.Color, markerOutline, lineStyleSkipsUnstyledTint ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null);
+                    double? outlineWidth = lineStyleSkipsUnstyledTint ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
+                    if (lineStyleSkipsUnstyledTint
+                        && marker.Fill is null
+                        && TryGetStyleBarGradientStops(chartStyleId, new ChartSeriesFill(stroke.Color, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
+                        && PaintStyleMarkerGradient(graphics, plotBox, marker.SymbolKind, pointX, pointY, marker.Size, gradientStops))
+                    {
+                        // RV04: gradient-filled markers skip the flat fill and keep only the
+                        // rim, matching the Office fill-plus-outline marker passes.
+                        ChartSeriesStroke? rim = ChartMarkerOutlineStroke(marker, markerOutline, outlineWidth);
+                        if (rim is not null)
+                        {
+                            RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerStroke(graphics, pointX, pointY, marker.SymbolKind, marker.Size, rim));
+                        }
+                    }
+                    else
+                    {
+                        graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
+                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, marker, stroke.Color, markerOutline, outlineWidth);
+                    }
                 }
 
                 if (stroke.Alpha < 1d)
@@ -713,9 +730,55 @@ internal sealed partial class PptxRenderer
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
         // Unstyled marker outlines default to round joins (Office marker forensics); explicitly
         // styled markers keep their DrawingML cap/join defaults.
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
+        ChartSeriesStroke? stroke = ChartMarkerOutlineStroke(marker, defaultStroke, null);
         DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill);
         DrawChartMarkerStroke(graphics, x, y, marker.SymbolKind, size, stroke);
+    }
+
+    private static ChartSeriesStroke? ChartMarkerOutlineStroke(ChartMarkerStyle marker, RgbColor defaultStroke, double? markerOutlineWidth)
+    {
+        return marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, markerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
+    }
+
+    // RV04: style-18 marker gradient fill: one axial shading per marker with Coords
+    // spanning twice the marker height from its bottom edge, clipped to the marker
+    // shape (Office paints PatternType-2 shadings over diamond/square/triangle
+    // markers; other symbols keep the flat path).
+    private static bool PaintStyleMarkerGradient(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxSceneChartMarkerSymbol symbol, double x, double y, double size, IReadOnlyList<PdfShadingStop> stops)
+    {
+        if (size <= 0d)
+        {
+            return false;
+        }
+
+        double bottom = y - size / 2d;
+        if (symbol != PptxSceneChartMarkerSymbol.Diamond &&
+            symbol != PptxSceneChartMarkerSymbol.Square &&
+            symbol != PptxSceneChartMarkerSymbol.Triangle)
+        {
+            return false;
+        }
+
+        RenderInChartPlotAreaClip(graphics, plotBox, () =>
+        {
+            graphics.SaveState();
+            if (symbol == PptxSceneChartMarkerSymbol.Square)
+            {
+                graphics.ClipRectangle(x - size / 2d, bottom, size, size);
+            }
+            else if (symbol == PptxSceneChartMarkerSymbol.Diamond)
+            {
+                graphics.ClipPolygon([(x, y + size / 2d), (x + size / 2d, y), (x, y - size / 2d), (x - size / 2d, y)]);
+            }
+            else
+            {
+                graphics.ClipPolygon([(x, y + size / 2d), (x + size / 2d, y - size / 2d), (x - size / 2d, y - size / 2d)]);
+            }
+
+            graphics.PaintAxialShading(x, bottom + 2d * size, x, bottom, stops);
+            graphics.RestoreState();
+        });
+        return true;
     }
 
     private static void DrawChartMarkerInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, ChartMarkerStyle marker, RgbColor defaultFill, RgbColor defaultStroke, double? markerOutlineWidth = null)
@@ -729,7 +792,7 @@ internal sealed partial class PptxRenderer
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
         // Unstyled marker outlines default to round joins (Office marker forensics); explicitly
         // styled markers keep their DrawingML cap/join defaults.
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, markerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
+        ChartSeriesStroke? stroke = ChartMarkerOutlineStroke(marker, defaultStroke, markerOutlineWidth);
         if (!IsLineOnlyChartMarker(marker.SymbolKind))
         {
             RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill));
