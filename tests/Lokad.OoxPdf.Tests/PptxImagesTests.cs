@@ -808,8 +808,8 @@ internal static class PptxImagesTests
         TestAssert.Contains("1 0 0 rg", pdf);
     }
 
-    // RV07: style-only stroke diagnoses while the default black fill renders (the prior expectation pinned pre-stroke-support vanishing and was never Office-measured).
-    public static void PptxSyntheticSvgStyleOnlyStrokeDiagnoses()
+    // RV07: style named strokes resolve while the default black fill renders (second falsification: the diagnose expectation pinned hex-only parsing and was never Office-measured).
+    public static void PptxSyntheticSvgStyleNamedStrokeRenders()
     {
         string input = WriteSvgGradientDeck("""
             <svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg">
@@ -817,13 +817,11 @@ internal static class PptxImagesTests
             </svg>
             """);
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("\n0 g\n", pdf.Replace("\r\n", "\n"));
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)), "Unusable style stroke must diagnose.");
+        TestAssert.Contains("\n0 0 1 RG\n", pdf.Replace("\r\n", "\n"));
     }
 
     // RV07: stroked-only paths render their stroke instead of vanishing.
@@ -993,6 +991,70 @@ internal static class PptxImagesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1.44 w", pdf);
+    }
+
+    // RV07: CSS named fills resolve instead of diagnosing.
+    public static void PptxSyntheticSvgNamedColorFillRenders()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="red"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
+    // RV07: CSS named strokes resolve instead of vanishing.
+    public static void PptxSyntheticSvgNamedColorStrokeRenders()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="blue"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 1 RG", pdf);
+    }
+
+    // RV07: short hex fills expand per CSS instead of diagnosing.
+    public static void PptxSyntheticSvgShortHexFillRenders()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#F00"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
+    // RV07: functional color syntax stays diagnosed (guard: boundary never silently renders).
+    public static void PptxSyntheticSvgRgbFunctionFillDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="rgb(255,0,0)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "Functional color must diagnose.");
     }
 
     // RV07: repeating gradients wrap strip offsets instead of clamping.

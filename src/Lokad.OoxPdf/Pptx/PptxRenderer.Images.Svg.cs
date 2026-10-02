@@ -555,7 +555,7 @@ internal sealed partial class PptxRenderer
     private static (double Offset, RgbColor? Color, bool HasColorAttribute) ReadSvgGradientStop(XElement stop)
     {
         string? stopColorAttribute = (string?)stop.Attribute("stop-color");
-        RgbColor? stopColor = RgbColor.TryParse(stopColorAttribute?.TrimStart('#'), out RgbColor parsedStopColor) ? parsedStopColor : null;
+        RgbColor? stopColor = RgbColor.TryParseCssColor(stopColorAttribute, out RgbColor parsedStopColor) ? parsedStopColor : null;
         return (ReadSvgOffset((string?)stop.Attribute("offset")), stopColor, !string.IsNullOrWhiteSpace(stopColorAttribute));
     }
 
@@ -673,7 +673,7 @@ internal sealed partial class PptxRenderer
             failure = SvgFillFailure.UnresolvedGradient;
             return false;
         }
-        if (RgbColor.TryParse(fill.TrimStart((char)35), out RgbColor color))
+        if (RgbColor.TryParseCssColor(fill, out RgbColor color))
         {
             paint = new SvgPaint(color, null, opacity);
             failure = SvgFillFailure.None;
@@ -717,7 +717,7 @@ internal sealed partial class PptxRenderer
             failure = SvgStrokeFailure.UnresolvedGradient;
             return default;
         }
-        if (!RgbColor.TryParse(strokePaint.TrimStart((char)35), out RgbColor color))
+        if (!RgbColor.TryParseCssColor(strokePaint, out RgbColor color))
         {
             failure = SvgStrokeFailure.UnparsableColor;
             return default;
