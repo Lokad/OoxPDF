@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
             grouping,
             IsStackedChartGrouping(grouping),
             IsPercentStackedChartGrouping(grouping),
-            ReadSceneOrXmlSmoothSeries(plot, chartElement),
+            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: true),
             ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
     }
 
@@ -115,7 +115,7 @@ internal sealed partial class PptxRenderer
         return new ChartScatterPlotOptions(
             scatterStyle,
             ResolveChartScatterLineConnection(scatterStyle),
-            ReadSceneOrXmlSmoothSeries(plot, chartElement));
+            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: false));
     }
 
     private readonly record struct ChartRadarPlotOptions(PptxSceneChartRadarStyle RadarStyle);

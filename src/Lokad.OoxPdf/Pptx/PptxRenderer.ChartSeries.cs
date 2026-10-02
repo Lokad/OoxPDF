@@ -1128,18 +1128,34 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartBooleanOption> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement)
+    // RV04: plot-level smooth applies to series without their own smooth element on line
+    // charts (COM plot-smooth-only probe smooths every series); series-explicit values win.
+    // Scatter keeps the series-only legacy path (plot-level scatter smoothing unprobed).
+    private static IReadOnlyList<ChartBooleanOption> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement, bool applyPlotFallback)
     {
+        (bool? plotSmooth, string plotSmoothValue) = applyPlotFallback
+            ? PptxSceneBuilder.ReadChartSeriesSmooth(chartElement)
+            : (null, string.Empty);
         return plot is not null
-            ? plot.Series.Select(series => new ChartBooleanOption(series.Smooth ?? false, series.SmoothValue, series.Smooth is not null)).ToArray()
+            ? plot.Series.Select(series => ResolveSmoothOption(series.Smooth, series.SmoothValue, plotSmooth, plotSmoothValue)).ToArray()
             : chartElement
                 .Elements(ChartNamespace + "ser")
                 .Select(series =>
                 {
                     (bool? smooth, string smoothValue) = PptxSceneBuilder.ReadChartSeriesSmooth(series);
-                    return new ChartBooleanOption(smooth ?? false, smoothValue, smooth is not null);
+                    return ResolveSmoothOption(smooth, smoothValue, plotSmooth, plotSmoothValue);
                 })
                 .ToArray();
+    }
+
+    private static ChartBooleanOption ResolveSmoothOption(bool? seriesSmooth, string seriesSmoothValue, bool? plotSmooth, string plotSmoothValue)
+    {
+        if (seriesSmooth is not null)
+        {
+            return new ChartBooleanOption(seriesSmooth.Value, seriesSmoothValue, true);
+        }
+
+        return new ChartBooleanOption(plotSmooth ?? false, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, plotSmooth is not null);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
