@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
+                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, lineStyleSkipsUnstyledTint ? PptxChartMetricRules.StyleLineSeriesStrokeWidth : ChartLineDefaultStrokeWidth);
                 if (stroke.Alpha < 1d)
                 {
                     graphics.SaveState();

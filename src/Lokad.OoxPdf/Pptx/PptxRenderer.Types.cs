@@ -407,6 +407,11 @@ internal sealed partial class PptxRenderer
         // red, and green series), while fills and explicitly styled strokes keep raw
         // colors. Linear per-channel scaling is killed (predicts 77 vs observed 74).
         public const double UnstyledLineStrokeLuminanceFactor = 0.975d;
+        // Style-18 unstyled line series stroke at 5pt instead of the 2.25pt default
+        // (COM-built style-18 decks: four series polylines across the 1- and 3-series
+        // references all emit 5 w; default-style controls emit 2.25 w; explicit series
+        // widths keep winning by construction).
+        public const double StyleLineSeriesStrokeWidth = 5d;
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         // Second variation regime at twelve-plus points (dash12 twice plus dash13):
         // slots 1-6 shade at 0.82 (maxabs 1 over 18 channels) and slots 7-12 go raw
