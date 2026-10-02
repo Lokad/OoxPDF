@@ -1,0 +1,26 @@
+{
+  "id": "pptx-ladder-11-chart-line-span-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-line-span-port.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "chart",
+    "line-chart",
+    "markers",
+    "span",
+    "pptx-renderer-port",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 6.0,
+    "minForegroundRecall": 0.1,
+    "maxChangedPixelRatioAtThreshold16": 0.06
+  }
+}
+
