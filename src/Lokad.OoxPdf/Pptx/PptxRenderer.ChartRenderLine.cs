@@ -893,9 +893,13 @@ internal sealed partial class PptxRenderer
             {
                 graphics.ClipRectangle(x - size / 2d, bottom, size, size);
             }
-            else if (symbol == PptxSceneChartMarkerSymbol.Circle || symbol == PptxSceneChartMarkerSymbol.Dot)
+            else if (symbol == PptxSceneChartMarkerSymbol.Circle)
             {
                 graphics.ClipEllipse(x - size / 2d, bottom, size, size);
+            }
+            else if (symbol == PptxSceneChartMarkerSymbol.Dot)
+            {
+                graphics.ClipRectangle(x, y - size / 10d, size / 2d, size / 5d);
             }
             else if (symbol == PptxSceneChartMarkerSymbol.Diamond)
             {
@@ -949,7 +953,9 @@ internal sealed partial class PptxRenderer
             switch (symbol)
             {
                 case PptxSceneChartMarkerSymbol.Dot:
-                    graphics.FillEllipse(x - size / 4d, y - size / 4d, size / 2d, size / 2d);
+                    // RV04: dots render as data-anchored rectangles (Office paints s/2 by
+                    // s/5 rects starting at the data point with centered height, not ellipses).
+                    graphics.FillRectangle(x, y - size / 10d, size / 2d, size / 5d);
                     break;
                 case PptxSceneChartMarkerSymbol.Square:
                     graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
@@ -1030,6 +1036,9 @@ internal sealed partial class PptxRenderer
                 graphics.StrokeLine(x, y - size / 2d, x, y + size / 2d);
                 graphics.StrokeLine(x - size / 2d, y - size / 2d, x + size / 2d, y + size / 2d);
                 graphics.StrokeLine(x - size / 2d, y + size / 2d, x + size / 2d, y - size / 2d);
+                break;
+            case PptxSceneChartMarkerSymbol.Dot:
+                graphics.StrokeRectangle(x, y - size / 10d, size / 2d, size / 5d);
                 break;
             default:
                 graphics.StrokeEllipse(x - size / 2d, y - size / 2d, size, size);
