@@ -658,7 +658,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber)
+        int? dynamicFieldPageNumber,
+        double lineImageWidth = 0d)
     {
         double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
         double drawableLineWidth = MeasureDrawableTextSpansForLayout(line.Spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
@@ -667,7 +668,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSegmentLayout> segments = firstLine && paragraph.ListLabel is not null
             ? CreateNumberedLineSegments(paragraph.ListLabel, line.Spans, firstRun)
             : justifyLine
-                ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
+                ? CreateJustifiedTextSegments(line.Spans, lineX, drawableLineWidth, paragraphWidth, lineImageWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
                 : CreateTextSegments(line.Spans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
         double effectiveX = firstLine && paragraph.ListLabel is not null ? labelX : lineX;
         double effectiveWidth = firstLine && paragraph.ListLabel is not null

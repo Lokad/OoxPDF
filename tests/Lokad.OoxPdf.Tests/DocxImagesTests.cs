@@ -1710,6 +1710,54 @@ internal static class DocxImagesTests
         TestAssert.True(Math.Abs((double.Parse(topStarts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Header following text must start after the 72pt image end: image=" + imageX);
     }
 
+    // RV05: justified image sits at the image-aware stretched position (Word 16.0
+    // justimg probe, same-batch reference: image cm x=417.34 with text ending 417.1;
+    // the renderer stretched spaces against the full width ignoring the 72pt image,
+    // pushing the image 60pt right and overflowing the margin.
+    public static void DocxJustifiedInlineImageUsesImageAwareStretch()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                <Default Extension="xml" ContentType="application/xml"/>
+                <Default Extension="png" ContentType="image/png"/>
+                <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+                """),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/></Relationships>
+                """),
+            ["word/document.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    <w:p><w:pPr><w:jc w:val="both"/></w:pPr>
+                      <w:r><w:t>This is a long justified line of text holding an image midstream here </w:t></w:r>
+                      <w:r><w:drawing><wp:inline><wp:extent cx="914400" cy="914400"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+                      <w:r><w:t> tail words here</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
+            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+        TestAssert.True(imagePlacement.Success, "Expected a placed justified image.");
+        double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(Math.Abs(imageX - 417.34d) < 3d, "Justified image must sit at the image-aware stretched position (residual per-space rounding/advance noise): imageX=" + imageX);
+    }
     // RV05: on justified lines the image must sit at the stretched run position,
     // not at the unstretched measurement (first line is justified, last is not).
     public static void DocxJustifiedInlineImageAlignsWithStretchedText()

@@ -290,14 +290,14 @@ internal sealed partial class DocxLayoutEngine
                 textMeasurer,
                 ScaleTabStopPositions(effective.TabStops, fixedScale),
                 defaultTabStopPoints * fixedScale,
-                pageNumber);
+                pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
             IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
             if (storyMidLinePlan is not null && storyMidLinePlan.ImagesByLine[lineIndex].Count != 0)
             {
                 var imageShifts = new List<(double BoundaryX, double Shift)>();
                 foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])
                 {
-                    double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber);
+                    double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     imageShifts.Add((shiftBeforeWidth, placed.Width));
                 }
 
@@ -336,7 +336,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])
                 {
-                    double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber);
+                    double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     placedImages.Add(new DocxInlineImageLayout(
                         placed.Image,
                         lineX + beforeWidth,

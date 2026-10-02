@@ -515,7 +515,7 @@ internal sealed partial class DocxLayoutEngine
                         measurer,
                         ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale),
                         context.DefaultTabStopPoints * context.ParagraphSpacingScale,
-                        context.PageNumber);
+                        context.PageNumber, midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     lineShape = FitTableCellLineText(lineShape, paragraphWidth);
                     IReadOnlyList<DocxTextSegmentLayout> emissionSegments = lineShape.Segments;
                     if (midLinePlan is not null && midLinePlan.ImagesByLine[lineIndex].Count != 0)
@@ -523,7 +523,7 @@ internal sealed partial class DocxLayoutEngine
                         var imageShifts = new List<(double BoundaryX, double Shift)>();
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                         {
-                            double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber);
+                            double shiftBeforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber, midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                             imageShifts.Add((shiftBeforeWidth, placed.Width));
                         }
 
@@ -561,7 +561,7 @@ internal sealed partial class DocxLayoutEngine
                     {
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
                         {
-                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber);
+                            double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == wrappedLines.Length - 1, paragraphWidth, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber, midLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                             // RV06 cellmidline size matrix (Word 16.0, blue-bounds raster measurement):
                             // Office cell image bottoms sit at the text baseline (medium bounds 679.0
                             // against baseline 678.82 both families, all sizes within 0.5), so midline

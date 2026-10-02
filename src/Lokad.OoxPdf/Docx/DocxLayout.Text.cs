@@ -213,7 +213,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
         double defaultTabStopPoints,
-        int? dynamicFieldPageNumber)
+        int? dynamicFieldPageNumber,
+        double lineImageWidth = 0d)
     {
         double plainWidth = MeasureTextSpansForLayout(SliceTextSpans(lineSpans, 0, lineCharOffset), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber);
         if (firstLine && paragraph.ListLabel is not null)
@@ -228,7 +229,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         int stretchableSpaces = CountStretchableJustificationSpaces(lineSpans);
-        double extraPerSpace = Math.Max(0d, paragraphWidth - drawableLineWidth) / stretchableSpaces;
+        double extraPerSpace = Math.Max(0d, paragraphWidth - lineImageWidth - drawableLineWidth) / stretchableSpaces;
         int drawableLength = FindDrawableTextLength(lineSpans);
         int prefixLength = Math.Min(lineCharOffset, drawableLength);
         int seen = 0;
@@ -314,6 +315,7 @@ internal sealed partial class DocxLayoutEngine
         double lineX,
         double drawableLineWidth,
         double paragraphWidth,
+        double lineImageWidth,
         double fontSize,
         IDocxTextMeasurer textMeasurer,
         IReadOnlyList<DocxTabStop> tabStops,
@@ -325,7 +327,10 @@ internal sealed partial class DocxLayoutEngine
             return CreateTextSegments(spans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints);
         }
 
-        double extraPerSpace = Math.Max(0d, paragraphWidth - drawableLineWidth) / stretchableSpaces;
+        // RV05 calibration (Word 16.0 justimg probe): justification stretch fills only the
+        // text share of the line, so placed image widths leave the stretch budget before spaces
+        // share it (stacking full-width text stretch under image shifts overflowed the margin).
+        double extraPerSpace = Math.Max(0d, paragraphWidth - lineImageWidth - drawableLineWidth) / stretchableSpaces;
         int drawableLength = FindDrawableTextLength(spans);
         IReadOnlyList<DocxTextSpan> drawableSpans = SliceTextSpans(spans, 0, drawableLength);
         var segments = new List<DocxTextSegmentLayout>(drawableSpans.Count);
