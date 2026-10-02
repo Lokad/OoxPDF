@@ -412,6 +412,10 @@ internal sealed partial class PptxRenderer
         // references all emit 5 w; default-style controls emit 2.25 w; explicit series
         // widths keep winning by construction).
         public const double StyleLineSeriesStrokeWidth = 5d;
+        // Style-26 unstyled line series stroke at 7pt (COM-built style-26 deck:
+        // three series polylines all emit 7 w with raw-base strokes; style 26 draws
+        // no markers, so widths and smoothing are its only gallery traits).
+        public const double StyleHeavyLineSeriesStrokeWidth = 7d;
         public const int SingleSeriesVaryColorsShadePointThreshold = 6;
         // Second variation regime at twelve-plus points (dash12 twice plus dash13):
         // slots 1-6 shade at 0.82 (maxabs 1 over 18 channels) and slots 7-12 go raw

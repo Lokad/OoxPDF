@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool plotMarkersExplicitOff)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -28,10 +28,12 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        // RV04: style-18 (transitional 18, c14 118) line series stroke the raw theme base
-        // (Office emits no luminance tint on the polyline); other styles keep the calibrated
-        // 97.5% tint. Marker outlines keep the legacy tint; legend entries are untouched.
-        bool lineStyleSkipsUnstyledTint = chartStyleId == 18 || chartStyleId == 118;
+        // RV04: style-18 (transitional 18, c14 118) and style-26 (26, c14 126) line
+        // series stroke the raw theme base (Office emits no luminance tint on either
+        // gallery polyline); other styles keep the calibrated 97.5% tint. Only
+        // style-18 forces gallery markers; legend entries are untouched.
+        bool lineStyleSkipsUnstyledTint = chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
+        bool lineStyleGalleryMarkers = chartStyleId == 18 || chartStyleId == 118;
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
         double valueAxisCrossingY = 0d;
@@ -98,7 +100,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, lineStyleSkipsUnstyledTint ? PptxChartMetricRules.StyleLineSeriesStrokeWidth : ChartLineDefaultStrokeWidth);
+                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, ResolveStyleLineSeriesWidth(chartStyleId));
                 if (stroke.Alpha < 1d)
                 {
                     graphics.SaveState();
@@ -153,11 +155,11 @@ internal sealed partial class PptxRenderer
                 foreach ((double pointX, double pointY) in markers)
                 {
                     ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
-                    if (lineStyleSkipsUnstyledTint && marker.SymbolKind == PptxSceneChartMarkerSymbol.None && !marker.IsDefined)
+                    if (lineStyleGalleryMarkers && !plotMarkersExplicitOff && marker.SymbolKind == PptxSceneChartMarkerSymbol.None && !marker.IsDefined)
                     {
                         // RV04: style-18 forces gallery markers (Office draws auto symbols
-                        // at 12.96pt with no marker markup); explicit marker markup keeps
-                        // winning by construction.
+                        // at 12.96pt with no marker markup, and none with an explicit
+                        // plot-level marker=0); explicit marker markup keeps winning.
                         marker = marker with
                         {
                             SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(seriesIndex),
@@ -165,13 +167,20 @@ internal sealed partial class PptxRenderer
                         };
                     }
 
+                    if ((chartStyleId == 26 || chartStyleId == 126) && !marker.IsDefined)
+                    {
+                        // RV04: style-26 draws no gallery markers (Office renders none with
+                        // plot marker=1 or none at all); series-explicit markers keep rendering.
+                        continue;
+                    }
+
                     // RV04: style-18 marker outlines stroke the raw base at 1pt (Office emits
                     // no luminance tint on marker rims); other styles keep the tinted 0.75pt rim.
                     RgbColor markerOutline = defaultSeriesStroke
-                        ? (lineStyleSkipsUnstyledTint ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
+                        ? (lineStyleGalleryMarkers ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
                         : stroke.Color;
-                    double? outlineWidth = lineStyleSkipsUnstyledTint ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
-                    if (lineStyleSkipsUnstyledTint
+                    double? outlineWidth = lineStyleGalleryMarkers ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
+                    if (lineStyleGalleryMarkers
                         && marker.Fill is null
                         && TryGetStyleBarGradientStops(chartStyleId, new ChartSeriesFill(stroke.Color, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
                         && PaintStyleMarkerGradient(graphics, plotBox, marker.SymbolKind, pointX, pointY, marker.Size, gradientStops))
@@ -219,6 +228,36 @@ internal sealed partial class PptxRenderer
         {
             StrokeStraightChartPath(graphics, points);
         }
+    }
+
+    // RV04: explicit plot-level marker=0 suppresses forced gallery markers (Office
+    // draws no markers on the marker=0 style-18 probe); an absent marker element
+    // leaves forcing enabled. Mirrors the scene/XML source selection used for marker
+    // styles so both paths agree.
+    private static bool PlotMarkersExplicitOff(PptxSceneChartPlot? linePlot, XElement chartElement)
+    {
+        if (linePlot is not null)
+        {
+            return linePlot.MarkersEnabled == false;
+        }
+
+        return chartElement.Element(ChartNamespace + "marker") is { } markerElement &&
+            !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(markerElement);
+    }
+
+    // RV04: gallery polyline widths: style-18 strokes at 5pt, style-26 at 7pt,
+    // other styles keep the 2.25pt default (explicit series widths keep winning
+    // by construction at the call site).
+    private static double ResolveStyleLineSeriesWidth(int? chartStyleId)
+    {
+        if (chartStyleId == 26 || chartStyleId == 126)
+        {
+            return PptxChartMetricRules.StyleHeavyLineSeriesStrokeWidth;
+        }
+
+        return chartStyleId == 18 || chartStyleId == 118
+            ? PptxChartMetricRules.StyleLineSeriesStrokeWidth
+            : ChartLineDefaultStrokeWidth;
     }
 
     // RV04: style-18 implied smoothing: piecewise cubic Hermite through the data
