@@ -2111,6 +2111,54 @@ internal static class PptxChartRenderingTests
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
         TestAssert.DoesNotContain("0.914 0.443 0.196 rg", pdf);
     }
+    // RV04: style-18 line series draw smoothed beziers instead of straight segments
+    // (Office emits curve operators on the style-18 deck while default-style lines
+    // stay straight; markers stay off so the polyline is the only curved path).
+    public static void LineStyle18SmoothsSeriesCurves()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(Regex.IsMatch(pdf, @" c\r?$", RegexOptions.Multiline), "Expected smoothed style-18 series curves.");
+    }
+
+    // RV04: an explicit smooth=false keeps straight segments under style 18.
+    public static void LineStyle18KeepsExplicitStraightSegments()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="0"/>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(!Regex.IsMatch(pdf, @" c\r?$", RegexOptions.Multiline), "Explicit smooth=false must keep straight segments under style 18.");
+    }
 
     // RV04: default-style line charts without marker markup still draw no markers.
     public static void DefaultStyleDrawsNoMarkersWithoutMarkup()

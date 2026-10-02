@@ -110,6 +110,9 @@ internal sealed partial class PptxRenderer
                 bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
                 ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = lineStyleSkipsUnstyledTint ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
                 SetChartStroke(graphics, lineStroke);
+                bool explicitSmooth = IsSmoothSeries(seriesIndex, smoothSeries);
+                bool explicitStraight = seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex].IsDefined && !smoothSeries[seriesIndex].Value;
+                bool styleSmooth = !explicitSmooth && !explicitStraight && lineStyleSkipsUnstyledTint;
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
                 for (int i = 0; i < values.Count; i++)
@@ -124,7 +127,7 @@ internal sealed partial class PptxRenderer
                         {
                             if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
                             {
-                                StrokeLineChartPointSegmentInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, explicitSmooth, styleSmooth);
                                 points.Clear();
                             }
 
@@ -145,7 +148,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                StrokeLineChartPointSegmentInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, explicitSmooth, styleSmooth);
 
                 foreach ((double pointX, double pointY) in markers)
                 {
@@ -215,6 +218,62 @@ internal sealed partial class PptxRenderer
         else
         {
             StrokeStraightChartPath(graphics, points);
+        }
+    }
+
+    // RV04: style-18 implied smoothing: piecewise cubic Hermite through the data
+    // points with uniform-x third offsets, central-difference interior tangents and
+    // one-sided (chord) end tangents (COM-built style-18 decks: 12/12 segments predict
+    // the Office bezier controls within rounding; the legacy Catmull-Rom matches interior
+    // spans but halves the end tangents, so it stays for explicit smooth requests).
+    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        graphics.MoveTo(points[0].X, points[0].Y);
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            double dx = points[i + 1].X - points[i].X;
+            double startRun = i == 0 ? dx : points[i + 1].X - points[i - 1].X;
+            double endRun = i + 2 >= points.Count ? dx : points[i + 2].X - points[i].X;
+            if (dx == 0d || startRun == 0d || endRun == 0d)
+            {
+                graphics.LineTo(points[i + 1].X, points[i + 1].Y);
+                continue;
+            }
+
+            double startSlope = i == 0
+                ? (points[1].Y - points[0].Y) / startRun
+                : (points[i + 1].Y - points[i - 1].Y) / startRun;
+            double endSlope = i + 2 >= points.Count
+                ? (points[i + 1].Y - points[i].Y) / dx
+                : (points[i + 2].Y - points[i].Y) / endRun;
+            graphics.CurveTo(
+                points[i].X + dx / 3d,
+                points[i].Y + dx / 3d * startSlope,
+                points[i + 1].X - dx / 3d,
+                points[i + 1].Y - dx / 3d * endSlope,
+                points[i + 1].X,
+                points[i + 1].Y);
+        }
+
+        graphics.StrokeCurrentPath();
+    }
+
+    // RV04: style-18 implies smoothed series (Office draws beziers with no smooth
+    // markup); an explicit smooth value keeps its legacy path by construction.
+    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool explicitSmooth, bool styleSmooth)
+    {
+        if (styleSmooth)
+        {
+            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points));
+        }
+        else
+        {
+            StrokeLineChartPointSegmentInPlotClip(graphics, plotBox, points, explicitSmooth);
         }
     }
 
