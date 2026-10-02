@@ -26,6 +26,10 @@ internal static class PptxChartMarkerMetricRules
     // size is absolute, not plot-relative; symbol order follows the auto line order).
     public const double StyleLineMarkerSize = 12.96d;
     public const double StyleLineMarkerOutlineWidth = 1d;
+    // Gallery legend keys draw markers at a fixed smaller size (COM-built style-18
+    // and style-26 legend decks: diamonds/triangles 9.84, squares 9.96; shipped as a
+    // uniform 9.9 since the per-shape spread is sub-pixel dust on single-deck evidence).
+    public const double StyleLegendMarkerSize = 9.9d;
     // Smoothed default-style markers without marker markup draw flat at 9pt with raw
     // 1pt rims (COM-built default-style smooth deck: squares measure 9.0; diamond and
     // triangle paths measure 8.88, recorded as a watch item rather than a per-shape rule

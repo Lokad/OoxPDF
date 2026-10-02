@@ -184,7 +184,7 @@ internal sealed partial class PptxRenderer
                         secondaryAxisReversed = lineValueAxisOptions.Reversed;
                     }
 
-                    legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, linePlot, comboLineChart, lineSeriesStrokes, lineMarkerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook));
+                    legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, linePlot, comboLineChart, lineSeriesStrokes, lineMarkerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook, chartStyleId: barStyleId));
                     ChartAxisSource comboCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
                     RenderLineChart(
                         graphics,

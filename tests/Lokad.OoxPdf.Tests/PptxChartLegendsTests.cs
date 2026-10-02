@@ -2148,7 +2148,7 @@ internal static class PptxChartLegendsTests
         Type strokeListType = typeof(List<>).MakeGenericType(buildEntries.GetParameters()[5].ParameterType.GetGenericArguments()[0]);
         object emptyStrokes = Activator.CreateInstance(strokeListType) ?? throw new InvalidOperationException("Expected stroke list.");
 
-        object[] entries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, new List<bool> { true, false }])) ?? throw new InvalidOperationException("Expected stroke legend entries.")).Cast<object>().ToArray();
+        object[] entries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, new List<bool> { true, false }, null])) ?? throw new InvalidOperationException("Expected stroke legend entries.")).Cast<object>().ToArray();
         TestAssert.Equal(2, entries.Length);
         TestAssert.Equal("Series 1", (string?)entries[0].GetType().GetProperty("Name")?.GetValue(entries[0]) ?? string.Empty);
         TestAssert.True((bool?)entries[0].GetType().GetProperty("LineHidden")?.GetValue(entries[0]) == true, "Expected the explicit-noFill series to suppress its legend line sample (Office marker-only key).");
@@ -2160,7 +2160,7 @@ internal static class PptxChartLegendsTests
         TestAssert.Equal("diamond", PptxTests.ChartMarkerStyleSymbol(marker0!));
         TestAssert.Equal(9d, PptxTests.ChartMarkerStyleSize(marker0!));
 
-        object[] defaultEntries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, null])) ?? throw new InvalidOperationException("Expected default stroke legend entries.")).Cast<object>().ToArray();
+        object[] defaultEntries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, null, null])) ?? throw new InvalidOperationException("Expected default stroke legend entries.")).Cast<object>().ToArray();
         TestAssert.True((bool?)defaultEntries[0].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[0]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
         TestAssert.True((bool?)defaultEntries[1].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[1]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
     }    public static void PptxSyntheticBubbleRightLegendSharesAreaTextGap()
