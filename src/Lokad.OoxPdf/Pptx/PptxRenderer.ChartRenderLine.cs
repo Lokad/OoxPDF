@@ -969,9 +969,6 @@ internal sealed partial class PptxRenderer
                         (x - size / 2d, y - size / 2d)
                     ]);
                     break;
-                case PptxSceneChartMarkerSymbol.Star:
-                    graphics.FillPolygon(BuildChartStarMarker(x, y, size));
-                    break;
                 default:
                     graphics.FillEllipse(x - size / 2d, y - size / 2d, size, size);
                     break;
@@ -1030,7 +1027,9 @@ internal sealed partial class PptxRenderer
                 ]);
                 break;
             case PptxSceneChartMarkerSymbol.Star:
-                graphics.StrokePolygon(BuildChartStarMarker(x, y, size));
+                graphics.StrokeLine(x, y - size / 2d, x, y + size / 2d);
+                graphics.StrokeLine(x - size / 2d, y - size / 2d, x + size / 2d, y + size / 2d);
+                graphics.StrokeLine(x - size / 2d, y + size / 2d, x + size / 2d, y - size / 2d);
                 break;
             default:
                 graphics.StrokeEllipse(x - size / 2d, y - size / 2d, size, size);
@@ -1043,27 +1042,17 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    // RV04: stars render as stroked asterisks with no visible fill (Office strokes a
+    // vertical plus two diagonal diameters; its gradient fill paints nothing on the open
+    // paths). Explicit star fills stay unprobed.
     private static bool IsLineOnlyChartMarker(PptxSceneChartMarkerSymbol symbol)
     {
         return symbol is PptxSceneChartMarkerSymbol.Plus or
             PptxSceneChartMarkerSymbol.X or
-            PptxSceneChartMarkerSymbol.Dash;
+            PptxSceneChartMarkerSymbol.Dash or
+            PptxSceneChartMarkerSymbol.Star;
     }
 
-    private static (double X, double Y)[] BuildChartStarMarker(double x, double y, double size)
-    {
-        var points = new List<(double X, double Y)>(10);
-        double outer = size / 2d;
-        double inner = outer * 0.42d;
-        for (int i = 0; i < 10; i++)
-        {
-            double radius = i % 2 == 0 ? outer : inner;
-            double angle = -Math.PI / 2d + i * Math.PI / 5d;
-            points.Add((x + Math.Cos(angle) * radius, y + Math.Sin(angle) * radius));
-        }
-
-        return points.ToArray();
-    }
 
     private static void StrokeChartPointRectangle(PdfGraphicsBuilder graphics, int seriesIndex, int categoryIndex, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, double x, double y, double width, double height, ChartSeriesStroke? fallbackStroke)
     {

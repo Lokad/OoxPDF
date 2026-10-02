@@ -2613,6 +2613,41 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.IsMatch(pdf, @"^3 w\r?$", RegexOptions.Multiline), "Expected 3pt plot-smoothed series strokes.");
         TestAssert.True(Regex.IsMatch(pdf, @" c\r?$", RegexOptions.Multiline), "Expected plot-smoothed series curves.");
     }
+    // RV04: style-18 stars stroke a 3-diameter asterisk with no fill (Office strokes
+    // vertical plus two diagonal diameters with a meaningless gradient fill; the
+    // size-9 vertical diameter pins the asterisk geometry).
+    public static void LineStyle18ExplicitStarStrokesAsterisk()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:style val="18"/><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:marker><c:symbol val="star"/><c:size val="9"/></c:marker>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
+        bool hasNinePointVertical = false;
+        foreach (Match m in Regex.Matches(pdf, @"^([\d.]+) ([\d.]+) m \1 ([\d.]+) l S\r?$", RegexOptions.Multiline))
+        {
+            double y1 = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+            double y2 = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
+            if (Math.Abs(Math.Abs(y2 - y1) - 9d) < 0.001d)
+            {
+                hasNinePointVertical = true;
+            }
+        }
+        TestAssert.True(hasNinePointVertical, "Expected a 9pt vertical asterisk diameter.");
+    }
 
     // RV04: default-style line charts without marker markup still draw no markers.
     public static void DefaultStyleDrawsNoMarkersWithoutMarkup()
