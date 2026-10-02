@@ -1155,7 +1155,12 @@ internal sealed partial class PptxRenderer
             return new ChartBooleanOption(seriesSmooth.Value, seriesSmoothValue, true);
         }
 
-        return new ChartBooleanOption(plotSmooth ?? false, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, plotSmooth is not null);
+        // RV04: plot-inherited smooth options never count as defined (an explicit plot-level
+        // smooth=0 must not veto an explicitly smoothed series; Office smooths every series
+        // with the full package when one series carries smooth=1 under plot smooth=0).
+        // Only series-explicit markup defines the option, so only it keeps straight series
+        // straight under a smoothed plot.
+        return new ChartBooleanOption(plotSmooth ?? false, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, false);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
