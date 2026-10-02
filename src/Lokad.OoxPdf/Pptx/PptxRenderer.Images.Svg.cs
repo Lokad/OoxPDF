@@ -84,6 +84,7 @@ internal sealed partial class PptxRenderer
         double scaleX = imageWidth / sourceWidth;
         double scaleY = imageHeight / sourceHeight;
         var gradients = ReadSvgGradients(svg);
+        var radialGradients = ReadSvgRadialGradients(svg);
         ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName);
         var unsupportedCommands = new SortedSet<char>();
         int unreadablePaths = 0;
@@ -93,6 +94,7 @@ internal sealed partial class PptxRenderer
         int gradientStrokes = 0;
         int unpaintableStrokes = 0;
         int invalidStrokePresentations = 0;
+        int focalRadialGradients = 0;
         int vectorEffectStrokes = 0;
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate)))
         {
@@ -112,7 +114,7 @@ internal sealed partial class PptxRenderer
             {
                 unsupportedCommands.Add(badCommand.Value);
             }
-            bool hasFill = TryReadSvgFill(element, gradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId);
+            bool hasFill = TryReadSvgFill(element, gradients, radialGradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
             if (!hasFill)
             {
                 if (fillFailure == SvgFillFailure.UnresolvedGradient && gradientId is not null)
@@ -145,6 +147,7 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
+            bool evenOddFill = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "fill-rule")?.Trim().Equals("evenodd", StringComparison.OrdinalIgnoreCase) == true;
             double strokeScale = Math.Sqrt(Math.Abs(transform.M11 * transform.M22 - transform.M12 * transform.M21)) * (scaleX + scaleY) / 2d;
             double strokeWidthPoints = Math.Max(0.001d, stroke.Width * strokeScale);
             double[]? dashPoints = null;
@@ -158,7 +161,28 @@ internal sealed partial class PptxRenderer
                 }
                 dashPhasePoints = stroke.DashOffset * strokeScale;
             }
-            if (paint.Gradient is { } gradient)
+            if (radial is { } radialGradient)
+            {
+                if (radialGradient.HasFocal)
+                {
+                    focalRadialGradients++;
+                }
+                if (TryReadSvgPathBounds(data, transform, out SvgPathBounds radialBounds))
+                {
+                    RenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                    if (stroke.Color is { } radialStrokeColor
+                        && !TryPaintSvgStrokePath(graphics, data, transform, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && badCommand is null)
+                    {
+                        unreadablePaths++;
+                    }
+                }
+                else if (badCommand is null)
+                {
+                    unreadablePaths++;
+                }
+            }
+            else if (paint.Gradient is { } gradient)
             {
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
@@ -206,7 +230,14 @@ internal sealed partial class PptxRenderer
                     }
                     if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                     {
-                        graphics.FillAndStrokeCurrentPath();
+                        if (evenOddFill)
+                        {
+                            graphics.FillAndStrokeCurrentPathEvenOdd();
+                        }
+                        else
+                        {
+                            graphics.FillAndStrokeCurrentPath();
+                        }
                     }
                     else if (badCommand is null)
                     {
@@ -228,7 +259,14 @@ internal sealed partial class PptxRenderer
                     graphics.SetFillRgb(color.Red, color.Green, color.Blue);
                     if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                     {
-                        graphics.FillCurrentPath();
+                        if (evenOddFill)
+                        {
+                            graphics.FillCurrentPathEvenOdd();
+                        }
+                        else
+                        {
+                            graphics.FillCurrentPath();
+                        }
                     }
                     else if (badCommand is null)
                     {
@@ -250,7 +288,7 @@ internal sealed partial class PptxRenderer
                 }
             }
         }
-        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, diagnosticSink, slideIndex, partName);
+        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, diagnosticSink, slideIndex, partName);
 
         graphics.RestoreState();
     }
@@ -350,7 +388,7 @@ internal sealed partial class PptxRenderer
     {
         return "MLHVCZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
     }
-    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int invalidStrokePresentations, int vectorEffectStrokes, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int invalidStrokePresentations, int vectorEffectStrokes, int focalRadialGradients, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
     {
         if (diagnosticSink is null)
         {
@@ -387,6 +425,10 @@ internal sealed partial class PptxRenderer
         if (invalidStrokePresentations > 0)
         {
             EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture renders " + invalidStrokePresentations.ToString(CultureInfo.InvariantCulture) + " paths with default stroke effects for unparsable dash/cap/join values.");
+        }
+        if (focalRadialGradients > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture ignores focal points on " + focalRadialGradients.ToString(CultureInfo.InvariantCulture) + " radial gradients.");
         }
         if (vectorEffectStrokes > 0)
         {
@@ -676,11 +718,12 @@ internal sealed partial class PptxRenderer
         return 1d;
     }
 
-    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients, out SvgPaint paint, out SvgFillFailure failure, out string? gradientId)
+    private static bool TryReadSvgFill(XElement path, IReadOnlyDictionary<string, SvgGradient> gradients, IReadOnlyDictionary<string, SvgRadialGradient> radialGradients, out SvgPaint paint, out SvgFillFailure failure, out string? gradientId, out SvgRadialGradient? radial)
     {
         gradientId = null;
+        radial = null;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
-        string? fill = ReadSvgInheritedPaint(path, style, "fill");
+        string? fill = ReadSvgInheritedAttribute(path, style, "fill");
         double opacity = ReadSvgOpacityValue(style.TryGetValue("fill-opacity", out string? styleFillOpacity) ? styleFillOpacity : (string?)path.Attribute("fill-opacity"))
             * ReadSvgOpacityValue(style.TryGetValue("opacity", out string? styleOpacity) ? styleOpacity : (string?)path.Attribute("opacity"));
         if (fill is null)
@@ -703,6 +746,13 @@ internal sealed partial class PptxRenderer
             if (gradients.TryGetValue(gradientId, out SvgGradient? svgGradient))
             {
                 paint = new SvgPaint(null, svgGradient, opacity);
+                failure = SvgFillFailure.None;
+                return true;
+            }
+            if (radialGradients.TryGetValue(gradientId, out SvgRadialGradient? svgRadial))
+            {
+                radial = svgRadial;
+                paint = new SvgPaint(null, null, opacity);
                 failure = SvgFillFailure.None;
                 return true;
             }
@@ -741,7 +791,7 @@ internal sealed partial class PptxRenderer
     {
         failure = SvgStrokeFailure.None;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
-        string? strokePaint = ReadSvgInheritedPaint(path, style, "stroke");
+        string? strokePaint = ReadSvgInheritedAttribute(path, style, "stroke");
         invalidPresentation = false;
         hasVectorEffect = !string.IsNullOrWhiteSpace(ReadSvgPresentationAttribute(path, style, "vector-effect"));
         if (string.IsNullOrWhiteSpace(strokePaint) || strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase))
@@ -796,7 +846,7 @@ internal sealed partial class PptxRenderer
     // RV07: fill and stroke inherit through groups in cascade order (element
     // style, element attribute, then each ancestor outward the same way).
     // Widths, opacities and presentations stay element-local per SVG.
-    private static string? ReadSvgInheritedPaint(XElement path, IReadOnlyDictionary<string, string> style, string name)
+    private static string? ReadSvgInheritedAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
         if (style.TryGetValue(name, out string? styleValue) && !string.IsNullOrWhiteSpace(styleValue))
         {
@@ -966,6 +1016,141 @@ internal sealed partial class PptxRenderer
         }
         return painted;
     }
+    // RV07: radial gradients paint concentric ellipse rings, largest first.
+    // Focal points diagnose and render centered; radii resolve per axis like
+    // the linear vector mapping, with the gradient transform baked at read.
+    private static IReadOnlyDictionary<string, SvgRadialGradient> ReadSvgRadialGradients(XDocument svg)
+    {
+        var gradients = new Dictionary<string, SvgRadialGradient>(StringComparer.Ordinal);
+        foreach (XElement gradient in svg.Descendants().Where(element => element.Name.LocalName == "radialGradient"))
+        {
+            string? id = (string?)gradient.Attribute("id");
+            SvgGradientStop[] stops = gradient
+                .Elements()
+                .Where(element => element.Name.LocalName == "stop")
+                .Select(ReadSvgGradientStop)
+                .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
+                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0)))
+                .OrderBy(stop => stop.Offset)
+                .ToArray();
+            if (string.IsNullOrWhiteSpace(id) || stops.Length == 0)
+            {
+                continue;
+            }
+            if (!TryParseSvgTransformList((string?)gradient.Attribute("gradientTransform"), out SvgTransform gradientTransform))
+            {
+                continue;
+            }
+            bool userSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
+            double cx = ReadSvgDoubleAttribute(gradient, "cx", 0.5d);
+            double cy = ReadSvgDoubleAttribute(gradient, "cy", 0.5d);
+            double radius = ReadSvgDoubleAttribute(gradient, "r", 0.5d);
+            if (radius <= 0d)
+            {
+                continue;
+            }
+            double fx = ReadSvgDoubleAttribute(gradient, "fx", cx);
+            double fy = ReadSvgDoubleAttribute(gradient, "fy", cy);
+            (double rawCx, double rawCy) = gradientTransform.Apply(cx, cy);
+            double rawRadius = radius;
+            if (userSpace)
+            {
+                (double edgeX, double edgeY) = gradientTransform.Apply(cx + radius, cy + radius);
+                rawRadius = Math.Max(Math.Abs(edgeX - rawCx), Math.Abs(edgeY - rawCy));
+            }
+            gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
+        }
+        return gradients;
+    }
+    private static void RenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    {
+        double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
+        double pathHeight = Math.Max(0.001d, pathBounds.MaxY - pathBounds.MinY);
+        double centerX;
+        double centerY;
+        double radiusX;
+        double radiusY;
+        if (radial.IsUserSpace)
+        {
+            (centerX, centerY) = transform.Apply(radial.Cx, radial.Cy);
+            radiusX = radial.Radius;
+            radiusY = radial.Radius;
+        }
+        else
+        {
+            centerX = pathBounds.MinX + radial.Cx * pathWidth;
+            centerY = pathBounds.MinY + radial.Cy * pathHeight;
+            radiusX = radial.Radius * pathWidth;
+            radiusY = radial.Radius * pathHeight;
+        }
+        graphics.SaveState();
+        if (!TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+        {
+            graphics.RestoreState();
+            return;
+        }
+        graphics.ClipCurrentPath();
+        if (opacity < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(opacity, 1d);
+        }
+        int ringCount = Math.Clamp((int)Math.Ceiling(Math.Max(radiusX, radiusY) / 2d), 16, 128);
+        for (int ring = 0; ring < ringCount; ring++)
+        {
+            double fraction = (double)(ringCount - ring) / ringCount;
+            RgbColor color = SampleSvgRadialStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            string ringData = ConvertSvgEllipseBody(centerX, centerY, radiusX * fraction, radiusY * fraction);
+            if (TryAppendSvgPath(graphics, ringData, SvgTransform.Identity, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+            {
+                graphics.FillCurrentPath();
+            }
+        }
+        if (opacity < 1d)
+        {
+            graphics.RestoreState();
+        }
+        graphics.RestoreState();
+    }
+    private static RgbColor SampleSvgRadialStops(IReadOnlyList<SvgGradientStop> stops, double t, SvgGradientSpread spread)
+    {
+        double offset = spread switch
+        {
+            SvgGradientSpread.Repeat => t - Math.Floor(t),
+            SvgGradientSpread.Reflect => ReflectSvgRadialOffset(t),
+            _ => Math.Clamp(t, 0d, 1d),
+        };
+        SvgGradientStop previous = stops[0];
+        foreach (SvgGradientStop next in stops.Skip(1))
+        {
+            if (offset <= next.Offset)
+            {
+                double span = next.Offset - previous.Offset;
+                double amount = span <= PptxTextMetricRules.TextStateTolerance ? 0d : (offset - previous.Offset) / span;
+                return InterpolateSvgGradientStop(previous.Color, next.Color, Math.Clamp(amount, 0d, 1d));
+            }
+            previous = next;
+        }
+        return previous.Color;
+    }
+    private static double ReflectSvgRadialOffset(double value)
+    {
+        double wrapped = value % 2d;
+        if (wrapped < 0d)
+        {
+            wrapped += 2d;
+        }
+        return wrapped > 1d ? 2d - wrapped : wrapped;
+    }
+    private static RgbColor InterpolateSvgGradientStop(RgbColor left, RgbColor right, double amount)
+    {
+        return new RgbColor(
+            ToSvgGradientByte(left.Red + (right.Red - left.Red) * amount),
+            ToSvgGradientByte(left.Green + (right.Green - left.Green) * amount),
+            ToSvgGradientByte(left.Blue + (right.Blue - left.Blue) * amount));
+    }
+    private static byte ToSvgGradientByte(double value) => (byte)Math.Clamp((int)Math.Round(value), byte.MinValue, byte.MaxValue);
     private static RgbColor SampleSvgGradient(SvgGradient gradient, double x, double y)
     {
         double dx = gradient.X2 - gradient.X1;

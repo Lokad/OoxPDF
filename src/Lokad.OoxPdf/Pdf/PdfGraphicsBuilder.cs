@@ -345,6 +345,11 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("S");
     }
 
+    public void FillAndStrokeCurrentPathEvenOdd()
+    {
+        builder.AppendLine("B*");
+    }
+
     public void FillAndStrokeCurrentPath()
     {
         builder.AppendLine("B");

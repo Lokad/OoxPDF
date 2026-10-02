@@ -1183,6 +1183,58 @@ internal static class PptxImagesTests
         TestAssert.Contains(" c\n", pdf.Replace("\r\n", "\n"));
     }
 
+    // RV07: evenodd fill rules punch holes instead of filling them.
+    public static void PptxSyntheticSvgEvenOddFillRulePunchesHole()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0H100V50H0Z M25 10H75V40H25 10Z" fill="#FF0000" fill-rule="evenodd"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\nf*\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: explicit nonzero fill rules keep the default operator (guard).
+    public static void PptxSyntheticSvgNonzeroFillRuleKeepsOperator()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0H100V50H0Z" fill="#FF0000" fill-rule="nonzero"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\nf\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: radial gradients paint rings instead of diagnosing.
+    public static void PptxSyntheticSvgRadialGradientPaintsRings()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <defs><radialGradient id="g" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
+    }
+
     // RV07: dashed strokes render their pattern instead of solid fallback.
     public static void PptxSyntheticSvgDashedStrokeRendersDashPattern()
     {
