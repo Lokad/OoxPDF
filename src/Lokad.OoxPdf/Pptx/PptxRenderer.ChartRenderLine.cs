@@ -275,6 +275,25 @@ internal sealed partial class PptxRenderer
     // RV04: gallery polyline widths: style-18 strokes at 5pt, style-26 at 7pt;
     // smoothed non-gallery series stroke at 3pt; other styles keep the 2.25pt
     // default (explicit series widths keep winning by construction at the call site).
+    // RV04: explicit series lines without a width inherit the gallery width (Office keeps
+    // 7pt under style-26 and 3pt under the smooth package when only a color is explicit;
+    // an explicit width always wins by construction at the call site; the style-18
+    // gallery width is the predicted equivalent, other styles keep 3pt).
+    private static double ResolveLineKindInheritedStrokeWidth(int? chartStyleId)
+    {
+        if (chartStyleId == 26 || chartStyleId == 126)
+        {
+            return PptxChartMetricRules.StyleHeavyLineSeriesStrokeWidth;
+        }
+
+        if (chartStyleId == 18 || chartStyleId == 118)
+        {
+            return PptxChartMetricRules.StyleLineSeriesStrokeWidth;
+        }
+
+        return ChartSeriesInheritedStrokeWidth;
+    }
+
     private static double ResolveStyleLineSeriesWidth(int? chartStyleId, bool smoothed)
     {
         if (chartStyleId == 26 || chartStyleId == 126)
