@@ -20,7 +20,18 @@ internal static class PptxChartMarkerMetricRules
     // Office default marker outline is 0.75pt at every measured size (7pt dense and
     // 9.9pt sparse diamonds alike); the old size-scaled fallback drew 1.1-1.6pt rims.
     public const double DefaultMarkerOutlineWidth = 0.75d;
+    // Style-18 line gallery markers without marker markup draw at 12.96pt with 1pt
+    // raw-base outlines (COM-built 1- and 3-series style-18 decks: 28 diamond/square/
+    // triangle markers all measure 12.96, including on a doubled-height frame, so the
+    // size is absolute, not plot-relative; symbol order follows the auto line order).
+    public const double StyleLineMarkerSize = 12.96d;
+    public const double StyleLineMarkerOutlineWidth = 1d;
     public const int DenseScatterMarkerMinimumPointCount = 6;
+
+    public static PptxSceneChartMarkerSymbol ResolveForcedLineMarkerSymbol(int seriesIndex)
+    {
+        return PptxSceneBuilder.ParseChartMarkerSymbol(AutoLineChartMarkerSymbols[seriesIndex % AutoLineChartMarkerSymbols.Length]);
+    }
 
     public static string ResolveDefaultSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {

@@ -150,7 +150,25 @@ internal sealed partial class PptxRenderer
                 foreach ((double pointX, double pointY) in markers)
                 {
                     graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-                    DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, defaultSeriesStroke ? ApplyUnstyledLineStrokeTint(stroke.Color) : stroke.Color);
+                    ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
+                    if (lineStyleSkipsUnstyledTint && marker.SymbolKind == PptxSceneChartMarkerSymbol.None && !marker.IsDefined)
+                    {
+                        // RV04: style-18 forces gallery markers (Office draws auto symbols
+                        // at 12.96pt with no marker markup); explicit marker markup keeps
+                        // winning by construction.
+                        marker = marker with
+                        {
+                            SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(seriesIndex),
+                            Size = PptxChartMarkerMetricRules.StyleLineMarkerSize,
+                        };
+                    }
+
+                    // RV04: style-18 marker outlines stroke the raw base at 1pt (Office emits
+                    // no luminance tint on marker rims); other styles keep the tinted 0.75pt rim.
+                    RgbColor markerOutline = defaultSeriesStroke
+                        ? (lineStyleSkipsUnstyledTint ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
+                        : stroke.Color;
+                    DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, marker, stroke.Color, markerOutline, lineStyleSkipsUnstyledTint ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null);
                 }
 
                 if (stroke.Alpha < 1d)
@@ -700,7 +718,7 @@ internal sealed partial class PptxRenderer
         DrawChartMarkerStroke(graphics, x, y, marker.SymbolKind, size, stroke);
     }
 
-    private static void DrawChartMarkerInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, ChartMarkerStyle marker, RgbColor defaultFill, RgbColor defaultStroke)
+    private static void DrawChartMarkerInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, ChartMarkerStyle marker, RgbColor defaultFill, RgbColor defaultStroke, double? markerOutlineWidth = null)
     {
         if (marker.SymbolKind == PptxSceneChartMarkerSymbol.None)
         {
@@ -711,7 +729,7 @@ internal sealed partial class PptxRenderer
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d, null, null);
         // Unstyled marker outlines default to round joins (Office marker forensics); explicitly
         // styled markers keep their DrawingML cap/join defaults.
-        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, markerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 };
         if (!IsLineOnlyChartMarker(marker.SymbolKind))
         {
             RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill));
