@@ -868,7 +868,7 @@ internal sealed partial class PptxRenderer
     // RV04: style-18 marker gradient fill: one axial shading per marker with Coords
     // spanning twice the marker height from its bottom edge, clipped to the marker
     // shape (Office paints PatternType-2 shadings over diamond/square/triangle/circle
-    // markers; star/dot and other symbols keep the flat path).
+    // and dot markers; stars keep the flat path until the asterisk-geometry slice).
     private static bool PaintStyleMarkerGradient(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxSceneChartMarkerSymbol symbol, double x, double y, double size, IReadOnlyList<PdfShadingStop> stops)
     {
         if (size <= 0d)
@@ -880,7 +880,8 @@ internal sealed partial class PptxRenderer
         if (symbol != PptxSceneChartMarkerSymbol.Diamond &&
             symbol != PptxSceneChartMarkerSymbol.Square &&
             symbol != PptxSceneChartMarkerSymbol.Triangle &&
-            symbol != PptxSceneChartMarkerSymbol.Circle)
+            symbol != PptxSceneChartMarkerSymbol.Circle &&
+            symbol != PptxSceneChartMarkerSymbol.Dot)
         {
             return false;
         }
@@ -892,7 +893,7 @@ internal sealed partial class PptxRenderer
             {
                 graphics.ClipRectangle(x - size / 2d, bottom, size, size);
             }
-            else if (symbol == PptxSceneChartMarkerSymbol.Circle)
+            else if (symbol == PptxSceneChartMarkerSymbol.Circle || symbol == PptxSceneChartMarkerSymbol.Dot)
             {
                 graphics.ClipEllipse(x - size / 2d, bottom, size, size);
             }
