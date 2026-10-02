@@ -170,10 +170,11 @@ internal sealed partial class PptxRenderer
                         };
                     }
 
-                    if ((chartStyleId == 26 || chartStyleId == 126) && !marker.IsDefined)
+                    if (chartStyleId == 26 || chartStyleId == 126)
                     {
-                        // RV04: style-26 draws no gallery markers (Office renders none with
-                        // plot marker=1 or none at all); series-explicit markers keep rendering.
+                        // RV04: style-26 draws no line markers at all (Office renders none
+                        // with plot marker=1, none, or series-explicit symbols); explicit
+                        // fill/line styling under style-26 stays unprobed.
                         continue;
                     }
 
@@ -843,8 +844,8 @@ internal sealed partial class PptxRenderer
 
     // RV04: style-18 marker gradient fill: one axial shading per marker with Coords
     // spanning twice the marker height from its bottom edge, clipped to the marker
-    // shape (Office paints PatternType-2 shadings over diamond/square/triangle
-    // markers; other symbols keep the flat path).
+    // shape (Office paints PatternType-2 shadings over diamond/square/triangle/circle
+    // markers; star/dot and other symbols keep the flat path).
     private static bool PaintStyleMarkerGradient(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxSceneChartMarkerSymbol symbol, double x, double y, double size, IReadOnlyList<PdfShadingStop> stops)
     {
         if (size <= 0d)
@@ -855,7 +856,8 @@ internal sealed partial class PptxRenderer
         double bottom = y - size / 2d;
         if (symbol != PptxSceneChartMarkerSymbol.Diamond &&
             symbol != PptxSceneChartMarkerSymbol.Square &&
-            symbol != PptxSceneChartMarkerSymbol.Triangle)
+            symbol != PptxSceneChartMarkerSymbol.Triangle &&
+            symbol != PptxSceneChartMarkerSymbol.Circle)
         {
             return false;
         }
@@ -866,6 +868,10 @@ internal sealed partial class PptxRenderer
             if (symbol == PptxSceneChartMarkerSymbol.Square)
             {
                 graphics.ClipRectangle(x - size / 2d, bottom, size, size);
+            }
+            else if (symbol == PptxSceneChartMarkerSymbol.Circle)
+            {
+                graphics.ClipEllipse(x - size / 2d, bottom, size, size);
             }
             else if (symbol == PptxSceneChartMarkerSymbol.Diamond)
             {
