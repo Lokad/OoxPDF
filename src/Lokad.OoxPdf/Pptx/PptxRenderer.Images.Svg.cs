@@ -90,6 +90,9 @@ internal sealed partial class PptxRenderer
         var missingGradients = new SortedSet<string>(StringComparer.Ordinal);
         int unpaintablePaths = 0;
         int unsupportedTransforms = 0;
+        int gradientStrokes = 0;
+        int unpaintableStrokes = 0;
+        int unsupportedStrokePresentations = 0;
         foreach (XElement path in svg.Descendants().Where(element => element.Name.LocalName == "path"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -108,7 +111,8 @@ internal sealed partial class PptxRenderer
             {
                 unsupportedCommands.Add(badCommand.Value);
             }
-            if (!TryReadSvgFill(path, gradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId))
+            bool hasFill = TryReadSvgFill(path, gradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId);
+            if (!hasFill)
             {
                 if (fillFailure == SvgFillFailure.UnresolvedGradient && gradientId is not null)
                 {
@@ -118,13 +122,37 @@ internal sealed partial class PptxRenderer
                 {
                     unpaintablePaths++;
                 }
+            }
+            SvgStroke stroke = ReadSvgStroke(path, out SvgStrokeFailure strokeFailure, out bool unsupportedStrokePresentation);
+            if (strokeFailure == SvgStrokeFailure.UnresolvedGradient)
+            {
+                gradientStrokes++;
+            }
+            else if (strokeFailure != SvgStrokeFailure.None)
+            {
+                unpaintableStrokes++;
+            }
+            if (stroke.HasPaint && unsupportedStrokePresentation)
+            {
+                unsupportedStrokePresentations++;
+            }
+            if (!hasFill && !stroke.HasPaint)
+            {
                 continue;
             }
+            double strokeScale = Math.Sqrt(Math.Abs(transform.M11 * transform.M22 - transform.M12 * transform.M21)) * (scaleX + scaleY) / 2d;
+            double strokeWidthPoints = Math.Max(0.001d, stroke.Width * strokeScale);
             if (paint.Gradient is { } gradient)
             {
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
                     RenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                    if (stroke.Color is { } gradientStrokeColor
+                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && badCommand is null)
+                    {
+                        unreadablePaths++;
+                    }
                 }
                 else if (badCommand is null)
                 {
@@ -133,29 +161,63 @@ internal sealed partial class PptxRenderer
             }
             else if (paint.Color is { } color)
             {
-                if (paint.Opacity < 1d)
+                if (stroke.Color is { } strokeColor)
                 {
-                    graphics.SaveState();
-                    graphics.SetAlpha(paint.Opacity, 1d);
+                    if (paint.Opacity < 1d || stroke.Opacity < 1d)
+                    {
+                        graphics.SaveState();
+                        graphics.SetAlpha(paint.Opacity, stroke.Opacity);
+                    }
+                    graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                    graphics.SetStrokeRgb(strokeColor.Red, strokeColor.Green, strokeColor.Blue);
+                    graphics.SetLineWidth(strokeWidthPoints);
+                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
+                    {
+                        graphics.FillAndStrokeCurrentPath();
+                    }
+                    else if (badCommand is null)
+                    {
+                        unreadablePaths++;
+                    }
+                    if (paint.Opacity < 1d || stroke.Opacity < 1d)
+                    {
+                        graphics.RestoreState();
+                    }
                 }
+                else
+                {
+                    if (paint.Opacity < 1d)
+                    {
+                        graphics.SaveState();
+                        graphics.SetAlpha(paint.Opacity, 1d);
+                    }
 
-                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-                if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
-                {
-                    graphics.FillCurrentPath();
+                    graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                    if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
+                    {
+                        graphics.FillCurrentPath();
+                    }
+                    else if (badCommand is null)
+                    {
+                        unreadablePaths++;
+                    }
+
+                    if (paint.Opacity < 1d)
+                    {
+                        graphics.RestoreState();
+                    }
                 }
-                else if (badCommand is null)
+            }
+            else if (stroke.Color is { } strokeOnlyColor)
+            {
+                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                    && badCommand is null)
                 {
                     unreadablePaths++;
                 }
-
-                if (paint.Opacity < 1d)
-                {
-                    graphics.RestoreState();
-                }
             }
         }
-        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, diagnosticSink, slideIndex, partName);
+        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, unsupportedStrokePresentations, diagnosticSink, slideIndex, partName);
 
         graphics.RestoreState();
     }
@@ -255,7 +317,7 @@ internal sealed partial class PptxRenderer
     {
         return "MLHVCZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
     }
-    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int unsupportedStrokePresentations, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
     {
         if (diagnosticSink is null)
         {
@@ -280,6 +342,18 @@ internal sealed partial class PptxRenderer
         if (unsupportedTransforms > 0)
         {
             EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unsupportedTransforms.ToString(CultureInfo.InvariantCulture) + " paths with unsupported transforms.");
+        }
+        if (gradientStrokes > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + gradientStrokes.ToString(CultureInfo.InvariantCulture) + " gradient path strokes.");
+        }
+        if (unpaintableStrokes > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unpaintableStrokes.ToString(CultureInfo.InvariantCulture) + " paths with unparsable stroke paint.");
+        }
+        if (unsupportedStrokePresentations > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture ignores dash/cap/join effects on " + unsupportedStrokePresentations.ToString(CultureInfo.InvariantCulture) + " stroked paths.");
         }
     }
     private static void EmitSvgWarning(Action<OoxPdfDiagnostic> diagnosticSink, int slideIndex, string? partName, string message)
@@ -574,10 +648,17 @@ internal sealed partial class PptxRenderer
             : (string?)path.Attribute("fill");
         double opacity = ReadSvgOpacityValue(style.TryGetValue("fill-opacity", out string? styleFillOpacity) ? styleFillOpacity : (string?)path.Attribute("fill-opacity"))
             * ReadSvgOpacityValue(style.TryGetValue("opacity", out string? styleOpacity) ? styleOpacity : (string?)path.Attribute("opacity"));
-        if (fill is null || fill.Equals("none", StringComparison.OrdinalIgnoreCase))
+        if (fill is null)
+        {
+            // SVG initial value: a path without fill paints black instead of vanishing.
+            paint = new SvgPaint(new RgbColor(0, 0, 0), null, opacity);
+            failure = SvgFillFailure.None;
+            return true;
+        }
+        if (fill.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             paint = default;
-            failure = style.Count > 0 ? SvgFillFailure.UnparsableColor : SvgFillFailure.None;
+            failure = SvgFillFailure.None;
             return false;
         }
         Match gradient = Regex.Match(fill, @"url\(#(?<id>[^)]+)\)");
@@ -605,6 +686,113 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
+    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity)
+    {
+        public bool HasPaint => Color is not null;
+    }
+    private enum SvgStrokeFailure
+    {
+        None,
+        UnresolvedGradient,
+        UnparsableColor,
+        UnparsableWidth
+    }
+    // RV07: solid strokes paint over any fill; gradient strokes, unparsable
+    // colors/widths and dash/cap/join effects diagnose instead of vanishing.
+    // Stroke widths are user units scaled by the path transform area scale
+    // and the viewBox mapping; non-uniform mappings stay approximate.
+    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool unsupportedPresentation)
+    {
+        failure = SvgStrokeFailure.None;
+        IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
+        string? strokePaint = ReadSvgPresentationAttribute(path, style, "stroke");
+        unsupportedPresentation = HasUnsupportedSvgStrokePresentation(path, style);
+        if (string.IsNullOrWhiteSpace(strokePaint) || strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return default;
+        }
+        double opacity = ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "stroke-opacity"))
+            * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
+        Match gradient = Regex.Match(strokePaint, @"url\(#(?<id>[^)]+)\)");
+        if (gradient.Success)
+        {
+            failure = SvgStrokeFailure.UnresolvedGradient;
+            return default;
+        }
+        if (!RgbColor.TryParse(strokePaint.TrimStart((char)35), out RgbColor color))
+        {
+            failure = SvgStrokeFailure.UnparsableColor;
+            return default;
+        }
+        if (!TryReadSvgStrokeWidth(style, path, out double width))
+        {
+            failure = SvgStrokeFailure.UnparsableWidth;
+            return default;
+        }
+        return new SvgStroke(color, width, opacity);
+    }
+    private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path, out double width)
+    {
+        width = 1d;
+        string? text = ReadSvgPresentationAttribute(path, style, "stroke-width");
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+        string trimmed = text.Trim();
+        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed.Substring(0, trimmed.Length - 2);
+        }
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && width >= 0d;
+    }
+    private static string? ReadSvgPresentationAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
+    {
+        if (style.TryGetValue(name, out string? styleValue) && !string.IsNullOrWhiteSpace(styleValue))
+        {
+            return styleValue;
+        }
+        return (string?)path.Attribute(name);
+    }
+    private static bool HasUnsupportedSvgStrokePresentation(XElement path, IReadOnlyDictionary<string, string> style)
+    {
+        string? dash = ReadSvgPresentationAttribute(path, style, "stroke-dasharray");
+        if (!string.IsNullOrWhiteSpace(dash) && !dash.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        string? cap = ReadSvgPresentationAttribute(path, style, "stroke-linecap");
+        if (!string.IsNullOrWhiteSpace(cap) && !cap.Trim().Equals("butt", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        string? join = ReadSvgPresentationAttribute(path, style, "stroke-linejoin");
+        if (!string.IsNullOrWhiteSpace(join) && !join.Trim().Equals("miter", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return !string.IsNullOrWhiteSpace(ReadSvgPresentationAttribute(path, style, "vector-effect"));
+    }
+    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    {
+        if (opacity < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, opacity);
+        }
+        graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+        graphics.SetLineWidth(widthPoints);
+        bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
+        if (painted)
+        {
+            graphics.StrokeCurrentPath();
+        }
+        if (opacity < 1d)
+        {
+            graphics.RestoreState();
+        }
+        return painted;
+    }
     private static RgbColor SampleSvgGradient(SvgGradient gradient, double x, double y)
     {
         double dx = gradient.X2 - gradient.X1;

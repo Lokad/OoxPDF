@@ -808,7 +808,7 @@ internal static class PptxImagesTests
         TestAssert.Contains("1 0 0 rg", pdf);
     }
 
-    // RV07: style-only paint that cannot render diagnoses instead of vanishing.
+    // RV07: style-only stroke diagnoses while the default black fill renders (the prior expectation pinned pre-stroke-support vanishing and was never Office-measured).
     public static void PptxSyntheticSvgStyleOnlyStrokeDiagnoses()
     {
         string input = WriteSvgGradientDeck("""
@@ -821,7 +821,113 @@ internal static class PptxImagesTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "Unusable style paint must diagnose.");
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\n0 g\n", pdf.Replace("\r\n", "\n"));
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)), "Unusable style stroke must diagnose.");
+    }
+    // RV07: stroked-only paths render their stroke instead of vanishing.
+    public static void PptxSyntheticSvgStrokedOnlyPathRendersStroke()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("1.44 w", pdf);
+        TestAssert.Contains("\nS\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: paths with both fill and stroke paint both.
+    public static void PptxSyntheticSvgFillAndStrokePathPaintsBoth()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#FF0000" stroke="#0000FF"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("0 0 1 RG", pdf);
+        TestAssert.Contains("\nB\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: stroke widths scale from user units to points with the viewBox mapping.
+    public static void PptxSyntheticSvgStrokeWidthScalesWithViewBox()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-width="2"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("2.88 w", pdf);
+    }
+
+    // RV07: a missing fill attribute defaults to black instead of vanishing the path.
+    public static void PptxSyntheticSvgMissingFillDefaultsToBlack()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" stroke="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\n0 g\n", pdf.Replace("\r\n", "\n"));
+        TestAssert.Contains("1 0 0 RG", pdf);
+    }
+
+    // RV07: gradient strokes diagnose while the fill still renders.
+    public static void PptxSyntheticSvgGradientStrokeDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#FF0000" stroke="url(#missing)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)), "Gradient strokes must diagnose.");
+    }
+
+    // RV07: dashed strokes diagnose and fall back to solid instead of vanishing.
+    public static void PptxSyntheticSvgDashedStrokeDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#FF0000" stroke="#FF0000" stroke-dasharray="4 2"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("dash", StringComparison.Ordinal)), "Dashed strokes must diagnose.");
     }
 
     // RV07: repeating gradients wrap strip offsets instead of clamping.
