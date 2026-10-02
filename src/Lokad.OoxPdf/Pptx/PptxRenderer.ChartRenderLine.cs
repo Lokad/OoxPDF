@@ -126,6 +126,7 @@ internal sealed partial class PptxRenderer
                 SetChartStroke(graphics, lineStroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
+                bool fragmentStartsAtGap = false;
                 for (int i = 0; i < values.Count; i++)
                 {
                     if (values[i] is not { } value)
@@ -138,8 +139,9 @@ internal sealed partial class PptxRenderer
                         {
                             if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
                             {
-                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, smoothCurve);
+                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, smoothCurve, fragmentStartsAtGap, true);
                                 points.Clear();
+                                fragmentStartsAtGap = true;
                             }
 
                             continue;
@@ -159,7 +161,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, smoothCurve);
+                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, smoothCurve, fragmentStartsAtGap, false);
 
                 foreach ((double pointX, double pointY) in markers)
                 {
@@ -282,12 +284,12 @@ internal sealed partial class PptxRenderer
             : ChartLineDefaultStrokeWidth;
     }
 
-    // RV04: style-18 implied smoothing: piecewise cubic Hermite through the data
-    // points with uniform-x third offsets, central-difference interior tangents and
-    // one-sided (chord) end tangents (COM-built style-18, style-26 and default-smooth
-    // decks: 30/30 segments predict the Office bezier controls within rounding; the legacy
-    // Catmull-Rom stays for scatter smooth paths only).
-    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    // RV04: smoothed series: piecewise cubic Hermite through the data points with uniform-x
+    // third offsets, central-difference interior tangents and one-sided (chord) end tangents
+    // (COM-built style-18, style-26 and default-smooth decks: 30/30 segments predict the
+    // Office bezier controls within rounding; gap-adjacent fragment ends halve their control
+    // offset (COM-built gap decks); the legacy Catmull-Rom stays for scatter smooth paths only).
+    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool startIsGap, bool endIsGap)
     {
         if (points.Count < 2)
         {
@@ -312,11 +314,13 @@ internal sealed partial class PptxRenderer
             double endSlope = i + 2 >= points.Count
                 ? (points[i + 1].Y - points[i].Y) / dx
                 : (points[i + 2].Y - points[i].Y) / endRun;
+            double startOffset = dx / (i == 0 && startIsGap ? 6d : 3d);
+            double endOffset = dx / (i + 2 >= points.Count && endIsGap ? 6d : 3d);
             graphics.CurveTo(
-                points[i].X + dx / 3d,
-                points[i].Y + dx / 3d * startSlope,
-                points[i + 1].X - dx / 3d,
-                points[i + 1].Y - dx / 3d * endSlope,
+                points[i].X + startOffset,
+                points[i].Y + startOffset * startSlope,
+                points[i + 1].X - endOffset,
+                points[i + 1].Y - endOffset * endSlope,
                 points[i + 1].X,
                 points[i + 1].Y);
         }
@@ -327,11 +331,11 @@ internal sealed partial class PptxRenderer
     // RV04: smoothed series routing: explicit, plot-wide and style-implied smoothing share
     // the end-chord Hermite path (Office draws identical beziers in all three cases);
     // an explicit smooth=false keeps the straight path.
-    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool smooth)
+    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool smooth, bool startIsGap, bool endIsGap)
     {
         if (smooth)
         {
-            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points));
+            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points, startIsGap, endIsGap));
         }
         else
         {
