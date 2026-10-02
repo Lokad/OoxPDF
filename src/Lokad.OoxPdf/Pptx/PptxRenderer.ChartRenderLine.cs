@@ -126,6 +126,12 @@ internal sealed partial class PptxRenderer
                 SetChartStroke(graphics, lineStroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
+                // RV04: span-mode smoothing halvings plus the category width (COM span decks:
+                // a chart-edge span start eases at a category third while span-adjacent
+                // interior controls sit at half a category width; gap/zero modes leave
+                // every flag false so their paths stay byte-identical).
+                var halvePoints = new List<bool>(values.Count);
+                double categoryWidth = plotWidth / Math.Max(1, pointCount);
                 bool fragmentStartsAtGap = false;
                 for (int i = 0; i < values.Count; i++)
                 {
@@ -139,8 +145,9 @@ internal sealed partial class PptxRenderer
                         {
                             if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
                             {
-                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, smoothCurve, fragmentStartsAtGap, true);
+                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, categoryWidth, smoothCurve, fragmentStartsAtGap, true);
                                 points.Clear();
+                                halvePoints.Clear();
                                 fragmentStartsAtGap = true;
                             }
 
@@ -155,13 +162,14 @@ internal sealed partial class PptxRenderer
                     double pointY = ChartValueToPlotCoordinate(valueExtents, plottedValue, plotY, plotHeight, valueAxisReversed);
                     points.Add((pointX, pointY));
                     markers.Add((pointX, pointY));
+                    halvePoints.Add(displayBlanksAs == PptxSceneChartDisplayBlanksAs.Span && ((i > 0 && values[i - 1] is null) || (i + 1 < values.Count && values[i + 1] is null)));
                     if (stacked)
                     {
                         lower[i] = plottedValue;
                     }
                 }
 
-                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, smoothCurve, fragmentStartsAtGap, false);
+                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, categoryWidth, smoothCurve, fragmentStartsAtGap, false);
 
                 foreach ((double pointX, double pointY) in markers)
                 {
@@ -288,8 +296,10 @@ internal sealed partial class PptxRenderer
     // third offsets, central-difference interior tangents and one-sided (chord) end tangents
     // (COM-built style-18, style-26 and default-smooth decks: 30/30 segments predict the
     // Office bezier controls within rounding; gap-adjacent fragment ends halve their control
-    // offset (COM-built gap decks); the legacy Catmull-Rom stays for scatter smooth paths only).
-    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool startIsGap, bool endIsGap)
+    // offset (COM-built gap decks); span-adjacent interior controls sit at half a category width
+    // with a chart-edge span start at a category third (COM-built span decks); the legacy
+    // Catmull-Rom stays for scatter smooth paths only).
+    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, IReadOnlyList<bool> halvePoints, double categoryWidth, bool startIsGap, bool endIsGap)
     {
         if (points.Count < 2)
         {
@@ -314,8 +324,12 @@ internal sealed partial class PptxRenderer
             double endSlope = i + 2 >= points.Count
                 ? (points[i + 1].Y - points[i].Y) / dx
                 : (points[i + 2].Y - points[i].Y) / endRun;
-            double startOffset = dx / (i == 0 && startIsGap ? 6d : 3d);
-            double endOffset = dx / (i + 2 >= points.Count && endIsGap ? 6d : 3d);
+            double startOffset = i == 0
+                ? startIsGap ? dx / 6d : halvePoints[i] ? categoryWidth / 3d : dx / 3d
+                : halvePoints[i] ? categoryWidth / 2d : dx / 3d;
+            double endOffset = i + 2 >= points.Count
+                ? endIsGap ? dx / 6d : dx / 3d
+                : halvePoints[i + 1] ? categoryWidth / 2d : dx / 3d;
             graphics.CurveTo(
                 points[i].X + startOffset,
                 points[i].Y + startOffset * startSlope,
@@ -331,11 +345,11 @@ internal sealed partial class PptxRenderer
     // RV04: smoothed series routing: explicit, plot-wide and style-implied smoothing share
     // the end-chord Hermite path (Office draws identical beziers in all three cases);
     // an explicit smooth=false keeps the straight path.
-    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool smooth, bool startIsGap, bool endIsGap)
+    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, IReadOnlyList<bool> halvePoints, double categoryWidth, bool smooth, bool startIsGap, bool endIsGap)
     {
         if (smooth)
         {
-            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points, startIsGap, endIsGap));
+            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points, halvePoints, categoryWidth, startIsGap, endIsGap));
         }
         else
         {
