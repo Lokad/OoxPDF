@@ -825,6 +825,7 @@ internal static class PptxImagesTests
         TestAssert.Contains("\n0 g\n", pdf.Replace("\r\n", "\n"));
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)), "Unusable style stroke must diagnose.");
     }
+
     // RV07: stroked-only paths render their stroke instead of vanishing.
     public static void PptxSyntheticSvgStrokedOnlyPathRendersStroke()
     {
@@ -928,6 +929,70 @@ internal static class PptxImagesTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("dash", StringComparison.Ordinal)), "Dashed strokes must diagnose.");
+    }
+
+    // RV07: group fills inherit into paths without their own fill.
+    public static void PptxSyntheticSvgGroupFillInheritsToPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <g fill="#00FF00"><path d="M0 0 H100 V50 H0 Z"/></g>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 1 0 rg", pdf);
+    }
+
+    // RV07: group strokes inherit into paths without their own stroke.
+    public static void PptxSyntheticSvgGroupStrokeInheritsToPath()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <g stroke="#0000FF"><path d="M0 0 H100 V50 H0 Z" fill="none"/></g>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 1 RG", pdf);
+    }
+
+    // RV07: element paint beats inherited paint (guard: cascade order never regresses).
+    public static void PptxSyntheticSvgSelfAttributeBeatsInheritedStyle()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <g style="fill:#00FF00"><path d="M0 0 H100 V50 H0 Z" fill="#FF0000"/></g>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
+    // RV07: stroke widths do not inherit from groups (SVG non-inherited property).
+    public static void PptxSyntheticSvgGroupStrokeWidthDoesNotInherit()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <g stroke-width="3"><path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000"/></g>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1.44 w", pdf);
     }
 
     // RV07: repeating gradients wrap strip offsets instead of clamping.

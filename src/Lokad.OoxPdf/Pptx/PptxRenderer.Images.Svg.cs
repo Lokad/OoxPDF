@@ -643,9 +643,7 @@ internal sealed partial class PptxRenderer
     {
         gradientId = null;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
-        string? fill = style.TryGetValue("fill", out string? styleFill) && !string.IsNullOrWhiteSpace(styleFill)
-            ? styleFill
-            : (string?)path.Attribute("fill");
+        string? fill = ReadSvgInheritedPaint(path, style, "fill");
         double opacity = ReadSvgOpacityValue(style.TryGetValue("fill-opacity", out string? styleFillOpacity) ? styleFillOpacity : (string?)path.Attribute("fill-opacity"))
             * ReadSvgOpacityValue(style.TryGetValue("opacity", out string? styleOpacity) ? styleOpacity : (string?)path.Attribute("opacity"));
         if (fill is null)
@@ -705,7 +703,7 @@ internal sealed partial class PptxRenderer
     {
         failure = SvgStrokeFailure.None;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
-        string? strokePaint = ReadSvgPresentationAttribute(path, style, "stroke");
+        string? strokePaint = ReadSvgInheritedPaint(path, style, "stroke");
         unsupportedPresentation = HasUnsupportedSvgStrokePresentation(path, style);
         if (string.IsNullOrWhiteSpace(strokePaint) || strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
@@ -745,6 +743,35 @@ internal sealed partial class PptxRenderer
             trimmed = trimmed.Substring(0, trimmed.Length - 2);
         }
         return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && width >= 0d;
+    }
+    // RV07: fill and stroke inherit through groups in cascade order (element
+    // style, element attribute, then each ancestor outward the same way).
+    // Widths, opacities and presentations stay element-local per SVG.
+    private static string? ReadSvgInheritedPaint(XElement path, IReadOnlyDictionary<string, string> style, string name)
+    {
+        if (style.TryGetValue(name, out string? styleValue) && !string.IsNullOrWhiteSpace(styleValue))
+        {
+            return styleValue;
+        }
+        string? attribute = (string?)path.Attribute(name);
+        if (!string.IsNullOrWhiteSpace(attribute))
+        {
+            return attribute;
+        }
+        foreach (XElement ancestor in path.Ancestors())
+        {
+            IReadOnlyDictionary<string, string> ancestorStyle = ReadSvgStyleDeclarations(ancestor);
+            if (ancestorStyle.TryGetValue(name, out string? ancestorStyleValue) && !string.IsNullOrWhiteSpace(ancestorStyleValue))
+            {
+                return ancestorStyleValue;
+            }
+            string? ancestorAttribute = (string?)ancestor.Attribute(name);
+            if (!string.IsNullOrWhiteSpace(ancestorAttribute))
+            {
+                return ancestorAttribute;
+            }
+        }
+        return null;
     }
     private static string? ReadSvgPresentationAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
