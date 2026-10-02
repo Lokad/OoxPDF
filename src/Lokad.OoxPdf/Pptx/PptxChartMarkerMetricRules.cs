@@ -26,6 +26,11 @@ internal static class PptxChartMarkerMetricRules
     // size is absolute, not plot-relative; symbol order follows the auto line order).
     public const double StyleLineMarkerSize = 12.96d;
     public const double StyleLineMarkerOutlineWidth = 1d;
+    // Smoothed default-style markers without marker markup draw flat at 9pt with raw
+    // 1pt rims (COM-built default-style smooth deck: squares measure 9.0; diamond and
+    // triangle paths measure 8.88, recorded as a watch item rather than a per-shape rule
+    // on single-deck evidence).
+    public const double SmoothLineMarkerSize = 9d;
     public const int DenseScatterMarkerMinimumPointCount = 6;
 
     public static PptxSceneChartMarkerSymbol ResolveForcedLineMarkerSymbol(int seriesIndex)

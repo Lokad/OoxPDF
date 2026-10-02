@@ -2314,6 +2314,129 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("ShadingType 2", pdf);
         TestAssert.DoesNotContain("0.082 0.376 0.51 rg", pdf);
     }
+    // RV04: explicit smooth series render the smoothed appearance package (Office
+    // draws raw strokes at 3pt with smoothed beziers and forced flat markers on
+    // the default-style smooth probe; this pins the raw/width operators while the
+    // marker test below pins the forced-marker geometry).
+    public static void LineSmoothSeriesStrokesRawThreePoint()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="1"/>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.082 0.376 0.51 RG", pdf);
+        TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"^3 w\r?$", RegexOptions.Multiline), "Expected a 3pt smoothed series stroke.");
+    }
+
+    // RV04: explicit smooth series force flat 9pt markers past marker=0 (Office
+    // draws 9pt flat markers with raw rims on the marker=0 smooth probe; the square
+    // series pins the 9pt geometry through its rectangle operator).
+    public static void LineSmoothSeriesForcesNinePointMarkers()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:marker val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="1"/>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="1"/>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("9 9 re", pdf);
+        TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
+    }
+    // RV04: plot-wide smoothing fallout (Office smooths every series when any series
+    // carries smooth=1, with markers on all of them; only the smoothed series is
+    // pinned here, the plot-wide behavior is covered by deck verification).
+    public static void LinePlotSmoothedAppliesPackagePlotWide()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="1"/>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(6, Regex.Matches(pdf, @"0\.082 0\.376 0\.51 RG|0\.914 0\.443 0\.196 RG").Count);
+        TestAssert.DoesNotContain("0.078 0.369 0.498 RG", pdf);
+        TestAssert.DoesNotContain("0.91 0.427 0.173 RG", pdf);
+    }
+
+    // RV04: an explicit smooth=false keeps the legacy straight package under a
+    // smoothed plot (explicit markup wins per series).
+    public static void LinePlotSmoothedKeepsExplicitStraightSeries()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="1"/>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                <c:smooth val="0"/>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(Regex.IsMatch(pdf, @"^2\.25 w\r?$", RegexOptions.Multiline), "The explicit-straight series keeps the default width.");
+        TestAssert.Contains("0.91 0.427 0.173 RG", pdf);
+    }
 
     // RV04: default-style line charts without marker markup still draw no markers.
     public static void DefaultStyleDrawsNoMarkersWithoutMarkup()
