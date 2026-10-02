@@ -911,8 +911,8 @@ internal static class PptxImagesTests
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)), "Gradient strokes must diagnose.");
     }
 
-    // RV07: dashed strokes diagnose and fall back to solid instead of vanishing.
-    public static void PptxSyntheticSvgDashedStrokeDiagnoses()
+    // RV07: dashed strokes render their pattern (second falsification: the diagnose-and-solid expectation pinned unmapped dashes and was never Office-measured).
+    public static void PptxSyntheticSvgDashedStrokeRendersDash()
     {
         string input = WriteSvgGradientDeck("""
             <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
@@ -926,7 +926,8 @@ internal static class PptxImagesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 RG", pdf);
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("dash", StringComparison.Ordinal)), "Dashed strokes must diagnose.");
+        TestAssert.Contains("[5.76 2.88 ] 0 d", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Mapped dashes must render without diagnostics.");
     }
 
     // RV07: group fills inherit into paths without their own fill.
@@ -1055,6 +1056,108 @@ internal static class PptxImagesTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable paint", StringComparison.Ordinal)), "Functional color must diagnose.");
+    }
+
+    // RV07: dashed strokes render their pattern instead of solid fallback.
+    public static void PptxSyntheticSvgDashedStrokeRendersDashPattern()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-dasharray="4 2"/>
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-dasharray="3"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("[5.76 2.88 ] 0 d", pdf);
+        TestAssert.Contains("[4.32 4.32 ] 0 d", pdf);
+    }
+
+    // RV07: round line caps map to PDF caps.
+    public static void PptxSyntheticSvgRoundLineCapRenders()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-linecap="round"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\n1 J\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: round line joins map to PDF joins.
+    public static void PptxSyntheticSvgRoundLineJoinRenders()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-linejoin="round"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\n1 j\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: dash offsets shift the pattern phase in points.
+    public static void PptxSyntheticSvgDashOffsetShiftsPhase()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-dasharray="4 2" stroke-dashoffset="1"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("[5.76 2.88 ] 1.44 d", pdf);
+    }
+
+    // RV07: invalid cap values diagnose and render butt instead of vanishing.
+    public static void PptxSyntheticSvgInvalidStrokePresentationDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-linecap="bogus"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("default stroke effects", StringComparison.Ordinal)), "Invalid stroke presentation must diagnose.");
+    }
+
+    // RV07: vector-effect diagnoses while the scaled stroke still renders.
+    public static void PptxSyntheticSvgVectorEffectDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" vector-effect="non-scaling-stroke"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("vector-effect", StringComparison.Ordinal)), "Vector effects must diagnose.");
     }
 
     // RV07: repeating gradients wrap strip offsets instead of clamping.

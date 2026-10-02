@@ -92,7 +92,8 @@ internal sealed partial class PptxRenderer
         int unsupportedTransforms = 0;
         int gradientStrokes = 0;
         int unpaintableStrokes = 0;
-        int unsupportedStrokePresentations = 0;
+        int invalidStrokePresentations = 0;
+        int vectorEffectStrokes = 0;
         foreach (XElement path in svg.Descendants().Where(element => element.Name.LocalName == "path"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -123,7 +124,7 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
-            SvgStroke stroke = ReadSvgStroke(path, out SvgStrokeFailure strokeFailure, out bool unsupportedStrokePresentation);
+            SvgStroke stroke = ReadSvgStroke(path, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect);
             if (strokeFailure == SvgStrokeFailure.UnresolvedGradient)
             {
                 gradientStrokes++;
@@ -132,9 +133,13 @@ internal sealed partial class PptxRenderer
             {
                 unpaintableStrokes++;
             }
-            if (stroke.HasPaint && unsupportedStrokePresentation)
+            if (stroke.HasPaint && invalidStrokePresentation)
             {
-                unsupportedStrokePresentations++;
+                invalidStrokePresentations++;
+            }
+            if (stroke.HasPaint && hasVectorEffect)
+            {
+                vectorEffectStrokes++;
             }
             if (!hasFill && !stroke.HasPaint)
             {
@@ -142,13 +147,24 @@ internal sealed partial class PptxRenderer
             }
             double strokeScale = Math.Sqrt(Math.Abs(transform.M11 * transform.M22 - transform.M12 * transform.M21)) * (scaleX + scaleY) / 2d;
             double strokeWidthPoints = Math.Max(0.001d, stroke.Width * strokeScale);
+            double[]? dashPoints = null;
+            double dashPhasePoints = 0d;
+            if (stroke.DashPattern is { } userDash)
+            {
+                dashPoints = new double[userDash.Length];
+                for (int dashIndex = 0; dashIndex < userDash.Length; dashIndex++)
+                {
+                    dashPoints[dashIndex] = userDash[dashIndex] * strokeScale;
+                }
+                dashPhasePoints = stroke.DashOffset * strokeScale;
+            }
             if (paint.Gradient is { } gradient)
             {
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
                     RenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                     if (stroke.Color is { } gradientStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -163,14 +179,31 @@ internal sealed partial class PptxRenderer
             {
                 if (stroke.Color is { } strokeColor)
                 {
-                    if (paint.Opacity < 1d || stroke.Opacity < 1d)
+                    bool transparent = paint.Opacity < 1d || stroke.Opacity < 1d;
+                    bool styled = stroke.HasStyledPresentation;
+                    if (transparent || styled)
                     {
                         graphics.SaveState();
+                    }
+                    if (transparent)
+                    {
                         graphics.SetAlpha(paint.Opacity, stroke.Opacity);
                     }
                     graphics.SetFillRgb(color.Red, color.Green, color.Blue);
                     graphics.SetStrokeRgb(strokeColor.Red, strokeColor.Green, strokeColor.Blue);
                     graphics.SetLineWidth(strokeWidthPoints);
+                    if (stroke.LineCap != 0)
+                    {
+                        graphics.SetLineCap(stroke.LineCap);
+                    }
+                    if (stroke.LineJoin != 0)
+                    {
+                        graphics.SetLineJoin(stroke.LineJoin);
+                    }
+                    if (dashPoints is not null)
+                    {
+                        graphics.SetLineDash(dashPoints, dashPhasePoints);
+                    }
                     if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                     {
                         graphics.FillAndStrokeCurrentPath();
@@ -179,7 +212,7 @@ internal sealed partial class PptxRenderer
                     {
                         unreadablePaths++;
                     }
-                    if (paint.Opacity < 1d || stroke.Opacity < 1d)
+                    if (transparent || styled)
                     {
                         graphics.RestoreState();
                     }
@@ -210,14 +243,14 @@ internal sealed partial class PptxRenderer
             }
             else if (stroke.Color is { } strokeOnlyColor)
             {
-                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                     && badCommand is null)
                 {
                     unreadablePaths++;
                 }
             }
         }
-        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, unsupportedStrokePresentations, diagnosticSink, slideIndex, partName);
+        ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, diagnosticSink, slideIndex, partName);
 
         graphics.RestoreState();
     }
@@ -317,7 +350,7 @@ internal sealed partial class PptxRenderer
     {
         return "MLHVCZ".IndexOf(char.ToUpperInvariant(command)) >= 0;
     }
-    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int unsupportedStrokePresentations, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    private static void ReportSkippedSvgPaths(SortedSet<char> unsupportedCommands, int unreadablePaths, SortedSet<string> missingGradients, int unpaintablePaths, int unsupportedTransforms, int gradientStrokes, int unpaintableStrokes, int invalidStrokePresentations, int vectorEffectStrokes, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
     {
         if (diagnosticSink is null)
         {
@@ -351,9 +384,13 @@ internal sealed partial class PptxRenderer
         {
             EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture omits " + unpaintableStrokes.ToString(CultureInfo.InvariantCulture) + " paths with unparsable stroke paint.");
         }
-        if (unsupportedStrokePresentations > 0)
+        if (invalidStrokePresentations > 0)
         {
-            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture ignores dash/cap/join effects on " + unsupportedStrokePresentations.ToString(CultureInfo.InvariantCulture) + " stroked paths.");
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture renders " + invalidStrokePresentations.ToString(CultureInfo.InvariantCulture) + " paths with default stroke effects for unparsable dash/cap/join values.");
+        }
+        if (vectorEffectStrokes > 0)
+        {
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture ignores vector-effect on " + vectorEffectStrokes.ToString(CultureInfo.InvariantCulture) + " stroked paths.");
         }
     }
     private static void EmitSvgWarning(Action<OoxPdfDiagnostic> diagnosticSink, int slideIndex, string? partName, string message)
@@ -684,9 +721,10 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity)
+    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset)
     {
         public bool HasPaint => Color is not null;
+        public bool HasStyledPresentation => DashPattern is not null || LineCap != 0 || LineJoin != 0;
     }
     private enum SvgStrokeFailure
     {
@@ -699,12 +737,13 @@ internal sealed partial class PptxRenderer
     // colors/widths and dash/cap/join effects diagnose instead of vanishing.
     // Stroke widths are user units scaled by the path transform area scale
     // and the viewBox mapping; non-uniform mappings stay approximate.
-    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool unsupportedPresentation)
+    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool invalidPresentation, out bool hasVectorEffect)
     {
         failure = SvgStrokeFailure.None;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
         string? strokePaint = ReadSvgInheritedPaint(path, style, "stroke");
-        unsupportedPresentation = HasUnsupportedSvgStrokePresentation(path, style);
+        invalidPresentation = false;
+        hasVectorEffect = !string.IsNullOrWhiteSpace(ReadSvgPresentationAttribute(path, style, "vector-effect"));
         if (string.IsNullOrWhiteSpace(strokePaint) || strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             return default;
@@ -727,7 +766,17 @@ internal sealed partial class PptxRenderer
             failure = SvgStrokeFailure.UnparsableWidth;
             return default;
         }
-        return new SvgStroke(color, width, opacity);
+        int lineCap = ReadSvgLineCap(ReadSvgPresentationAttribute(path, style, "stroke-linecap"), out bool capInvalid);
+        int lineJoin = ReadSvgLineJoin(ReadSvgPresentationAttribute(path, style, "stroke-linejoin"), out bool joinInvalid);
+        double[]? dash = ReadSvgDashPattern(ReadSvgPresentationAttribute(path, style, "stroke-dasharray"), out bool dashInvalid);
+        double offset = 0d;
+        if (dash is not null && !TryReadSvgStrokeOffset(ReadSvgPresentationAttribute(path, style, "stroke-dashoffset"), out offset))
+        {
+            dash = null;
+            dashInvalid = true;
+        }
+        invalidPresentation = capInvalid || joinInvalid || dashInvalid;
+        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset);
     }
     private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path, out double width)
     {
@@ -781,40 +830,137 @@ internal sealed partial class PptxRenderer
         }
         return (string?)path.Attribute(name);
     }
-    private static bool HasUnsupportedSvgStrokePresentation(XElement path, IReadOnlyDictionary<string, string> style)
+    private static int ReadSvgLineCap(string? value, out bool invalid)
     {
-        string? dash = ReadSvgPresentationAttribute(path, style, "stroke-dasharray");
-        if (!string.IsNullOrWhiteSpace(dash) && !dash.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
+        invalid = false;
+        if (string.IsNullOrWhiteSpace(value))
         {
-            return true;
+            return 0;
         }
-        string? cap = ReadSvgPresentationAttribute(path, style, "stroke-linecap");
-        if (!string.IsNullOrWhiteSpace(cap) && !cap.Trim().Equals("butt", StringComparison.OrdinalIgnoreCase))
+        string trimmed = value.Trim();
+        if (trimmed.Equals("butt", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return 0;
         }
-        string? join = ReadSvgPresentationAttribute(path, style, "stroke-linejoin");
-        if (!string.IsNullOrWhiteSpace(join) && !join.Trim().Equals("miter", StringComparison.OrdinalIgnoreCase))
+        if (trimmed.Equals("round", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return 1;
         }
-        return !string.IsNullOrWhiteSpace(ReadSvgPresentationAttribute(path, style, "vector-effect"));
+        if (trimmed.Equals("square", StringComparison.OrdinalIgnoreCase))
+        {
+            return 2;
+        }
+        invalid = true;
+        return 0;
     }
-    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    private static int ReadSvgLineJoin(string? value, out bool invalid)
     {
-        if (opacity < 1d)
+        invalid = false;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return 0;
+        }
+        string trimmed = value.Trim();
+        if (trimmed.Equals("miter", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+        if (trimmed.Equals("round", StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+        if (trimmed.Equals("bevel", StringComparison.OrdinalIgnoreCase))
+        {
+            return 2;
+        }
+        invalid = true;
+        return 0;
+    }
+    // RV07: dash patterns scale like widths at emission; an odd count doubles
+    // per SVG and an all-zero pattern means solid. Percentages stay diagnosed.
+    private static double[]? ReadSvgDashPattern(string? text, out bool invalid)
+    {
+        invalid = false;
+        if (string.IsNullOrWhiteSpace(text) || text.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+        string[] parts = text.Replace(",", " ").Split((char)32, StringSplitOptions.RemoveEmptyEntries);
+        var lengths = new List<double>();
+        foreach (string part in parts)
+        {
+            string item = part.Trim();
+            if (item.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+            {
+                item = item.Substring(0, item.Length - 2);
+            }
+            if (!double.TryParse(item, NumberStyles.Float, CultureInfo.InvariantCulture, out double length) || length < 0d)
+            {
+                invalid = true;
+                return null;
+            }
+            lengths.Add(length);
+        }
+        if (lengths.Count == 0)
+        {
+            invalid = true;
+            return null;
+        }
+        if (lengths.TrueForAll(length => length == 0d))
+        {
+            return null;
+        }
+        if (lengths.Count % 2 == 1)
+        {
+            lengths.AddRange(lengths.ToArray());
+        }
+        return lengths.ToArray();
+    }
+    private static bool TryReadSvgStrokeOffset(string? text, out double offset)
+    {
+        offset = 0d;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+        string trimmed = text.Trim();
+        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed.Substring(0, trimmed.Length - 2);
+        }
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out offset);
+    }
+    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    {
+        bool styled = dashPoints is not null || lineCap != 0 || lineJoin != 0;
+        if (opacity < 1d || styled)
         {
             graphics.SaveState();
+        }
+        if (opacity < 1d)
+        {
             graphics.SetAlpha(1d, opacity);
         }
         graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
         graphics.SetLineWidth(widthPoints);
+        if (lineCap != 0)
+        {
+            graphics.SetLineCap(lineCap);
+        }
+        if (lineJoin != 0)
+        {
+            graphics.SetLineJoin(lineJoin);
+        }
+        if (dashPoints is not null)
+        {
+            graphics.SetLineDash(dashPoints, dashPhasePoints);
+        }
         bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
         if (painted)
         {
             graphics.StrokeCurrentPath();
         }
-        if (opacity < 1d)
+        if (opacity < 1d || styled)
         {
             graphics.RestoreState();
         }
