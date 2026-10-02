@@ -155,7 +155,6 @@ internal sealed partial class PptxSceneBuilder
             marker is not null,
             marker?.Element(ChartNamespace + "spPr") is not null,
             scatterPointCount,
-            ParseChartMarkerSymbol(symbol),
             marker?.Element(ChartNamespace + "symbol") is not null);
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
         PptxSceneFillStyle fill = PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)

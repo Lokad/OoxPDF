@@ -2533,6 +2533,47 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("1 0 0 RG", pdf);
     }
 
+    // RV04: explicit plus/square markers without a size element draw at the nominal
+    // size-5 geometry like dots and stars (Office paints no-size plus diameters and
+    // square boxes at 5.04; the 0.04 residual is the shared geometry-rule domain).
+    public static void LineExplicitPlusSquareWithoutSizeDrawNominalFive()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", ThemedBarChartPackage("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+              <c:grouping val="standard"/>
+              <c:varyColors val="0"/>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                <c:marker><c:symbol val="plus"/></c:marker>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:ser>
+                <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                <c:marker><c:symbol val="square"/></c:marker>
+                <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+              </c:ser>
+              <c:axId val="10"/><c:axId val="20"/>
+            </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea></c:chart></c:chartSpace>
+            """));
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(input, output);
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("5 5 re", pdf);
+        bool hasFivePointVertical = false;
+        foreach (Match m in Regex.Matches(pdf, @"^([\d.]+) ([\d.]+) m \1 ([\d.]+) l S\r?$", RegexOptions.Multiline))
+        {
+            double y1 = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+            double y2 = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
+            if (Math.Abs(Math.Abs(y2 - y1) - 5d) < 0.001d)
+            {
+                hasFivePointVertical = true;
+            }
+        }
+        TestAssert.True(hasFivePointVertical, "Expected a 5pt vertical plus diameter.");
+    }
     // RV04: explicit marker fills win over gallery legend gradients (Office paints
     // a red flat circle for a red-filled marker key under style-26 while the other keys
     // keep their pattern fills; characterization pin of already-correct behavior).
