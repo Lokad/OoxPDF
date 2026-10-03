@@ -591,6 +591,7 @@ internal sealed partial class PptxRenderer
                 .Elements()
                 .Where(element => element.Name.LocalName == "stop")
                 .Select(ReadSvgGradientStop)
+                .Where(stop => !double.IsNaN(stop.Offset))
                 // RV07: a missing stop-color defaults to black (PowerPoint normalizes black
                 // stops by dropping the attribute); present-but-unparseable colors still filter out.
                 .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
@@ -608,20 +609,17 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                (double rawX1, double rawY1) = gradientTransform.Apply(
-                    ReadSvgDoubleAttribute(gradient, "x1", 0d),
-                    ReadSvgDoubleAttribute(gradient, "y1", 0d));
-                (double rawX2, double rawY2) = gradientTransform.Apply(
-                    ReadSvgDoubleAttribute(gradient, "x2", 1d),
-                    ReadSvgDoubleAttribute(gradient, "y2", 0d));
-                gradients[id] = new SvgGradient(
-                    rawX1,
-                    rawY1,
-                    rawX2,
-                    rawY2,
-                    stops,
-                    string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal),
-                    ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
+                bool linearUserSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
+                if (!TryReadSvgGradientCoordinate(gradient, "x1", 0d, !linearUserSpace, out double x1)
+                    || !TryReadSvgGradientCoordinate(gradient, "y1", 0d, !linearUserSpace, out double y1)
+                    || !TryReadSvgGradientCoordinate(gradient, "x2", 1d, !linearUserSpace, out double x2)
+                    || !TryReadSvgGradientCoordinate(gradient, "y2", 0d, !linearUserSpace, out double y2))
+                {
+                    continue;
+                }
+                (double rawX1, double rawY1) = gradientTransform.Apply(x1, y1);
+                (double rawX2, double rawY2) = gradientTransform.Apply(x2, y2);
+                gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
             }
         }
 
@@ -643,12 +641,17 @@ internal sealed partial class PptxRenderer
         }
 
         string trimmed = value.Trim();
-        if (trimmed.EndsWith("%", StringComparison.Ordinal))
+        if (trimmed.EndsWith("%", StringComparison.Ordinal)
+            && double.TryParse(trimmed[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
         {
-            return Math.Clamp(double.Parse(trimmed[..^1], CultureInfo.InvariantCulture) / 100d, 0d, 1d);
+            return Math.Clamp(percent / 100d, 0d, 1d);
         }
 
-        return Math.Clamp(double.Parse(trimmed, CultureInfo.InvariantCulture), 0d, 1d);
+        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double offset))
+        {
+            return Math.Clamp(offset, 0d, 1d);
+        }
+        return double.NaN;
     }
 
     // RV07: reflect and repeat tile the gradient vector; unknown methods pad.
@@ -662,12 +665,32 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double ReadSvgDoubleAttribute(XElement element, string name, double fallback)
+    // RV07: gradient coordinates resolve percentages as fractions in bounding
+    // boxes (spec-exact); user-space percentages and garbage skip the gradient
+    // so referencing paths diagnose instead of dropping the whole picture.
+    private static bool TryReadSvgGradientCoordinate(XElement gradient, string name, double fallback, bool percentAsFraction, out double value)
     {
-        string? value = (string?)element.Attribute(name);
-        return string.IsNullOrWhiteSpace(value)
-            ? fallback
-            : double.Parse(value, CultureInfo.InvariantCulture);
+        value = fallback;
+        string? text = (string?)gradient.Attribute(name);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+        string trimmed = text.Trim();
+        if (trimmed.EndsWith("%", StringComparison.Ordinal))
+        {
+            if (!percentAsFraction)
+            {
+                return false;
+            }
+            if (double.TryParse(trimmed[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
+            {
+                value = percent / 100d;
+                return true;
+            }
+            return false;
+        }
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 
     // RV07: CSS style declarations override presentation attributes; opacity
@@ -1044,6 +1067,7 @@ internal sealed partial class PptxRenderer
                 .Elements()
                 .Where(element => element.Name.LocalName == "stop")
                 .Select(ReadSvgGradientStop)
+                .Where(stop => !double.IsNaN(stop.Offset))
                 .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
                 .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0)))
                 .OrderBy(stop => stop.Offset)
@@ -1057,15 +1081,25 @@ internal sealed partial class PptxRenderer
                 continue;
             }
             bool userSpace = string.Equals((string?)gradient.Attribute("gradientUnits"), "userSpaceOnUse", StringComparison.Ordinal);
-            double cx = ReadSvgDoubleAttribute(gradient, "cx", 0.5d);
-            double cy = ReadSvgDoubleAttribute(gradient, "cy", 0.5d);
-            double radius = ReadSvgDoubleAttribute(gradient, "r", 0.5d);
+            if (!TryReadSvgGradientCoordinate(gradient, "cx", 0.5d, !userSpace, out double cx)
+                || !TryReadSvgGradientCoordinate(gradient, "cy", 0.5d, !userSpace, out double cy)
+                || !TryReadSvgGradientCoordinate(gradient, "r", 0.5d, !userSpace, out double radius))
+            {
+                continue;
+            }
             if (radius <= 0d)
             {
                 continue;
             }
-            double fx = ReadSvgDoubleAttribute(gradient, "fx", cx);
-            double fy = ReadSvgDoubleAttribute(gradient, "fy", cy);
+            double fx = cx;
+            double fy = cy;
+            string? fxText = (string?)gradient.Attribute("fx");
+            string? fyText = (string?)gradient.Attribute("fy");
+            if ((fxText is not null && !TryReadSvgGradientCoordinate(gradient, "fx", cx, !userSpace, out fx))
+                || (fyText is not null && !TryReadSvgGradientCoordinate(gradient, "fy", cy, !userSpace, out fy)))
+            {
+                continue;
+            }
             (double rawCx, double rawCy) = gradientTransform.Apply(cx, cy);
             double rawRadius = radius;
             if (userSpace)

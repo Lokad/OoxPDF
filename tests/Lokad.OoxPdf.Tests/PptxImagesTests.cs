@@ -1235,6 +1235,92 @@ internal static class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
     }
 
+    // RV07: garbage gradient vectors diagnose instead of killing conversion.
+    public static void PptxSyntheticSvgGarbageGradientVectorDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <defs><linearGradient id="g" x1="bogus" x2="1"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Garbage gradient vectors must diagnose.");
+    }
+
+    // RV07: percentage gradient vectors resolve as fractions in bounding boxes.
+    public static void PptxSyntheticSvgPercentGradientVectorRenders()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <defs><linearGradient id="g" x1="0%" y1="0" x2="100%" y2="0"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains(" rg", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Percentage vectors must resolve.");
+    }
+
+    // RV07: percentage vectors in user space diagnose instead of killing conversion.
+    public static void PptxSyntheticSvgUserSpacePercentVectorDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="50%" y2="0"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></linearGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "User-space percentages must diagnose.");
+    }
+
+    // RV07: garbage opacities fall back to opaque instead of killing conversion.
+    public static void PptxSyntheticSvgGarbageOpacityFallsBack()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0H100V50H0Z" fill="#FF0000" opacity="bogus%"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
+    // RV07: garbage stop offsets drop the stop instead of killing conversion.
+    public static void PptxSyntheticSvgGarbageStopOffsetDropsStop()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FF0000"/><stop offset="bogus" stop-color="#0000FF"/></linearGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+    }
+
     // RV07: dashed strokes render their pattern instead of solid fallback.
     public static void PptxSyntheticSvgDashedStrokeRendersDashPattern()
     {

@@ -98,7 +98,7 @@ internal static class PptxCompositionTests
 
     }
 
-    public static void PptxMalformedSvgPictureEmitsNodeDiagnosticAndKeepsSiblings()
+    public static void PptxGarbageGradientVectorDiagnosesAndKeepsSiblings()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -162,11 +162,16 @@ internal static class PptxCompositionTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 0 rg", pdf);
+        // Garbage gradient vectors skip the gradient (consistent with unparseable
+        // gradientTransform handling) so the referencing path diagnoses instead of
+        // failing the whole picture node; previously x1="bad" threw FormatException
+        // out of the node.
         TestAssert.True(
-            diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED" && d.Feature == "Picture"),
-            "Malformed SVG picture rendering should emit a node-level diagnostic.");
-        OoxPdfDiagnostic node = diagnostics.First(d => d.Id == "PPTX_NODE_RENDER_FAILED");
-        TestAssert.Contains("Cause:", node.Message);
+            diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)),
+            "Garbage gradient vectors must diagnose as unresolvable.");
+        TestAssert.True(
+            !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
+            "Graceful gradient fallback must not fail the picture node.");
     }
 
     public static void PruneUnreferencedResourcesDropsOrphans()
@@ -193,7 +198,7 @@ internal static class PptxCompositionTests
         TestAssert.True(ReferenceEquals(all, PptxRenderer.PruneUnreferencedImages("/Im1 Do", all)), "Fully referenced lists must pass through untouched.");
     }
 
-    public static void PptxGroupHyperlinkSurvivesFailingChildRollback()
+    public static void PptxGroupHyperlinkSurvivesDiagnosedChildFallback()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -262,10 +267,11 @@ internal static class PptxCompositionTests
         PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
         TestAssert.Equal("https://example.invalid/group", annotation.Uri);
         TestAssert.True(
-            diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED" && d.Feature == "Picture"),
-            "Malformed SVG picture rendering should emit a node-level diagnostic.");
-        OoxPdfDiagnostic node = diagnostics.First(d => d.Id == "PPTX_NODE_RENDER_FAILED");
-        TestAssert.Contains("Cause:", node.Message);
+            diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)),
+            "Garbage gradient vectors must diagnose as unresolvable.");
+        TestAssert.True(
+            !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
+            "Graceful gradient fallback must not fail the picture node.");
     }
 
     public static void PptxSyntheticSlideShapesRenderAbovePictures()
