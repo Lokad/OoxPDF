@@ -126,7 +126,7 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
-            SvgStroke stroke = ReadSvgStroke(element, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect);
+            SvgStroke stroke = ReadSvgStroke(element, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
             if (strokeFailure == SvgStrokeFailure.UnresolvedGradient)
             {
                 gradientStrokes++;
@@ -148,7 +148,8 @@ internal sealed partial class PptxRenderer
                 continue;
             }
             bool evenOddFill = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "fill-rule")?.Trim().Equals("evenodd", StringComparison.OrdinalIgnoreCase) == true;
-            double strokeScale = Math.Sqrt(Math.Abs(transform.M11 * transform.M22 - transform.M12 * transform.M21)) * (scaleX + scaleY) / 2d;
+            double viewportScale = (scaleX + scaleY) / 2d;
+            double strokeScale = nonScalingStroke ? viewportScale : Math.Sqrt(Math.Abs(transform.M11 * transform.M22 - transform.M12 * transform.M21)) * viewportScale;
             double strokeWidthPoints = Math.Max(0.001d, stroke.Width * strokeScale);
             double[]? dashPoints = null;
             double dashPhasePoints = 0d;
@@ -806,13 +807,17 @@ internal sealed partial class PptxRenderer
     // colors/widths and dash/cap/join effects diagnose instead of vanishing.
     // Stroke widths are user units scaled by the path transform area scale
     // and the viewBox mapping; non-uniform mappings stay approximate.
-    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool invalidPresentation, out bool hasVectorEffect)
+    // vector-effect=non-scaling-stroke skips the element-transform factor;
+    // any other effect value stays diagnosed with the scaled stroke.
+    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
     {
         failure = SvgStrokeFailure.None;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
         string? strokePaint = ReadSvgInheritedAttribute(path, style, "stroke");
         invalidPresentation = false;
-        hasVectorEffect = !string.IsNullOrWhiteSpace(ReadSvgPresentationAttribute(path, style, "vector-effect"));
+        string? vectorEffect = ReadSvgPresentationAttribute(path, style, "vector-effect");
+        nonScalingStroke = vectorEffect?.Trim().Equals("non-scaling-stroke", StringComparison.OrdinalIgnoreCase) == true;
+        hasVectorEffect = !nonScalingStroke && !string.IsNullOrWhiteSpace(vectorEffect);
         if (string.IsNullOrWhiteSpace(strokePaint) || strokePaint.Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             return default;

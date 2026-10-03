@@ -1405,12 +1405,29 @@ internal static class PptxImagesTests
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("default stroke effects", StringComparison.Ordinal)), "Invalid stroke presentation must diagnose.");
     }
 
-    // RV07: vector-effect diagnoses while the scaled stroke still renders.
-    public static void PptxSyntheticSvgVectorEffectDiagnoses()
+    // RV07: scaled strokes without vector-effect keep the element-transform scale.
+    public static void PptxSyntheticSvgScaledStrokeWithoutVectorEffectKeepsTransformScale()
     {
         string input = WriteSvgGradientDeck("""
             <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" vector-effect="non-scaling-stroke"/>
+              <path d="M0 0 H25 V12.5 H0 Z" fill="none" stroke="#FF0000" stroke-width="2" transform="scale(4)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("11.52 w", pdf);
+    }
+
+    // RV07: non-scaling-stroke keeps the untransformed stroke width.
+    public static void PptxSyntheticSvgNonScalingStrokeIgnoresElementTransform()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H25 V12.5 H0 Z" fill="none" stroke="#FF0000" stroke-width="2" transform="scale(4)" vector-effect="non-scaling-stroke"/>
             </svg>
             """);
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -1420,7 +1437,26 @@ internal static class PptxImagesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 RG", pdf);
-        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("vector-effect", StringComparison.Ordinal)), "Vector effects must diagnose.");
+        TestAssert.Contains("2.88 w", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("vector-effect", StringComparison.Ordinal)), "Honored non-scaling-stroke must not diagnose.");
+    }
+
+    // RV07: unknown vector-effect values diagnose while the scaled stroke still renders.
+    public static void PptxSyntheticSvgUnknownVectorEffectDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" vector-effect="bogus-effect"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("vector-effect", StringComparison.Ordinal)), "Unknown vector effects must diagnose.");
     }
 
     // RV07: miter joins emit the SVG default miter limit instead of the PDF default.
