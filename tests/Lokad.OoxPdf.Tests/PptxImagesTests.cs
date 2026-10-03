@@ -1337,6 +1337,57 @@ internal static class PptxImagesTests
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("vector-effect", StringComparison.Ordinal)), "Vector effects must diagnose.");
     }
 
+    // RV07: miter joins emit the SVG default miter limit instead of the PDF default.
+    public static void PptxSyntheticSvgMiterJoinEmitsDefaultMiterLimit()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\n4 M\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: explicit miter limits map to PDF miter limits.
+    public static void PptxSyntheticSvgExplicitMiterLimitMaps()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-miterlimit="2"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("\n2 M\n", pdf.Replace("\r\n", "\n"));
+    }
+
+    // RV07: invalid miter limits diagnose and render the default.
+    public static void PptxSyntheticSvgInvalidMiterLimitDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-miterlimit="bogus"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("\n4 M\n", pdf.Replace("\r\n", "\n"));
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("miter", StringComparison.Ordinal)), "Invalid miter limits must diagnose.");
+    }
+
     // RV07: repeating gradients wrap strip offsets instead of clamping.
     public static void PptxSyntheticSvgRepeatSpreadWrapsStripOffsets()
     {

@@ -96,6 +96,11 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(lineJoin.ToString(CultureInfo.InvariantCulture)).AppendLine(" j");
     }
 
+    public void SetMiterLimit(double miterLimit)
+    {
+        builder.Append(PdfDocumentWriter.FormatNumber(miterLimit)).AppendLine(" M");
+    }
+
     public void SaveState()
     {
         builder.AppendLine("q");

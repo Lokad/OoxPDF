@@ -171,7 +171,7 @@ internal sealed partial class PptxRenderer
                 {
                     RenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                     if (stroke.Color is { } radialStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && !TryPaintSvgStrokePath(graphics, data, transform, radialStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -188,7 +188,7 @@ internal sealed partial class PptxRenderer
                 {
                     RenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
                     if (stroke.Color is { } gradientStrokeColor
-                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                        && !TryPaintSvgStrokePath(graphics, data, transform, gradientStrokeColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                         && badCommand is null)
                     {
                         unreadablePaths++;
@@ -204,11 +204,7 @@ internal sealed partial class PptxRenderer
                 if (stroke.Color is { } strokeColor)
                 {
                     bool transparent = paint.Opacity < 1d || stroke.Opacity < 1d;
-                    bool styled = stroke.HasStyledPresentation;
-                    if (transparent || styled)
-                    {
-                        graphics.SaveState();
-                    }
+                    graphics.SaveState();
                     if (transparent)
                     {
                         graphics.SetAlpha(paint.Opacity, stroke.Opacity);
@@ -228,6 +224,10 @@ internal sealed partial class PptxRenderer
                     {
                         graphics.SetLineDash(dashPoints, dashPhasePoints);
                     }
+                    if (stroke.LineJoin == 0)
+                    {
+                        graphics.SetMiterLimit(stroke.MiterLimit);
+                    }
                     if (TryAppendSvgPath(graphics, data, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
                     {
                         if (evenOddFill)
@@ -243,10 +243,7 @@ internal sealed partial class PptxRenderer
                     {
                         unreadablePaths++;
                     }
-                    if (transparent || styled)
-                    {
-                        graphics.RestoreState();
-                    }
+                    graphics.RestoreState();
                 }
                 else
                 {
@@ -281,7 +278,7 @@ internal sealed partial class PptxRenderer
             }
             else if (stroke.Color is { } strokeOnlyColor)
             {
-                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
+                if (!TryPaintSvgStrokePath(graphics, data, transform, strokeOnlyColor, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY)
                     && badCommand is null)
                 {
                     unreadablePaths++;
@@ -424,7 +421,7 @@ internal sealed partial class PptxRenderer
         }
         if (invalidStrokePresentations > 0)
         {
-            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture renders " + invalidStrokePresentations.ToString(CultureInfo.InvariantCulture) + " paths with default stroke effects for unparsable dash/cap/join values.");
+            EmitSvgWarning(diagnosticSink, slideIndex, partName, "SVG picture renders " + invalidStrokePresentations.ToString(CultureInfo.InvariantCulture) + " paths with default stroke effects for unparsable dash/cap/join/miter values.");
         }
         if (focalRadialGradients > 0)
         {
@@ -771,10 +768,9 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset)
+    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset, double MiterLimit)
     {
         public bool HasPaint => Color is not null;
-        public bool HasStyledPresentation => DashPattern is not null || LineCap != 0 || LineJoin != 0;
     }
     private enum SvgStrokeFailure
     {
@@ -826,7 +822,13 @@ internal sealed partial class PptxRenderer
             dashInvalid = true;
         }
         invalidPresentation = capInvalid || joinInvalid || dashInvalid;
-        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset);
+        double miterLimit = 4d;
+        if (!TryReadSvgMiterLimit(ReadSvgPresentationAttribute(path, style, "stroke-miterlimit"), out miterLimit))
+        {
+            invalidPresentation = true;
+            miterLimit = 4d;
+        }
+        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit);
     }
     private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path, out double width)
     {
@@ -966,6 +968,22 @@ internal sealed partial class PptxRenderer
         }
         return lengths.ToArray();
     }
+    // RV07: miter limits below 1 are invalid per SVG; the limit only shapes
+    // miter joins, so other joins never emit it.
+    private static bool TryReadSvgMiterLimit(string? text, out double miterLimit)
+    {
+        miterLimit = 4d;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+        string trimmed = text.Trim();
+        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed.Substring(0, trimmed.Length - 2);
+        }
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out miterLimit) && miterLimit >= 1d;
+    }
     private static bool TryReadSvgStrokeOffset(string? text, out double offset)
     {
         offset = 0d;
@@ -980,13 +998,9 @@ internal sealed partial class PptxRenderer
         }
         return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out offset);
     }
-    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
-        bool styled = dashPoints is not null || lineCap != 0 || lineJoin != 0;
-        if (opacity < 1d || styled)
-        {
-            graphics.SaveState();
-        }
+        graphics.SaveState();
         if (opacity < 1d)
         {
             graphics.SetAlpha(1d, opacity);
@@ -1005,15 +1019,16 @@ internal sealed partial class PptxRenderer
         {
             graphics.SetLineDash(dashPoints, dashPhasePoints);
         }
+        if (lineJoin == 0)
+        {
+            graphics.SetMiterLimit(miterLimit);
+        }
         bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
         if (painted)
         {
             graphics.StrokeCurrentPath();
         }
-        if (opacity < 1d || styled)
-        {
-            graphics.RestoreState();
-        }
+        graphics.RestoreState();
         return painted;
     }
     // RV07: radial gradients paint concentric ellipse rings, largest first.
