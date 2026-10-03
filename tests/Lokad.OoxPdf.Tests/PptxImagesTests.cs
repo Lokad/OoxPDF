@@ -1459,6 +1459,240 @@ internal static class PptxImagesTests
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("vector-effect", StringComparison.Ordinal)), "Unknown vector effects must diagnose.");
     }
 
+    // RV07: out-of-range path coordinates keep the sibling picture instead of dropping it.
+    public static void PptxSyntheticSvgHugePathCoordinateKeepsSiblingPicture()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H1e999 V50 H0 Z" fill="#0000FF"/>
+              <path d="M50 0 H100 V50 H50 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range coordinates must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range viewBox dimensions diagnose as unusable instead of dropping the picture.
+    public static void PptxSyntheticSvgHugeViewBoxDiagnosesUnusable()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 1e999 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("no usable viewBox", StringComparison.Ordinal)), "Out-of-range viewBox must diagnose as unusable.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range viewBox must not drop the picture through node recovery.");
+    }
+
+    // RV07: subnormal viewBox dimensions overflow the picture scale and diagnose as unusable.
+    public static void PptxSyntheticSvgTinyViewBoxDiagnosesUnusable()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 1e-320 1e-320" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("no usable viewBox", StringComparison.Ordinal)), "Overflowing picture scale must diagnose as unusable.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Overflowing picture scale must not drop the picture through node recovery.");
+    }
+
+    // RV07: out-of-range stroke widths diagnose as unparsable while the fill still paints.
+    public static void PptxSyntheticSvgHugeStrokeWidthDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="#FF0000" stroke="#FF0000" stroke-width="1e999"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable stroke paint", StringComparison.Ordinal)), "Out-of-range stroke width must diagnose.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range stroke width must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range dash lengths fall back to a solid stroke with a diagnosis.
+    public static void PptxSyntheticSvgHugeDashPatternFallsBackToSolid()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-dasharray="1e999 2"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("default stroke effects", StringComparison.Ordinal)), "Out-of-range dash pattern must diagnose.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range dash pattern must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range miter limits diagnose and render the default.
+    public static void PptxSyntheticSvgHugeMiterLimitDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-miterlimit="1e999"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.Contains("\n4 M\n", pdf.Replace("\r\n", "\n"));
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("default stroke effects", StringComparison.Ordinal)), "Out-of-range miter limit must diagnose.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range miter limit must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range dash offsets fall back to a solid stroke with a diagnosis.
+    public static void PptxSyntheticSvgHugeDashOffsetDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H100 V50 H0 Z" fill="none" stroke="#FF0000" stroke-dasharray="4 2" stroke-dashoffset="1e999"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 RG", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("default stroke effects", StringComparison.Ordinal)), "Out-of-range dash offset must diagnose.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range dash offset must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range gradient vectors skip the gradient so referencing paths diagnose.
+    public static void PptxSyntheticSvgHugeGradientVectorDiagnosesUnresolvable()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1e999" y2="0">
+                <stop offset="0" stop-color="#0000FF"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </linearGradient>
+              <path d="M0 0 H100 V50 H0 Z" fill="url(#g)"/>
+              <path d="M50 0 H100 V50 H50 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable gradient g", StringComparison.Ordinal)), "Out-of-range gradient vectors must diagnose as unresolvable.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range gradient vectors must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range radial radii skip the gradient so referencing paths diagnose.
+    public static void PptxSyntheticSvgHugeRadialRadiusDiagnosesUnresolvable()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <radialGradient id="r" cx="0.5" cy="0.5" r="1e999">
+                <stop offset="0" stop-color="#0000FF"/>
+                <stop offset="1" stop-color="#0000FF"/>
+              </radialGradient>
+              <path d="M0 0 H100 V50 H0 Z" fill="url(#r)"/>
+              <path d="M50 0 H100 V50 H50 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable gradient r", StringComparison.Ordinal)), "Out-of-range radial radii must diagnose as unresolvable.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range radial radii must not drop the whole SVG picture.");
+    }
+
+    // RV07: transforms composing past double range keep the sibling picture instead of dropping it.
+    public static void PptxSyntheticSvgHugeTransformKeepsSiblingPicture()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H10 V5 H0 Z" fill="#0000FF" transform="scale(1e308)"/>
+              <path d="M50 0 H100 V50 H50 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Overflowing transforms must not drop the whole SVG picture.");
+    }
+
+    // RV07: out-of-range shape geometry renders nothing instead of misdiagnosing a command.
+    public static void PptxSyntheticSvgHugeShapeGeometrySkipsShape()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="10" width="1e999" height="30" fill="#0000FF"/>
+              <path d="M50 0 H100 V50 H50 Z" fill="#FF0000"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unsupported I command", StringComparison.Ordinal)), "Out-of-range shape geometry must not misdiagnose a path command.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range shape geometry must not drop the whole SVG picture.");
+    }
+    // RV07: stroke state overflowing past double range drops the stroke with a diagnosis, not the picture.
+    public static void PptxSyntheticSvgHugeTransformStrokeStateDiagnoses()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0 H10 V5 H0 Z" fill="#FF0000" stroke="#FF0000" transform="scale(1e308)"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unparsable stroke paint", StringComparison.Ordinal)), "Overflowing stroke state must diagnose.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Overflowing stroke state must not drop the whole SVG picture.");
+    }
     // RV07: miter joins emit the SVG default miter limit instead of the PDF default.
     public static void PptxSyntheticSvgMiterJoinEmitsDefaultMiterLimit()
     {

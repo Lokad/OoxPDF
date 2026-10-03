@@ -61,6 +61,32 @@ internal sealed partial class PptxRenderer
         double imageY = y + fillRect.Bottom * height;
         double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
         double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+        double sourceLeft = Math.Clamp(crop.Left, 0d, 0.999d);
+        double sourceTop = Math.Clamp(crop.Top, 0d, 0.999d);
+        double sourceRight = Math.Clamp(crop.Right, 0d, 0.999d);
+        double sourceBottom = Math.Clamp(crop.Bottom, 0d, 0.999d);
+        double sourceMinX = minX + sourceLeft * viewWidth;
+        double sourceMinY = minY + sourceTop * viewHeight;
+        double sourceWidth = viewWidth * Math.Max(0.001d, 1d - sourceLeft - sourceRight);
+        double sourceHeight = viewHeight * Math.Max(0.001d, 1d - sourceTop - sourceBottom);
+        double scaleX = imageWidth / sourceWidth;
+        double scaleY = imageHeight / sourceHeight;
+        // RV07: subnormal viewBox dimensions overflow the picture scale past
+        // double range; the picture cannot map and is ignored like a missing
+        // viewBox instead of throwing non-finite PDF numbers downstream.
+        if (!double.IsFinite(scaleX) || !double.IsFinite(scaleY))
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "SVG_UNSUPPORTED_CONTENT",
+                OoxPdfSeverity.Error,
+                "SVG picture has no usable viewBox and was ignored.",
+                partName,
+                PageIndex: null,
+                SlideIndex: slideIndex,
+                Feature: "svg",
+                Fallback: "Ignored"));
+            return;
+        }
 
         graphics.SaveState();
         if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
@@ -73,16 +99,6 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        double sourceLeft = Math.Clamp(crop.Left, 0d, 0.999d);
-        double sourceTop = Math.Clamp(crop.Top, 0d, 0.999d);
-        double sourceRight = Math.Clamp(crop.Right, 0d, 0.999d);
-        double sourceBottom = Math.Clamp(crop.Bottom, 0d, 0.999d);
-        double sourceMinX = minX + sourceLeft * viewWidth;
-        double sourceMinY = minY + sourceTop * viewHeight;
-        double sourceWidth = viewWidth * Math.Max(0.001d, 1d - sourceLeft - sourceRight);
-        double sourceHeight = viewHeight * Math.Max(0.001d, 1d - sourceTop - sourceBottom);
-        double scaleX = imageWidth / sourceWidth;
-        double scaleY = imageHeight / sourceHeight;
         var gradients = ReadSvgGradients(svg);
         var radialGradients = ReadSvgRadialGradients(svg);
         ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName);
@@ -161,6 +177,17 @@ internal sealed partial class PptxRenderer
                     dashPoints[dashIndex] = userDash[dashIndex] * strokeScale;
                 }
                 dashPhasePoints = stroke.DashOffset * strokeScale;
+            }
+            // RV07: stroke state past double range (huge transform area factors)
+            // cannot set PDF line state; the stroke is omitted with its fill
+            // intact instead of dropping the picture.
+            if (stroke.HasPaint
+                && (!double.IsFinite(strokeWidthPoints)
+                    || !double.IsFinite(dashPhasePoints)
+                    || (dashPoints is not null && !dashPoints.All(double.IsFinite))))
+            {
+                stroke = default;
+                unpaintableStrokes++;
             }
             if (radial is { } radialGradient)
             {
@@ -570,7 +597,9 @@ internal sealed partial class PptxRenderer
         double[] values = SvgNumberRegex().Matches(viewBox)
             .Select(match => double.Parse(match.Value, CultureInfo.InvariantCulture))
             .ToArray();
-        if (values.Length < 4)
+        // RV07: out-of-range viewBox numbers parse to infinity and cannot map;
+        // they fail like a missing viewBox instead of poisoning the picture.
+        if (values.Length < 4 || !values.All(double.IsFinite))
         {
             return false;
         }
@@ -620,6 +649,12 @@ internal sealed partial class PptxRenderer
                 }
                 (double rawX1, double rawY1) = gradientTransform.Apply(x1, y1);
                 (double rawX2, double rawY2) = gradientTransform.Apply(x2, y2);
+                // RV07: composed overflow (huge transforms on finite vectors)
+                // cannot sample; the gradient is skipped like a garbage vector.
+                if (!double.IsFinite(rawX1) || !double.IsFinite(rawY1) || !double.IsFinite(rawX2) || !double.IsFinite(rawY2))
+                {
+                    continue;
+                }
                 gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
             }
         }
@@ -684,14 +719,15 @@ internal sealed partial class PptxRenderer
             {
                 return false;
             }
-            if (double.TryParse(trimmed[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
+            if (double.TryParse(trimmed[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent)
+                && double.IsFinite(percent))
             {
                 value = percent / 100d;
                 return true;
             }
             return false;
         }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
     }
 
     // RV07: CSS style declarations override presentation attributes; opacity
@@ -871,7 +907,7 @@ internal sealed partial class PptxRenderer
         {
             trimmed = trimmed.Substring(0, trimmed.Length - 2);
         }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && width >= 0d;
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && double.IsFinite(width) && width >= 0d;
     }
     // RV07: fill and stroke inherit through groups in cascade order (element
     // style, element attribute, then each ancestor outward the same way).
@@ -974,7 +1010,7 @@ internal sealed partial class PptxRenderer
             {
                 item = item.Substring(0, item.Length - 2);
             }
-            if (!double.TryParse(item, NumberStyles.Float, CultureInfo.InvariantCulture, out double length) || length < 0d)
+            if (!double.TryParse(item, NumberStyles.Float, CultureInfo.InvariantCulture, out double length) || !double.IsFinite(length) || length < 0d)
             {
                 invalid = true;
                 return null;
@@ -1010,7 +1046,7 @@ internal sealed partial class PptxRenderer
         {
             trimmed = trimmed.Substring(0, trimmed.Length - 2);
         }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out miterLimit) && miterLimit >= 1d;
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out miterLimit) && double.IsFinite(miterLimit) && miterLimit >= 1d;
     }
     private static bool TryReadSvgStrokeOffset(string? text, out double offset)
     {
@@ -1024,7 +1060,7 @@ internal sealed partial class PptxRenderer
         {
             trimmed = trimmed.Substring(0, trimmed.Length - 2);
         }
-        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out offset);
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out offset) && double.IsFinite(offset);
     }
     private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
@@ -1112,6 +1148,13 @@ internal sealed partial class PptxRenderer
                 (double edgeX, double edgeY) = gradientTransform.Apply(cx + radius, cy + radius);
                 rawRadius = Math.Max(Math.Abs(edgeX - rawCx), Math.Abs(edgeY - rawCy));
             }
+            // RV07: composed overflow (huge transforms on finite centers)
+            // cannot sample; the gradient is skipped like a garbage vector.
+            if (!double.IsFinite(rawCx) || !double.IsFinite(rawCy) || !double.IsFinite(rawRadius))
+            {
+                continue;
+            }
+
             gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
         }
         return gradients;
@@ -1459,24 +1502,57 @@ internal sealed partial class PptxRenderer
                     currentY = pathCommand.Arguments[1];
                     startX = currentX;
                     startY = currentY;
-                    graphics.MoveTo(SvgX(currentX), SvgY(currentY));
+                    if (!TryMapSvgPoint(currentX, currentY, out double moveX, out double moveY))
+                    {
+                        return hasPath;
+                    }
+
+                    graphics.MoveTo(moveX, moveY);
                     hasPath = true;
                     break;
                 case 'L':
+                    {
                     currentX = pathCommand.Arguments[0];
                     currentY = pathCommand.Arguments[1];
-                    graphics.LineTo(SvgX(currentX), SvgY(currentY));
+                    if (!TryMapSvgPoint(currentX, currentY, out double lineX, out double lineY))
+                    {
+                        return hasPath;
+                    }
+
+                    graphics.LineTo(lineX, lineY);
                     break;
+                    }
                 case 'H':
+                    {
                     currentX = pathCommand.Arguments[0];
-                    graphics.LineTo(SvgX(currentX), SvgY(currentY));
+                    if (!TryMapSvgPoint(currentX, currentY, out double lineX, out double lineY))
+                    {
+                        return hasPath;
+                    }
+
+                    graphics.LineTo(lineX, lineY);
                     break;
+                    }
                 case 'V':
+                    {
                     currentY = pathCommand.Arguments[0];
-                    graphics.LineTo(SvgX(currentX), SvgY(currentY));
+                    if (!TryMapSvgPoint(currentX, currentY, out double lineX, out double lineY))
+                    {
+                        return hasPath;
+                    }
+
+                    graphics.LineTo(lineX, lineY);
                     break;
+                    }
                 case 'C':
-                    graphics.CurveTo(SvgX(pathCommand.Arguments[0]), SvgY(pathCommand.Arguments[1]), SvgX(pathCommand.Arguments[2]), SvgY(pathCommand.Arguments[3]), SvgX(pathCommand.Arguments[4]), SvgY(pathCommand.Arguments[5]));
+                    if (!TryMapSvgPoint(pathCommand.Arguments[0], pathCommand.Arguments[1], out double curve1X, out double curve1Y)
+                        || !TryMapSvgPoint(pathCommand.Arguments[2], pathCommand.Arguments[3], out double curve2X, out double curve2Y)
+                        || !TryMapSvgPoint(pathCommand.Arguments[4], pathCommand.Arguments[5], out double curveEndX, out double curveEndY))
+                    {
+                        return hasPath;
+                    }
+
+                    graphics.CurveTo(curve1X, curve1Y, curve2X, curve2Y, curveEndX, curveEndY);
                     currentX = pathCommand.Arguments[4];
                     currentY = pathCommand.Arguments[5];
                     break;
@@ -1494,6 +1570,15 @@ internal sealed partial class PptxRenderer
 
         double SvgX(double value) => imageX + (value - minX) * scaleX;
         double SvgY(double value) => imageY + imageHeight - (value - minY) * scaleY;
+        bool TryMapSvgPoint(double x, double y, out double mappedX, out double mappedY)
+        {
+            // RV07: composed overflow (huge transforms or scales on finite
+            // data) maps past double range; stopping keeps the finite prefix
+            // instead of throwing non-finite PDF numbers into per-node recovery.
+            mappedX = SvgX(x);
+            mappedY = SvgY(y);
+            return double.IsFinite(mappedX) && double.IsFinite(mappedY);
+        }
     }
 
     // RV07: basic shapes convert to path data and paint through the shared
@@ -1527,7 +1612,7 @@ internal sealed partial class PptxRenderer
             value = fallback;
             return true;
         }
-        return double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        return double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
     }
     private static string SvgPathNumber(double value)
     {
@@ -1550,11 +1635,11 @@ internal sealed partial class PptxRenderer
         string? ryText = (string?)element.Attribute("ry");
         double rx = 0d;
         double ry = 0d;
-        if (rxText is not null && !double.TryParse(rxText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out rx))
+        if (rxText is not null && (!double.TryParse(rxText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out rx) || !double.IsFinite(rx)))
         {
             return null;
         }
-        if (ryText is not null && !double.TryParse(ryText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out ry))
+        if (ryText is not null && (!double.TryParse(ryText.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out ry) || !double.IsFinite(ry)))
         {
             return null;
         }
@@ -1685,7 +1770,15 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        value = double.Parse(tokens[index].Value, CultureInfo.InvariantCulture);
+        // RV07: e999-style literals parse to infinity and cannot paint; stopping
+        // keeps the supported prefix like a truncated path instead of throwing
+        // non-finite PDF numbers into per-node recovery.
+        if (!double.TryParse(tokens[index].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+            || !double.IsFinite(value))
+        {
+            return false;
+        }
+
         index++;
         return true;
     }
@@ -1940,6 +2033,14 @@ internal sealed partial class PptxRenderer
         }
 
         transform = SvgTransform.Compose(local, transform);
+        // RV07: entries composed past double range cannot map; the path is
+        // omitted like an unparseable transform instead of throwing downstream.
+        if (!double.IsFinite(transform.M11) || !double.IsFinite(transform.M12) || !double.IsFinite(transform.M21) || !double.IsFinite(transform.M22) || !double.IsFinite(transform.OffsetX) || !double.IsFinite(transform.OffsetY))
+        {
+            transform = SvgTransform.Identity;
+            return false;
+        }
+
         return true;
     }
 }
