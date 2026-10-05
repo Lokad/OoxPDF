@@ -1140,6 +1140,8 @@ internal sealed partial class DocxLayoutEngine
                 // RV05: ordered inline atoms (body path). Affined images in text-mixed
                 // paragraphs attach to wrapped lines at run position; wrapping is untouched.
                 midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective)), lineHeight);
+                double? typographicBaselineInset = lineHeightProfile.Source == DocxLineHeightSource.BodySingleLineAuto
+                    ? DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer) : null;
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1175,6 +1177,7 @@ internal sealed partial class DocxLayoutEngine
                     double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, paragraphFontSize, textMeasurer);
                     double? bodyTierAMax = DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, textMeasurer);
                     double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
+                    baselineOffset = typographicBaselineInset ?? baselineOffset;
                     if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
                     {
                         // Office A/B (w18/w20/w21/w26/w29/w32 untokened probes, Word-COM
@@ -1285,6 +1288,7 @@ internal sealed partial class DocxLayoutEngine
                         FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null)
                     {
                         BodyColumnOriginOffsetX = x - lineShape.X,
+                        UsesUniformBodyTypographicBaseline = typographicBaselineInset is not null,
                         BodyLineBoxBaselineInsetPoints = lineHeightProfile.Source is DocxLineHeightSource.ExactLineSpacing or DocxLineHeightSource.BodySingleLineAuto
                             ? rawBaselineOffset * paragraphSpacingScale : null,
                         BodyLineBoxHeightPoints = lineHeightProfile.Source switch

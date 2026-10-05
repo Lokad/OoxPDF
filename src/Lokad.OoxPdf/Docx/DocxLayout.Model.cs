@@ -74,6 +74,7 @@ internal sealed record DocxTextLineLayout(
     // heights are authored distances; automatic heights already contain metric scaling.
     public double? BodyLineBoxBaselineInsetPoints { get; init; }
     public double? BodyLineBoxHeightPoints { get; init; }
+    public bool UsesUniformBodyTypographicBaseline { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(

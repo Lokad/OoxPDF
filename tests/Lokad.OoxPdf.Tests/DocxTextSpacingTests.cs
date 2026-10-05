@@ -1451,6 +1451,75 @@ internal static class DocxTextSpacingTests
         }
     }
 
+    public static void DocxUniformTypographicBodyBaselineAndViewportUseAscentAndGap()
+    {
+        foreach (short gap in new short[] { 0, 200 })
+        foreach (bool useTypographicMetrics in new[] { false, true })
+        foreach (double fontSize in new[] { 12d, 24d })
+        {
+            var paragraph = new DocxParagraph(
+                [new DocxTextRun("A", fontSize, "WinFace", false, false, false, null, null)],
+                [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null,
+                new DocxParagraphSpacing("0", "0", null, null, null, null, "240", "auto", null),
+                DocxParagraphKeepRules.Empty, null)
+            {
+                BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)],
+                Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 1)]
+            };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+            var renderer = new DocxRenderer(new WindowsExtentsFontResolver(useTypographicMetrics, gap),
+                OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines.Single().Segments.First();
+            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+                ?? throw new InvalidOperationException("The target must resolve.");
+            double typographicAscent = fontSize * (800d + gap) / 1000d;
+            double baselineInset = useTypographicMetrics ? typographicAscent : 0.94d * fontSize;
+            double viewportAscent = useTypographicMetrics ? typographicAscent : 1.1d * fontSize;
+            TestAssert.True(Math.Abs(glyph.BaselineY - (190d - baselineInset)) < 0.000001d,
+                "Uniform automatic body baselines must honor requested typographic ascent plus gap, retaining the unflagged floor.");
+            TestAssert.True(Math.Abs(destination.Top.GetValueOrDefault(double.NaN) - glyph.BaselineY - viewportAscent) < 0.000001d,
+                "A qualified bookmark viewport must use the selected ascent, including the typographic line gap.");
+        }
+    }
+
+    public static void DocxScaledTypographicBookmarkViewportUsesEmittedAscentAndGap()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-margin-mirrored.docx"));
+        DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        foreach (short gap in new short[] { 0, 200 })
+        foreach (double fontSize in new[] { 12d, 24d })
+        {
+            var paragraph = new DocxParagraph(
+                [new DocxTextRun("A", fontSize, "WinFace", false, false, false, null, null)],
+                [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null,
+                new DocxParagraphSpacing("0", "0", null, null, null, null, "240", "auto", null),
+                DocxParagraphKeepRules.Empty, null)
+            {
+                BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)],
+                Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 1)]
+            };
+            DocxDocument document = source with
+            {
+                BodyElements = [new DocxParagraphElement(paragraph), new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Review", "1"))]
+            };
+            var renderer = new DocxRenderer(new WindowsExtentsFontResolver(true, gap),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            TestAssert.True(scale < 1d, "The regression must exercise review print scaling.");
+            DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines
+                .Single(line => line.SourceBlockIndex == 0).Segments.First();
+            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+                ?? throw new InvalidOperationException("The scaled target must resolve.");
+            double inset = fontSize * (800d + gap) / 1000d;
+            double expectedBaseline = document.PageHeightPoints / 2d + (document.PageHeightPoints - document.MarginTopPoints - inset - document.PageHeightPoints / 2d) * scale;
+            TestAssert.True(Math.Abs(glyph.BaselineY - expectedBaseline) < 0.000001d,
+                "The first baseline's design ascent must be scaled once about the print-page center.");
+            TestAssert.True(Math.Abs(destination.Top.GetValueOrDefault(double.NaN) - glyph.BaselineY - (800d + gap) / 1000d * glyph.FontSize) < 0.000001d,
+                "The viewport ascent must follow the emitted font size, including its typographic line gap.");
+        }
+    }
+
     public static void DocxAutoLineBoxIgnoresWindowsExtents()
     {
         // USE_TYPO_METRICS carve-out for the hhea maximum above: a face requesting
@@ -1522,12 +1591,13 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs(pitch - 25.375d) < 0.000001d, "Auto line pitch must prefer the Windows box; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
-    private sealed class WindowsExtentsFontResolver(bool patchTypographicSelection) : IFontResolver
+    private sealed class WindowsExtentsFontResolver(bool patchTypographicSelection, short typographicLineGap = 0) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
             byte[] faceBytes = TestFontBuilder.CreateTestFont();
             PatchWindowsExtents(faceBytes, ascender: 1100, descender: 400);
+            PatchTypographicGap(faceBytes, typographicLineGap);
             if (patchTypographicSelection)
             {
                 PatchTypographicSelection(faceBytes);
@@ -1538,6 +1608,23 @@ internal static class DocxTextSpacingTests
                 new FontStyleKey(request.Bold, request.Italic),
                 new MemoryFontProgramSource("test:winface", faceBytes),
                 IsFallback: false);
+        }
+
+        private static void PatchTypographicGap(byte[] faceBytes, short gap)
+        {
+            int tableCount = (faceBytes[4] << 8) | faceBytes[5];
+            for (int tableIndex = 0; tableIndex < tableCount; tableIndex++)
+            {
+                int record = 12 + 16 * tableIndex;
+                if (faceBytes[record] == 0x4F && faceBytes[record + 1] == 0x53 && faceBytes[record + 2] == 0x2F && faceBytes[record + 3] == 0x32)
+                {
+                    int offset = (faceBytes[record + 8] << 24) | (faceBytes[record + 9] << 16) | (faceBytes[record + 10] << 8) | faceBytes[record + 11];
+                    faceBytes[offset + 72] = (byte)(gap >> 8);
+                    faceBytes[offset + 73] = (byte)(gap & 0xFF);
+                    return;
+                }
+            }
+            throw new InvalidOperationException("Synthetic test font is missing the OS/2 table.");
         }
 
         private static void PatchWindowsExtents(byte[] faceBytes, ushort ascender, ushort descender)

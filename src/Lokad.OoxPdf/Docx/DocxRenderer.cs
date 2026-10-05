@@ -1127,7 +1127,10 @@ internal sealed partial class DocxRenderer
                         else if (target.Resource is { } bookmarkResource)
                         {
                             OpenTypeFont bookmarkFont = bookmarkResource.Embedded.Font;
-                            ascender = bookmarkFont.Os2.WindowsAscender * target.FontSize / bookmarkFont.UnitsPerEm;
+                            ascender = line.UsesUniformBodyTypographicBaseline && (bookmarkFont.Os2.SelectionFlags & 0x80) != 0 &&
+                                Math.Abs(target.FontSize - line.FontSize * textEmissionFontScale) < 0.000001d
+                                ? DocxLineMetrics.MeasureTypographicBaselineInset(bookmarkFont, target.FontSize)
+                                : bookmarkFont.Os2.WindowsAscender * target.FontSize / bookmarkFont.UnitsPerEm;
                         }
                         else
                         {

@@ -84,6 +84,9 @@ internal interface IDocxTypographicMetricsProvider
 {
     bool UseTypographicMetrics(DocxTextRun? run);
 
+    // Body baseline insets retain design coordinates before review print scaling.
+    double MeasureTypographicBaselineInset(DocxTextRun? run, double fontSize) => 0d;
+
     // Unfloored typographic line box for auto line boxes (Word 16.0 Abadi probes): runs whose resolved face requests typographic metrics box the typo box alone. Providers without typo metrics report zero so legacy maxima apply bit-identically.
     double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize)
     {
@@ -148,6 +151,44 @@ internal static class DocxLineMetrics
 
         double units = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
         return units * fontSize / font.UnitsPerEm;
+    }
+
+    public static double MeasureTypographicBaselineInset(OpenTypeFont font, double fontSize)
+    {
+        return font.UnitsPerEm == 0 ? 0d
+            : (font.Os2.TypographicAscender + font.Os2.TypographicLineGap) * fontSize / font.UnitsPerEm;
+    }
+
+    internal static double? ResolveUniformBodyTypographicBaselineInset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer)
+    {
+        if (measurer is not IDocxTypographicMetricsProvider typographic ||
+            paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
+            paragraph.ParagraphMarkFontSize is double markSize && Math.Abs(markSize - fontSize) > 0.000001d)
+        {
+            return null;
+        }
+        DocxTextRun? first = null;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            DocxEffectiveRunProperties properties = run.EffectiveProperties;
+            if (properties.Hidden || string.IsNullOrWhiteSpace(run.Text))
+            {
+                continue;
+            }
+            if (Math.Abs(properties.FontSize - fontSize) > 0.000001d ||
+                first is not null && (!string.Equals(properties.FontFamily, first.EffectiveProperties.FontFamily, StringComparison.OrdinalIgnoreCase) ||
+                    properties.Bold != first.EffectiveProperties.Bold || properties.Italic != first.EffectiveProperties.Italic))
+            {
+                return null;
+            }
+            first ??= run;
+        }
+        if (first is null || !typographic.UseTypographicMetrics(first))
+        {
+            return null;
+        }
+        double inset = typographic.MeasureTypographicBaselineInset(first, fontSize);
+        return double.IsFinite(inset) && inset > 0d ? inset : null;
     }
 
     public static double MeasureHheaLineHeight(OpenTypeFont font, double fontSize)

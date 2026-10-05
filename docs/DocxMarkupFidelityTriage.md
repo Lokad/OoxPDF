@@ -356,6 +356,37 @@ skips. Across all 33 cached cases, total failures decrease from 586 to 585;
 raster bytes and page counts stay unchanged, and 31 PDFs are byte-identical.
 Evidence is under `artifacts/plan-revision-20261005/rv06-l11/`.
 
+## Uniform Typographic-Ascent Update (2026-10-05, RV06-L12)
+
+Uniform automatic body paragraphs whose resolved face requests typographic
+metrics now place their baseline using typographic ascent plus line gap. Their
+bookmark viewports use the same ascent at the emitted font size. The baseline
+inset remains a design coordinate through the review-scaling wrapper; layout
+applies print scaling once. Mixed faces/styles/sizes, differing paragraph-mark
+sizes, inline images/text boxes, exact/at-least spacing and other stories retain
+their existing baseline geometry pending separate qualification.
+
+Eight independent Word 16 controls cover 12/24-point Aptos and Abadi, explicit
+paragraph-mark controls and scaled mirrored pages. Destination vertical
+differences are at most 0.13 points unscaled and 0.50 points scaled. Previously
+Aptos differs by 0.87/1.71 points and Abadi by -1.65/-3.42 points. Abadi's paragraph
+pitch already matches Word; its baseline had incorrectly followed horizontal
+header ascent. Changing paragraph-mark styling leaves the control unchanged.
+
+Two production regressions cover requested/unrequested typographic metrics,
+zero/positive line gap, font size, viewport ascent and review scaling. Both fail
+on the previous renderer and pass with the repair. Five typographic tests and
+all 861 DOCX tests pass with no failures or skips. Raw qualification and
+verification are under `artifacts/plan-revision-20261005/rv06-l12/`.
+The complete 33-case cached comparison reduces total failures from 585 to 579.
+The main Word-compatible, Final and Original cases each lose two failures,
+including their bookmark-target gate; no case's total increases. All page
+counts match. Seven raster cases and one PDF remain byte-identical; the
+remaining cases change with baseline or annotation geometry. The main
+Word-compatible target's maximum position difference is 0.804 points and its
+rectangle difference remains 0.245 points. One case passes and 32 remain
+partial; these scoped repairs do not establish complete Office parity.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

@@ -428,6 +428,13 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         return font is not null && (font.Os2.SelectionFlags & 0x80) != 0;
     }
 
+    public double MeasureTypographicBaselineInset(DocxTextRun? run, double fontSize)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        OpenTypeFont? font = ResolveFont(run);
+        return font is null ? 0d : DocxLineMetrics.MeasureTypographicBaselineInset(font, fontSize);
+    }
+
     private IReadOnlyList<OpenTypeFont?> ResolveCandidateFonts(DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
     {
         bool bold = run is not null && run.Bold;

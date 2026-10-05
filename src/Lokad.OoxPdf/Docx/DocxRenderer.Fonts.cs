@@ -150,6 +150,12 @@ internal sealed partial class DocxRenderer
             return inner is IDocxTypographicMetricsProvider typographic && typographic.UseTypographicMetrics(run);
         }
 
+        public double MeasureTypographicBaselineInset(DocxTextRun? run, double fontSize)
+        {
+            return inner is IDocxTypographicMetricsProvider typographic
+                ? typographic.MeasureTypographicBaselineInset(run, fontSize) : 0d;
+        }
+
         public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize)
         {
             return inner is IDocxTypographicMetricsProvider typographic
