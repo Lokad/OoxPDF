@@ -90,6 +90,7 @@ internal sealed record DocxParagraphStyleResolution(
     public static DocxParagraphStyleResolution Empty { get; } = new(null, false, 0, false, false, false);
 }
 
+// TextOffset is relative to SourceRunIndex, like emitted text-segment offsets.
 internal sealed record DocxBookmarkAnchor(
     string? Id,
     string? Name,

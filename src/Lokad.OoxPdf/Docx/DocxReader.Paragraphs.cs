@@ -883,10 +883,10 @@ internal sealed partial class DocxReader
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
             sourceRunIndex,
             runs.Count,
-            runs.Sum(run => run.Text.Length)));
+            RelativeRunTextOffset(runs, sourceRunIndex)));
     }
 
-    // RV06: comment range markers sit between runs while consumers resolve offsets
+    // RV06: comment and bookmark markers sit between runs while consumers resolve offsets
     // run-relatively, so paragraph-absolute capture sums are relativized here.
     private static int RelativeRunTextOffset(List<DocxTextRun> runs, int sourceRunIndex)
     {

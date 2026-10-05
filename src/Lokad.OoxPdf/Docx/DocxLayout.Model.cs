@@ -65,7 +65,12 @@ internal sealed record DocxTextLineLayout(
     DocxParagraph? SourceParagraph,
     DocxLineHeightSource? LineHeightSource,
     bool EmitsTerminalParagraphMark,
-    double? FirstLineInsetPoints = null) : DocxLayoutItem;
+    double? FirstLineInsetPoints = null) : DocxLayoutItem
+{
+    // Relative to X so page translations preserve the containing column's origin.
+    // Only ordinary body lines carry this reference-qualified bookmark geometry.
+    public double? BodyColumnOriginOffsetX { get; init; }
+}
 
 internal sealed record DocxTextSegmentLayout(
     string Text,

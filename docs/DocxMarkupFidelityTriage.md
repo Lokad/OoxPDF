@@ -205,6 +205,40 @@ cached cases preserve candidate PDF bytes and gate counts, with unchanged page
 counts; total failures fall from 639 to 633. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l5/`.
 
+## Bookmark Viewport Update (2026-10-05, RV06-L6)
+
+Eleven independent Word 16 exports establish that ordinary body bookmark
+destinations use the containing column's left edge, with three design points of
+context. Paragraph indentation and center/right alignment do not move that
+viewport; visible text before a midline bookmark does. The context scales with
+Word-compatible review printing. Layout now retains the column's position
+relative to the line. Table, static-story, note and textbox target geometry keeps
+its existing behavior pending separate reference qualification.
+
+The reader also now captures bookmark offsets relative to their source run,
+matching the renderer's interpretation. Previously a midline bookmark counted
+the preceding paragraph text twice. Merging paragraphs across a deleted mark
+shifts source/run indexes while retaining that local offset. Scaled destinations,
+hyperlink rectangles and text-emission inspection now follow each target/source
+page's actual mirrored left margin.
+
+Three production regressions cover alignment/indentation, column breaks,
+mirrored review pages, ordinary/nested reader anchors and deleted-mark merging.
+The mirrored inspection is checked against the emitted PDF text matrix and link
+rectangle. Across the eleven Office controls, horizontal destination deltas are
+at most 0.61 points; the nine ordinary controls have sub-point vertical deltas.
+The broader DOCX run passes 852 tests with no failures or skips.
+The column-break control retains a 24.58-point flow residual, and the mirrored
+control retains a 1.12-point baseline residual. These are not closed by changing
+the destination padding.
+
+All 33 cached cases preserve raster bytes and page counts. Twenty-eight preserve
+PDF bytes; five change bookmark destinations. The Word-compatible All Markup
+target gate passes, reducing total failures from 633 to 632. Its annotation
+rectangle still differs, and the other markup views retain target baseline
+differences. One case passes all gates and 32 remain partial. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l6/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

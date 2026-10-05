@@ -312,6 +312,125 @@ internal static class DocxHyperlinksTests
         TestAssert.Equal(0, page.Annotations.Count);
     }
 
+    public static void DocxBookmarkViewportUsesColumnOriginForIndentedAndAlignedTargets()
+    {
+        DocxParagraph link = DocxTests.CreateDocxLayoutParagraph("Jump", 12d, 14d) with
+        {
+            Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 4)]
+        };
+        foreach ((DocxTextAlignment alignment, double indent) in new[]
+        {
+            (DocxTextAlignment.Left, 0d), (DocxTextAlignment.Left, 36d),
+            (DocxTextAlignment.Center, 0d), (DocxTextAlignment.Right, 0d)
+        })
+        {
+            DocxParagraph target = DocxTests.CreateDocxLayoutParagraph("Public bookmark target", 12d, 14d) with
+            {
+                Alignment = alignment,
+                Indent = DocxParagraphIndent.Empty with { LeftPoints = indent },
+                BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)]
+            };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(link), new DocxParagraphElement(target)], []);
+            var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+                ?? throw new InvalidOperationException("The internal link must resolve.");
+            TestAssert.True(Math.Abs(destination.Left.GetValueOrDefault(double.NaN) - (document.MarginLeftPoints - 3d)) < 0.000001d,
+                "Word places the bookmark viewport at the column origin, with three points of context, independently of paragraph indentation/alignment.");
+        }
+    }
+
+    public static void DocxBookmarkViewportTracksColumnBreaksAndMirroredReviewPages()
+    {
+        DocxParagraph link = DocxTests.CreateDocxLayoutParagraph("Jump", 12d, 14d) with
+        {
+            Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, 4)]
+        };
+        DocxParagraph target = DocxTests.CreateDocxLayoutParagraph("Public bookmark target", 12d, 14d) with
+        {
+            BookmarkAnchors = [new DocxBookmarkAnchor("1", "Target", 0, 0, 0)]
+        };
+        DocxDocument columns = new(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [],
+            [new DocxParagraphElement(link), new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
+                new DocxParagraphElement(target with { Alignment = DocxTextAlignment.Right, Indent = DocxParagraphIndent.Empty with { LeftPoints = 36d } }),
+                new DocxSectionBreakElement(DocxPageSettings.Empty, DocxSectionBreakType.NextPage, "2", "1", "720", [])], [], []);
+        var plainRenderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        PdfLinkDestination columnDestination = plainRenderer.RenderBlankPages(columns, null, CancellationToken.None).Single().Annotations.Single().Destination
+            ?? throw new InvalidOperationException("The column target must resolve.");
+        TestAssert.True(Math.Abs(columnDestination.Left.GetValueOrDefault(double.NaN) - 321d) < 0.000001d,
+            "An aligned target in the second column must use that column's origin rather than the page margin.");
+
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-margin-mirrored.docx"));
+        DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        DocxDocument mirrored = source with
+        {
+            BodyElements = [new DocxParagraphElement(link), new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Review", "1")),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
+                new DocxParagraphElement(target with
+                {
+                    Hyperlinks = [new DocxHyperlinkSpan(null, "Target", null, null, null, null, null, 0, 1, 0, 1, "Public bookmark target".Length)]
+                })]
+        };
+        var reviewRenderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        PdfPage[] mirroredPages = reviewRenderer.RenderBlankPages(mirrored, null, CancellationToken.None).ToArray();
+        PdfLinkDestination mirroredDestination = mirroredPages[0].Annotations.Single().Destination
+            ?? throw new InvalidOperationException("The mirrored target must resolve.");
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(mirrored,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+        TestAssert.True(scale < 1d, "The comment control must exercise review print scaling.");
+        TestAssert.Equal(1, mirroredDestination.PageIndex);
+        DocxTextEmissionSegmentSnapshot mirroredSegment = reviewRenderer.InspectTextEmission(mirrored).Lines
+            .Single(line => line.PageIndex == 1 && line.SourceBlockIndex == 3 && line.SourceLineIndex == 0).Segments.First();
+        TestAssert.True(Math.Abs(mirroredDestination.Left.GetValueOrDefault(double.NaN) - (mirroredSegment.X - 3d * scale)) < 0.000001d,
+            "A scaled bookmark destination must follow its target page's mirrored margin, just like the emitted glyphs.");
+        double emittedX = double.Parse(Regex.Match(mirroredPages[1].Content, @"1 0 0 1 (?<x>[-\d.]+) [-\d.]+ Tm").Groups["x"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(Math.Abs(mirroredSegment.X - emittedX) < 0.001d,
+            "The inspection snapshot must describe the actual emitted position on the mirrored target page.");
+        PdfLinkAnnotation mirroredLink = mirroredPages[1].Annotations.Single();
+        TestAssert.True(Math.Abs(mirroredLink.X + (2.2d / 11d * target.Runs[0].EffectiveProperties.FontSize) - emittedX) < 0.001d,
+            "A hyperlink on the mirrored page must cover the emitted text rather than its position under the document margin.");
+    }
+
+    public static void DocxBookmarkViewportDoesNotCountReaderPrefixTwiceAfterMerging()
+    {
+        foreach (string variant in new[] { "ordinary", "hyperlink", "deleted-mark" })
+        {
+            const string prefix = "<w:r><w:t xml:space=\"preserve\">Prefix </w:t></w:r>";
+            const string target = "<w:bookmarkStart w:id=\"1\" w:name=\"Target\"/><w:r><w:t>Destination</w:t></w:r><w:bookmarkEnd w:id=\"1\"/>";
+            string body = variant switch
+            {
+                "hyperlink" => "<w:p>" + prefix + "<w:hyperlink w:anchor=\"Other\">" + target + "</w:hyperlink></w:p>",
+                "deleted-mark" => "<w:p><w:pPr><w:rPr><w:del w:id=\"2\"/></w:rPr></w:pPr>" + prefix + "</w:p><w:p>" + target + "</w:p>",
+                _ => "<w:p>" + prefix + target + "</w:p>"
+            };
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" + body +
+                    "<w:p><w:hyperlink w:anchor=\"Target\"><w:r><w:t>Jump</w:t></w:r></w:hyperlink></w:p></w:body></w:document>"
+            });
+            DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxTextEmissionSegmentSnapshot targetSegment = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments)
+                .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == "Destination".Length);
+            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+                ?? throw new InvalidOperationException("The internal link must resolve.");
+            TestAssert.True(Math.Abs(destination.Left.GetValueOrDefault(double.NaN) - (targetSegment.X - 3d)) < 0.000001d,
+                "Reader bookmarks must resolve at the target run, including nested links and paragraphs merged across a deleted mark.");
+            TestAssert.Equal(0, document.Paragraphs[0].BookmarkAnchors.Single().TextOffset);
+        }
+    }
+
     public static void DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks()
     {
         DocxParagraph linkParagraph = new(
@@ -352,7 +471,8 @@ internal static class DocxHyperlinksTests
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal DOCX links should not be emitted as URI actions.");
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal DOCX links should resolve to a PDF page destination.");
-        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed bookmark text coordinates.");
+        TestAssert.True(annotation.Destination?.Left is { } destinationLeft && Math.Abs(destinationLeft - (document.MarginLeftPoints - 3d)) < 0.000001d,
+            "The body bookmark viewport should include Word's three-point context before the column origin.");
         TestAssert.True(annotation.Destination?.Top > 0d, "The destination should point to a concrete bookmark line top.");
         TestAssert.True(annotation.Width > 0d, "The clickable rectangle should still cover the rendered internal-link text.");
     }
@@ -1037,7 +1157,8 @@ internal static class DocxHyperlinksTests
         TestAssert.True(annotation.Uri is null, "Internal static-story links should not be emitted as URI actions.");
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal static-story links should resolve through the shared bookmark destination map.");
         TestAssert.True(annotation.Y > 150d, "The clickable rectangle should be anchored to the header story text.");
-        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed body bookmark coordinates.");
+        TestAssert.True(annotation.Destination?.Left is { } destinationLeft && Math.Abs(destinationLeft - (document.MarginLeftPoints - 3d)) < 0.000001d,
+            "The header link should resolve to the body bookmark viewport with three points of context.");
         TestAssert.True(annotation.Width > 0d, "The annotation should cover static-story hyperlink text.");
     }
 

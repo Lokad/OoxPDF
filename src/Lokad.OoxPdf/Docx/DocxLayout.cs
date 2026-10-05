@@ -1269,7 +1269,10 @@ internal sealed partial class DocxLayoutEngine
                         // the first baseline plus the first-line inset, not plus the font
                         // size. Only body first lines carry it; other paths keep legacy
                         // bounds until separately probed.
-                        FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null));
+                        FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null)
+                    {
+                        BodyColumnOriginOffsetX = x - lineShape.X
+                    });
                     if (lineImages is not null)
                     {
                         currentItems.AddRange(lineImages);

@@ -225,7 +225,7 @@ internal sealed partial class DocxReader
             RevisionRanges = first.RevisionRanges.Concat(second.RevisionRanges.Select(range => ShiftRevisionRange(range, sourceRunOffset, textOffset))).ToArray(),
             FieldReferences = first.FieldReferences.Concat(second.FieldReferences.Select(field => ShiftFieldReference(field, sourceRunOffset, textRunOffset))).ToArray(),
             Hyperlinks = first.Hyperlinks.Concat(second.Hyperlinks.Select(link => ShiftHyperlink(link, sourceRunOffset, textRunOffset))).ToArray(),
-            BookmarkAnchors = first.BookmarkAnchors.Concat(second.BookmarkAnchors.Select(anchor => ShiftBookmarkAnchor(anchor, sourceRunOffset, textRunOffset, textOffset))).ToArray(),
+            BookmarkAnchors = first.BookmarkAnchors.Concat(second.BookmarkAnchors.Select(anchor => ShiftBookmarkAnchor(anchor, sourceRunOffset, textRunOffset))).ToArray(),
             Revisions = first.Revisions.Concat(second.Revisions).ToArray(),
             HasDeletedParagraphMark = second.HasDeletedParagraphMark
         };
@@ -306,13 +306,12 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: index-shift family kept together.
-    private static DocxBookmarkAnchor ShiftBookmarkAnchor(DocxBookmarkAnchor anchor, int sourceRunOffset, int textRunOffset, int textOffset)
+    private static DocxBookmarkAnchor ShiftBookmarkAnchor(DocxBookmarkAnchor anchor, int sourceRunOffset, int textRunOffset)
     {
         return anchor with
         {
             SourceRunIndex = ShiftSourceRunIndex(anchor.SourceRunIndex, sourceRunOffset),
-            TextRunIndex = anchor.TextRunIndex + textRunOffset,
-            TextOffset = anchor.TextOffset + textOffset
+            TextRunIndex = anchor.TextRunIndex + textRunOffset
         };
     }
 

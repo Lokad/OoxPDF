@@ -940,7 +940,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal("Target", bookmark.Name ?? string.Empty);
         TestAssert.Equal(1, bookmark.SourceRunIndex);
         TestAssert.Equal(1, bookmark.TextRunIndex);
-        TestAssert.Equal(7, bookmark.TextOffset);
+        TestAssert.Equal(0, bookmark.TextOffset);
 
         DocxHyperlinkSpan link = paragraph.Hyperlinks.Single();
         TestAssert.Equal("Target", link.Anchor ?? string.Empty);
@@ -999,7 +999,7 @@ internal static class DocxFieldsTests
         TestAssert.Equal("InnerTarget", bookmark.Name ?? string.Empty);
         TestAssert.Equal(1, bookmark.SourceRunIndex);
         TestAssert.Equal(1, bookmark.TextRunIndex);
-        TestAssert.Equal(7, bookmark.TextOffset);
+        TestAssert.Equal(0, bookmark.TextOffset);
         TestAssert.Equal("OuterTarget", paragraph.Hyperlinks.Single().Anchor ?? string.Empty);
     }
     public static void DocxLiteralFieldLikeTextSurvivesWhileActualFieldsResolve()

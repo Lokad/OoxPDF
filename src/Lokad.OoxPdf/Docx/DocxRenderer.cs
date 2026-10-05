@@ -265,6 +265,8 @@ internal sealed partial class DocxRenderer
         {
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
+            effectiveMarkupContext = WithPageTextEmissionXOffset(effectiveMarkupContext, page);
+            textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
             void AddLine(
                 DocxTextLineLayout line,
                 bool isStaticStory,
@@ -955,6 +957,7 @@ internal sealed partial class DocxRenderer
             OoxConversionBudget.Current?.ChargePdfPages(1);
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
             markupContext = WithPageTextEmissionXOffset(markupContext, layoutPage);
+            textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
             int pageNumber = pageIndex + 1;
@@ -1075,7 +1078,9 @@ internal sealed partial class DocxRenderer
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = layout.Pages[pageIndex];
                 int pageNumber = pageIndex + 1;
-                foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
+                DocxMarkupContext pageMarkupContext = WithPageTextEmissionXOffset(markupContext, page);
+                double pageTextEmissionXOffset = ResolveTextEmissionXOffset(pageMarkupContext);
+                foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, pageMarkupContext, page.Height))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (line.SourceParagraph is not { } paragraph ||
@@ -1084,7 +1089,7 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
 
-                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken)
+                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, pageTextEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken)
                         .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
                         .ToArray();
                     if (segments.Count == 0)
@@ -1103,6 +1108,14 @@ internal sealed partial class DocxRenderer
                         if (!TryResolveBookmarkDestinationSegment(segments, bookmark, out DocxTextEmissionSegment? target, out double targetX))
                         {
                             continue;
+                        }
+
+                        // Word 16 bookmark controls: indentation/alignment do not move the
+                        // viewport origin, while a prefix before a mid-line bookmark does.
+                        // The three design-point context scales with the review print scale.
+                        if (line.Story?.Kind == DocxStoryKind.Body && line.BodyColumnOriginOffsetX is { } columnOffsetX)
+                        {
+                            targetX += columnOffsetX - 3d * textEmissionFontScale;
                         }
 
                         // RV01: fallback segments use diagnosed constants for bookmark targets.
