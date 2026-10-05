@@ -12,6 +12,45 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize()
+    {
+        foreach (double bodySize in new[] { 12d, 22d })
+        foreach (double? markSize in new double?[] { null, 8d, 12d, 16d, 24d })
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+                     OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAA", bodySize, 30d) with
+            {
+                ParagraphMarkFontSize = markSize,
+                InlineReferences = [new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null,
+                    SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)],
+                CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 3, 1, 0)]
+            };
+            DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([paragraph]) with
+            {
+                PageWidthPoints = 612d,
+                RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment,
+                    "/word/comments.xml", "1", [], [], [], null)]
+            };
+            var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
+            double nominalMarkSize = markSize ?? bodySize;
+            if (markSize is null && geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+                nominalMarkSize * scale > 11.625d)
+            {
+                nominalMarkSize = 11d;
+            }
+            double expected = OfficePdfTextEmissionProfile.FontSize(nominalMarkSize) * scale;
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            DocxTextEmissionSegmentSnapshot terminal = renderer.InspectTextEmission(document).Lines
+                .Where(line => !line.IsStaticStory).SelectMany(line => line.Segments)
+                .Single(segment => segment.IsTerminalLineSpace);
+            TestAssert.True(Math.Abs(terminal.PdfFontSize - expected) < 0.000001d,
+                $"Resolved paragraph mark {markSize}pt should retain its size at emission. Expected {expected}, actual {terminal.PdfFontSize}.");
+            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+            TestAssert.Contains(" " + expected.ToString("0.###", CultureInfo.InvariantCulture) + " Tf", content);
+        }
+    }
     public static void DocxReviewEmissionRoundsNominalFontSizeBeforePrintScale()
     {
         foreach (double nominalSize in new[] { 11d, 12d, 13d, 16d, 22d, 24d })

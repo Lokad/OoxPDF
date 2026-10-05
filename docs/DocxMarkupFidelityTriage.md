@@ -493,6 +493,25 @@ with 18 PDF/raster case identities. One case passes and 32 remain partial.
 Raw qualification and validation are under
 `artifacts/plan-revision-20261005/rv06-l16/`.
 
+## Resolved Paragraph-Mark Size Update (2026-10-05, RV06-L17)
+
+Terminal spaces now retain the resolved paragraph-mark size through review
+scaling. The reader already resolves that size through the paragraph style
+cascade, independently of the final visible run. The old large-font cap is
+retained for model-only paragraphs with no resolved mark size.
+
+Eight independent Word controls vary the body size and explicit or inherited
+mark size. The largest terminal font-size difference drops from 10.05 to 0.004
+points in the prototype; body baselines and terminal X positions are unchanged.
+The production regression checks inspection and emitted PDF font state across
+20 variants, including null marks and preserved layout. Terminal X differences
+up to 0.43 points remain a separate residual.
+
+The full DOCX run passes 866 tests with no failures or skips. All 33 cached
+rasters, page counts and failure totals are unchanged at 575, and 32 PDFs
+remain byte-identical. Only the comment text-box case changes PDF text state.
+Raw evidence is under `artifacts/plan-revision-20261005/rv06-l17/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

@@ -554,9 +554,11 @@ internal sealed partial class DocxRenderer
         // Spill sizing probes (Word COM references edge-spillsrc-break14/docdef16):
         // emission-appended terminal line spaces resolve at pilcrow size through the
         // style cascade (12pt trailing for a 9pt marker), not at the last layout
-        // segment size. Null pilcrows keep legacy behavior.
+        // segment size. Resolved pilcrows retain their size even for large marks;
+        // the legacy cap remains only for model-only paragraphs without a mark size.
         double fontSize = (line.SourceParagraph?.ParagraphMarkFontSize ?? GetSegmentFontSize(segment, line.FontSize)) * fontScale;
-        return ShouldCapWordCompatibleAllMarkupTextFontSize(fontSize, useWordCompatibleTextProfile)
+        return line.SourceParagraph?.ParagraphMarkFontSize is null &&
+            ShouldCapWordCompatibleAllMarkupTextFontSize(fontSize, useWordCompatibleTextProfile)
             ? 11d * fontScale
             : fontSize;
     }
