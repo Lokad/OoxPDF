@@ -36,7 +36,7 @@ internal static class DocxRevisionsTests
                             xmlns:v="urn:schemas-microsoft-com:vml">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:r>
                         <w:pict>
                           <v:shapetype id="_x0000_t202" coordsize="21600,21600" o:spt="202" path="m,l,21600r21600,l21600,xe"
@@ -61,7 +61,7 @@ internal static class DocxRevisionsTests
                           </v:shape>
                         </w:pict>
                       </w:r>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1363,11 +1363,11 @@ internal static class DocxRevisionsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:moveTo w:id="9" w:author="Author" w:date="2026-06-02T00:00:00Z">
                         <w:r><w:t>Moved</w:t></w:r>
                       </w:moveTo>
-                      <w:r><w:t> after</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> after</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>

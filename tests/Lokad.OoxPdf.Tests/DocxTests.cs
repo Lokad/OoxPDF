@@ -330,11 +330,11 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
-                      <w:ins w:id="1" w:author="A" w:date="2026-06-01T00:00:00Z"><w:r><w:t>Inserted </w:t></w:r></w:ins>
-                      <w:del w:id="2" w:author="B" w:date="2026-06-02T00:00:00Z"><w:r><w:delText>Deleted </w:delText></w:r></w:del>
-                      <w:moveFrom w:id="3" w:author="C" w:date="2026-06-03T00:00:00Z"><w:r><w:delText>MovedFrom </w:delText></w:r></w:moveFrom>
-                      <w:moveTo w:id="4" w:author="D" w:date="2026-06-04T00:00:00Z"><w:r><w:t>MovedTo </w:t></w:r></w:moveTo>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
+                      <w:ins w:id="1" w:author="A" w:date="2026-06-01T00:00:00Z"><w:r><w:t xml:space="preserve">Inserted </w:t></w:r></w:ins>
+                      <w:del w:id="2" w:author="B" w:date="2026-06-02T00:00:00Z"><w:r><w:delText xml:space="preserve">Deleted </w:delText></w:r></w:del>
+                      <w:moveFrom w:id="3" w:author="C" w:date="2026-06-03T00:00:00Z"><w:r><w:delText xml:space="preserve">MovedFrom </w:delText></w:r></w:moveFrom>
+                      <w:moveTo w:id="4" w:author="D" w:date="2026-06-04T00:00:00Z"><w:r><w:t xml:space="preserve">MovedTo </w:t></w:r></w:moveTo>
                       <w:r><w:t>After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
@@ -374,11 +374,11 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
-                      <w:ins w:id="1" w:author="A" w:date="2026-06-01T00:00:00Z"><w:r><w:t>Inserted </w:t></w:r></w:ins>
-                      <w:del w:id="2" w:author="B" w:date="2026-06-02T00:00:00Z"><w:r><w:delText>Deleted </w:delText></w:r></w:del>
-                      <w:moveFrom w:id="3" w:author="C" w:date="2026-06-03T00:00:00Z"><w:r><w:delText>MovedFrom </w:delText></w:r></w:moveFrom>
-                      <w:moveTo w:id="4" w:author="D" w:date="2026-06-04T00:00:00Z"><w:r><w:t>MovedTo </w:t></w:r></w:moveTo>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
+                      <w:ins w:id="1" w:author="A" w:date="2026-06-01T00:00:00Z"><w:r><w:t xml:space="preserve">Inserted </w:t></w:r></w:ins>
+                      <w:del w:id="2" w:author="B" w:date="2026-06-02T00:00:00Z"><w:r><w:delText xml:space="preserve">Deleted </w:delText></w:r></w:del>
+                      <w:moveFrom w:id="3" w:author="C" w:date="2026-06-03T00:00:00Z"><w:r><w:delText xml:space="preserve">MovedFrom </w:delText></w:r></w:moveFrom>
+                      <w:moveTo w:id="4" w:author="D" w:date="2026-06-04T00:00:00Z"><w:r><w:t xml:space="preserve">MovedTo </w:t></w:r></w:moveTo>
                       <w:r><w:t>After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
@@ -613,9 +613,9 @@ internal static class DocxTests
                           <w:del w:id="202" w:author="B" w:date="2026-06-10T00:00:00Z"/>
                         </w:rPr>
                       </w:pPr>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:del w:id="201" w:author="A" w:date="2026-06-10T00:00:00Z">
-                        <w:r><w:t>deleted-run </w:t></w:r>
+                        <w:r><w:t xml:space="preserve">deleted-run </w:t></w:r>
                       </w:del>
                       <w:r><w:t>After</w:t></w:r>
                     </w:p>
@@ -673,9 +673,9 @@ internal static class DocxTests
                     </w:p>
                     <w:p>
                       <w:pPr><w:spacing w:before="480" w:after="120"/></w:pPr>
-                      <w:r><w:t>Second </w:t></w:r>
-                      <w:hyperlink r:id="rIdLink"><w:r><w:t>link </w:t></w:r></w:hyperlink>
-                      <w:fldSimple w:instr=" REF SyntheticTarget "><w:r><w:t>field </w:t></w:r></w:fldSimple>
+                      <w:r><w:t xml:space="preserve">Second </w:t></w:r>
+                      <w:hyperlink r:id="rIdLink"><w:r><w:t xml:space="preserve">link </w:t></w:r></w:hyperlink>
+                      <w:fldSimple w:instr=" REF SyntheticTarget "><w:r><w:t xml:space="preserve">field </w:t></w:r></w:fldSimple>
                       <w:r><w:t>[c]</w:t><w:commentReference w:id="1"/></w:r>
                     </w:p>
                     <w:del w:id="502" w:author="B" w:date="2026-06-10T00:00:00Z">
@@ -740,15 +740,15 @@ internal static class DocxTests
                             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:hyperlink r:id="rIdLink">
-                        <w:r><w:t>Link </w:t></w:r>
-                        <w:del w:id="301" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>old </w:delText></w:r></w:del>
-                        <w:ins w:id="302" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:t>new </w:t></w:r></w:ins>
+                        <w:r><w:t xml:space="preserve">Link </w:t></w:r>
+                        <w:del w:id="301" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText xml:space="preserve">old </w:delText></w:r></w:del>
+                        <w:ins w:id="302" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:t xml:space="preserve">new </w:t></w:r></w:ins>
                       </w:hyperlink>
                       <w:fldSimple w:instr=" DATE ">
-                        <w:del w:id="303" w:author="C" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>field-old </w:delText></w:r></w:del>
-                        <w:ins w:id="304" w:author="D" w:date="2026-06-10T00:00:00Z"><w:r><w:t>field-new </w:t></w:r></w:ins>
+                        <w:del w:id="303" w:author="C" w:date="2026-06-10T00:00:00Z"><w:r><w:delText xml:space="preserve">field-old </w:delText></w:r></w:del>
+                        <w:ins w:id="304" w:author="D" w:date="2026-06-10T00:00:00Z"><w:r><w:t xml:space="preserve">field-new </w:t></w:r></w:ins>
                       </w:fldSimple>
                       <w:r><w:t>After</w:t></w:r>
                     </w:p>
@@ -793,20 +793,20 @@ internal static class DocxTests
                             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
-                      <w:del w:id="401" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Hidden </w:delText></w:r></w:del>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
+                      <w:del w:id="401" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText xml:space="preserve">Hidden </w:delText></w:r></w:del>
                       <w:ins w:id="402" w:author="A" w:date="2026-06-10T00:00:00Z">
                         <w:bookmarkStart w:id="9" w:name="Target"/>
-                        <w:r><w:t>Target </w:t></w:r>
+                        <w:r><w:t xml:space="preserve">Target </w:t></w:r>
                         <w:bookmarkEnd w:id="9"/>
                       </w:ins>
-                      <w:hyperlink w:anchor="Target"><w:r><w:t>Jump </w:t></w:r></w:hyperlink>
+                      <w:hyperlink w:anchor="Target"><w:r><w:t xml:space="preserve">Jump </w:t></w:r></w:hyperlink>
                       <w:hyperlink r:id="rIdLink">
-                        <w:del w:id="403" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Old link </w:delText></w:r></w:del>
-                        <w:ins w:id="404" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>External </w:t></w:r></w:ins>
+                        <w:del w:id="403" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:delText xml:space="preserve">Old link </w:delText></w:r></w:del>
+                        <w:ins w:id="404" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t xml:space="preserve">External </w:t></w:r></w:ins>
                       </w:hyperlink>
                       <w:ins w:id="405" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Foot</w:t><w:footnoteReference w:id="2"/></w:r></w:ins>
-                      <w:r><w:t> End</w:t><w:endnoteReference w:id="3"/></w:r>
+                      <w:r><w:t xml:space="preserve"> End</w:t><w:endnoteReference w:id="3"/></w:r>
                     </w:p>
                     <w:tbl>
                       <w:del w:id="406" w:author="A" w:date="2026-06-10T00:00:00Z">
@@ -1115,7 +1115,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:p>
-                    <w:r><w:t>Header base </w:t></w:r>
+                    <w:r><w:t xml:space="preserve">Header base </w:t></w:r>
                     <w:ins w:id="11" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Header inserted</w:t></w:r></w:ins>
                     <w:del w:id="12" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Header deleted</w:delText></w:r></w:del>
                   </w:p>
@@ -1125,7 +1125,7 @@ internal static class DocxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:p>
-                    <w:r><w:t>Footer base </w:t></w:r>
+                    <w:r><w:t xml:space="preserve">Footer base </w:t></w:r>
                     <w:ins w:id="21" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Footer inserted</w:t></w:r></w:ins>
                     <w:del w:id="22" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Footer deleted</w:delText></w:r></w:del>
                   </w:p>
@@ -1136,7 +1136,7 @@ internal static class DocxTests
                 <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:comment w:id="1">
                     <w:p>
-                      <w:r><w:t>Comment base </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Comment base </w:t></w:r>
                       <w:ins w:id="31" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Comment inserted</w:t></w:r></w:ins>
                       <w:del w:id="32" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Comment deleted</w:delText></w:r></w:del>
                     </w:p>
@@ -1148,7 +1148,7 @@ internal static class DocxTests
                 <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:footnote w:id="2">
                     <w:p>
-                      <w:r><w:t>Footnote base </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Footnote base </w:t></w:r>
                       <w:ins w:id="41" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Footnote inserted</w:t></w:r></w:ins>
                       <w:del w:id="42" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Footnote deleted</w:delText></w:r></w:del>
                     </w:p>
@@ -1160,7 +1160,7 @@ internal static class DocxTests
                 <w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:endnote w:id="3">
                     <w:p>
-                      <w:r><w:t>Endnote base </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Endnote base </w:t></w:r>
                       <w:ins w:id="51" w:author="A" w:date="2026-06-10T00:00:00Z"><w:r><w:t>Endnote inserted</w:t></w:r></w:ins>
                       <w:del w:id="52" w:author="B" w:date="2026-06-10T00:00:00Z"><w:r><w:delText>Endnote deleted</w:delText></w:r></w:del>
                     </w:p>
@@ -1593,21 +1593,21 @@ internal static class DocxTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Zebra anchor </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Zebra anchor </w:t></w:r>
                       <w:commentRangeStart w:id="1"/>
                       <w:r><w:t>marked range</w:t></w:r>
                       <w:commentRangeEnd w:id="1"/>
                       <w:r><w:commentReference w:id="1"/></w:r>
                     </w:p>
                     <w:p>
-                      <w:r><w:t>Apple anchor </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Apple anchor </w:t></w:r>
                       <w:commentRangeStart w:id="2"/>
                       <w:r><w:t>marked range</w:t></w:r>
                       <w:commentRangeEnd w:id="2"/>
                       <w:r><w:commentReference w:id="2"/></w:r>
                     </w:p>
                     <w:p>
-                      <w:r><w:t>Zebra again </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Zebra again </w:t></w:r>
                       <w:commentRangeStart w:id="3"/>
                       <w:r><w:t>marked range</w:t></w:r>
                       <w:commentRangeEnd w:id="3"/>

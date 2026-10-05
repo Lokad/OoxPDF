@@ -136,6 +136,32 @@ the remaining parity gates. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l2/`; portable adversarial checks run via
 `tools/TestMarkupAnnotations.ps1` in both CI jobs.
 
+## Text Whitespace Update (2026-10-05, RV06-L3)
+
+The reader now removes insignificant XML whitespace at the edges of `w:t` and
+`w:delText`. A direct `xml:space="preserve"` retains those edges; internal spaces
+and nonbreaking spaces remain. Literal tab/newline characters inside text become
+spaces, while `w:tab` and `w:br` retain their layout semantics. The default-edge
+rule follows the [OOXML TextType remarks](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.texttype.space?view=openxml-3.0.1).
+Independent Word 16 exports also establish that preservation attributes on
+ancestor runs or paragraphs do not preserve a text element's edges.
+
+The hidden-comment-anchor case previously emitted one extra space, causing
+roughly 2.5-point width/advance differences. All its gates now pass. A regression
+covers thirteen combinations of preservation, deleted text, nonbreaking spaces
+and actual/literal text controls. Synthetic unit inputs that intend significant
+edge spaces now declare preservation explicitly; their expected results remain
+unchanged. The broader DOCX run passes 847 tests with no failures or skips.
+
+Across all 33 cached-reference cases, gate failures decrease from 665 to 645 and
+page counts remain unchanged. Thirty-two cases still have nonzero gates. Two
+cases gain failures: the threaded/resolved case exposes a 0.298-point spacing
+residual while its largest width mismatch improves from 61.48 to 35.20 points;
+the mirrored-margin case changes wrapping on its wider even-page body frame,
+moving two balloons and increasing failures from 15 to 21. That geometry defect
+is the next bounded repair, rather than a reason to restore insignificant text.
+Evidence is under `artifacts/plan-revision-20261005/rv06-l3/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

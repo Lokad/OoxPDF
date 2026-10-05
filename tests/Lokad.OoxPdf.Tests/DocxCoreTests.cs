@@ -12,6 +12,54 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCoreTests
 {
+    public static void DocxReaderTextWhitespaceMatchesOffice()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t>  alpha  </w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:r><w:t xml:space="preserve">  alpha  </w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p xml:space="preserve"><w:r><w:t>  alpha  </w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:r xml:space="preserve"><w:t>  alpha  </w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p xml:space="preserve"><w:r><w:t xml:space="default">  alpha  </w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>alpha</w:t></w:r><w:r><w:t>  </w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>alpha  beta</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>&#160;alpha&#160;</w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>&#9;alpha&#10;</w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:r><w:t xml:space="preserve">&#9;alpha&#10;</w:t></w:r><w:r><w:t>beta</w:t></w:r></w:p>
+                    <w:p><w:del w:id="1"><w:r><w:delText>  old  </w:delText></w:r></w:del></w:p>
+                    <w:p><w:del w:id="2"><w:r><w:delText xml:space="preserve">  old  </w:delText></w:r></w:del></w:p>
+                    <w:p><w:r><w:t>alpha</w:t><w:tab/><w:t>beta</w:t><w:br/><w:t>gamma</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.AllMarkup);
+        string[] expected = ["alphabeta", "  alpha  beta", "alphabeta", "alphabeta", "alphabeta", "alphabeta", "alpha  beta", "\u00A0alpha\u00A0beta", "alphabeta", " alpha beta", "old", "  old  ", "alpha\tbeta\ngamma"];
+        TestAssert.Equal(expected.Length, document.Paragraphs.Count);
+        for (int i = 0; i < expected.Length; i++)
+        {
+            TestAssert.Equal(expected[i], string.Concat(document.Paragraphs[i].Runs.Select(run => run.Text)));
+        }
+    }
+
     public static void DocxStoryIdPreservesLegacySpellings()
     {
         // T03: every layout story kind renders the exact string the layout

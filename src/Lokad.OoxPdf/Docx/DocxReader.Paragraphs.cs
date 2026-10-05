@@ -1338,7 +1338,30 @@ internal sealed partial class DocxReader
         if (child.Name == WordprocessingNamespace + "t" ||
             child.Name == WordprocessingNamespace + "delText")
         {
-            return (string?)child ?? string.Empty;
+            string value = child.Value;
+            // Word 16 honors preservation on the text element itself, not on
+            // ancestor runs/paragraphs. Unmarked boundary XML whitespace is
+            // insignificant; interior spaces and nonbreaking spaces remain.
+            if ((string?)child.Attribute(XNamespace.Xml + "space") != "preserve")
+            {
+                int start = 0;
+                int end = value.Length;
+                while (start < end && IsXmlWhitespace(value[start]))
+                {
+                    start++;
+                }
+                while (end > start && IsXmlWhitespace(value[end - 1]))
+                {
+                    end--;
+                }
+                if (start != 0 || end != value.Length)
+                {
+                    value = value.Substring(start, end - start);
+                }
+            }
+            // Literal controls in w:t are text whitespace. w:tab and w:br
+            // below carry the actual tab-stop and line-break semantics.
+            return value.Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
         }
 
         if (child.Name == WordprocessingNamespace + "tab")
@@ -1369,6 +1392,8 @@ internal sealed partial class DocxReader
 
         return string.Empty;
     }
+
+    private static bool IsXmlWhitespace(char value) => value is ' ' or '\t' or '\r' or '\n';
 
     private static string? ReadParagraphStyleId(XElement? paragraphProperties)
     {

@@ -1188,9 +1188,9 @@ internal static class DocxTextTests
                   <w:body>
                     <w:p>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="single"/></w:rPr><w:t>Under</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="double"/></w:rPr><w:t> DoubleUnder</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:strike/></w:rPr><w:t> Strike</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:dstrike/></w:rPr><w:t> Double</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="double"/></w:rPr><w:t xml:space="preserve"> DoubleUnder</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:strike/></w:rPr><w:t xml:space="preserve"> Strike</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:dstrike/></w:rPr><w:t xml:space="preserve"> Double</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1326,9 +1326,9 @@ internal static class DocxTextTests
                   <w:body>
                     <w:p>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dash"/></w:rPr><w:t>Dash style</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotted"/></w:rPr><w:t> Dotted style</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotDash"/></w:rPr><w:t> Dot dash style</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotDotDash"/></w:rPr><w:t> Dot dot dash style</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotted"/></w:rPr><w:t xml:space="preserve"> Dotted style</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotDash"/></w:rPr><w:t xml:space="preserve"> Dot dash style</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dotDotDash"/></w:rPr><w:t xml:space="preserve"> Dot dot dash style</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1374,7 +1374,7 @@ internal static class DocxTextTests
                   <w:body>
                     <w:p>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="single"/></w:rPr><w:t>Single</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="thick"/></w:rPr><w:t> Thick</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="thick"/></w:rPr><w:t xml:space="preserve"> Thick</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1423,7 +1423,7 @@ internal static class DocxTextTests
                   <w:body>
                     <w:p>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dashDotHeavy"/></w:rPr><w:t>Dash dot heavy</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dashDotDotHeavy"/></w:rPr><w:t> Dash dot dot heavy</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/><w:u w:val="dashDotDotHeavy"/></w:rPr><w:t xml:space="preserve"> Dash dot dot heavy</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1579,9 +1579,9 @@ internal static class DocxTextTests
                   <w:body>
                     <w:p>
                       <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:highlight w:val="yellow"/></w:rPr><w:t>Yellow</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:highlight w:val="darkBlue"/><w:color w:val="FFFFFF"/></w:rPr><w:t> Dark</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:shd w:val="clear" w:fill="D9EAD3"/></w:rPr><w:t> Shade</w:t></w:r>
-                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:shd w:val="pct20" w:color="112233" w:fill="D9EAD3"/></w:rPr><w:t> PatternTokenOnly</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:highlight w:val="darkBlue"/><w:color w:val="FFFFFF"/></w:rPr><w:t xml:space="preserve"> Dark</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:shd w:val="clear" w:fill="D9EAD3"/></w:rPr><w:t xml:space="preserve"> Shade</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="28"/><w:shd w:val="pct20" w:color="112233" w:fill="D9EAD3"/></w:rPr><w:t xml:space="preserve"> PatternTokenOnly</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1771,11 +1771,11 @@ internal static class DocxTextTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:fldSimple w:instr=" DATE \@ &quot;yyyy&quot; ">
                         <w:r><w:rPr><w:rStyle w:val="ResultStyle"/></w:rPr><w:t>2026</w:t></w:r>
                       </w:fldSimple>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1817,10 +1817,10 @@ internal static class DocxTextTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:ins><w:r><w:rPr><w:color w:val="336699"/></w:rPr><w:t>Inserted</w:t></w:r></w:ins>
                       <w:del><w:r><w:t>Deleted</w:t></w:r></w:del>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1862,10 +1862,10 @@ internal static class DocxTextTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:ins><w:r><w:t>Inserted</w:t></w:r></w:ins>
                       <w:del><w:r><w:t>Deleted</w:t></w:r></w:del>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -1921,11 +1921,11 @@ internal static class DocxTextTests
                             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:hyperlink r:id="rId2">
                         <w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr><w:t>Link</w:t></w:r>
                       </w:hyperlink>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>

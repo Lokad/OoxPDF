@@ -161,9 +161,9 @@ internal static class DocxFieldsTests
                 <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:footnote w:id="5">
                     <w:p>
-                      <w:r><w:t>Foot </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Foot </w:t></w:r>
                       <w:fldSimple w:instr=" PAGE "/>
-                      <w:r><w:t> of </w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> of </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> NUMPAGES </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
@@ -178,13 +178,13 @@ internal static class DocxFieldsTests
                 <w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:endnote w:id="7">
                     <w:p>
-                      <w:r><w:t>End </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">End </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> PAGE </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
                       <w:r><w:t>3</w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="end"/></w:r>
-                      <w:r><w:t> of </w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> of </w:t></w:r>
                       <w:fldSimple w:instr=" NUMPAGES "/>
                     </w:p>
                   </w:endnote>
@@ -297,13 +297,13 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> DATE \@ &quot;yyyy&quot; </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
                       <w:r><w:t>2026</w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="end"/></w:r>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -354,7 +354,7 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:hyperlink r:id="rIdLink">
                         <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                         <w:r><w:instrText> PAGEREF Target \h </w:instrText></w:r>
@@ -362,7 +362,7 @@ internal static class DocxFieldsTests
                         <w:r><w:t>section 2</w:t></w:r>
                         <w:r><w:fldChar w:fldCharType="end"/></w:r>
                       </w:hyperlink>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -417,19 +417,19 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> REF Outer </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
-                      <w:r><w:t>Outer </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Outer </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> DATE \@ &quot;yyyy&quot; </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
                       <w:r><w:t>2026</w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="end"/></w:r>
-                      <w:r><w:t> Done</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> Done</w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="end"/></w:r>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -492,12 +492,12 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:del w:id="41" w:author="A" w:date="2026-06-10T00:00:00Z">
                         <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                         <w:r><w:instrText> REF DeletedTarget </w:instrText></w:r>
                         <w:r><w:fldChar w:fldCharType="separate"/></w:r>
-                        <w:r><w:delText>deleted-field </w:delText></w:r>
+                        <w:r><w:delText xml:space="preserve">deleted-field </w:delText></w:r>
                         <w:r><w:fldChar w:fldCharType="end"/></w:r>
                       </w:del>
                       <w:moveFrom w:id="42" w:author="B" w:date="2026-06-10T00:00:00Z">
@@ -507,7 +507,7 @@ internal static class DocxFieldsTests
                         <w:r><w:t>moved-field</w:t></w:r>
                         <w:r><w:fldChar w:fldCharType="end"/></w:r>
                       </w:moveFrom>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -559,11 +559,11 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:sdt>
                         <w:sdtPr><w:alias w:val="Synthetic content control"/></w:sdtPr>
                         <w:sdtContent>
-                          <w:r><w:t>control </w:t></w:r>
+                          <w:r><w:t xml:space="preserve">control </w:t></w:r>
                           <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                           <w:r><w:instrText> REF ControlTarget </w:instrText></w:r>
                           <w:r><w:fldChar w:fldCharType="separate"/></w:r>
@@ -571,7 +571,7 @@ internal static class DocxFieldsTests
                           <w:r><w:fldChar w:fldCharType="end"/></w:r>
                         </w:sdtContent>
                       </w:sdt>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -619,7 +619,7 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> REF ControlTarget </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
@@ -630,7 +630,7 @@ internal static class DocxFieldsTests
                         </w:sdtContent>
                       </w:sdt>
                       <w:r><w:fldChar w:fldCharType="end"/></w:r>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -727,12 +727,12 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:r><w:fldChar w:fldCharType="begin"/></w:r>
                       <w:r><w:instrText> REF BrokenTarget </w:instrText></w:r>
                       <w:r><w:fldChar w:fldCharType="separate"/></w:r>
                       <w:r><w:t>cached-ref</w:t></w:r>
-                      <w:r><w:t> After</w:t></w:r>
+                      <w:r><w:t xml:space="preserve"> After</w:t></w:r>
                     </w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
@@ -918,7 +918,7 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:bookmarkStart w:id="7" w:name="Target"/>
                       <w:r><w:t>Target</w:t></w:r>
                       <w:bookmarkEnd w:id="7"/>
@@ -979,7 +979,7 @@ internal static class DocxFieldsTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:p>
-                      <w:r><w:t>Before </w:t></w:r>
+                      <w:r><w:t xml:space="preserve">Before </w:t></w:r>
                       <w:hyperlink w:anchor="OuterTarget">
                         <w:bookmarkStart w:id="11" w:name="InnerTarget"/>
                         <w:r><w:t>Linked</w:t></w:r>
