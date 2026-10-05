@@ -11,7 +11,7 @@ Measured renderer/tool revision: `cef195d77e4e8b116002dd8dcdb985eed4e30fd8`,
 package version 0.1.5. Ubuntu 24.04.3 under WSL2 (kernel 5.15.167.4),
 .NET runtime 10.0.12, SDK 10.0.112, 64-bit workstation GC, Interactive latency,
 28 logical CPUs on an Intel Core i7-14700KF. This establishes the measured WSL
-Linux leg; other Linux hosts and server GC require separate runs.
+Linux leg; default server GC is measured below, while other Linux hosts require separate runs.
 
 Each DOCX contains one `x` paragraph with `pageBreakBefore` per page and a
 612 by 792 point page size. There are no images, tables, markup or charts.
@@ -78,6 +78,77 @@ Original input SHA-256 values were:
 - 800 pages: `bdcbed07ccc2906700707c2c48ce9d6effe12aa638df47102c49d1e1f73beb9c`
 - 1600 pages: `3d79b42d4466aa1661839a8b1110654368200ccaf70d0fd17fd9a528673fbbf0`
 
+## Linux GC profiles, 2026-10-06
+
+Measured renderer/tool revision: `a0b042888607b87d2f0c74d48dfa3e7c7903b598`,
+package version 0.1.5, on the same Ubuntu/WSL host and .NET 10.0.12 with 28 logical
+CPUs. These fresh workstation controls include the subsequent renderer repairs;
+the earlier `cef195d7` observations above retain their original provenance.
+
+Workstation and server profiles use `DOTNET_gcServer=0` and `DOTNET_gcServer=1`,
+respectively, following the [runtime GC configuration](https://learn.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector).
+Every report confirms the actual GC mode, 64-bit process and Interactive latency.
+There were no ambient GC overrides; heap counts and other GC settings use runtime
+defaults. Both explicit-font probe self-tests passed before measurement.
+
+The same original inputs and DejaVu Sans font were copied to the native Linux
+filesystem. Each profile ran three repetitions of one process-first plus eight
+warm conversions per size/output mode, and three warmed batches per concurrency
+level. Profiles alternate within each repetition. Windows validation finished
+before the series; native Linux load averages were zero at the start.
+All 36 reports pass revision, GC, procedure, font/input and output identity checks.
+
+Each row below includes 24 warm samples; allocation and heap values use MiB,
+retained deltas use KiB, and times use milliseconds.
+
+| GC | File-output pages | Calling-thread allocation | Managed heap peak | Post-GC retained delta | Wall time |
+|---|---:|---:|---:|---:|---:|
+| workstation | 400 | 16.15–16.15 | 13.85–16.58 | 434–450 | 20.8–31.6 |
+| workstation | 800 | 31.01–31.09 | 15.16–18.11 | 860–872 | 41.2–84.1 |
+| workstation | 1600 | 60.93–61.09 | 19.74–22.00 | 1689–1709 | 90.5–166.2 |
+| server | 400 | 16.15–16.17 | 3.95–17.30 | 436–452 | 26.2–37.6 |
+| server | 800 | 31.07–31.09 | 8.53–31.97 | 862–874 | 47.4–81.5 |
+| server | 1600 | 60.93–61.07 | 14.92–63.28 | 1699–1711 | 85.7–181.3 |
+
+The output-mode and concurrency tables use MiB for all memory columns.
+At 1600 pages, sampled process memory also differs by GC profile:
+
+| GC | Output mode | Calling-thread allocation | Managed heap peak | Private memory | Working set |
+|---|---|---:|---:|---:|---:|
+| workstation | file | 60.93–61.09 | 19.74–22.00 | 116.39–124.23 | 92.20–103.05 |
+| workstation | buffer | 63.16–63.31 | 19.01–21.79 | 116.53–134.30 | 93.91–106.14 |
+| workstation | forward-only | 60.93–61.09 | 19.38–21.94 | 116.46–124.03 | 94.11–106.08 |
+| server | file | 60.93–61.07 | 14.92–63.28 | 161.49–459.64 | 84.14–177.17 |
+| server | buffer | 63.16–63.31 | 12.44–64.76 | 161.55–456.75 | 83.45–173.16 |
+| server | forward-only | 60.93–61.10 | 13.41–61.76 | 161.07–419.06 | 82.78–174.52 |
+
+Each concurrency row covers three warmed 1600-page batches:
+
+| GC | Parallel conversions | Batch heap peak | Private memory | Working set | Batch wall time |
+|---|---:|---:|---:|---:|---:|
+| workstation | 1 | 20.44–21.09 | 130.07–131.88 | 91.17–93.20 | 101.5–103.9 |
+| workstation | 2 | 27.05–28.79 | 146.17–149.52 | 97.02–106.33 | 124.9–136.7 |
+| workstation | 4 | 38.70–42.97 | 211.10–211.98 | 135.19–137.89 | 194.1–206.1 |
+| server | 1 | 17.07–27.07 | 185.32–214.02 | 98.02–101.98 | 96.7–106.5 |
+| server | 2 | 32.02–35.60 | 210.42–210.70 | 109.82–112.11 | 108.9–120.4 |
+| server | 4 | 54.16–60.22 | 272.74–276.04 | 158.39–161.79 | 164.3–188.0 |
+
+Allocation volume and retained deltas are similar across these two profiles,
+while server GC has wider sampled heap ranges and higher sampled private memory.
+The four-way server batches finish sooner in these samples; single-conversion
+wall-time ranges overlap. This establishes these default profiles on this host
+and workload. Other hosts, heap-count settings and document families require
+their own measurements. The approximately 5 ms sampling can miss brief peaks.
+
+Every size retains its previous output identity. The 1600-page output remains
+578631 bytes with the SHA-256 recorded above across both GC profiles, all output
+modes and every concurrency level.
+
+To repeat either profile, prefix each measurement command below with
+`DOTNET_gcServer=0` or `DOTNET_gcServer=1`; check the actual `serverGc` report field.
+Repeat the same size, output-mode and concurrency series three times for each
+profile with builds, self-tests and fixture generation outside the timed series.
+
 ## Reproduction and scope
 
 Generate the same OOXML parts with `tools/NewOperatingEnvelopeFixtures.ps1`.
@@ -102,4 +173,3 @@ include startup and earlier work. Neither these numbers nor image/page-content
 reservations establish arbitrary-document OOM immunity. Broader resource mixes,
 resolver eviction, charts/shading retention and other host/GC settings remain
 separate workloads.
-
