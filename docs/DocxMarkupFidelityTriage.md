@@ -317,6 +317,30 @@ cases preserve raster bytes, page counts and gate tallies; total failures remain
 byte-identical. The cached Word-compatible rectangle's maximum difference remains
 2.267 points, predominantly its body's accumulated baseline drift.
 
+## Review Typographic-Metrics Update (2026-10-05, RV06-L10)
+
+Review print scaling now retains the resolved font's typographic-metrics
+selection and scales its typographic line box once. The wrapper previously
+dropped this provider interface, so fonts requesting typographic metrics used
+larger Windows boxes in the scaled layout. A portable production regression
+checks both flag-set and flag-clear synthetic faces: the former uses its
+typographic box, while the latter continues to use Windows extents.
+
+In the cached Word-compatible review fixture, ordinary body-baseline differences
+fall from 0.89-2.17 points to at most 0.07 points; gate failures decrease from
+23 to 19. Correcting pitch exposes separate annotation assumptions: the bookmark
+viewport's Windows ascent differs by 1.453 points, and clipping a body hyperlink
+against the following table's glyph top leaves a 2.563-point bottom-edge
+difference. These are separate follow-up calibrations. The full DOCX run passes
+858 tests with no failures or skips. Raw evidence is under
+`artifacts/plan-revision-20261005/rv06-l10/`.
+
+The complete 33-case cached comparison reduces total gate failures from 632 to
+586. All page counts match; 19 PDF/raster cases remain byte-identical and 14
+change with the repaired line metrics. No case's total failure count increases.
+The newly exposed bookmark target delta above is retained as a named residual,
+despite the main case's net improvement. One case passes and 32 remain partial.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

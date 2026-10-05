@@ -117,7 +117,7 @@ internal sealed partial class DocxRenderer
             Fallback: fallback));
     }
 
-    private sealed class ScaledDocxTextMeasurer(IDocxTextMeasurer inner, double textScale, double lineMetricScale) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
+    private sealed class ScaledDocxTextMeasurer(IDocxTextMeasurer inner, double textScale, double lineMetricScale) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxTypographicMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize)
         {
@@ -143,6 +143,18 @@ internal sealed partial class DocxRenderer
             return inner is IDocxStaticTextMetricsProvider staticMetrics
                 ? staticMetrics.MeasureWindowsDescender(run, fontSize) * lineMetricScale
                 : fontSize * 0.2d * lineMetricScale;
+        }
+
+        public bool UseTypographicMetrics(DocxTextRun? run)
+        {
+            return inner is IDocxTypographicMetricsProvider typographic && typographic.UseTypographicMetrics(run);
+        }
+
+        public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize)
+        {
+            return inner is IDocxTypographicMetricsProvider typographic
+                ? typographic.MeasureTypographicLineHeight(run, fontSize) * lineMetricScale
+                : 0d;
         }
     }
 

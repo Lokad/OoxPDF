@@ -1417,6 +1417,40 @@ internal static class DocxTextSpacingTests
         TestAssert.True(Math.Abs(pitch - 25.375d) < 0.000001d, "Auto line pitch must follow max hhea sum when larger; observed pitch=" + pitch.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
+    public static void DocxReviewPrintScalingPreservesTypographicLineBoxSelection()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-margin-mirrored.docx"));
+        DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("Body", 10d, "WinFace", false, false, false, null, null)],
+            [], null, DocxTextAlignment.Left, null, 0d, 8d, 278d / 240d, null,
+            new DocxParagraphSpacing("0", "160", null, null, null, null, "278", "auto", null),
+            DocxParagraphKeepRules.Empty, null);
+        DocxDocument document = source with
+        {
+            BodyElements = [new DocxParagraphElement(paragraph), new DocxParagraphElement(paragraph with
+            {
+                Runs = [new DocxTextRun("Next", 10d, "WinFace", false, false, false, null, null)]
+            }), new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Review", "1"))]
+        };
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+        TestAssert.True(scale < 1d, "The regression must exercise the review-scaling wrapper.");
+        foreach (bool useTypographicMetrics in new[] { false, true })
+        {
+            var renderer = new DocxRenderer(new WindowsExtentsFontResolver(useTypographicMetrics),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines
+                .Where(line => line.SourceBlockIndex is 0 or 1 && line.SourceLineIndex == 0).ToArray();
+            TestAssert.Equal(2, lines.Length);
+            double pitch = lines[0].Segments.First().BaselineY - lines[1].Segments.First().BaselineY;
+            double lineBox = useTypographicMetrics ? 10d : 15d;
+            double expectedPitch = (lineBox * 278d / 240d + 8d) * scale;
+            TestAssert.True(Math.Abs(pitch - expectedPitch) < 0.000001d,
+                "Review scaling must retain the resolved font's line-box selection and scale the selected metrics once.");
+        }
+    }
+
     public static void DocxAutoLineBoxIgnoresWindowsExtents()
     {
         // USE_TYPO_METRICS carve-out for the hhea maximum above: a face requesting
