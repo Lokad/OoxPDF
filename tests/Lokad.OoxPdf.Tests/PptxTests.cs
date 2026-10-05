@@ -202,9 +202,7 @@ internal static class PptxTests
             }
         }
 
-        string input = TestFixtures.WriteTempPackage(".pptx", parts);
-
-        using FileStream stream = File.OpenRead(input);
+        using MemoryStream stream = TestFixtures.CreateZipPackage(parts);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         return (document, package);
