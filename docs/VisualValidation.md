@@ -90,7 +90,13 @@ Named limitation, intended next improvement, and gate for each approximate famil
 - pptx-composition: master and layout inheritance locks case by case; next is extending locked inheritance coverage. Gate: family gates plus pixels.
 - pptx-effects: raster shadows and glows approximate, other effects unsupported with diagnostics; next is held-out Office calibration for further effects. Gate: family 9/9 plus pixels.
 - docx-layout: Latin greedy wrapping with mid-line images across body, table-cell, related-story and static paths plus approximate columns, notes, and floating wrap; Office calibration of image baseline, line growth, and justification is complete; remaining scope is explicit non-goals. Gate: family 60/60, docx-text groups, words and line starts plus pixels.
-- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text; next is word-compatible Office calibration (references unavailable here). Gate: cached Office gates plus layout snapshots.
+- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text. On the validation workstation, all 33 public manifests have cached references covering 25 distinct input/view identities; all still have nonzero parity gates. Next is the classified Word-compatible layout/balloon/text residuals in `docs/DocxMarkupFidelityTriage.md`. Gate: cached Office gates plus layout snapshots.
+
+SVG gradient geometry is checked after transforms and coordinate mapping, before
+painting. Finite input values whose spans, sampling projection or radial bounds
+overflow are diagnosed and their fills omitted. Usable solid strokes and adjacent
+shapes remain. This is an extreme-value fallback, not arbitrary-precision SVG
+geometry support; ordinary SVG reference-case PDF bytes remain unchanged.
 
 ### Lock policy
 

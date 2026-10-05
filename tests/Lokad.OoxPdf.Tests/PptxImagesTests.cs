@@ -1725,6 +1725,37 @@ internal static class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unsupported I command", StringComparison.Ordinal)), "Out-of-range shape geometry must not misdiagnose a path command.");
         TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Out-of-range shape geometry must not drop the whole SVG picture.");
     }
+    // RV07-N1: composed gradient overflow omits only the fill and keeps adjacent
+    // shapes and the invalid fill's independently usable solid stroke.
+    public static void PptxSyntheticSvgExtremeGradientGeometryKeepsOtherShapes()
+    {
+        foreach (var probe in new[]
+        {
+            (Gradient: "<linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient>", Path: "M-1e308 0H1e308V20H-1e308Z", Transform: ""),
+            (Gradient: "<radialGradient id=\"g\" cx=\"1e308\" cy=\"0.5\" r=\"1e308\"><stop offset=\"0\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></radialGradient>", Path: "M0 0H10V5H0Z", Transform: ""),
+            (Gradient: "<linearGradient id=\"g\" gradientUnits=\"userSpaceOnUse\" x1=\"1e308\" y1=\"0\" x2=\"1e308\" y2=\"1\"><stop offset=\"0\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient>", Path: "M0 0H10V5H0Z", Transform: "transform=\"scale(2)\""),
+            (Gradient: "<linearGradient id=\"g\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"0\" x2=\"1e155\" y2=\"0\"><stop offset=\"0\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient>", Path: "M0 0H10V5H0Z", Transform: ""),
+            (Gradient: "<linearGradient id=\"g\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"0\" x2=\"1e154\" y2=\"0\" spreadMethod=\"repeat\"><stop offset=\"0\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient>", Path: "M1e160 0H2e160V20H1e160Z", Transform: ""),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <defs>{probe.Gradient}</defs>
+                  <path d="{probe.Path}" fill="url(#g)" stroke="#FF00FF" {probe.Transform}/>
+                  <path d="M50 0H100V50H50Z" fill="#FF0000"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Composed gradient overflow must not discard the entire SVG picture.");
+            TestAssert.Contains("1 0 0 rg", pdf);
+            TestAssert.Contains("1 0 1 RG", pdf);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("non-finite gradient geometry", StringComparison.Ordinal)), "Composed gradient overflow must diagnose its omitted fill.");
+        }
+    }
+
     // RV07: stroke state overflowing past double range drops the stroke with a diagnosis, not the picture.
     public static void PptxSyntheticSvgHugeTransformStrokeStateDiagnoses()
     {
