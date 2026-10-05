@@ -12,6 +12,83 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxHyperlinksTests
 {
+    public static void DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-margin-mirrored.docx"));
+        DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        foreach (bool scaled in new[] { false, true })
+        foreach (double fontSize in new[] { 11d, 12d, 24d })
+        {
+            var paragraph = new DocxParagraph(
+                [new DocxTextRun("LINK", fontSize, null, false, false, false, null, null)],
+                [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, 24d,
+                new DocxParagraphSpacing(null, null, null, null, null, null, null, "exact", null),
+                DocxParagraphKeepRules.Empty, null)
+            {
+                Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/line-box", "External", null, 0, 1, 0, 1, 4)]
+            };
+            DocxDocument document = source with
+            {
+                BodyElements = [new DocxParagraphElement(paragraph), new DocxParagraphElement(DocxTests.CreateCommentMarkerParagraph("Review", "1"))]
+            };
+            var mode = scaled ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var geometry = scaled ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), mode, geometry);
+            double scale = scaled ? DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode, geometry)) : 1d;
+            DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines
+                .Single(line => line.SourceBlockIndex == 0).Segments.First();
+            PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+            TestAssert.True(Math.Abs(annotation.X - (glyph.X - 2.25d * scale)) < 0.000001d,
+                "Word body link padding is a fixed design distance, independent of glyph size.");
+            TestAssert.True(Math.Abs(annotation.Y + annotation.Height - (glyph.BaselineY + 19.2d * scale)) < 0.000001d,
+                "An exact 24pt paragraph anchors its link rectangle at the line-box top for every glyph size.");
+            TestAssert.True(Math.Abs(annotation.Height - 24d * scale) < 0.000001d,
+                "The clickable slot must retain the printed exact line height when the following paragraph changes font size.");
+        }
+    }
+
+    public static void DocxBodyHyperlinkAutoBoxSurvivesMixedRunsSpacingAndBreakSpill()
+    {
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (double paragraphFontSize in new[] { 11d, 24d })
+        {
+            var paragraph = new DocxParagraph(
+                [new DocxTextRun(paragraphFontSize == 24d ? "Prefix " : "", paragraphFontSize, null, false, false, false, null, null),
+                 new DocxTextRun("LINK", 11d, null, false, false, false, null, null)],
+                [], null, DocxTextAlignment.Left, null, 0d, 0d, 1d, null,
+                new DocxParagraphSpacing(null, null, null, null, null, null, "240", "auto", null),
+                DocxParagraphKeepRules.Empty, null)
+            {
+                Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/auto-box", "External", null, 1, 1, 1, 1, 4)]
+            };
+            DocxDocument isolated = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+            PdfLinkAnnotation isolatedBox = renderer.RenderBlankPages(isolated, null, CancellationToken.None).Single().Annotations.Single();
+            foreach (double after in new[] { 0d, 8d })
+            foreach (double nextFontSize in new[] { 12d, 24d })
+            foreach (bool breakOnly in new[] { false, true })
+            {
+                DocxParagraph following = paragraph with
+                {
+                    Runs = [new DocxTextRun(breakOnly ? "" : "Following", nextFontSize, null, false, false, false, null, null)],
+                    Hyperlinks = []
+                };
+                var elements = new List<DocxBodyElement> { new DocxParagraphElement(paragraph with { SpacingAfterPoints = after }) };
+                elements.Add(breakOnly
+                    ? new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", following)
+                    : new DocxParagraphElement(following));
+                DocxDocument document = DocxTests.CreateLayoutTestDocument(elements, []);
+                PdfLinkAnnotation box = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Annotations.Single();
+                DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines
+                    .Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0).Segments
+                    .Single(segment => segment.TextLength == 4 && !segment.IsTerminalLineSpace);
+                TestAssert.True(Math.Abs(box.Y + box.Height - (glyph.BaselineY + 0.94d * paragraphFontSize)) < 0.000001d,
+                    "A larger neighbouring run sets the paragraph line-box top even when the link glyphs stay small.");
+                TestAssert.True(Math.Abs(box.Height - isolatedBox.Height - after) < 0.000001d,
+                    "Following font changes and non-consuming break-spill glyphs must preserve the link slot and its trailing paragraph spacing.");
+            }
+        }
+    }
+
     public static void DocxRendererEmitsBodyExternalHyperlinkAnnotations()
     {
         var runs = new[]
@@ -148,8 +225,10 @@ internal static class DocxHyperlinksTests
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
         PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
 
+        double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
         TestAssert.True(
-            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * (2.2d * 10d / 11d))) < 0.001d,
+            Math.Abs(annotation.Width - (linkSegment.AdvanceProfile.PlannedEmittedAdvance + 2 * 2.25d * printScale)) < 0.001d,
             "Word-compatible all-markup hyperlink annotations should cover the emitted glyph advance after positioned spacing.");
         TestAssert.True(
             Math.Abs(annotation.Width - linkSegment.Width) > 0.05d,
@@ -386,7 +465,7 @@ internal static class DocxHyperlinksTests
         TestAssert.True(Math.Abs(mirroredSegment.X - emittedX) < 0.001d,
             "The inspection snapshot must describe the actual emitted position on the mirrored target page.");
         PdfLinkAnnotation mirroredLink = mirroredPages[1].Annotations.Single();
-        TestAssert.True(Math.Abs(mirroredLink.X + (2.2d / 11d * target.Runs[0].EffectiveProperties.FontSize) - emittedX) < 0.001d,
+        TestAssert.True(Math.Abs(mirroredLink.X + 2.25d * scale - emittedX) < 0.001d,
             "A hyperlink on the mirrored page must cover the emitted text rather than its position under the document margin.");
     }
 

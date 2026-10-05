@@ -70,6 +70,10 @@ internal sealed record DocxTextLineLayout(
     // Relative to X so page translations preserve the containing column's origin.
     // Only ordinary body lines carry this reference-qualified bookmark geometry.
     public double? BodyColumnOriginOffsetX { get; init; }
+    // Printed line-box geometry relative to the emitted body baseline. Exact
+    // heights are authored distances; automatic heights already contain metric scaling.
+    public double? BodyLineBoxBaselineInsetPoints { get; init; }
+    public double? BodyLineBoxHeightPoints { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(

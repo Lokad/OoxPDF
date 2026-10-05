@@ -1148,7 +1148,10 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)
         {
             var annotations = new List<PdfLinkAnnotation>();
-            // RV06: measured Word hyperlink rectangle geometry, em-stable across 11/12pt:
+            // Ordinary body paragraphs carry reference-qualified printed line boxes.
+            // Other stories retain the earlier glyph-relative geometry until qualified.
+            const double BodyHyperlinkRectHorizontalPadPoints = 2.25d;
+            // RV06: measured legacy hyperlink rectangle geometry across 11/12pt:
             // horizontal pads about 0.20em per side, line tops at baseline plus 0.939em,
             // non-last bottoms tiling the next page line top, default last-line bottoms at
             // baseline minus 1.136em. (Office renders style-less runs at 12pt, matching the
@@ -1161,14 +1164,24 @@ internal sealed partial class DocxRenderer
             double previousLineTop = 0d;
             double previousLineBottomFallback = 0d;
             double? previousDelta = null;
+            bool previousUsesBodyLineBox = false;
             foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // Break-spill glyph rows do not consume a paragraph line slot.
+                // They must not shorten the preceding body's clickable line box.
+                if (previousUsesBodyLineBox && line.Segments.Count > 0 &&
+                    line.Segments.All(static segment => segment.Role == DocxTextSegmentRole.BreakSpill))
+                {
+                    continue;
+                }
                 // RV06: Office tiles link rectangles down to the next page line top across all
                 // lines, so a held line flushes here even when the current line has no links.
                 if (previousLineLinks is not null && previousDelta is not null)
                 {
-                    double flushNextTop = line.BaselineY + previousDelta.Value + HyperlinkRectTopEm * line.FontSize;
+                    double flushNextTop = previousUsesBodyLineBox && line.BodyLineBoxBaselineInsetPoints is double nextInset
+                        ? line.BaselineY - textEmissionBaselineOffset + nextInset
+                        : line.BaselineY + previousDelta.Value + HyperlinkRectTopEm * line.FontSize;
                     // RV06: tile only into lines below the held line; side-by-side table-cell
                     // lines share one baseline, so they keep the full-height fallback instead.
                     double flushBottom = flushNextTop < previousLineTop
@@ -1187,7 +1200,10 @@ internal sealed partial class DocxRenderer
                 IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
                 // RV06: Office emits one padded link rectangle per hyperlink per line and
                 // tiles them top-anchored down to the next page line top.
-                double lineLinkPad = HyperlinkRectHorizontalPadEm * line.FontSize;
+                bool usesBodyLineBox = line.BodyLineBoxBaselineInsetPoints is not null && line.BodyLineBoxHeightPoints is not null;
+                double lineLinkPad = usesBodyLineBox
+                    ? BodyHyperlinkRectHorizontalPadPoints * textEmissionFontScale
+                    : HyperlinkRectHorizontalPadEm * line.FontSize;
                 var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX, double Top, double BaseBl, double BaseFs)>();
                 foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken))
                 {
@@ -1213,8 +1229,10 @@ internal sealed partial class DocxRenderer
                     double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
                     double fragmentMinX = segment.X;
                     double fragmentMaxX = segment.X + annotationWidth;
-                    double fragmentTop = segment.BaselineY + HyperlinkRectTopEm * segment.FontSize;
-                    double fragmentBl = segment.BaselineY;
+                    double fragmentTop = usesBodyLineBox
+                        ? line.BaselineY - textEmissionBaselineOffset + line.BodyLineBoxBaselineInsetPoints!.Value
+                        : segment.BaselineY + HyperlinkRectTopEm * segment.FontSize;
+                    double fragmentBl = usesBodyLineBox ? line.BaselineY - textEmissionBaselineOffset : segment.BaselineY;
                     double fragmentFs = segment.FontSize;
                     bool linkTargetEmittable = IsExternalHyperlink(link) ||
                         (!string.IsNullOrEmpty(link.Anchor) && bookmarkDestinations.ContainsKey(link.Anchor));
@@ -1268,10 +1286,11 @@ internal sealed partial class DocxRenderer
 
                     previousLineTop = heldTop;
                     // RV06: a page-last rectangle covers its line slot plus trailing paragraph space.
-                    double heldSlotHeight = line.LineHeight ?? ((HyperlinkRectTopEm + HyperlinkRectBottomEm) * heldFs);
+                    double heldSlotHeight = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? ((HyperlinkRectTopEm + HyperlinkRectBottomEm) * heldFs);
                     double heldAfterSpacing = line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
                     previousLineBottomFallback = heldTop - heldSlotHeight - heldAfterSpacing;
                     previousDelta = heldBl - line.BaselineY;
+                    previousUsesBodyLineBox = usesBodyLineBox;
                 }
             }
 

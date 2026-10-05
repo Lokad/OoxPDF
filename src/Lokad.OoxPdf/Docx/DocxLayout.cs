@@ -1284,7 +1284,15 @@ internal sealed partial class DocxLayoutEngine
                         // bounds until separately probed.
                         FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null)
                     {
-                        BodyColumnOriginOffsetX = x - lineShape.X
+                        BodyColumnOriginOffsetX = x - lineShape.X,
+                        BodyLineBoxBaselineInsetPoints = lineHeightProfile.Source is DocxLineHeightSource.ExactLineSpacing or DocxLineHeightSource.BodySingleLineAuto
+                            ? rawBaselineOffset * paragraphSpacingScale : null,
+                        BodyLineBoxHeightPoints = lineHeightProfile.Source switch
+                        {
+                            DocxLineHeightSource.ExactLineSpacing => lineHeight * paragraphSpacingScale,
+                            DocxLineHeightSource.BodySingleLineAuto => lineHeight,
+                            _ => null
+                        }
                     });
                     if (lineImages is not null)
                     {

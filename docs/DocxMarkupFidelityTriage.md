@@ -286,6 +286,37 @@ cases preserve PDF/raster bytes and gate counts; total failures remain 632.
 Raw controls are under `artifacts/plan-revision-20261005/rv06-l6/`, with final
 verification under `artifacts/plan-revision-20261005/rv06-l8/`.
 
+## Body Hyperlink Line-Box Update (2026-10-05, RV06-L9)
+
+Ordinary body hyperlink rectangles now follow the printed paragraph line box.
+Horizontal padding is 2.25 design points per side, scaled with review printing,
+independent of glyph size. The layout retains the body's baseline inset and
+printed slot height: exact heights need print scaling, while automatic heights
+already contain scaled font metrics. A larger neighbouring run therefore controls
+the top edge even when the linked run is small. Non-consuming page-break spill
+glyphs no longer shorten the preceding clickable slot.
+
+Twelve independent Word 16 controls cover 11/12/24-point glyphs, exact/automatic
+spacing, scaled/unscaled printing, mixed font sizes, trailing paragraph spacing
+and a following paragraph with a different font size. Every rectangle bound is
+within 0.14 points of Word. Before the repair, automatic-spacing bottoms differ
+by 2.71-5.86 points, and the mixed-size rectangle is 11.98 points too short.
+Two regressions exercise production emission across fonts, print scale, spacing,
+mixed runs and break-spill rows. Both fail on the previous renderer and pass
+with the repair.
+
+Table cells, static stories, text boxes, notes and at-least spacing retain their
+existing geometry pending separate reference qualification. The cached
+Word-compatible link also has a separate body-baseline difference; this change
+does not claim to correct that text-flow residual. Raw controls and verification
+are under `artifacts/plan-revision-20261005/rv06-l8/` and `rv06-l9/`.
+
+The broader DOCX run passes 857 tests with no failures or skips. All 33 cached
+cases preserve raster bytes, page counts and gate tallies; total failures remain
+632. Nine PDFs change through annotation geometry, while the other 24 remain
+byte-identical. The cached Word-compatible rectangle's maximum difference remains
+2.267 points, predominantly its body's accumulated baseline drift.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
