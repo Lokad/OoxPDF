@@ -539,7 +539,9 @@ A read-only [GetPrinter](https://learn.microsoft.com/en-us/windows/win32/printdo
 query finds Letter global defaults for both drivers and no per-user overrides.
 This qualifies a driver change with the same default paper. It does not qualify
 a different paper canvas. A smaller printer canvas remains an inference that
-requires a different-paper control. The renderer keeps its current formula;
+requires a different-paper control. A section-level OOXML printer-settings part
+cannot supply that control: [Microsoft documents that Word discards it](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/ff9e6328-9e35-4396-9651-50cd7cfdfdcb).
+The renderer keeps its current formula;
 no printer-specific constant was introduced. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l18/`, including
 `alternate-profile-evidence.json` and `paired-printer-controls.json`.
