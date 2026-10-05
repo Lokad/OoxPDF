@@ -33,6 +33,9 @@ soft masks. Color spaces are device gray, RGB, or CMYK only.
 with exponential or stitched color functions and extended endpoint colors.
 Radial shadings map a unit circle into the printed ellipse through the
 content transform and retain the SVG path clip.
+- Repeated radial colors use a bounded stitched function; reflect spread
+reverses alternate cycle domains. Cycle bounds retain six decimal places
+to reduce phase errors in small-radius fills.
 - The full operator inventory is whatever `PdfInspect` parses; anything it
 cannot tokenize is outside the supported profile by construction.
 

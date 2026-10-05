@@ -474,8 +474,30 @@ internal sealed class PdfDocumentWriter
             PdfRadialShading => (3, "0 0 0 0 0 1"),
             _ => throw new InvalidOperationException("Unknown PDF shading type.")
         };
+        string function = BuildShadingFunction(shading.Stops);
+        if (shading is PdfRadialShading { CycleCount: > 1 } radial)
+        {
+            var repeated = new StringBuilder("<< /FunctionType 3 /Domain [0 1] /Functions [");
+            for (int cycle = 0; cycle < radial.CycleCount; cycle++)
+            {
+                repeated.Append(' ').Append(function);
+            }
+            repeated.Append(" ] /Bounds [");
+            for (int cycle = 1; cycle < radial.CycleCount; cycle++)
+            {
+                if (cycle > 1) { repeated.Append(' '); }
+                repeated.Append(((double)cycle / radial.CycleCount).ToString("0.######", CultureInfo.InvariantCulture));
+            }
+            repeated.Append("] /Encode [");
+            for (int cycle = 0; cycle < radial.CycleCount; cycle++)
+            {
+                if (cycle > 0) { repeated.Append(' '); }
+                repeated.Append(radial.Reflect && cycle % 2 == 1 ? "1 0" : "0 1");
+            }
+            function = repeated.Append("] >>").ToString();
+        }
         writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /ShadingType {type} /ColorSpace /DeviceRGB /Coords [{coordinates}] /Function {BuildShadingFunction(shading.Stops)} /Extend [true true] >>\n"));
+            $"<< /ShadingType {type} /ColorSpace /DeviceRGB /Coords [{coordinates}] /Function {function} /Extend [true true] >>\n"));
 
         string BuildShadingFunction(IReadOnlyList<PdfShadingStop> stops)
         {

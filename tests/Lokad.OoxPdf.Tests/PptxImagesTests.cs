@@ -1266,6 +1266,31 @@ internal static class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
     }
 
+    public static void PptxSvgRadialSpreadIsInvariantToSourceCoordinateScale()
+    {
+        foreach (string spread in new[] { "repeat", "reflect" })
+        {
+            byte[]? baseline = null;
+            foreach (int width in new[] { 10, 100, 1000 })
+            {
+                string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                    <svg viewBox="0 0 {width} {width / 2d}" xmlns="http://www.w3.org/2000/svg">
+                      <defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="{width / 2d}" cy="{width / 4d}" r="{width / 5d}" spreadMethod="{spread}"><stop offset="0" stop-color="#FF0000"/><stop offset="0.4" stop-color="#00FF00"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+                      <path d="M0 0H{width}V{width / 2d}H0Z" fill="url(#g)"/>
+                    </svg>
+                    """));
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+                byte[] pdf = File.ReadAllBytes(output);
+                TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Repeated radial fills must remain renderable.");
+                if (baseline is null) { baseline = pdf; }
+                else { TestAssert.True(baseline.AsSpan().SequenceEqual(pdf),
+                    "Source coordinate units must not alter the printed repeated gradient or PDF bytes."); }
+            }
+        }
+    }
+
     public static void PptxSvgRadialUnrepresentableFunctionBoundsKeepPaintedFallback()
     {
         foreach (string offsets in new[] { "0.5,0.5", "0.5,0.500001", "0.000001,0.5", "0.5,0.999999" })
@@ -1285,6 +1310,32 @@ internal static class PptxImagesTests
             TestAssert.Contains("0 0 1 rg", pdf);
             TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
                 "Hard stops and sub-precision intervals must retain their painted fill.");
+        }
+    }
+
+    public static void PptxSvgRadialSpreadExpansionRetainsBoundedFallback()
+    {
+        foreach ((double radius, int stopCount) in new[] { (0.1d, 2), (2d, 12), (1d, 4) })
+        {
+            string stops = string.Concat(Enumerable.Range(0, stopCount).Select(index =>
+                FormattableString.Invariant($"<stop offset=\"{(stopCount == 4 ? 0.2d + 0.6d * index / (stopCount - 1) : (double)index / (stopCount - 1))}\" stop-color=\"#0000FF\"/>")));
+            string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="25" r="{radius}" spreadMethod="repeat">{stops}</radialGradient></defs>
+                  <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+                  <path d="M0 0H10V10H0Z" fill="#00FF00"/>
+                </svg>
+                """));
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            byte[] bytes = File.ReadAllBytes(output);
+            string pdf = Encoding.ASCII.GetString(bytes);
+            TestAssert.True(bytes.Length < 50_000, "Dense repetition must not expand an unbounded PDF function graph.");
+            TestAssert.DoesNotContain("/ShadingType 3", pdf);
+            TestAssert.Contains("0 0 1 rg", pdf);
+            TestAssert.Contains("0 1 0 rg", pdf);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Bounded sampling must preserve neighboring paint.");
         }
     }
 

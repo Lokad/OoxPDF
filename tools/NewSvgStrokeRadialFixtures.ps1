@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -61,6 +61,21 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
         $controls[$variant.Key] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="40" ' + $variant.Value + '><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
     }
     $controls
+} elseif ($ProbeSet -eq 'radial-spread-controls') {
+    $controls = [ordered]@{}
+    foreach ($spread in @('repeat', 'reflect')) {
+        foreach ($variant in @('two-stops', 'three-stops', 'shifted', 'small-radius', 'scaled-units')) {
+            $width = if ($variant -eq 'scaled-units') { 1000 } else { 100 }
+            $height = $width / 2
+            $factor = $width / 100
+            $radius = if ($variant -eq 'small-radius') { 5 * $factor } else { 20 * $factor }
+            $cx = if ($variant -eq 'shifted') { 30 * $factor } else { $width / 2 }
+            $cy = if ($variant -eq 'shifted') { 15 * $factor } else { $height / 2 }
+            $stops = if ($variant -eq 'three-stops') { '<stop offset="0" stop-color="#FF0000"/><stop offset="0.4" stop-color="#00FF00"/><stop offset="1" stop-color="#0000FF"/>' } else { '<stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/>' }
+            $controls[$spread + '-' + $variant] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $width $height`"><defs><radialGradient id=`"g`" gradientUnits=`"userSpaceOnUse`" cx=`"$cx`" cy=`"$cy`" r=`"$radius`" spreadMethod=`"$spread`">$stops</radialGradient></defs><path d=`"M0 0H${width}V${height}H0Z`" fill=`"url(#g)`"/></svg>"
+        }
+    }
+    $controls
 } elseif ($ProbeSet -eq 'radial-paint-controls') {
     $controls = [ordered]@{}
     foreach ($name in @('two-stops', 'scaled-units', 'three-stops', 'extended-stops', 'opacity', 'small-radius', 'repeat', 'reflect', 'hard-stop')) {
@@ -105,7 +120,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -ne 'radial-paint-controls') {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -113,7 +128,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -eq 'radial-paint-controls') {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null

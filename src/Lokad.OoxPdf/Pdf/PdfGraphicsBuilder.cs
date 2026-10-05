@@ -218,9 +218,9 @@ internal sealed class PdfGraphicsBuilder
         PaintShading(new PdfAxialShading(x0, y0, x1, y1, stops));
     }
 
-    public void PaintRadialShading(IReadOnlyList<PdfShadingStop> stops)
+    public void PaintRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false)
     {
-        PaintShading(new PdfRadialShading(stops));
+        PaintShading(new PdfRadialShading(stops, cycleCount, reflect));
     }
 
     private void PaintShading(PdfShading shading)

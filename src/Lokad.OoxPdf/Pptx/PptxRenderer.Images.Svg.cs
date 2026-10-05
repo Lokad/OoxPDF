@@ -1239,15 +1239,29 @@ internal sealed partial class PptxRenderer
         double printedRadiusY = Math.Abs(radiusY * scaleY);
         // PDF coordinates and function bounds use three decimal places. Retain
         // sampling when quantization could collapse a radius or stop interval.
-        bool nativePad = radial.Spread == SvgGradientSpread.Pad && opacity >= 1d &&
+        bool nativeShading = opacity >= 1d &&
             printedRadiusX >= 0.001d && printedRadiusY >= 0.001d && radial.Stops.Count >= 2 &&
             (radial.Stops[0].Offset == 0d || radial.Stops[0].Offset >= 0.001d) &&
             (radial.Stops[^1].Offset == 1d || radial.Stops[^1].Offset <= 0.999d);
-        for (int index = 1; nativePad && index < radial.Stops.Count; index++)
+        for (int index = 1; nativeShading && index < radial.Stops.Count; index++)
         {
-            nativePad = radial.Stops[index].Offset - radial.Stops[index - 1].Offset >= 0.001d;
+            nativeShading = radial.Stops[index].Offset - radial.Stops[index - 1].Offset >= 0.001d;
         }
-        if (!nativePad && radial.Spread == SvgGradientSpread.Pad)
+        int cycleCount = 1;
+        if (nativeShading && radial.Spread != SvgGradientSpread.Pad)
+        {
+            double dx = Math.Max(Math.Abs(pathBounds.MinX - centerX), Math.Abs(pathBounds.MaxX - centerX)) / radiusX;
+            double dy = Math.Max(Math.Abs(pathBounds.MinY - centerY), Math.Abs(pathBounds.MaxY - centerY)) / radiusY;
+            double requiredCycles = Math.Max(1d, Math.Ceiling(Math.Sqrt(dx * dx + dy * dy)));
+            double normalizedStopCount = radial.Stops.Count +
+                (radial.Stops[0].Offset > 0d ? 1d : 0d) + (radial.Stops[^1].Offset < 1d ? 1d : 0d);
+            // Bound stitched-function expansion independently of source units.
+            nativeShading = double.IsFinite(requiredCycles) && requiredCycles <= 128d &&
+                normalizedStopCount * requiredCycles <= 256d &&
+                double.IsFinite(printedRadiusX * requiredCycles) && double.IsFinite(printedRadiusY * requiredCycles);
+            if (nativeShading) { cycleCount = (int)requiredCycles; }
+        }
+        if (!nativeShading && radial.Spread == SvgGradientSpread.Pad)
         {
             // Pad extends the final stop through the clipped shape beyond the outer ring.
             RgbColor outerColor = SampleSvgRadialStops(radial.Stops, 1d, radial.Spread);
@@ -1257,14 +1271,15 @@ internal sealed partial class PptxRenderer
                 graphics.FillCurrentPath();
             }
         }
-        if (nativePad)
+        if (nativeShading)
         {
             graphics.SaveState();
-            graphics.Transform(printedRadiusX, 0d, 0d, printedRadiusY,
+            graphics.Transform(printedRadiusX * cycleCount, 0d, 0d, printedRadiusY * cycleCount,
                 imageX + (centerX - minX) * scaleX,
                 imageY + imageHeight - (centerY - minY) * scaleY);
             graphics.PaintRadialShading(radial.Stops.Select(stop =>
-                new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
+                new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray(),
+                cycleCount, radial.Spread == SvgGradientSpread.Reflect);
             graphics.RestoreState();
         }
         else

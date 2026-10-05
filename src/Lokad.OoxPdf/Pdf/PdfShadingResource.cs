@@ -106,7 +106,12 @@ internal sealed class PdfAxialShading : PdfShading
 }
 
 // A centered unit-circle gradient; the caller maps it into the printed ellipse.
-internal sealed class PdfRadialShading(IReadOnlyList<PdfShadingStop> stops) : PdfShading(stops)
+internal sealed class PdfRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false) : PdfShading(stops)
 {
-    protected override string CoordinateKey => "radial:0:0:0:0:0:1";
+    public int CycleCount { get; } = cycleCount is >= 1 and <= 128 ? cycleCount :
+        throw new ArgumentOutOfRangeException(nameof(cycleCount));
+
+    public bool Reflect { get; } = reflect;
+
+    protected override string CoordinateKey => FormattableString.Invariant($"radial:0:0:0:0:0:1:{CycleCount}:{Reflect}");
 }
