@@ -1778,7 +1778,8 @@ internal static class DocxTablesMarkupTests
             DocxTextEmissionSegmentSnapshot[] visibleSegments = line.Segments
                 .Where(segment => !segment.IsTerminalLineSpace)
                 .ToArray();
-            double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
+            // Connector placement uses the layout range; glyph export rounding is separate.
+            double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].Width;
             double baselineY = visibleSegments[0].BaselineY;
             double anchorDelta = baselineY - placement.AnchorY;
 
@@ -1806,7 +1807,7 @@ internal static class DocxTablesMarkupTests
                 placement.AnchorConnectorX > rangeEndX - 7d,
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Word-compatible all-markup should anchor {flowName} comment connector X near the emitted story table range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+                    $"Word-compatible all-markup should anchor {flowName} comment connector X near the layout story table range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
         }
     }
 
@@ -1874,9 +1875,9 @@ internal static class DocxTablesMarkupTests
         DocxTextEmissionSegmentSnapshot[] visibleSegments = line.Segments
             .Where(segment => !segment.IsTerminalLineSpace)
             .ToArray();
-        // Emission snapshots are output-space (segment X already includes the uniform print shift),
-        // so the emitted range end is X + advance with no extra print-scale factor.
-        double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
+        // Snapshot X includes the print shift and Width retains the scaled layout range.
+        // Connector placement uses the layout range; glyph export rounding is separate.
+        double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].Width;
         double baselineY = visibleSegments[0].BaselineY;
         double tableLineAnchorDelta = baselineY - placement.AnchorY;
 
@@ -1897,7 +1898,7 @@ internal static class DocxTablesMarkupTests
             placement.AnchorConnectorX > rangeEndX - 7d,
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"Word-compatible all-markup should anchor table comment connectors near the emitted cell range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+                $"Word-compatible all-markup should anchor table comment connectors near the layout cell range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
     }
 
     public static void DocxCommentBalloonPreviewFallsBackForImageAndTableStories()

@@ -1396,7 +1396,8 @@ internal static class DocxCommentsTests
             .Where(segment => !segment.IsTerminalLineSpace)
             .ToArray();
         DocxTextEmissionSegmentSnapshot lastVisibleSegment = visibleSegments[^1];
-        double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].AdvanceProfile.PlannedEmittedAdvance;
+        // Connector placement uses the layout range; glyph export rounding is separate.
+        double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].Width;
         double lastLineAnchorDelta = lastVisibleSegment.BaselineY - placement.AnchorY;
         double firstLineAnchorDelta = firstVisibleSegment.BaselineY - placement.AnchorY;
 
@@ -1408,16 +1409,13 @@ internal static class DocxCommentsTests
             string.Create(
                 CultureInfo.InvariantCulture,
                 $"Word-compatible all-markup should anchor comment connector Y to the wrapped range end line. AnchorY={placement.AnchorY}, FirstBaselineY={firstVisibleSegment.BaselineY}, LastBaselineY={lastVisibleSegment.BaselineY}."));
-        // The drawn gap is the 3.18 connector inset plus line-length-dependent emission extras
-        // (0.071 positioning spacing accumulated over the wrapped last line plus kern/rounding:
-        // observed 7.217 = 3.18 + 4.037 on the 56-gap last line). Queued: resolve anchors from
-        // emission space so connectors track the drawn range end exactly.
+        // The layout range retains the qualified connector inset and wrapping extras.
         TestAssert.True(
             placement.AnchorConnectorX < rangeEndX - 3d &&
             placement.AnchorConnectorX > rangeEndX - 8d,
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"Word-compatible all-markup should anchor comment connectors near the emitted comment range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+                $"Word-compatible all-markup should anchor comment connectors near the layout comment range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
     }
 
     public static void DocxWordCompatibleAllMarkupSuppressesCommentReferenceSpacerTextOperation()

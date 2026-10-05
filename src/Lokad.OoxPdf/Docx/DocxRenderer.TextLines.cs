@@ -535,7 +535,8 @@ internal sealed partial class DocxRenderer
             segment.PdfCharacterSpacing,
             segment.PdfCharacterSpacingSource,
             segment.CompensatePdfCharacterSpacing,
-            segment.IsTerminalLineSpace);
+            segment.IsTerminalLineSpace,
+            segment.FontScale);
         return new DocxTextEmissionSegmentSnapshot(
             segment.Text.Length,
             line.SourceBlockIndex,

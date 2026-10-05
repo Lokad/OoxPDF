@@ -464,6 +464,35 @@ margin case falls from 20 to 19 failures; no case total increases. One case
 passes and 32 remain partial. Raw qualification, the original full-run report
 and focused rechecks are under `artifacts/plan-revision-20261005/rv06-l15/`.
 
+## Review Font-Grid Order Update (2026-10-05, RV06-L16)
+
+DOCX embedded-font emission now rounds the nominal font size on the Office
+600-DPI export grid before applying review print scaling. The print scale
+travels with each emission segment so rendering, inspection, terminal advance
+and hyperlink widths use the same font-size plan. Unscaled DOCX and the shared
+PPTX font-grid behavior retain their existing results.
+
+Six independent Word size controls reduce the largest font-size difference
+from 0.048 to 0.004 points and the largest natural-width difference from 0.379
+to 0.032 points. Three unscaled controls remain exact for font size and width.
+The remaining small printed-scale quantization difference is explicit. The
+regression exercises both inspection and emitted PDF text state across six
+sizes and two page widths, using a portable synthetic embedded font.
+
+The large main-case width outlier involves different cached DATE-field results;
+it does not establish a font-metric defect. Terminal-space paragraph-mark caps
+remain a separate measured follow-up. Three custom-page controls also expose
+larger review-scale differences despite matching PDF page sizes; those require
+page/print scaling qualification and are outside the Letter font-grid result.
+
+The full DOCX run and focused connector rechecks cover all 865 tests without
+remaining failures or skips. Three connector assertions now use layout widths;
+their bounds and placement behavior are unchanged. Both PPTX font-grid checks
+pass. All 33 cached page counts and failure totals remain unchanged at 575,
+with 18 PDF/raster case identities. One case passes and 32 remain partial.
+Raw qualification and validation are under
+`artifacts/plan-revision-20261005/rv06-l16/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

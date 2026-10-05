@@ -250,7 +250,8 @@ internal sealed record DocxTextEmissionSegment(
     int SourceTextRunIndex,
     int SourceTextOffsetInRun,
     DocxTextSegmentRole Role,
-    PdfFallbackFontResource? FallbackFace = null);
+    PdfFallbackFontResource? FallbackFace = null,
+    double FontScale = 1d);
 
 internal readonly record struct DocxKeepBlockEstimate(
     double Height,

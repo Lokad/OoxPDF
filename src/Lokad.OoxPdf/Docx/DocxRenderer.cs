@@ -1364,7 +1364,8 @@ internal sealed partial class DocxRenderer
             segment.PdfCharacterSpacing,
             segment.PdfCharacterSpacingSource,
             segment.CompensatePdfCharacterSpacing,
-            segment.IsTerminalLineSpace);
+            segment.IsTerminalLineSpace,
+            segment.FontScale);
         // RV01: fallback runs have no advance profile; measured width stands in.
         double emittedAdvance = segment.Resource is { } advanceResource
             ? DocxTextEmissionPlanner.MeasureAdvanceProfile(segment.Text, advanceResource.Embedded, segment.Width, plan).PlannedEmittedAdvance

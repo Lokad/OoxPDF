@@ -12,6 +12,45 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewEmissionRoundsNominalFontSizeBeforePrintScale()
+    {
+        foreach (double nominalSize in new[] { 11d, 12d, 13d, 16d, 22d, 24d })
+        foreach (double pageWidth in new[] { 612d, 720d })
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAA", nominalSize, 30d) with
+            {
+                InlineReferences = [new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null,
+                    SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)],
+                CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 3, 1, 0)]
+            };
+            DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([paragraph]) with
+            {
+                PageWidthPoints = pageWidth,
+                RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment,
+                    "/word/comments.xml", "1", [], [], [], null)]
+            };
+            var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
+            TestAssert.True(scale < 1d, "The anchored comment should activate review print scaling.");
+            double roundedNominal = OfficePdfTextEmissionProfile.FontSize(nominalSize);
+            foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+                         OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
+            {
+                var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+                DocxTextEmissionSegmentSnapshot segment = renderer.InspectTextEmission(document).Lines
+                    .Where(line => !line.IsStaticStory).SelectMany(line => line.Segments)
+                    .Single(segment => !segment.IsTerminalLineSpace);
+                double expected = roundedNominal * (geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? scale : 1d);
+                TestAssert.True(Math.Abs(segment.PdfFontSize - expected) < 0.000001d,
+                    $"Nominal {nominalSize}pt should round before print scaling. Expected {expected}, actual {segment.PdfFontSize}.");
+                string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+                string emittedSize = expected.ToString("0.###", CultureInfo.InvariantCulture);
+                TestAssert.Contains(" " + emittedSize + " Tf", content);
+            }
+        }
+    }
+
     public static void DocxMarkupGeometryKeepsAuthoredMediaBox()
     {
         string input = DocxTests.WriteTrackedChangeModeProbeDocx();

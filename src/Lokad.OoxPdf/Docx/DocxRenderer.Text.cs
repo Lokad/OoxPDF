@@ -50,7 +50,8 @@ internal sealed partial class DocxRenderer
             segment.PdfCharacterSpacing,
             segment.PdfCharacterSpacingSource,
             segment.CompensatePdfCharacterSpacing,
-            segment.IsTerminalLineSpace);
+            segment.IsTerminalLineSpace,
+            segment.FontScale);
         DrawRunGlyphText(graphics, resource, segment.Text, segment.X, segment.BaselineY, color, plan, segment.SyntheticItalic);
         if (!segment.IsTerminalLineSpace && segment.SyntheticBold)
         {
@@ -285,7 +286,8 @@ internal sealed partial class DocxRenderer
                     segment.SourceTextRunIndex,
                     currentPartSourceTextOffset,
                     segment.Role,
-                    FallbackFace: fallbackFace), fontResources, cancellationToken);
+                    FallbackFace: fallbackFace,
+                    FontScale: fontScale), fontResources, cancellationToken);
                 substitutedFieldXAdjustment += emittedWidth - part.Width;
             }
         }
@@ -333,7 +335,8 @@ internal sealed partial class DocxRenderer
                 segment.SourceTextRunIndex,
                 segment.SourceTextOffsetInRun + segment.Text.Length,
                 segment.Role,
-                FallbackFace: terminalFallbackFace));
+                FallbackFace: terminalFallbackFace,
+                FontScale: fontScale));
         }
 
             AddTerminalLineSpace();
@@ -384,7 +387,8 @@ internal sealed partial class DocxRenderer
                 segment.SourceTextRunIndex,
                 segment.SourceTextOffsetInRun + segment.Text.Length,
                 segment.Role,
-                FallbackFace: null));
+                FallbackFace: null,
+                FontScale: fontScale));
             break;
         }
 
@@ -628,7 +632,8 @@ internal sealed partial class DocxRenderer
                     segment.PdfCharacterSpacing,
                     segment.PdfCharacterSpacingSource,
                     segment.CompensatePdfCharacterSpacing,
-                    isTerminalLineSpace: false);
+                    isTerminalLineSpace: false,
+                    fontScale);
                 double partX = part.X + xOffset + ResolveWordCompatibleAllMarkupBodyXOffset(
                     segment,
                     part,

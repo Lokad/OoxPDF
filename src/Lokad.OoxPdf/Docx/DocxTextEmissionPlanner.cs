@@ -93,7 +93,8 @@ internal static class DocxTextEmissionPlanner
         double layoutFontSize,
         double pdfCharacterSpacing,
         bool compensatePdfCharacterSpacing,
-        DocxTextStateCharacterSpacingSource source)
+        DocxTextStateCharacterSpacingSource source,
+        double fontScale = 1d)
     {
         DocxEffectiveRunProperties effective = style.EffectiveProperties;
         double positioningCharacterSpacing = compensatePdfCharacterSpacing
@@ -104,21 +105,24 @@ internal static class DocxTextEmissionPlanner
             ? DocxTextStateCharacterSpacingSource.Explicit
             : source;
         return new(
-            OfficePdfTextEmissionProfile.FontSize(layoutFontSize),
+            // Word rounds the design font on its export grid before scaling the
+            // review page. LayoutFontSize already includes that print scale.
+            OfficePdfTextEmissionProfile.FontSize(layoutFontSize / fontScale) * fontScale,
             pdfCharacterSpacing,
             positioningCharacterSpacing,
             compensatePdfCharacterSpacing,
             resolvedSource);
     }
 
-    public static DocxTextEmissionPlan CreateTerminalLineSpace(DocxTextRun style, double layoutFontSize)
+    public static DocxTextEmissionPlan CreateTerminalLineSpace(DocxTextRun style, double layoutFontSize, double fontScale = 1d)
     {
         return Create(
             style,
             layoutFontSize,
             pdfCharacterSpacing: 0d,
             compensatePdfCharacterSpacing: true,
-            DocxTextStateCharacterSpacingSource.TerminalLineSpace);
+            DocxTextStateCharacterSpacingSource.TerminalLineSpace,
+            fontScale);
     }
 
     public static DocxTextEmissionPlan CreateForEmissionSegment(
@@ -127,11 +131,12 @@ internal static class DocxTextEmissionPlanner
         double pdfCharacterSpacing,
         DocxTextStateCharacterSpacingSource source,
         bool compensatePdfCharacterSpacing,
-        bool isTerminalLineSpace)
+        bool isTerminalLineSpace,
+        double fontScale = 1d)
     {
         return isTerminalLineSpace
-            ? CreateTerminalLineSpace(style, layoutFontSize)
-            : Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing, source);
+            ? CreateTerminalLineSpace(style, layoutFontSize, fontScale)
+            : Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing, source, fontScale);
     }
 
     public static double TextStateCharacterSpacingForListLabel(DocxListLabel label, double layoutFontSize)
