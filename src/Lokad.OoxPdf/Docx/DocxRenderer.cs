@@ -107,9 +107,6 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints = WordCompatibleAllMarkupBalloonHeightPoints - WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints;
     // Office A/B (tbxrev one-line plus dense two-line balloon rects, Word-COM rendered): reply-less balloon bodies fit the rendered text rows, so the top inset is the first-baseline inset above and 3.4pt pads the last baseline.
     private const double WordCompatibleAllMarkupBalloonBottomInsetPoints = 3.4d;
-    private const double WordCompatibleAllMarkupCommentThreadReplyHeightPoints = 8.37d;
-    private const double WordCompatibleAllMarkupCommentThreadSeparatorYOffsetPoints = 1.9d;
-    private const int WordCompatibleAllMarkupCommentThreadMaxSeparatorLineCount = 2;
     private const double WordCompatibleAllMarkupLaneBackgroundRightBleedPoints = 0.37d;
     private const double WordCompatibleAllMarkupLaneBackgroundWidthPoints = 199.70d;
     private const double WordCompatibleAllMarkupLaneBackgroundBottomInsetPoints = 17.475d;

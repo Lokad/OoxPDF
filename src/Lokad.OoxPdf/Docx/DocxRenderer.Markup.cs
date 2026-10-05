@@ -533,7 +533,7 @@ internal sealed partial class DocxRenderer
                         commentStories.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout? storyLayout);
                         commentRepliesByParentId.TryGetValue(reference.Id ?? string.Empty, out DocxRelatedStoryLayout[]? replies);
                         string commentBody = TrimBalloonText(BuildCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
-                        string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout, replies ?? []);
+                        string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout);
                         DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
                         DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
                         // RV06: Word-compatible comment balloons wear the first-seen
@@ -566,7 +566,7 @@ internal sealed partial class DocxRenderer
                             CommentOpenCount: commentMetrics.OpenCount,
                             CommentReplyCount: commentMetrics.ReplyCount,
                             BodySummaryPartCount: CountBalloonSummaryPart(commentBody),
-                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(commentBody)));
+                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(wordCompatibleCommentBody)));
                     }
                 }
 
@@ -825,13 +825,9 @@ internal sealed partial class DocxRenderer
             markupContext.ExpandsMarkupMargin)
         {
             // Office A/B (tbxrev one-line 12.3 plus dense two-line 21.4 balloon
-            // rects, Word-COM rendered): reply-less balloon bodies fit the
-            // rendered text rows while titles stay top-anchored, so the height
-            // follows the wrapped body rows plus Office insets. Threaded
-            // balloons keep the legacy flat height plus separator extra
-            // (separator geometry is unprobed for row-derived sizing).
-            if (candidate.CommentReplyCount == 0 &&
-                !string.IsNullOrWhiteSpace(candidate.WordCompatibleTitle) &&
+            // rects, Word-COM rendered): bodies fit their printed text rows
+            // while titles stay top-anchored. Thread replies are not printed.
+            if (!string.IsNullOrWhiteSpace(candidate.WordCompatibleTitle) &&
                 labelEmbedded is not null &&
                 bodyEmbedded is not null)
             {
@@ -846,22 +842,10 @@ internal sealed partial class DocxRenderer
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;
             }
 
-            return WordCompatibleAllMarkupBalloonHeightPoints + ResolveWordCompatibleCommentThreadExtraHeight(candidate.CommentReplyCount);
+            return WordCompatibleAllMarkupBalloonHeightPoints;
         }
 
         return string.IsNullOrWhiteSpace(candidate.Body) ? 16d : 26d;
-    }
-
-    private static double ResolveWordCompatibleCommentThreadExtraHeight(int replyCount)
-    {
-        return ResolveCommentThreadSeparatorLineCount(replyCount) * WordCompatibleAllMarkupCommentThreadReplyHeightPoints;
-    }
-
-    private static int ResolveCommentThreadSeparatorLineCount(int replyCount)
-    {
-        return Math.Min(
-            WordCompatibleAllMarkupCommentThreadMaxSeparatorLineCount,
-            Math.Max(0, replyCount));
     }
 
     private static double ResolveMarkupBalloonTopInset(DocxMarkupContext markupContext)
@@ -959,7 +943,7 @@ internal sealed partial class DocxRenderer
 
             string? BuildWordCompatibleMarkupBalloonGroupBodyPart(DocxMarkupBalloonCandidate candidate)
             {
-                string? partBody = FirstNonEmpty(candidate.WordCompatibleBody, candidate.Body);
+                string? partBody = candidate.WordCompatibleBody ?? candidate.Body;
                 if (partBody is not null)
                 {
                     return partBody;
@@ -1157,7 +1141,6 @@ internal sealed partial class DocxRenderer
 
         if (labelResource is not null && bodyResource is not null && ShouldRenderWordCompatibleBalloonText(placement, markupContext))
         {
-            RenderWordCompatibleCommentThreadSeparators(placement, graphics);
             RenderWordCompatibleBalloonText(placement, graphics, titleResource ?? labelResource, bodyResource, markupContext.WordCompatiblePrintScale);
             return;
         }
@@ -1167,16 +1150,11 @@ internal sealed partial class DocxRenderer
         // no-font output matches the with-fonts word-compatible text.
         bool fallbackWordCompatibleText = (labelResource is null || bodyResource is null)
             && ShouldRenderWordCompatibleBalloonText(placement, markupContext);
-        if (fallbackWordCompatibleText)
-        {
-            RenderWordCompatibleCommentThreadSeparators(placement, graphics);
-        }
-
         string title = fallbackWordCompatibleText && !string.IsNullOrWhiteSpace(placement.WordCompatibleTitle)
             ? placement.WordCompatibleTitle
             : placement.Title;
-        string body = fallbackWordCompatibleText && !string.IsNullOrWhiteSpace(placement.WordCompatibleBody)
-            ? placement.WordCompatibleBody
+        string body = fallbackWordCompatibleText
+            ? placement.WordCompatibleBody ?? string.Empty
             : placement.Body;
 
         DrawBalloonText(graphics, labelResource, title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
@@ -1313,37 +1291,6 @@ internal sealed partial class DocxRenderer
     private static double ResolveWordCompatibleBalloonFirstBaselineY(DocxMarkupBalloonPlacement placement)
     {
         return placement.Y + placement.Height - WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints;
-    }
-
-    private static void RenderWordCompatibleCommentThreadSeparators(
-        DocxMarkupBalloonPlacement placement,
-        PdfGraphicsBuilder graphics)
-    {
-        int separatorCount = ResolveCommentThreadSeparatorLineCount(placement.CommentReplyCount);
-        if (separatorCount == 0)
-        {
-            return;
-        }
-
-        double leftX = placement.X + WordCompatibleAllMarkupBalloonTextInsetXPoints;
-        double rightX = placement.X + placement.Width - WordCompatibleAllMarkupBalloonTextInsetXPoints;
-        double lineGap = WordCompatibleAllMarkupCommentThreadReplyHeightPoints;
-        double firstSeparatorY = ResolveWordCompatibleBalloonFirstBaselineY(placement) -
-            lineGap -
-            WordCompatibleAllMarkupCommentThreadSeparatorYOffsetPoints;
-        graphics.ClearLineDash();
-        graphics.SetLineWidth(WordCompatibleAllMarkupConnectorStrokeWidthPoints);
-        graphics.SetStrokeRgb(WordCompatibleAllMarkupReviewStrokeRgb.Red, WordCompatibleAllMarkupReviewStrokeRgb.Green, WordCompatibleAllMarkupReviewStrokeRgb.Blue);
-        for (int i = 0; i < separatorCount; i++)
-        {
-            double separatorY = firstSeparatorY - i * lineGap;
-            if (separatorY <= placement.Y + 1d)
-            {
-                break;
-            }
-
-            graphics.StrokeLine(leftX, separatorY, rightX, separatorY);
-        }
     }
 
     private static void RenderMarkupBalloonConnector(

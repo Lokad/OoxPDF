@@ -93,48 +93,18 @@ internal sealed partial class DocxRenderer
         return string.Join(" ", parts);
     }
 
-    internal static string BuildWordCompatibleCommentBalloonPreview(
-        DocxRelatedStoryLayout? storyLayout,
-        IReadOnlyList<DocxRelatedStoryLayout> replies)
+    internal static string BuildWordCompatibleCommentBalloonPreview(DocxRelatedStoryLayout? storyLayout)
     {
         if (storyLayout is null)
         {
             return string.Empty;
         }
 
-        var parts = new List<string>();
-        string parentPreview = BuildWordCompatibleCommentStoryPreview(storyLayout, prefix: null);
-        if (!string.IsNullOrWhiteSpace(parentPreview))
-        {
-            parts.Add(parentPreview);
-        }
-
-        if (replies.Count != 0)
-        {
-            parts.Add(replies.Count == 1 ? "1 reply" : replies.Count.ToString(CultureInfo.InvariantCulture) + " replies");
-            foreach (string replyPreview in replies
-                .Select(reply => BuildWordCompatibleCommentStoryPreview(reply, "Reply"))
-                .Where(preview => !string.IsNullOrWhiteSpace(preview)))
-            {
-                parts.Add(replyPreview);
-            }
-        }
-
-        return string.Join(" ", parts);
-    }
-
-    private static string BuildWordCompatibleCommentStoryPreview(DocxRelatedStoryLayout storyLayout, string? prefix)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(prefix))
-        {
-            parts.Add(prefix);
-        }
-
+        // Word 16 prints the parent only, for resolved/open threads and
+        // multiple replies. Reply metadata stays in the model and inspection.
         // Office A/B (dense and threaded references): Word-compatible balloons show the
         // comment text with no date or resolved/open flag.
-        parts.AddRange(BuildCommentStoryPreviewParts(storyLayout));
-        return string.Join(" ", parts);
+        return string.Join(" ", BuildCommentStoryPreviewParts(storyLayout));
     }
 
     private static List<string> BuildCommentStoryPreviewParts(DocxRelatedStoryLayout storyLayout)

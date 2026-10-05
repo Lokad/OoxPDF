@@ -1178,7 +1178,56 @@ internal static class DocxCommentsTests
             "Word-compatible grouped comment balloons should not use the legacy summary title font size.");
     }
 
-    public static void DocxWordCompatibleAllMarkupRendersThreadedCommentSeparators()
+    public static void DocxWordCompatibleThreadPrintMatchesParentOnlyWithoutDroppingMetadata()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-comment-threaded-resolved.docx"));
+        DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        TestAssert.Equal("1", source.RelatedStories.Single(story => story.Id == "2").CommentMetadata?.ParentCommentId);
+        foreach (bool resolved in new[] { false, true })
+        {
+            DocxDocument threaded = source with
+            {
+                RelatedStories = source.RelatedStories.Select(story => story.Id == "1"
+                    ? story with { CommentMetadata = story.CommentMetadata! with { IsResolved = resolved } }
+                    : story).ToArray()
+            };
+            DocxDocument parentOnly = threaded with { RelatedStories = threaded.RelatedStories.Where(story => story.Id != "2").ToArray() };
+            var word = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxMarkupBalloonPlacementSnapshot balloon = word.InspectMarkupBalloons(threaded).Single();
+            TestAssert.Equal(1, balloon.CommentReplyCount);
+            TestAssert.Equal(0, balloon.CommentSeparatorLineCount);
+            TestAssert.Equal(word.InspectMarkupBalloons(parentOnly).Single().Height, balloon.Height);
+            TestAssert.Equal(word.RenderBlankPages(parentOnly, null, CancellationToken.None).Single().Content,
+                word.RenderBlankPages(threaded, null, CancellationToken.None).Single().Content);
+
+            var preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            // A short parent leaves room for the default profile's trimmed reply summary.
+            DocxDocument shortParent = threaded with
+            {
+                RelatedStories = threaded.RelatedStories.Select(story => story.Id == "1"
+                    ? story with { BodyElements = [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("P", 10d, 12d))] }
+                    : story).ToArray()
+            };
+            DocxDocument shortParentOnly = shortParent with { RelatedStories = shortParent.RelatedStories.Where(story => story.Id != "2").ToArray() };
+            TestAssert.True(preserve.RenderBlankPages(shortParentOnly, null, CancellationToken.None).Single().Content !=
+                preserve.RenderBlankPages(shortParent, null, CancellationToken.None).Single().Content,
+                "The preserve-layout profile must retain its reply summaries and body text.");
+            TestAssert.Equal(2, threaded.RelatedStories.Count);
+        }
+        DocxDocument emptyParent = source with
+        {
+            RelatedStories = source.RelatedStories.Select(story => story.Id == "1"
+                ? story with { BodyElements = [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 12d))] }
+                : story).ToArray()
+        };
+        DocxDocument emptyParentOnly = emptyParent with { RelatedStories = emptyParent.RelatedStories.Where(story => story.Id != "2").ToArray() };
+        var fallback = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(0, fallback.InspectMarkupBalloons(emptyParent).Single().WordCompatibleBodySummaryPartCount);
+        TestAssert.Equal(fallback.RenderBlankPages(emptyParentOnly, null, CancellationToken.None).Single().Content,
+            fallback.RenderBlankPages(emptyParent, null, CancellationToken.None).Single().Content);
+    }
+
+    public static void DocxWordCompatibleAllMarkupKeepsReplyMetadataWithoutPrintedSeparators()
     {
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Threaded comment anchor", 10d, 12d) with
         {
@@ -1259,13 +1308,10 @@ internal static class DocxCommentsTests
             });
 
         TestAssert.Equal(2, placement.CommentReplyCount);
-        TestAssert.Equal(2, placement.CommentSeparatorLineCount);
-        TestAssert.True(
-            placement.Height > 36d && placement.Height < 38d,
-            string.Create(CultureInfo.InvariantCulture, $"Threaded comment balloons should expand within the capped Word-compatible height band. Height={placement.Height}."));
-        TestAssert.True(
-            renderedSeparatorLines >= placement.CommentSeparatorLineCount,
-            "Word-compatible threaded comment balloons should emit internal separator strokes for visible reply boundaries.");
+        TestAssert.Equal(0, placement.CommentSeparatorLineCount);
+        TestAssert.Equal(0, renderedSeparatorLines);
+        DocxDocument parentOnly = document with { RelatedStories = [parentComment] };
+        TestAssert.Equal(renderer.InspectMarkupBalloons(parentOnly).Single().Height, placement.Height);
     }
 
     public static void DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd()
@@ -2912,10 +2958,9 @@ internal static class DocxCommentsTests
         TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit four text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
     }
 
-    public static void DocxWordCompatibleBalloonHeightKeepsThreadedLegacyHeight()
+    public static void DocxWordCompatibleBalloonHeightIgnoresUnprintedReplies()
     {
-        // Threaded balloons keep the legacy flat height plus separator extra (their
-        // separator geometry is unprobed for row-derived sizing).
+        // Printed height follows parent rows, independently of thread metadata.
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Threaded comment anchor", 10d, 12d) with
         {
             InlineReferences =
@@ -2966,7 +3011,11 @@ internal static class DocxCommentsTests
             .InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
 
-        TestAssert.True(Math.Abs(placement.Height - (20.48d + 8.37d)) < 0.05d, "Threaded balloons should keep the legacy height plus separator extra. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+        DocxDocument parentOnly = document with { RelatedStories = [parentComment] };
+        DocxMarkupBalloonPlacementSnapshot control = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectMarkupBalloons(parentOnly).Single();
+        TestAssert.Equal(control.Height, placement.Height);
+        TestAssert.Equal(1, placement.CommentReplyCount);
     }
 
     public static void DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill()

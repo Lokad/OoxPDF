@@ -235,13 +235,12 @@ internal static class DocxInspectionTests
         TestAssert.Contains("2 replies", threadedPreview);
         TestAssert.Contains("Reply: Reply comment", threadedPreview);
         TestAssert.Contains("Reply: Second reply", threadedPreview);
-        string wordCompatibleThreadedPreview = DocxRenderer.BuildWordCompatibleCommentBalloonPreview(parentLayout, [replyLayout, secondReplyLayout]);
+        string wordCompatibleThreadedPreview = DocxRenderer.BuildWordCompatibleCommentBalloonPreview(parentLayout);
         // Office A/B (dense and threaded references): Word-compatible balloons show comment
         // text with no date or resolved/open flag.
         TestAssert.Contains("Parent comment", wordCompatibleThreadedPreview);
-        TestAssert.Contains("2 replies", wordCompatibleThreadedPreview);
-        TestAssert.Contains("Reply Reply comment", wordCompatibleThreadedPreview);
-        TestAssert.Contains("Reply Second reply", wordCompatibleThreadedPreview);
+        TestAssert.True(!wordCompatibleThreadedPreview.Contains("replies", StringComparison.Ordinal), "Word does not print reply summaries.");
+        TestAssert.True(!wordCompatibleThreadedPreview.Contains("Reply", StringComparison.Ordinal), "Word does not print reply bodies.");
 
         DocxMarkupBalloonPlacementSnapshot parentBalloon = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectMarkupBalloons(document)

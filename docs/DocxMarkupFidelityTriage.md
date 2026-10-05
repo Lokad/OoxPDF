@@ -183,6 +183,28 @@ preserve candidate PDF bytes and gate counts; total failures fall from 645 to
 639, with unchanged page counts. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l4/`.
 
+## Printed Comment Thread Update (2026-10-05, RV06-L5)
+
+Independent Word 16 exports print only the parent comment for resolved/open
+threads with one or two replies. Removing the reply relationship and anchoring
+that comment independently makes its text print, confirming the visibility rule.
+Word-compatible balloons now use the parent text and its wrapped rows, with no
+reply summary, extra height or separator strokes. Thread ownership, dates,
+resolved/open state and reply counts remain in the model and inspection. The
+other geometry profiles retain their compact reply previews.
+
+A red/green regression compares production page content with a parent-only
+control for both resolved states. It also checks metadata retention, the default
+profile's reply summary and an empty parent through the diagnosed font fallback.
+The broader DOCX suite passes 849 tests with no failures or skips.
+
+The threaded/resolved case drops from 15 to 9 failures. Last-baseline drift falls
+from 8.273 to 0.077 points and body-height drift from 8.146 to 0.05 points. Text
+spacing/advance, graphics and regional raster differences remain. The other 32
+cached cases preserve candidate PDF bytes and gate counts, with unchanged page
+counts; total failures fall from 639 to 633. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l5/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

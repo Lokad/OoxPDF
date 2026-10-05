@@ -122,7 +122,7 @@ internal sealed partial class DocxRenderer
                 CommentReplyCount,
                 BodySummaryPartCount,
                 WordCompatibleBodySummaryPartCount,
-                ResolveCommentThreadSeparatorLineCount(CommentReplyCount),
+                0, // Reply metadata does not create printed separator lines.
                 OverflowStartIndex,
                 OverflowEndIndex,
                 LaneBandIndex,
