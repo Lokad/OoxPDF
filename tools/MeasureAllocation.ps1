@@ -11,6 +11,8 @@ param(
 
     [string] $Out = "artifacts/alloc/report.json",
 
+    [string] $FontPath = "",
+
     [switch] $SkipBuild,
 
     [switch] $Stages,
@@ -56,7 +58,11 @@ else {
 }
 
 if ($SelfTest) {
-    & dotnet $probeDll --self-test
+    $selfTestArguments = @("--self-test")
+    if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
+        $selfTestArguments += @("--font-file", (Resolve-Path -LiteralPath $FontPath).Path)
+    }
+    & dotnet $probeDll @selfTestArguments
     if ($LASTEXITCODE -ne 0) {
         throw "AllocProbe self-test failed with exit code $LASTEXITCODE."
     }
@@ -76,6 +82,9 @@ foreach ($entry in $Corpus) {
 
 $outFull = if ([System.IO.Path]::IsPathRooted($Out)) { $Out } else { Join-Path $repoRoot $Out }
 $probeArgs = @("--out", $outFull, "--warmup", $Warmup, "--iterations", $Iterations, "--output-mode", $OutputMode)
+if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
+    $probeArgs += @("--font-file", (Resolve-Path -LiteralPath $FontPath).Path)
+}
 if ($Stages) {
     $probeArgs += "--stages"
 }

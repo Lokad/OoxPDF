@@ -112,6 +112,23 @@ Named limitation, intended next improvement, and gate for each approximate famil
   histogram correlation at 0.77); `pptx-ladder-11-chart-line-3series-port` to
   approximate (same unstyled-series shade family, no markers; histcorr 0.79).
 
+## Allocation and peak-memory probes
+
+`tools/MeasureAllocation.ps1 -FontPath <font.ttf>` supplies one explicit TrueType
+face for all requested families. The underlying AllocProbe `--font-file` option
+also applies to isolated inputs, stage measurements, concurrency and self-tests.
+Reports pin the actual font-program SHA-256 and size, source lifetime, input hash,
+runtime and revision. Per-conversion metrics count embedded TrueType resources;
+the explicit-font self-test rejects fallback-only output. This probe resolver
+uses a regular face and shares its lazy file source across warm conversions.
+It measures that controlled workload rather than Office font matching.
+
+Allocation volume is attributed to the calling thread. Retained managed heap,
+sampled managed/private/working-set peaks and process lifetime high-water marks
+are separate metrics. Use `--output-mode file` to exclude caller output buffering,
+and `--concurrency 1`, `2`, or `4` for batch peaks. `--isolate` uses fresh processes
+per input and cannot be combined with concurrency.
+
 ## Cached DOCX Markup References
 
 DOCX markup parity work uses cache-only reference comparisons so autonomous runs do not launch Word or COM. Generate a reference request for the public DOCX markup cases:

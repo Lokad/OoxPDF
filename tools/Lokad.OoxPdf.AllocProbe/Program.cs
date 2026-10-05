@@ -25,12 +25,24 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
     Console.WriteLine("  --isolate measures each input in a fresh child process (independent cold, per-input process peaks).");
     Console.WriteLine("  Allocation scope is the calling thread; see report/allocationScope.");
     Console.WriteLine("  --concurrency <n> runs n conversions of each input in parallel with batch peaks.");
+    Console.WriteLine("  --font-file <ttf> uses one explicit TrueType face for all requested families and records its hash.");
     return 2;
+}
+
+ProbeFont? probeFont = null;
+if (ReadOption("--font-file") is string probeFontPath && ReadOption("--font-breadth") is null)
+{
+    try { probeFont = new ProbeFont(probeFontPath); }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("Cannot use probe font: " + ex.Message);
+        return 2;
+    }
 }
 
 if (args.Any(arg => string.Equals(arg, "--self-test", StringComparison.Ordinal)))
 {
-    return RunSelfTest();
+    return RunSelfTest(probeFont);
 }
 
 if (ReadOption("--font-breadth") is string breadthSpec)
@@ -66,7 +78,12 @@ if (reportPath is null || inputs.Length == 0 || warmup < 0 || iterations < 1)
 
 if (isolate)
 {
-    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode, residentWindowBytes);
+    if (ReadOption("--concurrency") is not null)
+    {
+        Console.Error.WriteLine("--isolate and --concurrency cannot be combined.");
+        return 2;
+    }
+    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode, residentWindowBytes, probeFont);
 }
 
 if (ReadOption("--concurrency") is string concurrencySpec)
@@ -77,7 +94,7 @@ if (ReadOption("--concurrency") is string concurrencySpec)
         return 2;
     }
 
-    return RunConcurrency(reportPath, inputs, outputMode, residentWindowBytes, concurrency);
+    return RunConcurrency(reportPath, inputs, outputMode, residentWindowBytes, concurrency, probeFont);
 }
 
 var reports = new List<object>();
@@ -99,7 +116,7 @@ foreach (string input in inputs)
         string? peakNote = args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal))
             ? "single-input isolated child process: peak is per-input"
             : null;
-        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote, residentWindowBytes));
+        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote, residentWindowBytes, probeFont));
     }
     catch (Exception ex)
     {
@@ -108,13 +125,13 @@ foreach (string input in inputs)
     }
 }
 
-var report = BuildReport(reports, outputMode, isolation: "in-process (cold is process-first; later inputs reuse static caches; process peak is a lifetime high-water mark)");
+var report = BuildReport(reports, outputMode, isolation: "in-process (cold is process-first; later inputs reuse static caches; process peak is a lifetime high-water mark)", probeFont);
 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
 File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine($"Wrote {reportPath} ({reports.Count} inputs).");
 return 0;
 
-static object BuildReport(List<object> reports, string outputMode, string isolation)
+static object BuildReport(List<object> reports, string outputMode, string isolation, ProbeFont? probeFont = null)
 {
     return new
     {
@@ -135,7 +152,7 @@ static object BuildReport(List<object> reports, string outputMode, string isolat
         outputMode,
         isolation,
         allocationScope = "calling-thread (GC.GetAllocatedBytesForCurrentThread); hashing, page-count checks, and report serialization run outside the counters; I/O buffers and background loaders outside this thread are not attributed",
-        fontInventory = DescribeFontInventory(),
+        fontInventory = DescribeFontInventory(probeFont),
         inputs = reports.ToArray(),
     };
 }
@@ -148,8 +165,9 @@ static string GetSourceRevision()
     return string.IsNullOrWhiteSpace(version) ? "unknown (local build)" : version;
 }
 
-static object DescribeFontInventory()
+static object DescribeFontInventory(ProbeFont? probeFont)
 {
+    if (probeFont is not null) { return probeFont.Describe(); }
     // Counted after all measurements so inventory enumeration never warms the
     // static discovery cache ahead of a cold conversion in this process.
     try
@@ -163,7 +181,7 @@ static object DescribeFontInventory()
     }
 }
 
-static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode, long residentWindowBytes)
+static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode, long residentWindowBytes, ProbeFont? probeFont)
 {
     // cold inputs run independently in fresh child processes so static
     // caches cannot leak across inputs and each child reports its own process peak.
@@ -206,6 +224,11 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
         psi.ArgumentList.Add(outputMode);
         psi.ArgumentList.Add("--resident-window");
         psi.ArgumentList.Add(residentWindowBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (probeFont is not null)
+        {
+            psi.ArgumentList.Add("--font-file");
+            psi.ArgumentList.Add(probeFont.Path);
+        }
         psi.ArgumentList.Add("--isolated-child");
         psi.ArgumentList.Add(input);
         try
@@ -252,7 +275,7 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
         }
     }
 
-    object report = BuildReport(merged, outputMode, isolation: "per-input child processes (independent cold conversions; per-input peakWorkingSetBytes is that child's process peak)");
+    object report = BuildReport(merged, outputMode, isolation: "per-input child processes (independent cold conversions; per-input peakWorkingSetBytes is that child's process peak)", probeFont);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
     File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine($"Wrote {reportPath} ({merged.Count} inputs, isolated).");
@@ -262,7 +285,7 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
 bool IsOptionValue(string arg)
 {
     int index = Array.IndexOf(args, arg);
-    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode" || args[index - 1] == "--resident-window" || args[index - 1] == "--concurrency");
+    return index > 0 && (args[index - 1] == "--out" || args[index - 1] == "--warmup" || args[index - 1] == "--iterations" || args[index - 1] == "--output-mode" || args[index - 1] == "--resident-window" || args[index - 1] == "--concurrency" || args[index - 1] == "--font-file");
 }
 
 string? ReadOption(string name)
@@ -305,7 +328,7 @@ long? ReadLongOption(string name)
     return value;
 }
 
-static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null, long residentWindowBytes = 67108864L)
+static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null, long residentWindowBytes = 67108864L, ProbeFont? probeFont = null)
 {
     string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
         : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
@@ -317,6 +340,7 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
     var options = new OoxPdfOptions
     {
         InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
+        FontResolver = probeFont,
         ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = residentWindowBytes },
     };
     (object cold, string coldSha, int coldLength, int coldPages) = MeasureOnce(inputBytes, options, inputExtension: kind == "docx" ? ".docx" : ".pptx", outputMode, recordOutput: true);
@@ -354,12 +378,12 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
         outputSha256 = outputShas[0],
         outputStable = stable,
         pageCount = pageCounts[0],
-        fontResolver = "default",
+        fontResolver = probeFont is null ? "default" : ProbeFont.Description,
         outputMode,
         residentWindowBytes,
         cold,
         warm = warm.ToArray(),
-        stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0], outputMode) : null,
+        stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0], outputMode, probeFont) : null,
         peakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64,
         peakWorkingSetNote = peakNoteOverride ?? "process lifetime high-water mark, including earlier inputs and stage probes; pass --isolate for per-input peaks",
     };
@@ -399,7 +423,7 @@ static (T Value, object Metrics) MeasureStep<T>(Func<T> produce, string scope)
 // whole-pipeline measurements, so shared static caches are warm; the whole
 // control stays the cold/warm reference. Prerequisite objects are left for
 // GC like the converter itself (no disposal).
-static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha, string outputMode)
+static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha, string outputMode, ProbeFont? probeFont)
 {
     bool isDocx = string.Equals(kind, "docx", StringComparison.OrdinalIgnoreCase);
     var markupMode = OoxPdfDocxMarkupMode.Final;
@@ -434,13 +458,13 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         {
             DocxDocument renderDocument = new DocxReader().Read(renderPackage, diagnosticSink: null, CancellationToken.None, markupMode);
             renderScope = "exclusive: layout and emission from prebuilt package and document";
-            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: null, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
+            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: probeFont, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
         }
         else
         {
             PptxDocument renderDocument = new PptxReader().Read(renderPackage, CancellationToken.None);
             renderScope = "INCLUSIVE: PptxRenderer.RenderPages rebuilds the scene internally; package and document prerequisites are prebuilt";
-            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: null).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
+            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: probeFont).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
         }
     }
 
@@ -524,6 +548,7 @@ static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] in
         byte[] outputBytes = bufferedOutput ?? File.ReadAllBytes(fileOutput!);
         string sha = recordOutput ? Convert.ToHexString(SHA256.HashData(outputBytes)).ToLowerInvariant() : string.Empty;
         int pages = recordOutput ? ReadPageCount(outputBytes) : 0;
+        int embeddedTrueTypeFontCount = Regex.Matches(Encoding.Latin1.GetString(outputBytes), @"/FontFile2\b").Count;
         int length = outputBytes.Length;
         bufferedOutput = null;
         outputBytes = null!;
@@ -532,6 +557,7 @@ static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] in
         object metrics = new
         {
             outputMode,
+            embeddedTrueTypeFontCount,
             allocatedBytes,
             gen0Collections = gen0,
             gen1Collections = gen1,
@@ -577,7 +603,7 @@ static int ReadPageCount(byte[] pdfBytes)
     return match.Success && int.TryParse(match.Groups[1].Value, out int count) ? count : -1;
 }
 
-static int RunSelfTest()
+static int RunSelfTest(ProbeFont? probeFont)
 {
     var cases = new (string Name, byte[] Package)[]
     {
@@ -589,13 +615,18 @@ static int RunSelfTest()
     {
         try
         {
-            dynamic report = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer");
+            dynamic report = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer", probeFont: probeFont);
             bool stable = report.outputStable;
             int pages = report.pageCount;
             int bytes = report.outputBytes;
             Console.WriteLine($"PASS self-test {name}: bytes={bytes} pages={pages} stable={stable}");
             if (!stable || pages < 1 || bytes == 0)
             {
+                ok = false;
+            }
+            if (probeFont is not null && (int)report.cold.embeddedTrueTypeFontCount < 1)
+            {
+                Console.WriteLine("FAIL self-test explicit font: no embedded TrueType font in " + name);
                 ok = false;
             }
         }
@@ -637,7 +668,7 @@ static int RunSelfTest()
     // real conversion (working set and private bytes both contain the heap).
     try
     {
-        dynamic peakReport = MeasureInput("self-test-peaks.docx", BuildMinimalDocx(), warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer");
+        dynamic peakReport = MeasureInput("self-test-peaks.docx", BuildMinimalDocx(), warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer", probeFont: probeFont);
         dynamic peakWarm = peakReport.warm[0];
         long peakHeap = peakWarm.peakManagedHeapBytes;
         long peakPrivate = peakWarm.peakPrivateBytes;
@@ -663,7 +694,7 @@ static int RunSelfTest()
     // with positive batch peaks.
     try
     {
-        dynamic concurrent = MeasureConcurrencyInput("self-test-concurrency.docx", BuildMinimalDocx(), "buffer", 67108864L, 2);
+        dynamic concurrent = MeasureConcurrencyInput("self-test-concurrency.docx", BuildMinimalDocx(), "buffer", 67108864L, 2, probeFont);
         bool concurrentStable = concurrent.outputsStable;
         int concurrentPages = concurrent.pageCount;
         long batchHeap = concurrent.batchPeakManagedHeapBytes;
@@ -954,7 +985,7 @@ static byte[] BuildBreadthDocx(int breadth)
 // input and warms caches, then N conversions run concurrently on thread-pool
 // threads with independent options and scopes; a batch sampler records process
 // peaks over the whole batch while per-task walls expose overlap efficiency.
-static int RunConcurrency(string reportPath, string[] inputs, string outputMode, long residentWindowBytes, int concurrency)
+static int RunConcurrency(string reportPath, string[] inputs, string outputMode, long residentWindowBytes, int concurrency, ProbeFont? probeFont)
 {
     var reports = new List<object>();
     foreach (string input in inputs)
@@ -972,7 +1003,7 @@ static int RunConcurrency(string reportPath, string[] inputs, string outputMode,
 
         try
         {
-            reports.Add(MeasureConcurrencyInput(Path.GetFileName(input), inputBytes, outputMode, residentWindowBytes, concurrency));
+            reports.Add(MeasureConcurrencyInput(Path.GetFileName(input), inputBytes, outputMode, residentWindowBytes, concurrency, probeFont));
         }
         catch (Exception ex)
         {
@@ -981,13 +1012,13 @@ static int RunConcurrency(string reportPath, string[] inputs, string outputMode,
         }
     }
 
-    object report = BuildReport(reports, outputMode, isolation: "concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + " parallel in-process conversions sharing static caches; batch peaks cover the whole batch");
+    object report = BuildReport(reports, outputMode, isolation: "concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + " parallel in-process conversions sharing static caches; batch peaks cover the whole batch", probeFont);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
     File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine("Wrote " + reportPath + " (" + reports.Count + " inputs, concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + ").");
     return 0;
 }
-static object MeasureConcurrencyInput(string name, byte[] inputBytes, string outputMode, long residentWindowBytes, int concurrency)
+static object MeasureConcurrencyInput(string name, byte[] inputBytes, string outputMode, long residentWindowBytes, int concurrency, ProbeFont? probeFont = null)
 {
     string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
         : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
@@ -997,6 +1028,7 @@ static object MeasureConcurrencyInput(string name, byte[] inputBytes, string out
         return new OoxPdfOptions
         {
             InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
+            FontResolver = probeFont,
             ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = residentWindowBytes },
         };
     }
@@ -1043,6 +1075,11 @@ static object MeasureConcurrencyInput(string name, byte[] inputBytes, string out
         kind,
         inputBytes = inputBytes.Length,
         concurrency,
+        inputSha256 = Convert.ToHexString(SHA256.HashData(inputBytes)).ToLowerInvariant(),
+        fontResolver = probeFont is null ? "default" : ProbeFont.Description,
+        resolverLifetime = probeFont is null
+            ? "default resolver instances share discovery caches"
+            : "shared supplied resolver/source across warmup and parallel conversions",
         outputsStable = stable,
         outputBytes = results[0].Length,
         outputSha256 = results[0].Sha,
@@ -1162,6 +1199,42 @@ sealed class PeakSampler : IDisposable
             RecordPeak(ref peakWorkingSetBytes, samplerProcess.WorkingSet64);
             Thread.Sleep(5);
         }
+    }
+}
+
+sealed class ProbeFont : IFontResolver
+{
+    public const string Description = "single-file TrueType face for all requested families";
+    private readonly FileFontProgramSource source;
+
+    public ProbeFont(string path)
+    {
+        Path = System.IO.Path.GetFullPath(path);
+        if (!File.Exists(Path)) { throw new FileNotFoundException("Explicit font file does not exist.", Path); }
+        FileFontProgramSource.CheckLocalFontSize(new FileInfo(Path).Length, Path);
+        source = new FileFontProgramSource(Path);
+    }
+
+    public string Path { get; }
+
+    public FontFaceResolution Resolve(FontRequest request) => new(
+        request.FamilyName,
+        "Probe font",
+        new FontStyleKey(false, false, 400, 0, false),
+        source,
+        IsFallback: true);
+
+    public object Describe()
+    {
+        ReadOnlyMemory<byte> bytes = source.GetBytesAsync().GetAwaiter().GetResult();
+        return new
+        {
+            resolver = Description,
+            fileName = System.IO.Path.GetFileName(Path),
+            byteSize = bytes.Length,
+            sha256 = Convert.ToHexString(SHA256.HashData(bytes.Span)).ToLowerInvariant(),
+            sourceLifetime = "one lazy file source retained across conversions; metadata hashing is outside conversion counters",
+        };
     }
 }
 
