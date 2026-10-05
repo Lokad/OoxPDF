@@ -512,7 +512,7 @@ rasters, page counts and failure totals are unchanged at 575, and 32 PDFs
 remain byte-identical. Only the comment text-box case changes PDF text state.
 Raw evidence is under `artifacts/plan-revision-20261005/rv06-l17/`.
 
-## Custom-Page Review Scale Qualification (2026-10-05, RV06-L18)
+## Custom-Page Review Scale Qualification (2026-10-06, RV06-L18)
 
 Eleven Word controls cover A4, Letter landscape and custom page dimensions.
 PDF page sizes match. The standard-page font-size differences are at most
@@ -523,11 +523,26 @@ separate from nominal font-grid rounding.
 Four additional exports with Word's
 [paper-mapping option](https://learn.microsoft.com/en-us/office/vba/api/word.options.mappapersize)
 disabled have identical rasters and text geometry. Word identifies the custom
-pages as paper size 41, and the validation workstation's virtual printer uses
-Letter paper. A smaller printer canvas is a plausible cause, but another
-printer/paper profile is needed to establish it. The renderer keeps its current
-formula; no printer-specific constant was introduced. Evidence is under
-`artifacts/plan-revision-20261005/rv06-l18/`.
+pages as paper size 41.
+
+Eight controls were then exported with each of two installed virtual drivers,
+Microsoft Print To PDF and OneNote. Custom-page body font sizes remain identical
+between drivers; Letter landscape differs by 0.024 points. All text and page
+assignments match, with small coordinate and advance differences. The custom
+candidate font-size residual still reaches 3.104 points. Every export preserves
+document dimensions and the Windows default printer. Selection uses Word's
+hidden [printer setup dialog](https://learn.microsoft.com/en-us/office/vba/api/word.wdworddialog)
+with `DoNotSetAsSysDefault=1`; validation exports PDF without submitting a print
+job and restores the original application printer.
+
+A read-only [GetPrinter](https://learn.microsoft.com/en-us/windows/win32/printdocs/getprinter)
+query finds Letter global defaults for both drivers and no per-user overrides.
+This qualifies a driver change with the same default paper. It does not qualify
+a different paper canvas. A smaller printer canvas remains an inference that
+requires a different-paper control. The renderer keeps its current formula;
+no printer-specific constant was introduced. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l18/`, including
+`alternate-profile-evidence.json` and `paired-printer-controls.json`.
 
 ## Missing-Font Inspection Update (2026-10-05, RV06-L19)
 
