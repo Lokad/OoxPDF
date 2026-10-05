@@ -3138,6 +3138,50 @@ internal static class DocxTablesTests
         TestAssert.True(xs[1] > 185d && xs[1] < 196d, "Autofit must split columns at the Office-measured position.");
     }
 
+    public static void DocxAutofitColumnWidthsAreIndependentOfCellRowPairing()
+    {
+        static double[] ColumnWidths(bool moveRightCells)
+        {
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+                ["_rels/.rels"] = """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+                ["word/document.xml"] = $$"""
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                      <w:tbl><w:tblPr><w:tblW w:w="6000" w:type="dxa"/></w:tblPr>
+                        <w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="3000"/></w:tblGrid>
+                        <w:tr><w:tc><w:p><w:r><w:t>AA</w:t></w:r></w:p></w:tc>
+                          <w:tc><w:p><w:r><w:t>{{(moveRightCells ? "B" : "BBBBBBBBBBBB")}}</w:t></w:r></w:p></w:tc></w:tr>
+                        <w:tr><w:tc><w:p><w:r><w:t>AAAAAAA</w:t></w:r></w:p></w:tc>
+                          <w:tc><w:p><w:r><w:t>{{(moveRightCells ? "BBBBBBBBBBBB" : "B")}}</w:t></w:r></w:p></w:tc></w:tr>
+                      </w:tbl>
+                      <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+                    </w:body></w:document>
+                    """
+            });
+            using FileStream stream = File.OpenRead(input);
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxTableRowLayout[] rows = layout.Pages.SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();
+            TestAssert.Equal(2, rows.Length);
+            for (int column = 0; column < 2; column++)
+            {
+                TestAssert.True(Math.Abs(rows[0].Cells[column].Width - rows[1].Cells[column].Width) < 0.000001d,
+                    "Every row must share the resolved column grid.");
+            }
+            return rows[0].Cells.Select(cell => cell.Width).ToArray();
+        }
+
+        double[] separateMaxima = ColumnWidths(false);
+        double[] pairedMaxima = ColumnWidths(true);
+        for (int column = 0; column < separateMaxima.Length; column++)
+        {
+            TestAssert.True(Math.Abs(separateMaxima[column] - pairedMaxima[column]) < 0.000001d,
+                "Moving cells between rows within their own column must preserve autofit widths.");
+        }
+    }
+
     // RV06-L1: rejected insertion length cannot change Original-mode table geometry.
     public static void DocxOriginalAutofitIgnoresExcludedInsertionLength()
     {

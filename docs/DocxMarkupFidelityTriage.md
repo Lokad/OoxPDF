@@ -387,6 +387,29 @@ Word-compatible target's maximum position difference is 0.804 points and its
 rectangle difference remains 0.245 points. One case passes and 32 remain
 partial; these scoped repairs do not establish complete Office parity.
 
+## Autofit Column-Maximum Update (2026-10-05, RV06-L13)
+
+Autofit now measures the widest cell in each column independently. Previously
+it selected one row with the largest total content width and used all of that
+row's widths, missing wider cells in other rows. A production regression moves
+cells between rows within their own column and requires column widths to stay
+unchanged. It fails before the repair and passes afterward.
+
+Eight independent Word controls separate clean cell text, comment anchors and
+review scaling. In the unscaled insertion-only control, the first-column width
+difference falls from 6.66 to 0.07 points; all three unscaled controls have
+differences of at most 0.28 points. The scaled insertion-only control exposes a
+separate comment-marker measurement difference (15.43 to 20.66 points). In a
+separate combined-text control, removing the table comment anchor reduces the
+width difference from 19.30 to 0.27 points. That remains a scoped follow-up.
+
+All 862 DOCX tests pass. Across 33 cached comparisons, page counts and case
+failure totals remain unchanged at 579; 32 PDF/raster cases are byte-identical.
+The table-comment case's maximum text-position difference improves from 16.339
+to 9.058 points, and its maximum regional raster MAE improves from 15.714 to
+14.536. Its 12 failed gates remain partial. Raw evidence is under
+`artifacts/plan-revision-20261005/rv06-l13/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

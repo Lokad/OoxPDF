@@ -447,8 +447,9 @@ internal sealed partial class DocxLayoutEngine
 
     // Office A/B (comment-table autofit probes: baseline/long/short/words plus comment
     // permutation renders, Word-COM rendered): tables without a fixed layout distribute
-    // width by column content instead of the grid, so skewed content yields skewed columns.
-    // Explicit per-column preferred widths, spans, and differentiated grids keep the
+    // width by each column's widest cell instead of the grid, so skewed content
+    // yields skewed columns even when the maxima occur in different rows.
+    // Fixed layout, explicit per-column preferred widths and spans keep the
     // legacy path; content measurement mirrors cell layout inputs (single source with
     // LayoutTableCellTextLines for text, design extents for drawings).
     private static IReadOnlyList<double>? TryResolveAutoLayoutContentColumns(
@@ -500,17 +501,15 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double[] pads = new double[columnCount];
-        double[]? bestRowTotals = null;
-        double bestRowTotal = 0d;
+        double[] columnMaxima = new double[columnCount];
         foreach (DocxTableRow row in table.Rows)
         {
-            var rowTotals = new double[columnCount];
             for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
                 double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
-                rowTotals[cellIndex] = cellVisibleMax + cellDeletedTotal;
+                columnMaxima[cellIndex] = Math.Max(columnMaxima[cellIndex], cellVisibleMax + cellDeletedTotal);
 
                 double cellPad = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, fixedScale) +
                     ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, fixedScale) +
@@ -521,16 +520,10 @@ internal sealed partial class DocxLayoutEngine
                     pads[cellIndex] = cellPad;
                 }
             }
-
-            double rowTotal = rowTotals.Sum();
-            if (bestRowTotals is null || rowTotal > bestRowTotal)
-            {
-                bestRowTotals = rowTotals;
-                bestRowTotal = rowTotal;
-            }
         }
 
-        if (bestRowTotals is null || bestRowTotal <= 0d)
+        double totalContent = columnMaxima.Sum();
+        if (totalContent <= 0d)
         {
             return null;
         }
@@ -542,8 +535,8 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        return bestRowTotals
-            .Select((rowTotal, index) => pads[index] + contentTarget * rowTotal / bestRowTotal)
+        return columnMaxima
+            .Select((columnMaximum, index) => pads[index] + contentTarget * columnMaximum / totalContent)
             .ToArray();
     }
 
