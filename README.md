@@ -217,6 +217,9 @@ See [docs/DocxMarkupModes.md](docs/DocxMarkupModes.md) for DOCX final/original/s
 
 See [docs/RenderingModel.md](docs/RenderingModel.md) for the package, layout, page, and PDF writer architecture.
 
+See [docs/OperatingEnvelope.md](docs/OperatingEnvelope.md) for measured memory and
+concurrency workloads, reproduction steps, and the limits of those measurements.
+
 See [docs/PrivateValidation.md](docs/PrivateValidation.md) for local-only validation of documents that must not be versioned or made public.
 
 ## Development
