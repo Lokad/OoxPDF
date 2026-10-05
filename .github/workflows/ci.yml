@@ -63,6 +63,8 @@ jobs:
         run: pwsh -NoProfile -File tools/TestTextOperationComparison.ps1
       - name: Markup text geometry checks
         run: pwsh -NoProfile -File tools/TestMarkupTextGeometry.ps1
+      - name: Markup annotation checks
+        run: pwsh -NoProfile -File tools/TestMarkupAnnotations.ps1
       - name: Graphics comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestGraphicsOperationComparison.ps1
       - name: Flow comparison adversarial checks

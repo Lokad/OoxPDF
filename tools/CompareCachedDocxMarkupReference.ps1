@@ -185,26 +185,99 @@ function Decode-PdfLiteralString([string] $Value) {
     return $builder.ToString()
 }
 
-function Get-PdfAnnotationTargetInfo([string] $Body) {
-    $uriMatch = [regex]::Match($Body, '(?s)/A\s*<<.*?/S\s*/URI\b.*?/URI\s*\((?<uri>(?:\\.|[^\\)])*)\)')
-    $destinationMatch = [regex]::Match($Body, '(?s)/Dest\s*(?<dest>\[[^\]]*\]|\((?:\\.|[^\\)])*\)|/[A-Za-z0-9_.-]+)')
-    $hasAction = [regex]::IsMatch($Body, '/A\s*<<')
+function Get-PdfPageMap($Objects) {
+    $byReference = @{}
+    foreach ($object in $Objects) {
+        $byReference["$($object.Number) $($object.Generation)"] = $object
+    }
+    $catalog = $Objects | Where-Object { $_.Body -match '/Type\s*/Catalog\b' } | Select-Object -Last 1
+    $root = [regex]::Match([string]$catalog.Body, '/Pages\s+(?<number>\d+)\s+(?<generation>\d+)\s+R')
+    $pageByReference = @{}
+    if (-not $root.Success) { throw 'PDF page tree is unavailable to the annotation inspector.' }
+
+    # Page object numbers and physical object order are writer-specific. Traverse
+    # /Kids in logical order, retaining generation numbers and guarding cycles.
+    $pending = [Collections.Generic.Stack[string]]::new()
+    $pending.Push("$($root.Groups['number'].Value) $($root.Groups['generation'].Value)")
+    $visited = [Collections.Generic.HashSet[string]]::new()
+    while ($pending.Count -gt 0) {
+        $key = $pending.Pop()
+        if (-not $visited.Add($key) -or -not $byReference.ContainsKey($key)) {
+            throw "Unresolvable or repeated PDF page-tree reference: $key"
+        }
+        $body = $byReference[$key].Body
+        if ($body -match '/Type\s*/Page\b') {
+            $pageByReference[$key] = $pageByReference.Count + 1
+            continue
+        }
+        $kids = [regex]::Match($body, '(?s)/Kids\s*\[(?<items>.*?)\]')
+        if ($body -notmatch '/Type\s*/Pages\b' -or -not $kids.Success) {
+            throw "Unsupported PDF page-tree node: $key"
+        }
+        $references = [regex]::Matches($kids.Groups['items'].Value, '(?<number>\d+)\s+(?<generation>\d+)\s+R')
+        for ($i = $references.Count - 1; $i -ge 0; $i--) {
+            $pending.Push("$($references[$i].Groups['number'].Value) $($references[$i].Groups['generation'].Value)")
+        }
+    }
+    return $pageByReference
+}
+
+function Get-PdfExplicitDestination([string] $Value, [hashtable] $PageByReference) {
+    $match = [regex]::Match($Value, '^\[\s*(?<number>\d+)\s+(?<generation>\d+)\s+R\s*/(?<view>XYZ|Fit|FitH|FitV|FitR|FitB|FitBH|FitBV)\b(?<parameters>.*?)\s*\]$', [Text.RegularExpressions.RegexOptions]::Singleline)
+    if (-not $match.Success) { return $null }
+    $pageKey = "$($match.Groups['number'].Value) $($match.Groups['generation'].Value)"
+    if (-not $PageByReference.ContainsKey($pageKey)) { return $null }
+    $view = $match.Groups['view'].Value
+    $text = $match.Groups['parameters'].Value.Trim()
+    $parameterTokens = [regex]::Matches($text, '(?:^|\s)(?<value>null|[-+]?(?:\d+(?:\.\d*)?|\.\d+))(?=\s|$)')
+    $expectedCount = switch ($view) { 'XYZ' { 3 }; 'FitR' { 4 }; { $_ -in @('Fit', 'FitB') } { 0 }; default { 1 } }
+    if ($parameterTokens.Count -ne $expectedCount -or ($text -replace '\s', '') -ne (($parameterTokens | ForEach-Object { $_.Groups['value'].Value }) -join '')) {
+        return $null
+    }
+    $parameters = [Collections.Generic.List[object]]::new()
+    foreach ($token in $parameterTokens) {
+        if ($token.Groups['value'].Value -eq 'null') { $parameters.Add($null); continue }
+        $coordinate = [double]::Parse($token.Groups['value'].Value, [Globalization.CultureInfo]::InvariantCulture)
+        if (-not [double]::IsFinite($coordinate)) { return $null }
+        # PDF explicit /XYZ destinations define zero zoom as retained zoom.
+        if ($view -eq 'XYZ' -and $parameters.Count -eq 2 -and $coordinate -eq 0) { $parameters.Add($null) }
+        else { $parameters.Add($coordinate) }
+    }
+    $canonical = "page=$($PageByReference[$pageKey]);view=$view;" + (@(foreach ($parameter in $parameters) {
+        if ($null -eq $parameter) { 'null' } else { $parameter.ToString('R', [Globalization.CultureInfo]::InvariantCulture) }
+    }) -join ',')
+    [pscustomobject]@{ Page = $PageByReference[$pageKey]; View = $view; Parameters = $parameters.ToArray(); Sha256 = Get-Sha256Hex $canonical }
+}
+
+function Get-PdfAnnotationTargetInfo([string] $Body, [hashtable] $PageByReference = @{}) {
+    $actionMatch = [regex]::Match($Body, '(?s)/A\s*(?<action><<.*?>>|\d+\s+\d+\s+R)')
+    $actionBody = $actionMatch.Groups['action'].Value
+    $uriMatch = [regex]::Match($actionBody, '(?s)/URI\s*\((?<uri>(?:\\.|[^\\)])*)\)')
+    $hasUri = $uriMatch.Success -and $actionBody -match '/S\s*/URI\b'
+    $destinationPattern = '(?<dest>\[[^\]]*\]|\((?:\\.|[^\\)])*\)|/[A-Za-z0-9_.-]+|\d+\s+\d+\s+R)'
+    $destinationMatch = [regex]::Match($Body, '(?s)/Dest\s*' + $destinationPattern)
+    $hasAction = $actionMatch.Success
+    if (-not $destinationMatch.Success -and $actionBody -match '/S\s*/GoTo\b') {
+        $destinationMatch = [regex]::Match($actionBody, '(?s)/D\s*' + $destinationPattern)
+    }
     $hasDestination = $destinationMatch.Success
     $uriSha256 = $null
     $uriLength = $null
-    if ($uriMatch.Success) {
+    if ($hasUri) {
         $uri = Decode-PdfLiteralString $uriMatch.Groups["uri"].Value
         $uriLength = $uri.Length
         $uriSha256 = Get-Sha256Hex $uri
     }
 
-    $destinationSha256 = if ($destinationMatch.Success) {
+    $rawDestinationSha256 = if ($destinationMatch.Success) {
         Get-Sha256Hex $destinationMatch.Groups["dest"].Value
     }
     else {
         $null
     }
-    $targetKind = if ($uriMatch.Success) {
+    $destination = if ($destinationMatch.Success) { Get-PdfExplicitDestination $destinationMatch.Groups['dest'].Value $PageByReference } else { $null }
+    $destinationSha256 = if ($null -ne $destination) { $destination.Sha256 } else { $rawDestinationSha256 }
+    $targetKind = if ($hasUri) {
         "ExternalUri"
     }
     elseif ($destinationMatch.Success) {
@@ -223,24 +296,29 @@ function Get-PdfAnnotationTargetInfo([string] $Body) {
         HasDestination = $hasDestination
         UriLength = $uriLength
         UriSha256 = $uriSha256
+        RawDestinationSha256 = $rawDestinationSha256
         DestinationSha256 = $destinationSha256
-        TargetSha256 = if ($null -ne $uriSha256) { $uriSha256 } else { $destinationSha256 }
+        DestinationPage = if ($null -ne $destination) { $destination.Page } else { $null }
+        DestinationView = if ($null -ne $destination) { $destination.View } else { $null }
+        DestinationParameters = if ($null -ne $destination) { ,$destination.Parameters } else { $null }
+        TargetSha256 = if ($null -ne $uriSha256) { $uriSha256 } elseif ($null -ne $destinationSha256) { $destinationSha256 } elseif ($hasAction) { Get-Sha256Hex $actionBody } else { $null }
     }
 }
 
 function Get-PdfAnnotations([string] $PdfPath) {
     $objects = @(Get-PdfObjects $PdfPath)
+    $pageByReference = Get-PdfPageMap $objects
     $pageByAnnotationObject = @{}
-    $pageNumber = 0
     foreach ($object in $objects) {
-        if ($object.Body -match '/Type\s*/Page\b' -and $object.Body -notmatch '/Type\s*/Pages\b') {
-            $pageNumber++
+        $pageKey = "$($object.Number) $($object.Generation)"
+        if ($pageByReference.ContainsKey($pageKey)) {
+            $pageNumber = $pageByReference[$pageKey]
             $annotsMatch = [regex]::Match($object.Body, '(?s)/Annots\s*\[(?<items>.*?)\]')
             if ($annotsMatch.Success) {
-                foreach ($ref in [regex]::Matches($annotsMatch.Groups["items"].Value, '(?<number>\d+)\s+\d+\s+R')) {
-                    $annotationNumber = [int]$ref.Groups["number"].Value
-                    if (-not $pageByAnnotationObject.ContainsKey($annotationNumber)) {
-                        $pageByAnnotationObject[$annotationNumber] = $pageNumber
+                foreach ($ref in [regex]::Matches($annotsMatch.Groups["items"].Value, '(?<number>\d+)\s+(?<generation>\d+)\s+R')) {
+                    $annotationKey = "$($ref.Groups['number'].Value) $($ref.Groups['generation'].Value)"
+                    if (-not $pageByAnnotationObject.ContainsKey($annotationKey)) {
+                        $pageByAnnotationObject[$annotationKey] = $pageNumber
                     }
                 }
             }
@@ -265,17 +343,22 @@ function Get-PdfAnnotations([string] $PdfPath) {
         $maxX = [Math]::Max($numbers[0], $numbers[2])
         $minY = [Math]::Min($numbers[1], $numbers[3])
         $maxY = [Math]::Max($numbers[1], $numbers[3])
-        $targetInfo = Get-PdfAnnotationTargetInfo $object.Body
+        $targetInfo = Get-PdfAnnotationTargetInfo $object.Body $pageByReference
+        $annotationKey = "$($object.Number) $($object.Generation)"
         [pscustomobject]@{
             ObjectNumber = $object.Number
-            Page = if ($pageByAnnotationObject.ContainsKey($object.Number)) { $pageByAnnotationObject[$object.Number] } else { $null }
+            Page = if ($pageByAnnotationObject.ContainsKey($annotationKey)) { $pageByAnnotationObject[$annotationKey] } else { $null }
             Subtype = $subtypeMatch.Groups["subtype"].Value
             TargetKind = $targetInfo.TargetKind
             HasAction = $targetInfo.HasAction
             HasDestination = $targetInfo.HasDestination
             UriLength = $targetInfo.UriLength
             UriSha256 = $targetInfo.UriSha256
+            RawDestinationSha256 = $targetInfo.RawDestinationSha256
             DestinationSha256 = $targetInfo.DestinationSha256
+            DestinationPage = $targetInfo.DestinationPage
+            DestinationView = $targetInfo.DestinationView
+            DestinationParameters = $targetInfo.DestinationParameters
             TargetSha256 = $targetInfo.TargetSha256
             MinX = [Math]::Round($minX, 6)
             MinY = [Math]::Round($minY, 6)
@@ -317,14 +400,54 @@ function Get-TargetKindPenalty($Reference, $Candidate) {
     return 10000d
 }
 
-function Get-TargetHashPenalty($Reference, $Candidate) {
+function Compare-AnnotationTargets($Reference, $Candidate, [double] $Tolerance) {
+    $referenceTargetKind = Get-OptionalPropertyValue $Reference 'TargetKind'
+    $candidateTargetKind = Get-OptionalPropertyValue $Candidate 'TargetKind'
+    $referenceTargetHash = Get-OptionalPropertyValue $Reference 'TargetSha256'
+    $candidateTargetHash = Get-OptionalPropertyValue $Candidate 'TargetSha256'
+    $kindDelta = [string]$referenceTargetKind -ne [string]$candidateTargetKind
+    $hashDelta = [string]$referenceTargetHash -ne [string]$candidateTargetHash
+    $positionDelta = $null
+    $targetDelta = $kindDelta -or $hashDelta
+    $referencePage = Get-OptionalPropertyValue $Reference 'DestinationPage'
+    $candidatePage = Get-OptionalPropertyValue $Candidate 'DestinationPage'
+    if (-not $kindDelta -and $null -ne $referencePage -and $null -ne $candidatePage) {
+        $view = Get-OptionalPropertyValue $Reference 'DestinationView'
+        # Read arrays directly so PowerShell's pipeline does not discard null
+        # coordinates or collapse their positions within the destination.
+        $referenceParameters = $Reference.DestinationParameters
+        $candidateParameters = $Candidate.DestinationParameters
+        $targetDelta = $referencePage -ne $candidatePage -or $view -ne (Get-OptionalPropertyValue $Candidate 'DestinationView') -or $referenceParameters.Count -ne $candidateParameters.Count
+        $positionDelta = 0d
+        if ($referenceParameters.Count -eq $candidateParameters.Count) {
+            for ($i = 0; $i -lt $referenceParameters.Count; $i++) {
+                $referenceValue = $referenceParameters[$i]
+                $candidateValue = $candidateParameters[$i]
+                if ($null -eq $referenceValue -or $null -eq $candidateValue) {
+                    if ($null -ne $referenceValue -or $null -ne $candidateValue) { $targetDelta = $true }
+                }
+                elseif ($view -eq 'XYZ' -and $i -eq 2) {
+                    if ([double]$referenceValue -ne [double]$candidateValue) { $targetDelta = $true }
+                }
+                else {
+                    $delta = [Math]::Abs([double]$referenceValue - [double]$candidateValue)
+                    $positionDelta = [Math]::Max($positionDelta, $delta)
+                    if ($delta -gt $Tolerance) { $targetDelta = $true }
+                }
+            }
+        }
+    }
+    [pscustomobject]@{ TargetKindDelta = $kindDelta; TargetSha256Delta = $hashDelta; TargetDelta = $targetDelta; DestinationMaxPositionDelta = $positionDelta }
+}
+
+function Get-TargetHashPenalty($Reference, $Candidate, [double] $Tolerance = 0) {
     $referenceTargetHash = Get-OptionalPropertyValue $Reference "TargetSha256"
     $candidateTargetHash = Get-OptionalPropertyValue $Candidate "TargetSha256"
     if ($null -eq $referenceTargetHash -and $null -eq $candidateTargetHash) {
         return 0d
     }
 
-    if ([string]$referenceTargetHash -eq [string]$candidateTargetHash) {
+    if (-not (Compare-AnnotationTargets $Reference $Candidate $Tolerance).TargetDelta) {
         return 0d
     }
 
@@ -335,23 +458,28 @@ function New-RectComparisonRow(
     [string] $Status,
     $Candidate,
     $Reference,
-    $MaxDelta)
+    $MaxDelta,
+    [double] $TargetTolerance = 0)
 {
     $candidateTargetKind = Get-OptionalPropertyValue $Candidate "TargetKind"
     $referenceTargetKind = Get-OptionalPropertyValue $Reference "TargetKind"
     $candidateTargetHash = Get-OptionalPropertyValue $Candidate "TargetSha256"
     $referenceTargetHash = Get-OptionalPropertyValue $Reference "TargetSha256"
-    $hasTargetInfo = $null -ne $candidateTargetKind -or $null -ne $referenceTargetKind -or $null -ne $candidateTargetHash -or $null -ne $referenceTargetHash
-    $targetKindDelta = if ($hasTargetInfo) { [string]$candidateTargetKind -ne [string]$referenceTargetKind } else { $false }
-    $targetHashDelta = if ($hasTargetInfo -and ($null -ne $candidateTargetHash -or $null -ne $referenceTargetHash)) { [string]$candidateTargetHash -ne [string]$referenceTargetHash } else { $false }
-    $targetDelta = $targetKindDelta -or $targetHashDelta
-    $rowStatus = if ($Status -eq "ok" -and $targetDelta) { "delta" } else { $Status }
+    $targetComparison = Compare-AnnotationTargets $Reference $Candidate $TargetTolerance
+    $targetKindDelta = $targetComparison.TargetKindDelta
+    $targetHashDelta = $targetComparison.TargetSha256Delta
+    $targetDelta = $targetComparison.TargetDelta
+    $sourcePageDelta = (Get-OptionalPropertyValue $Candidate 'Page') -ne (Get-OptionalPropertyValue $Reference 'Page')
+    $subtypeDelta = (Get-OptionalPropertyValue $Candidate 'Subtype') -ne (Get-OptionalPropertyValue $Reference 'Subtype')
+    $rowStatus = if ($Status -eq "ok" -and ($targetDelta -or $sourcePageDelta -or $subtypeDelta)) { "delta" } else { $Status }
 
     [pscustomobject]@{
         Status = $rowStatus
         Candidate = $Candidate
         Reference = $Reference
         MaxDelta = $MaxDelta
+        SourcePageDelta = $sourcePageDelta
+        SubtypeDelta = $subtypeDelta
         CandidateTargetKind = $candidateTargetKind
         ReferenceTargetKind = $referenceTargetKind
         TargetKindDelta = $targetKindDelta
@@ -359,6 +487,7 @@ function New-RectComparisonRow(
         ReferenceTargetSha256 = $referenceTargetHash
         TargetSha256Delta = $targetHashDelta
         TargetDelta = $targetDelta
+        DestinationMaxPositionDelta = $targetComparison.DestinationMaxPositionDelta
     }
 }
 
@@ -379,7 +508,7 @@ function Compare-RectLists($ReferenceItems, $CandidateItems, [double] $Tolerance
             $score = $pagePenalty +
                 $subtypePenalty +
                 (Get-TargetKindPenalty $reference $candidate) +
-                (Get-TargetHashPenalty $reference $candidate) +
+                (Get-TargetHashPenalty $reference $candidate $Tolerance) +
                 [Math]::Abs((Get-CenterX $candidate) - (Get-CenterX $reference)) +
                 [Math]::Abs((Get-CenterY $candidate) - (Get-CenterY $reference))
             if ($score -lt $bestScore) {
@@ -394,7 +523,7 @@ function Compare-RectLists($ReferenceItems, $CandidateItems, [double] $Tolerance
         }
 
         if ($null -eq $referenceItem) {
-            $rows.Add((New-RectComparisonRow "missing-reference" $candidate $null $null))
+            $rows.Add((New-RectComparisonRow "missing-reference" $candidate $null $null $Tolerance))
             continue
         }
 
@@ -406,11 +535,11 @@ function Compare-RectLists($ReferenceItems, $CandidateItems, [double] $Tolerance
         )
         $maxDelta = ($deltas | Measure-Object -Maximum).Maximum
         $status = if ($maxDelta -le $Tolerance) { "ok" } else { "delta" }
-        $rows.Add((New-RectComparisonRow $status $candidate $referenceItem ([Math]::Round($maxDelta, 6))))
+        $rows.Add((New-RectComparisonRow $status $candidate $referenceItem ([Math]::Round($maxDelta, 6)) $Tolerance))
     }
 
     foreach ($reference in $unmatched) {
-        $rows.Add((New-RectComparisonRow "missing-candidate" $null $reference $null))
+        $rows.Add((New-RectComparisonRow "missing-candidate" $null $reference $null $Tolerance))
     }
 
     return $rows.ToArray()

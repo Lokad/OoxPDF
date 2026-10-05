@@ -115,6 +115,27 @@ Affected table/core groups pass, and six held-out cases across Final, Simple,
 AllMarkup and an independent Original input preserve candidate bytes and gate
 counts. Evidence is under `artifacts/plan-revision-20261005/rv06-l1/`.
 
+## Annotation Comparison Update (2026-10-05, RV06-L2)
+
+Internal link targets now compare logical destination pages, view types and
+coordinates rather than hashes of raw PDF destination syntax. Page order comes
+from the page tree. Object numbers, numeric spelling and equivalent retained
+zoom values no longer create target failures; direct destinations and local
+GoTo actions compare together. Positions use the annotation bounds tolerance,
+while source/destination pages, annotation subtypes, view types, retained
+coordinates and zoom remain strict.
+Raw and canonical hashes are both retained, alongside actual position deltas.
+Named/indirect destinations and other unresolved actions retain exact checks;
+this tool still inspects direct PDF objects rather than compressed object streams.
+
+Annotation-only checks of all 33 existing PDF pairs preserve their failure counts.
+Their current target differences are real: the clean Original case differs by
+3 points horizontally and about 1.63 vertically. The normalization corrects a
+reproduced comparator defect without claiming a renderer improvement or loosening
+the remaining parity gates. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l2/`; portable adversarial checks run via
+`tools/TestMarkupAnnotations.ps1` in both CI jobs.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
