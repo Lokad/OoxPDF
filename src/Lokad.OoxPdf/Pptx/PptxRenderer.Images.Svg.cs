@@ -1192,9 +1192,10 @@ internal sealed partial class PptxRenderer
     {
         graphics.SaveState();
         SvgTransform? strokeViewport = ApplySvgStrokeViewport(graphics, imageX, imageY, imageHeight, scaleX, scaleY);
-        List<SvgRoundDashCap>? roundDashCaps = opacity == 1d && lineCap == 1 && dashPoints is { Length: 2 }
-            ? ReadSvgRoundDashCaps(data, transform, widthPoints, dashPoints, dashPhasePoints, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport)
+        SvgRoundDashPaint? roundDashPaint = opacity == 1d && lineCap == 1 && dashPoints is { Length: 2 }
+            ? ReadSvgRoundDashPaint(data, transform, widthPoints, dashPoints, dashPhasePoints, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport)
             : null;
+        List<SvgRoundDashCap>? roundDashCaps = roundDashPaint?.Caps;
         if (opacity < 1d)
         {
             graphics.SetAlpha(1d, opacity);
@@ -1233,11 +1234,25 @@ internal sealed partial class PptxRenderer
                     PaintSvgRoundDashCap(graphics, cap, widthPoints / 2d);
                 }
             }
+            if (roundDashPaint is { SolidLines: { Count: > 0 } } dashPaint)
+            {
+                // RV07-S7: Office paints an opaque rounded line when its
+                // entire path falls in dash gaps. Retain mixed painted paths.
+                graphics.SetLineDash(Array.Empty<double>(), 0d);
+                graphics.SetLineCap(1);
+                foreach ((double x, double y, double endX, double endY) in dashPaint.SolidLines)
+                {
+                    graphics.MoveTo(x, y);
+                    graphics.LineTo(endX, endY);
+                }
+                graphics.StrokeCurrentPath();
+            }
         }
         graphics.RestoreState();
         return painted;
     }
     private readonly record struct SvgRoundDashCap(double X, double Y, double DirectionX, double DirectionY);
+    private readonly record struct SvgRoundDashPaint(List<SvgRoundDashCap>? Caps, List<(double X, double Y, double EndX, double EndY)> SolidLines);
     private static void PaintSvgRoundDashCap(PdfGraphicsBuilder graphics, SvgRoundDashCap cap, double radius)
     {
         double nx = -cap.DirectionY, ny = cap.DirectionX;
@@ -1253,20 +1268,24 @@ internal sealed partial class PptxRenderer
         graphics.ClosePath();
         graphics.FillCurrentPath();
     }
-    private static List<SvgRoundDashCap>? ReadSvgRoundDashCaps(string data, SvgTransform transform, double widthPoints, double[] dash, double phase, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? viewport)
+    private static SvgRoundDashPaint? ReadSvgRoundDashPaint(string data, SvgTransform transform, double widthPoints, double[] dash, double phase, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? viewport)
     {
         // RV07-S6: Office rounds visible dash ends within half a stroke width
         // of an original endpoint. Outward semicircles retain partial dash gaps.
         // Qualify complete single-line subpaths with multiple visible dashes;
-        // short strokes, curves, joins, alpha and extreme geometry keep fallback.
+        // RV07-S7: a wholly unpainted straight path gets solid opaque paint.
+        // Curves, joins, alpha and extreme geometry retain native fallback.
         double period = dash[0] + dash[1];
-        if (dash[0] <= widthPoints || dash[1] <= 0d || !double.IsFinite(period)) return null;
+        if (dash[0] <= 0d || dash[1] <= 0d || !double.IsFinite(period)) return null;
+        bool qualifiedCaps = dash[0] > widthPoints;
         double meanScale = (scaleX + scaleY) / 2d;
         if (viewport is null && Math.Abs(scaleX - scaleY) > meanScale * .000001d) return null;
         (List<SvgPathCommand> parsed, bool complete) = ParseSvgPathData(data);
         if (!complete || parsed.Count == 0 || parsed.Count > 256 || parsed.Count % 2 != 0) return null;
         List<SvgPathCommand> commands = TransformSvgCommands(parsed, transform);
         var caps = new List<SvgRoundDashCap>();
+        var solidLines = new List<(double X, double Y, double EndX, double EndY)>();
+        bool hasPaintedDash = false;
         phase %= period;
         if (phase < 0d) phase += period;
         for (int index = 0; index < commands.Count; index += 2)
@@ -1285,19 +1304,35 @@ internal sealed partial class PptxRenderer
                 || !TryMapSvgPicturePoint(endX, endY, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, viewport, out endX, out endY)) return null;
             double dx = endX - x, dy = endY - y;
             if (!double.IsFinite(dx) || !double.IsFinite(dy) || !double.IsFinite(length)
-                || length <= widthPoints || length / period > 1e12d || !double.IsFinite(length + phase)) return null;
+                || length <= 0d || length / period > 1e12d || !double.IsFinite(length + phase)) return null;
             double mappedLargest = Math.Max(Math.Abs(dx), Math.Abs(dy));
             double mappedLength = mappedLargest * Math.Sqrt(Math.Pow(dx / mappedLargest, 2d) + Math.Pow(dy / mappedLargest, 2d));
             if (!double.IsFinite(mappedLength) || mappedLength == 0d) return null;
             double tolerance = Math.Max(1d, period) * 1e-12d;
             double first = phase < dash[0] ? 0d : period - phase;
-            if (first >= length - tolerance) return null;
+            if (first >= length - tolerance)
+            {
+                double radius = widthPoints / 2d;
+                if (!double.IsFinite(x - radius) || !double.IsFinite(x + radius)
+                    || !double.IsFinite(y - radius) || !double.IsFinite(y + radius)
+                    || !double.IsFinite(endX - radius) || !double.IsFinite(endX + radius)
+                    || !double.IsFinite(endY - radius) || !double.IsFinite(endY + radius)) return null;
+                solidLines.Add((x, y, endX, endY));
+                qualifiedCaps = false;
+                continue;
+            }
+            hasPaintedDash = true;
             double remainder = (length + phase) % period;
             if (remainder < tolerance || period - remainder < tolerance) remainder = 0d;
             double last = remainder == 0d ? length - dash[1] : remainder <= dash[0] ? length : length - (remainder - dash[0]);
             if (last <= first || last > length) return null;
             double firstEnd = phase < dash[0] ? dash[0] - phase : first + dash[0];
-            if (last <= firstEnd + tolerance) return null;
+            if (length <= widthPoints || last <= firstEnd + tolerance)
+            {
+                qualifiedCaps = false;
+                continue;
+            }
+            if (!qualifiedCaps) continue;
             if (first <= widthPoints / 2d + tolerance && !AddCap(first, -1d)) return null;
             if (length - last <= widthPoints / 2d + tolerance && !AddCap(last, 1d)) return null;
 
@@ -1311,7 +1346,8 @@ internal sealed partial class PptxRenderer
                 return true;
             }
         }
-        return caps;
+        if (hasPaintedDash) solidLines.Clear();
+        return new SvgRoundDashPaint(qualifiedCaps ? caps : null, solidLines);
     }
     private static SvgTransform? ApplySvgStrokeViewport(PdfGraphicsBuilder graphics, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {

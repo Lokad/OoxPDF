@@ -1063,8 +1063,8 @@ internal static class PptxImagesTests
             (Data: "M15 25H1e308", Alpha: "", Dash: "8 4"),
             (Data: manySubpaths, Alpha: "", Dash: "8 4"),
             (Data: "M15 25H18", Alpha: "", Dash: "8 4"),
-            (Data: "M15 25H17", Alpha: "stroke-dashoffset=\"1.5\"", Dash: "8 4"),
-            (Data: "M15 25H18", Alpha: "stroke-dashoffset=\"1.5\"", Dash: "8 4"),
+            (Data: "M15 25H17", Alpha: "stroke-dashoffset=\"1.5\" stroke-opacity=\"0.5\"", Dash: "8 4"),
+            (Data: "M15 25H18", Alpha: "stroke-dashoffset=\"1.5\" stroke-opacity=\"0.5\"", Dash: "8 4"),
             (Data: "M15 25H23", Alpha: "", Dash: "8 4"),
             (Data: "M15 25H27", Alpha: "", Dash: "8 4"),
         })
@@ -1174,6 +1174,79 @@ internal static class PptxImagesTests
                 double x = double.Parse(curves[index].Groups[group].Value, CultureInfo.InvariantCulture);
                 TestAssert.True(index < 2 ? x <= start + .001d : x >= last - .001d,
                     "A terminal cap must stay outward of its dash end, retaining the adjacent partial-dash gap.");
+            }
+        }
+    }
+
+    public static void PptxSvgRoundDashUnpaintedShortPathsUseOfficeSolidFallback()
+    {
+        foreach (int width in new[] { 3, 6, 9 })
+        foreach (int length in new[] { 2, 3 })
+        {
+            byte[]? baseline = null;
+            foreach (double size in new[] { .1d, 100d, 1000d })
+            {
+                string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                    <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M{size * .15} {size * .25}H{size * (15 + length) / 100}" fill="none" stroke="#0000FF" stroke-width="{size * width / 100}" stroke-linecap="round" stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="{9d / width}"/>
+                    </svg>
+                    """));
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+                byte[] bytes = File.ReadAllBytes(output);
+                string pdf = Encoding.ASCII.GetString(bytes);
+                TestAssert.Contains("[] 0 d", pdf);
+                TestAssert.Contains("1 J", pdf);
+                TestAssert.Equal(2, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+                MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+                MatchCollection lines = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) l\r?$");
+                TestAssert.Equal(2, moves.Count);
+                TestAssert.Equal(2, lines.Count);
+                TestAssert.Equal(moves[0].Value, moves[1].Value);
+                TestAssert.Equal(lines[0].Value, lines[1].Value);
+                TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "The opaque Office short-line fallback must retain the picture.");
+                if (baseline is null) baseline = bytes;
+                else TestAssert.True(baseline.AsSpan().SequenceEqual(bytes), "Solid fallback geometry must survive source-coordinate rescaling.");
+            }
+        }
+    }
+
+    public static void PptxSvgRoundDashUnpaintedPathFallbackIsOpaqueAndLocal()
+    {
+        foreach (bool whollyUnpainted in new[] { false, true })
+        foreach (bool transparent in new[] { false, true })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 25H17 M25 15V{(whollyUnpainted ? "17" : "85")}" fill="none" stroke="#0000FF" stroke-width="6" stroke-linecap="round" stroke-dasharray="8 4" stroke-dashoffset="1.5" stroke-opacity="{(transparent ? "0.5" : "1")}"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            bool solidFallback = whollyUnpainted && !transparent;
+            TestAssert.Equal(solidFallback ? 2 : 1, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+            TestAssert.Equal(0, Regex.Matches(pdf, @"(?m)^f\r?$").Count);
+            if (transparent)
+            {
+                TestAssert.Contains("/CA 0.5", pdf);
+                TestAssert.True(!pdf.Contains("[] 0 d", StringComparison.Ordinal), "Unqualified alpha must retain native dash paint without opaque augmentation.");
+            }
+            if (solidFallback)
+            {
+                MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+                MatchCollection lines = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) l\r?$");
+                TestAssert.Equal(4, moves.Count);
+                TestAssert.Equal(4, lines.Count);
+                TestAssert.Equal(moves[0].Value, moves[2].Value);
+                TestAssert.Equal(lines[0].Value, lines[2].Value);
+                TestAssert.Equal(moves[1].Value, moves[3].Value);
+                TestAssert.Equal(lines[1].Value, lines[3].Value);
+            }
+            else
+            {
+                TestAssert.True(!pdf.Contains("[] 0 d", StringComparison.Ordinal), "A mixed painted path must retain its existing dash paint.");
             }
         }
     }
