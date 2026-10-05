@@ -621,7 +621,7 @@ internal static class PptxImagesTests
                 """));
             string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
             OoxPdfConverter.Convert(input, output);
-            List<double> widths = ReadAxisAlignedPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            List<double> widths = ReadPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
             TestAssert.Equal(2, widths.Count);
             TestAssert.True(Math.Abs(widths[0] - 4.32d) < .004d, $"Horizontal stroke thickness was {widths[0]}pt for source size {size}.");
             TestAssert.True(Math.Abs(widths[1] - 8.64d) < .004d, $"Vertical stroke thickness was {widths[1]}pt for source size {size}.");
@@ -644,18 +644,108 @@ internal static class PptxImagesTests
             string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
             var diagnostics = new List<OoxPdfDiagnostic>();
             OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-            List<double> widths = ReadAxisAlignedPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            List<double> widths = ReadPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
             TestAssert.Equal(1, widths.Count);
             TestAssert.True(double.IsFinite(widths[0]) && widths[0] > 0d, "Unrepresentable viewport anisotropy must retain finite stroke paint.");
             TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Extreme aspect ratios must not discard the picture.");
         }
     }
 
-    private static List<double> ReadAxisAlignedPdfStrokeWidths(string pdf)
+    public static void PptxSvgElementStrokeUsesOfficeUniformTransformWidth()
+    {
+        foreach (double size in new[] { .1d, 100d, 1000d })
+        foreach (var probe in new[]
+        {
+            (Transform: "scale(2,1)", Horizontal: 8.64d, Vertical: 8.64d),
+            (Transform: "matrix(1,0,0.5,1,0,0)", Horizontal: 4.32d * (Math.Sqrt(4.25d) + .5d) / 2d, Vertical: 4.32d * (Math.Sqrt(4.25d) + .5d) / 2d),
+            (Transform: FormattableString.Invariant($"translate({size * 2},0) scale(-2,1)"), Horizontal: 8.64d, Vertical: 8.64d),
+        })
+        {
+            string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="{probe.Transform}">
+                    <path d="M{size * .15} {size * .25}H{size * .85}" fill="none" stroke="#0000FF" stroke-width="{size * .06}"/>
+                    <path d="M{size * .25} {size * .15}V{size * .85}" fill="none" stroke="#0000FF" stroke-width="{size * .06}"/>
+                  </g>
+                </svg>
+                """));
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            List<double> widths = ReadPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            TestAssert.Equal(2, widths.Count);
+            TestAssert.True(Math.Abs(widths[0] - probe.Horizontal) < .006d, $"Horizontal thickness {widths[0]} for {probe.Transform}, size {size}.");
+            TestAssert.True(Math.Abs(widths[1] - probe.Vertical) < .006d, $"Vertical thickness {widths[1]} for {probe.Transform}, size {size}.");
+        }
+    }
+
+    public static void PptxSvgNonScalingElementStrokeRetainsViewportWidths()
+    {
+        foreach (string transform in new[] { "scale(2,1)", "matrix(1,0,0.5,1,0,0)" })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="{transform}">
+                    <path d="M15 25H85" fill="none" stroke="#0000FF" stroke-width="6" vector-effect="non-scaling-stroke"/>
+                    <path d="M25 15V85" fill="none" stroke="#0000FF" stroke-width="6" style="vector-effect:non-scaling-stroke"/>
+                  </g>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            List<double> widths = ReadPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            TestAssert.Equal(2, widths.Count);
+            TestAssert.True(widths.All(width => Math.Abs(width - 4.32d) < .001d), "Non-scaling strokes must omit element stretch/shear from their width.");
+        }
+    }
+
+    public static void PptxSvgExtremeElementStrokeKeepsFinitePaint()
+    {
+        foreach (string transform in new[] { "matrix(1,0,1000000,1,0,0)", "scale(1000000,0.000001)" })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 0L0.00001 0.00001" transform="{transform}" fill="none" stroke="#0000FF" stroke-width="6"/>
+                  <path d="M20 20H40" fill="none" stroke="#FF0000" stroke-width="6"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            List<double> widths = ReadPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            TestAssert.Equal(2, widths.Count);
+            TestAssert.True(widths.All(width => double.IsFinite(width) && width > 0d), "Extreme element transforms must retain finite stroke and sibling paint.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Extreme transforms must not drop the picture.");
+        }
+    }
+
+    public static void PptxSvgFilledElementStrokeUsesOfficeTransformWidth()
+    {
+        foreach (var probe in new[]
+        {
+            (Transform: "scale(2,1)", Width: 8.64d),
+            (Transform: "matrix(1,0,0.5,1,0,0)", Width: 4.32d * (Math.Sqrt(4.25d) + .5d) / 2d),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="{probe.Transform}"><path d="M10 20H50V35H10Z" fill="#00FF00" stroke="#0000FF" stroke-width="6"/></g>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            List<double> widths = ReadPdfStrokeWidths(pdf);
+            TestAssert.Equal(1, widths.Count);
+            TestAssert.True(Math.Abs(widths[0] - probe.Width) < .006d, "Combined solid fill/stroke must use the qualified Office element width.");
+            TestAssert.Contains("0 1 0 rg", pdf);
+        }
+    }
+
+    private static List<double> ReadPdfStrokeWidths(string pdf)
     {
         var widths = new List<double>();
-        var states = new Stack<(double X, double Y, double Width)>();
-        (double X, double Y, double Width) state = (1d, 1d, 1d);
+        var states = new Stack<(double A, double B, double C, double D, double Width)>();
+        (double A, double B, double C, double D, double Width) state = (1d, 0d, 0d, 1d, 1d);
         double startX = 0d, startY = 0d, endX = 0d, endY = 0d;
         foreach (string line in pdf.Split('\n'))
         {
@@ -667,17 +757,20 @@ internal static class PptxImagesTests
                 case "q": states.Push(state); break;
                 case "Q": state = states.Pop(); break;
                 case "cm":
-                    TestAssert.True(Number(1) == 0d && Number(2) == 0d, "This probe expects axis-aligned PDF transforms.");
-                    state = (state.X * Number(0), state.Y * Number(3), state.Width);
+                    double a = Number(0), b = Number(1), c = Number(2), d = Number(3);
+                    state = (state.A * a + state.C * b, state.B * a + state.D * b,
+                        state.A * c + state.C * d, state.B * c + state.D * d, state.Width);
                     break;
                 case "w": state.Width = Number(0); break;
                 case "m": startX = endX = Number(0); startY = endY = Number(1); break;
                 case "l": endX = Number(0); endY = Number(1); break;
                 case "S":
+                case "B":
+                case "B*":
                     double dx = endX - startX, dy = endY - startY;
                     double sourceLength = Math.Sqrt(dx * dx + dy * dy);
-                    double pageLength = Math.Sqrt(Math.Pow(state.X * dx, 2) + Math.Pow(state.Y * dy, 2));
-                    widths.Add(state.Width * Math.Abs(state.X * state.Y) * sourceLength / pageLength);
+                    double pageLength = Math.Sqrt(Math.Pow(state.A * dx + state.C * dy, 2) + Math.Pow(state.B * dx + state.D * dy, 2));
+                    widths.Add(state.Width * Math.Abs(state.A * state.D - state.B * state.C) * sourceLength / pageLength);
                     break;
             }
         }

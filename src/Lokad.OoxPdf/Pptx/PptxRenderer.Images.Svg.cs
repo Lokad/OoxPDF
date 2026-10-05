@@ -171,7 +171,7 @@ internal sealed partial class PptxRenderer
             }
             bool evenOddFill = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "fill-rule")?.Trim().Equals("evenodd", StringComparison.OrdinalIgnoreCase) == true;
             double viewportScale = (scaleX + scaleY) / 2d;
-            double strokeScale = nonScalingStroke ? viewportScale : Math.Sqrt(Math.Abs(transform.M11 * transform.M22 - transform.M12 * transform.M21)) * viewportScale;
+            double strokeScale = nonScalingStroke ? viewportScale : GetSvgStrokeElementScale(transform) * viewportScale;
             double strokeWidthPoints = Math.Max(0.001d, stroke.Width * strokeScale);
             double[]? dashPoints = null;
             double dashPhasePoints = 0d;
@@ -921,8 +921,8 @@ internal sealed partial class PptxRenderer
     }
     // RV07: solid strokes paint over any fill; gradient strokes, unparsable
     // colors/widths and dash/cap/join effects diagnose instead of vanishing.
-    // Stroke widths are user units scaled by the path transform area scale
-    // and the viewBox mapping; non-uniform mappings stay approximate.
+    // Office uses the largest singular value of the element transform for
+    // a uniform stroke width; the viewport separately stretches its normal.
     // vector-effect=non-scaling-stroke skips the element-transform factor;
     // any other effect value stays diagnosed with the scaled stroke.
     private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
@@ -1141,6 +1141,24 @@ internal sealed partial class PptxRenderer
             trimmed = trimmed.Substring(0, trimmed.Length - 2);
         }
         return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out offset) && double.IsFinite(offset);
+    }
+    private static double GetSvgStrokeElementScale(SvgTransform transform)
+    {
+        // RV07-S2: PowerPoint scales a uniform element stroke by the largest
+        // singular value, including shear. Preserve the previous degenerate
+        // and overflow fallback before normalizing the finite matrix entries.
+        double area = transform.M11 * transform.M22 - transform.M12 * transform.M21;
+        if (!double.IsFinite(area) || area == 0d)
+        {
+            return Math.Sqrt(Math.Abs(area));
+        }
+        double largest = Math.Max(Math.Max(Math.Abs(transform.M11), Math.Abs(transform.M12)),
+            Math.Max(Math.Abs(transform.M21), Math.Abs(transform.M22)));
+        double a = transform.M11 / largest, b = transform.M12 / largest;
+        double c = transform.M21 / largest, d = transform.M22 / largest;
+        double first = Math.Sqrt((a + d) * (a + d) + (b - c) * (b - c));
+        double second = Math.Sqrt((a - d) * (a - d) + (b + c) * (b + c));
+        return largest * ((first + second) / 2d);
     }
     private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
