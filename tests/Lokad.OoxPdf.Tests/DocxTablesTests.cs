@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -3136,6 +3138,58 @@ internal static class DocxTablesTests
         TestAssert.True(xs[1] > 185d && xs[1] < 196d, "Autofit must split columns at the Office-measured position.");
     }
 
+    // RV06-L1: rejected insertion length cannot change Original-mode table geometry.
+    public static void DocxOriginalAutofitIgnoresExcludedInsertionLength()
+    {
+        var parts = new Dictionary<string, byte[]>();
+        using (ZipArchive archive = ZipFile.OpenRead(FindCase("docx-markup-review.docx")))
+        {
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                using Stream source = entry.Open();
+                using var bytes = new MemoryStream();
+                source.CopyTo(bytes);
+                parts[entry.FullName] = bytes.ToArray();
+            }
+        }
+        string shortInput = TestFixtures.WriteTempPackage(".docx", parts);
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XDocument xml = XDocument.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
+        XElement inserted = xml.Descendants(w + "ins").Single(element => (string?)element.Attribute(w + "id") == "8");
+        inserted.Descendants(w + "t").Single().Value = new string('X', 200);
+        parts["word/document.xml"] = Encoding.UTF8.GetBytes(xml.ToString());
+        string longInput = TestFixtures.WriteTempPackage(".docx", parts);
+
+        static DocxTableRowLayout OriginalTable(string input)
+        {
+            using FileStream stream = File.OpenRead(input);
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Original);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            return layout.Pages.SelectMany(page => page.Items).OfType<DocxTableRowLayout>().Last();
+        }
+
+        DocxTableRowLayout shortRow = OriginalTable(shortInput);
+        DocxTableRowLayout longRow = OriginalTable(longInput);
+        for (int column = 0; column < shortRow.Cells.Count; column++)
+        {
+            TestAssert.True(Math.Abs(shortRow.Cells[column].Width - longRow.Cells[column].Width) < 0.000001d,
+                "Original-mode column width must be independent of excluded insertion length.");
+        }
+        string renderedText = string.Concat(longRow.Cells[1].TextLines.Select(line => line.Text));
+        TestAssert.Contains("removed cell text", renderedText);
+        TestAssert.DoesNotContain(new string('X', 20), renderedText);
+
+        inserted.Name = w + "moveTo";
+        parts["word/document.xml"] = Encoding.UTF8.GetBytes(xml.ToString());
+        DocxTableRowLayout movedRow = OriginalTable(TestFixtures.WriteTempPackage(".docx", parts));
+        for (int column = 0; column < shortRow.Cells.Count; column++)
+        {
+            TestAssert.True(Math.Abs(shortRow.Cells[column].Width - movedRow.Cells[column].Width) < 0.000001d,
+                "Original-mode column width must be independent of excluded move-to text.");
+        }
+    }
+
     // RV06: table autofit measures deleted text, so the reader preserves Final-view
     // excluded del runs for measurement (rendering keeps filtering them).
     public static void DocxReaderPreservesDeletedTextForMeasurement()
@@ -3150,7 +3204,7 @@ internal static class DocxTablesTests
         DocxDocument original = new DocxReader().Read(OoxPackage.Open(originalStream, CancellationToken.None), null, CancellationToken.None, OoxPdfDocxMarkupMode.Original);
         DocxTable originalTable = original.BodyElements.OfType<DocxTableElement>().First().Table;
         DocxParagraph originalCell = ((DocxParagraphElement)originalTable.Rows[1].Cells[1].BodyElements[0]).Paragraph;
-        TestAssert.Equal("added cell text", originalCell.DeletedText);
+        TestAssert.Equal(string.Empty, originalCell.DeletedText);
     }
 
     // RV06 (Office gate): autofit ignores grid variation, so a differentiated grid

@@ -164,10 +164,15 @@ internal sealed partial class DocxReader
         {
             if (!IsIncludedRevisionContainer(container, markupMode))
             {
-                // RV06: excluded revision text still sizes table columns in Office.
-                foreach (XElement run in container.Descendants(WordprocessingNamespace + "r"))
+                // Final/Simple views retain hidden deletions for Office autofit. The
+                // clean Original view rejects insertions/move-to content, so those
+                // excluded runs must not influence its column widths.
+                if (markupMode != OoxPdfDocxMarkupMode.Original)
                 {
-                    deletedText.Append(ReadRunText(run));
+                    foreach (XElement run in container.Descendants(WordprocessingNamespace + "r"))
+                    {
+                        deletedText.Append(ReadRunText(run));
+                    }
                 }
 
                 return;

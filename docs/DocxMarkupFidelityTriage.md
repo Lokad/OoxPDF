@@ -33,7 +33,7 @@ inherited view. Acceptance-test PDFs use unique scratch identities.
 
 All 33 cases still have nonzero parity gates. Page counts match in every case;
 22 cases fail the whole-page raster threshold, and region gates catch additional
-localized differences. The current tally is 671 failed gates by manifest, or 463
+localized differences. The E1 snapshot tally is 671 failed gates by manifest, or 463
 when shared identities are counted once. These are overlapping metrics, not
 671 distinct bugs. The comparator repair closes an alignment defect; broader
 Word-compatible layout, balloon composition and annotation fidelity remain open.
@@ -50,7 +50,7 @@ Word-compatible layout, balloon composition and annotation fidelity remain open.
 | Balloons | 27 | Rectangle/order/placement differences in review views |
 | Raster | 150 | Whole-page and regional paint/layout differences, with multiple gates per region |
 
-The per-case inventory below classifies every remaining failure into gate phases.
+The per-case E1 inventory below classifies the failures into gate phases.
 Structural covers page/pagination, markup geometry, tables, annotations and
 balloons; operations covers text and graphics. Counts are failing metrics.
 Reports and hashes stay under ignored `artifacts/plan-revision-20261005/`:
@@ -94,6 +94,26 @@ populating trusted references on another workstation.
 | docx-private-grounded-style-spacing | 9 | 11 | 6 |
 | docx-private-grounded-table-borders | 9 | 11 | 6 |
 | docx-private-grounded-threaded-comments | 9 | 11 | 6 |
+
+## Original-View Autofit Update (2026-10-05, RV06-L1)
+
+Original mode previously added the width of excluded insertion/move-to text to
+autofit columns, even though that text was absent from the rendered page. It now
+sizes only the original content. Final/Simple views retain the Office-calibrated
+hidden deletion/move-from measurement behavior.
+
+The clean original reference's first column is about 171.39 points wide. The
+candidate moves from 118.43 to 171.42 points; the roughly 53-point discrepancy is
+removed. Table-grid bounds now pass (maximum delta 0.787 points, including border
+and row edges), and regional raster gates pass. The case drops from 16 to 10
+failing gates. Date-field result differences, small text spacing, graphics and
+link annotation differences remain; this is still an approximate case.
+
+The regression changes an excluded insertion to 200 characters and then to
+move-to content, requiring unchanged Original-mode columns and original text.
+Affected table/core groups pass, and six held-out cases across Final, Simple,
+AllMarkup and an independent Original input preserve candidate bytes and gate
+counts. Evidence is under `artifacts/plan-revision-20261005/rv06-l1/`.
 
 ## Inputs
 

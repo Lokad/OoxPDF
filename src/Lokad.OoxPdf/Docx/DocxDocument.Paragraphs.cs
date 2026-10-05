@@ -31,9 +31,9 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     public bool HasDeletedParagraphMark { get; init; }
 
-    // RV06: text of revision containers excluded from Runs by the markup view
-    // (deleted text in Final view). Rendering keeps filtering it; table autofit
-    // measurement includes it because Office sizes columns with it.
+    // Hidden deletions/move-from text in Final/Simple views still size Office
+    // autofit columns. Original rejects insertions/move-to text and excludes
+    // those runs from both painting and this measurement text.
     public string DeletedText { get; init; } = string.Empty;
 
     // Pilcrow (paragraph-mark) run size through the style cascade, excluding direct
