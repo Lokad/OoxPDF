@@ -67,7 +67,25 @@ Invoke-Case "matrix-raw" @($mEff) @($mCand) 1 0
 Invoke-Case "matrix-effective" @($mEff) @($mCand) 0 0 "-UseEffectiveMatrix"
 Invoke-Case "matrix-fallback" @((New-Op 10 20 "Plain")) @((New-Op 10 20 "Plain")) 0 0 "-UseEffectiveMatrix"
 
+function New-MetricOp($X, $Y, $Text, $Advance) {
+    [pscustomobject]@{ PageNumber=1; X=$X; Y=$Y; FontSize=12; CharacterSpacing=0; Payload=$Text; DecodedText=$Text; EffectiveX=$X; EffectiveY=$Y; EmittedAdvancePoints=$Advance; NaturalWidthPoints=$Advance; AdjustmentTotalPoints=0; NetSpacingGapTotalPoints=0; CharacterSpacingGapTotalPoints=0; DecodedRuneCount=([string]$Text).Length; TextChunkCount=1 }
+}
+$hello = New-MetricOp 10 100 'Hello' 25
+$space = New-MetricOp 35 100 ' ' 3
+$world = New-MetricOp 38 100 'world' 25
+$blank = New-MetricOp 10 80 ' ' 3
+$whole = New-MetricOp 10 100 'Hello world' 53
+$visibleArgs = '-MergeSameLineOperations -IgnoreWhitespaceOnlyLines -CompareDecodedText -UseEffectiveMatrix'
+Invoke-Case 'blank-line-default' @($whole, $blank) @($whole) 1 1 '-MergeSameLineOperations -CompareDecodedText'
+Invoke-Case 'blank-line-geometry' @($hello, $space, $world, $blank) @($whole) 0 0 $visibleArgs
+Invoke-Case 'blank-line-moved' @($whole, $blank) @((New-MetricOp 10 99 'Hello world' 53)) 1 0 $visibleArgs
+Invoke-Case 'blank-line-missing-text' @($whole, $blank) @($blank) 1 1 $visibleArgs
+$unknown = New-MetricOp 10 80 $null 3
+$unknown.Payload = 'undecoded'
+Invoke-Case 'blank-line-unknown' @($unknown) @($blank) 1 1 $visibleArgs
+Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) @($blank) 1 1 $visibleArgs
+
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Text comparison adversarial checks passed (14 cases)."
+Write-Host "Text comparison adversarial checks passed (20 cases)."

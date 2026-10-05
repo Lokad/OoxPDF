@@ -107,6 +107,8 @@ function Invoke-DotnetBuildIfStale {
 
 . (Join-Path $PSScriptRoot "JsonObject.ps1")
 
+. (Join-Path $PSScriptRoot "PdfTextGeometry.ps1")
+
 function Get-PdfObjects([string] $PdfPath) {
     $bytes = [System.IO.File]::ReadAllBytes($PdfPath)
     $text = [System.Text.Encoding]::Latin1.GetString($bytes)
@@ -1965,7 +1967,7 @@ function Merge-SameLineTextOperations($Operations) {
         $lineKey = [string]$pageKey + "|" + [Math]::Round($opY, 1)
         $opEndX = $opX + $opAdvance
         if ($null -ne $current -and $currentLineKey -eq $lineKey -and ($opX - $currentEndX) -le 1d) {
-            $current.DecodedText = [string]$current.DecodedText + [string]$op.DecodedText
+            $current.DecodedText = if ($null -eq $current.DecodedText -or $null -eq $op.DecodedText) { $null } else { [string]$current.DecodedText + [string]$op.DecodedText }
             $current.Payload = [string]$current.Payload + [string]$op.Payload
             $current.EmittedAdvancePoints = [double]$current.EmittedAdvancePoints + $opAdvance
             $current.NaturalWidthPoints = [double]$current.NaturalWidthPoints + [double]$op.NaturalWidthPoints
@@ -1979,6 +1981,7 @@ function Merge-SameLineTextOperations($Operations) {
         }
         if ($null -ne $current) { $merged.Add($current) }
         $current = $op.PSObject.Copy()
+        if ($current.PSObject.Properties.Name -notcontains "DecodedText") { $current | Add-Member -NotePropertyName DecodedText -NotePropertyValue $null }
         $currentLineKey = $lineKey
         $currentEndX = $opEndX
     }
@@ -1988,8 +1991,8 @@ function Merge-SameLineTextOperations($Operations) {
 function New-TextGateDeltaSummary($ReferenceTextOperations, $CandidateTextOperations) {
     $reference = @(Sort-TextOperationsForGate $ReferenceTextOperations)
     $candidate = @(Sort-TextOperationsForGate $CandidateTextOperations)
-    $reference = @(Merge-SameLineTextOperations $reference)
-    $candidate = @(Merge-SameLineTextOperations $candidate)
+    $reference = @(Select-NonWhitespacePdfTextOperations (Merge-SameLineTextOperations $reference))
+    $candidate = @(Select-NonWhitespacePdfTextOperations (Merge-SameLineTextOperations $candidate))
     $pairCount = [Math]::Min($reference.Count, $candidate.Count)
     $maxBaselineDelta = $null
     $maxXDelta = $null
@@ -2444,7 +2447,7 @@ function New-MediaBoxDeltaSummary($ReferenceMediaBoxes, $CandidateMediaBoxes) {
 
 function Get-TextBaselinePageSummary($TextOperations, [int] $PageNumber) {
     $pageOperations = @($TextOperations | Where-Object { $_.PageNumber -ne $null -and [int]$_.PageNumber -eq $PageNumber })
-    $baselines = @($pageOperations |
+    $baselines = @(Select-NonWhitespacePdfTextOperations $pageOperations |
         ForEach-Object { Get-DoubleMetric $_ @("EffectiveY", "Y") } |
         Where-Object { $null -ne $_ } |
         ForEach-Object { [double]$_ })
@@ -3371,6 +3374,7 @@ if ((Test-Path -LiteralPath $referenceTextOperations) -and (Test-Path -LiteralPa
         -CharacterSpacingTolerance $TextCharacterSpacingTolerance `
         -MatchByPosition `
         -MergeSameLineOperations `
+        -IgnoreWhitespaceOnlyLines `
         -UseEffectiveMatrix *> $textLog
     $textComparisonExitCode = $LASTEXITCODE
 }

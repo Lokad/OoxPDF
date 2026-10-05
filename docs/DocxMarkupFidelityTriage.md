@@ -2,6 +2,99 @@
 
 Use this checklist when reviewing cached Office-reference comparisons for DOCX markup cases. Keep private artifacts under ignored directories and commit only anonymized findings.
 
+## Public Reference Snapshot (2026-10-05, RV06-E1)
+
+All 33 public markup manifests have verified cached PDFs at 144 DPI on the
+validation workstation, covering 25 distinct input/view identities. Sixteen new
+identities closed the 24 case-level misses. Nine public `docx-private-grounded-*`
+cases share one complex synthetic fixture and view; they exercise named feature
+interactions, not nine independent inputs. This is local cache availability,
+not a repository-distributed reference corpus or an Office parity claim.
+
+New references were exported with Word 16.0 under the reference supervisor and
+explicit ShowRevisions/RevisionsView/MarkupMode/RevisionsMode/ShowComments flags.
+Original mode rejects revisions on a temporary input copy and prints clean text.
+All-markup references use inline deletions (RevisionsMode=1). The historical
+original-mode reference instead printed comment balloons and shrank the body;
+it was backed up and replaced with a clean explicit-view export. Eight other
+historical PDFs were preserved. Independent all/final exports confirm their
+historical view class; their raster MAE against the old PDFs is below 0.03.
+Automatic date fields can change during Word export, so field-result differences
+must be distinguished from renderer layout and operation alignment.
+
+The blank-line comparison repair removes nine false gate failures across three
+cases, with all 33 candidate/reference PDF pairs unchanged. Hidden-anchor last
+baseline drift falls from 24.98 to 0.02 points and its failures from nine to three;
+the remaining width/advance deltas of about 2.5 points still fail. Correcting the
+original-view reference separately removes eleven failures (27 to 16), without
+changing the candidate PDF. Missing or corrupt markup variants now require an
+explicit export/import; generic cache rendering cannot silently label Word's
+inherited view. Acceptance-test PDFs use unique scratch identities.
+
+All 33 cases still have nonzero parity gates. Page counts match in every case;
+22 cases fail the whole-page raster threshold, and region gates catch additional
+localized differences. The current tally is 671 failed gates by manifest, or 463
+when shared identities are counted once. These are overlapping metrics, not
+671 distinct bugs. The comparator repair closes an alignment defect; broader
+Word-compatible layout, balloon composition and annotation fidelity remain open.
+
+| Delta class | Failed gates by manifest | Interpretation for the next repair |
+|---|---:|---|
+| Page geometry | 10 | Media/body-frame geometry signals; page count already agrees |
+| Pagination | 64 | Painted baseline/span drift; inspect actual layout and keep/row flow |
+| Markup geometry | 43 | Body/lane widths, occupied bounds and connector placement |
+| Text | 281 | Baselines, positions, advances and spacing; verify merged-line alignment before changing rendering |
+| Graphics | 32 | Visible path-operation differences; confirm with the corresponding pixels |
+| Tables | 38 | Grid/column geometry; clean original mode still has a roughly 53-point grid-bound mismatch |
+| Annotations | 26 | Rectangle and destination differences; inspect targets independently of visible text |
+| Balloons | 27 | Rectangle/order/placement differences in review views |
+| Raster | 150 | Whole-page and regional paint/layout differences, with multiple gates per region |
+
+The per-case inventory below classifies every remaining failure into gate phases.
+Structural covers page/pagination, markup geometry, tables, annotations and
+balloons; operations covers text and graphics. Counts are failing metrics.
+Reports and hashes stay under ignored `artifacts/plan-revision-20261005/`:
+`markup-baseline`, `markup-after-comparator`, `markup-original-view-corrected`,
+`markup-cache-final`, and `markup-final-inventory.json`. Re-run with
+`tools/RunDocxMarkupReferenceGate.ps1 -ContinueOnFailure -FailOnDeltas` after
+populating trusted references on another workstation.
+
+| Public case | Structural | Operations | Raster |
+|---|---:|---:|---:|
+| docx-markup-all | 12 | 11 | 6 |
+| docx-markup-all-word-compatible | 9 | 10 | 5 |
+| docx-markup-balloon-lane-bands | 6 | 10 | 6 |
+| docx-markup-comment-hidden-anchors | 0 | 3 | 0 |
+| docx-markup-comment-long | 6 | 8 | 3 |
+| docx-markup-comment-static-stories | 7 | 10 | 6 |
+| docx-markup-comment-table | 3 | 8 | 3 |
+| docx-markup-comment-text-box | 0 | 4 | 2 |
+| docx-markup-comment-threaded-resolved | 4 | 6 | 3 |
+| docx-markup-comment-unresolved | 0 | 10 | 3 |
+| docx-markup-final | 3 | 7 | 0 |
+| docx-markup-links-fields-all | 10 | 9 | 5 |
+| docx-markup-links-fields-final | 4 | 8 | 2 |
+| docx-markup-links-fields-original | 4 | 8 | 2 |
+| docx-markup-links-fields-simple | 10 | 10 | 6 |
+| docx-markup-margin-dense-revisions | 6 | 10 | 6 |
+| docx-markup-margin-landscape | 4 | 10 | 5 |
+| docx-markup-margin-mirrored | 2 | 10 | 3 |
+| docx-markup-margin-multi-column | 6 | 10 | 6 |
+| docx-markup-margin-multi-page | 4 | 10 | 5 |
+| docx-markup-margin-one-page | 4 | 11 | 5 |
+| docx-markup-margin-table-heavy | 8 | 11 | 6 |
+| docx-markup-original | 5 | 9 | 2 |
+| docx-markup-simple | 10 | 11 | 6 |
+| docx-private-grounded-comment-anchors | 9 | 11 | 6 |
+| docx-private-grounded-complex-fields | 9 | 11 | 6 |
+| docx-private-grounded-dense-balloons | 9 | 11 | 6 |
+| docx-private-grounded-floating-drawings | 9 | 11 | 6 |
+| docx-private-grounded-formatting-revisions | 9 | 11 | 6 |
+| docx-private-grounded-numbering-indentation | 9 | 11 | 6 |
+| docx-private-grounded-style-spacing | 9 | 11 | 6 |
+| docx-private-grounded-table-borders | 9 | 11 | 6 |
+| docx-private-grounded-threaded-comments | 9 | 11 | 6 |
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

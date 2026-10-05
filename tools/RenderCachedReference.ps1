@@ -33,6 +33,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "ReferenceCache.ps1")
 
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
+$isDocxMarkupVariant = [IO.Path]::GetExtension($inputFull) -eq '.docx' -and $CacheVariant -match '(^|;)docxMarkup='
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
@@ -42,6 +43,9 @@ function New-CacheMissMessage($resolution) {
         $(if ([string]::IsNullOrWhiteSpace($CacheVariant)) { "" } else { " -CacheVariant '$CacheVariant'" })
     if (-not [string]::IsNullOrWhiteSpace($CaseId)) {
         $populate += " -CaseId '$CaseId'"
+    }
+    if ($isDocxMarkupVariant) {
+        $populate = 'export with tools/ExportDocxMarkupReference.ps1 using explicit markup view settings, then import with tools/ImportDocxMarkupReferenceCache.ps1 for the case manifest. CacheVariant labels identify references; they do not set Word view options.'
     }
 
     return "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI ($($resolution.Reason)). Cache-only mode refuses to invoke Office/COM reference rendering. Expected identity directory: artifacts/reference-cache/$($resolution.IdentityKey). To populate it on an Office setup, run: $populate"
@@ -64,6 +68,10 @@ if ($resolution.Outcome -eq "Corrupt") {
         throw "Reference cache entry is corrupt and CacheOnly refuses to re-render: $($resolution.Reason) Entry: $($resolution.CacheDirectory)"
     }
 
+    if ($isDocxMarkupVariant) {
+        throw "DOCX markup reference is corrupt; preserve the entry for inspection and re-import a trusted reference with explicit markup view settings. CacheVariant does not configure Word. Entry: $($resolution.CacheDirectory)"
+    }
+
     Write-Host ("Reference cache entry corrupt ($($resolution.Reason)); re-rendering: $($resolution.CacheDirectory)")
     Use-ReferenceCacheLock $resolution.IdentityKey {
         if (Test-Path -LiteralPath $resolution.CacheDirectory) {
@@ -76,6 +84,10 @@ if ($resolution.Outcome -eq "Corrupt") {
 if ($resolution.Outcome -eq "Miss") {
     if ($CacheOnly) {
         throw (New-CacheMissMessage $resolution)
+    }
+
+    if ($isDocxMarkupVariant) {
+        throw "DOCX markup reference cache miss: export and import a trusted reference with explicit markup view settings via ExportDocxMarkupReference.ps1 and ImportDocxMarkupReferenceCache.ps1. CacheVariant does not configure Word; generic rendering would cache the wrong view."
     }
 
     $renderReference = Join-Path $PSScriptRoot "RenderReference.ps1"

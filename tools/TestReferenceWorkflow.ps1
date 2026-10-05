@@ -103,6 +103,17 @@ catch {
 
 Assert-True $variantMissed "R02 variant mismatch misses instead of sharing an entry"
 
+# A variant label cannot configure Word's persistent view options. Refuse a
+# generic cache fill before starting Office, leaving explicit exports/imports.
+$unsafeVariantRejected = $false
+$unsafeVariantOutput = Join-Path $scratch 'variant-render-out'
+try {
+    & (Join-Path $repoRoot 'tools/RenderCachedReference.ps1') -InputPath $missDocx -OutputDirectory $unsafeVariantOutput -Dpi 144 -CacheVariant 'docxMarkup=all;docxMarkupGeometry=preserve' | Out-Null
+} catch {
+    $unsafeVariantRejected = $_.Exception.Message -like '*explicit markup view settings*'
+}
+Assert-True ($unsafeVariantRejected -and -not (Test-Path -LiteralPath (Join-Path $unsafeVariantOutput 'reference-supervisor.log'))) 'Markup variant miss refuses inherited Word view before launching Office'
+
 # R02: a second DPI rasterizes offline from the cached PDF identity.
 & (Join-Path $repoRoot "tools/RenderCachedReference.ps1") -InputPath $missDocx -OutputDirectory (Join-Path $scratch "hit72-out") -Dpi 72 -CacheOnly | Out-Null
 Assert-True (@(Get-ChildItem -LiteralPath (Join-Path $scratch "hit72-out") -Filter "page-*.png").Count -ge 1) "R02 missing derivative rasterizes offline from the cached PDF"

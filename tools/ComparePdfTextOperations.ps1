@@ -17,7 +17,9 @@ param(
 
     [switch] $CompareDecodedText,
 
-    [switch] $MergeSameLineOperations
+    [switch] $MergeSameLineOperations,
+
+    [switch] $IgnoreWhitespaceOnlyLines
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,6 +27,8 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 . (Join-Path $PSScriptRoot "CompareMath.ps1")
+
+. (Join-Path $PSScriptRoot "PdfTextGeometry.ps1")
 
 function TextX($op) {
     if ($UseEffectiveMatrix -and $op.EffectiveX -ne $null) {
@@ -60,7 +64,7 @@ function Merge-SameLineOperations($Operations) {
         $lineKey = [string]$op.PageNumber + "|" + [Math]::Round((TextY $op), 1)
         $opEndX = (TextX $op) + [double]$op.EmittedAdvancePoints
         if ($null -ne $current -and $currentLineKey -eq $lineKey -and ((TextX $op) - $currentEndX) -le 1d) {
-            $current.DecodedText = (TextContent $current) + (TextContent $op)
+            $current.DecodedText = if ($null -eq $current.DecodedText -or $null -eq $op.DecodedText) { $null } else { [string]$current.DecodedText + [string]$op.DecodedText }
             $current.Payload = [string]$current.Payload + [string]$op.Payload
             $current.EmittedAdvancePoints = [double]$current.EmittedAdvancePoints + [double]$op.EmittedAdvancePoints
             $current.NaturalWidthPoints = [double]$current.NaturalWidthPoints + [double]$op.NaturalWidthPoints
@@ -74,6 +78,7 @@ function Merge-SameLineOperations($Operations) {
         }
         if ($null -ne $current) { $merged.Add($current) }
         $current = $op.PSObject.Copy()
+        if ($current.PSObject.Properties.Name -notcontains "DecodedText") { $current | Add-Member -NotePropertyName DecodedText -NotePropertyValue $null }
         $currentLineKey = $lineKey
         $currentEndX = $opEndX
     }
@@ -85,6 +90,11 @@ $candidateOps = Read-JsonArray $Candidate
 if ($MergeSameLineOperations) {
     $referenceOps = Merge-SameLineOperations $referenceOps
     $candidateOps = Merge-SameLineOperations $candidateOps
+}
+if ($IgnoreWhitespaceOnlyLines) {
+    if (-not $MergeSameLineOperations) { throw '-IgnoreWhitespaceOnlyLines requires -MergeSameLineOperations to preserve inline spacing.' }
+    $referenceOps = @(Select-NonWhitespacePdfTextOperations $referenceOps)
+    $candidateOps = @(Select-NonWhitespacePdfTextOperations $candidateOps)
 }
 $rows = New-Object System.Collections.Generic.List[object]
 $failures = 0

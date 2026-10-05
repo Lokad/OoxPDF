@@ -59,13 +59,13 @@ Do not commit generated visual artifacts unless they are intentionally small fix
 ## Family Parity Targets (Q07 triage, 2026-09-22)
 
 Each family has an explicit target classification so needs-review triage has a
-destination. Counts below track the manifest state as of 2026-10-02 (triage rounds 1-14 baselined 2026-09-22)
-(118 locked, 9 locked-text-ops, 215 approximate, 0 needs-review across 342
-cases; family rows overlap on shared patterns so their totals exceed 342). Three approximate cases joined since: pptx-ladder-11-chart-bar-style-18 (9c134d2d), pptx-ladder-07-svg-extensions (a8da17c9), and pptx-ladder-11-chart-line-span-port (9dfdcb06).
+destination. Counts below track the validated manifest state as of 2026-10-05
+(118 locked, 9 locked-text-ops, 216 approximate, 0 needs-review across 343
+cases; family rows overlap on shared patterns so their totals exceed 343).
 
 | Family | Cases | Target | Rationale |
 |---|---|---|---|
-| pptx-images | 13 / 0 / 2 / 0 | Locked except known-approx effects | Pixel-faithful embedding; effectively there |
+| pptx-images | 13 / 0 / 3 / 0 | Embedding locked; SVG paints approximate | Radial/stroke probe records remaining paint and geometry residuals |
 | pptx-charts | 28 / 0 / 34 / 0 | Tier-1 ports locked; rest approximate with recorded gaps | Matches the Tier-1/Tier-2 split in Capabilities.md; triage complete 2026-09-22 |
 | pptx-typography | 15 / 9 / 71 / 0 | Approximate by default; exact ports lock | Font-metric approximations are structural; text-ops locks pin emission; run-merging fix aligns op grouping with Office |
 | pptx-tables | 9 / 0 / 7 / 0 | Mixed; first-pass built-ins lock, rich styles approximate | Per Capabilities table-style scope; triage complete 2026-09-22 |
@@ -150,6 +150,21 @@ pwsh tools/RunDocxMarkupReferenceGate.ps1 -FailOnDeltas
 ```
 
 The cache-status output includes `missing-import-commands.ps1`, which lists only the references still absent from `artifacts/reference-cache/`.
+
+`CacheVariant` identifies a cached PDF; it does not set Word's persistent view
+options. `RenderCachedReference.ps1` serves verified markup hits, but refuses
+generic rendering of missing or corrupt DOCX markup variants. Export with all
+view settings explicit, then import against the case manifest. Corrupt markup
+entries are preserved for inspection. Ordinary DOCX/PPTX cache fills are unchanged.
+
+The markup baseline and merged-line text geometry gates ignore decoded
+whitespace-only lines. Runs merge first, so spaces between words still contribute
+to line advances. Raw operator counts and undecoded runs remain available; blank
+paragraph pagination must be assessed through layout snapshots and pixels.
+The standalone `ComparePdfTextOperations.ps1` keeps its default full comparison;
+use `-MergeSameLineOperations -IgnoreWhitespaceOnlyLines` for this geometry policy.
+`tools/TestMarkupTextGeometry.ps1` and the text comparison adversarial checks cover
+missing/moved lines, inline spaces and undecoded runs without Office or a cache.
 
 ### Reference revision-view matching
 
