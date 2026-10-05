@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -244,6 +244,21 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
         }
     }
     $controls
+} elseif ($ProbeSet -eq 'radial-opacity-controls') {
+    $controls = [ordered]@{}
+    foreach ($spread in @('pad', 'repeat', 'reflect')) {
+        foreach ($variant in @('quarter', 'half', 'three-quarters', 'fill-opacity', 'combined', 'style')) {
+            $opacity = switch ($variant) { 'quarter' { '0.25' } 'three-quarters' { '0.75' } default { '0.5' } }
+            $attributes = switch ($variant) {
+                'fill-opacity' { 'fill-opacity="0.5"' }
+                'combined' { 'opacity="0.5" fill-opacity="0.5"' }
+                'style' { 'style="opacity:0.5;fill-opacity:0.5"' }
+                default { "opacity=`"$opacity`"" }
+            }
+            $controls[$spread + '-' + $variant] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 100 50`"><defs><radialGradient id=`"g`" gradientUnits=`"userSpaceOnUse`" cx=`"50`" cy=`"25`" r=`"20`" spreadMethod=`"$spread`"><stop offset=`"0`" stop-color=`"#FF0000`"/><stop offset=`"0.4`" stop-color=`"#00FF00`"/><stop offset=`"1`" stop-color=`"#0000FF`"/></radialGradient></defs><path d=`"M0 0H100V50H0Z`" fill=`"url(#g)`" $attributes/></svg>"
+        }
+    }
+    $controls
 } elseif ($ProbeSet -eq 'radial-spread-controls') {
     $controls = [ordered]@{}
     foreach ($spread in @('repeat', 'reflect')) {
@@ -303,7 +318,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls')) {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -311,7 +326,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls')) {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null
@@ -325,6 +340,18 @@ try {
     $stage = 'export'; Stage $stage
     $presentation.SaveAs((Join-Path $WorkDirectory 'fixture.pptx'), 24)
     $presentation.SaveAs((Join-Path $WorkDirectory 'reference.pdf'), 32)
+    if ($ProbeSet -eq 'radial-opacity-controls') {
+        # Keep PNG preview exports separate from the PDF raster pages. The
+        # two Office outputs disagree for some SVG opacity constructs.
+        $previewRoot = Join-Path $WorkDirectory 'office-preview'
+        New-Item -ItemType Directory -Force -Path $previewRoot | Out-Null
+        $pixelWidth = [int][Math]::Round($presentation.PageSetup.SlideWidth * $Dpi / 72)
+        $pixelHeight = [int][Math]::Round($presentation.PageSetup.SlideHeight * $Dpi / 72)
+        foreach ($entry in $presentation.Slides) {
+            $entry.Export((Join-Path $previewRoot ("page-{0:D3}.png" -f [int]$entry.SlideIndex)), 'PNG', $pixelWidth, $pixelHeight)
+            Release-ComObject $entry
+        }
+    }
 } catch {
     [ordered]@{Status='export-failed';Stage=$stage;OfficeApp='PowerPoint';OfficeVersion='';ExportSettings='';Error=$_.Exception.Message} | ConvertTo-Json | Set-Content -LiteralPath $StatusPath -Encoding utf8
     throw

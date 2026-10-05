@@ -2093,6 +2093,33 @@ internal static class PptxImagesTests
         }
     }
 
+    public static void PptxSvgRadialOpacityPaintsOnceThroughTheClip()
+    {
+        foreach (string spread in new[] { "pad", "repeat", "reflect" })
+        {
+            foreach (double opacity in new[] { 0.25d, 0.5d, 0.75d })
+            {
+                foreach (string attribute in new[] { "opacity", "fill-opacity" })
+                {
+                    string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                        <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                          <defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="25" r="20" spreadMethod="{spread}"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+                          <path d="M0 0H100V50H0Z" fill="url(#g)" {attribute}="{opacity}"/>
+                        </svg>
+                        """));
+                    string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                    OoxPdfConverter.Convert(input, output);
+                    string pdf = File.ReadAllText(output, Encoding.ASCII);
+                    TestAssert.Contains("/ShadingType 3", pdf);
+                    TestAssert.Contains(FormattableString.Invariant($"/ca {opacity} /CA 1"), pdf);
+                    TestAssert.Equal(1, Regex.Matches(pdf, @"/Sh\d+ sh").Count);
+                    TestAssert.DoesNotContain("1 0 0 rg", pdf);
+                    TestAssert.DoesNotContain("0 0 1 rg", pdf);
+                }
+            }
+        }
+    }
+
     // RV07-E1: pad extends the last stop beyond the outer circle, through the clipped shape.
     public static void PptxSyntheticSvgRadialPadPaintsCorners()
     {

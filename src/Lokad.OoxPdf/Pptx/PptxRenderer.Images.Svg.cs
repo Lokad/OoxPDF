@@ -1486,8 +1486,9 @@ internal sealed partial class PptxRenderer
         double printedRadiusY = Math.Abs(radiusY * scaleY);
         // PDF coordinates and function bounds use three decimal places. Retain
         // sampling when quantization could collapse a radius or stop interval.
-        bool nativeShading = opacity >= 1d &&
-            printedRadiusX >= 0.001d && printedRadiusY >= 0.001d && radial.Stops.Count >= 2 &&
+        // One clipped shading applies alpha once instead of accumulating it
+        // over nested sampled rings and the padded background.
+        bool nativeShading = printedRadiusX >= 0.001d && printedRadiusY >= 0.001d && radial.Stops.Count >= 2 &&
             (radial.Stops[0].Offset == 0d || radial.Stops[0].Offset >= 0.001d) &&
             (radial.Stops[^1].Offset == 1d || radial.Stops[^1].Offset <= 0.999d);
         for (int index = 1; nativeShading && index < radial.Stops.Count; index++)
