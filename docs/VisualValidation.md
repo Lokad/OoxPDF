@@ -90,7 +90,7 @@ Named limitation, intended next improvement, and gate for each approximate famil
 - pptx-composition: master and layout inheritance locks case by case; next is extending locked inheritance coverage. Gate: family gates plus pixels.
 - pptx-effects: raster shadows and glows approximate, other effects unsupported with diagnostics; next is held-out Office calibration for further effects. Gate: family 9/9 plus pixels.
 - docx-layout: Latin greedy wrapping with mid-line images across body, table-cell, related-story and static paths plus approximate columns, notes, and floating wrap; Office calibration of image baseline, line growth, and justification is complete; remaining scope is explicit non-goals. Gate: family 60/60, docx-text groups, words and line starts plus pixels.
-- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text. On the validation workstation, all 33 public manifests have cached references covering 25 distinct input/view identities; all still have nonzero parity gates. Next is the classified Word-compatible layout/balloon/text residuals in `docs/DocxMarkupFidelityTriage.md`. Gate: cached Office gates plus layout snapshots.
+- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text. On the validation workstation, all 33 public manifests have cached references covering 25 distinct input/view identities. Office parity remains partial; scoped repairs and remaining layout/balloon/text gates are recorded in `docs/DocxMarkupFidelityTriage.md`. Gate: cached Office gates plus layout snapshots.
 
 SVG gradient geometry is checked after transforms and coordinate mapping, before
 painting. Finite input values whose spans, sampling projection or radial bounds
@@ -148,6 +148,14 @@ is enabled, `visual-diff-build-info.json` with the selected output hash.
 Run `pwsh tools/TestCachedMarkupBuild.ps1` to check property-driven refresh,
 incremental output stability, provenance and rejection of an existing DLL
 after a failed build. These checks require .NET and no Office installation.
+
+`InspectPdf.ps1` and `InspectPptxText.ps1` use the same shared MSBuild gate.
+When an output directory is provided, PDF inspection records
+`pdf-inspect-build-info.json`; PPTX inspection records
+`pptx-inspect-build-info.json`. These identify the selected inspector DLL and
+build inputs. Run `pwsh tools/TestInspectorBuild.ps1` to verify both production
+build calls against changed parent properties, unchanged output, provenance
+and failed-build rejection.
 
 DOCX markup parity work uses cache-only reference comparisons so autonomous runs do not launch Word or COM. Generate a reference request for the public DOCX markup cases:
 

@@ -14,16 +14,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj"
 $dll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll"
-$sourceNewest = Get-ChildItem -LiteralPath (Split-Path -Parent $project) -Recurse -Include *.cs,*.csproj |
-    Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
-    Sort-Object LastWriteTimeUtc -Descending |
-    Select-Object -First 1
-if (-not (Test-Path -LiteralPath $dll) -or $sourceNewest.LastWriteTimeUtc -gt (Get-Item -LiteralPath $dll).LastWriteTimeUtc) {
-    dotnet build $project --nologo
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDF inspect build failed with exit code $LASTEXITCODE."
-    }
+$buildRecordPath = $null
+if (-not [string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+    $buildRecordPath = Join-Path $OutputDirectory 'pdf-inspect-build-info.json'
 }
+& (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Project $project -OutputDll $dll -Description 'PDF inspect' -RecordPath $buildRecordPath
 
 $arguments = @((Resolve-Path -LiteralPath $InputPdf).Path)
 if (-not [string]::IsNullOrWhiteSpace($OutputDirectory)) {
