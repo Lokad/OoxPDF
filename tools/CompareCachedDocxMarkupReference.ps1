@@ -82,25 +82,17 @@ function Invoke-DotnetBuildIfStale {
         [Parameter(Mandatory = $true)]
         [string] $Description,
 
-        [string[]] $AdditionalSourceDirectories = @()
+        [string] $RecordPath
     )
 
-    $projectDirectory = Split-Path -Parent $Project
-    $sourceDirectories = @($projectDirectory) + $AdditionalSourceDirectories
-    $sourceNewest = $sourceDirectories | ForEach-Object {
-        Get-ChildItem -LiteralPath $_ -Recurse -Include *.cs,*.csproj
-    } |
-        Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
-        Sort-Object LastWriteTimeUtc -Descending |
-        Select-Object -First 1
-    if ((Test-Path -LiteralPath $OutputDll) -and $sourceNewest.LastWriteTimeUtc -le (Get-Item -LiteralPath $OutputDll).LastWriteTimeUtc) {
-        return
+    # MSBuild tracks referenced projects and imported props/targets. Comparing
+    # all source timestamps against the CLI DLL misses build-property changes
+    # and cannot identify updates to its deployed library independently.
+    $buildParameters = @{ Project = $Project; OutputDll = $OutputDll; Description = $Description }
+    if (-not [string]::IsNullOrWhiteSpace($RecordPath)) {
+        $buildParameters.RecordPath = $RecordPath
     }
-
-    dotnet build $Project --nologo
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Description build failed with exit code $LASTEXITCODE."
-    }
+    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') @buildParameters
 }
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
@@ -3422,8 +3414,7 @@ if ($ValidateOnly) {
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
 $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
-$librarySourceDirectory = Join-Path $repoRoot "src/Lokad.OoxPdf"
-Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -AdditionalSourceDirectories @($librarySourceDirectory)
+Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $runRoot 'cli-build-info.json')
 
 $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
@@ -3461,7 +3452,7 @@ if (-not $SkipRasterDiff) {
 
     $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
     $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
-    Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff"
+    Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff" -RecordPath (Join-Path $runRoot 'visual-diff-build-info.json')
     dotnet $visualDiffDll $referenceRasterDir $candidateRasterDir $visualDiffDir | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "VisualDiff failed with exit code $LASTEXITCODE."

@@ -140,6 +140,15 @@ per input and cannot be combined with concurrency.
 
 ## Cached DOCX Markup References
 
+Cached markup comparisons build the CLI and visual diff tool through
+`tools/EnsureDotnetBuild.ps1`, which delegates dependency and imported-property
+tracking to MSBuild and serializes shared builds. A failed build stops the
+comparison. Each run records `cli-build-info.json` and, when raster comparison
+is enabled, `visual-diff-build-info.json` with the selected output hash.
+Run `pwsh tools/TestCachedMarkupBuild.ps1` to check property-driven refresh,
+incremental output stability, provenance and rejection of an existing DLL
+after a failed build. These checks require .NET and no Office installation.
+
 DOCX markup parity work uses cache-only reference comparisons so autonomous runs do not launch Word or COM. Generate a reference request for the public DOCX markup cases:
 
 ```powershell
