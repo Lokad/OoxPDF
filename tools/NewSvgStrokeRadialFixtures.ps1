@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -59,6 +59,26 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
     }
     foreach ($variant in $focalVariants.GetEnumerator()) {
         $controls[$variant.Key] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="40" ' + $variant.Value + '><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
+    }
+    $controls
+} elseif ($ProbeSet -eq 'stroke-transform-controls') {
+    $controls = [ordered]@{}
+    foreach ($name in @('uniform','picture-stretch','group-stretch','group-uniform','group-rotate','group-shear','non-scaling-uniform','non-scaling-stretch','dashed-stretch','square-caps-stretch')) {
+        $width = if ($name -in @('picture-stretch','dashed-stretch','square-caps-stretch')) { 100 } else { 200 }
+        $transform = switch ($name) {
+            'group-stretch' { 'transform="scale(2,1)"' }
+            'group-uniform' { 'transform="scale(2)"' }
+            'group-rotate' { 'transform="translate(35,15) rotate(20)"' }
+            'group-shear' { 'transform="matrix(1,0,0.5,1,0,0)"' }
+            'non-scaling-uniform' { 'transform="scale(2)"' }
+            'non-scaling-stretch' { 'transform="scale(2,1)"' }
+            default { '' }
+        }
+        $effect = if ($name.StartsWith('non-scaling')) { 'vector-effect="non-scaling-stroke"' } else { '' }
+        $dash = if ($name -eq 'dashed-stretch') { 'stroke-dasharray="8 4" stroke-dashoffset="3"' } else { '' }
+        $cap = if ($name -eq 'square-caps-stretch') { 'square' } else { 'round' }
+        $path = if ($name -in @('group-uniform','non-scaling-uniform')) { 'M10 10H70 M15 10V40 M25 40L60 10' } else { 'M15 25H85 M25 15V85 M35 80L75 25' }
+        $controls[$name] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $width 100`"><g $transform><path d=`"$path`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"6`" stroke-linecap=`"$cap`" stroke-linejoin=`"round`" $effect $dash/></g></svg>"
     }
     $controls
 } elseif ($ProbeSet -eq 'radial-spread-controls') {
@@ -120,7 +140,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls')) {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -128,7 +148,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls')) {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null

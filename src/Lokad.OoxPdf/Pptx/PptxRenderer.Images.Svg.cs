@@ -1145,6 +1145,26 @@ internal sealed partial class PptxRenderer
     private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
         graphics.SaveState();
+        // RV07-S1: keep viewport anisotropy in the PDF CTM so it stretches
+        // the stroke's normal, caps and dash lengths as well as the path.
+        // Normalize around the existing mean scale to retain page-sized path
+        // coordinates. Bound the error from the writer's three-decimal CTM;
+        // extreme aspect ratios retain the previous scalar approximation.
+        SvgTransform? strokeViewport = null;
+        double meanScale = (scaleX + scaleY) / 2d;
+        if (double.IsFinite(meanScale) && meanScale > 0d && Math.Abs(scaleX - scaleY) > meanScale * .000001d)
+        {
+            double factorX = scaleX / meanScale, factorY = scaleY / meanScale;
+            double printedX = Math.Round(factorX, 3), printedY = Math.Round(factorY, 3);
+            if (printedX > 0d && printedY > 0d
+                && Math.Abs(printedX - factorX) <= factorX * .001d
+                && Math.Abs(printedY - factorY) <= factorY * .001d
+                && double.IsFinite(imageY + imageHeight))
+            {
+                strokeViewport = new SvgTransform(printedX, 0d, 0d, printedY, imageX, imageY + imageHeight);
+                graphics.Transform(printedX, 0d, 0d, printedY, imageX, imageY + imageHeight);
+            }
+        }
         if (opacity < 1d)
         {
             graphics.SetAlpha(1d, opacity);
@@ -1167,7 +1187,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.SetMiterLimit(miterLimit);
         }
-        bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY);
+        bool painted = TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport);
         if (painted)
         {
             graphics.StrokeCurrentPath();
@@ -1624,7 +1644,7 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    private static bool TryAppendSvgPath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport = null)
     {
         List<SvgPathCommand> commands = TransformSvgCommands(ParseSvgPathData(data).Commands, transform);
         double currentX = 0d;
@@ -1716,6 +1736,15 @@ internal sealed partial class PptxRenderer
             // instead of throwing non-finite PDF numbers into per-node recovery.
             mappedX = SvgX(x);
             mappedY = SvgY(y);
+            if (!double.IsFinite(mappedX) || !double.IsFinite(mappedY))
+            {
+                return false;
+            }
+            if (strokeViewport is SvgTransform viewport)
+            {
+                mappedX = (mappedX - viewport.OffsetX) / viewport.M11;
+                mappedY = (mappedY - viewport.OffsetY) / viewport.M22;
+            }
             return double.IsFinite(mappedX) && double.IsFinite(mappedY);
         }
     }

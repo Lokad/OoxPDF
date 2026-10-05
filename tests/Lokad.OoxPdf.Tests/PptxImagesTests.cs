@@ -607,6 +607,83 @@ internal static class PptxImagesTests
         });
     }
 
+    // RV07-S1: stretching a picture scales the stroke normal independently
+    // of the path tangent. Read the emitted PDF geometry, including its CTM.
+    public static void PptxSvgViewportStretchPreservesDirectionalStrokeWidths()
+    {
+        foreach (double size in new[] { 0.1d, 100d, 1000d })
+        {
+            string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                <svg viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M{size * .15} {size * .25}H{size * .85}" fill="none" stroke="#0000FF" stroke-width="{size * .06}"/>
+                  <path d="M{size * .25} {size * .15}V{size * .85}" fill="none" stroke="#0000FF" stroke-width="{size * .06}"/>
+                </svg>
+                """));
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            List<double> widths = ReadAxisAlignedPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            TestAssert.Equal(2, widths.Count);
+            TestAssert.True(Math.Abs(widths[0] - 4.32d) < .004d, $"Horizontal stroke thickness was {widths[0]}pt for source size {size}.");
+            TestAssert.True(Math.Abs(widths[1] - 8.64d) < .004d, $"Vertical stroke thickness was {widths[1]}pt for source size {size}.");
+        }
+    }
+
+    public static void PptxSvgExtremeViewportStrokeKeepsFinitePaint()
+    {
+        foreach (var probe in new[]
+        {
+            (ViewBox: "0 0 1000000 100", Path: "M100000 20H900000"),
+            (ViewBox: "0 0 100 1000000", Path: "M10 200000H90"),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="{probe.ViewBox}" xmlns="http://www.w3.org/2000/svg">
+                  <path d="{probe.Path}" fill="none" stroke="#0000FF" stroke-width="6"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            List<double> widths = ReadAxisAlignedPdfStrokeWidths(File.ReadAllText(output, Encoding.ASCII));
+            TestAssert.Equal(1, widths.Count);
+            TestAssert.True(double.IsFinite(widths[0]) && widths[0] > 0d, "Unrepresentable viewport anisotropy must retain finite stroke paint.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Extreme aspect ratios must not discard the picture.");
+        }
+    }
+
+    private static List<double> ReadAxisAlignedPdfStrokeWidths(string pdf)
+    {
+        var widths = new List<double>();
+        var states = new Stack<(double X, double Y, double Width)>();
+        (double X, double Y, double Width) state = (1d, 1d, 1d);
+        double startX = 0d, startY = 0d, endX = 0d, endY = 0d;
+        foreach (string line in pdf.Split('\n'))
+        {
+            string[] words = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) continue;
+            double Number(int index) => double.Parse(words[index], CultureInfo.InvariantCulture);
+            switch (words[^1])
+            {
+                case "q": states.Push(state); break;
+                case "Q": state = states.Pop(); break;
+                case "cm":
+                    TestAssert.True(Number(1) == 0d && Number(2) == 0d, "This probe expects axis-aligned PDF transforms.");
+                    state = (state.X * Number(0), state.Y * Number(3), state.Width);
+                    break;
+                case "w": state.Width = Number(0); break;
+                case "m": startX = endX = Number(0); startY = endY = Number(1); break;
+                case "l": endX = Number(0); endY = Number(1); break;
+                case "S":
+                    double dx = endX - startX, dy = endY - startY;
+                    double sourceLength = Math.Sqrt(dx * dx + dy * dy);
+                    double pageLength = Math.Sqrt(Math.Pow(state.X * dx, 2) + Math.Pow(state.Y * dy, 2));
+                    widths.Add(state.Width * Math.Abs(state.X * state.Y) * sourceLength / pageLength);
+                    break;
+            }
+        }
+        return widths;
+    }
+
     // RV07: default objectBoundingBox gradients normalize into path space.
     public static void PptxSyntheticSvgObjectBoundingBoxGradientVariesAcrossStrips()
     {
