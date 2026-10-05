@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -14,25 +14,25 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $OutputPath = if ($ProbeSet -eq 'focal-controls') { 'artifacts/svg-focal-controls/pptx-svg-focal-controls.pptx' } else { 'tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-stroke-radial.pptx' }
+    $OutputPath = if ($ProbeSet -eq 'stroke-radial') { 'tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-stroke-radial.pptx' } else { "artifacts/svg-$ProbeSet/pptx-svg-$ProbeSet.pptx" }
 }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = if ($ProbeSet -eq 'focal-controls') { 'artifacts/svg-focal-controls-reference' } else { 'artifacts/svg-stroke-radial-reference' }
+    $OutputDirectory = if ($ProbeSet -eq 'stroke-radial') { 'artifacts/svg-stroke-radial-reference' } else { "artifacts/svg-$ProbeSet-reference" }
 }
 if ([string]::IsNullOrWhiteSpace($WorkDirectory)) {
     $outputFull = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $repoRoot $OutputDirectory }))
     # The supervisor starts a fresh worker; pass the probe choice through a small
     # wrapper rather than relying on this process's parameter state.
     $workerScript = $PSCommandPath
-    if ($ProbeSet -eq 'focal-controls') {
+    if ($ProbeSet -ne 'stroke-radial') {
         New-Item -ItemType Directory -Force -Path $outputFull | Out-Null
-        $workerScript = Join-Path $outputFull 'focal-worker.ps1'
+        $workerScript = Join-Path $outputFull 'probe-worker.ps1'
         $quotedGenerator = $PSCommandPath.Replace("'", "''")
         $workerTemplate = @'
 param([string] $InputPath, [string] $WorkDirectory, [int] $Dpi, [string] $ProgressLog, [string] $StatusPath)
-& 'GENERATOR_PATH' -ProbeSet focal-controls -InputPath $InputPath -WorkDirectory $WorkDirectory -Dpi $Dpi -ProgressLog $ProgressLog -StatusPath $StatusPath
+& 'GENERATOR_PATH' -ProbeSet PROBE_SET -InputPath $InputPath -WorkDirectory $WorkDirectory -Dpi $Dpi -ProgressLog $ProgressLog -StatusPath $StatusPath
 '@
-        [IO.File]::WriteAllText($workerScript, $workerTemplate.Replace('GENERATOR_PATH', $quotedGenerator))
+        [IO.File]::WriteAllText($workerScript, $workerTemplate.Replace('GENERATOR_PATH', $quotedGenerator).Replace('PROBE_SET', $ProbeSet))
     }
     & (Join-Path $PSScriptRoot "RenderReference.ps1") -InputPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/pptx-blank.pptx") -OutputDirectory $outputFull -Dpi $Dpi -TimeoutSeconds $TimeoutSeconds -WorkerScript $workerScript
     $fixtureFull = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $repoRoot $OutputPath }))
@@ -61,6 +61,25 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
         $controls[$variant.Key] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="40" ' + $variant.Value + '><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
     }
     $controls
+} elseif ($ProbeSet -eq 'radial-paint-controls') {
+    $controls = [ordered]@{}
+    foreach ($name in @('two-stops', 'scaled-units', 'three-stops', 'extended-stops', 'opacity', 'small-radius', 'repeat', 'reflect', 'hard-stop')) {
+        $width = if ($name -eq 'scaled-units') { 1000 } else { 100 }
+        $height = $width / 2
+        $radius = if ($name -eq 'small-radius') { $width / 10 } else { $width / 4 }
+        $spread = if ($name -in @('repeat', 'reflect')) { "spreadMethod=`"$name`"" } else { '' }
+        $opacity = if ($name -eq 'opacity') { 'opacity="0.5"' } else { '' }
+        $stops = switch ($name) {
+            'three-stops' { '<stop offset="0" stop-color="#FF0000"/><stop offset="0.4" stop-color="#00FF00"/><stop offset="1" stop-color="#0000FF"/>' }
+            'extended-stops' { '<stop offset="0.2" stop-color="#FF0000"/><stop offset="0.8" stop-color="#0000FF"/>' }
+            'hard-stop' { '<stop offset="0" stop-color="#FF0000"/><stop offset="0.5" stop-color="#FF0000"/><stop offset="0.5" stop-color="#0000FF"/><stop offset="1" stop-color="#0000FF"/>' }
+            default { '<stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/>' }
+        }
+        $cx = $width / 2
+        $cy = $height / 2
+        $controls[$name] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $width $height`"><defs><radialGradient id=`"g`" gradientUnits=`"userSpaceOnUse`" cx=`"$cx`" cy=`"$cy`" r=`"$radius`" $spread>$stops</radialGradient></defs><path d=`"M0 0H${width}V${height}H0Z`" fill=`"url(#g)`" $opacity/></svg>"
+    }
+    $controls
 } else {
     [ordered]@{
     'radial-pad' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="30"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
@@ -85,15 +104,24 @@ try {
     $presentation = $app.Presentations.Add($false)
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
-    $slide = $presentation.Slides.Add(1, 12)
-    $slide.Background.Fill.ForeColor.RGB = 16777215
+    $slide = $null
+    if ($ProbeSet -ne 'radial-paint-controls') {
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = 16777215
+    }
     $index = 0
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        $left = 72 + 288 * ($index % 3)
-        $top = 72 + 234 * [Math]::Floor($index / 3)
-        $slide.Shapes.AddPicture($svgPath, $false, $true, $left, $top, 240, 180) | Out-Null
+        if ($ProbeSet -eq 'radial-paint-controls') {
+            $slide = $presentation.Slides.Add($index + 1, 12)
+            $slide.Background.Fill.ForeColor.RGB = 16777215
+            $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null
+        } else {
+            $left = 72 + 288 * ($index % 3)
+            $top = 72 + 234 * [Math]::Floor($index / 3)
+            $slide.Shapes.AddPicture($svgPath, $false, $true, $left, $top, 240, 180) | Out-Null
+        }
         $index++
     }
     $stage = 'export'; Stage $stage
@@ -113,4 +141,4 @@ try {
 $stage = 'rasterize'; Stage $stage
 & (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -InputPdf (Join-Path $WorkDirectory 'reference.pdf') -OutputDirectory $WorkDirectory -Dpi $Dpi
 $stage = 'done'; Stage $stage
-[ordered]@{Status='ok';Stage=$stage;OfficeApp='PowerPoint';OfficeVersion=$version;ExportSettings="Generated six SVG pictures ($ProbeSet) with AddPicture; 960x540 slide; SaveAs PPTX(24) then PDF(32)";Error=''} | ConvertTo-Json | Set-Content -LiteralPath $StatusPath -Encoding utf8
+[ordered]@{Status='ok';Stage=$stage;OfficeApp='PowerPoint';OfficeVersion=$version;ExportSettings="Generated $index SVG pictures ($ProbeSet) with AddPicture; 960x540 slides; SaveAs PPTX(24) then PDF(32)";Error=''} | ConvertTo-Json | Set-Content -LiteralPath $StatusPath -Encoding utf8

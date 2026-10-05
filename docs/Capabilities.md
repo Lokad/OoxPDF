@@ -32,7 +32,7 @@ Partial or approximated:
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Table rendering honors merges and explicit borders with vertical-anchor approximations, but per-edge border styles, rich table styles beyond the first-pass built-ins, and fine vertical metrics remain approximate.
 - Shape rendering supports only a small preset geometry set.
-- Rasterized outer shadows and glows, axial-gradient chart style fills and shape gradients, approximated SVG gradients, and alpha transparency; other effects remain unsupported.
+- Rasterized outer shadows and glows, axial-gradient chart style fills and shape gradients, SVG gradients, and alpha transparency; other effects remain unsupported. Opaque SVG radial pad fills with distinct representable stop intervals use smooth PDF radial shading. Linear gradients, transparent radial fills, repeat/reflect spread and hard-stop radial fills retain sampled approximations.
 - Missing-glyph and missing-font fallback renders deterministic standard-14 faces with capped diagnostics (WinAnsi coverage; other scripts substitute a diagnosed mark).
 - Chart number formats keep invariant separators and English names (locale-specific rules warn instead), and axis labels use chart-side formats rather than linked workbook formats.
 

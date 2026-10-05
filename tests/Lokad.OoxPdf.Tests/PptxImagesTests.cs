@@ -1215,8 +1215,37 @@ internal static class PptxImagesTests
         TestAssert.Contains("\nf\n", pdf.Replace("\r\n", "\n"));
     }
 
-    // RV07: radial gradients paint rings instead of diagnosing.
-    public static void PptxSyntheticSvgRadialGradientPaintsRings()
+    // RV07-E2: source coordinate units must not determine printed gradient quality.
+    public static void PptxSvgRadialSamplingIsInvariantToSourceCoordinateScale()
+    {
+        foreach (bool userSpace in new[] { false, true })
+        {
+            byte[]? baseline = null;
+            foreach (int width in new[] { 10, 100, 1000 })
+            {
+                string units = userSpace
+                    ? FormattableString.Invariant($"gradientUnits=\"userSpaceOnUse\" cx=\"{width / 2d}\" cy=\"{width / 4d}\" r=\"{width / 5d}\"")
+                    : "cx=\"0.5\" cy=\"0.5\" r=\"0.2\"";
+                string input = WriteSvgGradientDeck($"""
+                    <svg viewBox="0 0 {width} {width / 2d}" xmlns="http://www.w3.org/2000/svg">
+                      <defs><radialGradient id="g" {units}><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+                      <path d="M0 0H{width}V{width / 2d}H0Z" fill="url(#g)"/>
+                    </svg>
+                    """);
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+                byte[] pdf = File.ReadAllBytes(output);
+                TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" || d.Id == "PPTX_NODE_RENDER_FAILED"),
+                    "Equivalent supported radial gradients should remain renderable.");
+                if (baseline is null) { baseline = pdf; }
+                else { TestAssert.True(baseline.AsSpan().SequenceEqual(pdf),
+                    "Changing SVG coordinate units without changing printed geometry must preserve radial sampling and PDF bytes."); }
+            }
+        }
+    }
+
+    public static void PptxSyntheticSvgRadialGradientPaintsSmoothShading()
     {
         string input = WriteSvgGradientDeck("""
             <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
@@ -1230,9 +1259,33 @@ internal static class PptxImagesTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.Contains("/ShadingType 3", pdf);
+        TestAssert.Contains("/C0 [1 0 0]", pdf);
+        TestAssert.Contains("/C1 [0 0 1]", pdf);
+        TestAssert.Contains("/Sh1 sh", pdf);
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
+    }
+
+    public static void PptxSvgRadialUnrepresentableFunctionBoundsKeepPaintedFallback()
+    {
+        foreach (string offsets in new[] { "0.5,0.5", "0.5,0.500001", "0.000001,0.5", "0.5,0.999999" })
+        {
+            string[] pair = offsets.Split(',');
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <defs><radialGradient id="g"><stop offset="{pair[0]}" stop-color="#FF0000"/><stop offset="{pair[1]}" stop-color="#0000FF"/></radialGradient></defs>
+                  <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.DoesNotContain("/ShadingType 3", pdf);
+            TestAssert.Contains("0 0 1 rg", pdf);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
+                "Hard stops and sub-precision intervals must retain their painted fill.");
+        }
     }
 
     // RV07-E1: pad extends the last stop beyond the outer circle, through the clipped shape.
@@ -1250,9 +1303,11 @@ internal static class PptxImagesTests
             OoxPdfConverter.Convert(input, output);
             string pdf = File.ReadAllText(output, Encoding.ASCII).Replace("\r\n", "\n");
 
-            // Painting this whole rectangle with the final stop covers each corner outside the circle.
-            TestAssert.Contains("0 0 1 rg\n72 468 m\n216 468 l\n216 396 l\n72 396 l\nh\nf\n", pdf);
-            TestAssert.Contains("1 0 0 rg", pdf);
+            // The path clip and extended final stop cover corners beyond the outer circle.
+            TestAssert.Contains("72 468 m\n216 468 l\n216 396 l\n72 396 l\nh\nW n\n", pdf);
+            TestAssert.Contains("/Extend [true true]", pdf);
+            TestAssert.Contains("/C0 [1 0 0]", pdf);
+            TestAssert.Contains("/C1 [0 0 1]", pdf);
         }
     }
 

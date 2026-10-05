@@ -1235,7 +1235,19 @@ internal sealed partial class PptxRenderer
             graphics.SaveState();
             graphics.SetAlpha(opacity, 1d);
         }
-        if (radial.Spread == SvgGradientSpread.Pad)
+        double printedRadiusX = Math.Abs(radiusX * scaleX);
+        double printedRadiusY = Math.Abs(radiusY * scaleY);
+        // PDF coordinates and function bounds use three decimal places. Retain
+        // sampling when quantization could collapse a radius or stop interval.
+        bool nativePad = radial.Spread == SvgGradientSpread.Pad && opacity >= 1d &&
+            printedRadiusX >= 0.001d && printedRadiusY >= 0.001d && radial.Stops.Count >= 2 &&
+            (radial.Stops[0].Offset == 0d || radial.Stops[0].Offset >= 0.001d) &&
+            (radial.Stops[^1].Offset == 1d || radial.Stops[^1].Offset <= 0.999d);
+        for (int index = 1; nativePad && index < radial.Stops.Count; index++)
+        {
+            nativePad = radial.Stops[index].Offset - radial.Stops[index - 1].Offset >= 0.001d;
+        }
+        if (!nativePad && radial.Spread == SvgGradientSpread.Pad)
         {
             // Pad extends the final stop through the clipped shape beyond the outer ring.
             RgbColor outerColor = SampleSvgRadialStops(radial.Stops, 1d, radial.Spread);
@@ -1245,16 +1257,29 @@ internal sealed partial class PptxRenderer
                 graphics.FillCurrentPath();
             }
         }
-        int ringCount = Math.Clamp((int)Math.Ceiling(Math.Max(radiusX, radiusY) / 2d), 16, 128);
-        for (int ring = 0; ring < ringCount; ring++)
+        if (nativePad)
         {
-            double fraction = (double)(ringCount - ring) / ringCount;
-            RgbColor color = SampleSvgRadialStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-            string ringData = ConvertSvgEllipseBody(centerX, centerY, radiusX * fraction, radiusY * fraction);
-            if (TryAppendSvgPath(graphics, ringData, SvgTransform.Identity, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+            graphics.SaveState();
+            graphics.Transform(printedRadiusX, 0d, 0d, printedRadiusY,
+                imageX + (centerX - minX) * scaleX,
+                imageY + imageHeight - (centerY - minY) * scaleY);
+            graphics.PaintRadialShading(radial.Stops.Select(stop =>
+                new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
+            graphics.RestoreState();
+        }
+        else
+        {
+            int ringCount = Math.Clamp((int)Math.Ceiling(Math.Max(radiusX, radiusY) / 2d), 16, 128);
+            for (int ring = 0; ring < ringCount; ring++)
             {
-                graphics.FillCurrentPath();
+                double fraction = (double)(ringCount - ring) / ringCount;
+                RgbColor color = SampleSvgRadialStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
+                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                string ringData = ConvertSvgEllipseBody(centerX, centerY, radiusX * fraction, radiusY * fraction);
+                if (TryAppendSvgPath(graphics, ringData, SvgTransform.Identity, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+                {
+                    graphics.FillCurrentPath();
+                }
             }
         }
         if (opacity < 1d)

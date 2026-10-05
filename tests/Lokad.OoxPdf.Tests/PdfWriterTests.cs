@@ -163,6 +163,32 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Sh1 sh", pdf);
     }
 
+    public static void RadialShadingResourcesReusePaletteAcrossPagesWithoutAliasingAxial()
+    {
+        PdfShadingStop[] stops = [new(0d, 255, 0, 0), new(0.5d, 0, 255, 0), new(1d, 0, 0, 255)];
+        var first = new PdfGraphicsBuilder();
+        first.PaintAxialShading(0, 0, 0, 1, stops);
+        first.PaintRadialShading(stops);
+        first.PaintRadialShading(stops);
+        var second = new PdfGraphicsBuilder();
+        second.PaintRadialShading(stops);
+        PdfPage[] pages = [
+            new(100, 100, first.ToString(), [], [], first.ExtGStates, first.Shadings),
+            new(100, 100, second.ToString(), [], [], second.ExtGStates, second.Shadings)
+        ];
+
+        string pdf = WritePdfText(pages);
+
+        TestAssert.Equal(2, first.Shadings.Count);
+        TestAssert.Equal(1, CountOccurrences(pdf, "/ShadingType 2"));
+        TestAssert.Equal(1, CountOccurrences(pdf, "/ShadingType 3"));
+        TestAssert.Equal(2, CountOccurrences(pdf, "/Sh2 sh"));
+        TestAssert.Contains("/Coords [0 0 0 0 0 1]", pdf);
+        TestAssert.Contains("/Bounds [0.5]", pdf);
+        TestAssert.Contains("/C1 [0 1 0]", pdf);
+        TestAssert.Contains("/C1 [0 0 1]", pdf);
+    }
+
     public static void WritesTilingPatternResources()
     {
         var graphics = new PdfGraphicsBuilder();
@@ -621,6 +647,7 @@ internal static class PdfWriterTests
         graphics.DrawGlyphText("F1", 12, 20, 30, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d);
         graphics.DrawImage("Im1", 0, 0, 10, 10);
         graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
+        graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 0, 0, 0);
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var page = new PdfPage(
@@ -930,8 +957,10 @@ internal static class PdfWriterTests
         graphics.SaveState();
         graphics.SetAlpha(0.5d, 0.5d);
         graphics.PaintAxialShading(0, 0, 100, 100, 255, 0, 0, 0, 0, 255);
+        graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
         var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 47, 133, 106);
         graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, pattern);
+        TestAssert.Equal(2, graphics.Shadings.Count);
 
         graphics.TruncateContent(mark);
 
@@ -945,6 +974,10 @@ internal static class PdfWriterTests
         TestAssert.Equal(0, graphics.Shadings.Count);
         TestAssert.Equal(0, graphics.Patterns.Count);
         TestAssert.Equal(0, graphics.StateDepth);
+        graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
+        TestAssert.Equal(1, graphics.Shadings.Count);
+        TestAssert.Equal("Sh1", graphics.Shadings[0].ResourceName);
+        TestAssert.Contains("/Sh1 sh", graphics.ToString());
     }
 
     public static void TruncatedContentMarksNestAcrossNodes()

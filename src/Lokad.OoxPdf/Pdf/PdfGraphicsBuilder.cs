@@ -215,7 +215,16 @@ internal sealed class PdfGraphicsBuilder
 
     public void PaintAxialShading(double x0, double y0, double x1, double y1, IReadOnlyList<PdfShadingStop> stops)
     {
-        var shading = new PdfAxialShading(x0, y0, x1, y1, stops);
+        PaintShading(new PdfAxialShading(x0, y0, x1, y1, stops));
+    }
+
+    public void PaintRadialShading(IReadOnlyList<PdfShadingStop> stops)
+    {
+        PaintShading(new PdfRadialShading(stops));
+    }
+
+    private void PaintShading(PdfShading shading)
+    {
         string resourceName = "Sh" + (shadings.Count + 1).ToString(CultureInfo.InvariantCulture);
         if (!shadingIndex.TryGetValue(shading.ResourceKey, out int existingShadingIndex))
         {

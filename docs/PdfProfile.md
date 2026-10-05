@@ -29,6 +29,10 @@ written inline with explicit `/Length`.
 `/FlateDecode` for re-encoded raster (PNG/BMP/recolored JPEG) and grayscale
 soft masks. Color spaces are device gray, RGB, or CMYK only.
 - Transparency uses ExtGState fill alpha and luminosity soft masks.
+- Gradients use RGB axial (type 2) or centered radial (type 3) shadings,
+with exponential or stitched color functions and extended endpoint colors.
+Radial shadings map a unit circle into the printed ellipse through the
+content transform and retain the SVG path clip.
 - The full operator inventory is whatever `PdfInspect` parses; anything it
 cannot tokenize is outside the supported profile by construction.
 

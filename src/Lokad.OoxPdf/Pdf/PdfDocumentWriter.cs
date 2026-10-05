@@ -226,10 +226,10 @@ internal sealed class PdfDocumentWriter
             WriteImageObjects(writer, image, numbers.ImageObjects[image.ResourceKey]);
         }
 
-        foreach (PdfAxialShading shading in plan.Shadings)
+        foreach (PdfShading shading in plan.Shadings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            WriteAxialShadingObject(writer, shading, numbers.ShadingObjects[shading.ResourceKey]);
+            WriteShadingObject(writer, shading, numbers.ShadingObjects[shading.ResourceKey]);
         }
 
         foreach (PdfLuminositySoftMask softMask in plan.SoftMasks)
@@ -466,12 +466,18 @@ internal sealed class PdfDocumentWriter
         }
     }
 
-    private static void WriteAxialShadingObject(PdfObjectWriter writer, PdfAxialShading shading, int objectNumber)
+    private static void WriteShadingObject(PdfObjectWriter writer, PdfShading shading, int objectNumber)
     {
+        (int type, string coordinates) = shading switch
+        {
+            PdfAxialShading axial => (2, $"{FormatNumber(axial.X0)} {FormatNumber(axial.Y0)} {FormatNumber(axial.X1)} {FormatNumber(axial.Y1)}"),
+            PdfRadialShading => (3, "0 0 0 0 0 1"),
+            _ => throw new InvalidOperationException("Unknown PDF shading type.")
+        };
         writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [{FormatNumber(shading.X0)} {FormatNumber(shading.Y0)} {FormatNumber(shading.X1)} {FormatNumber(shading.Y1)}] /Function {BuildAxialShadingFunction(shading.Stops)} /Extend [true true] >>\n"));
+            $"<< /ShadingType {type} /ColorSpace /DeviceRGB /Coords [{coordinates}] /Function {BuildShadingFunction(shading.Stops)} /Extend [true true] >>\n"));
 
-        string BuildAxialShadingFunction(IReadOnlyList<PdfShadingStop> stops)
+        string BuildShadingFunction(IReadOnlyList<PdfShadingStop> stops)
         {
             if (stops.Count == 2)
             {
@@ -690,7 +696,7 @@ internal sealed class PdfDocumentWriter
         IReadOnlyList<PdfEmbeddedFont> Fonts,
         IReadOnlyList<PdfFallbackFont> FallbackFonts,
         IReadOnlyList<PdfImageXObject> Images,
-        IReadOnlyList<PdfAxialShading> Shadings,
+        IReadOnlyList<PdfShading> Shadings,
         IReadOnlyList<PdfLuminositySoftMask> SoftMasks,
         IReadOnlyList<PdfTilingPattern> Patterns);
 
@@ -725,7 +731,7 @@ internal sealed class PdfDocumentWriter
             static image => image.ResourceKey,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        List<PdfAxialShading> shadings = pages
+        List<PdfShading> shadings = pages
             .SelectMany(p => p.Shadings.Select(s => s.Shading))
             .DistinctBy(s => s.ResourceKey)
             .ToList();
