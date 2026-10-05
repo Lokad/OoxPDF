@@ -188,6 +188,23 @@ internal sealed partial class PptxRenderer
                 {
                     dashPoints[dashIndex] = userDash[dashIndex] * strokeScale;
                 }
+                // RV07-S5: Office square caps preserve the painted dash/gap
+                // footprint. PDF caps extend each segment by a full width.
+                // Retain the approximation when a dash is no longer than that
+                // width: zero/negative segments do not match Office's paint.
+                bool compensateSquareCaps = stroke.LineCap == 2;
+                for (int dashIndex = 0; compensateSquareCaps && dashIndex < dashPoints.Length; dashIndex += 2)
+                {
+                    compensateSquareCaps = dashPoints[dashIndex] > strokeWidthPoints;
+                }
+                if (compensateSquareCaps)
+                {
+                    for (int dashIndex = 0; dashIndex < dashPoints.Length; dashIndex += 2)
+                    {
+                        dashPoints[dashIndex] -= strokeWidthPoints;
+                        dashPoints[dashIndex + 1] += strokeWidthPoints;
+                    }
+                }
                 // RV07-S4: Office interprets dash offset in stroke-width units,
                 // while dash lengths remain user-space geometry.
                 dashPhasePoints = stroke.DashOffset * strokeWidthPoints;

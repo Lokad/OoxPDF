@@ -893,6 +893,112 @@ internal static class PptxImagesTests
         }
     }
 
+    public static void PptxSvgSquareDashMatchesOfficePaintedFootprint()
+    {
+        foreach (double width in new[] { 3d, 6d })
+        foreach (bool combinedPaint in new[] { false, true })
+        {
+            byte[]? baseline = null;
+            foreach (double size in new[] { .1d, 100d, 1000d })
+            {
+                string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                    <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M{size * .15} {size * .25}H{size * .85}" fill="{(combinedPaint ? "#00FF00" : "none")}" stroke="#0000FF" stroke-width="{size * width / 100}" stroke-linecap="square" stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="3" stroke-opacity="0.25"/>
+                    </svg>
+                    """));
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                OoxPdfConverter.Convert(input, output);
+                byte[] bytes = File.ReadAllBytes(output);
+                string pdf = Encoding.ASCII.GetString(bytes);
+                Match dash = Regex.Match(pdf, @"\[([\d.]+) ([\d.]+) \] [-\d.]+ d");
+                TestAssert.True(dash.Success, "The production picture must retain a dashed stroke.");
+                double draw = double.Parse(dash.Groups[1].Value, CultureInfo.InvariantCulture);
+                double gap = double.Parse(dash.Groups[2].Value, CultureInfo.InvariantCulture);
+                List<double> widths = ReadPdfStrokeWidths(pdf);
+                TestAssert.Equal(1, widths.Count);
+                // A PDF square cap adds half a width at each dash end. Office's
+                // painted dash/gap stay 8/4 source units, at 0.72 points per unit.
+                TestAssert.True(Math.Abs(draw + widths[0] - 5.76d) < .001d, "Square caps must not expand the Office painted dash footprint.");
+                TestAssert.True(Math.Abs(gap - widths[0] - 2.88d) < .001d, "Square caps must retain the Office white gap.");
+                TestAssert.Contains("2 J", pdf);
+                TestAssert.Contains("/CA 0.25", pdf);
+                TestAssert.Equal(1, Regex.Matches(pdf, combinedPaint ? @"(?m)^B\r?$" : @"(?m)^S\r?$").Count);
+                if (baseline is null) baseline = bytes;
+                else TestAssert.True(baseline.AsSpan().SequenceEqual(bytes), "Square dash paint must survive source-coordinate rescaling.");
+            }
+        }
+    }
+
+    public static void PptxSvgSquareDashCompensationOverflowKeepsFillAndSibling()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0H40V40H0Z" fill="#00FF00" stroke="#FF0000" stroke-width="7e307" stroke-linecap="square" stroke-dasharray="8e307 8e307"/>
+              <path d="M50 25H90" fill="none" stroke="#0000FF"/>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 1 0 rg", pdf);
+        TestAssert.Contains("0 0 1 RG", pdf);
+        TestAssert.True(!pdf.Contains("1 0 0 RG", StringComparison.Ordinal), "Overflow in the cap-adjusted gap must omit only the unusable stroke.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Unrepresentable cap-adjusted dash state must diagnose.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Dash compensation must retain the picture and sibling paint.");
+    }
+
+    public static void PptxSvgSquareDashPreservesNormalizedPatternCycle()
+    {
+        foreach (var probe in new[]
+        {
+            (Width: 3d, Pattern: new[] { 12d, 8d, 10d }, PdfDash: "[6.48 7.92 5.04 10.8 3.6 9.36 ] 6.48 d"),
+            (Width: 6d, Pattern: new[] { 10d, 4d, 8d, 6d }, PdfDash: "[2.88 7.2 1.44 8.64 ] 12.96 d"),
+        })
+        {
+            byte[]? baseline = null;
+            foreach (double size in new[] { .1d, 100d, 1000d })
+            {
+                string dash = string.Join(" ", probe.Pattern.Select(length => (size * length / 100d).ToString("R", CultureInfo.InvariantCulture)));
+                string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                    <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M{size * .15} {size * .25}H{size * .85}" fill="none" stroke="#0000FF" stroke-width="{size * probe.Width / 100}" stroke-linecap="square" stroke-dasharray="{dash}" stroke-dashoffset="3"/>
+                    </svg>
+                    """));
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                OoxPdfConverter.Convert(input, output);
+                byte[] pdf = File.ReadAllBytes(output);
+                TestAssert.Contains(probe.PdfDash, Encoding.ASCII.GetString(pdf));
+                if (baseline is null) baseline = pdf;
+                else TestAssert.True(baseline.AsSpan().SequenceEqual(pdf), "Normalized odd and multi-pair dash cycles must survive source-coordinate rescaling.");
+            }
+        }
+    }
+
+    public static void PptxSvgSquareDashRetainsUnqualifiedBoundaryPatterns()
+    {
+        foreach (var probe in new[]
+        {
+            (Pattern: "6 4", PdfDash: "[4.32 2.88 ]"),
+            (Pattern: "4 12", PdfDash: "[2.88 8.64 ]"),
+            (Pattern: "0 4", PdfDash: "[0 2.88 ]"),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 25H85" fill="none" stroke="#0000FF" stroke-width="6" stroke-linecap="square" stroke-dasharray="{probe.Pattern}"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.Contains(probe.PdfDash, pdf);
+            TestAssert.Contains("0 0 1 RG", pdf);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Unqualified boundary patterns must retain finite approximate stroke paint.");
+        }
+    }
+
     private static List<double> ReadPdfStrokeWidths(string pdf)
     {
         var widths = new List<double>();
