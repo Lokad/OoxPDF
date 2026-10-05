@@ -10,6 +10,93 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    private static void ApplyReviewTableBaselineGeometry(
+        List<DocxLayoutItem> items,
+        int firstItem,
+        double? precedingBodyBaselineInset,
+        IDocxTextMeasurer measurer,
+        double printScale,
+        CancellationToken cancellationToken)
+    {
+        if (!double.IsFinite(printScale) || printScale >= 1d || printScale <= 0d || firstItem >= items.Count)
+        {
+            return;
+        }
+
+        var rows = new List<(DocxTableRowLayout Row, double[] Insets)>();
+        double highestBaseline = double.NegativeInfinity;
+        double firstCellInset = 0d;
+        for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (items[itemIndex] is not DocxTableRowLayout row || row.FragmentCount != 1 ||
+                row.HeightRuleValue is not null || row.DeclaredHeightPoints is not null)
+            {
+                return;
+            }
+
+            var insets = new double[row.Cells.Count];
+            for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                DocxTableCellLayout cell = row.Cells[cellIndex];
+                IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
+                if (cell.TextLines.Count != 1 || cell.InlineImages.Count != 0 || cell.InlineTextBoxes.Count != 0 ||
+                    cell.NestedRows.Count != 0 || cell.Cell.HasVerticalMerge || paragraphs.Count != 1 ||
+                    paragraphs[0].EffectiveProperties.LineSpacingPoints is not null ||
+                    !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
+                    !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                double inset = ResolveTableCellFirstBaselineInset(paragraphs, measurer);
+                if (!double.IsFinite(inset) || inset <= 0d)
+                {
+                    return;
+                }
+
+                insets[cellIndex] = inset;
+                if (cell.TextLines[0].BaselineY > highestBaseline)
+                {
+                    highestBaseline = cell.TextLines[0].BaselineY;
+                    firstCellInset = inset;
+                }
+            }
+
+            rows.Add((row, insets));
+        }
+
+        // Word review controls: body text already carries a scaled baseline anchor,
+        // while simple table cells retain nominal insets in their layout. Move the
+        // table geometry to that anchor and scale each cell inset once. Surrounding
+        // paragraph flow and row pitch remain in their existing coordinates.
+        double originCorrection = (precedingBodyBaselineInset ?? firstCellInset) * (1d - printScale);
+        if (!double.IsFinite(originCorrection) || originCorrection <= 0d)
+        {
+            return;
+        }
+
+        for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            (DocxTableRowLayout row, double[] insets) = rows[rowIndex];
+            var cells = new DocxTableCellLayout[row.Cells.Count];
+            for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
+            {
+                DocxTableCellLayout cell = row.Cells[cellIndex];
+                double baselineCorrection = insets[cellIndex] * (1d - printScale) - originCorrection;
+                cells[cellIndex] = cell with
+                {
+                    Y = cell.Y - originCorrection,
+                    TextLines = [cell.TextLines[0] with { BaselineY = cell.TextLines[0].BaselineY + baselineCorrection }]
+                };
+            }
+
+            items[firstItem + rowIndex] = row with { Y = row.Y - originCorrection, Cells = cells };
+        }
+    }
+
     private static void LayoutTable(
         DocxTable table,
         double marginBottom,

@@ -12,6 +12,93 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewTableCellInsetsUsePrintedFontSize()
+    {
+        // Word 16 controls: simple cells retain a 0.94-em first-baseline inset
+        // after review scaling, including a table at the document start.
+        foreach (double bodySize in new[] { 12d, 15d })
+        foreach (double cellSize in new[] { 11d, 24d })
+        foreach (double pageWidth in new[] { 612d, 792d })
+        foreach (bool tableFirst in new[] { false, true })
+        {
+            DocxDocument document = CreateReviewTableInsetDocument(bodySize, cellSize, pageWidth, tableFirst);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            TestAssert.True(scale < 1d, "The public comment anchor must activate review scaling.");
+            DocxTableCellSnapshot cell = renderer.InspectLayout(document).Pages.Single().TableRows.Single().Cells.Single();
+            double actual = cell.Y + cell.Height - cell.ResolvedPaddingTopPoints - cell.FirstBaselineY!.Value;
+            TestAssert.True(Math.Abs(actual - cellSize * 0.94d * scale) < 0.000001d,
+                $"Review cell inset should follow its printed font size. Body={bodySize}, cell={cellSize}, first={tableFirst}, expected={cellSize * 0.94d * scale}, actual={actual}.");
+
+            DocxTextEmissionSegmentSnapshot[] emitted = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments).ToArray();
+            DocxTextEmissionSegmentSnapshot segment = emitted.Single(segment => !segment.IsTerminalLineSpace &&
+                Math.Abs(segment.FontSize - cellSize * scale) < 0.000001d);
+            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+            TestAssert.Contains(" " + segment.BaselineY.ToString("0.###", CultureInfo.InvariantCulture) + " Tm", content);
+        }
+    }
+
+    public static void DocxReviewTableCorrectionPreservesSurroundingTextFlow()
+    {
+        foreach (double bodySize in new[] { 12d, 15d })
+        foreach (double cellSize in new[] { 11d, 24d })
+        {
+            DocxDocument document = CreateReviewTableInsetDocument(bodySize, cellSize, 612d, tableFirst: false);
+            DocxTable table = document.Tables.Single();
+            DocxTable fallbackTable = table with { Rows = [table.Rows.Single() with { HeightRuleValue = "auto" }] };
+            DocxDocument fallback = document with
+            {
+                BodyElements = [document.BodyElements[0], new DocxTableElement(fallbackTable), document.BodyElements[2]],
+                FallbackTables = [fallbackTable]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxTextEmissionSegmentSnapshot[] actual = BodySegments(document);
+            DocxTextEmissionSegmentSnapshot[] expected = BodySegments(fallback);
+            TestAssert.Equal(2, actual.Length);
+            TestAssert.Equal(expected.Length, actual.Length);
+            for (int index = 0; index < actual.Length; index++)
+            {
+                TestAssert.Equal(expected[index].X, actual[index].X);
+                TestAssert.Equal(expected[index].BaselineY, actual[index].BaselineY);
+                TestAssert.Equal(expected[index].PdfFontSize, actual[index].PdfFontSize);
+            }
+
+            DocxTextEmissionSegmentSnapshot[] BodySegments(DocxDocument input) => renderer.InspectTextEmission(input).Lines
+                .Where(line => line.SourceBlockIndex is 0 or 2).SelectMany(line => line.Segments)
+                .Where(segment => !segment.IsTerminalLineSpace).ToArray();
+        }
+    }
+
+    private static DocxDocument CreateReviewTableInsetDocument(double bodySize, double cellSize, double pageWidth, bool tableFirst)
+    {
+        DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("CCC", bodySize, 30d) with { LineSpacingPoints = null };
+        DocxParagraph cellParagraph = DocxTests.CreateDocxLayoutParagraph("AAA", cellSize, 30d) with { LineSpacingPoints = null };
+        DocxParagraph anchor = tableFirst ? cellParagraph : body;
+        anchor = anchor with
+        {
+            InlineReferences = [new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null,
+                SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)],
+            CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 3, 1, 0)]
+        };
+        if (tableFirst) cellParagraph = anchor; else body = anchor;
+        var cell = new DocxTableCell("AAA", [cellParagraph], "B8D8F8", null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable("fixed", [160d], [new DocxTableRow([cell], null)]);
+        DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("BBB", bodySize, 30d) with { LineSpacingPoints = null };
+        return DocxTests.CreateAllMarkupWrapProbeDocument([body, following]) with
+        {
+            PageWidthPoints = pageWidth,
+            PageHeightPoints = pageWidth == 792d ? 612d : 792d,
+            BodyElements = tableFirst
+                ? [new DocxTableElement(table), new DocxParagraphElement(following)]
+                : [new DocxParagraphElement(body), new DocxTableElement(table), new DocxParagraphElement(following)],
+            FallbackTables = [table],
+            RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", [], [], [], null)]
+        };
+    }
+
     public static void DocxFallbackInspectionReportsEmittedFontSizeAndSpacing()
     {
         foreach (double nominalSize in new[] { 11d, 13d, 22d })
