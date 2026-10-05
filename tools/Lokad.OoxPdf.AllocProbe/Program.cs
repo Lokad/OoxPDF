@@ -22,6 +22,7 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
     Console.WriteLine("  Measures one cold plus N warm conversions per input and writes a JSON report.");
     Console.WriteLine("  --output-mode buffer (default) keeps converter output in a MemoryStream;");
     Console.WriteLine("  --output-mode file writes converter output to a temp file (no output buffering attributed).");
+    Console.WriteLine("  --output-mode forward-only writes to a file through a strict non-seekable caller stream.");
     Console.WriteLine("  --isolate measures each input in a fresh child process (independent cold, per-input process peaks).");
     Console.WriteLine("  Allocation scope is the calling thread; see report/allocationScope.");
     Console.WriteLine("  --concurrency <n> runs n conversions of each input in parallel with batch peaks.");
@@ -63,16 +64,16 @@ if (residentWindowBytes < 0)
     Console.Error.WriteLine("Invalid --resident-window: expected non-negative bytes.");
     return 2;
 }
-if (outputMode != "buffer" && outputMode != "file")
+if (outputMode != "buffer" && outputMode != "file" && outputMode != "forward-only")
 {
-    Console.Error.WriteLine($"Invalid --output-mode '{outputMode}': expected buffer or file.");
+    Console.Error.WriteLine($"Invalid --output-mode '{outputMode}': expected buffer, file, or forward-only.");
     return 2;
 }
 
 string[] inputs = args.Where(arg => !arg.StartsWith("--", StringComparison.Ordinal) && !IsOptionValue(arg)).ToArray();
 if (reportPath is null || inputs.Length == 0 || warmup < 0 || iterations < 1)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--output-mode buffer|file] [--resident-window bytes] [--isolate] <input...>");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--output-mode buffer|file|forward-only] [--resident-window bytes] [--isolate] <input...>");
     return 2;
 }
 
@@ -499,7 +500,7 @@ static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] in
     string? stageDirectory = null;
     string? fileInput = null;
     string? fileOutput = null;
-    if (outputMode == "file")
+    if (outputMode is "file" or "forward-only")
     {
         stageDirectory = Path.Combine(Path.GetTempPath(), "allocprobe-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stageDirectory);
@@ -524,12 +525,17 @@ static (object Metrics, string Sha, int Length, int Pages) MeasureOnce(byte[] in
         byte[]? bufferedOutput = null;
         try
         {
-            bufferedOutput = outputMode == "file"
-                ? null
-                : ConvertToBuffer(inputBytes, options);
             if (outputMode == "file")
             {
                 ConvertToFile(fileInput!, fileOutput!, options);
+            }
+            else if (outputMode == "forward-only")
+            {
+                ConvertToForwardOnly(fileInput!, fileOutput!, options);
+            }
+            else
+            {
+                bufferedOutput = ConvertToBuffer(inputBytes, options);
             }
         }
         finally
@@ -596,6 +602,19 @@ static void ConvertToFile(string inputPath, string outputPath, OoxPdfOptions opt
     OoxPdfConverter.Convert(inputPath, outputPath, options);
 }
 
+[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+static void ConvertToForwardOnly(string inputPath, string outputPath, OoxPdfOptions options)
+{
+    using var input = File.OpenRead(inputPath);
+    using var destination = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write);
+    using var output = new ForwardOnlyProbeStream(destination);
+    OoxPdfConverter.Convert(input, output, options);
+    if (!output.CanWrite || !input.CanRead)
+    {
+        throw new InvalidOperationException("Conversion closed a caller-owned stream.");
+    }
+}
+
 static int ReadPageCount(byte[] pdfBytes)
 {
     // Anchored to the writer's deterministic Pages object ("<< /Type /Pages /Count N ...").
@@ -628,6 +647,19 @@ static int RunSelfTest(ProbeFont? probeFont)
             {
                 Console.WriteLine("FAIL self-test explicit font: no embedded TrueType font in " + name);
                 ok = false;
+            }
+            foreach (string mode in new[] { "file", "forward-only" })
+            {
+                dynamic other = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: false, outputMode: mode, probeFont: probeFont);
+                if (!other.outputStable || (string)other.outputSha256 != (string)report.outputSha256)
+                {
+                    Console.WriteLine("FAIL self-test output mode " + mode + ": bytes differ for " + name);
+                    ok = false;
+                }
+                else
+                {
+                    Console.WriteLine("PASS self-test output mode " + mode + ": " + name + " matches buffered output.");
+                }
             }
         }
         catch (Exception ex)
@@ -1093,7 +1125,7 @@ static object MeasureConcurrencyInput(string name, byte[] inputBytes, string out
 }
 static (string Sha, int Length, int Pages) ConvertOnce(byte[] inputBytes, OoxPdfOptions options, string inputExtension, string outputMode)
 {
-    if (outputMode == "file")
+    if (outputMode is "file" or "forward-only")
     {
         string stageDirectory = Path.Combine(Path.GetTempPath(), "allocprobe-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stageDirectory);
@@ -1102,7 +1134,8 @@ static (string Sha, int Length, int Pages) ConvertOnce(byte[] inputBytes, OoxPdf
             string fileInput = Path.Combine(stageDirectory, "input" + inputExtension);
             string fileOutput = Path.Combine(stageDirectory, "output.pdf");
             File.WriteAllBytes(fileInput, inputBytes);
-            ConvertToFile(fileInput, fileOutput, options);
+            if (outputMode == "file") { ConvertToFile(fileInput, fileOutput, options); }
+            else { ConvertToForwardOnly(fileInput, fileOutput, options); }
             byte[] outputBytes = File.ReadAllBytes(fileOutput);
             return (Convert.ToHexString(SHA256.HashData(outputBytes)).ToLowerInvariant(), outputBytes.Length, ReadPageCount(outputBytes));
         }
@@ -1199,6 +1232,36 @@ sealed class PeakSampler : IDisposable
             RecordPeak(ref peakWorkingSetBytes, samplerProcess.WorkingSet64);
             Thread.Sleep(5);
         }
+    }
+}
+
+sealed class ForwardOnlyProbeStream(Stream destination) : Stream
+{
+    private bool disposed;
+
+    public override bool CanRead => false;
+    public override bool CanSeek => false;
+    public override bool CanWrite => !disposed && destination.CanWrite;
+    public override long Length => throw new NotSupportedException("Forward-only output has no readable length.");
+    public override long Position
+    {
+        get => throw new NotSupportedException("Forward-only output has no readable position.");
+        set => throw new NotSupportedException("Forward-only output cannot seek.");
+    }
+    public override void Flush() => destination.Flush();
+    public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
+    public override void Write(ReadOnlySpan<byte> buffer)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        destination.Write(buffer);
+    }
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    protected override void Dispose(bool disposing)
+    {
+        disposed = true;
+        base.Dispose(disposing);
     }
 }
 

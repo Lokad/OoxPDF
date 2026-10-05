@@ -126,7 +126,10 @@ It measures that controlled workload rather than Office font matching.
 Allocation volume is attributed to the calling thread. Retained managed heap,
 sampled managed/private/working-set peaks and process lifetime high-water marks
 are separate metrics. Use `--output-mode file` to exclude caller output buffering,
-and `--concurrency 1`, `2`, or `4` for batch peaks. `--isolate` uses fresh processes
+or `--output-mode forward-only` for a strict non-seekable caller stream backed by
+a temporary file. The latter exercises stream conversion with seek/position/length
+rejected and checks that caller streams remain open. Self-tests require identical
+PDF bytes across all three output modes. Use `--concurrency 1`, `2`, or `4` for batch peaks. `--isolate` uses fresh processes
 per input and cannot be combined with concurrency.
 
 ## Cached DOCX Markup References

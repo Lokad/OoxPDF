@@ -19,7 +19,7 @@ param(
 
     [switch] $SelfTest,
 
-    [ValidateSet("buffer", "file")]
+    [ValidateSet("buffer", "file", "forward-only")]
     [string] $OutputMode = "buffer",
 
     [switch] $Isolate
