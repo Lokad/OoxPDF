@@ -741,6 +741,60 @@ internal static class PptxImagesTests
         }
     }
 
+    public static void PptxSvgCombinedPaintViewportPreservesStrokeWidthsAndAlpha()
+    {
+        foreach (double size in new[] { .1d, 100d, 1000d })
+        foreach (bool evenOdd in new[] { false, true })
+        {
+            string presentation = evenOdd ? "fill-rule=\"evenodd\" fill-opacity=\"0.5\" stroke-opacity=\"0.25\"" : "";
+            string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                <svg viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M{size * .15} {size * .25}H{size * .85}" fill="#00FF00" stroke="#0000FF" stroke-width="{size * .06}" {presentation}/>
+                  <path d="M{size * .25} {size * .15}V{size * .85}" fill="#00FF00" stroke="#0000FF" stroke-width="{size * .06}" {presentation}/>
+                </svg>
+                """));
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            List<double> widths = ReadPdfStrokeWidths(pdf);
+            TestAssert.Equal(2, widths.Count);
+            TestAssert.True(Math.Abs(widths[0] - 4.32d) < .004d && Math.Abs(widths[1] - 8.64d) < .004d, "Combined paint must preserve directional viewport widths.");
+            string operation = evenOdd ? "B*" : "B";
+            TestAssert.Equal(2, pdf.Split('\n').Count(line => line.Trim() == operation));
+            if (evenOdd)
+            {
+                TestAssert.Contains("/ca 0.5", pdf);
+                TestAssert.Contains("/CA 0.25", pdf);
+            }
+        }
+    }
+
+    public static void PptxSvgCombinedExtremeViewportKeepsFillAndStroke()
+    {
+        foreach (var probe in new[]
+        {
+            (ViewBox: "0 0 1000000 100", Path: "M100000 20H900000V80H100000Z"),
+            (ViewBox: "0 0 100 1000000", Path: "M10 200000H90V800000H10Z"),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="{probe.ViewBox}" xmlns="http://www.w3.org/2000/svg">
+                  <path d="{probe.Path}" fill="#00FF00" stroke="#0000FF" stroke-width="6"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            List<double> widths = ReadPdfStrokeWidths(pdf);
+            TestAssert.Equal(1, widths.Count);
+            TestAssert.True(double.IsFinite(widths[0]) && widths[0] > 0d, "Extreme combined paint must retain its finite stroke fallback.");
+            TestAssert.Contains("0 1 0 rg", pdf);
+            TestAssert.Equal(1, pdf.Split('\n').Count(line => line.Trim() == "B"));
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Extreme combined paint must keep the picture.");
+        }
+    }
+
     private static List<double> ReadPdfStrokeWidths(string pdf)
     {
         var widths = new List<double>();

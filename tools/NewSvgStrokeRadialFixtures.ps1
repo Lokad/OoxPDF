@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -81,6 +81,27 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
         $controls[$name] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $width 100`"><g $transform><path d=`"$path`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"6`" stroke-linecap=`"$cap`" stroke-linejoin=`"round`" $effect $dash/></g></svg>"
     }
     $controls
+} elseif ($ProbeSet -eq 'stroke-filled-controls') {
+    $controls = [ordered]@{}
+    foreach ($name in @('opaque','evenodd','fill-alpha','stroke-alpha','combined-alpha','style-alpha','square-caps','non-scaling')) {
+        $path = switch ($name) {
+            'evenodd' { 'M15 15H85V85H15Z M35 35H65V65H35Z' }
+            'square-caps' { 'M15 25H85V75L15 75' }
+            default { 'M15 25H85V75H15Z' }
+        }
+        $rule = if ($name -eq 'evenodd') { 'fill-rule="evenodd"' } else { '' }
+        $alpha = switch ($name) {
+            'fill-alpha' { 'fill-opacity="0.5"' }
+            'stroke-alpha' { 'stroke-opacity="0.5"' }
+            'combined-alpha' { 'opacity="0.5"' }
+            'style-alpha' { 'style="fill-opacity:0.5;stroke-opacity:0.25"' }
+            default { '' }
+        }
+        $cap = if ($name -eq 'square-caps') { 'square' } else { 'round' }
+        $effect = if ($name -eq 'non-scaling') { 'vector-effect="non-scaling-stroke"' } else { '' }
+        $controls[$name] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 100 100`"><path d=`"$path`" fill=`"#00FF00`" stroke=`"#0000FF`" stroke-width=`"6`" stroke-linecap=`"$cap`" stroke-linejoin=`"round`" $rule $alpha $effect/></svg>"
+    }
+    $controls
 } elseif ($ProbeSet -eq 'stroke-element-controls') {
     $controls = [ordered]@{}
     $transforms = [ordered]@{
@@ -159,7 +180,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls')) {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -167,7 +188,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls')) {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null
