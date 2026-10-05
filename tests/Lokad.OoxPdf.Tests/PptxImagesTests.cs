@@ -795,6 +795,43 @@ internal static class PptxImagesTests
         }
     }
 
+    // RV07-D2: unused definitions cannot add paint or paint diagnostics.
+    public static void PptxSvgUnusedDefinitionsDoNotPaintOrActivateGradients()
+    {
+        string visible = "<path d=\"M50 5H95V45H50Z\" fill=\"url(#used)\"/>";
+        string definitions = """
+            <defs>
+              <radialGradient id="used"><stop offset="0" stop-color="#00FF00"/><stop offset="1" stop-color="#0000FF"/></radialGradient>
+              <linearGradient id="unused"><stop offset="0" stop-color="#FF0000" stop-opacity="0.25"/><stop offset="1" stop-color="#0000FF"/></linearGradient>
+            </defs>
+            """;
+        string hidden = """
+            <defs><g opacity="0.25">
+              <path d="M0 0H40V40H0Z" fill="#FF00FF" stroke="#FF00FF"/>
+              <rect width="30" height="30" fill="url(#unused)"/>
+              <circle cx="20" cy="20" r="10" fill="#FF00FF"/>
+              <ellipse cx="20" cy="20" rx="10" ry="5" fill="#FF00FF"/>
+              <line x1="0" y1="0" x2="40" y2="40" stroke="#FF00FF"/>
+              <polyline points="0,0 10,10 20,0" stroke="#FF00FF"/>
+              <polygon points="0,0 10,10 20,0" fill="#FF00FF"/>
+              <path d="M0 0A10 10 0 0 1 20 20" fill="#FF00FF"/>
+            </g></defs>
+            """;
+        string? expectedHash = null;
+        foreach (string extra in new[] { "", hidden })
+        {
+            string input = WriteSvgGradientDeck($"<svg viewBox=\"0 0 100 50\" xmlns=\"http://www.w3.org/2000/svg\">{definitions}{extra}{visible}</svg>");
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(output)));
+            if (expectedHash is null) expectedHash = hash;
+            else TestAssert.Equal(expectedHash, hash);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" || d.Id == "PPTX_NODE_RENDER_FAILED"), "Unused definitions must not activate paint warnings, unsupported commands or gradient stop opacity.");
+            TestAssert.Contains("/ShadingType 3", File.ReadAllText(output, Encoding.ASCII));
+        }
+    }
+
     private static List<double> ReadPdfStrokeWidths(string pdf)
     {
         var widths = new List<double>();

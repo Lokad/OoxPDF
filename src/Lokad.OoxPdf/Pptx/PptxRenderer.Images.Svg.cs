@@ -117,6 +117,12 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate)))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // RV07-D2: definition descendants supply reusable paint resources;
+            // they do not paint into the picture or activate paint diagnostics.
+            if (IsSvgDefinitionElement(element))
+            {
+                continue;
+            }
             string? data = element.Name.LocalName == "path" ? (string?)element.Attribute("d") : ConvertSvgShapeToPathData(element);
             if (string.IsNullOrWhiteSpace(data))
             {
