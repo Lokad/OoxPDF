@@ -512,6 +512,23 @@ rasters, page counts and failure totals are unchanged at 575, and 32 PDFs
 remain byte-identical. Only the comment text-box case changes PDF text state.
 Raw evidence is under `artifacts/plan-revision-20261005/rv06-l17/`.
 
+## Custom-Page Review Scale Qualification (2026-10-05, RV06-L18)
+
+Eleven Word controls cover A4, Letter landscape and custom page dimensions.
+PDF page sizes match. The standard-page font-size differences are at most
+0.031 points; custom portrait/landscape differences reach 3.104 points, with
+coupled position and baseline differences. These are print-scale residuals,
+separate from nominal font-grid rounding.
+
+Four additional exports with Word's
+[paper-mapping option](https://learn.microsoft.com/en-us/office/vba/api/word.options.mappapersize)
+disabled have identical rasters and text geometry. Word identifies the custom
+pages as paper size 41, and the validation workstation's virtual printer uses
+Letter paper. A smaller printer canvas is a plausible cause, but another
+printer/paper profile is needed to establish it. The renderer keeps its current
+formula; no printer-specific constant was introduced. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l18/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
