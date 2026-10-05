@@ -89,6 +89,36 @@ internal static class DocxHyperlinksTests
         }
     }
 
+    public static void DocxBodyHyperlinkSlotIsIndependentOfFollowingTableFont()
+    {
+        var paragraph = new DocxParagraph(
+            [new DocxTextRun("LINK", 12d, null, false, false, false, null, null)],
+            [], null, DocxTextAlignment.Left, null, 0d, 8d, 1d, null,
+            new DocxParagraphSpacing(null, null, null, null, null, null, "240", "auto", null),
+            DocxParagraphKeepRules.Empty, null)
+        {
+            Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/table-boundary", "External", null, 0, 1, 0, 1, 4)]
+        };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxDocument isolated = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
+        PdfLinkAnnotation expected = renderer.RenderBlankPages(isolated, null, CancellationToken.None).Single().Annotations.Single();
+        foreach (double tableFontSize in new[] { 8d, 12d, 24d })
+        {
+            DocxParagraph cellParagraph = paragraph with
+            {
+                Runs = [new DocxTextRun("Cell", tableFontSize, null, false, false, false, null, null)],
+                Hyperlinks = [], SpacingAfterPoints = 0d
+            };
+            var cell = new DocxTableCell("Cell", [cellParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var table = new DocxTable(null, [100d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(paragraph), new DocxTableElement(table)], [table]);
+            PdfLinkAnnotation actual = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+            TestAssert.True(Math.Abs(actual.Y - expected.Y) < 0.000001d && Math.Abs(actual.Height - expected.Height) < 0.000001d,
+                "A table glyph's ascent must not clip the preceding body's paragraph slot or trailing spacing.");
+        }
+    }
+
     public static void DocxRendererEmitsBodyExternalHyperlinkAnnotations()
     {
         var runs = new[]

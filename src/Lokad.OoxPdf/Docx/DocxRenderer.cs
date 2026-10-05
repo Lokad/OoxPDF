@@ -1184,9 +1184,13 @@ internal sealed partial class DocxRenderer
                         : line.BaselineY + previousDelta.Value + HyperlinkRectTopEm * line.FontSize;
                     // RV06: tile only into lines below the held line; side-by-side table-cell
                     // lines share one baseline, so they keep the full-height fallback instead.
-                    double flushBottom = flushNextTop < previousLineTop
-                        ? Math.Max(flushNextTop, previousLineBottomFallback)
-                        : previousLineBottomFallback;
+                    // A table or other story's glyph top is not the body slot's
+                    // next line-box boundary. Preserve the qualified body slot.
+                    double flushBottom = previousUsesBodyLineBox && line.BodyLineBoxBaselineInsetPoints is null
+                        ? previousLineBottomFallback
+                        : flushNextTop < previousLineTop
+                            ? Math.Max(flushNextTop, previousLineBottomFallback)
+                            : previousLineBottomFallback;
                     EmitLineLinkRects(previousLineLinks, previousLineTop, flushBottom);
                     previousLineLinks = null;
                 }

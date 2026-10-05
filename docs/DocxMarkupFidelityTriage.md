@@ -341,6 +341,21 @@ change with the repaired line metrics. No case's total failure count increases.
 The newly exposed bookmark target delta above is retained as a named residual,
 despite the main case's net improvement. One case passes and 32 remain partial.
 
+## Body-Link Table-Boundary Update (2026-10-05, RV06-L11)
+
+A table or another story's glyph top no longer clips the preceding body's
+qualified hyperlink slot. Its own printed line height and trailing paragraph
+spacing define that boundary. A production regression varies the following
+table font across 8/12/24 points and requires the body slot to stay unchanged.
+It fails on the previous renderer and passes with the repair.
+
+The Word-compatible cached link rectangle's maximum bound difference decreases
+from 2.563 to 0.245 points, passing its rectangle gate. The separate bookmark
+viewport residual remains. The DOCX suite passes 859 tests with no failures or
+skips. Across all 33 cached cases, total failures decrease from 586 to 585;
+raster bytes and page counts stay unchanged, and 31 PDFs are byte-identical.
+Evidence is under `artifacts/plan-revision-20261005/rv06-l11/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
