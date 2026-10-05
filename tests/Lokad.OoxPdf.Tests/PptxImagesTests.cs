@@ -1266,6 +1266,36 @@ internal static class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
     }
 
+    public static void PptxSvgIgnoredContainerAndStopOpacityDiagnosesOnlyUsedPaint()
+    {
+        string input = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg" opacity="0.5">
+              <defs>
+                <g opacity="0.5"><path d="M0 0H5V5H0Z"/></g>
+                <radialGradient id="unused"><stop offset="0" stop-color="#FF0000" stop-opacity="0.5"/><stop offset="1" stop-color="#0000FF"/></radialGradient>
+                <radialGradient id="g"><stop offset="0" stop-color="#FF0000" stop-opacity="50%"/><stop offset="1" stop-color="#0000FF" style="stop-opacity:0.5"/></radialGradient>
+              </defs>
+              <g opacity="1" style="opacity:0.25"><path d="M0 0H100V50H0Z" fill="url(#g)"/><path d="M0 0H100V50H0Z" fill="url(#g)"/></g>
+            </svg>
+            """);
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores opacity on 2 containers", StringComparison.Ordinal)));
+        TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores stop-opacity on 2 gradient stops", StringComparison.Ordinal)));
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Ignored opacity must preserve the picture.");
+
+        string control = WriteSvgGradientDeck("""
+            <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg" opacity="0.5" style="opacity:1">
+              <defs><radialGradient id="unused"><stop offset="0" stop-color="#FF0000" stop-opacity="0.5"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+              <path d="M0 0H100V50H0Z" fill="#0000FF" opacity="0.5"/>
+            </svg>
+            """);
+        diagnostics.Clear();
+        OoxPdfConverter.Convert(control, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Unused definitions and effective unit container opacity must not warn.");
+    }
+
     public static void PptxSvgRadialSpreadIsInvariantToSourceCoordinateScale()
     {
         foreach (string spread in new[] { "repeat", "reflect" })

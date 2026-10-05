@@ -101,6 +101,9 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 - `IMAGE_UNSUPPORTED_FORMAT`: error, image bytes could not be decoded or the content type is unsupported, so the image was ignored.
 - `IMAGE_CROP_UNSUPPORTED_FORMAT`: a cropped image could not be decoded for Office-style embedding, so PDF clipping is used instead.
 - `SVG_UNSUPPORTED_CONTENT`: unparsable SVG pictures and unusable viewBoxes are errors with the picture ignored; unsupported elements, path commands, gradients, and paint are warnings with the affected content partially omitted. One diagnostic per construct kind.
+  Non-unit group/root opacity and stop opacity on referenced gradients are
+  reported as ignored. Unused definitions and effective unit opacity do not
+  add these warnings; inline style overrides presentation attributes.
 
 - `DIAGNOSTIC_OVERFLOW`: error, the collector retained the first diagnostics and dropped further occurrences; per-ID totals stay available on the collector.
 

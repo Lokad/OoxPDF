@@ -113,6 +113,7 @@ internal sealed partial class PptxRenderer
         int focalRadialGradients = 0;
         int nonFiniteGradientPaths = 0;
         int vectorEffectStrokes = 0;
+        HashSet<string>? usedGradientIds = diagnosticSink is null ? null : new(StringComparer.Ordinal);
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate)))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -132,6 +133,10 @@ internal sealed partial class PptxRenderer
                 unsupportedCommands.Add(badCommand.Value);
             }
             bool hasFill = TryReadSvgFill(element, gradients, radialGradients, out SvgPaint paint, out SvgFillFailure fillFailure, out string? gradientId, out SvgRadialGradient? radial);
+            if (hasFill && gradientId is not null)
+            {
+                usedGradientIds?.Add(gradientId);
+            }
             if (!hasFill)
             {
                 if (fillFailure == SvgFillFailure.UnresolvedGradient && gradientId is not null)
@@ -321,6 +326,7 @@ internal sealed partial class PptxRenderer
             }
         }
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
+        ReportIgnoredSvgOpacity(svg, usedGradientIds, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
     }
@@ -360,6 +366,45 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
+    private static void ReportIgnoredSvgOpacity(XDocument svg, HashSet<string>? usedGradientIds, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
+    {
+        if (diagnosticSink is null || usedGradientIds is null) { return; }
+        int containerCount = 0;
+        int stopCount = 0;
+        foreach (XElement element in svg.Descendants())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string name = element.Name.LocalName;
+            if (name is "svg" or "g" && !IsSvgDefinitionElement(element))
+            {
+                IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
+                string? opacity = style.TryGetValue("opacity", out string? value) ? value : (string?)element.Attribute("opacity");
+                if (ReadSvgOpacityValue(opacity) < 1d) { containerCount++; }
+            }
+            if (name is "linearGradient" or "radialGradient" &&
+                (string?)element.Attribute("id") is { } id && usedGradientIds.Contains(id))
+            {
+                foreach (XElement stop in element.Elements().Where(child => child.Name.LocalName == "stop"))
+                {
+                    IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
+                    string? opacity = style.TryGetValue("stop-opacity", out string? value) ? value : (string?)stop.Attribute("stop-opacity");
+                    if (ReadSvgOpacityValue(opacity) < 1d) { stopCount++; }
+                }
+            }
+        }
+        if (containerCount > 0)
+        {
+            Report("SVG picture ignores opacity on " + containerCount.ToString(CultureInfo.InvariantCulture) + (containerCount == 1 ? " container." : " containers."));
+        }
+        if (stopCount > 0)
+        {
+            Report("SVG picture ignores stop-opacity on " + stopCount.ToString(CultureInfo.InvariantCulture) + (stopCount == 1 ? " gradient stop." : " gradient stops."));
+        }
+        void Report(string message) => diagnosticSink(new OoxPdfDiagnostic(
+            "SVG_UNSUPPORTED_CONTENT", OoxPdfSeverity.Warning, message, partName,
+            PageIndex: null, SlideIndex: slideIndex, Feature: "svg", Fallback: "Partial"));
+    }
+
     private static bool IsSupportedSvgElement(string name)
     {
         return name is "svg" or "defs" or "g" or "title" or "desc" or "metadata" or "style" or "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon" or "linearGradient" or "radialGradient" or "stop";
