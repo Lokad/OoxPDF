@@ -67,7 +67,7 @@ internal static class DocxTablesMarkupTests
         // 26pt fixture sinks the 0.48pt Office default cell insets (w68) so the token still needs exactly one emergency split past the 5-char fit.
         var cell = new DocxTableCell("ABC\u2011DEFG", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(
-            null,
+            "fixed",
             [26d],
             [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 26d };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
@@ -103,7 +103,7 @@ internal static class DocxTablesMarkupTests
             null);
         var cell = new DocxTableCell("ABC\u00A0DEFG", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var table = new DocxTable(
-            null,
+            "fixed",
             [20d],
             [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 20d };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);

@@ -437,6 +437,33 @@ falls from 12 to 10 failures and its maximum regional raster MAE improves from
 14.536 to 7.847. One case passes and 32 remain partial. Raw evidence is under
 `artifacts/plan-revision-20261005/rv06-l14/`.
 
+## Autofit Compression and Minimum-Width Update (2026-10-05, RV06-L15)
+
+Qualified autofit tables now compress the flexible width above each column's
+minimum content width. Unbreakable words stay together across styled runs and
+nonbreaking spaces; hyphens use the shared wrapping rules. Allocation includes
+the cell insets used by layout. A preferred table width below the content
+minimum can grow within the available frame. Fixed layout, explicit cell
+preferred widths and spans retain their existing paths. Deleted content,
+positioned tabs, hard breaks and minima wider than the frame remain separately
+scoped.
+
+Thirty Word controls cover width scans, word boundaries, review labels and
+fixed layout. Column differences are below 0.3 points; the previous tight-table
+review-label difference falls from 3.76 to 0.15 points. The fixed narrow control
+matches within 0.06 points. A new regression fails before the repair and passes
+across eight variants, covering styled run boundaries, nonbreaking spaces,
+preferred-width preservation and growth below the content minimum.
+
+The full DOCX run and focused rechecks cover all 864 tests with no remaining
+failures or skips. Four emergency-wrap fixtures now explicitly select fixed
+layout; their assertions remain intact. Seventy-two focused checks pass after
+that correction. All 33 cached page counts match, 32 PDF/raster cases remain
+byte-identical, and total failed gates fall from 576 to 575. The table-heavy
+margin case falls from 20 to 19 failures; no case total increases. One case
+passes and 32 remain partial. Raw qualification, the original full-run report
+and focused rechecks are under `artifacts/plan-revision-20261005/rv06-l15/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

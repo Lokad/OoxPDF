@@ -3182,6 +3182,56 @@ internal static class DocxTablesTests
         }
     }
 
+    public static void DocxAutofitCompressionPreservesUnbreakableWordMinimums()
+    {
+        string word = new string('X', 30);
+        foreach (int preferredWidth in new[] { 100, 210 })
+        foreach (bool nonbreaking in new[] { false, true })
+        foreach (bool splitRuns in new[] { false, true })
+        {
+            string leftRuns = splitRuns
+                ? $"<w:r><w:t>AA{(nonbreaking ? '\u00A0' : ' ')}{word[..15]}</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>{word[15..]}</w:t></w:r>"
+                : $"<w:r><w:t>AA{(nonbreaking ? '\u00A0' : ' ')}{word}</w:t></w:r>";
+            string rightText = string.Join(" ", Enumerable.Repeat("bb", 8));
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""",
+                ["_rels/.rels"] = """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
+                ["word/document.xml"] = $$"""
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                      <w:tbl><w:tblPr><w:tblW w:w="{{preferredWidth * 20}}" w:type="dxa"/></w:tblPr>
+                        <w:tblGrid><w:gridCol w:w="1000"/><w:gridCol w:w="1000"/></w:tblGrid>
+                        <w:tr><w:tc><w:p>{{leftRuns}}</w:p></w:tc>
+                          <w:tc><w:p><w:r><w:t>{{rightText}}</w:t></w:r></w:p></w:tc></w:tr>
+                      </w:tbl>
+                      <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+                    </w:body></w:document>
+                    """
+            });
+            DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxTableRowLayout row = layout.Pages.SelectMany(page => page.Items).OfType<DocxTableRowLayout>().Single();
+            DocxTableCellLayout left = row.Cells[0];
+            double minimumWordWidth = (nonbreaking ? word.Length + 3 : word.Length) * 5d;
+            TestAssert.True(left.Width - left.ContentPaddingLeft - left.ContentPaddingRight >= minimumWordWidth - 0.000001d,
+                "Autofit compression must reserve the unbreakable word width across run boundaries and nonbreaking spaces.");
+            TestAssert.True(left.TextLines.Any(line => line.Text.Contains(word, StringComparison.Ordinal)),
+                "A word that fits the available table frame must remain on one line.");
+            double resolvedWidth = row.Cells.Sum(cell => cell.Width);
+            if (preferredWidth == 100)
+            {
+                TestAssert.True(resolvedWidth > preferredWidth,
+                    "A preferred table width below the content minimum must expand within the available frame.");
+            }
+            else
+            {
+                TestAssert.True(Math.Abs(resolvedWidth - preferredWidth) < 0.000001d,
+                    "Compression above the content minimum must preserve the preferred table width.");
+            }
+        }
+    }
+
     public static void DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize()
     {
         var sourceParts = new Dictionary<string, byte[]>();

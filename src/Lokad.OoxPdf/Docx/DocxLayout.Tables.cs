@@ -422,6 +422,7 @@ internal sealed partial class DocxLayoutEngine
                 IReadOnlyList<double>? autoContentColumns = TryResolveAutoLayoutContentColumns(
                     table,
                     preferredTableWidth,
+                    tableAvailableWidth,
                     textMeasurer,
                     defaultTabStopPoints,
                     pageNumber,
@@ -430,6 +431,9 @@ internal sealed partial class DocxLayoutEngine
                     commentMarkerLabels);
                 if (autoContentColumns is not null)
                 {
+                    // A preferred autofit width can be smaller than the words it
+                    // contains. The qualified minimum can grow within this frame.
+                    targetTableWidth = Math.Max(targetTableWidth, autoContentColumns.Sum());
                     return autoContentColumns;
                 }
             }
@@ -457,6 +461,7 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<double>? TryResolveAutoLayoutContentColumns(
         DocxTable table,
         double targetTableWidth,
+        double availableTableWidth,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         int? pageNumber,
@@ -504,7 +509,9 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double[] pads = new double[columnCount];
+        double[] contentInsets = new double[columnCount];
         double[] columnMaxima = new double[columnCount];
+        bool hasDeletedContent = false;
         foreach (DocxTableRow row in table.Rows)
         {
             for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
@@ -512,6 +519,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableCell cell = row.Cells[cellIndex];
                 double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
+                hasDeletedContent |= cellDeletedTotal > 0d;
                 columnMaxima[cellIndex] = Math.Max(columnMaxima[cellIndex], cellVisibleMax + cellDeletedTotal);
 
                 double cellPad = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, fixedScale) +
@@ -522,6 +530,9 @@ internal sealed partial class DocxLayoutEngine
                 {
                     pads[cellIndex] = cellPad;
                 }
+                contentInsets[cellIndex] = Math.Max(contentInsets[cellIndex],
+                    ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, fixedScale) +
+                    ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, fixedScale));
             }
         }
 
@@ -536,6 +547,44 @@ internal sealed partial class DocxLayoutEngine
         if (contentTarget <= 0d)
         {
             return null;
+        }
+
+        double totalContentInset = contentInsets.Sum();
+        double compressedContentTarget = targetTableWidth - totalContentInset;
+        // Word width/word-boundary controls: compression distributes only the
+        // flexible width above each column's minimum, preserving whole words.
+        // Reuse the actual layout insets, including unset cell margins.
+        if (!hasDeletedContent && compressedContentTarget < totalContent)
+        {
+            double[] columnMinima = new double[columnCount];
+            bool qualified = true;
+            foreach (DocxTableRow row in table.Rows)
+            {
+                for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
+                {
+                    double? minimum = MeasureTableCellMinContentWidth(row.Cells[cellIndex], textMeasurer, pageNumber, pageCount, fixedScale, commentMarkerLabels);
+                    if (minimum is null || minimum.Value > columnMaxima[cellIndex] + 0.000001d)
+                    {
+                        qualified = false;
+                        break;
+                    }
+                    columnMinima[cellIndex] = Math.Max(columnMinima[cellIndex], minimum.Value);
+                }
+                if (!qualified)
+                {
+                    break;
+                }
+            }
+            double totalMinimum = columnMinima.Sum();
+            if (qualified && totalMinimum + totalContentInset <= availableTableWidth)
+            {
+                double expansion = totalContent > totalMinimum
+                    ? Math.Max(0d, compressedContentTarget - totalMinimum) / (totalContent - totalMinimum)
+                    : 0d;
+                return columnMaxima
+                    .Select((maximum, index) => contentInsets[index] + columnMinima[index] + expansion * (maximum - columnMinima[index]))
+                    .ToArray();
+            }
         }
 
         return columnMaxima
@@ -553,6 +602,81 @@ internal sealed partial class DocxLayoutEngine
         return cell.PreferredWidthKind == DocxTableWidthKind.Percent &&
             int.TryParse(cell.PreferredWidthValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fiftiethsPercent) &&
             fiftiethsPercent > 0;
+    }
+
+    private static double? MeasureTableCellMinContentWidth(
+        DocxTableCell cell,
+        IDocxTextMeasurer measurer,
+        int? pageNumber,
+        int? pageCount,
+        double fixedScale,
+        IReadOnlyDictionary<string, string>? markerLabels)
+    {
+        double minimum = 0d;
+        foreach (DocxBodyElement element in GetTableCellLayoutBodyElements(cell))
+        {
+            if (element is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+            DocxParagraph paragraph = paragraphElement.Paragraph;
+            double fontSize = GetParagraphFontSize(paragraph);
+            var spans = NormalizeDynamicFieldMeasurementSpans(CreateTextSpans(paragraph.Runs, pageNumber, pageCount), pageNumber).ToList();
+            foreach (DocxInlineReference reference in paragraph.InlineReferences)
+            {
+                if (reference.Kind == DocxRelatedStoryKind.Comment && reference.Id is { } id &&
+                    markerLabels?.TryGetValue(id, out string? label) == true)
+                {
+                    if ((paragraph.ParagraphMarkRun ?? paragraph.Runs.FirstOrDefault()) is { } markRun)
+                    {
+                        spans.Add(new DocxTextSpan(label, markRun, -1, 0));
+                    }
+                }
+            }
+            string text = string.Concat(spans.Select(span => span.Text));
+            if (text.IndexOfAny(['\t', '\r', '\n']) >= 0)
+            {
+                // Positioned tabs and explicit line breaks need their own
+                // preferred/minimum-content qualification.
+                return null;
+            }
+            var spanStarts = new int[spans.Count + 1];
+            for (int index = 0; index < spans.Count; index++)
+            {
+                spanStarts[index + 1] = spanStarts[index] + spans[index].Text.Length;
+            }
+            int start = 0;
+            for (int index = 0; index < text.Length; index++)
+            {
+                bool whitespace = DocxTextBreakRules.IsBreakableWhitespaceChar(text[index]);
+                if (!whitespace && !DocxLineBreakOpportunities.IsOpportunityAfter(text[index]))
+                {
+                    continue;
+                }
+                MeasureWord(whitespace ? index : index + 1, !whitespace);
+                start = index + 1;
+            }
+            MeasureWord(text.Length, false);
+            foreach (DocxInlineImage image in paragraph.Images)
+            {
+                minimum = Math.Max(minimum, Math.Max(0d, image.WidthPoints) * fixedScale);
+            }
+            foreach (DocxInlineTextBox box in paragraph.InlineTextBoxes)
+            {
+                minimum = Math.Max(minimum, Math.Max(0d, ReadEmuPoints(box.ExtentCxValue) ?? 0d) * fixedScale);
+            }
+
+            void MeasureWord(int end, bool preserveTerminalSoftHyphen)
+            {
+                if (end <= start)
+                {
+                    return;
+                }
+                IReadOnlyList<DocxTextSpan> word = SliceTextSpans(spans, start, end - start, spanStarts);
+                minimum = Math.Max(minimum, MeasureTextSpansForWrapping(word, fontSize, measurer, [], 0d, preserveTerminalSoftHyphen, pageNumber));
+            }
+        }
+        return minimum;
     }
 
     private static double MeasureTableCellMaxContentWidth(

@@ -494,8 +494,9 @@ internal static class DocxRevisionsTests
             DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell("ABCDEFGHIJ", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        // Terminal-space emission is exercised in a fixed, overwide frame.
         var table = new DocxTable(
-            null,
+            "fixed",
             [16d],
             [new DocxTableRow([cell], 10d)]) with {PreferredWidthPoints = 16d };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
