@@ -1272,7 +1272,7 @@ internal sealed partial class PptxRenderer
     {
         // RV07-S6: Office rounds visible dash ends within half a stroke width
         // of an original endpoint. Outward semicircles retain partial dash gaps.
-        // Qualify complete single-line subpaths with multiple visible dashes;
+        // Qualify complete single-line subpaths with flat dash ends;
         // RV07-S7: a wholly unpainted straight path gets solid opaque paint.
         // Curves, joins, alpha and extreme geometry retain native fallback.
         double period = dash[0] + dash[1];
@@ -1327,14 +1327,18 @@ internal sealed partial class PptxRenderer
             double last = remainder == 0d ? length - dash[1] : remainder <= dash[0] ? length : length - (remainder - dash[0]);
             if (last <= first || last > length) return null;
             double firstEnd = phase < dash[0] ? dash[0] - phase : first + dash[0];
-            if (length <= widthPoints || last <= firstEnd + tolerance)
+            bool firstCap = first <= widthPoints / 2d + tolerance;
+            bool lastCap = length - last <= widthPoints / 2d + tolerance;
+            // RV07-S8: one visible dash needs flat ends outside Office endpoint
+            // regions. Keep native paint when both rounded ends already match.
+            if (length <= widthPoints || (last <= firstEnd + tolerance && firstCap && lastCap))
             {
                 qualifiedCaps = false;
                 continue;
             }
             if (!qualifiedCaps) continue;
-            if (first <= widthPoints / 2d + tolerance && !AddCap(first, -1d)) return null;
-            if (length - last <= widthPoints / 2d + tolerance && !AddCap(last, 1d)) return null;
+            if (firstCap && !AddCap(first, -1d)) return null;
+            if (lastCap && !AddCap(last, 1d)) return null;
 
             bool AddCap(double distance, double direction)
             {

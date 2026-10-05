@@ -1066,7 +1066,7 @@ internal static class PptxImagesTests
             (Data: "M15 25H17", Alpha: "stroke-dashoffset=\"1.5\" stroke-opacity=\"0.5\"", Dash: "8 4"),
             (Data: "M15 25H18", Alpha: "stroke-dashoffset=\"1.5\" stroke-opacity=\"0.5\"", Dash: "8 4"),
             (Data: "M15 25H23", Alpha: "", Dash: "8 4"),
-            (Data: "M15 25H27", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H27", Alpha: "stroke-opacity=\"0.5\"", Dash: "8 4"),
         })
         {
             string input = WriteSvgGradientDeck($"""
@@ -1247,6 +1247,50 @@ internal static class PptxImagesTests
             else
             {
                 TestAssert.True(!pdf.Contains("[] 0 d", StringComparison.Ordinal), "A mixed painted path must retain its existing dash paint.");
+            }
+        }
+    }
+
+    public static void PptxSvgRoundDashSingleVisibleDashKeepsOfficeEndpointRegions()
+    {
+        foreach (var probe in new[]
+        {
+            (Width: 3, Length: 4, PhaseSource: 9, Caps: 1, CapPosition: 4d),
+            (Width: 3, Length: 12, PhaseSource: 0, Caps: 1, CapPosition: 0d),
+            (Width: 3, Length: 15, PhaseSource: 9, Caps: 0, CapPosition: 0d),
+            (Width: 6, Length: 12, PhaseSource: 0, Caps: 1, CapPosition: 0d),
+            (Width: 6, Length: 15, PhaseSource: 9, Caps: 1, CapPosition: 3d),
+        })
+        foreach (bool stretched in new[] { false, true })
+        {
+            byte[]? baseline = null;
+            foreach (double size in new[] { .1d, 100d, 1000d })
+            {
+                string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                    <svg viewBox="0 0 {size * (stretched ? 1 : 2)} {size}" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M{size * .15} {size * .25}H{size * (15 + probe.Length) / 100}" fill="none" stroke="#0000FF" stroke-width="{size * probe.Width / 100}" stroke-linecap="round" stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="{(double)probe.PhaseSource / probe.Width}"/>
+                    </svg>
+                    """));
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                OoxPdfConverter.Convert(input, output);
+                byte[] bytes = File.ReadAllBytes(output);
+                string pdf = Encoding.ASCII.GetString(bytes);
+                TestAssert.Contains("0 J", pdf);
+                TestAssert.Equal(1, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+                TestAssert.Equal(probe.Caps, Regex.Matches(pdf, @"(?m)^f\r?$").Count);
+                TestAssert.Equal(probe.Caps * 2, Regex.Matches(pdf, @"(?m)^.* c\r?$").Count);
+                MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+                TestAssert.Equal(probe.Caps + 1, moves.Count);
+                if (probe.Caps == 1)
+                {
+                    double start = double.Parse(moves[0].Groups[1].Value, CultureInfo.InvariantCulture);
+                    double cap = double.Parse(moves[1].Groups[1].Value, CultureInfo.InvariantCulture);
+                    double meanScale = stretched ? 1.08d : .72d;
+                    TestAssert.True(Math.Abs(cap - start - probe.CapPosition * meanScale) < .002d,
+                        "A single visible dash must retain the independently measured Office endpoint cap position.");
+                }
+                if (baseline is null) baseline = bytes;
+                else TestAssert.True(baseline.AsSpan().SequenceEqual(bytes), "Single-dash endpoint regions must survive source-coordinate rescaling.");
             }
         }
     }
