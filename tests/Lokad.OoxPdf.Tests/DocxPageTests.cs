@@ -1732,6 +1732,72 @@ internal static class DocxPageTests
         TestAssert.Equal(anchorSnapshot.VerticalReferenceTop ?? 0d, anchorSnapshot.PlacedTop ?? -1d);
     }
 
+    public static void DocxColumnBreakParagraphCarriesPitchAndCollapsedSpacingIntoNextFrame()
+    {
+        foreach (int columnCount in new[] { 1, 2 })
+        foreach ((double lineHeight, double before, double after, double priorAfter) in new[]
+        {
+            (14d, 0d, 0d, 12d), (24d, 0d, 0d, 12d), (14d, 0d, 24d, 12d),
+            (14d, 6d, 0d, 12d), (14d, 24d, 0d, 12d), (14d, 24d, 0d, 0d)
+        })
+        {
+            DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", 12d, 14d) with { SpacingAfterPoints = priorAfter };
+            DocxParagraph target = DocxTests.CreateDocxLayoutParagraph("Target", 12d, 14d);
+            DocxParagraph mark = DocxTests.CreateDocxLayoutParagraph(string.Empty, 12d, lineHeight) with
+            {
+                SpacingBeforePoints = before,
+                SpacingAfterPoints = after,
+                Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }
+            };
+            DocxDocument Document(DocxParagraph? breakParagraph) => new(400d, 400d, 20d, 20d, 20d, 20d, DocxPageSettings.Empty, [], [], [],
+                [new DocxParagraphElement(first), new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", breakParagraph),
+                    new DocxParagraphElement(target), new DocxSectionBreakElement(DocxPageSettings.Empty, DocxSectionBreakType.NextPage,
+                        columnCount.ToString(CultureInfo.InvariantCulture), "1", "400", [])], [], []);
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var measurer = new DocxTests.FamilyWidthTextMeasurer();
+            DocxLayout control = engine.Create(Document(null), measurer, CancellationToken.None);
+            DocxLayout candidate = engine.Create(Document(mark), measurer, CancellationToken.None);
+            TestAssert.Equal(columnCount == 1 ? 2 : 1, candidate.Pages.Count);
+            DocxTextLineLayout ControlTarget(DocxLayout layout) => layout.Pages.SelectMany(page => page.Items.OfType<DocxTextLineLayout>())
+                .Single(line => ReferenceEquals(line.SourceParagraph, target));
+            DocxTextLineLayout controlLine = ControlTarget(control);
+            DocxTextLineLayout candidateLine = ControlTarget(candidate);
+            TestAssert.Equal(controlLine.X, candidateLine.X);
+            double expectedPitch = lineHeight + after + Math.Max(0d, before - priorAfter);
+            TestAssert.True(Math.Abs(controlLine.BaselineY - candidateLine.BaselineY - expectedPitch) < 0.000001d,
+                "Word consumes the break paragraph's mark and after-spacing in the new frame, plus before-spacing beyond the preceding after-gap.");
+        }
+    }
+
+    public static void DocxColumnBreakParagraphUsesItsResolvedFontPitch()
+    {
+        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("First", 12d, 14d) with
+        {
+            Runs = [new DocxTextRun("First", 12d, "Body", false, false, false, null, null)]
+        };
+        DocxParagraph target = first with { Runs = [first.Runs[0] with { Text = "Target" }] };
+        foreach (double size in new[] { 12d, 24d })
+        {
+            DocxParagraph mark = DocxTests.CreateDocxLayoutParagraph(string.Empty, size, 14d) with
+            {
+                Runs = [new DocxTextRun(string.Empty, size, "Break", false, false, false, null, null)],
+                LineSpacingPoints = null,
+                Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "auto", LineValue = "240" }
+            };
+            DocxDocument Document(bool ordinaryMark) => new(400d, 400d, 20d, 20d, 20d, 20d, DocxPageSettings.Empty, [], [], [],
+                ordinaryMark
+                    ? [new DocxParagraphElement(first), new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
+                        new DocxParagraphElement(mark), new DocxParagraphElement(target)]
+                    : [new DocxParagraphElement(first), new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", mark),
+                        new DocxParagraphElement(target)], [], []);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            double TargetBaseline(DocxDocument document, int block) => renderer.InspectTextEmission(document).Lines
+                .Single(line => line.SourceBlockIndex == block && line.SourceLineIndex == 0).Segments.First().BaselineY;
+            TestAssert.True(Math.Abs(TargetBaseline(Document(true), 3) - TargetBaseline(Document(false), 2)) < 0.000001d,
+                "A column-break paragraph's automatic pitch must use its resolved font, matching the same ordinary blank paragraph in the new frame.");
+        }
+    }
+
     public static void DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -36,6 +36,11 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
             .Concat(EnumerateInlineTextBoxParagraphs(document))
             .SelectMany(GetParagraphFontRuns)
+            // Body column-break marks consume a font-dependent pitch after the
+            // frame turn, even though their empty text never emits glyphs.
+            .Concat(document.BodyElements.OfType<DocxManualBreakElement>()
+                .Where(element => element.Value?.Equals("column", StringComparison.OrdinalIgnoreCase) == true)
+                .SelectMany(element => element.BreakParagraph is { } paragraph ? GetParagraphFontRuns(paragraph) : []))
             .Concat(document.BodyElements
                 .OfType<DocxImplicitParagraphElement>()
                 .Select(element => DocxImplicitParagraphElement.CreateParagraphMarkRun(element.MarkFontSizePoints)))

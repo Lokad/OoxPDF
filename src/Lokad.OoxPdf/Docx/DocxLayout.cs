@@ -967,7 +967,20 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (manualBreak.Value?.Equals("column", StringComparison.OrdinalIgnoreCase) == true)
                 {
+                    DocxParagraph? breakParagraph = manualBreak.BreakParagraph;
+                    DocxParagraphSpacingProfile? breakSpacing = breakParagraph is null ? null
+                        : ResolveParagraphSpacingProfile(previousParagraph, breakParagraph, pendingSpacingAfter, paragraphSpacingScale);
                     AdvanceColumnOrPage();
+                    if (breakParagraph is not null && breakSpacing is not null)
+                    {
+                        // Word 16 column controls: the paragraph mark resumes in the
+                        // next frame, carrying only before-spacing beyond the old after-gap.
+                        double extraBefore = Math.Max(0d, breakSpacing.AppliedBeforeSpacing - breakSpacing.PendingAfterSpacing);
+                        cursorY -= extraBefore + ResolveLineHeight(breakParagraph, GetParagraphFontSize(breakParagraph), textMeasurer);
+                        pendingSpacingAfter = breakSpacing.ParagraphAfterSpacing;
+                        previousParagraph = breakParagraph;
+                        activeColumnHasContent = true;
+                    }
                     continue;
                 }
 

@@ -239,6 +239,30 @@ rectangle still differs, and the other markup views retain target baseline
 differences. One case passes all gates and 32 remain partial. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l6/`.
 
+## Column-Break Paragraph Update (2026-10-05, RV06-L7)
+
+Break-only body paragraphs now resume their paragraph mark in the next column
+or page. Their line pitch is consumed there, followed by normal after-spacing.
+Before-spacing carries only the amount beyond the preceding paragraph's
+after-gap. The retained empty run now participates in the font plan so automatic
+pitch uses its resolved face rather than unqualified fallback metrics. This
+preserves the existing body-paragraph inventory and uses the retained break
+paragraph model.
+
+Ten independent Word 16 controls cover exact/automatic line height, 12/24-point
+mark fonts, before/after spacing and a single-column turn to the next page.
+Vertical destination differences decrease from 13.58-37.58 points to at most
+0.42 points. The original two-column bookmark control improves from 24.58 to
+0.38 points. Two regressions verify collapsed spacing through layout and
+resolved-font pitch through production text emission, using a portable test face.
+An inline-break control remains unchanged at 28.58 points; missing continuation
+paragraphs after inline breaks require separate qualification.
+
+The broader DOCX run passes 854 tests with no failures or skips. All 33 cached
+cases retain PDF/raster bytes and gate counts; total failures remain 632. Raw
+controls and reference exports are under `artifacts/plan-revision-20261005/rv06-l6/`;
+repair verification is under `artifacts/plan-revision-20261005/rv06-l7/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
