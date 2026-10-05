@@ -3182,6 +3182,76 @@ internal static class DocxTablesTests
         }
     }
 
+    public static void DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize()
+    {
+        var sourceParts = new Dictionary<string, byte[]>();
+        using (ZipArchive archive = ZipFile.OpenRead(FindCase("docx-markup-review.docx")))
+        {
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                using Stream source = entry.Open();
+                using var bytes = new MemoryStream();
+                source.CopyTo(bytes);
+                sourceParts[entry.FullName] = bytes.ToArray();
+            }
+        }
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        foreach ((int textSize, int markSize) in new[] { (12, 12), (24, 12), (12, 24), (24, 24) })
+        foreach (int referenceSize in new[] { 8, 24 })
+        foreach (string initials in new[] { "RV", "LONG" })
+        foreach (string id in new[] { "2", "12" })
+        {
+            string MakeInput(bool markerAsText)
+            {
+                var parts = new Dictionary<string, byte[]>(sourceParts);
+                XDocument document = XDocument.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
+                XElement cell = document.Descendants(w + "tbl").Single().Elements(w + "tr").Last().Elements(w + "tc").First();
+                XElement paragraph = cell.Element(w + "p")!;
+                paragraph.AddFirst(new XElement(w + "pPr", new XElement(w + "rPr", new XElement(w + "sz", new XAttribute(w + "val", markSize * 2)))));
+                XElement textRun = paragraph.Elements(w + "r").First(run => run.Element(w + "t") is not null);
+                textRun.AddFirst(new XElement(w + "rPr", new XElement(w + "sz", new XAttribute(w + "val", textSize * 2))));
+                XElement referenceRun = paragraph.Elements(w + "r").Single(run => run.Element(w + "commentReference") is not null);
+                referenceRun.AddFirst(new XElement(w + "rPr", new XElement(w + "sz", new XAttribute(w + "val", referenceSize * 2))));
+                foreach (XElement marker in paragraph.Descendants().Where(element => element.Name == w + "commentRangeStart" || element.Name == w + "commentRangeEnd" || element.Name == w + "commentReference").ToArray())
+                {
+                    marker.SetAttributeValue(w + "id", id);
+                }
+                if (markerAsText)
+                {
+                    paragraph.Elements().Where(element => element.Name == w + "commentRangeStart" || element.Name == w + "commentRangeEnd").Remove();
+                    referenceRun.Remove();
+                    paragraph.Add(new XElement(w + "r",
+                        new XElement(w + "rPr", new XElement(w + "sz", new XAttribute(w + "val", markSize * 2))),
+                        new XElement(w + "t", "[" + initials + "2]")));
+                }
+                parts["word/document.xml"] = Encoding.UTF8.GetBytes(document.ToString());
+                XDocument comments = XDocument.Parse(Encoding.UTF8.GetString(parts["word/comments.xml"]));
+                XElement comment = comments.Descendants(w + "comment").Single(element => (string?)element.Attribute(w + "id") == "2");
+                comment.SetAttributeValue(w + "id", id);
+                comment.SetAttributeValue(w + "initials", initials);
+                if (markerAsText) { comment.Remove(); }
+                parts["word/comments.xml"] = Encoding.UTF8.GetBytes(comments.ToString());
+                return TestFixtures.WriteTempPackage(".docx", parts);
+            }
+
+            DocxDocument anchored = DocxTests.ReadDocx(MakeInput(false), OoxPdfDocxMarkupMode.AllMarkup);
+            DocxDocument visibleLabel = DocxTests.ReadDocx(MakeInput(true), OoxPdfDocxMarkupMode.AllMarkup);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            IReadOnlyList<double> anchoredWidths = renderer.InspectLayout(anchored).Tables.Single().ResolvedColumnWidths;
+            IReadOnlyList<double> visibleWidths = renderer.InspectLayout(visibleLabel).Tables.Single().ResolvedColumnWidths;
+            for (int column = 0; column < anchoredWidths.Count; column++)
+            {
+                TestAssert.True(Math.Abs(anchoredWidths[column] - visibleWidths[column]) < 0.000001d,
+                    "A review comment anchor must size columns like its display label at paragraph-mark size, ignoring direct reference size and source ID.");
+            }
+            int anchoredDigits = renderer.InspectTextEmission(anchored).Lines.Where(line => !line.IsStaticStory)
+                .SelectMany(line => line.Segments).Sum(segment => segment.CharacterProfile.DigitCount);
+            int visibleDigits = renderer.InspectTextEmission(visibleLabel).Lines.Where(line => !line.IsStaticStory)
+                .SelectMany(line => line.Segments).Sum(segment => segment.CharacterProfile.DigitCount);
+            TestAssert.Equal(anchoredDigits + 1, visibleDigits);
+        }
+    }
+
     // RV06-L1: rejected insertion length cannot change Original-mode table geometry.
     public static void DocxOriginalAutofitIgnoresExcludedInsertionLength()
     {

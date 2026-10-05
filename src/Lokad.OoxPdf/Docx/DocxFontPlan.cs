@@ -22,7 +22,7 @@ internal sealed record DocxResolvedRunTypeface(
 
 internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 {
-    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken)
+    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken, bool includeReviewAutofitMarks = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateBodyParagraphs(document)
@@ -35,7 +35,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
             .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
             .Concat(EnumerateInlineTextBoxParagraphs(document))
-            .SelectMany(GetParagraphFontRuns)
+            .SelectMany(paragraph => GetParagraphFontRuns(paragraph, includeReviewAutofitMarks))
             // Body column-break marks consume a font-dependent pitch after the
             // frame turn, even though their empty text never emits glyphs.
             .Concat(document.BodyElements.OfType<DocxManualBreakElement>()
@@ -164,11 +164,16 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return candidate is not null && candidate.Equals(family, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph)
+    private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph, bool includeReviewAutofitMarks = false)
     {
         foreach (DocxTextRun run in paragraph.Runs)
         {
             yield return run;
+        }
+
+        if (includeReviewAutofitMarks && paragraph.ParagraphMarkRun is { } markRun)
+        {
+            yield return markRun;
         }
 
         if (paragraph.ListLabel is not null)

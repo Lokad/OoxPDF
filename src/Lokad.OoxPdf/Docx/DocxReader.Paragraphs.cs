@@ -267,7 +267,12 @@ internal sealed partial class DocxReader
             Revisions = paragraphRevisions,
             HasDeletedParagraphMark = hasDeletedParagraphMark,
             DeletedText = deletedText.ToString(),
-            ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints
+            ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
+            ParagraphMarkRun = inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment)
+                ? CreateResolvedTextRun(string.Empty, paragraphMarkRun,
+                    CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
+                    false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))
+                : null
         };
 
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)
@@ -1269,6 +1274,11 @@ internal sealed partial class DocxReader
 
     private static void AddResolvedTextRun(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, bool complexScript, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
+        runs.Add(CreateResolvedTextRun(text, resolvedRun, styleResolution, complexScript, sourceRunIndex, sourceTextOffsetInRun, revision, revisions, fieldKind));
+    }
+
+    private static DocxTextRun CreateResolvedTextRun(string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, bool complexScript, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
+    {
         bool bold = complexScript
             ? resolvedRun.ComplexScriptBold ?? resolvedRun.Bold ?? false
             : resolvedRun.Bold ?? false;
@@ -1280,7 +1290,7 @@ internal sealed partial class DocxReader
             : resolvedRun.FontFamily;
         bool isScriptShiftedRun =
             DocxTextRun.ParseVerticalAlignment(resolvedRun.VerticalAlignmentValue) is not DocxRunVerticalAlignment.Baseline;
-        runs.Add(new DocxTextRun(
+        return new DocxTextRun(
             text,
             resolvedRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
             resolvedRun.ColorHex,
@@ -1314,7 +1324,7 @@ internal sealed partial class DocxReader
             SourceTextOffsetInRun = sourceTextOffsetInRun,
             Revision = revision,
             Revisions = revisions ?? RevisionList(revision)
-        });
+        };
     }
 
     private static string? FirstNonEmpty(params string?[] values)

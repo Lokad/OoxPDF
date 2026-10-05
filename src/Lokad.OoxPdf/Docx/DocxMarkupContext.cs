@@ -34,6 +34,7 @@ internal sealed record DocxMarkupContext(
     // group dictionaries for every page. Null keeps entry paths without it on the
     // per-page fallback.
     public MarkupCommentStoryIndex? CommentStoryIndex { get; init; }
+    public IReadOnlyDictionary<string, string>? CommentMarkerLabels { get; init; }
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {
         DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;

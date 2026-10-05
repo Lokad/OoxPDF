@@ -44,8 +44,43 @@ internal sealed partial class DocxRenderer
         return label;
     }
 
-    private static string BuildWordCompatibleCommentBalloonTitle(DocxRelatedStory? story, string? fallbackId)
+    private static IReadOnlyDictionary<string, string>? BuildWordCompatibleCommentMarkerLabels(DocxDocument document, CancellationToken cancellationToken)
     {
+        var stories = new Dictionary<string, DocxRelatedStory>(StringComparer.Ordinal);
+        foreach (DocxRelatedStory story in document.RelatedStories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (story.Kind == DocxRelatedStoryKind.Comment && story.Id is { } id)
+            {
+                stories.TryAdd(id, story);
+            }
+        }
+        var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(document))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (DocxInlineReference reference in paragraph.InlineReferences)
+            {
+                if (reference.Kind != DocxRelatedStoryKind.Comment || reference.Id is not { } id ||
+                    labels.ContainsKey(id) || !stories.TryGetValue(id, out DocxRelatedStory? story) ||
+                    story.CommentMetadata?.ParentCommentId is not null)
+                {
+                    continue;
+                }
+                string? initials = FirstNonEmpty(story.CommentMetadata?.Initials, story.CommentMetadata?.Author);
+                string number = (labels.Count + 1).ToString(CultureInfo.InvariantCulture);
+                labels.Add(id, "[" + (initials ?? "Comment ") + number + "]");
+            }
+        }
+        return labels.Count == 0 ? null : labels;
+    }
+
+    private static string BuildWordCompatibleCommentBalloonTitle(DocxRelatedStory? story, string? fallbackId, IReadOnlyDictionary<string, string>? markerLabels = null)
+    {
+        if (fallbackId is not null && markerLabels?.TryGetValue(fallbackId, out string? label) == true)
+        {
+            return "Commented " + label + ": ";
+        }
         DocxCommentMetadata? metadata = story?.CommentMetadata;
         string? initials = FirstNonEmpty(metadata?.Initials, metadata?.Author);
         string? id = FirstNonEmpty(fallbackId);

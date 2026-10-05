@@ -549,7 +549,7 @@ internal sealed partial class DocxRenderer
                             DocxMarkupBalloonKind.Comment,
                             TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
                             commentBody,
-                            BuildWordCompatibleCommentBalloonTitle(storyLayout?.Story, reference.Id),
+                            BuildWordCompatibleCommentBalloonTitle(storyLayout?.Story, reference.Id, markupContext.CommentMarkerLabels),
                             wordCompatibleCommentBody,
                             anchorLine.BaselineY,
                             ResolveCommentAnchorX(anchorLine, anchorTextLines, paragraph, reference, markupContext),

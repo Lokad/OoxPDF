@@ -410,6 +410,33 @@ to 9.058 points, and its maximum regional raster MAE improves from 15.714 to
 14.536. Its 12 failed gates remain partial. Raw evidence is under
 `artifacts/plan-revision-20261005/rv06-l13/`.
 
+## Review Comment-Label Autofit Update (2026-10-05, RV06-L14)
+
+Word-compatible review tables now include hidden comment display labels in
+their preferred content widths. Word measures these labels at the paragraph
+mark's resolved font face and size, ignoring direct formatting on the comment
+reference run. Labels use first-seen comment display order rather than source
+IDs; the same per-conversion labels also supply printed balloon titles. This
+measurement does not emit additional body glyphs. Other markup geometry modes,
+nested tables and tables in other stories retain their existing behavior.
+
+Nineteen trusted Word controls include literal-label substitution, changed
+initials, 8/24-point reference formatting, paragraph-mark/text size changes,
+source-ID renumbering and three unscaled controls. Eighteen have column-width
+differences below 0.3 points. A tight table with both text and paragraph mark
+at 24 points retains a 3.76-point difference; its literal-label Office control
+has the same width, isolating a separate minimum/maximum-content allocation
+follow-up.
+
+The production regression fails before the repair and passes afterward across
+32 combinations; it also verifies that hidden-label measurement adds no body
+digits. All 863 DOCX tests pass. The 33 cached comparisons reduce total failed
+gates from 579 to 576 without increasing any case's total. All page counts
+match, and 30 PDF/raster cases remain byte-identical. The table-comment case
+falls from 12 to 10 failures and its maximum regional raster MAE improves from
+14.536 to 7.847. One case passes and 32 remain partial. Raw evidence is under
+`artifacts/plan-revision-20261005/rv06-l14/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

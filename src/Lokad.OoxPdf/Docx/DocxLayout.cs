@@ -220,6 +220,7 @@ internal sealed partial class DocxLayoutEngine
     private readonly bool scaleBaselineOffsetTransitions;
     private readonly bool retuneReserveToPrintScale;
     private readonly double reservePrintScale;
+    private readonly IReadOnlyDictionary<string, string>? commentMarkerLabels;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -257,7 +258,7 @@ internal sealed partial class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> ResolvedColumnWidths);
 
-    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale)
+    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null)
     {
         reserveMarkupMargin = markupGeometryMode is OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin or OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         paragraphSpacingScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
@@ -266,6 +267,7 @@ internal sealed partial class DocxLayoutEngine
         retuneReserveToPrintScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         scaleBaselineOffsetTransitions = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         reservePrintScale = wordCompatiblePrintScale;
+        this.commentMarkerLabels = commentMarkerLabels;
     }
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken)
@@ -1054,7 +1056,8 @@ internal sealed partial class DocxLayoutEngine
                         cancellationToken,
                         pageNumber: pages.Count + 1,
                         pageCount: null,
-                        paragraphSpacingScale: paragraphSpacingScale);
+                        paragraphSpacingScale: paragraphSpacingScale,
+                        commentMarkerLabels: commentMarkerLabels);
                 }
 
                 LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo());

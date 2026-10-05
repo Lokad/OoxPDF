@@ -232,9 +232,10 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         int? pageNumber,
         int? pageCount,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        IReadOnlyDictionary<string, string>? commentMarkerLabels = null)
     {
-        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount);
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels);
         var tableContext = new DocxTableLayoutContext(
             tableIndex,
             sourceBlockIndex,
@@ -275,7 +276,7 @@ internal sealed partial class DocxLayoutEngine
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
 
-    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount)
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null)
     {
         // W6-a1: fixed table geometry joins scaled space (fixed lengths times the layout
         // scale) so the uniform shift-composition maps frames like body text. Percent and
@@ -425,7 +426,8 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     pageNumber,
                     pageCount,
-                    fixedScale);
+                    fixedScale,
+                    commentMarkerLabels);
                 if (autoContentColumns is not null)
                 {
                     return autoContentColumns;
@@ -459,7 +461,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         int? pageNumber,
         int? pageCount,
-        double fixedScale)
+        double fixedScale,
+        IReadOnlyDictionary<string, string>? commentMarkerLabels)
     {
         if (textMeasurer is null)
         {
@@ -507,7 +510,7 @@ internal sealed partial class DocxLayoutEngine
             for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
-                double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale);
+                double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
                 columnMaxima[cellIndex] = Math.Max(columnMaxima[cellIndex], cellVisibleMax + cellDeletedTotal);
 
@@ -558,7 +561,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         int? pageNumber,
         int? pageCount,
-        double fixedScale)
+        double fixedScale,
+        IReadOnlyDictionary<string, string>? commentMarkerLabels)
     {
         double maxWidth = 0d;
         foreach (DocxBodyElement bodyElement in GetTableCellLayoutBodyElements(cell))
@@ -573,7 +577,18 @@ internal sealed partial class DocxLayoutEngine
             if (textSpans.Count != 0)
             {
                 double fontSize = GetParagraphFontSize(paragraph);
-                maxWidth = Math.Max(maxWidth, MeasureTextSpansForLayout(
+                double markerWidth = 0d;
+                foreach (DocxInlineReference reference in paragraph.InlineReferences)
+                {
+                    if (reference.Kind == DocxRelatedStoryKind.Comment && reference.Id is { } id &&
+                        commentMarkerLabels?.TryGetValue(id, out string? label) == true)
+                    {
+                        DocxTextRun? markRun = paragraph.ParagraphMarkRun ?? paragraph.Runs.FirstOrDefault();
+                        markerWidth += textMeasurer.MeasureText(markRun, label,
+                            paragraph.ParagraphMarkFontSize ?? fontSize);
+                    }
+                }
+                maxWidth = Math.Max(maxWidth, markerWidth + MeasureTextSpansForLayout(
                     textSpans,
                     fontSize,
                     textMeasurer,

@@ -179,7 +179,7 @@ internal sealed partial class DocxRenderer
             yield break;
         }
 
-        foreach (PdfPage page in RenderParagraphs(document, fontResolver, ResolveEffectiveMarkupContext(document), diagnosticSink, cancellationToken))
+        foreach (PdfPage page in RenderParagraphs(document, fontResolver, ResolveEffectiveMarkupContext(document, cancellationToken), diagnosticSink, cancellationToken))
         {
             yield return page;
         }
@@ -203,8 +203,8 @@ internal sealed partial class DocxRenderer
 
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None, effectiveMarkupContext.CommentMarkerLabels is not null);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, effectiveGeometryMode, CancellationToken.None);
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
@@ -212,8 +212,8 @@ internal sealed partial class DocxRenderer
 
     internal IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> InspectMarkupBalloons(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None, effectiveMarkupContext.CommentMarkerLabels is not null);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
@@ -245,13 +245,14 @@ internal sealed partial class DocxRenderer
 
     internal DocxFontPlanSnapshot InspectFontPlan(DocxDocument document)
     {
-        return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None));
+        return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None,
+            ResolveEffectiveMarkupContext(document).CommentMarkerLabels is not null));
     }
 
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
     {
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None);
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None, effectiveMarkupContext.CommentMarkerLabels is not null);
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
@@ -381,7 +382,7 @@ internal sealed partial class DocxRenderer
         // R06.2 repagination control: at most two full layouts per conversion (first pass
         // plus one conditional displaced pass; no loop), and page/content charges apply
         // once per emitted final page in RenderParagraphs, never per pass.
-        DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale);
+        DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
         DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer);
         // Maps stay dense: explicitly unconstrained pages record zero so the
@@ -411,7 +412,7 @@ internal sealed partial class DocxRenderer
             : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage);
     }
 
-    private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document)
+    private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document, CancellationToken cancellationToken = default)
     {
         DocxMarkupContext effective = markupContext.ApplyDocumentSettings(document.Settings);
         double printScale = ResolveWordCompatiblePrintScale(document, effective);
@@ -428,7 +429,10 @@ internal sealed partial class DocxRenderer
             effective.ExpandsMarkupMargin
             ? WordCompatibleTextYOffsetReferenceAnchorPoints
             : 0d;
-        return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset, WordCompatibleTextYOffset = yOffset };
+        IReadOnlyDictionary<string, string>? markerLabels = UsesWordCompatibleAllMarkupTextProfile(effective) && effective.RendersCommentBalloons
+            ? BuildWordCompatibleCommentMarkerLabels(document, cancellationToken) : null;
+        return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset,
+            WordCompatibleTextYOffset = yOffset, CommentMarkerLabels = markerLabels };
     }
 
     private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;
@@ -919,7 +923,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink, cancellationToken);
+        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink, cancellationToken, markupContext.CommentMarkerLabels is not null);
 
         DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), cancellationToken);
         // RV06: comment balloons and range washes wear first-seen author colors;
