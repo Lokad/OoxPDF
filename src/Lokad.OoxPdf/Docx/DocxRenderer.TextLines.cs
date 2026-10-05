@@ -529,14 +529,7 @@ internal sealed partial class DocxRenderer
         DocxTextEmissionSegment segment,
         DocxTextLineLayout line)
     {
-        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
-            segment.StyleRun,
-            segment.FontSize,
-            segment.PdfCharacterSpacing,
-            segment.PdfCharacterSpacingSource,
-            segment.CompensatePdfCharacterSpacing,
-            segment.IsTerminalLineSpace,
-            segment.FontScale);
+        DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(segment);
         return new DocxTextEmissionSegmentSnapshot(
             segment.Text.Length,
             line.SourceBlockIndex,

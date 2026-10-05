@@ -12,6 +12,49 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxFallbackInspectionReportsEmittedFontSizeAndSpacing()
+    {
+        foreach (double nominalSize in new[] { 11d, 13d, 22d })
+        foreach (double characterSpacing in new[] { 0d, 0.5d })
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+                     OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAA", nominalSize, 30d) with
+            {
+                InlineReferences = [new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null,
+                    SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0, DisplayText: null)],
+                CommentRanges = [new DocxCommentRange("1", 0, 0, 1, 3, 1, 0)]
+            };
+            paragraph = paragraph with { Runs = [paragraph.Runs.Single() with { CharacterSpacingPoints = characterSpacing }] };
+            DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([paragraph]) with
+            {
+                PageWidthPoints = 612d,
+                RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment,
+                    "/word/comments.xml", "1", [], [], [], null)]
+            };
+            var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            DocxTextEmissionSegmentSnapshot segment = renderer.InspectTextEmission(document).Lines
+                .Where(line => !line.IsStaticStory).SelectMany(line => line.Segments)
+                .Single(segment => !segment.IsTerminalLineSpace);
+            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+            string textOperation = Regex.Matches(content, @"BT(?<body>.*?)ET", RegexOptions.Singleline)
+                .Select(match => match.Groups["body"].Value)
+                .Single(body => Regex.Matches(body, "<41> Tj").Count == 3);
+            double emittedFontSize = double.Parse(Regex.Match(textOperation, @"/[^\s]+ (?<size>[0-9.]+) Tf").Groups["size"].Value,
+                CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs(segment.PdfFontSize - emittedFontSize) < 0.000501d,
+                $"Fallback inspection font size should match emitted PDF state. Inspection={segment.PdfFontSize}, PDF={emittedFontSize}.");
+            TestAssert.Equal(0d, segment.PdfCharacterSpacing);
+            double[] glyphX = Regex.Matches(textOperation, @"1 0 0 1 (?<x>[0-9.]+) [0-9.]+ Tm")
+                .Select(match => double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture)).Take(3).ToArray();
+            TestAssert.Equal(3, glyphX.Length);
+            double observedAdvance = glyphX[2] - glyphX[0];
+            double expectedAdvance = segment.AdvanceProfile.PlannedEmittedAdvance - segment.AdvanceProfile.NaturalPdfWidth / 3d;
+            TestAssert.True(Math.Abs(expectedAdvance - observedAdvance) < 0.002d,
+                $"Fallback inspection should describe the emitted glyph positions. Inspection={expectedAdvance}, PDF={observedAdvance}.");
+        }
+    }
+
     public static void DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize()
     {
         foreach (double bodySize in new[] { 12d, 22d })

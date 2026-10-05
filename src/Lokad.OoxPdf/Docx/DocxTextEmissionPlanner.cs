@@ -126,6 +126,33 @@ internal static class DocxTextEmissionPlanner
     }
 
     public static DocxTextEmissionPlan CreateForEmissionSegment(
+        DocxTextEmissionSegment segment)
+    {
+        if (segment.FallbackFace is not null)
+        {
+            // Fallback glyphs use the layout font size and absolute positions.
+            // They do not emit the embedded-font export grid or a PDF Tc value.
+            return new(
+                segment.FontSize,
+                PdfCharacterSpacing: 0d,
+                segment.StyleRun.EffectiveProperties.CharacterSpacingPoints,
+                CompensatePdfCharacterSpacing: false,
+                segment.IsTerminalLineSpace
+                    ? DocxTextStateCharacterSpacingSource.TerminalLineSpace
+                    : DocxTextStateCharacterSpacingSource.None);
+        }
+
+        return CreateForEmissionSegment(
+            segment.StyleRun,
+            segment.FontSize,
+            segment.PdfCharacterSpacing,
+            segment.PdfCharacterSpacingSource,
+            segment.CompensatePdfCharacterSpacing,
+            segment.IsTerminalLineSpace,
+            segment.FontScale);
+    }
+
+    public static DocxTextEmissionPlan CreateForEmissionSegment(
         DocxTextRun style,
         double layoutFontSize,
         double pdfCharacterSpacing,

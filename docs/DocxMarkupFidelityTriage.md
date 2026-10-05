@@ -529,6 +529,21 @@ printer/paper profile is needed to establish it. The renderer keeps its current
 formula; no printer-specific constant was introduced. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l18/`.
 
+## Missing-Font Inspection Update (2026-10-05, RV06-L19)
+
+Inspection now reports the font size and spacing actually used by standard-14
+fallback glyphs. Those glyphs use unrounded layout sizes and absolute positions,
+with zero PDF text-state character spacing. Embedded fonts retain their export
+grid and spacing plan. Rendering and missing-font diagnostics are unchanged.
+
+A regression compares inspection against emitted PDF font state and glyph
+coordinates across 12 size/spacing/view variants. It fails before the repair and
+passes afterward. All 23 text-emission checks and four missing-font checks pass.
+Nine public document/view controls retain identical PDF bytes and diagnostic
+counts, verified against the actual loaded baseline and candidate DLL hashes in
+both prototype and root. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l19/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
