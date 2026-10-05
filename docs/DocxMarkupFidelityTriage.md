@@ -561,6 +561,41 @@ counts, verified against the actual loaded baseline and candidate DLL hashes in
 both prototype and root. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l19/`.
 
+## Simple Review-Table Baseline Update (2026-10-06, RV06-L20)
+
+Word-compatible review layout now projects simple table geometry onto the
+existing body baseline anchor and scales each cell's first-baseline inset by
+the review print scale. The preceding and following body text, row pitch and
+pagination retain their existing coordinates. The correction applies only to
+complete tables on one page, with automatic row heights and a single
+top-aligned text line in each cell. Wrapped or split rows, declared heights,
+vertical merges, nested tables, inline graphics, multiple paragraphs and
+explicit line heights retain the previous layout.
+
+Twenty-four independent Word 16 controls vary cell font size, preceding
+paragraph count, paragraph spacing, borders, following body text and a table
+at the document start. All improve their pixel comparison. Unbordered controls
+have maximum cell-baseline, fill-top and fill-bottom differences of 0.11, 0.18
+and 0.20 points respectively. Bordered controls reach 0.21, 0.57 and 1.22
+points; border-driven height differences remain a separate residual. Following
+body baselines remain identical to the accepted renderer.
+
+Two production regressions cover 32 font/page/start-position variants and
+surrounding-text invariance. The baseline fails the inset check; the proposal
+passes on Windows and Linux. A full DOCX run passes 869 tests before the final
+fallback guards are narrowed. The final guarded proposal passes both Release
+regressions, all 43 API tests and an exact fresh 0.1.5 package smoke. Its PDFs
+retain the measured proposal's bytes for all 24 controls and all 33 cached
+cases; four fallback controls retain the accepted renderer's bytes. Twenty-four
+preserved-layout controls also retain their bytes.
+
+All cached input/reference identities and page counts match. Thirty cached
+PDFs and rasters retain their bytes; the three changed cases improve or retain
+every measured raster region. Failed gates decrease from 575 to 573, with no
+case increase. One case passes and 32 remain partial. The main review fixture
+closes two last-baseline gates; wider table/markup parity remains incomplete.
+Raw qualification is under `artifacts/plan-revision-20261005/rv06-l20/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
