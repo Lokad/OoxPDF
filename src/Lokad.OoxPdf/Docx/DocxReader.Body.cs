@@ -100,7 +100,7 @@ internal sealed partial class DocxReader
 
                 if (HasRunPageOrColumnBreak(element, markupMode))
                 {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode, retainEmptyColumnTail: true))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
@@ -332,7 +332,7 @@ internal sealed partial class DocxReader
         };
     }
 
-    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
+    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode, bool retainEmptyColumnTail = false)
     {
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
@@ -341,7 +341,11 @@ internal sealed partial class DocxReader
 
         void AddParagraphPart(bool endsBeforeBreak)
         {
-            if (currentChildren.Count == 0)
+            // Word retains the paragraph mark after a trailing body column break.
+            // Its style, pitch and after-spacing belong to the continuation frame.
+            bool emptyColumnTail = retainEmptyColumnTail && !endsBeforeBreak && startsAfterBreak &&
+                string.Equals(parts.LastOrDefault()?.BreakValue, "column", StringComparison.OrdinalIgnoreCase);
+            if (currentChildren.Count == 0 && !emptyColumnTail)
             {
                 return;
             }

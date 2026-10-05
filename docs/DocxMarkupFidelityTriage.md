@@ -263,6 +263,29 @@ cases retain PDF/raster bytes and gate counts; total failures remain 632. Raw
 controls and reference exports are under `artifacts/plan-revision-20261005/rv06-l6/`;
 repair verification is under `artifacts/plan-revision-20261005/rv06-l7/`.
 
+## Trailing Inline Column-Break Update (2026-10-05, RV06-L8)
+
+Body paragraphs ending with an inline column break now retain their empty
+continuation paragraph. It carries the authored paragraph-mark style, line
+height and after-spacing in the new column; before-spacing and numbering are
+removed from the continuation as for existing nonempty fragments. Previously
+the reader discarded this tail, placing the following paragraph too high.
+Table-cell lowering keeps its existing behavior pending separate qualification.
+
+Eight independent Word 16 controls cover default/explicit styles, exact/automatic
+spacing, after-spacing and mark/prefix/break-run font sizes. Destination vertical
+differences are now at most 0.42 points, compared with 12.58-37.58-point gaps for
+the trailing-break controls. The mid-paragraph control remains within 0.22 points.
+Changing the break or prefix font does not change an empty continuation's pitch;
+changing its paragraph-mark font does. A regression checks direct and hyperlink
+tails through the reader and production text emission, with mid-paragraph and
+page-break controls.
+
+The broader DOCX run passes 855 tests with no failures or skips. All 33 cached
+cases preserve PDF/raster bytes and gate counts; total failures remain 632.
+Raw controls are under `artifacts/plan-revision-20261005/rv06-l6/`, with final
+verification under `artifacts/plan-revision-20261005/rv06-l8/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

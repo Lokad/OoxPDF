@@ -104,6 +104,52 @@ internal static class DocxTextSpacingTests
         TestAssert.True(block.ManualBreakConsumesParagraphLine == true, "The snapshot should expose the preserved break paragraph.");
     }
 
+    public static void DocxReaderRetainsEmptyTailAfterTrailingBodyColumnBreak()
+    {
+        foreach (string variant in new[] { "direct", "hyperlink", "middle", "page" })
+        {
+            string breakType = variant == "page" ? "page" : "column";
+            string run = "<w:r><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"48\"/></w:rPr>" +
+                "<w:t>Prefix</w:t><w:br w:type=\"" + breakType + "\"/>" + (variant == "middle" ? "<w:t>After</w:t>" : "") + "</w:r>";
+            if (variant == "hyperlink") { run = "<w:hyperlink w:anchor=\"Unused\">" + run + "</w:hyperlink>"; }
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p>" +
+                    "<w:pPr><w:spacing w:before=\"240\" w:after=\"480\" w:line=\"480\" w:lineRule=\"exact\"/><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"24\"/></w:rPr></w:pPr>" + run +
+                    "</w:p><w:p><w:r><w:t>Target</w:t></w:r></w:p><w:sectPr><w:cols w:num=\"2\"/></w:sectPr></w:body></w:document>"
+            });
+            DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            bool emptyTail = variant is "direct" or "hyperlink";
+            TestAssert.Equal(variant == "page" ? 2 : 3, document.Paragraphs.Count);
+            if (!emptyTail) { continue; }
+            DocxParagraph tail = document.Paragraphs[1];
+            TestAssert.True(tail.Runs.All(item => item.Text.Length == 0), "A trailing column break must retain an empty continuation paragraph.");
+            TestAssert.Equal(12d, tail.Runs.Single().EffectiveProperties.FontSize);
+            TestAssert.Equal(0d, tail.SpacingBeforePoints);
+            TestAssert.Equal(24d, tail.SpacingAfterPoints);
+            DocxDocument control = document with
+            {
+                BodyElements = [document.BodyElements[0], new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", tail), document.BodyElements[^1]]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            double TargetBaseline(DocxDocument value) => renderer.InspectTextEmission(value).Lines.Last().Segments.First().BaselineY;
+            TestAssert.True(Math.Abs(TargetBaseline(document) - TargetBaseline(control)) < 0.000001d,
+                "The empty continuation must consume the same paragraph-mark pitch and after-spacing as an authored break-only paragraph.");
+        }
+    }
+
     public static void DocxReaderPromotesInlineRunColumnBreakInsideParagraph()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
