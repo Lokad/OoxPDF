@@ -1,0 +1,79 @@
+# Office-authored SVG stroke/radial probe, generated under the reference supervisor.
+param(
+    [string] $OutputPath = "tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-stroke-radial.pptx",
+    [string] $OutputDirectory = "artifacts/svg-stroke-radial-reference",
+    [int] $Dpi = 144,
+    [int] $TimeoutSeconds = 120,
+    [string] $InputPath,
+    [string] $WorkDirectory,
+    [string] $ProgressLog,
+    [string] $StatusPath
+)
+$ErrorActionPreference = "Stop"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($WorkDirectory)) {
+    $outputFull = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $repoRoot $OutputDirectory }))
+    & (Join-Path $PSScriptRoot "RenderReference.ps1") -InputPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/pptx-blank.pptx") -OutputDirectory $outputFull -Dpi $Dpi -TimeoutSeconds $TimeoutSeconds -WorkerScript $PSCommandPath
+    $fixtureFull = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $repoRoot $OutputPath }))
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $fixtureFull) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $outputFull "fixture.pptx") -Destination $fixtureFull -Force
+    Write-Host "SVG stroke/radial fixture: $fixtureFull; Office reference: $outputFull"
+    return
+}
+function Stage([string] $Name) {
+    Add-Content -LiteralPath $ProgressLog -Value ("stage:$Name " + [DateTime]::UtcNow.ToString("O"))
+}
+function Release-ComObject($Value) {
+    if ($null -ne $Value -and [Runtime.InteropServices.Marshal]::IsComObject($Value)) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($Value) }
+}
+$svgInputs = [ordered]@{
+    'radial-pad' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="30"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
+    'radial-focus' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="50" fx="25" fy="30"><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
+    'radial-user' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="30"><stop offset="0" stop-color="#00FF00"/><stop offset="1" stop-color="#000000"/></radialGradient></defs><path d="M5 5H95V95H5Z" fill="url(#g)"/></svg>'
+    'stroke-caps' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M15 25H85" fill="none" stroke="#008000" stroke-width="6" stroke-linecap="round"/><path d="M15 50H85" fill="none" stroke="#FF0000" stroke-width="6" stroke-linecap="square"/><path d="M15 75H85" fill="none" stroke="#0000FF" stroke-width="6" stroke-linecap="butt"/></svg>'
+    'stroke-vector' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="scale(2)"><path d="M10 15H40" fill="none" stroke="#0000FF" stroke-width="4"/><path d="M10 35H40" fill="none" stroke="#FF0000" stroke-width="4" vector-effect="non-scaling-stroke"/></g></svg>'
+    'stroke-dash' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 25H90" fill="none" stroke="#000000" stroke-width="4" stroke-dasharray="8 4" stroke-dashoffset="3"/><path d="M15 80L50 40L85 80" fill="none" stroke="#FF8000" stroke-width="5" stroke-linejoin="miter" stroke-miterlimit="2"/></svg>'
+}
+$svgRoot = Join-Path $WorkDirectory '_svg'
+New-Item -ItemType Directory -Force -Path $svgRoot | Out-Null
+$app = $null
+$presentation = $null
+$stage = 'activation'
+try {
+    Stage $stage
+    $app = New-Object -ComObject PowerPoint.Application
+    $version = [string]$app.Version
+    $app.DisplayAlerts = 1
+    $stage = 'create'; Stage $stage
+    $presentation = $app.Presentations.Add($false)
+    $presentation.PageSetup.SlideWidth = 960
+    $presentation.PageSetup.SlideHeight = 540
+    $slide = $presentation.Slides.Add(1, 12)
+    $slide.Background.Fill.ForeColor.RGB = 16777215
+    $index = 0
+    foreach ($item in $svgInputs.GetEnumerator()) {
+        $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
+        Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
+        $left = 72 + 288 * ($index % 3)
+        $top = 72 + 234 * [Math]::Floor($index / 3)
+        $slide.Shapes.AddPicture($svgPath, $false, $true, $left, $top, 240, 180) | Out-Null
+        $index++
+    }
+    $stage = 'export'; Stage $stage
+    $presentation.SaveAs((Join-Path $WorkDirectory 'fixture.pptx'), 24)
+    $presentation.SaveAs((Join-Path $WorkDirectory 'reference.pdf'), 32)
+} catch {
+    [ordered]@{Status='export-failed';Stage=$stage;OfficeApp='PowerPoint';OfficeVersion='';ExportSettings='';Error=$_.Exception.Message} | ConvertTo-Json | Set-Content -LiteralPath $StatusPath -Encoding utf8
+    throw
+} finally {
+    $stage = 'cleanup'; Stage $stage
+    try { if ($presentation) { $presentation.Close() } }
+    finally {
+        try { if ($app) { $app.Quit() } }
+        finally { Release-ComObject $presentation; Release-ComObject $app; [GC]::Collect(); [GC]::WaitForPendingFinalizers() }
+    }
+}
+$stage = 'rasterize'; Stage $stage
+& (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -InputPdf (Join-Path $WorkDirectory 'reference.pdf') -OutputDirectory $WorkDirectory -Dpi $Dpi
+$stage = 'done'; Stage $stage
+[ordered]@{Status='ok';Stage=$stage;OfficeApp='PowerPoint';OfficeVersion=$version;ExportSettings='Generated six SVG pictures with AddPicture; 960x540 slide; SaveAs PPTX(24) then PDF(32)';Error=''} | ConvertTo-Json | Set-Content -LiteralPath $StatusPath -Encoding utf8

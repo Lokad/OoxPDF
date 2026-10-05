@@ -1,0 +1,24 @@
+{
+  "id": "pptx-ladder-07-svg-stroke-radial",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-stroke-radial.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "images", "svg-strokes", "svg-radial", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "minStructuralSimilarity": 0.97,
+    "minForegroundColorHistogramCorrelation": 0.995,
+    "maxMeanAbsoluteError": 2.0,
+    "maxChangedPixelRatioAtThreshold16": 0.016,
+    "minForegroundRecall": 0.99
+  },
+  "allowedUnsupportedFeatures": ["svg"],
+  "support": {
+    "minStructuralSimilarity": 0.97,
+    "minForegroundColorHistogramCorrelation": 0.995,
+    "minForegroundRecall": 0.99
+  }
+}

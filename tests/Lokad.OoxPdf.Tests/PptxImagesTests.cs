@@ -1235,6 +1235,27 @@ internal static class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
     }
 
+    // RV07-E1: pad extends the last stop beyond the outer circle, through the clipped shape.
+    public static void PptxSyntheticSvgRadialPadPaintsCorners()
+    {
+        foreach (string units in new[] { "cx=\"50%\" cy=\"50%\" r=\"20%\"", "gradientUnits=\"userSpaceOnUse\" cx=\"50\" cy=\"25\" r=\"10\"" })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <defs><radialGradient id="g" {units}><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+                  <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII).Replace("\r\n", "\n");
+
+            // Painting this whole rectangle with the final stop covers each corner outside the circle.
+            TestAssert.Contains("0 0 1 rg\n72 468 m\n216 468 l\n216 396 l\n72 396 l\nh\nf\n", pdf);
+            TestAssert.Contains("1 0 0 rg", pdf);
+        }
+    }
+
     // RV07: garbage gradient vectors diagnose instead of killing conversion.
     public static void PptxSyntheticSvgGarbageGradientVectorDiagnoses()
     {

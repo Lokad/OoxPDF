@@ -1192,6 +1192,16 @@ internal sealed partial class PptxRenderer
             graphics.SaveState();
             graphics.SetAlpha(opacity, 1d);
         }
+        if (radial.Spread == SvgGradientSpread.Pad)
+        {
+            // Pad extends the final stop through the clipped shape beyond the outer ring.
+            RgbColor outerColor = SampleSvgRadialStops(radial.Stops, 1d, radial.Spread);
+            graphics.SetFillRgb(outerColor.Red, outerColor.Green, outerColor.Blue);
+            if (TryAppendSvgPath(graphics, data, transform, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY))
+            {
+                graphics.FillCurrentPath();
+            }
+        }
         int ringCount = Math.Clamp((int)Math.Ceiling(Math.Max(radiusX, radiusY) / 2d), 16, 128);
         for (int ring = 0; ring < ringCount; ring++)
         {
