@@ -238,7 +238,16 @@ catch {
 Assert-True $incompleteMissed "R02 incomplete entry without a completion marker misses"
 
 # R02: the markup import wrapper delegates to the shared verified path.
-$markupCase = Join-Path $repoRoot "visual-cases/cases/docx-markup-all/case.json"
+$markupDocx = New-ScratchDocx "markup.docx"
+$markupCase = Join-Path $scratch "markup-case.json"
+$markupCaseId = "workflow-markup-all-$PID"
+[ordered]@{
+    id = $markupCaseId
+    kind = "docx"
+    input = [IO.Path]::GetFileName($markupDocx)
+    docxMarkup = "all"
+    docxMarkupGeometry = "preserve"
+} | ConvertTo-Json | Set-Content -LiteralPath $markupCase -Encoding UTF8
 & (Join-Path $repoRoot "tools/ImportDocxMarkupReferenceCache.ps1") -Case $markupCase -ReferencePdf $standinPdf -Dpi 144 -Force | Out-Null
 $markupManifest = Get-Content -Raw -LiteralPath $markupCase | ConvertFrom-Json
 $markupInput = (Resolve-Path -LiteralPath (Join-Path (Split-Path -Parent $markupCase) $markupManifest.input)).Path
@@ -246,7 +255,11 @@ $markupVariant = "docxMarkup=all;docxMarkupGeometry=preserve"
 $markupKey = Get-ReferenceIdentityKey $markupInput $markupVariant
 $markupDir = Join-Path (Get-ReferenceCacheRoot) $markupKey
 $markupCheck = Test-ReferenceIdentityEntry $markupDir ((Get-FileHash -LiteralPath $markupInput -Algorithm SHA256).Hash.ToLowerInvariant()) $markupVariant
-Assert-True (($markupCheck.State -eq "Complete") -and ([string]$markupCheck.Metadata.CaseId -eq "docx-markup-all")) "R02 markup import wrapper publishes a verified entry with case provenance"
+Assert-True (($markupCheck.State -eq "Complete") -and ([string]$markupCheck.Metadata.CaseId -eq $markupCaseId)) "R02 markup import wrapper publishes a verified scratch entry with case provenance"
+$publicMarkupCase = Join-Path $repoRoot "visual-cases/cases/docx-markup-all/case.json"
+$publicMarkupManifest = Get-Content -Raw -LiteralPath $publicMarkupCase | ConvertFrom-Json
+$publicMarkupInput = (Resolve-Path -LiteralPath (Join-Path (Split-Path -Parent $publicMarkupCase) $publicMarkupManifest.input)).Path
+Assert-True ($markupKey -ne (Get-ReferenceIdentityKey $publicMarkupInput $markupVariant)) "R02 fake markup import cannot replace the real public-case reference"
 & (Join-Path $repoRoot "tools/RenderCachedReference.ps1") -InputPath $markupInput -OutputDirectory (Join-Path $scratch "markup-hit-out") -Dpi 144 -CacheOnly -CacheVariant $markupVariant | Out-Null
 Assert-True ((Test-Path -LiteralPath (Join-Path $scratch "markup-hit-out/reference.pdf")) -and (@(Get-ChildItem -LiteralPath (Join-Path $scratch "markup-hit-out") -Filter "page-*.png").Count -ge 1)) "R02 markup variant hit serves PDF plus derivatives"
 
