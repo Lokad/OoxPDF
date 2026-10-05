@@ -1,6 +1,8 @@
 # Package smoke test (T08): packs the library as shipped, then converts a
 # document through the packed package only: no project references, no tools,
-# no Office/COM, and no reference cache. On hosts without Windows fonts,
+# no Office/COM, and no reference cache. Each run has its own package feed,
+# restore cache, and consumer directory so older packages cannot satisfy the test.
+# On hosts without Windows fonts,
 # pass an embeddable TrueType font through -FontPath to exercise a custom resolver.
 
 param(
@@ -15,36 +17,44 @@ if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
 }
 
 $libraryProject = Join-Path $repoRoot "src/Lokad.OoxPdf/Lokad.OoxPdf.csproj"
-& dotnet pack $libraryProject -c $Configuration --nologo
+$runId = [Guid]::NewGuid().ToString("N")
+$packDirectory = Join-Path $repoRoot "artifacts/nuget/package-smoke/$runId"
+$scratch = Join-Path $repoRoot "artifacts/package-smoke/$runId"
+New-Item -ItemType Directory -Force -Path $packDirectory, $scratch | Out-Null
+& dotnet pack $libraryProject -c $Configuration --nologo --output $packDirectory
 if ($LASTEXITCODE -ne 0) {
     throw "Library packing failed with exit code $LASTEXITCODE."
 }
 
-$package = Get-ChildItem -LiteralPath (Join-Path $repoRoot "artifacts/nuget") -Filter "Lokad.OoxPdf.*.nupkg" |
-    Where-Object { $_.Name -notlike "*.snupkg" } |
-    Sort-Object Name -Descending |
-    Select-Object -First 1
-if ($null -eq $package) {
-    throw "No packed Lokad.OoxPdf package found under artifacts/nuget."
+$packages = @(Get-ChildItem -LiteralPath $packDirectory -Filter "Lokad.OoxPdf.*.nupkg")
+if ($packages.Count -ne 1) {
+    throw "Expected exactly one freshly packed Lokad.OoxPdf package, found $($packages.Count)."
 }
+$package = $packages[0]
 $version = $package.BaseName.Substring("Lokad.OoxPdf.".Length)
 Write-Host ("Smoking package {0}." -f $package.Name)
 
-$scratch = Join-Path $repoRoot "artifacts/package-smoke"
-if (Test-Path -LiteralPath $scratch) {
-    Remove-Item -LiteralPath $scratch -Recurse -Force
+$archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
+try {
+    $libraryEntry = $archive.GetEntry("lib/net10.0/Lokad.OoxPdf.dll")
+    if ($null -eq $libraryEntry) { throw "Packed library DLL is missing." }
+    $libraryStream = $libraryEntry.Open()
+    try {
+        $librarySha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($libraryStream))
+    }
+    finally { $libraryStream.Dispose() }
 }
-New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+finally { $archive.Dispose() }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx") -Destination (Join-Path $scratch "input.docx")
 
+$escapedFeedPath = [Security.SecurityElement]::Escape($packDirectory)
 Set-Content -LiteralPath (Join-Path $scratch "NuGet.config") -Encoding UTF8 -Value @"
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
     <clear />
-    <add key="local-pack" value="../nuget" />
-    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="local-pack" value="$escapedFeedPath" />
   </packageSources>
 </configuration>
 "@
@@ -65,14 +75,22 @@ Set-Content -LiteralPath (Join-Path $scratch "smoke.csproj") -Encoding UTF8 -Val
 
 $program = @'
 using System.Text;
+using System.Security.Cryptography;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 
 string input = args[0];
 string output = args[1];
+string expectedLibrarySha256 = args[2];
+string loadedLibrarySha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(OoxPdfConverter).Assembly.Location)));
+if (!string.Equals(expectedLibrarySha256, loadedLibrarySha256, StringComparison.Ordinal))
+{
+    throw new InvalidDataException("Smoke consumer loaded a DLL different from the freshly packed library.");
+}
+Console.WriteLine("Loaded packed library SHA-256 " + loadedLibrarySha256 + ".");
 var options = new OoxPdfOptions
 {
-    FontResolver = args.Length > 2 ? new SmokeFontResolver(args[2]) : null
+    FontResolver = args.Length > 3 ? new SmokeFontResolver(args[3]) : null
 };
 OoxPdfConverter.Convert(input, output, options);
 byte[] header = new byte[5];
@@ -110,9 +128,14 @@ Set-Content -LiteralPath (Join-Path $scratch "Program.cs") -Encoding UTF8 -Value
 
 $input = Join-Path $scratch "input.docx"
 $output = Join-Path $scratch "output.pdf"
-$smokeArguments = @($input, $output)
+$smokeArguments = @($input, $output, $librarySha256)
 if (-not [string]::IsNullOrWhiteSpace($FontPath)) { $smokeArguments += $FontPath }
-& dotnet run --project (Join-Path $scratch "smoke.csproj") -c $Configuration -- @smokeArguments
+$smokeProject = Join-Path $scratch "smoke.csproj"
+& dotnet restore $smokeProject --packages (Join-Path $scratch "packages") --configfile (Join-Path $scratch "NuGet.config") --nologo
+if ($LASTEXITCODE -ne 0) {
+    throw "Isolated package restore failed with exit code $LASTEXITCODE."
+}
+& dotnet run --no-restore --project $smokeProject -c $Configuration -- @smokeArguments
 if ($LASTEXITCODE -ne 0) {
     throw "Smoke conversion failed with exit code $LASTEXITCODE."
 }
@@ -122,3 +145,13 @@ if ($pdfHeader -ne "%PDF-") {
     throw "Smoke output does not start with the PDF header: $pdfHeader."
 }
 Write-Host "Package smoke test passed through the packed library."
+[ordered]@{
+    Package = $package.FullName
+    PackageVersion = $version
+    PackageSha256 = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash
+    LibrarySha256 = $librarySha256
+    OutputSha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
+    OutputBytes = (Get-Item -LiteralPath $output).Length
+    RestorePackages = Join-Path $scratch "packages"
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $scratch "summary.json") -Encoding UTF8
+Write-Host ("Evidence: {0}" -f (Join-Path $scratch "summary.json"))

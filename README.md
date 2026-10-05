@@ -238,5 +238,7 @@ gate, and the PDFium visual probe. Ubuntu intentionally runs the portable `api`,
 Windows fonts skip when those fonts are absent. Its package smoke test supplies
 DejaVu Sans through a custom font resolver and checks font embedding. Console
 test reports are uploaded separately for each operating system.
+Package smoke tests use a fresh local feed and isolated restore directory, then
+verify that the consumer loaded the exact library DLL from the newly packed package.
 
 `src/Lokad.OoxPdf` is the NuGet library and must remain free of package references. Office automation and PDFium are isolated under `tools/` for validation only.
