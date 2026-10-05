@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -167,6 +167,52 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
         }
     }
     $controls
+} elseif ($ProbeSet -eq 'stroke-round-dash-controls') {
+    $controls = [ordered]@{}
+    foreach ($mapping in @('uniform','stretch')) {
+        $viewWidth = if ($mapping -eq 'uniform') { 200 } else { 100 }
+        foreach ($probe in @(
+            @{Name='regular';Length=70;Phase=0},
+            @{Name='partial-first';Length=70;Phase=1},
+            @{Name='initial-gap';Length=70;Phase=1.5},
+            @{Name='negative-phase';Length=70;Phase=-1},
+            @{Name='single-dash';Length=3;Phase=0},
+            @{Name='empty';Length=2;Phase=1.5},
+            @{Name='partial-last';Length=64;Phase=0},
+            @{Name='last-gap';Length=70;Phase=0}
+        )) {
+            $end=15+$probe.Length
+            $key="$mapping-$($probe.Name)"
+            $controls[$key]="<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $viewWidth 100`"><path d=`"M15 25H$end M25 15V$end M35 80L$end 25`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"6`" stroke-linecap=`"round`" stroke-dasharray=`"8 4`" stroke-dashoffset=`"$($probe.Phase)`"/></svg>"
+        }
+    }
+    foreach ($mapping in @('uniform','stretch')) {
+        $viewWidth=if($mapping -eq 'uniform'){200}else{100}
+        foreach($probe in @(
+            @{Name='cycle-end-draw';Length=68;Phase=0},
+            @{Name='cycle-end-gap';Length=72;Phase=0},
+            @{Name='cycle-start-gap';Length=63;Phase=1.5},
+            @{Name='cycle-partial';Length=65;Phase=1.5}
+        )){
+            $end=15+$probe.Length
+            $key="$mapping-$($probe.Name)"
+            $controls[$key]="<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $viewWidth 100`"><path d=`"M15 25H$end M25 15V$end M35 80L$end 25`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"6`" stroke-linecap=`"round`" stroke-dasharray=`"8 4`" stroke-dashoffset=`"$($probe.Phase)`"/></svg>"
+        }
+    }
+    foreach ($mapping in @('uniform','stretch')) {
+        $viewWidth=if($mapping -eq 'uniform'){200}else{100}
+        foreach($probe in @(
+            @{Name='endpoint-neither';Width=3;Length=27;Phase=3},
+            @{Name='endpoint-first';Width=3;Length=70;Phase=0},
+            @{Name='endpoint-last';Width=3;Length=70;Phase=3},
+            @{Name='endpoint-cycle';Width=6;Length=72;Phase=0}
+        )){
+            $end=15+$probe.Length
+            $key="$mapping-$($probe.Name)"
+            $controls[$key]="<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $viewWidth 100`"><path d=`"M15 25H$end`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"$($probe.Width)`" stroke-linecap=`"round`" stroke-dasharray=`"8 4`" stroke-dashoffset=`"$($probe.Phase)`"/></svg>"
+        }
+    }
+    $controls
 } elseif ($ProbeSet -eq 'radial-spread-controls') {
     $controls = [ordered]@{}
     foreach ($spread in @('repeat', 'reflect')) {
@@ -226,7 +272,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls')) {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -234,7 +280,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls')) {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null

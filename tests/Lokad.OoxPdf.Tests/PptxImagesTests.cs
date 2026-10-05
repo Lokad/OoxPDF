@@ -999,6 +999,185 @@ internal static class PptxImagesTests
         }
     }
 
+    public static void PptxSvgRoundDashUsesFlatInteriorsAndVisibleTerminalCaps()
+    {
+        foreach (var probe in new[]
+        {
+            (Length: 70d, Phase: 0d, First: 15d, Last: 83d, Caps: 2),
+            (Length: 70d, Phase: 1d, First: 15d, Last: 85d, Caps: 2),
+            (Length: 70d, Phase: 1.5d, First: 18d, Last: 85d, Caps: 2),
+            (Length: 70d, Phase: -1d, First: 15d, Last: 85d, Caps: 2),
+            (Length: 64d, Phase: 0d, First: 15d, Last: 79d, Caps: 2),
+            (Length: 68d, Phase: 0d, First: 15d, Last: 83d, Caps: 2),
+            (Length: 72d, Phase: 0d, First: 15d, Last: 83d, Caps: 1),
+        })
+        {
+            byte[]? baseline = null;
+            foreach (double size in new[] { .1d, 100d, 1000d })
+            {
+                string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                    <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M{size * .15} {size * .25}H{size * (15 + probe.Length) / 100}" fill="none" stroke="#0000FF" stroke-width="{size * .06}" stroke-linecap="round" stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="{probe.Phase}"/>
+                    </svg>
+                    """));
+                string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                OoxPdfConverter.Convert(input, output);
+                byte[] bytes = File.ReadAllBytes(output);
+                string pdf = Encoding.ASCII.GetString(bytes);
+                TestAssert.Contains("0 J", pdf);
+                TestAssert.True(!pdf.Contains("1 J", StringComparison.Ordinal), "Interior dashes must retain a flat white gap.");
+                TestAssert.Equal(probe.Caps, Regex.Matches(pdf, @"(?m)^f\r?$").Count);
+                TestAssert.Equal(probe.Caps * 2, Regex.Matches(pdf, @"(?m)^.* c\r?$").Count);
+                if (probe.Caps > 0)
+                {
+                    MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+                    TestAssert.Equal(probe.Caps + 1, moves.Count);
+                    double lineStart = double.Parse(moves[0].Groups[1].Value, CultureInfo.InvariantCulture);
+                    double first = double.Parse(moves[1].Groups[1].Value, CultureInfo.InvariantCulture);
+                    TestAssert.True(Math.Abs(first - lineStart - (probe.First - 15d) * .72d) < .001d, "First cap must sit on the first visible dash, including initial gaps.");
+                    if (probe.Caps == 2)
+                    {
+                        double last = double.Parse(moves[2].Groups[1].Value, CultureInfo.InvariantCulture);
+                        TestAssert.True(Math.Abs(last - lineStart - (probe.Last - 15d) * .72d) < .001d, "Last cap must sit on the last visible dash within the endpoint region.");
+                    }
+                }
+                if (baseline is null) baseline = bytes;
+                else TestAssert.True(baseline.AsSpan().SequenceEqual(bytes), "Visible terminal caps must survive source-coordinate rescaling.");
+            }
+        }
+    }
+
+    public static void PptxSvgRoundDashUnqualifiedPathsRetainNativeStroke()
+    {
+        string manySubpaths = string.Join(" ", Enumerable.Repeat("M15 25H85", 129));
+        foreach (var probe in new[]
+        {
+            (Data: "M15 25H85", Alpha: "stroke-opacity=\"0.5\"", Dash: "8 4"),
+            (Data: "M15 25C30 0 70 50 85 25", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H85V70", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H85V70Z", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H85", Alpha: "", Dash: "12 8 10"),
+            (Data: "M15 25H15", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H85", Alpha: "", Dash: "1e-12 1e-12"),
+            (Data: "M15 25H85A10 10 0 0 1 95 35", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H1e308", Alpha: "", Dash: "8 4"),
+            (Data: manySubpaths, Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H18", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H17", Alpha: "stroke-dashoffset=\"1.5\"", Dash: "8 4"),
+            (Data: "M15 25H18", Alpha: "stroke-dashoffset=\"1.5\"", Dash: "8 4"),
+            (Data: "M15 25H23", Alpha: "", Dash: "8 4"),
+            (Data: "M15 25H27", Alpha: "", Dash: "8 4"),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="{probe.Data}" fill="none" stroke="#0000FF" stroke-width="6" stroke-linecap="round" stroke-dasharray="{probe.Dash}" {probe.Alpha}/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.Contains("1 J", pdf);
+            TestAssert.Equal(1, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+            TestAssert.Equal(0, Regex.Matches(pdf, @"(?m)^f\r?$").Count);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Unqualified round-dash paths must retain native stroke fallback.");
+            TestAssert.True(!pdf.Contains("NaN", StringComparison.Ordinal) && !pdf.Contains("Infinity", StringComparison.Ordinal), "The fallback must retain finite PDF paint.");
+        }
+    }
+
+    public static void PptxSvgRoundDashTerminalCapsPreserveStretchedViewportGeometry()
+    {
+        byte[]? baseline = null;
+        foreach (double size in new[] { .1d, 100d, 1000d })
+        {
+            string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                <svg viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M{size * .15} {size * .25}H{size * .85} M{size * .25} {size * .15}V{size * .85} M{size * .35} {size * .8}L{size * .75} {size * .25}" fill="none" stroke="#0000FF" stroke-width="{size * .06}" stroke-linecap="round" stroke-dasharray="{size * .08} {size * .04}"/>
+                </svg>
+                """));
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            byte[] bytes = File.ReadAllBytes(output);
+            string pdf = Encoding.ASCII.GetString(bytes);
+            TestAssert.Contains("1.333 0 0 0.667", pdf);
+            TestAssert.Contains("0 J", pdf);
+            TestAssert.Equal(1, Regex.Matches(pdf, @"(?m)^S\r?$").Count);
+            TestAssert.Equal(6, Regex.Matches(pdf, @"(?m)^f\r?$").Count);
+            MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+            TestAssert.Equal(9, moves.Count);
+            double X(int index) => double.Parse(moves[index].Groups[1].Value, CultureInfo.InvariantCulture);
+            double Y(int index) => double.Parse(moves[index].Groups[2].Value, CultureInfo.InvariantCulture);
+            MatchCollection curves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) c\r?$");
+            TestAssert.Equal(12, curves.Count);
+            double TipX(int index) => double.Parse(curves[index].Groups[5].Value, CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs((TipX(0) - X(0)) * 1.333d + 4.32d) < .003d, "The first horizontal cap must preserve its stretched outward radius.");
+            TestAssert.True(Math.Abs((TipX(2) - X(0)) * 1.333d - 102.24d) < .003d, "The last horizontal cap must sit on source dash end 83, before the trailing gap.");
+            TestAssert.True(Math.Abs((Y(6) - Y(1)) * .667d + 48.96d) < .002d, "The last vertical cap must retain the viewport's independent vertical scale.");
+            if (baseline is null) baseline = bytes;
+            else TestAssert.True(baseline.AsSpan().SequenceEqual(bytes), "Stretched terminal caps must survive source-coordinate rescaling.");
+        }
+    }
+
+    public static void PptxSvgRoundDashCapsStayWithinOfficeEndpointRegions()
+    {
+        foreach (var probe in new[]
+        {
+            (Width: 3, Length: 27, Phase: 3, Caps: 0, CapRightFromStart: 0d),
+            (Width: 3, Length: 70, Phase: 0, Caps: 1, CapRightFromStart: 0d),
+            (Width: 3, Length: 70, Phase: 3, Caps: 1, CapRightFromStart: 70d),
+            (Width: 6, Length: 72, Phase: 0, Caps: 1, CapRightFromStart: 0d),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 25H{15 + probe.Length}" fill="none" stroke="#0000FF" stroke-width="{probe.Width}" stroke-linecap="round" stroke-dasharray="8 4" stroke-dashoffset="{probe.Phase}"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.Contains("0 J", pdf);
+            TestAssert.Equal(probe.Caps, Regex.Matches(pdf, @"(?m)^f\r?$").Count);
+            MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+            TestAssert.Equal(probe.Caps + 1, moves.Count);
+            if (probe.Caps == 1)
+            {
+                double start = double.Parse(moves[0].Groups[1].Value, CultureInfo.InvariantCulture);
+                double cap = double.Parse(moves[1].Groups[1].Value, CultureInfo.InvariantCulture);
+                TestAssert.True(Math.Abs(cap - start - probe.CapRightFromStart * .72d) < .001d, "A cap must retain the independently observed Office endpoint region.");
+            }
+        }
+    }
+
+    public static void PptxSvgRoundDashPartialTerminalCapsDoNotPaintInteriorGaps()
+    {
+        foreach (var probe in new[] { (Length: 70, Phase: 1), (Length: 62, Phase: 0) })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 25H{15 + probe.Length}" fill="none" stroke="#0000FF" stroke-width="6" stroke-linecap="round" stroke-dasharray="8 4" stroke-dashoffset="{probe.Phase}"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            MatchCollection moves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) m\r?$");
+            MatchCollection curves = Regex.Matches(pdf, @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) c\r?$");
+            TestAssert.Equal(3, moves.Count);
+            TestAssert.Equal(4, curves.Count);
+            double start = double.Parse(moves[0].Groups[1].Value, CultureInfo.InvariantCulture);
+            double last = start + probe.Length * .72d;
+            for (int index = 0; index < curves.Count; index++)
+            foreach (int group in new[] { 1, 3, 5 })
+            {
+                double x = double.Parse(curves[index].Groups[group].Value, CultureInfo.InvariantCulture);
+                TestAssert.True(index < 2 ? x <= start + .001d : x >= last - .001d,
+                    "A terminal cap must stay outward of its dash end, retaining the adjacent partial-dash gap.");
+            }
+        }
+    }
+
     private static List<double> ReadPdfStrokeWidths(string pdf)
     {
         var widths = new List<double>();

@@ -1192,13 +1192,20 @@ internal sealed partial class PptxRenderer
     {
         graphics.SaveState();
         SvgTransform? strokeViewport = ApplySvgStrokeViewport(graphics, imageX, imageY, imageHeight, scaleX, scaleY);
+        List<SvgRoundDashCap>? roundDashCaps = opacity == 1d && lineCap == 1 && dashPoints is { Length: 2 }
+            ? ReadSvgRoundDashCaps(data, transform, widthPoints, dashPoints, dashPhasePoints, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport)
+            : null;
         if (opacity < 1d)
         {
             graphics.SetAlpha(1d, opacity);
         }
         graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
         graphics.SetLineWidth(widthPoints);
-        if (lineCap != 0)
+        if (roundDashCaps is not null)
+        {
+            graphics.SetLineCap(0);
+        }
+        else if (lineCap != 0)
         {
             graphics.SetLineCap(lineCap);
         }
@@ -1218,9 +1225,93 @@ internal sealed partial class PptxRenderer
         if (painted)
         {
             graphics.StrokeCurrentPath();
+            if (roundDashCaps is not null)
+            {
+                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                foreach (SvgRoundDashCap cap in roundDashCaps)
+                {
+                    PaintSvgRoundDashCap(graphics, cap, widthPoints / 2d);
+                }
+            }
         }
         graphics.RestoreState();
         return painted;
+    }
+    private readonly record struct SvgRoundDashCap(double X, double Y, double DirectionX, double DirectionY);
+    private static void PaintSvgRoundDashCap(PdfGraphicsBuilder graphics, SvgRoundDashCap cap, double radius)
+    {
+        double nx = -cap.DirectionY, ny = cap.DirectionX;
+        double sx = cap.X + nx * radius, sy = cap.Y + ny * radius;
+        double tx = cap.X + cap.DirectionX * radius, ty = cap.Y + cap.DirectionY * radius;
+        double ex = cap.X - nx * radius, ey = cap.Y - ny * radius;
+        double kappa = SvgCircleKappa * radius;
+        graphics.MoveTo(sx, sy);
+        graphics.CurveTo(sx + cap.DirectionX * kappa, sy + cap.DirectionY * kappa,
+            tx + nx * kappa, ty + ny * kappa, tx, ty);
+        graphics.CurveTo(tx - nx * kappa, ty - ny * kappa,
+            ex + cap.DirectionX * kappa, ey + cap.DirectionY * kappa, ex, ey);
+        graphics.ClosePath();
+        graphics.FillCurrentPath();
+    }
+    private static List<SvgRoundDashCap>? ReadSvgRoundDashCaps(string data, SvgTransform transform, double widthPoints, double[] dash, double phase, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? viewport)
+    {
+        // RV07-S6: Office rounds visible dash ends within half a stroke width
+        // of an original endpoint. Outward semicircles retain partial dash gaps.
+        // Qualify complete single-line subpaths with multiple visible dashes;
+        // short strokes, curves, joins, alpha and extreme geometry keep fallback.
+        double period = dash[0] + dash[1];
+        if (dash[0] <= widthPoints || dash[1] <= 0d || !double.IsFinite(period)) return null;
+        double meanScale = (scaleX + scaleY) / 2d;
+        if (viewport is null && Math.Abs(scaleX - scaleY) > meanScale * .000001d) return null;
+        (List<SvgPathCommand> parsed, bool complete) = ParseSvgPathData(data);
+        if (!complete || parsed.Count == 0 || parsed.Count > 256 || parsed.Count % 2 != 0) return null;
+        List<SvgPathCommand> commands = TransformSvgCommands(parsed, transform);
+        var caps = new List<SvgRoundDashCap>();
+        phase %= period;
+        if (phase < 0d) phase += period;
+        for (int index = 0; index < commands.Count; index += 2)
+        {
+            SvgPathCommand move = commands[index], line = commands[index + 1];
+            if (move.Kind != 'M' || line.Kind is not ('L' or 'H' or 'V')) return null;
+            double endX = line.Kind == 'V' ? move.Arguments[0] : line.Arguments[0];
+            double endY = line.Kind == 'H' ? move.Arguments[1] : line.Kind == 'V' ? line.Arguments[0] : line.Arguments[1];
+            double sourceDx = endX - move.Arguments[0], sourceDy = endY - move.Arguments[1];
+            double largest = Math.Max(Math.Abs(sourceDx), Math.Abs(sourceDy));
+            if (!double.IsFinite(largest) || largest == 0d) return null;
+            // Use source geometry for cycle boundaries, before the rounded
+            // viewport CTM and translated path coordinates add numeric drift.
+            double length = largest * Math.Sqrt(Math.Pow(sourceDx / largest, 2d) + Math.Pow(sourceDy / largest, 2d)) * meanScale;
+            if (!TryMapSvgPicturePoint(move.Arguments[0], move.Arguments[1], minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, viewport, out double x, out double y)
+                || !TryMapSvgPicturePoint(endX, endY, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, viewport, out endX, out endY)) return null;
+            double dx = endX - x, dy = endY - y;
+            if (!double.IsFinite(dx) || !double.IsFinite(dy) || !double.IsFinite(length)
+                || length <= widthPoints || length / period > 1e12d || !double.IsFinite(length + phase)) return null;
+            double mappedLargest = Math.Max(Math.Abs(dx), Math.Abs(dy));
+            double mappedLength = mappedLargest * Math.Sqrt(Math.Pow(dx / mappedLargest, 2d) + Math.Pow(dy / mappedLargest, 2d));
+            if (!double.IsFinite(mappedLength) || mappedLength == 0d) return null;
+            double tolerance = Math.Max(1d, period) * 1e-12d;
+            double first = phase < dash[0] ? 0d : period - phase;
+            if (first >= length - tolerance) return null;
+            double remainder = (length + phase) % period;
+            if (remainder < tolerance || period - remainder < tolerance) remainder = 0d;
+            double last = remainder == 0d ? length - dash[1] : remainder <= dash[0] ? length : length - (remainder - dash[0]);
+            if (last <= first || last > length) return null;
+            double firstEnd = phase < dash[0] ? dash[0] - phase : first + dash[0];
+            if (last <= firstEnd + tolerance) return null;
+            if (first <= widthPoints / 2d + tolerance && !AddCap(first, -1d)) return null;
+            if (length - last <= widthPoints / 2d + tolerance && !AddCap(last, 1d)) return null;
+
+            bool AddCap(double distance, double direction)
+            {
+                double cx = x + dx * (distance / length), cy = y + dy * (distance / length);
+                double radius = widthPoints / 2d * (1d + SvgCircleKappa);
+                if (!double.IsFinite(cx - radius) || !double.IsFinite(cx + radius)
+                    || !double.IsFinite(cy - radius) || !double.IsFinite(cy + radius)) return false;
+                caps.Add(new SvgRoundDashCap(cx, cy, direction * dx / mappedLength, direction * dy / mappedLength));
+                return true;
+            }
+        }
+        return caps;
     }
     private static SvgTransform? ApplySvgStrokeViewport(PdfGraphicsBuilder graphics, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
     {
@@ -1778,26 +1869,23 @@ internal sealed partial class PptxRenderer
 
         return hasPath;
 
-        double SvgX(double value) => imageX + (value - minX) * scaleX;
-        double SvgY(double value) => imageY + imageHeight - (value - minY) * scaleY;
         bool TryMapSvgPoint(double x, double y, out double mappedX, out double mappedY)
         {
-            // RV07: composed overflow (huge transforms or scales on finite
-            // data) maps past double range; stopping keeps the finite prefix
-            // instead of throwing non-finite PDF numbers into per-node recovery.
-            mappedX = SvgX(x);
-            mappedY = SvgY(y);
-            if (!double.IsFinite(mappedX) || !double.IsFinite(mappedY))
-            {
-                return false;
-            }
-            if (strokeViewport is SvgTransform viewport)
-            {
-                mappedX = (mappedX - viewport.OffsetX) / viewport.M11;
-                mappedY = (mappedY - viewport.OffsetY) / viewport.M22;
-            }
-            return double.IsFinite(mappedX) && double.IsFinite(mappedY);
+            return TryMapSvgPicturePoint(x, y, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, strokeViewport, out mappedX, out mappedY);
         }
+    }
+    private static bool TryMapSvgPicturePoint(double x, double y, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, SvgTransform? strokeViewport, out double mappedX, out double mappedY)
+    {
+        // Stop composed overflow before emitting a non-finite PDF number.
+        mappedX = imageX + (x - minX) * scaleX;
+        mappedY = imageY + imageHeight - (y - minY) * scaleY;
+        if (!double.IsFinite(mappedX) || !double.IsFinite(mappedY)) return false;
+        if (strokeViewport is SvgTransform viewport)
+        {
+            mappedX = (mappedX - viewport.OffsetX) / viewport.M11;
+            mappedY = (mappedY - viewport.OffsetY) / viewport.M22;
+        }
+        return double.IsFinite(mappedX) && double.IsFinite(mappedY);
     }
 
     // RV07: basic shapes convert to path data and paint through the shared
