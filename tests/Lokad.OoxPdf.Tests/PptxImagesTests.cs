@@ -832,6 +832,67 @@ internal static class PptxImagesTests
         }
     }
 
+    public static void PptxSvgDashOffsetUsesOfficeStrokeWidthUnits()
+    {
+        foreach (var probe in new[]
+        {
+            (Width: 3, Offset: -1, Phase: "-2.16"), (Width: 3, Offset: 1, Phase: "2.16"), (Width: 3, Offset: 3, Phase: "6.48"),
+            (Width: 6, Offset: -1, Phase: "-4.32"), (Width: 6, Offset: 1, Phase: "4.32"), (Width: 6, Offset: 3, Phase: "12.96"),
+            (Width: 9, Offset: -1, Phase: "-6.48"), (Width: 9, Offset: 1, Phase: "6.48"), (Width: 9, Offset: 3, Phase: "19.44"),
+        })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 25H85" fill="none" stroke="#0000FF" stroke-width="{probe.Width}" stroke-dasharray="8 4" stroke-dashoffset="{probe.Offset}"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            TestAssert.Contains($"[5.76 2.88 ] {probe.Phase} d", File.ReadAllText(output, Encoding.ASCII));
+        }
+    }
+
+    public static void PptxSvgDashOffsetIsInvariantToSourceCoordinateScale()
+    {
+        byte[]? baseline = null;
+        foreach (double size in new[] { .1d, 100d, 1000d })
+        {
+            string input = WriteSvgGradientDeck(FormattableString.Invariant($"""
+                <svg viewBox="0 0 {size * 2} {size}" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M{size * .15} {size * .25}H{size * .85}" fill="none" stroke="#0000FF" stroke-width="{size * .06}" stroke-dasharray="{size * .08} {size * .04}" stroke-dashoffset="3"/>
+                </svg>
+                """));
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output);
+            byte[] pdf = File.ReadAllBytes(output);
+            TestAssert.Contains("[5.76 2.88 ] 12.96 d", Encoding.ASCII.GetString(pdf));
+            if (baseline is null) baseline = pdf;
+            else TestAssert.True(baseline.AsSpan().SequenceEqual(pdf), "Office dash-offset units must survive source-coordinate rescaling.");
+        }
+    }
+
+    public static void PptxSvgComposedDashOffsetOverflowKeepsFillAndSibling()
+    {
+        foreach (var probe in new[] { (Width: "1e308", Offset: "4"), (Width: "4", Offset: "1e308") })
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 0H40V40H0Z" fill="#00FF00" stroke="#FF0000" stroke-width="{probe.Width}" stroke-dasharray="8 4" stroke-dashoffset="{probe.Offset}"/>
+                  <path d="M50 25H90" fill="none" stroke="#0000FF"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.Contains("0 1 0 rg", pdf);
+            TestAssert.Contains("0 0 1 RG", pdf);
+            TestAssert.True(!pdf.Contains("1 0 0 RG", StringComparison.Ordinal), "Overflowing dash phase must omit only the unusable stroke.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Composed dash phase overflow must diagnose.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Composed dash phase overflow must keep the picture.");
+        }
+    }
+
     private static List<double> ReadPdfStrokeWidths(string pdf)
     {
         var widths = new List<double>();

@@ -188,7 +188,9 @@ internal sealed partial class PptxRenderer
                 {
                     dashPoints[dashIndex] = userDash[dashIndex] * strokeScale;
                 }
-                dashPhasePoints = stroke.DashOffset * strokeScale;
+                // RV07-S4: Office interprets dash offset in stroke-width units,
+                // while dash lengths remain user-space geometry.
+                dashPhasePoints = stroke.DashOffset * strokeWidthPoints;
             }
             // RV07: stroke state past double range (huge transform area factors)
             // cannot set PDF line state; the stroke is omitted with its fill

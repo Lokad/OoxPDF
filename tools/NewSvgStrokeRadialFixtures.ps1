@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -121,6 +121,30 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
     $controls['filled-stretch'] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><g transform="scale(2,1)"><path d="M10 20H50V35H10Z" fill="#00FF00" stroke="#0000FF" stroke-width="6" stroke-linejoin="round"/></g></svg>'
     $controls['filled-shear'] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><g transform="matrix(1,0,0.5,1,0,0)"><path d="M10 20H50V35H10Z" fill="#00FF00" stroke="#0000FF" stroke-width="6" stroke-linejoin="round"/></g></svg>'
     $controls
+} elseif ($ProbeSet -eq 'stroke-dash-controls') {
+    $controls = [ordered]@{}
+    foreach ($mapping in @('uniform','stretch')) {
+        $width = if ($mapping -eq 'uniform') { 200 } else { 100 }
+        foreach ($cap in @('butt','round','square')) {
+            foreach ($phase in @(0,1,3)) {
+                $key = "$mapping-$cap-$phase"
+                $controls[$key] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $width 100`"><path d=`"M15 25H85 M25 15V85 M35 80L75 25`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"6`" stroke-linecap=`"$cap`" stroke-dasharray=`"8 4`" stroke-dashoffset=`"$phase`"/></svg>"
+            }
+        }
+    }
+    $controls
+} elseif ($ProbeSet -eq 'stroke-dash-phase-controls') {
+    $controls = [ordered]@{}
+    foreach ($mapping in @('uniform','stretch')) {
+        $width = if ($mapping -eq 'uniform') { 200 } else { 100 }
+        foreach ($strokeWidth in @(3,6,9)) {
+            foreach ($phase in @(-1,1,3)) {
+                $key = "$mapping-$strokeWidth-$phase"
+                $controls[$key] = "<svg xmlns=`"http://www.w3.org/2000/svg`" viewBox=`"0 0 $width 100`"><path d=`"M15 25H85 M25 15V85 M35 80L75 25`" fill=`"none`" stroke=`"#0000FF`" stroke-width=`"$strokeWidth`" stroke-linecap=`"butt`" stroke-dasharray=`"8 4`" stroke-dashoffset=`"$phase`"/></svg>"
+            }
+        }
+    }
+    $controls
 } elseif ($ProbeSet -eq 'radial-spread-controls') {
     $controls = [ordered]@{}
     foreach ($spread in @('repeat', 'reflect')) {
@@ -180,7 +204,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls')) {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -188,7 +212,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls')) {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null
