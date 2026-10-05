@@ -1256,6 +1256,35 @@ internal static class PptxImagesTests
         }
     }
 
+    // RV07-F1: PowerPoint 16 exports focal variants centered. Keep that Office
+    // appearance while reporting the unsupported SVG focus to callers.
+    public static void PptxSyntheticSvgRadialFocalFallbackMatchesOfficeCenter()
+    {
+        (byte[] Pdf, List<OoxPdfDiagnostic> Diagnostics) Render(string focalAttributes)
+        {
+            string input = WriteSvgGradientDeck($"""
+                <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                  <defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="50" cy="25" r="20" {focalAttributes}><stop offset="0" stop-color="#FF0000"/><stop offset="1" stop-color="#0000FF"/></radialGradient></defs>
+                  <path d="M0 0H100V50H0Z" fill="url(#g)"/>
+                </svg>
+                """);
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+            return (File.ReadAllBytes(output), diagnostics);
+        }
+
+        var centered = Render("fx=\"50\" fy=\"25\"");
+        TestAssert.True(!centered.Diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "A centered supported gradient does not warn.");
+        foreach (string focal in new[] { "fx=\"25\" fy=\"15\"", "fx=\"99\" fy=\"15\"", "fx=\"25\" fy=\"15\" fr=\"0\"" })
+        {
+            var candidate = Render(focal);
+            TestAssert.True(centered.Pdf.AsSpan().SequenceEqual(candidate.Pdf), "Focal fallback preserves the Office-centered PDF bytes.");
+            TestAssert.Equal(1, candidate.Diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores focal points", StringComparison.Ordinal)));
+            TestAssert.True(!candidate.Diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Focal fallback keeps the picture.");
+        }
+    }
+
     // RV07: garbage gradient vectors diagnose instead of killing conversion.
     public static void PptxSyntheticSvgGarbageGradientVectorDiagnoses()
     {
