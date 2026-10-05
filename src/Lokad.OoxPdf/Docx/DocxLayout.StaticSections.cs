@@ -298,11 +298,17 @@ internal sealed partial class DocxLayoutEngine
         double marginLeft = ReadTwipsValue(effectiveSettings.MarginLeftValue, document.MarginLeftPoints);
         double marginRight = ReadTwipsValue(effectiveSettings.MarginRightValue, document.MarginRightPoints);
         double gutter = Math.Max(0d, ReadTwipsValue(effectiveSettings.GutterDistanceValue, effectiveSettings.GutterDistancePoints ?? 0d));
-        // Odd-authored margins, captured before gutter and reserve: even mirrored pages
-        // mirror the body (left) side onto the authored right while the right side keeps
-        // odd-page geometry below.
+        // Keep the authored right edge for the fixed review lane. Word mirrors
+        // the body and inside gutter, while balloons remain at this odd-page edge.
         double oddAuthoredMarginLeft = marginLeft;
         double oddAuthoredMarginRight = marginRight;
+        bool scaledMarkupReserve = reserveMarkupMargin && retuneReserve && Math.Abs(printScale - 1d) >= 0.000000001d;
+        if (scaledMarkupReserve && IsEvenMirroredPage(document, pageNumber))
+        {
+            // Swap before charging the gutter and retuning the reserve so
+            // identical odd/even content has the same scaled wrap width.
+            (marginLeft, marginRight) = (marginRight, marginLeft);
+        }
         if (gutter > 0d)
         {
             if (ShouldApplyGutterToRightMargin(document, pageNumber))
@@ -327,12 +333,10 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double markupMarginReservePoints = Math.Max(0d, Math.Max(marginLeft - authoredMarginLeft, marginRight - authoredMarginRight));
-        if (IsEvenMirroredPage(document, pageNumber))
+        if (!scaledMarkupReserve && IsEvenMirroredPage(document, pageNumber))
         {
-            // Office (mirrored-margin reference): even pages mirror the body (left) side onto
-            // the authored right margin, while the right side keeps odd-page geometry (full
-            // mirror without reserve, odd reserved geometry with reserve) so the review reserve
-            // and balloon lane never mirror left.
+            // Preserve the existing unscaled geometry profiles: body margins
+            // fully mirror without reserve; the fixed reserve stays on the right.
             marginLeft = oddAuthoredMarginRight;
             if (!reserveMarkupMargin)
             {
@@ -354,7 +358,10 @@ internal sealed partial class DocxLayoutEngine
             section.SectionProperties,
             CreateColumnFrames(
                 width,
-                section.SectionProperties));
+                section.SectionProperties))
+        {
+            MarkupLaneDesignBodyEnd = scaledMarkupReserve ? width - oddAuthoredMarginRight : null
+        };
 
         IReadOnlyList<DocxLayoutColumnFrame> CreateColumnFrames(double pageWidth, DocxSectionLayoutProperties section)
         {

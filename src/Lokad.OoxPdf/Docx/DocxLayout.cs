@@ -234,6 +234,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxLayoutColumnFrame> ColumnFrames)
     {
         public double BodyWidth => Math.Max(1d, Width - MarginLeft - MarginRight);
+        public double? MarkupLaneDesignBodyEnd { get; init; }
     }
 
     private sealed record DocxEffectiveSectionSettings(
@@ -370,7 +371,10 @@ internal sealed partial class DocxLayoutEngine
                 [],
                 [],
                 [],
-                currentItems.ToArray()));
+                currentItems.ToArray())
+            {
+                MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd
+            });
             PlaceInFlightFootnotesOnCompletingPage();
             // RV12: guard the page budget while paginating without consuming it, so
             // a tiny budget trips before the full layout is retained; emission still

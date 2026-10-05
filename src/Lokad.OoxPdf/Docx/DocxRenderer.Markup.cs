@@ -1115,8 +1115,9 @@ internal sealed partial class DocxRenderer
         {
             // Office (W5-X1): lane geometry scales uniformly; the layout-derived lane ignores
             // the right margin (it saturates at the preferred reserve) and never scales.
-            // Authored body end = layout right edge plus the reserved points.
-            double designBodyEnd = page.Width - page.MarginRight + page.MarkupMarginReservePoints;
+            // Mirrored body frames and inside gutters must not move the fixed
+            // review lane. Layout retains its authored odd-page right edge.
+            double designBodyEnd = page.MarkupLaneDesignBodyEnd ?? (page.Width - page.MarginRight + page.MarkupMarginReservePoints);
             double printScale = markupContext.WordCompatiblePrintScale;
             bodyWidth = Math.Max(MinimumMarkupBalloonBodyWidthPoints, WordCompatibleAllMarkupBalloonBodyWidthPoints * printScale);
             double scaledTextX = (designBodyEnd + WordCompatibleAllMarkupBalloonLaneGapPoints) * printScale;

@@ -413,6 +413,45 @@ internal static class DocxPageMarkupTests
             "Right-lane connector stems should stay between the body frame and balloon body.");
     }
 
+    public static void DocxWordCompatibleMirroredPagesKeepWrapWidthAndBalloonLane()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-markup-margin-mirrored.docx"));
+        DocxDocument source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        string text = string.Join(" ", Enumerable.Repeat("Identical public paragraph for mirrored review wrapping.", 8));
+        DocxParagraph first = DocxTests.CreateCommentMarkerParagraph(text, "1");
+        DocxParagraph second = DocxTests.CreateCommentMarkerParagraph(text, "2");
+        foreach (double gutter in new[] { 0d, 24d })
+        {
+            DocxDocument document = source with
+            {
+                PageSettings = source.PageSettings with
+                {
+                    GutterDistanceValue = (gutter * 20d).ToString(CultureInfo.InvariantCulture),
+                    GutterDistancePoints = gutter
+                },
+                BodyElements = [new DocxParagraphElement(first), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), new DocxParagraphElement(second)]
+            };
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: 0.75d)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            TestAssert.Equal(2, layout.Pages.Count);
+            TestAssert.Equal(108d + gutter, layout.Pages[0].MarginLeft);
+            TestAssert.Equal(54d, layout.Pages[1].MarginLeft);
+            TestAssert.True(Math.Abs(layout.Pages[0].ColumnFrames[0].Width - layout.Pages[1].ColumnFrames[0].Width) < 0.000001d,
+                "Word keeps identical mirrored paragraphs at the same wrap width, including an inside gutter.");
+            string[] oddLines = layout.Pages[0].Items.OfType<DocxTextLineLayout>().Select(line => line.Text).ToArray();
+            string[] evenLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().Select(line => line.Text).ToArray();
+            TestAssert.True(oddLines.Length > 1, "The probe must exercise wrapping.");
+            TestAssert.True(oddLines.SequenceEqual(evenLines), "Mirroring must preserve line breaks for repeated content.");
+
+            var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxMarkupBalloonPlacementSnapshot[] balloons = renderer.InspectMarkupBalloons(document).ToArray();
+            TestAssert.Equal(2, balloons.Length);
+            TestAssert.True(balloons.All(balloon => balloon.Side == "Right"), "Word keeps the review lane on the right.");
+            TestAssert.True(Math.Abs(balloons[0].X - balloons[1].X) < 0.000001d,
+                "Mirroring and the inside gutter must not move the fixed review lane.");
+        }
+    }
+
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBar()
     {
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Revision bar public probe", 10d, 12d) with

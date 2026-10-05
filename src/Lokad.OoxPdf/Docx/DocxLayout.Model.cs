@@ -26,6 +26,8 @@ internal sealed record DocxLayoutPage(
     IReadOnlyList<DocxLayoutItem> Items)
 {
     public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];
+    // The scaled review lane keeps this authored edge when the body mirrors.
+    public double? MarkupLaneDesignBodyEnd { get; init; }
 }
 
 // One positioned content item on a laid-out page, emitted in the order the

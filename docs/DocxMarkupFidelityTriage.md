@@ -162,6 +162,27 @@ moving two balloons and increasing failures from 15 to 21. That geometry defect
 is the next bounded repair, rather than a reason to restore insignificant text.
 Evidence is under `artifacts/plan-revision-20261005/rv06-l3/`.
 
+## Mirrored Wrap Width Update (2026-10-05, RV06-L4)
+
+Scaled Word-compatible layout now mirrors the body margins before computing its
+review reserve. Odd and even pages therefore retain the same wrap width for
+identical content, including an inside gutter. The authored odd-page right edge
+is retained separately for balloon placement, matching Word's fixed right lane.
+The unscaled PreserveDocumentLayout and ReserveMarkupMargin profiles keep their
+existing geometry.
+
+Three independent Word 16 probes cover mirrored pages, mirrored pages with a
+24-point gutter and a nonmirrored gutter control. Repeated paragraphs keep the
+same line breaks and balloon x position on both pages. The new regression
+exercises that behavior through layout and balloon inspection. The broader DOCX
+run passes 848 tests, with no failures or skips. The public mirrored case returns
+from 21 to 15 failures; its even-page last-baseline delta falls from 7.267 to 1.25
+points, and its raster-region maximum error returns from 27.72 to 18.35. It still
+has spacing, graphics and other parity residuals. The other 32 cached cases
+preserve candidate PDF bytes and gate counts; total failures fall from 645 to
+639, with unchanged page counts. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l4/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
