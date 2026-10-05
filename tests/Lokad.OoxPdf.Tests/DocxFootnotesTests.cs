@@ -3076,8 +3076,8 @@ internal static class DocxFootnotesTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new MixMaxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
         DocxFloatingDrawingLayout placed = layout.FloatingDrawings.Single();
-        TestAssert.True(placed.TextBoxLayout is not null, "Floating drawing must carry its textbox story layout.");
-        DocxTextLineLayout first = placed.TextBoxLayout.TextLines.First(line => line.Text.StartsWith("Box note", StringComparison.Ordinal));
+        var textBoxLayout = TestAssert.NotNull(placed.TextBoxLayout, "Floating drawing must carry its textbox story layout.");
+        DocxTextLineLayout first = textBoxLayout.TextLines.First(line => line.Text.StartsWith("Box note", StringComparison.Ordinal));
         return first.BaselineY;
     }
 
@@ -3107,8 +3107,8 @@ internal static class DocxFootnotesTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DescMostTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
         DocxFloatingDrawingLayout placed = layout.FloatingDrawings.Single();
-        TestAssert.True(placed.TextBoxLayout is not null, "Floating drawing must carry its textbox story layout.");
-        DocxTextLineLayout first = placed.TextBoxLayout.TextLines.First(line => line.Text.StartsWith("Box note", StringComparison.Ordinal));
+        var textBoxLayout = TestAssert.NotNull(placed.TextBoxLayout, "Floating drawing must carry its textbox story layout.");
+        DocxTextLineLayout first = textBoxLayout.TextLines.First(line => line.Text.StartsWith("Box note", StringComparison.Ordinal));
         return first.BaselineY;
     }
 
