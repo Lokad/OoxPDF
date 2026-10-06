@@ -229,7 +229,7 @@ internal sealed partial class DocxRenderer
             bool thirdWrapped = thirdWidth > continuationWidth;
             if (!double.IsFinite(firstWidth) || firstWidth <= 0d || !double.IsFinite(thirdWidth) || thirdWidth <= 0d ||
                 !double.IsFinite(fourthWidth) || fourthWidth <= 0d || fourthWidth > continuationWidth ||
-                !(firstWrapped || secondWrapped || thirdWrapped) || (firstWrapped && secondWrapped && thirdWrapped)) { return null; }
+                !(firstWrapped || secondWrapped || thirdWrapped)) { return null; }
         }
         DocxUniformBalloonRow[]? firstRows = null;
         double firstTailGap = 0d;
