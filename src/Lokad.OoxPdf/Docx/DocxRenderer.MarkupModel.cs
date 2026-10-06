@@ -58,6 +58,7 @@ internal sealed partial class DocxRenderer
         int WordCompatibleBodySummaryPartCount)
     {
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
+        public double? WordCompatibleBodyLineHeightEm { get; init; }
     }
 
     private sealed record DocxMarkupBalloonLaneBand(
@@ -102,6 +103,7 @@ internal sealed partial class DocxRenderer
         int LaneBandCandidateCount)
     {
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
+        public double? WordCompatibleBodyLineHeightEm { get; init; }
 
         public DocxMarkupBalloonPlacementSnapshot ToSnapshot(int pageIndex)
         {

@@ -2269,6 +2269,53 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleSameFaceBalloonUsesBodyLineMetrics()
+    {
+        string body = string.Join(" ", Enumerable.Repeat("alpha", 30));
+        foreach (bool mixedFaces in new[] { false, true })
+        {
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+            {
+                Runs = mixedFaces
+                    ? [new DocxTextRun(body[..6], 12d, null, false, false, false, null, "CommentFace"),
+                       new DocxTextRun(body[6..], 12d, null, false, false, false, null, "OtherCommentFace")]
+                    : [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single();
+            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            var lines = ReadEmbeddedGlyphTextShows(page)
+                .Where(show => show.X >= balloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
+                    !show.Text.StartsWith("Commented", StringComparison.Ordinal) &&
+                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+            TestAssert.True(lines.Length >= 3, "The same-face probe must have continuation rows.");
+            TestAssert.Equal(body, string.Join(" ", lines.Select(show => show.Text.Trim())));
+            double expectedGap = lines[0].Size * (mixedFaces ? 1.2d : 1.45d);
+            for (int index = 1; index < lines.Length; index++)
+            {
+                TestAssert.True(Math.Abs(lines[index - 1].Y - lines[index].Y - expectedGap) < 0.02d,
+                    "Same-face uniform comments need body metrics; mixed-face comments retain legacy pitch.");
+            }
+            TestAssert.True(Math.Abs(balloon.Height - (9.21d + (lines.Length - 1) * expectedGap + 3.4d)) < 0.02d,
+                "Same-face metric admission must keep balloon height aligned with emitted rows.");
+        }
+    }
+
     private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
@@ -3240,14 +3287,15 @@ internal static class DocxCommentsTests
             RelatedStories = [commentStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
-        
-        double expected = 9.21d + 3 * 9d * printScale * 1.2d + 3.4d;
-
-        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxMarkupBalloonPlacementSnapshot placement = renderer
             .InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        var rows = ReadEmbeddedGlyphTextShows(page)
+            .Where(show => show.Text.StartsWith("Balloon", StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal(4, rows.Length);
+        double expected = 9.21d + rows[0].Y - rows[^1].Y + 3.4d;
 
         TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit four text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
     }
