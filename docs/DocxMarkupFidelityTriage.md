@@ -1342,6 +1342,44 @@ and two new overwide-word guards. Prior positioning/composed pixel residuals and
 rejected first-row reservation evidence remain under `rv06-l44/` beside it.
 
 
+## RV06-L45: separator-only prefix row before the first tail word
+
+A fitting plain two-word ASCII prefix followed by one authored tail separator
+can now keep that separator in its prepared face while the first word starts
+below the prefix. Whole and overwide words retain the existing scalar-safe tail
+wrapper. An explicitly empty first tail row prevents even a zero-advance first
+scalar from painting beside the prefix. The separator itself still consumes its
+own advance on that row; no separator is invented inside a split word.
+
+Fourteen trusted metric controls cover ten font pairs and three print scales.
+When only a separator shares the prefix row, the first step uses visible prefix
+descent plus tail ascent/line gap. Maximum error is 0.131pt/mean 0.042pt. Including
+tail descent reaches 0.621pt/mean 0.352pt and is rejected; that mixed-descent rule
+still applies to the earlier fitting visible-tail-word case. Twenty-six later
+tail-only pitches have maximum error 0.082pt. Both source-face admission and
+distinct-descent regressions fail before their repairs. Forty-eight numeric
+scalar/zero-first-advance/descent/whole-and-split/scale variants check exact text,
+separator face/advance, row spacing, final mark/size, visible width and height.
+
+All 892 DOCX checks, 88 balloon checks and thirteen Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `e0647231`:
+`D2BA3A419DC2A6DDFB6351633B85A8A7686CB3A8F8DE54370D4043BC227B6987`.
+Across 230 earlier and fourteen new comparisons, fourteen improve MAE and SSIM,
+230 retain PDF/raster/graphics bytes and all retain main-document text and
+comment content. All fourteen changed controls match exact row text, spaces and
+source faces, including eighteen within-word breaks. Maximum row-start X gap is
+0.838pt and baseline gap is 0.207pt; the rejected mixed-descent prototype reaches
+0.810pt baseline gap. Actual Office break matches reach 238 of 244 inputs.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Six break mismatches remain:
+three-part and multi-paragraph comments, two earlier wide-word guards and the
+new doubled-separator/punctuation guards. Prior positioning/composed pixel
+residuals and 33 partial cached cases remain. Qualification, input/reference/
+candidate identities and the rejected mixed-descent counterfactual are under
+`artifacts/plan-revision-20261005/rv06-l45/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
