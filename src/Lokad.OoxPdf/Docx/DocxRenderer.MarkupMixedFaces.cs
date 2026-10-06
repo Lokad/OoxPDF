@@ -173,7 +173,10 @@ internal sealed partial class DocxRenderer
         bool singlePrefixWord = prefix.Text.IndexOf(' ') < 0;
         if ((!singlePrefixWord && prefix.Text.IndexOf(' ') <= 0) || prefix.Text.EndsWith(' ') || tail.Text[0] == ' ' ||
             !double.IsFinite(firstLineWidth) || firstLineWidth <= 0d) { return null; }
-        for (int i = 0; i < prefix.Text.Length; i++)
+        int plainPrefixLength = prefix.Text.EndsWith(',') ? prefix.Text.Length - 1 : prefix.Text.Length;
+        if (plainPrefixLength != prefix.Text.Length &&
+            (!singlePrefixWord || plainPrefixLength == 0 || !char.IsAsciiLetterOrDigit(prefix.Text[plainPrefixLength - 1]))) { return null; }
+        for (int i = 0; i < plainPrefixLength; i++)
         {
             if ((i & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
             if (prefix.Text[i] != ' ' && !char.IsAsciiLetterOrDigit(prefix.Text[i])) { return null; }
