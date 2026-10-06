@@ -1986,6 +1986,17 @@ Of 34 cached Office cases, 34 retain PDF bytes and the aggregate is 545 failed g
 
 Frozen runtime `a7e00d87` passes a clean Release build and **2186 passed, 0 failed, 1 skipped**, including 904 DOCX checks. The optional private PPTX layout diagnostic lacks configured input/output. Exact local 0.1.5 package smoke `fc8ca2fecb6e42f98e34dadf69618701` contains the full-suite DLL, SHA-256 `EEFFFF3A1F197652C434F1C648E6594D919F1B5E9AE9FAB1728A70A46F5D30A9`. This run covers L20 through L68/E4 and excludes L69 and later prototypes. Evidence is under `artifacts/plan-revision-20261005/milestone-a7e00d87/`. Release preparation remains deferred.
 
+## RV06-L71: wrapped first and second bodies in four comment paragraphs
+
+Wrapped first and second bodies precede fitting third and fourth bodies. Each body and nominal mark retains its prepared font; height and emission share each continuation pitch and all three adjacent transitions. Other wrapping combinations in four paragraphs, mixed/decorated bodies and unsupported spacing retain complete fallback. The expanded production regression fails before changes; nineteen mixed checks cover 2688 two-/three-/four-paragraph scalar/advance/descent/gap/length/mark/scale variants, including 192 new first-and-second combinations and inherited formatting/numeric/zero-width-body guards.
+
+Frozen runtime `d015108c` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `54c7d705881948368e0dc20dc71d153c` contains the exact tested DLL, SHA-256 `9CE7A7BB57C4441BE6160504E2BA3DF4D013503CCD3F79D66054188F411273F5`. The Linux source archive emits two SourceLink warnings and zero build errors.
+
+Across 800 prior and twenty-six fresh controls, 24 improve MAE and SSIM and 802 retain PDF/raster/graphics bytes, with no image regressions. All 826 retain main-document text and comment content; 763 match Office breaks. All 24 changed cases match exact row text, spaces and prepared fonts, including 86 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.29pt. 24 Office metric controls cover 65 first-body pitches and 41 second-body pitches at maximum errors 0.075pt and 0.066pt; adjacent transitions differ by at most 0.113/0.141/0.111pt. Reusing second-body metrics for first continuations misses by up to 1.336pt. All six unsupported/boundary guards retain PDF/raster/graphics bytes. The original four-paragraph case improves from four candidate rows to nine matching Office rows, with exact spaces/fonts and MAE 0.669→0.198. Older changed cases are included in the emission and metric inventories.
+
+Of 34 cached Office cases, 34 retain PDF bytes and the aggregate is 545 failed gates with no gate increases. 63 control break mismatches remain across other wrapping combinations in four paragraphs, mixed paragraph bodies, five paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font and guard audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l71/`. Separate full integration V42 through L70/E4 remains in progress and excludes L71 and later prototypes.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
