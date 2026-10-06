@@ -2950,7 +2950,7 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            if (wrappedFourth && (!hasFourth || !wrappedFirst || wrappedSecond || wrappedThird)) { continue; }
+            if (wrappedFourth && (!hasFourth || wrappedThird || wrappedFirst == wrappedSecond)) { continue; }
             if (hasFourth && (!hasThird || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
@@ -3110,7 +3110,7 @@ internal static class DocxCommentsTests
             }
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight + fourthPitch * size + fourthHeight)) < 0.02d,
                 "Height includes the paragraph transition and all later rows.");
-            if (wrappedFourth && (!hasFourth || !wrappedFirst || wrappedSecond || wrappedThird)) { continue; }
+            if (wrappedFourth && (!hasFourth || wrappedThird || wrappedFirst == wrappedSecond)) { continue; }
             if (hasFourth && !supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
                 if (wrappedThird)
@@ -3172,7 +3172,7 @@ internal static class DocxCommentsTests
                     DocxDocument guarded = document with
                     {
                         RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first),
-                            new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = "control.", FontFamily = "AnchorFace" }] }),
+                            new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = wrappedSecond ? new string('a', 80) + " ending." : "control.", FontFamily = wrappedSecond ? "CommentFace" : "AnchorFace" }] }),
                             new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Text = "finish." }] }),
                             new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 80) + " last.", FontFamily = "OtherCommentFace" }] })] }]
                     };
