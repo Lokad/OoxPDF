@@ -260,9 +260,11 @@ internal sealed partial class DocxRenderer
     {
         int split = prefix.Text.IndexOf(' ');
         int separatorLength = tail.Text.Length > 1 && tail.Text[1] == ' ' ? 2 : 1;
-        if (split <= 0 || split != prefix.Text.LastIndexOf(' ') || split == prefix.Text.Length - 1 ||
+        // A terminal comma stays in the prefix face; other punctuation keeps fallback.
+        int plainPrefixLength = prefix.Text.EndsWith(',') ? prefix.Text.Length - 1 : prefix.Text.Length;
+        if (split <= 0 || split != prefix.Text.LastIndexOf(' ') || split >= plainPrefixLength - 1 ||
             tail.Text.Length <= separatorLength || tail.Text[separatorLength] == ' ') { return null; }
-        for (int i = 0; i < prefix.Text.Length; i++)
+        for (int i = 0; i < plainPrefixLength; i++)
         {
             if ((i & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
             if (prefix.Text[i] != ' ' && !char.IsAsciiLetterOrDigit(prefix.Text[i])) { return null; }

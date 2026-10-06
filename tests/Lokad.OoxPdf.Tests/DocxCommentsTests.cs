@@ -2624,6 +2624,101 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleMixedBalloonKeepsSeparatedTailAfterTerminalComma()
+    {
+        foreach (bool supplementary in new[] { false, true })
+        foreach (bool zeroAdvance in new[] { false, true })
+        foreach (bool fittingFirstWord in new[] { false, true })
+        foreach (short prefixDescender in new short[] { -50, -350 })
+        foreach (int length in new[] { 18, 72 })
+        foreach (double rightMargin in new[] { 72d, 144d, 207d })
+        {
+            const string prefix = "Review table,";
+            string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
+            if (zeroAdvance) { word = "a" + word[1..].Replace('a', 'b'); }
+            string tail = " " + (fittingFirstWord ? "i " : string.Empty) + word + " ending.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "CommentFace"),
+                    new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodySpaceAdvance: 123,
+                bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroAdvance ? (short)0 : null), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(prefix, shows[0].Text);
+            TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
+            TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
+            TestAssert.Equal(fittingFirstWord ? " i " : " ", shows[1].Text);
+            TestAssert.Equal(900, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint(' ')));
+            double size = shows[1].Size;
+            TestAssert.True(Math.Abs(shows[1].Y - shows[0].Y) < 0.001d, "The authored separator stays on the prefix row.");
+            TestAssert.True(Math.Abs(shows[1].X - shows[0].X - shows[0].Font.MeasureTextPoints(prefix, size)) < 0.04d,
+                "The separator starts after the complete prefix advance.");
+            var tailRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+            TestAssert.True(tailRows.Length >= 1, "The separated word must paint below the prefix.");
+            if (zeroAdvance) { TestAssert.Equal(0, (int)tailRows[0].Font.Font.GetAdvanceWidth(tailRows[0].Font.Font.MapCodePoint('a'))); }
+            double firstPitch = (fittingFirstWord ? Math.Max(-prefixDescender / 1000d, 0.2d) : -prefixDescender / 1000d) + 0.8d;
+            TestAssert.True(Math.Abs(shows[0].Y - tailRows[0].Y - firstPitch * size) < 0.02d,
+                "The first step selects descent from visible text; a separator-only row keeps prefix descent.");
+            foreach (var row in tailRows)
+            {
+                TestAssert.Equal(900, (int)row.Font.Font.GetAdvanceWidth(row.Font.Font.MapCodePoint('b')));
+                TestAssert.True(row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
+                    "Whole and split first words retain visible continuation width.");
+            }
+            for (int i = 1; i < tailRows.Length; i++)
+            {
+                TestAssert.True(Math.Abs(tailRows[i - 1].Y - tailRows[i].Y - size) < 0.02d,
+                    "Later rows retain the tail face's metrics.");
+            }
+            TestAssert.Equal(" ", shows[^1].Text);
+            TestAssert.Equal(500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
+            TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The terminal mark keeps nominal balloon size.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - tailRows[^1].Y)) < 0.02d,
+                "Height includes the mixed first step and every tail row.");
+            foreach ((string guardedPrefix, string guardedTail) in new[]
+            {
+                ("Review table:", tail), ("Review, table,", tail),
+                ("Review ,", tail), (prefix, "  " + word + " ending.")
+            })
+            {
+                DocxParagraph guardedComment = comment with
+                {
+                    Runs = [comment.Runs[0] with { Text = guardedPrefix }, comment.Runs[1] with { Text = guardedTail }]
+                };
+                DocxDocument guarded = document with
+                {
+                    RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
+                };
+                var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
+                        !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
+                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "A colon, internal comma, punctuation-only word or doubled separator keeps complete fallback.");
+            }
+        }
+    }
+
     public static void DocxWordCompatibleMixedBalloonRetainsTwoLeadingTailSpaces()
     {
         foreach (bool supplementary in new[] { false, true })
