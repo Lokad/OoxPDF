@@ -1926,6 +1926,16 @@ Frozen revision `08594bc8` passes a clean Release build and the full Windows sui
 
 Fresh local 0.1.5 package smoke `733e2de8d79d4fa18a84a5927467b594` contains the exact full-suite DLL, SHA-256 `3C85895AD2F7AA79FBBE99286E9FAB7F2C996D47674B048CE4092C7CFA25E079`. Full-suite/package evidence is under `artifacts/plan-revision-20261005/milestone-08594bc8/`; separate L63, L64 and L65 Office-reference qualifications remain authoritative for their scoped visual behavior. Version remains 0.1.5 and release preparation remains deferred.
 
+## RV06-L66: wrapped third bodies after two fitting comment paragraphs
+
+A wrapped third body follows two fitting plain paragraphs. Each body and nominal mark retains its prepared font; height and emission share the third body's continuation pitch and both adjacent transitions. Four-paragraph wrapping, mixed/decorated bodies and unsupported spacing retain complete fallback. The expanded production regression fails before changes; nineteen mixed checks cover 1920 two-/three-paragraph scalar/advance/descent/gap/length/mark/scale variants, including 192 new third-only wrap combinations and formatting/numeric/zero-width-body guards.
+
+Frozen runtime `97b0c6ad` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `0f6938ab6bf34a2ca02d3bec2f08ab6f` contains the exact tested DLL, SHA-256 `C98F6676BAE8983769174B1BBC0EFB5670A910517BB61DEDBB842BCE6FF8BA18`. The Linux source archive emits two SourceLink warnings and zero build errors.
+
+Across 670 prior and twenty-six fresh controls, 19 improve MAE and SSIM and 677 retain PDF/raster/graphics bytes, with no image regressions. All 696 retain main-document text and comment content; 649 match Office breaks. All 19 changed cases match exact row text, spaces and prepared fonts, including 16 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.277pt. Nineteen Office metric controls cover twenty-five third-body pitches at maximum error 0.083pt; transitions differ by at most 0.083/0.089pt. Reusing second-body metrics for third continuations misses by up to 1.346pt. All six guards/boundaries retain PDF/raster/graphics bytes; the separately classified short third body fits one row and also retains PDF/raster/graphics bytes, without changing its input.
+
+Of 34 cached Office cases, 34 retain PDF bytes and the aggregate is 545 failed gates with no gate increases. 47 control break mismatches remain across mixed/wrapped paragraph bodies, five paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font and boundary audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l66/`. Separate full integration V40 through L65/E4 remains in progress and excludes L66 and later prototypes.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
