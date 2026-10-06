@@ -1131,6 +1131,40 @@ separate row composition and metric evidence. Styled/grouped/unprepared fallback
 prior positioning and composed pixel residuals remain. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l39/`.
 
+## RV06-L40: a joined first word across source faces
+
+A fitting ASCII letter/digit prefix can now share an overwide first word with its
+prepared tail face. The tail splits at Unicode scalar boundaries using the
+qualified first-row and continuation widths. Prefixes with spaces or other break
+opportunities retain first-tail-word admission; the remaining two-face gates,
+including multiple tail words, stay intact. Height, continuation metrics, source
+CIDs, final mark face and cancellation use the existing qualified paths.
+
+The production reproducer fails before repair and passes for ASCII and
+supplementary Unicode at two print scales. It checks source-face fragments,
+complete text with no invented spaces, first-row prefix advance, tail pitch,
+final mark size/face and height, plus composed-prefix fallback. All 887 DOCX
+checks, 83 balloon checks and eight Linux regressions pass. Release is clean;
+fresh 0.1.5 package smoke contains the exact tested DLL from runtime revision
+`ccaa4809`:
+`2AFA896FFBF90A2C2F206955E65E1F3A0E2C5888200E04728D5B0B231D286E8B`.
+
+All 171 prior Office controls retain PDF, raster and graphics bytes. Of seven new
+probes, five joined-word controls improve error and similarity and match Office
+breaks across Courier New, Georgia, Arial and Aptos. The two preserved-separator
+guards retain PDFs. All 178 controls retain main-document text and comment
+content. The five repaired controls match exact row text, spaces and source faces,
+including twelve within-word breaks; maximum row-start X gap is 0.085pt and
+baseline gap is 0.177pt. All 34 cached PDFs and 551 failed gates stay unchanged.
+
+Joined multi-word prefixes, separated prefixes and the prior fallback/positioning
+and composed-pixel residuals remain. The separated-word controls show a different
+first continuation pitch, requiring font-transition evidence before admission.
+Ten controls retain break mismatches, and 33 cached cases remain partial. Evidence
+is under `artifacts/plan-revision-20261005/rv06-l40/`; invalid unqualified fixture
+versions from an XML namespace generation error are retained separately from the
+trusted corrected input identities.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
