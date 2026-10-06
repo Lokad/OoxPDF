@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Pdf;
 
@@ -25,7 +26,7 @@ internal sealed partial class DocxRenderer
                 paragraph.FieldReferences.Count != 0 || paragraph.Revisions.Count != 0 ||
                 paragraph.ListLabel is not null || paragraph.Alignment != DocxTextAlignment.Left ||
                 paragraph.Indent != DocxParagraphIndent.Empty || paragraph.TabStops.Count != 0 ||
-                paragraph.Spacing != DocxParagraphSpacing.Empty || paragraph.LineSpacingPoints is not null ||
+                !IsWordCompatibleBalloonParagraphSpacing(paragraph.Spacing) || paragraph.LineSpacingPoints is not null ||
                 paragraph.ParagraphMarkRun is not { } mark || !IsPlainBalloonParagraphRun(mark) ||
                 !fonts.RunResources.TryGetValue(mark, out DocxRunFontResource? markResource) ||
                 markResource.Resolution.Bold || markResource.Resolution.Italic || markResource.Resolution.IsFallback ||
@@ -56,6 +57,17 @@ internal sealed partial class DocxRenderer
         !run.AllCaps && !run.SmallCaps && !run.Hidden && run.VerticalAlignmentValue is null &&
         run.HighlightValue is null && run.ShadingFillHex is null && run.CharacterSpacingPoints == 0d &&
         run.FieldKind is null && (run.ColorHex is null || run.ColorHex == "000000");
+
+    private static bool IsWordCompatibleBalloonParagraphSpacing(DocxParagraphSpacing spacing) =>
+        // Office normalizes explicit before/after twips in comment balloons.
+        // Keep line, automatic and contextual spacing on the existing path.
+        spacing.BeforeLinesValue is null && spacing.AfterLinesValue is null &&
+        spacing.BeforeAutoSpacingValue is null && spacing.AfterAutoSpacingValue is null &&
+        spacing.LineValue is null && spacing.LineRuleValue is null && spacing.ContextualSpacing is null &&
+        IsBalloonParagraphTwipsToken(spacing.BeforeValue) && IsBalloonParagraphTwipsToken(spacing.AfterValue);
+
+    private static bool IsBalloonParagraphTwipsToken(string? value) =>
+        value is null || uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out _);
 
     private static bool HasEncodedBalloonParagraphText(DocxRunFontResource resource, string text, CancellationToken cancellationToken)
     {

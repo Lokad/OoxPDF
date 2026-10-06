@@ -3010,7 +3010,7 @@ internal static class DocxCommentsTests
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second) },
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second)],
-                [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterValue = "120" } })],
+                [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterLinesValue = "100" } })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Bold = true }] })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = word + "  ending." }] })],
@@ -3118,7 +3118,7 @@ internal static class DocxCommentsTests
                     [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] })],
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterValue = "120" } }), new DocxParagraphElement(last)],
+                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { ParagraphMarkRun = last.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = "two  words" }] }), new DocxParagraphElement(last)]
@@ -3145,6 +3145,134 @@ internal static class DocxCommentsTests
                     TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
                         guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                         "Zero-width bodies and nonpositive adjacent metrics retain finite complete fallback.");
+                }
+            }
+        }
+    }
+
+    public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
+    {
+        foreach (string value in new[] { "120", "0", "480", "4294967295" })
+        foreach (int spacingKind in new[] { 0, 1, 2 })
+        foreach (int bodyKind in new[] { 0, 1, 2 })
+        foreach (double rightMargin in new[] { 72d, 144d, 207d })
+        {
+            string tail = bodyKind == 1 ? new string('m', 80) + " ending." : "control.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("Review table", 12d, 14d) with
+            {
+                LineSpacingPoints = null,
+                Runs = [new DocxTextRun("Review table", 12d, null, false, false, false, null, "CommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace"),
+                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null }
+            };
+            DocxParagraph second = first with
+            {
+                Runs = [new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "CommentFace", FontSize = 36d },
+                Spacing = DocxParagraphSpacing.Empty with { BeforeValue = spacingKind != 0 ? value : null }
+            };
+            DocxParagraph third = first with
+            {
+                Runs = [first.Runs[0] with { Text = "ending." }],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontSize = 24d },
+                Spacing = DocxParagraphSpacing.Empty
+            };
+            DocxBodyElement[] elements = bodyKind == 2
+                ? [new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third)]
+                : [new DocxParagraphElement(first), new DocxParagraphElement(second)];
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1", elements, [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodySpaceAdvance: 123,
+                bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal("Review table", shows[0].Text);
+            TestAssert.Equal(" ", shows[1].Text);
+            TestAssert.Equal("Review table " + tail + " " + (bodyKind == 2 ? "ending. " : ""), string.Concat(shows.Select(show => show.Text)));
+            double size = shows[0].Size;
+            var bodyRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+            TestAssert.True(Math.Abs(bodyRows[0].Y - bodyRows[1].Y - 0.85d * size) < 0.02d,
+                "Office balloon spacing ignores explicit point values while retaining adjacent body metrics.");
+            TestAssert.Equal(700, (int)bodyRows[0].Font.Font.GetAdvanceWidth(bodyRows[0].Font.Font.MapCodePoint('R')));
+            foreach (var row in bodyRows.Skip(1).Take(bodyRows.Length - 1 - (bodyKind == 2 ? 1 : 0)))
+            {
+                TestAssert.Equal(900, (int)row.Font.Font.GetAdvanceWidth(row.Font.Font.MapCodePoint('b')));
+            }
+            if (bodyKind == 1)
+            {
+                TestAssert.True(bodyRows.Length >= 3, "The second paragraph still wraps in its own face.");
+                for (int index = 2; index < bodyRows.Length; index++)
+                {
+                    TestAssert.True(Math.Abs(bodyRows[index - 1].Y - bodyRows[index].Y - size) < 0.02d,
+                        "Later wrapped rows retain the second body's own height.");
+                }
+            }
+            if (bodyKind == 2)
+            {
+                TestAssert.Equal(3, bodyRows.Length);
+                TestAssert.Equal(700, (int)bodyRows[2].Font.Font.GetAdvanceWidth(bodyRows[2].Font.Font.MapCodePoint('b')));
+                TestAssert.True(Math.Abs(bodyRows[1].Y - bodyRows[2].Y - 1.15d * size) < 0.02d,
+                    "The next paragraph transition remains independent of the ignored spacing token.");
+            }
+            var marks = shows.Where(show => string.IsNullOrWhiteSpace(show.Text)).ToArray();
+            TestAssert.Equal(500, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint(' ')));
+            TestAssert.Equal(" ", shows[^1].Text);
+            TestAssert.Equal(bodyKind == 2 ? 500 : 123, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
+            if (bodyKind == 2)
+            {
+                TestAssert.Equal(6, shows.Length);
+                TestAssert.Equal(123, (int)shows[3].Font.Font.GetAdvanceWidth(shows[3].Font.Font.MapCodePoint(' ')));
+            }
+            if (bodyKind == 1)
+            {
+                var breakSpaces = shows.Skip(2).SkipLast(1).Where(show => string.IsNullOrWhiteSpace(show.Text));
+                TestAssert.True(breakSpaces.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint(' ')) == 900),
+                    "Authored wrap separators retain the body face; the terminal mark retains its distinct face.");
+            }
+            TestAssert.True(marks.All(mark => Math.Abs(mark.Size - size) < 0.001d), "Spaces and marks retain nominal balloon size.");
+            double height = 12.61d + 0.85d * size + (bodyKind == 2 ? 1.15d * size : (bodyRows.Length - 2) * size);
+            TestAssert.True(double.IsFinite(balloon.Height) && Math.Abs(balloon.Height - height) < 0.02d,
+                "Even large integer spacing values leave the measured balloon height unchanged.");
+            if (value == "120" && spacingKind == 0 && bodyKind == 0)
+            {
+                var invalidSpacing = new List<DocxParagraphSpacing>
+                {
+                    DocxParagraphSpacing.Empty with { BeforeLinesValue = "100" },
+                    DocxParagraphSpacing.Empty with { AfterLinesValue = "100" },
+                    DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "1" },
+                    DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "0" },
+                    DocxParagraphSpacing.Empty with { LineValue = "480" },
+                    DocxParagraphSpacing.Empty with { LineRuleValue = "exact" },
+                    DocxParagraphSpacing.Empty with { ContextualSpacing = true },
+                    DocxParagraphSpacing.Empty with { ContextualSpacing = false }
+                };
+                foreach (string invalid in new[] { "-120", "invalid", "4294967296", " 120", "+120", "120pt", "" })
+                {
+                    invalidSpacing.Add(DocxParagraphSpacing.Empty with { BeforeValue = invalid });
+                    invalidSpacing.Add(DocxParagraphSpacing.Empty with { AfterValue = invalid });
+                }
+                foreach (DocxParagraphSpacing spacing in invalidSpacing)
+                {
+                    DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first with { Spacing = spacing }), new DocxParagraphElement(second)] }] };
+                    var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                    TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
+                        guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                        "Line, automatic, contextual, malformed, signed and oversized-integer spacing retain finite complete fallback.");
                 }
             }
         }
@@ -3273,7 +3401,7 @@ internal static class DocxCommentsTests
             foreach (DocxBodyElement[] guardedElements in new[]
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second) },
-                [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterValue = "120" } }), new DocxParagraphElement(second)],
+                [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(second)],
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second)],
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Bold = true }] }), new DocxParagraphElement(second)]
             })
