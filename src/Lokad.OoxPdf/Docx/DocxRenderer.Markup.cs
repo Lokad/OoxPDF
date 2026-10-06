@@ -976,8 +976,13 @@ internal sealed partial class DocxRenderer
                     (candidate.WordCompatibleBodyLineHeightEm is not null && candidate.WordCompatibleBodyParts is null
                         ? Math.Max(1, WrapUniformBalloonWords(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth, cancellationToken).Length)
                         : CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth));
-                return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints +
-                    (rows - 1) * ResolveWordCompatibleBalloonLineGap(twoFaceRows?.TailLineHeightEm ?? candidate.WordCompatibleBodyLineHeightEm, fontSize) +
+                double lineGap = ResolveWordCompatibleBalloonLineGap(twoFaceRows?.TailLineHeightEm ?? candidate.WordCompatibleBodyLineHeightEm, fontSize);
+                double continuationsHeight = (rows - 1) * lineGap;
+                if (twoFaceRows?.FirstContinuationGapEm is double firstGapEm)
+                {
+                    continuationsHeight = firstGapEm * fontSize + (rows - 2) * lineGap;
+                }
+                return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + continuationsHeight +
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;
             }
 

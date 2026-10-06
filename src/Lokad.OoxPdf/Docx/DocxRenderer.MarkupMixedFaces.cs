@@ -1,4 +1,5 @@
 using System.Text;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
@@ -85,7 +86,8 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonBodyPart Prefix,
         DocxRunFontResource TailResource,
         DocxUniformBalloonRow[] TailLines,
-        double? TailLineHeightEm);
+        double? TailLineHeightEm,
+        double? FirstContinuationGapEm);
 
     private static DocxMarkupTwoFaceRows? ResolveWordCompatibleTwoFaceRows(
         IReadOnlyList<DocxMarkupBalloonBodyPart>? parts,
@@ -104,17 +106,29 @@ internal sealed partial class DocxRenderer
         if (space == 0 || !tail.Embedded.TryGetEncodedCid(space, out _)) { return null; }
         string[] words = parts[1].Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length < 2) { return null; }
-        // A fitting ASCII word prefix can share its first word with the tail.
-        // Prefixes with spaces or other break opportunities still require the
-        // first tail word to fit; their row composition needs separate evidence.
         double firstWordWidth = tail.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
-        if (!double.IsFinite(firstWordWidth) ||
-            firstWordWidth > tailFirstWidth && !parts[0].Text.All(char.IsAsciiLetterOrDigit)) { return null; }
-        var lines = WrapUniformBalloonWords(parts[1].Text, tail.Embedded, fontSize, tailFirstWidth, continuationWidth, cancellationToken);
+        if (!double.IsFinite(firstWordWidth)) { return null; }
+        double? firstGapEm = null;
+        if (firstWordWidth > tailFirstWidth && !parts[0].Text.All(char.IsAsciiLetterOrDigit))
+        {
+            string prefix = parts[0].Text;
+            if (!prefix.EndsWith(' ') || !prefix[..^1].All(char.IsAsciiLetterOrDigit)) { return null; }
+            OpenTypeFont prefixFont = parts[0].Resource.Embedded.Font;
+            OpenTypeFont tailFont = tail.Embedded.Font;
+            if (prefixFont.UnitsPerEm <= 0 || tailFont.UnitsPerEm <= 0) { return null; }
+            double transition = -prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm +
+                (tailFont.Hhea.HorizontalAscender + tailFont.Hhea.HorizontalLineGap) / (double)tailFont.UnitsPerEm;
+            if (!double.IsFinite(transition) || transition <= 0d) { return null; }
+            firstGapEm = transition;
+        }
+        // A joined ASCII word can split beside its prefix. A separated word
+        // starts below the prefix, even if its first glyph has zero advance.
+        var lines = WrapUniformBalloonWords(parts[1].Text, tail.Embedded, fontSize,
+            firstGapEm is null ? tailFirstWidth : -1d, continuationWidth, cancellationToken);
         if (lines.Length < 2) { return null; }
         double? lineHeightEm = tail.Embedded.Font.UnitsPerEm > 0
             ? DocxLineMetrics.MeasureHheaLineHeight(tail.Embedded.Font, 1d) : null;
-        return new(parts[0], tail, lines, lineHeightEm);
+        return new(parts[0], tail, lines, lineHeightEm, firstGapEm);
     }
 
     private static void RenderWordCompatibleTwoFaceRows(
@@ -133,6 +147,7 @@ internal sealed partial class DocxRenderer
         double tailX = bodyFirstLineX + rows.Prefix.Resource.Embedded.MeasureTextPoints(rows.Prefix.Text, fontSize);
         double gap = ResolveWordCompatibleBalloonLineGap(rows.TailLineHeightEm, fontSize);
         RenderUniformBalloonRows(rows.TailLines, placement, graphics, rows.TailResource, terminalResource,
-            tailX, textX, firstBaselineY, gap, fontSize, cancellationToken);
+            tailX, textX, firstBaselineY, gap, fontSize, cancellationToken,
+            rows.FirstContinuationGapEm * fontSize);
     }
 }

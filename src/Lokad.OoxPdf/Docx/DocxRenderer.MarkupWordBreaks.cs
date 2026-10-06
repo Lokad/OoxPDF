@@ -108,13 +108,14 @@ internal sealed partial class DocxRenderer
         DocxUniformBalloonRow[] rows, DocxMarkupBalloonPlacement placement,
         PdfGraphicsBuilder graphics, DocxRunFontResource body, DocxRunFontResource terminal,
         double firstX, double continuationX, double firstY, double gap, double fontSize,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, double? firstContinuationGap = null)
     {
         for (int i = 0; i < rows.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             double x = i == 0 ? firstX : continuationX;
-            double y = firstY - i * gap;
+            double y = i > 0 && firstContinuationGap is double firstGap
+                ? firstY - firstGap - (i - 1) * gap : firstY - i * gap;
             string text = i == 0 && rows.Length > 1 && rows[i].SpaceAfter && rows[i].Text.Length != 0
                 ? rows[i].Text + " " : rows[i].Text;
             DrawBalloonText(graphics, body, text, x, y, fontSize,
