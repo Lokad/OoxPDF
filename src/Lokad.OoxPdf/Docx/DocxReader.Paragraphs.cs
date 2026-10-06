@@ -22,7 +22,8 @@ internal sealed partial class DocxReader
         DocxDocumentSettings? documentSettings,
         DocxRevisionInfo? inheritedRevision,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool retainBalloonParagraphMark = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -236,6 +237,28 @@ internal sealed partial class DocxReader
         double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ?? ResolveDefaultAutoLineSpacingFactor(resolvedParagraph);
         double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
 
+        DocxTextRun? firstCommentRun = retainBalloonParagraphMark
+            ? runs.FirstOrDefault(run => !string.IsNullOrWhiteSpace(run.Text)) : null;
+        bool retainCommentMark = retainBalloonParagraphMark && firstCommentRun is not null &&
+            images.Count == 0 && inlineTextBoxes.Count == 0 && fieldReferences.Count == 0 && paragraphRevisions.Count == 0 &&
+            runs.Where(run => !string.IsNullOrWhiteSpace(run.Text)).All(run =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return !run.Bold && !run.Italic && !run.Underline && run.CharacterSpacingPoints == 0d && run.FieldKind is null &&
+                    string.Equals(run.FontFamily, firstCommentRun.FontFamily, StringComparison.OrdinalIgnoreCase) &&
+                    Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts);
+            });
+        DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment)
+            ? CreateResolvedTextRun(retainCommentMark ? " " : string.Empty, paragraphMarkRun,
+                CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
+                false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))
+            : null;
+        if (retainCommentMark && retainedMark is { } commentMark &&
+            (commentMark.Bold || commentMark.Italic || commentMark.Underline || commentMark.CharacterSpacingPoints != 0d))
+        {
+            retainedMark = null;
+        }
+
         return new DocxParagraph(
             runs,
             images,
@@ -268,11 +291,7 @@ internal sealed partial class DocxReader
             HasDeletedParagraphMark = hasDeletedParagraphMark,
             DeletedText = deletedText.ToString(),
             ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
-            ParagraphMarkRun = inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment)
-                ? CreateResolvedTextRun(string.Empty, paragraphMarkRun,
-                    CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
-                    false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))
-                : null
+            ParagraphMarkRun = retainedMark
         };
 
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)

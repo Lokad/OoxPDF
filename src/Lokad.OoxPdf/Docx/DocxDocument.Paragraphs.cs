@@ -41,8 +41,8 @@ internal sealed record DocxParagraph(
     // (spill probes 2026-09-28: marker-direct 9pt carries 12pt spills). Null keeps
     // legacy run-size behavior (synthetic and unresolvable paragraphs).
     public double? ParagraphMarkFontSize { get; init; }
-    // Comment autofit uses the paragraph mark's face/size even when the
-    // reference run has direct formatting. Retained only for comment anchors.
+    // Comment autofit retains an empty mark run for anchors. Plain comment
+    // stories retain a space run for their printed terminal blank's face.
     public DocxTextRun? ParagraphMarkRun { get; init; }
 
     public DocxEffectiveParagraphProperties EffectiveProperties => new(

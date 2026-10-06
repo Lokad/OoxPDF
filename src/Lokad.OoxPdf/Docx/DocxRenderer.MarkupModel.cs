@@ -59,6 +59,7 @@ internal sealed partial class DocxRenderer
     {
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
+        public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
     }
 
     private sealed record DocxMarkupBalloonLaneBand(
@@ -104,6 +105,7 @@ internal sealed partial class DocxRenderer
     {
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
+        public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
 
         public DocxMarkupBalloonPlacementSnapshot ToSnapshot(int pageIndex)
         {

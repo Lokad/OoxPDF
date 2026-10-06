@@ -2316,6 +2316,50 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace()
+    {
+        foreach (string body in new[] { "Review table control.", string.Join(" ", Enumerable.Repeat("alpha", 30)) })
+        {
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "OtherCommentFace")
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            PdfPage page = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            var shows = ReadEmbeddedGlyphTextShows(page).ToArray();
+            var bodyRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
+                show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+            var finalRow = bodyRows[^1];
+            var terminal = shows.Single(show => show.Text == " " && Math.Abs(show.Y - finalRow.Y) < 0.01d);
+            TestAssert.Equal(900, (int)terminal.Font.Font.GetAdvanceWidth(terminal.Font.Font.MapCodePoint(' ')));
+            TestAssert.True(Math.Abs(terminal.Size - finalRow.Size) < 0.001d,
+                "The paragraph-mark face must retain the nominal 9pt balloon size, independently of its declared size.");
+            double end = finalRow.X + finalRow.Font.MeasureTextPoints(finalRow.Text, finalRow.Size);
+            TestAssert.True(Math.Abs(terminal.X - end) < 0.04d, "The final blank must still follow the visible body advance.");
+            foreach (var space in shows.Where(show => show.Text == " " && show.Y > finalRow.Y + 0.01d &&
+                show.X >= bodyRows.Min(row => row.X)))
+            {
+                TestAssert.Equal(700, (int)space.Font.Font.GetAdvanceWidth(space.Font.Font.MapCodePoint(' ')));
+            }
+        }
+    }
+
     private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)

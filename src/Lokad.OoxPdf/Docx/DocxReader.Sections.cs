@@ -111,7 +111,8 @@ internal sealed partial class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool retainBalloonParagraphMark = false)
     {
         var bodyElements = new List<DocxBodyElement>();
         foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(elements, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
@@ -121,7 +122,7 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: null, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: null, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken, retainBalloonParagraphMark: retainBalloonParagraphMark);
                 if (paragraph is not null)
                 {
                     bodyElements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
