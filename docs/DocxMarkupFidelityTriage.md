@@ -814,6 +814,31 @@ private-layout probe skipped, including 875 DOCX checks. Its fresh 0.1.5
 package contains the exact full-suite DLL. Evidence is under
 `artifacts/plan-revision-20261005/milestone-dc66b4f2/`.
 
+## Final Blank Face (2026-10-06, RV06-L29)
+
+Qualified single-paragraph, uniform regular comments now retain their resolved
+paragraph-mark face for the final emitted blank. Intermediate break spaces
+keep the body face, and the final blank keeps the body-based X position and
+nominal 9-point print size. Mixed, grouped and unsupported comment composition
+retain their existing path. Font preparation collects the mark's space before
+rendering; the renderer does not create another font resource.
+
+Four new Word controls vary the paragraph-mark face and include an 18-point
+mark. Word honors the mark face but keeps nominal 9-point balloon printing.
+The candidate matches those faces, with terminal advance differences below
+0.01 points. The portable production regression checks both single-row and
+wrapped output, including intermediate spaces. It fails before the repair
+and passes afterward. All 878 DOCX checks and 75 balloon checks pass, the
+Release build is clean, three portable regressions pass on Linux, and fresh
+0.1.5 package smoke contains the exact tested DLL.
+
+All 44 Office controls retain visible text, text geometry, graphics and raster
+bytes. Nineteen final blank faces change; 25 control PDFs retain their bytes.
+All 33 cached PDFs retain their bytes and 544 failed gates. One case passes
+and 32 remain partial. This repairs a text-operation font-state difference;
+existing pixel, body-flow and composed-layout residuals remain. Evidence is
+under `artifacts/plan-revision-20261005/rv06-l29/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
