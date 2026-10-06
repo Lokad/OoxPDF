@@ -102,10 +102,14 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (parts is not { Count: 2 } || parts[0].Text.Length == 0 || parts[1].Text.Length == 0 ||
-            parts[1].Text[0] == ' ') { return null; }
+        if (parts is not { Count: 2 } || parts[0].Text.Length == 0 || parts[1].Text.Length == 0) { return null; }
         double tailFirstWidth = firstLineWidth - parts[0].Resource.Embedded.MeasureTextPoints(parts[0].Text, fontSize);
         if (!double.IsFinite(tailFirstWidth) || tailFirstWidth <= 0d) { return null; }
+        if (parts[1].Text[0] == ' ')
+        {
+            return ResolveWordCompatibleLeadingTailRows(parts[0], parts[1], fontSize,
+                tailFirstWidth, continuationWidth, cancellationToken);
+        }
         DocxRunFontResource tail = parts[1].Resource;
         ushort space = tail.Embedded.Font.MapCodePoint(' ');
         if (space == 0 || !tail.Embedded.TryGetEncodedCid(space, out _)) { return null; }
@@ -138,6 +142,42 @@ internal sealed partial class DocxRenderer
         double? lineHeightEm = tail.Embedded.Font.UnitsPerEm > 0
             ? DocxLineMetrics.MeasureHheaLineHeight(tail.Embedded.Font, 1d) : null;
         return new(parts[0], tail, lines, lineHeightEm, firstGapEm);
+    }
+
+    private static DocxMarkupTwoFaceRows? ResolveWordCompatibleLeadingTailRows(
+        DocxMarkupBalloonBodyPart prefix, DocxMarkupBalloonBodyPart tail,
+        double fontSize, double firstTailWidth, double continuationWidth, CancellationToken cancellationToken)
+    {
+        int split = prefix.Text.IndexOf(' ');
+        if (split <= 0 || split != prefix.Text.LastIndexOf(' ') || split == prefix.Text.Length - 1 ||
+            tail.Text.Length < 2 || tail.Text[1] == ' ') { return null; }
+        for (int i = 0; i < prefix.Text.Length; i++)
+        {
+            if ((i & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+            if (prefix.Text[i] != ' ' && !char.IsAsciiLetterOrDigit(prefix.Text[i])) { return null; }
+        }
+        OpenTypeFont prefixFont = prefix.Resource.Embedded.Font;
+        OpenTypeFont tailFont = tail.Resource.Embedded.Font;
+        ushort space = tailFont.MapCodePoint(' ');
+        if (space == 0 || !tail.Resource.Embedded.TryGetEncodedCid(space, out _) ||
+            prefixFont.UnitsPerEm <= 0 || tailFont.UnitsPerEm <= 0) { return null; }
+        double available = firstTailWidth - tail.Resource.Embedded.MeasureTextPoints(" ", fontSize);
+        string text = tail.Text[1..];
+        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (!double.IsFinite(available) || available <= 0d || words.Length < 2) { return null; }
+        double firstWordWidth = tail.Resource.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
+        if (!double.IsFinite(firstWordWidth) || firstWordWidth > available) { return null; }
+        double descent = Math.Max(-prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm,
+            -tailFont.Hhea.HorizontalDescender / (double)tailFont.UnitsPerEm);
+        double transition = descent + (tailFont.Hhea.HorizontalAscender + tailFont.Hhea.HorizontalLineGap) / (double)tailFont.UnitsPerEm;
+        if (!double.IsFinite(transition) || transition <= 0d) { return null; }
+        var lines = WrapUniformBalloonWords(text, tail.Resource.Embedded, fontSize,
+            available, continuationWidth, cancellationToken);
+        if (lines.Length < 2 || lines[0].Text.Length == 0) { return null; }
+        // Keep the authored separator in its tail resource and reserve its
+        // advance before fitting the first word beside the complete prefix.
+        lines[0] = lines[0] with { Text = " " + lines[0].Text };
+        return new(prefix, tail.Resource, lines, DocxLineMetrics.MeasureHheaLineHeight(tailFont, 1d), transition);
     }
 
     private static DocxMarkupTwoFaceRows? ResolveWordCompatibleComposedPrefixRows(
