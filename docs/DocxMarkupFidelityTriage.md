@@ -941,6 +941,25 @@ all 34 cached cases with 551 failed gates. Evidence, including per-control
 hashes and the separate face/content and row audits, is under
 `artifacts/plan-revision-20261005/rv06-l33/`.
 
+## RV06-L34: continuation-width probe limits
+
+Twelve fresh Office controls vary Georgia, Courier New and Aptos tails across
+72/108/144pt right margins, with uniform companions. Georgia loses one row in
+all four applicable controls; Courier and Aptos retain Office row counts.
+A symmetric right text inset is rejected: it would wrap three currently
+fitting Aptos controls too early. The observed inset scales with the print
+profile, but these bounds do not qualify a shared replacement width rule.
+Runtime remains unchanged. Input/reference identities, body-content checks
+and numeric width constraints are under
+`artifacts/plan-revision-20261005/rv06-l34/`.
+
+Full integration at `ca949c0e`, through L32 and the locked-field companion but
+before L33, passes 2,160 Windows checks with no failures and one unconfigured
+private-layout probe skipped, including 879 DOCX checks. Release is clean;
+fresh 0.1.5 package smoke contains the exact full-suite DLL:
+`620E02E62AA586027117F7977982EA3E27E06594F4652331476050408B244C5C`.
+Evidence is under `artifacts/plan-revision-20261005/milestone-ca949c0e/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
