@@ -1291,6 +1291,57 @@ positioning/composed pixel residuals and 33 partial cache cases remain. Evidence
 and input/reference/candidate identities are under
 `artifacts/plan-revision-20261005/rv06-l43/`.
 
+## RV21-V29: full integration through L43
+
+The isolated Release run at `972fc7c9` passes 2171 checks, fails none and skips
+only the private PPTX diagnostic whose input/output environment is absent.
+All 890 DOCX checks pass. The clean build and fresh 0.1.5 package contain the
+exact full-suite DLL:
+`A6EE1A4BBD0F82F3849DBB14CAF7D6D943A7269A3DDEFB6EDF2CFAB622E57798`.
+This run excludes E4 transparency and L44. Evidence is under
+`artifacts/plan-revision-20261005/milestone-972fc7c9/`.
+
+## RV06-L44: multiple prefix rows before a joined tail
+
+An ordinary ASCII word prefix that exceeds the first row can wrap in its
+prepared face before its last word joins a fitting first tail word. Each prefix
+word must fit continuation width; an overwide prefix word or first tail word
+retains fallback. The first prefix row fits visible words without reserving the
+emitted break separator. Prefix-only and tail-only rows use their own metrics.
+The incoming mixed row uses prefix descent plus the larger full ascent/line-gap
+pair; the outgoing step uses mixed descent plus tail ascent/line gap. Height and
+emission share these phases. The source font boundary invents no separator.
+
+Seventeen trusted metric controls cover ten font pairs and three print scales.
+Incoming/outgoing maximum prediction errors are 0.131/0.134pt. Using prefix or
+tail height alone, or separate maxima of ascent and line gap, is rejected where
+it disagrees with those measurements. Sixty-two prefix-only and 131 tail-only
+pitches have maximum errors of 0.082/0.110pt. A production regression was red
+before admission; an enlarged-space variant was red before the first-row
+correction. Seventy-two scalar/gap/space/scale/tail variants and fallback guards
+check text, source faces, phase spacing, final mark/size and height. All 891 DOCX
+checks, 87 balloon checks and twelve Linux regressions pass. Release is clean;
+fresh 0.1.5 package smoke contains the exact tested DLL at runtime `7eb675b2`:
+`7F8F2D3CF07A707B415E3781C894B83BDD0BF12E26761C0B21A574237082315E`.
+
+Across 213 earlier and seventeen new comparisons, seventeen improve MAE and
+SSIM, 213 retain PDF/raster/graphics bytes and all retain main-document text and
+comment content. All seventeen changed controls match exact row text, spaces
+and source faces, including the two older Arial controls fixed by excluding the
+first prefix row's emitted blank from width reservation. Those two controls
+improve MAE from 1.164 to 0.593 versus the initial L44 prototype; all seventeen
+new-control PDFs retain their bytes through that correction. Maximum row-start
+X gap is 0.838pt and baseline gap is 0.253pt. Actual Office break matches reach
+224 of 230 inputs; separately emitted spaces remain part of the audit.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Six break mismatches remain:
+three-part and multi-paragraph comments, two leading-overwide-first-word controls
+and two new overwide-word guards. Prior positioning/composed pixel residuals and
+33 partial cached cases remain. Corrected qualification and identities are under
+`artifacts/plan-revision-20261005/rv06-l44-first-row/`; the initial prototype and
+rejected first-row reservation evidence remain under `rv06-l44/` beside it.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
