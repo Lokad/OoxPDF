@@ -1430,6 +1430,75 @@ Qualification, identities and the rejected unreflowed-prefix prototype are under
 `artifacts/plan-revision-20261005/rv06-l46/`.
 
 
+## RV06-L47: an overwide prefix word in its prepared face
+
+A single overwide ASCII prefix word now splits in its prepared font before its
+joined tail begins. Hard breaks invent no spaces. The first prefix glyph must
+have positive advance and fit the first row; every prefix glyph must fit the
+continuation width. Existing tail-glyph bounds, four spacing phases and nominal
+paragraph-mark size remain shared by height and emission. Punctuation and
+non-ASCII prefix words retain fallback.
+
+Fourteen Office metric controls cover ten font pairs and three print scales.
+Incoming/outgoing maximum errors are 0.131/0.124pt. Prefix-only and tail-only
+pitch errors are at most 0.060/0.082pt across 27/121 measurements. Rejected
+single-face and separate-component models remain recorded. The production
+regression fails before admission, then checks 72 scalar/gap/length/scale/tail
+variants, zero or oversized first prefix/tail glyphs and unsupported prefix
+guards. Assertions preserve exact content, all spacing phases, source fonts,
+visible widths, final mark and matching balloon height.
+
+All 894 DOCX checks, 90 balloon checks and fifteen Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `4a59bb73`:
+`ED62397274F86AB85121EA09E109322B3D27155D7C9DD79BA1461600349BBCC3`.
+Across 258 earlier and fourteen new inputs, fifteen improve MAE and SSIM,
+257 retain PDF/raster/graphics identity and all retain main-document text and
+comment content. All fifteen changed controls match exact row text, spaces and
+source fonts, including 44 within-word breaks. Maximum row-start X gap is
+0.838pt and baseline gap is 0.233pt. Office break matches reach 267 of 272 inputs.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Five break mismatches
+remain: three-part comments, multiple paragraphs, a doubled tail separator and
+two punctuation-prefix guards. Earlier positioning/composed pixel residuals
+and 33 partial cached cases remain. Qualification and identities are under
+`artifacts/plan-revision-20261005/rv06-l47/`.
+
+## RV06-L48: two authored leading tail spaces
+
+Two leading tail spaces now retain their prepared font and advance beside a
+fitting plain two-word ASCII prefix. The available first-row width reserves
+both spaces. An overwide first word starts below the prefix; a fitting word
+shares its row. Separator-only rows use prefix descent for the first step,
+while visible mixed rows use both descents. Later rows retain tail metrics.
+Three leading spaces, repeated internal spaces and punctuated prefixes retain
+fallback. The exception to repeated-space admission is limited to this shape.
+
+Fourteen Office phase controls cover ten font pairs and three print scales:
+twelve separator-only first rows and two visible mixed first rows. The selected
+first-step error is at most 0.131pt; using one descent rule for every case has
+larger errors. Twenty-eight tail-only pitches have maximum error 0.082pt.
+The production reproducer fails before admission. The final regression checks
+48 scalar/zero-first-glyph/prefix-descent/length/scale variants, expanded fitting
+tail cases and fallback guards, preserving exact spaces, fonts, advances,
+baseline steps, visible widths, nominal final mark and matching height.
+
+All 895 DOCX checks, 91 balloon checks and sixteen Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `28e66b48`:
+`81CC4C76DAECDB7B826670A4164F06FC9A8E518E11E1EB4DE8E821660871B617`.
+Across 272 earlier and fourteen new inputs, fourteen improve MAE and SSIM,
+272 retain PDF/raster/graphics identity and all retain main-document text and
+comment content. All fourteen changed controls match exact row text, spaces
+and source fonts, including twenty within-word breaks. Maximum row-start X gap
+is 0.838pt and baseline gap is 0.207pt. Office break matches reach 281 of 286.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Five break mismatches
+remain: three-part comments, multiple paragraphs, two punctuation-prefix guards
+and the new three-space guard. Earlier positioning/composed pixel residuals
+and 33 partial cached cases remain. Qualification and identities are under
+`artifacts/plan-revision-20261005/rv06-l48/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
