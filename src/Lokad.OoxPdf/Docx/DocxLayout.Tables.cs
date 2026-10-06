@@ -27,7 +27,7 @@ internal sealed partial class DocxLayoutEngine
         var rows = new List<(DocxTableRowLayout Row, double[] Insets)>();
         double highestBaseline = double.NegativeInfinity;
         double firstCellInset = 0d;
-        bool scaleSimpleBorders = true;
+        bool scaleSimpleBorders = DocxTableBorderGeometry.TryResolveReviewPaintScale(printScale, out _);
         for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();

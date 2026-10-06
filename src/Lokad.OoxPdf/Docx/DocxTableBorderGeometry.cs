@@ -6,6 +6,13 @@ internal static class DocxTableBorderGeometry
 {
     private const double WordPdfBorderWidthScale = 0.96d;
 
+    public static bool TryResolveReviewPaintScale(double printScale, out double matrixScale)
+    {
+        matrixScale = Math.Round(printScale, 3);
+        return double.IsFinite(printScale) && printScale > 0d && printScale < 1d && matrixScale > 0d &&
+            Math.Abs(matrixScale - printScale) / printScale <= 0.001d;
+    }
+
     public static DocxTableCellBorder? Find(IReadOnlyList<DocxTableCellBorder> borders, string edge)
     {
         return borders.FirstOrDefault(border => string.Equals(border.Edge, edge, StringComparison.OrdinalIgnoreCase));

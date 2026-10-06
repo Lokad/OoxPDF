@@ -12,6 +12,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewTableBorderScalingKeepsExtremePrintScaleFallback()
+    {
+        DocxDocument control = CreateReviewTableInsetDocument(12d, 11d, 20d, tableFirst: false);
+        DocxTable table = control.Tables.Single();
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("A", 11d, 30d) with { LineSpacingPoints = null };
+        DocxTableCell textCell = table.Rows.Single().Cells.Single() with { Text = "A", Paragraphs = [paragraph] };
+        table = table with { Rows = [table.Rows.Single() with { Cells = [textCell] }] };
+        control = control with
+        {
+            BodyElements = [control.BodyElements[0], new DocxTableElement(table), control.BodyElements[2]],
+            FallbackTables = [table]
+        };
+        DocxTableCell cell = table.Rows.Single().Cells.Single() with
+        {
+            Borders = [new DocxTableCellBorder("top", "single", "808080", "4"),
+                new DocxTableCellBorder("bottom", "single", "808080", "4")]
+        };
+        table = table with { Rows = [table.Rows.Single() with { Cells = [cell] }] };
+        DocxDocument candidate = control with
+        {
+            BodyElements = [control.BodyElements[0], new DocxTableElement(table), control.BodyElements[2]],
+            FallbackTables = [table]
+        };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxTableRowSnapshot before = renderer.InspectLayout(control).Pages.SelectMany(page => page.TableRows).Single();
+        DocxTableRowSnapshot after = renderer.InspectLayout(candidate).Pages.SelectMany(page => page.TableRows).Single();
+        TestAssert.Equal(1, before.TextLineCount);
+        TestAssert.Equal(1, after.TextLineCount);
+        TestAssert.True(Math.Abs(after.Height - before.Height - 0.96d) < 0.000001d,
+            "An extreme review scale must retain both legacy border advances when its PDF transform cannot be represented accurately.");
+    }
+
     public static void DocxReviewTableBorderAdvancesUsePrintScale()
     {
         // Word controls at three widths and one/three rows: the collapsed

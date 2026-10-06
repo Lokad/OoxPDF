@@ -50,10 +50,8 @@ internal sealed partial class DocxRenderer
         }
 
         double printScale = row.ReviewBorderPrintScale;
-        double borderScale = Math.Round(printScale, 3);
-        bool scaleBorders = double.IsFinite(printScale) && borderScale > 0d && printScale < 1d &&
+        bool scaleBorders = DocxTableBorderGeometry.TryResolveReviewPaintScale(printScale, out double borderScale) &&
             geometryRow.Cells.Count != 0 &&
-            Math.Abs(borderScale - printScale) / printScale <= 0.001d &&
             (HasVisibleBorder(geometryRow) || geometryPreviousRow is not null && HasVisibleBorder(geometryPreviousRow) ||
              geometryNextRow is not null && HasVisibleBorder(geometryNextRow));
         double borderOriginX = scaleBorders ? geometryRow.Cells[0].X : 0d;
