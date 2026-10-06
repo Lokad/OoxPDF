@@ -220,11 +220,11 @@ internal sealed partial class DocxRenderer
         {
             effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, effectiveMarkupContext, CancellationToken.None) };
         }
-        (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource) = EnsureMarkupBalloonTextResources(layout, fontResources, effectiveMarkupContext, CancellationToken.None);
+        (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, effectiveMarkupContext, CancellationToken.None);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         DocxRunFontResource? balloonLabelResource = ResolveMarkupLabelFontResource(fontResources);
         PdfEmbeddedFont? balloonLabelEmbedded = balloonTitleResource?.Embedded ?? balloonLabelResource?.Embedded;
-        PdfEmbeddedFont? balloonBodyEmbedded = (ResolveMarkupBodyFontResource(fontResources) ?? balloonLabelResource)?.Embedded;
+        PdfEmbeddedFont? balloonBodyEmbedded = (balloonBodyResource ?? ResolveMarkupBodyFontResource(fontResources) ?? balloonLabelResource)?.Embedded;
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, CancellationToken.None);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -942,7 +942,7 @@ internal sealed partial class DocxRenderer
             markupContext = markupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, markupContext, cancellationToken) };
         }
         markupContext = WithFirstPinYOffset(markupContext, document, layout);
-        (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);
+        (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
@@ -1020,6 +1020,7 @@ internal sealed partial class DocxRenderer
                 markupContext,
                 balloonTextResource,
                 balloonTitleResource,
+                balloonBodyResource,
                 cancellationToken);
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)

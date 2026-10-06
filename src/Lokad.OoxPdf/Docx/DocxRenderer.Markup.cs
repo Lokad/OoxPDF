@@ -44,7 +44,7 @@ internal sealed partial class DocxRenderer
             or DocxRevisionKind.SectionPropertiesChange;
     }
 
-    private static (DocxRunFontResource? LabelCoverage, DocxRunFontResource? Title) EnsureMarkupBalloonTextResources(
+    private static (DocxRunFontResource? LabelCoverage, DocxRunFontResource? Title, DocxRunFontResource? BodyCoverage) EnsureMarkupBalloonTextResources(
         DocxLayout layout,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
@@ -56,17 +56,18 @@ internal sealed partial class DocxRenderer
         // string when the label resource falls short. Titles additionally get a Segoe UI Bold
         // subset when the conversion resolved that face (Office sets balloon titles in Segoe UI
         // Bold); measurement, wrap widths, placement heights and emission all use the title
-        // resource together, so rows stay consistent. Returns nulls when no extra coverage is
-        // needed, leaving existing subsets (and their snapshots) untouched.
+        // resource together, so rows stay consistent. Word-compatible bodies can use a
+        // different face/subset from labels; ensure coverage in that actual body resource.
+        // Existing subsets remain untouched when their coverage is sufficient.
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
-            return (null, null);
+            return (null, null, null);
         }
 
         DocxRunFontResource? labelResource = ResolveMarkupLabelFontResource(fontResources);
         if (labelResource is null)
         {
-            return (null, null);
+            return (null, null, null);
         }
 
         // R12: page drawings come from the once-per-pass page index instead of
@@ -74,10 +75,11 @@ internal sealed partial class DocxRenderer
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         var codepoints = new HashSet<int>();
         var titleCodepoints = new HashSet<int>();
+        var bodyCodepoints = new HashSet<int>();
+        DocxRunFontResource bodyCoverageResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxRunFontResource bodyCoverageResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
             foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
@@ -111,22 +113,47 @@ internal sealed partial class DocxRenderer
                         titleCodepoints.Add(rune.Value);
                     }
                 }
+
+                if (ShouldRenderWordCompatibleBalloonText(placement, markupContext) &&
+                    !string.IsNullOrWhiteSpace(placement.WordCompatibleBody))
+                {
+                    foreach (Rune rune in placement.WordCompatibleBody.EnumerateRunes())
+                    {
+                        bodyCodepoints.Add(rune.Value);
+                    }
+                    // Word-compatible rows also emit a terminal space.
+                    bodyCodepoints.Add(' ');
+                }
             }
         }
 
         DocxRunFontResource? titleResource = EnsureMarkupBalloonTitleResource(fontResources, markupContext, titleCodepoints, cancellationToken);
         if (codepoints.Count == 0)
         {
-            return (null, titleResource);
+            return (null, titleResource, null);
         }
 
-        OpenTypeFont labelFont = labelResource.Embedded.Font;
+        DocxRunFontResource? labelCoverage = EnsureMarkupBalloonCoverageResource(fontResources, labelResource, codepoints, cancellationToken);
+        DocxRunFontResource? bodyCoverage = EnsureMarkupBalloonCoverageResource(fontResources,
+            bodyCoverageResource, bodyCodepoints, cancellationToken,
+            reusableCoverage: ReferenceEquals(bodyCoverageResource, labelResource) ? labelCoverage : null);
+        return (labelCoverage, titleResource, bodyCoverage);
+    }
+
+    private static DocxRunFontResource? EnsureMarkupBalloonCoverageResource(
+        DocxFontResources fontResources,
+        DocxRunFontResource source,
+        IReadOnlySet<int> codepoints,
+        CancellationToken cancellationToken,
+        DocxRunFontResource? reusableCoverage = null)
+    {
+        OpenTypeFont font = source.Embedded.Font;
         bool needsExtraCoverage = false;
         foreach (int codePoint in codepoints)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ushort glyph = labelFont.MapCodePoint(codePoint);
-            if (glyph != 0 && !labelResource.Embedded.TryGetEncodedCid(glyph, out _))
+            ushort glyph = font.MapCodePoint(codePoint);
+            if (glyph != 0 && !source.Embedded.TryGetEncodedCid(glyph, out _))
             {
                 needsExtraCoverage = true;
                 break;
@@ -135,18 +162,25 @@ internal sealed partial class DocxRenderer
 
         if (!needsExtraCoverage)
         {
-            return (null, titleResource);
+            return null;
+        }
+
+        if (reusableCoverage is not null && codepoints.All(codePoint =>
+            font.MapCodePoint(codePoint) is var glyph &&
+            (glyph == 0 || reusableCoverage.Embedded.TryGetEncodedCid(glyph, out _))))
+        {
+            return reusableCoverage;
         }
 
         if (fontResources.Resources is not List<PdfFontResource> mutableResources)
         {
-            return (null, titleResource);
+            return null;
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(labelFont, codepoints, cancellationToken);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codepoints, cancellationToken);
         string name = "F" + (mutableResources.Count + 1).ToString(CultureInfo.InvariantCulture);
         mutableResources.Add(new PdfFontResource(name, embedded));
-        return (new DocxRunFontResource(name, embedded, labelResource.Resolution), titleResource);
+        return new DocxRunFontResource(name, embedded, source.Resolution);
     }
 
     private static DocxRunFontResource? EnsureMarkupBalloonTitleResource(
@@ -201,11 +235,12 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         DocxRunFontResource? balloonTextResource,
         DocxRunFontResource? balloonTitleResource,
+        DocxRunFontResource? balloonBodyResource,
         CancellationToken cancellationToken)
     {
         DocxRunFontResource? labelResource = balloonTextResource ?? ResolveMarkupLabelFontResource(fontResources);
         DocxRunFontResource? titleResource = balloonTitleResource ?? labelResource;
-        DocxRunFontResource? bodyResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
+        DocxRunFontResource? bodyResource = balloonBodyResource ?? ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
         // RV06 (RV01 residual): without any embeddable face, balloons render with the
         // diagnosed standard-14 fallback instead of vanishing.
         PdfFallbackFontResource? fallbackFace = labelResource is null || bodyResource is null

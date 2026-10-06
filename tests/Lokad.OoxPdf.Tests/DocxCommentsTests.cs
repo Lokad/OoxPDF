@@ -2030,6 +2030,71 @@ internal static class DocxCommentsTests
             "Some page font must cover every synthetic balloon title glyph.");
     }
 
+    public static void DocxBalloonBodyEmissionCoversItsOwnFontSubset()
+    {
+        // A comment face can contain glyphs absent from the first regular body face.
+        // Check the actual shows, rather than the existence of a covering label font.
+        foreach ((OoxPdfDocxMarkupGeometryMode geometry, string body) in new[]
+            {
+                (OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, "Review table control."),
+                (OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, "Review table control."),
+                (OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+                    "Review table control. Verify wrapped letters, punctuation and supplementary glyphs \U0001F600 across several printed rows.")
+            })
+        {
+            DocxParagraph anchor = DocxTests.CreateDocxLayoutParagraph("Body anchor", 12d, 14d) with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")],
+                InlineReferences = [new DocxInlineReference(DocxRelatedStoryKind.Comment, "1", null,
+                    SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 11, DisplayText: null)]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            PdfPage page = new DocxRenderer(new BalloonSubsetFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            var emitted = new StringBuilder();
+            foreach (Match show in Regex.Matches(page.Content,
+                @"/(?<font>F\d+) [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 [-\d.]+ [-\d.]+ Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
+                RegexOptions.Singleline))
+            {
+                PdfEmbeddedFont font = page.Fonts.Single(resource => resource.ResourceName == show.Groups["font"].Value).Font;
+                foreach (Match chunk in Regex.Matches(show.Groups["show"].Value, @"<(?<hex>[0-9A-F]+)>"))
+                {
+                    string hex = chunk.Groups["hex"].Value;
+                    for (int offset = 0; offset < hex.Length; offset += 4)
+                    {
+                        ushort cid = ushort.Parse(hex.AsSpan(offset, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                        TestAssert.True(font.UnicodeByCid.TryGetValue(cid, out int codePoint), "Every emitted balloon CID must have a Unicode mapping.");
+                        emitted.Append(char.ConvertFromUtf32(codePoint));
+                    }
+                }
+            }
+            TestAssert.Contains(Regex.Replace(body, @"\s", string.Empty),
+                Regex.Replace(emitted.ToString(), @"\s", string.Empty));
+        }
+    }
+
+    private sealed class BalloonSubsetFontResolver : IFontResolver
+    {
+        private static readonly byte[] Bytes = TestFontBuilder.CreateTestFont();
+
+        public FontFaceResolution Resolve(FontRequest request) => new(
+            request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
+            new MemoryFontProgramSource("test:balloon:" + request.FamilyName, Bytes), IsFallback: false);
+    }
+
     private static bool CoversAllTitleGlyphs(PdfEmbeddedFont font, string text)
     {
         foreach (System.Text.Rune rune in text.EnumerateRunes())
