@@ -1067,7 +1067,7 @@ internal sealed partial class DocxRenderer
                 layoutPage.Width,
                 layoutPage.Height,
                 content,
-                fontResources.Resources,
+                fontResources.Resources.Where(resource => graphics.UsedFontResourceNames.Contains(resource.ResourceName)).ToArray(),
                 pageImages.ToArray(),
                 graphics.ExtGStates,
                 graphics.Shadings,

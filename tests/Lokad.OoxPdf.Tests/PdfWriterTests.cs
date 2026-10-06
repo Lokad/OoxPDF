@@ -1003,22 +1003,30 @@ internal static class PdfWriterTests
     public static void TruncatedContentMarksNestAcrossNodes()
     {
         var graphics = new PdfGraphicsBuilder();
+        graphics.DrawFallbackText("F1", 12d, 0, 0, 0, [new(10d, 20d, 65)]);
         graphics.SetFillRgb(255, 0, 0);
         graphics.FillRectangle(10, 20, 30, 40);
         PdfGraphicsBuilder.ContentMark first = graphics.MarkContent();
+        graphics.DrawFallbackText("F2", 12d, 0, 0, 0, [new(30d, 20d, 66)]);
         graphics.SetFillRgb(0, 1, 0);
         graphics.FillRectangle(50, 60, 70, 80);
         PdfGraphicsBuilder.ContentMark second = graphics.MarkContent();
+        graphics.DrawFallbackText("F1", 12d, 0, 0, 0, [new(50d, 20d, 67)]);
+        graphics.DrawFallbackText("F3", 12d, 0, 0, 0, [new(70d, 20d, 68)]);
         graphics.SetFillRgb(0, 0, 255);
         graphics.FillRectangle(90, 100, 110, 120);
 
         graphics.TruncateContent(second);
+        TestAssert.True(graphics.UsedFontResourceNames.SetEquals(["F1", "F2"]), "Nested rollback must retain earlier font uses.");
         string middle = graphics.ToString();
         TestAssert.Contains("10 20 30 40 re f", middle);
         TestAssert.Contains("50 60 70 80 re f", middle);
         TestAssert.DoesNotContain("90 100 110 120 re f", middle);
 
         graphics.TruncateContent(first);
+        TestAssert.True(graphics.UsedFontResourceNames.SetEquals(["F1"]), "Rollback must remove fonts first used by discarded content.");
+        graphics.DrawFallbackText("F2", 12d, 0, 0, 0, [new(30d, 20d, 66)]);
+        TestAssert.True(graphics.UsedFontResourceNames.SetEquals(["F1", "F2"]), "A discarded font can be registered again.");
         string rolledBack = graphics.ToString();
         TestAssert.Contains("10 20 30 40 re f", rolledBack);
         TestAssert.DoesNotContain("50 60 70 80 re f", rolledBack);

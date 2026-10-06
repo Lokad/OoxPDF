@@ -11,6 +11,8 @@ internal sealed class PdfGraphicsBuilder
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
     private readonly List<PdfTilingPatternResource> patterns = [];
+    private readonly HashSet<string> usedFontResourceNames = new(StringComparer.Ordinal);
+    private readonly List<string> fontUseOrder = [];
     // R10: registration indexes mirroring the append-only resource lists. Dictionary
     // lookups replace per-call linear scans so distinct-state registration is O(1);
     // TruncateContent rebuilds them so rolled-back entries never dangle.
@@ -25,6 +27,8 @@ internal sealed class PdfGraphicsBuilder
     public IReadOnlyList<PdfShadingResource> Shadings => shadings;
 
     public IReadOnlyList<PdfTilingPatternResource> Patterns => patterns;
+
+    public IReadOnlySet<string> UsedFontResourceNames => usedFontResourceNames;
 
     public int StateDepth => stateDepth;
 
@@ -453,6 +457,8 @@ internal sealed class PdfGraphicsBuilder
             return;
         }
 
+        RegisterFontUse(fontResourceName);
+
         builder.AppendLine("BT");
         if (!TryAppendFillGray(red, green, blue))
         {
@@ -488,6 +494,7 @@ internal sealed class PdfGraphicsBuilder
         double strokeWidth,
         int textRotationQuarterTurns = 0)
     {
+        RegisterFontUse(fontResourceName);
         builder.AppendLine("BT");
         if (!TryAppendFillGray(red, green, blue))
         {
@@ -561,15 +568,15 @@ internal sealed class PdfGraphicsBuilder
     }
 
     // Operation/resource boundary for node-level transactional recovery (S09).
-    // Snapshots capture the append-only builder state so a failed node rewinds its
-    // paint without disturbing earlier nodes. Font/image caches are intentionally
+    // Snapshots capture the append-only builder state and emitted font-use names
+    // so a failed node rewinds its paint without disturbing earlier nodes. Font/image caches are intentionally
     // outside the boundary: orphan entries are inert, while index rollback could
     // dangle references held by surviving content.
-    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth);
+    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount);
 
     public ContentMark MarkContent()
     {
-        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth);
+        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count);
     }
 
     public void TruncateContent(ContentMark mark)
@@ -577,6 +584,12 @@ internal sealed class PdfGraphicsBuilder
         if (mark.ContentLength < builder.Length)
         {
             builder.Length = Math.Max(0, mark.ContentLength);
+        }
+
+        while (fontUseOrder.Count > mark.FontUseCount)
+        {
+            usedFontResourceNames.Remove(fontUseOrder[^1]);
+            fontUseOrder.RemoveAt(fontUseOrder.Count - 1);
         }
 
         while (extGStates.Count > mark.ExtGStateCount)
@@ -596,6 +609,11 @@ internal sealed class PdfGraphicsBuilder
 
         stateDepth = Math.Max(0, mark.StateDepth);
         RebuildResourceIndexes();
+    }
+
+    private void RegisterFontUse(string resourceName)
+    {
+        if (usedFontResourceNames.Add(resourceName)) { fontUseOrder.Add(resourceName); }
     }
 
     private void RebuildResourceIndexes()

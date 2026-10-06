@@ -2437,6 +2437,40 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxPagesOmitUnemittedBalloonAndOtherPageFaces()
+    {
+        DocxParagraph first = DocxTests.CreateDocxLayoutParagraph("Page text", 12d, 14d) with
+        {
+            Runs = [new DocxTextRun("Page text", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph second = first with
+        {
+            Runs = [new DocxTextRun("Page text", 12d, null, false, false, false, null, "OtherCommentFace")]
+        };
+        DocxParagraph orphan = first with
+        {
+            Runs = [new DocxTextRun("Unanchored comment", 12d, null, false, false, false, null, "CommentFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(orphan)], [], [], null);
+        DocxDocument document = new(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(first), new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
+                new DocxParagraphElement(second)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        PdfPage[] pages = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        TestAssert.Equal(2, pages.Length);
+        for (int i = 0; i < pages.Length; i++)
+        {
+            TestAssert.Equal(1, pages[i].Fonts.Count);
+            TestAssert.Equal(i == 0 ? 500 : 900,
+                (int)pages[i].Fonts.Single().Font.Font.GetAdvanceWidth(pages[i].Fonts.Single().Font.Font.MapCodePoint('P')));
+            TestAssert.Equal("Page text", string.Concat(ReadEmbeddedGlyphTextShows(pages[i]).Select(show => show.Text)).TrimEnd());
+        }
+    }
+
     public static void DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace()
     {
         foreach (string markFamily in new[] { "CommentFace", "OtherCommentFace" })
