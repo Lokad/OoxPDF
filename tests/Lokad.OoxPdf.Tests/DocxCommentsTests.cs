@@ -1165,9 +1165,16 @@ internal static class DocxCommentsTests
         TestAssert.True(
             !page.Content.Contains("-4.093", StringComparison.Ordinal),
             "Word-compatible grouped comment balloon titles should not use positioned glyph tracking.");
-        TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, "/F3 8.203 Tf") >= 1 && DocxTests.CountOccurrences(page.Content, "/F2 8.203 Tf") >= 2,
-            "Word-compatible grouped comment balloons should keep the title on the dedicated balloon-label resource (same label typeface, fuller subset) and body text on the regular body resource.");
+        var balloonShows = ReadEmbeddedGlyphTextShows(page).Where(show => Math.Abs(show.Size - 8.203d) < 0.01d).ToArray();
+        var titleShow = balloonShows.Single(show => show.Text.StartsWith("Commented ", StringComparison.Ordinal));
+        var bodyShows = balloonShows.Where(show => !show.Text.StartsWith("Commented ", StringComparison.Ordinal)).ToArray();
+        TestAssert.True(titleShow.Font.Font.Os2.WeightClass >= 600 && bodyShows.Length >= 2 &&
+            bodyShows.All(show => show.Font.Font.Os2.WeightClass < 600),
+            "Grouped balloon titles must use the bold label face and bodies a regular face, including any supplemental subset.");
+        string emittedBody = Regex.Replace(string.Concat(bodyShows.Select(show => show.Text)), @"\s", string.Empty);
+        // Group summaries retain their existing truncation; the emitted prefix and
+        // synthetic ellipsis must survive the body font's supplemental subset.
+        TestAssert.Equal("Publiccommentalphabetagammadeltaepsilonforwrapping;Formatted...", emittedBody);
         TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
         TestAssert.True(
@@ -2163,6 +2170,28 @@ internal static class DocxCommentsTests
         public FontFaceResolution Resolve(FontRequest request) => new(
             request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
             new MemoryFontProgramSource("test:balloon:" + request.FamilyName, Bytes), IsFallback: false);
+    }
+
+    private static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size)> ReadEmbeddedGlyphTextShows(PdfPage page)
+    {
+        foreach (Match show in Regex.Matches(page.Content,
+            @"/(?<font>F\d+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 [-\d.]+ [-\d.]+ Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
+            RegexOptions.Singleline))
+        {
+            PdfEmbeddedFont font = page.Fonts.Single(resource => resource.ResourceName == show.Groups["font"].Value).Font;
+            var text = new StringBuilder();
+            foreach (Match chunk in Regex.Matches(show.Groups["show"].Value, @"<(?<hex>[0-9A-F]+)>"))
+            {
+                string hex = chunk.Groups["hex"].Value;
+                for (int offset = 0; offset < hex.Length; offset += 4)
+                {
+                    ushort cid = ushort.Parse(hex.AsSpan(offset, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                    TestAssert.True(font.UnicodeByCid.TryGetValue(cid, out int codePoint), "Every emitted CID must have a Unicode mapping.");
+                    text.Append(char.ConvertFromUtf32(codePoint));
+                }
+            }
+            yield return (font, text.ToString(), double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture));
+        }
     }
 
     private static bool CoversAllTitleGlyphs(PdfEmbeddedFont font, string text)
