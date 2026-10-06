@@ -223,16 +223,19 @@ internal sealed partial class DocxRenderer
         string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (!double.IsFinite(available) || available <= 0d || words.Length < 2) { return null; }
         double firstWordWidth = tail.Resource.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
-        if (!double.IsFinite(firstWordWidth) || firstWordWidth > available) { return null; }
-        double descent = Math.Max(-prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm,
+        if (!double.IsFinite(firstWordWidth)) { return null; }
+        bool startsBelowPrefix = firstWordWidth > available;
+        double prefixDescent = -prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm;
+        double descent = startsBelowPrefix ? prefixDescent : Math.Max(prefixDescent,
             -tailFont.Hhea.HorizontalDescender / (double)tailFont.UnitsPerEm);
         double transition = descent + (tailFont.Hhea.HorizontalAscender + tailFont.Hhea.HorizontalLineGap) / (double)tailFont.UnitsPerEm;
         if (!double.IsFinite(transition) || transition <= 0d) { return null; }
         var lines = WrapUniformBalloonWords(text, tail.Resource.Embedded, fontSize,
-            available, continuationWidth, cancellationToken);
-        if (lines.Length < 2 || lines[0].Text.Length == 0) { return null; }
+            startsBelowPrefix ? -1d : available, continuationWidth, cancellationToken);
+        if (lines.Length < 2 || (!startsBelowPrefix && lines[0].Text.Length == 0)) { return null; }
         // Keep the authored separator in its tail resource and reserve its
-        // advance before fitting the first word beside the complete prefix.
+        // advance beside the complete prefix. A separated first word that
+        // does not fit starts below it, including zero-advance first glyphs.
         lines[0] = lines[0] with { Text = " " + lines[0].Text };
         return new(prefix, tail.Resource, lines, DocxLineMetrics.MeasureHheaLineHeight(tailFont, 1d), transition);
     }
