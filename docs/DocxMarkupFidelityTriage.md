@@ -627,6 +627,11 @@ cached PDFs retain their qualified bytes after the guard. The final Release
 build is clean and a fresh 0.1.5 package smoke loads the DLL used by the focused
 tests. The broader table-border experiment is superseded.
 
+A fresh integration pinned to `49a9e80b` subsequently passes 2,152 Windows
+checks with no failures and one unconfigured private-probe skip, including all
+871 DOCX checks. Its clean Release build and exact fresh 0.1.5 package smoke
+use the same library bytes. This integration predates the balloon repairs below.
+
 The cached corpus keeps 573 failed gates, one passing case and 32 partial
 cases. All input/reference identities and page counts match; 30 PDFs and
 rasters retain their bytes. The three changed cases improve overall pixel
@@ -636,6 +641,61 @@ difference rises from 0.182 to 0.343 points and stays within its gate. These
 remain explicit composition/flow residuals. Comparisons are linked to fresh
 final candidate PDFs by input, reference and output hashes. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l21/`.
+
+## Balloon Placement and Body Coverage (2026-10-06, RV06-L22/L23)
+
+Sixteen independent Word controls place a comment before or after a table,
+varying cell font size, row count and border width. Balloon title baselines
+differ by at most 0.121 points, vertical box edges by 0.218 points, and the
+title offset from its anchor by 0.050 points. These controls support retaining
+the existing placement rather than applying another vertical correction.
+
+The controls instead expose missing body letters. Synthetic labels receive
+extra glyph coverage, but Word-compatible bodies can use another font subset.
+The renderer now ensures coverage in the actual body subset and shares the
+label supplement when the original resource is the same. Existing complete
+subsets and missing-face fallback retain their paths. The production regression
+decodes actual emitted CIDs and checks distinct faces, wrapped text and a
+supplementary character. A grouped-balloon assertion now checks bold/regular
+faces and its printed summary prefix, including the existing ellipsis, rather
+than pinning resource IDs.
+
+The initial broader DOCX run has 871 passing checks and one obsolete resource-ID
+assertion. With that assertion replaced, all 69 balloon checks pass and the
+portable content regression passes on Linux. The fresh 0.1.5 package smoke
+loads the exact library used by the final focused tests. All 33 freshly rendered
+cached PDFs retain their bytes and their 573 failed gates. Sixteen controls
+restore the full comment text without changing graphics; their page MAE rises
+by 0.001–0.002 because body typeface selection remains wrong in that slice.
+Raw qualification is under `artifacts/plan-revision-20261005/rv06-l22/` and
+`artifacts/plan-revision-20261005/rv06-l23/`.
+
+## Uniform Comment Body Faces (2026-10-06, RV06-L24)
+
+Nine independent Office controls cross Calibri, Arial and Aptos document runs
+with inherited, Arial and Courier New comment runs. Word uses the comment's
+face in every combination. Qualified regular comments now carry their own
+prepared font resource through balloon height measurement and emission.
+Admission requires a single plain paragraph, one regular face, and complete
+glyph coverage. Matching existing faces retain their resources; mixed faces,
+formatting, compound stories and grouped balloons keep their previous path.
+The coverage scan observes cancellation without copying the body string.
+
+All sixteen table controls improve after the face correction; seven of the
+nine font controls improve and two retain their rasters. First-row advances
+in the font matrix differ from Office by at most 0.12 points. Two held-out
+wrapped comments improve pixel error and similarity. Arial retains three
+printed rows; Courier still prints four where Office prints five, and its
+continuation pitch remains approximate. The mixed-face control retains the
+content repair and its legacy typeface path. Font selection does not establish
+complete comment formatting or wrapping parity.
+
+The final Release build is clean; 70 balloon checks and both portable content
+and typeface regressions pass. The fresh 0.1.5 package smoke uses the exact
+tested library. All 33 cached PDFs retain their accepted bytes and 573 failed
+gates, with comparisons linked by input, reference and candidate hashes.
+Final-source identity checks retain all 28 qualified control PDFs. Evidence
+is under `artifacts/plan-revision-20261005/rv06-l24/`.
 
 ## Inputs
 
