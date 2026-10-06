@@ -11,8 +11,8 @@ internal sealed partial class DocxRenderer
         DocxFontResources? fonts,
         CancellationToken cancellationToken)
     {
-        // Office prints each plain paragraph on its own row, with the paragraph
-        // mark's prepared face. Wider paragraphs remain on the existing path.
+        // Preserve each plain paragraph's prepared body and mark faces. The
+        // measured rendering paths separately admit fitting and wrapped bodies.
         if (fonts is null || storyLayout is null || storyLayout.Story.BodyElements.Count != 2 ||
             storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0) { return null; }
         var paragraphs = new List<DocxMarkupBalloonParagraph>(2);
@@ -81,12 +81,62 @@ internal sealed partial class DocxRenderer
             double width = body.Resource.Embedded.MeasureTextPoints(body.Text, fontSize);
             if (!double.IsFinite(width) || width <= 0d || width > (index == 0 ? firstWidth : continuationWidth)) { return null; }
         }
+        return MeasureWordCompatibleParagraphTransition(paragraphs, fontSize);
+    }
+
+    private static double? MeasureWordCompatibleParagraphTransition(IReadOnlyList<DocxMarkupBalloonParagraph> paragraphs, double fontSize)
+    {
         var first = paragraphs[0].Body.Resource.Embedded.Font;
         var second = paragraphs[1].Body.Resource.Embedded.Font;
         if (first.UnitsPerEm <= 0 || second.UnitsPerEm <= 0) { return null; }
         double gap = (-first.Hhea.HorizontalDescender / (double)first.UnitsPerEm +
             (second.Hhea.HorizontalAscender + second.Hhea.HorizontalLineGap) / (double)second.UnitsPerEm) * fontSize;
         return double.IsFinite(gap) && gap > 0d ? gap : null;
+    }
+
+    private sealed record DocxMarkupWrappedParagraphRows(
+        DocxMarkupBalloonParagraph First, DocxMarkupBalloonParagraph Second,
+        DocxUniformBalloonRow[] TailRows, double FirstGap, double TailGap)
+    {
+        public double ContinuationsHeight => FirstGap + (TailRows.Length - 1) * TailGap;
+    }
+
+    private static DocxMarkupWrappedParagraphRows? ResolveWordCompatibleWrappedParagraphRows(
+        IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,
+        double firstWidth, double continuationWidth, CancellationToken cancellationToken)
+    {
+        if (paragraphs is not { Count: 2 } || !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
+        DocxMarkupBalloonParagraph first = paragraphs[0], second = paragraphs[1];
+        double prefixWidth = first.Body.Resource.Embedded.MeasureTextPoints(first.Body.Text, fontSize);
+        double tailWidth = second.Body.Resource.Embedded.MeasureTextPoints(second.Body.Text, fontSize);
+        if (!double.IsFinite(prefixWidth) || prefixWidth <= 0d || prefixWidth > firstWidth ||
+            !double.IsFinite(tailWidth) || tailWidth <= continuationWidth) { return null; }
+        var tailFont = second.Body.Resource.Embedded.Font;
+        int index = 0;
+        foreach (Rune rune in second.Body.Text.EnumerateRunes())
+        {
+            if ((index++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+            double width = tailFont.GetAdvanceWidth(tailFont.MapCodePoint(rune.Value)) * fontSize / tailFont.UnitsPerEm;
+            if (!double.IsFinite(width) || width > continuationWidth) { return null; }
+        }
+        double? firstGap = MeasureWordCompatibleParagraphTransition(paragraphs, fontSize);
+        double tailGap = DocxLineMetrics.MeasureHheaLineHeight(tailFont, fontSize);
+        if (firstGap is null || !double.IsFinite(tailGap) || tailGap <= 0d) { return null; }
+        var lines = WrapUniformBalloonWords(second.Body.Text, second.Body.Resource.Embedded, fontSize,
+            continuationWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
+        return lines.Length >= 2 && lines[0].Text.Length != 0 ? new(first, second, lines, firstGap.Value, tailGap) : null;
+    }
+
+    private static void RenderWordCompatibleWrappedParagraphRows(
+        DocxMarkupWrappedParagraphRows rows, DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics,
+        double firstX, double continuationX, double firstY, double fontSize, CancellationToken cancellationToken)
+    {
+        DrawBalloonText(graphics, rows.First.Body.Resource, rows.First.Body.Text, firstX, firstY, fontSize,
+            placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+        DrawBalloonText(graphics, rows.First.Mark, " ", firstX + rows.First.Body.Resource.Embedded.MeasureTextPoints(rows.First.Body.Text, fontSize),
+            firstY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+        RenderUniformBalloonRows(rows.TailRows, placement, graphics, rows.Second.Body.Resource, rows.Second.Mark,
+            continuationX, continuationX, firstY - rows.FirstGap, rows.TailGap, fontSize, cancellationToken);
     }
 
     private static void RenderWordCompatibleParagraphs(

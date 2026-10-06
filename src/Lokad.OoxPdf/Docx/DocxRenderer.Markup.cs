@@ -976,6 +976,10 @@ internal sealed partial class DocxRenderer
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGap + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
+                if (ResolveWordCompatibleWrappedParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } paragraphRows)
+                {
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                }
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
                     ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth, cancellationToken);
@@ -1428,6 +1432,12 @@ internal sealed partial class DocxRenderer
         {
             RenderWordCompatibleParagraphs(placement.WordCompatibleParagraphs!, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, paragraphGap, fontSize, cancellationToken);
+            return;
+        }
+        if (ResolveWordCompatibleWrappedParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } paragraphRows)
+        {
+            RenderWordCompatibleWrappedParagraphRows(paragraphRows, placement, graphics, bodyFirstLineX, textX,
+                firstBaselineY, fontSize, cancellationToken);
             return;
         }
         if (TryMeasureWordCompatibleSingleRowParts(placement.WordCompatibleBodyParts, fontSize, firstLineWidth, out _))
