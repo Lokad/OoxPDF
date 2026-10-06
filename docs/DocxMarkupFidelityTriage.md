@@ -1626,6 +1626,49 @@ and 33 partial cached cases remain. Qualification, identities, selected and
 rejected models are under `artifacts/plan-revision-20261005/rv06-l51/`.
 
 
+## RV06-L52: two fitting comment paragraphs and their marks
+
+Two plain comment paragraphs that each fit one printed row retain their own
+prepared body and paragraph-mark faces. The reader now retains marks for one
+or two plain paragraphs in all-markup view. Both renderer and reader
+regressions fail before their respective changes. First-face descent plus
+next-face ascent and line gap measures the shared layout/emission step;
+paragraph marks keep nominal balloon size. Explicit spacing, wrapped rows,
+decorations and larger stories retain the complete fallback.
+
+Fifteen mixed checks cover 96 scalar/font/mark/metric/scale variants and guards.
+All 900 DOCX checks, 96 balloon checks and twenty-one Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `1c9a3a4f`:
+`04845D429E4F2F683B68713A60BEA275457DE962AB4D3AD16CF26D4234DDEC33`.
+
+Across 335 prior and eighteen fresh inputs, sixteen improve MAE and SSIM,
+335 retain PDF bytes and 337 retain raster/graphics identity. All 353 retain
+main-document text and comment content; 345 match Office breaks. All sixteen
+changed controls match exact row text, spaces and prepared fonts, with maximum
+row-start X gap 0.838pt and baseline gap 0.181pt. Fifteen metric controls support
+the selected step (maximum error 0.131pt); rejected mark-driven and uniform
+models remain recorded. Two new fallback PDFs differ only by internal font
+aliases: resolved glyph operations, embedded font bytes, declarations,
+graphics and rasters retain identity.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Eight break mismatches
+remain: three parts, colon, semicolon, overflowing-space, internal-double-space
+and new wrapped/spacing/three-paragraph guards. Prior positioning/composed
+pixel residuals and 33 partial cached cases remain. Qualification, identities
+and the fallback alias audit are under `artifacts/plan-revision-20261005/rv06-l52/`.
+
+## RV21-V33: full integration through L50 and SVG transparency
+
+Frozen integration at `5486a32c`, through L49/L50 and accepted smooth SVG
+transparency E4, passes **2179/0/1**, including 897 DOCX checks, with a clean
+Release build. The sole skip is the private PPTX diagnostic's missing optional
+input/output configuration. Fresh 0.1.5 package smoke contains the exact
+full-suite DLL:
+`16E704643A9B892CEF072C1003E0E3954F892E42FAACFDCF2C70A4616C7F973A`.
+This run excludes L51/L52. Its report, package link and identities are under
+`artifacts/plan-revision-20261005/milestone-5486a32c/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
