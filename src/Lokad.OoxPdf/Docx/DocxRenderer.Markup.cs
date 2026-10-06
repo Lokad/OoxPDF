@@ -980,9 +980,9 @@ internal sealed partial class DocxRenderer
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
-                if (ResolveWordCompatibleThreeParagraphGaps(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
+                if (ResolveWordCompatibleFittingParagraphGaps(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
                 {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGaps[0] + paragraphGaps[1] + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGaps.Sum() + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
@@ -1444,9 +1444,9 @@ internal sealed partial class DocxRenderer
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }
-        if (ResolveWordCompatibleThreeParagraphGaps(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
+        if (ResolveWordCompatibleFittingParagraphGaps(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
         {
-            RenderWordCompatibleThreeParagraphs(placement.WordCompatibleParagraphs!, paragraphGaps, placement, graphics,
+            RenderWordCompatibleFittingParagraphs(placement.WordCompatibleParagraphs!, paragraphGaps, placement, graphics,
                 bodyFirstLineX, textX, firstBaselineY, fontSize, cancellationToken);
             return;
         }
