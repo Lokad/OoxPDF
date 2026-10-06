@@ -162,7 +162,12 @@ internal sealed record DocxTableRowLayout(
     string? CantSplitValue,
     int RevisionCount,
     IReadOnlyList<DocxRevisionInfo>? Revisions,
-    DocxStoryId? Story) : DocxLayoutItem;
+    DocxStoryId? Story) : DocxLayoutItem
+{
+    // Set only by the complete, simple review-table projection. Positions are
+    // already in printed coordinates; border widths still need this scale.
+    public double ReviewBorderPrintScale { get; init; } = 1d;
+}
 
 internal sealed record DocxTableLayoutContext(
     int TableIndex,

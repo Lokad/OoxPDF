@@ -49,10 +49,47 @@ internal sealed partial class DocxRenderer
             RenderShadingFill(cell.FillHex, cell.ShadingValue, cell.ShadingColor, graphics, cellLayout.X, cellLayout.Y, cellLayout.Width, cellLayout.Height);
         }
 
-        RowPairBorderPlan? sharedBorderPlan = RowPairBorderPlan.TryBuild(geometryRow, geometryNextRow, cancellationToken);
-        RenderTableRowBorders(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken, sharedBorderPlan);
-        RenderTableBorderJunctions(geometryRow, geometryPreviousRow, geometryNextRow, graphics, cancellationToken, sharedBorderPlan);
+        double printScale = row.ReviewBorderPrintScale;
+        double borderScale = Math.Round(printScale, 3);
+        bool scaleBorders = double.IsFinite(printScale) && borderScale > 0d && printScale < 1d &&
+            geometryRow.Cells.Count != 0 &&
+            Math.Abs(borderScale - printScale) / printScale <= 0.001d &&
+            (HasVisibleBorder(geometryRow) || geometryPreviousRow is not null && HasVisibleBorder(geometryPreviousRow) ||
+             geometryNextRow is not null && HasVisibleBorder(geometryNextRow));
+        double borderOriginX = scaleBorders ? geometryRow.Cells[0].X : 0d;
+        double borderOriginY = scaleBorders ? geometryRow.Y : 0d;
+        DocxTableRowLayout borderRow = scaleBorders ? ProjectBorderGeometry(geometryRow) : geometryRow;
+        DocxTableRowLayout? borderPreviousRow = scaleBorders && geometryPreviousRow is not null ? ProjectBorderGeometry(geometryPreviousRow) : geometryPreviousRow;
+        DocxTableRowLayout? borderNextRow = scaleBorders && geometryNextRow is not null ? ProjectBorderGeometry(geometryNextRow) : geometryNextRow;
+        if (scaleBorders)
+        {
+            graphics.SaveState();
+            graphics.Transform(borderScale, 0d, 0d, borderScale, borderOriginX, borderOriginY);
+        }
+        RowPairBorderPlan? sharedBorderPlan = RowPairBorderPlan.TryBuild(borderRow, borderNextRow, cancellationToken);
+        RenderTableRowBorders(borderRow, borderPreviousRow, borderNextRow, graphics, cancellationToken, sharedBorderPlan);
+        RenderTableBorderJunctions(borderRow, borderPreviousRow, borderNextRow, graphics, cancellationToken, sharedBorderPlan);
+        if (scaleBorders) graphics.RestoreState();
         RenderTableRowMarkupIndicators(row, graphics, markupContext);
+
+        static bool HasVisibleBorder(DocxTableRowLayout input) => input.Cells.Any(cell =>
+            cell.VisualCell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d));
+
+        // The layout has already shrunk positions and lengths. Project only border
+        // coordinates through a local inverse, then let the PDF transform scale
+        // widths, patterns and junctions together without scaling text or shading.
+        DocxTableRowLayout ProjectBorderGeometry(DocxTableRowLayout input) => input with
+        {
+            Y = (input.Y - borderOriginY) / borderScale,
+            Height = input.Height / borderScale,
+            Cells = input.Cells.Select(cell => cell with
+            {
+                X = (cell.X - borderOriginX) / borderScale,
+                Y = (cell.Y - borderOriginY) / borderScale,
+                Width = cell.Width / borderScale,
+                Height = cell.Height / borderScale
+            }).ToArray()
+        };
 
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {

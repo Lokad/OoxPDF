@@ -12,6 +12,55 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewTableBorderAdvancesUsePrintScale()
+    {
+        // Word controls at three widths and one/three rows: the collapsed
+        // advance and final bottom overhang shrink with the review canvas.
+        foreach (double cellSize in new[] { 11d, 24d })
+        foreach (int rowCount in new[] { 1, 3 })
+        foreach (int borderSize in new[] { 4, 12, 24 })
+        foreach (double pageWidth in new[] { 612d, 792d })
+        {
+            DocxDocument input = CreateReviewTableInsetDocument(12d, cellSize, pageWidth, tableFirst: false);
+            DocxTable template = input.Tables.Single();
+            DocxTable unbordered = template with { Rows = Enumerable.Repeat(template.Rows.Single(), rowCount).ToArray() };
+            DocxTableCell originalCell = template.Rows.Single().Cells.Single();
+            DocxTableCell borderedCell = originalCell with
+            {
+                Borders = new[] { "top", "bottom", "left", "right" }.Select(edge =>
+                    new DocxTableCellBorder(edge, "single", "808080", borderSize.ToString(CultureInfo.InvariantCulture))).ToArray()
+            };
+            DocxTable bordered = unbordered with { Rows = unbordered.Rows.Select(row => row with { Cells = [borderedCell] }).ToArray() };
+            DocxDocument control = WithTable(unbordered);
+            DocxDocument candidate = WithTable(bordered);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(candidate,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            DocxTableRowSnapshot[] before = renderer.InspectLayout(control).Pages.Single().TableRows.ToArray();
+            DocxTableRowSnapshot[] after = renderer.InspectLayout(candidate).Pages.Single().TableRows.ToArray();
+            double borderWidth = borderSize / 8d * 0.96d * printScale;
+            for (int index = 0; index < rowCount; index++)
+            {
+                double expectedAdvance = borderWidth * (index == rowCount - 1 ? 2d : 1d);
+                TestAssert.True(Math.Abs(after[index].Height - before[index].Height - expectedAdvance) < 0.000001d,
+                    $"Review border advance should scale once. Width={borderSize}, row={index}, expected={expectedAdvance}, actual={after[index].Height - before[index].Height}.");
+            }
+            double beforeFollowing = FollowingBaseline(control);
+            double afterFollowing = FollowingBaseline(candidate);
+            TestAssert.True(Math.Abs(beforeFollowing - afterFollowing - borderWidth * (rowCount + 1)) < 0.000001d,
+                "Following body text should consume the printed border advances.");
+
+            DocxDocument WithTable(DocxTable table) => input with
+            {
+                BodyElements = [input.BodyElements[0], new DocxTableElement(table), input.BodyElements[2]],
+                FallbackTables = [table]
+            };
+            double FollowingBaseline(DocxDocument document) => renderer.InspectTextEmission(document).Lines
+                .Single(line => line.SourceBlockIndex == 2).Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY;
+        }
+    }
+
     public static void DocxReviewTableCellInsetsUsePrintedFontSize()
     {
         // Word 16 controls: simple cells retain a 0.94-em first-baseline inset

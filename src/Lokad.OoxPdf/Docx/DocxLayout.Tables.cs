@@ -16,6 +16,7 @@ internal sealed partial class DocxLayoutEngine
         double? precedingBodyBaselineInset,
         IDocxTextMeasurer measurer,
         double printScale,
+        ref double cursorY,
         CancellationToken cancellationToken)
     {
         if (!double.IsFinite(printScale) || printScale >= 1d || printScale <= 0d || firstItem >= items.Count)
@@ -26,6 +27,7 @@ internal sealed partial class DocxLayoutEngine
         var rows = new List<(DocxTableRowLayout Row, double[] Insets)>();
         double highestBaseline = double.NegativeInfinity;
         double firstCellInset = 0d;
+        bool scaleSimpleBorders = true;
         for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -57,6 +59,11 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 insets[cellIndex] = inset;
+                if (cell.VisualCell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d &&
+                    !string.Equals(border.Value, "single", StringComparison.OrdinalIgnoreCase)))
+                {
+                    scaleSimpleBorders = false;
+                }
                 if (cell.TextLines[0].BaselineY > highestBaseline)
                 {
                     highestBaseline = cell.TextLines[0].BaselineY;
@@ -70,31 +77,55 @@ internal sealed partial class DocxLayoutEngine
         // Word review controls: body text already carries a scaled baseline anchor,
         // while simple table cells retain nominal insets in their layout. Move the
         // table geometry to that anchor and scale each cell inset once. Surrounding
-        // paragraph flow and row pitch remain in their existing coordinates.
+        // paragraph anchors remain in their existing coordinates. Qualified solid
+        // borders consume their printed widths in row pitch and following flow.
         double originCorrection = (precedingBodyBaselineInset ?? firstCellInset) * (1d - printScale);
         if (!double.IsFinite(originCorrection) || originCorrection <= 0d)
         {
             return;
         }
 
+        double previousBorderAdvanceCorrection = 0d;
         for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             (DocxTableRowLayout row, double[] insets) = rows[rowIndex];
+            double borderAdvanceCorrection = 0d;
+            if (scaleSimpleBorders)
+            {
+                double bottom = MaxBorderWidth("bottom");
+                double advance = bottom > 0d ? bottom : MaxBorderWidth("top");
+                if (rowIndex == rows.Count - 1) advance += bottom;
+                borderAdvanceCorrection = advance * (1d - printScale);
+            }
             var cells = new DocxTableCellLayout[row.Cells.Count];
             for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
             {
                 DocxTableCellLayout cell = row.Cells[cellIndex];
-                double baselineCorrection = insets[cellIndex] * (1d - printScale) - originCorrection;
+                double baselineCorrection = insets[cellIndex] * (1d - printScale) - originCorrection + previousBorderAdvanceCorrection;
                 cells[cellIndex] = cell with
                 {
-                    Y = cell.Y - originCorrection,
+                    Y = cell.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
+                    Height = cell.Height - borderAdvanceCorrection,
                     TextLines = [cell.TextLines[0] with { BaselineY = cell.TextLines[0].BaselineY + baselineCorrection }]
                 };
             }
 
-            items[firstItem + rowIndex] = row with { Y = row.Y - originCorrection, Cells = cells };
+            items[firstItem + rowIndex] = row with
+            {
+                Y = row.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
+                Height = row.Height - borderAdvanceCorrection,
+                FullRowHeight = row.FullRowHeight - borderAdvanceCorrection,
+                Cells = cells,
+                ReviewBorderPrintScale = scaleSimpleBorders ? printScale : 1d
+            };
+            previousBorderAdvanceCorrection += borderAdvanceCorrection;
+
+            double MaxBorderWidth(string edge) => row.Cells
+                .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.VisualCell.Borders, edge)))
+                .DefaultIfEmpty(0d).Max();
         }
+        cursorY += previousBorderAdvanceCorrection;
     }
 
     private static void LayoutTable(

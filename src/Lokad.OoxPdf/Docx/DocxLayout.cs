@@ -1065,7 +1065,7 @@ internal sealed partial class DocxLayoutEngine
                 LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo());
                 if (scaleBaselineOffsetTransitions && completedPagesBeforeTable == pages.Count && textMeasurer is not null)
                 {
-                    ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset, textMeasurer, paragraphSpacingScale, cancellationToken);
+                    ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset, textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken);
                 }
                 if (currentItems.Count > itemCountBeforeTable)
                 {
