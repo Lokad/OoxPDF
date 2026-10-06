@@ -874,6 +874,40 @@ these controls support the accepted metric admission without qualifying a
 font-specific positioning constant. No runtime change is introduced. Evidence
 is under `artifacts/plan-revision-20261005/rv06-l31/`.
 
+## Single-Row Mixed Faces (2026-10-06, RV06-L32)
+
+Plain regular mixed-face comments now retain their prepared font resources when
+the complete body fits the first row. Each part follows the preceding part's
+measured advance on a shared baseline; geometry and emission share the fit
+check. Grouped, styled, compound and overwide comments retain the previous
+path. Source glyph coverage and cancellation are checked before admission;
+no font is created during emission. Wrapped mixed composition and its final
+blank face remain residuals.
+
+The production reproducer fails before the repair and passes afterward,
+checking actual font CIDs, complete content, advances, baseline and height.
+It also checks styled and overwide fallback. The older mixed-face assertion
+now checks the two emitted faces rather than expecting flattened text.
+All 879 DOCX checks and 76 balloon checks pass; three portable regressions
+pass on Linux and the Release build is clean. Fresh 0.1.5 package smoke
+contains the exact tested DLL.
+
+Across 57 Office controls, seven mixed-face cases improve error and similarity,
+50 PDFs retain their bytes, and all retain graphics and main-document text.
+The repaired operations match Office faces and text, with maximum horizontal
+and baseline gaps of 0.126 and 0.177 points. The long, bold and multi-paragraph
+controls retain their PDFs and remain partial. Comparisons now distinguish
+font-operation counts from rows grouped by their baselines: the earlier short
+mixed control has two font operations on one visual row. All 34 cached PDFs
+retain their bytes and 551 failed gates. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l32/`.
+
+Full integration pinned to `10612c66`, through L29 and before this mixed-face
+repair, passes 2,159 Windows checks with no failures and one unconfigured
+private-layout probe skipped, including 878 DOCX checks. Its fresh 0.1.5 package
+contains the exact full-suite DLL. Evidence is under
+`artifacts/plan-revision-20261005/milestone-10612c66/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
