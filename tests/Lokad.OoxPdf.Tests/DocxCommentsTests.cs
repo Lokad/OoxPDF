@@ -2950,7 +2950,7 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            if (wrappedFourth && (!hasFourth || (wrappedThird && wrappedFirst == wrappedSecond) || !(wrappedFirst || wrappedSecond))) { continue; }
+            if (wrappedFourth && (!hasFourth || (wrappedThird && wrappedFirst && wrappedSecond) || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
             if (hasFourth && (!hasThird || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
@@ -3110,7 +3110,7 @@ internal static class DocxCommentsTests
             }
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight + fourthPitch * size + fourthHeight)) < 0.02d,
                 "Height includes the paragraph transition and all later rows.");
-            if (wrappedFourth && (!hasFourth || (wrappedThird && wrappedFirst == wrappedSecond) || !(wrappedFirst || wrappedSecond))) { continue; }
+            if (wrappedFourth && (!hasFourth || (wrappedThird && wrappedFirst && wrappedSecond) || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
             if (hasFourth && !supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
                 if (wrappedThird)
@@ -3413,7 +3413,6 @@ internal static class DocxCommentsTests
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 200) }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { ParagraphMarkRun = last.ParagraphMarkRun! with { Bold = true } })],
