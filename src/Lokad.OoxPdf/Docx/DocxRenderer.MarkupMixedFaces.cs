@@ -66,9 +66,10 @@ internal sealed partial class DocxRenderer
         if (offset != body.Length) { return null; }
         if (body.Contains("  ", StringComparison.Ordinal))
         {
-            if (parts.Count != 2 || !parts[1].Text.StartsWith("  ", StringComparison.Ordinal) ||
-                parts[1].Text.Length <= 2 || parts[1].Text[2] == ' ' ||
-                parts[1].Text[2..].Contains("  ", StringComparison.Ordinal)) { return null; }
+            if (parts.Count != 2) { return null; }
+            int leadingSpaces = CountLeadingBalloonSpaces(parts[1].Text, cancellationToken);
+            if (leadingSpaces < 2 || leadingSpaces >= parts[1].Text.Length ||
+                parts[1].Text[leadingSpaces..].Contains("  ", StringComparison.Ordinal)) { return null; }
             string prefix = parts[0].Text;
             int split = prefix.IndexOf(' ');
             if (split <= 0 || split != prefix.LastIndexOf(' ') || split == prefix.Length - 1) { return null; }
@@ -79,6 +80,17 @@ internal sealed partial class DocxRenderer
             }
         }
         return parts.ToArray();
+    }
+
+    private static int CountLeadingBalloonSpaces(string text, CancellationToken cancellationToken)
+    {
+        int count = 0;
+        while (count < text.Length && text[count] == ' ')
+        {
+            if ((count & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+            count++;
+        }
+        return count;
     }
 
     private static bool TryMeasureWordCompatibleSingleRowParts(
@@ -262,11 +274,11 @@ internal sealed partial class DocxRenderer
         double fontSize, double firstTailWidth, double continuationWidth, CancellationToken cancellationToken)
     {
         int split = prefix.Text.IndexOf(' ');
-        int separatorLength = tail.Text.Length > 1 && tail.Text[1] == ' ' ? 2 : 1;
+        int separatorLength = CountLeadingBalloonSpaces(tail.Text, cancellationToken);
         // A terminal comma stays in the prefix face; other punctuation keeps fallback.
         int plainPrefixLength = prefix.Text.EndsWith(',') ? prefix.Text.Length - 1 : prefix.Text.Length;
         if (split <= 0 || split != prefix.Text.LastIndexOf(' ') || split >= plainPrefixLength - 1 ||
-            tail.Text.Length <= separatorLength || tail.Text[separatorLength] == ' ') { return null; }
+            separatorLength == 0 || tail.Text.Length <= separatorLength) { return null; }
         for (int i = 0; i < plainPrefixLength; i++)
         {
             if ((i & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
