@@ -225,9 +225,11 @@ internal sealed partial class DocxRenderer
         {
             double thirdWidth = paragraphs[2].Body.Resource.Embedded.MeasureTextPoints(paragraphs[2].Body.Text, fontSize);
             double fourthWidth = paragraphs[3].Body.Resource.Embedded.MeasureTextPoints(paragraphs[3].Body.Text, fontSize);
+            bool firstWrapped = prefixWidth > firstWidth, secondWrapped = tailWidth > continuationWidth;
+            bool thirdWrapped = thirdWidth > continuationWidth;
             if (!double.IsFinite(firstWidth) || firstWidth <= 0d || !double.IsFinite(thirdWidth) || thirdWidth <= 0d ||
                 !double.IsFinite(fourthWidth) || fourthWidth <= 0d || fourthWidth > continuationWidth ||
-                (prefixWidth > firstWidth ? 1 : 0) + (tailWidth > continuationWidth ? 1 : 0) + (thirdWidth > continuationWidth ? 1 : 0) != 1) { return null; }
+                !(firstWrapped || secondWrapped || thirdWrapped) || (thirdWrapped && (firstWrapped || secondWrapped))) { return null; }
         }
         DocxUniformBalloonRow[]? firstRows = null;
         double firstTailGap = 0d;

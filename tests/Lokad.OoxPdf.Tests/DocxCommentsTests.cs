@@ -2949,7 +2949,8 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            if (hasFourth && (!hasThird || (wrappedFirst ? 1 : 0) + (wrappedSecond ? 1 : 0) + (wrappedThird ? 1 : 0) != 1)) { continue; }
+            if (hasFourth && (!hasThird || !(wrappedFirst || wrappedSecond || wrappedThird) ||
+                (wrappedThird && (wrappedFirst || wrappedSecond)))) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
             string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
