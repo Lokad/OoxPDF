@@ -989,6 +989,42 @@ difference, long-run baseline drift and composed pixel residuals remain.
 Evidence, final-blank and font-resource audits, all identities and exact package
 proof are under `artifacts/plan-revision-20261005/rv06-l35/`.
 
+## RV06-L36: serialize only used DOCX page fonts
+
+DOCX pages now serialize embedded font resources referenced by surviving text
+operators. Content rollback also rewinds newly used font names, including nested
+marks and reuse of an earlier face. Font discovery, loading, preparation and CID
+coverage remain unchanged, as do standard fallback registration and PPTX resource
+policy. This reduces PDF bytes without claiming a prepared-font memory reduction.
+
+The production reproducer covers two page-specific faces and an orphan comment
+face; nested rollback verifies both glyph and fallback text. All 882 DOCX,
+79 balloon, 65 PDF and 127 image checks pass, together with four Linux regressions.
+Release is clean. Fresh 0.1.5 package smoke contains the exact tested DLL from
+runtime revision `92fd1809`:
+`499D4993FEADA9E7C0FD70246DB9B609735ECC22465CEC635C66DE1F5966F7CA`.
+
+All 92 Office controls retain exact text operations, graphics, rasters and
+surviving font metadata, excluding reassigned PDF object identifiers. Removing
+104 unused font declarations saves 1,868,575 bytes across this recorded corpus,
+with a maximum of 44,023 bytes per document. One PDF retains its bytes; the other
+91 change only through removal of unused declarations and consequent object
+numbering. Related controls do not constitute independent mechanism counts.
+
+All 34 cached cases retain exact text operations and surviving font metadata,
+and all 37 raster pages retain bytes. Eighteen PDFs retain bytes; removing
+22 declarations from the remaining PDFs saves 172,611 bytes. Failed gates stay
+at 551 with no case increase. Georgia wrapping, long baseline drift and composed
+pixel residuals remain. Hashes, audits and package proof are under
+`artifacts/plan-revision-20261005/rv06-l36/`.
+
+Full integration pinned to `facef6ad`, through L35 and before this resource
+repair, passes 2,162 Windows checks with no failures and one unconfigured
+private-layout probe skipped, including 881 DOCX checks. Release is clean;
+the fresh 0.1.5 package contains the exact full-suite DLL:
+`503BA96F0E64352CFAB842776BE7313C0574CBCC4C9AF6144795B57382B4B376`.
+Evidence is under `artifacts/plan-revision-20261005/milestone-facef6ad/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
