@@ -1593,6 +1593,39 @@ new semicolon guards. Earlier positioning/composed pixel residuals and 33
 partial cached cases remain. Qualification and identities are under
 `artifacts/plan-revision-20261005/rv06-l50/`.
 
+## RV06-L51: authored leading tail space spans
+
+Word preserves a fitting run of leading tail spaces beside a plain two-word
+ASCII prefix. Admission now counts the complete authored span and reserves its
+prepared advance; the span must leave positive first-row width. Separator-only
+first rows use the visible prefix descent, while a visible tail word uses both
+descents. Later rows keep tail metrics. Internal repeated spaces, punctuation,
+tabs and overflowing spans retain the complete fallback.
+
+The regression fails before admission and then covers 384 scalar,
+zero-first-glyph, space-count, descent, length, scale and fitting-first-word
+variants with explicit fallback guards. Fourteen mixed checks, all 898 DOCX
+checks, 94 balloon checks and nineteen Linux regressions pass. Release has no
+warnings or errors. Fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `b6e59c96`:
+`DCF6350A303972B248596B2DEC382A623B37074FBB5C7B8AB755398E300DD6DB`.
+
+Across 317 prior and eighteen fresh inputs, seventeen improve MAE and SSIM,
+318 retain PDF/raster/graphics identity and all 335 retain comment content and
+main-document text. Office break matches reach 329 of 335. All seventeen changed
+controls match exact row text, spaces and prepared fonts, including 23
+within-word breaks. Maximum row-start X gap is 0.838pt and baseline gap 0.207pt.
+Fifteen separator-only and two visible mixed first rows support the selected
+phase rule (maximum first-pitch error 0.131pt); 34 later pitches retain tail
+metrics (maximum error 0.082pt). Single-descent alternatives remain recorded.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Six break mismatches
+remain: three parts, multiple paragraphs, colon, semicolon, overflowing-space
+and internal-double-space guards. Earlier positioning/composed pixel residuals
+and 33 partial cached cases remain. Qualification, identities, selected and
+rejected models are under `artifacts/plan-revision-20261005/rv06-l51/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
