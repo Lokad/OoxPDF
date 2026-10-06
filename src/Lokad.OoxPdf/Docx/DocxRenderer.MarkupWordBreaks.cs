@@ -10,7 +10,8 @@ internal sealed partial class DocxRenderer
 
     private static DocxUniformBalloonRow[] WrapUniformBalloonWords(
         string text, PdfEmbeddedFont embedded, double fontSize,
-        double firstLineWidth, double continuationWidth, CancellationToken cancellationToken)
+        double firstLineWidth, double continuationWidth, CancellationToken cancellationToken,
+        bool reserveFirstRowBreakSpace = true)
     {
         cancellationToken.ThrowIfCancellationRequested();
         string normalized = Regex.Replace(text.Trim(), @"\s+", " ");
@@ -44,7 +45,7 @@ internal sealed partial class DocxRenderer
                     out double fittedUnits, out ushort lastGlyph);
                 bool completeWord = wordOffset + length == word.Length;
                 double withBreakSpace = fittedUnits + embedded.Font.GetAdvanceWidth(space) + embedded.Font.GetKerning(lastGlyph, space);
-                if (hasEarlierWord && (!completeWord || firstRow && wordIndex + 1 < words.Length && withBreakSpace * pointScale > maxWidth))
+                if (hasEarlierWord && (!completeWord || reserveFirstRowBreakSpace && firstRow && wordIndex + 1 < words.Length && withBreakSpace * pointScale > maxWidth))
                 {
                     break;
                 }

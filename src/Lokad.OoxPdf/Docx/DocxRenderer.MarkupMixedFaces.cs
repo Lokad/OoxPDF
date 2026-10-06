@@ -87,7 +87,12 @@ internal sealed partial class DocxRenderer
         DocxRunFontResource TailResource,
         DocxUniformBalloonRow[] TailLines,
         double? TailLineHeightEm,
-        double? FirstContinuationGapEm);
+        double? FirstContinuationGapEm,
+        DocxMarkupBalloonBodyPart? ContinuationPrefix = null,
+        double? SecondContinuationGapEm = null)
+    {
+        public int PrintedRows => TailLines.Length + (ContinuationPrefix is null ? 0 : 1);
+    }
 
     private static DocxMarkupTwoFaceRows? ResolveWordCompatibleTwoFaceRows(
         IReadOnlyList<DocxMarkupBalloonBodyPart>? parts,
@@ -112,7 +117,11 @@ internal sealed partial class DocxRenderer
         if (firstWordWidth > tailFirstWidth && !parts[0].Text.All(char.IsAsciiLetterOrDigit))
         {
             string prefix = parts[0].Text;
-            if (!prefix.EndsWith(' ') || !prefix[..^1].All(char.IsAsciiLetterOrDigit)) { return null; }
+            if (!prefix.EndsWith(' ') || !prefix[..^1].All(char.IsAsciiLetterOrDigit))
+            {
+                return ResolveWordCompatibleComposedPrefixRows(parts[0], parts[1], fontSize,
+                    continuationWidth, cancellationToken);
+            }
             OpenTypeFont prefixFont = parts[0].Resource.Embedded.Font;
             OpenTypeFont tailFont = tail.Embedded.Font;
             if (prefixFont.UnitsPerEm <= 0 || tailFont.UnitsPerEm <= 0) { return null; }
@@ -131,6 +140,39 @@ internal sealed partial class DocxRenderer
         return new(parts[0], tail, lines, lineHeightEm, firstGapEm);
     }
 
+    private static DocxMarkupTwoFaceRows? ResolveWordCompatibleComposedPrefixRows(
+        DocxMarkupBalloonBodyPart prefix, DocxMarkupBalloonBodyPart tail,
+        double fontSize, double continuationWidth, CancellationToken cancellationToken)
+    {
+        int split = prefix.Text.LastIndexOf(' ');
+        if (split <= 0 || split == prefix.Text.Length - 1 || split != prefix.Text.IndexOf(' ')) { return null; }
+        for (int i = 0; i < prefix.Text.Length; i++)
+        {
+            if ((i & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+            if (prefix.Text[i] != ' ' && !char.IsAsciiLetterOrDigit(prefix.Text[i])) { return null; }
+        }
+        DocxMarkupBalloonBodyPart residual = prefix with { Text = prefix.Text[(split + 1)..] };
+        double available = continuationWidth - residual.Resource.Embedded.MeasureTextPoints(residual.Text, fontSize);
+        if (!double.IsFinite(available) || available <= 0d) { return null; }
+        OpenTypeFont prefixFont = prefix.Resource.Embedded.Font;
+        OpenTypeFont tailFont = tail.Resource.Embedded.Font;
+        if (prefixFont.UnitsPerEm <= 0 || tailFont.UnitsPerEm <= 0) { return null; }
+        double prefixDescent = -prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm;
+        double tailDescent = -tailFont.Hhea.HorizontalDescender / (double)tailFont.UnitsPerEm;
+        double prefixAscentGap = (prefixFont.Hhea.HorizontalAscender + prefixFont.Hhea.HorizontalLineGap) / (double)prefixFont.UnitsPerEm;
+        double tailAscentGap = (tailFont.Hhea.HorizontalAscender + tailFont.Hhea.HorizontalLineGap) / (double)tailFont.UnitsPerEm;
+        double firstGap = prefixDescent + Math.Max(prefixAscentGap, tailAscentGap);
+        double secondGap = Math.Max(prefixDescent, tailDescent) + tailAscentGap;
+        if (!double.IsFinite(firstGap) || firstGap <= 0d || !double.IsFinite(secondGap) || secondGap <= 0d) { return null; }
+        // The first tail row is already a continuation of the prefix row:
+        // its visible words fit without reserving the emitted break separator.
+        var lines = WrapUniformBalloonWords(tail.Text, tail.Resource.Embedded, fontSize,
+            available, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
+        if (lines.Length == 0 || lines[0].Text.Length == 0) { return null; }
+        return new(prefix with { Text = prefix.Text[..(split + 1)] }, tail.Resource, lines,
+            DocxLineMetrics.MeasureHheaLineHeight(tailFont, 1d), firstGap, residual, secondGap);
+    }
+
     private static void RenderWordCompatibleTwoFaceRows(
         DocxMarkupTwoFaceRows rows,
         DocxMarkupBalloonPlacement placement,
@@ -146,6 +188,17 @@ internal sealed partial class DocxRenderer
             placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
         double tailX = bodyFirstLineX + rows.Prefix.Resource.Embedded.MeasureTextPoints(rows.Prefix.Text, fontSize);
         double gap = ResolveWordCompatibleBalloonLineGap(rows.TailLineHeightEm, fontSize);
+        if (rows.ContinuationPrefix is DocxMarkupBalloonBodyPart residual)
+        {
+            double mixedY = firstBaselineY - rows.FirstContinuationGapEm!.Value * fontSize;
+            DrawBalloonText(graphics, residual.Resource, residual.Text, textX, mixedY, fontSize,
+                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            tailX = textX + residual.Resource.Embedded.MeasureTextPoints(residual.Text, fontSize);
+            RenderUniformBalloonRows(rows.TailLines, placement, graphics, rows.TailResource, terminalResource,
+                tailX, textX, mixedY, gap, fontSize, cancellationToken,
+                rows.SecondContinuationGapEm * fontSize);
+            return;
+        }
         RenderUniformBalloonRows(rows.TailLines, placement, graphics, rows.TailResource, terminalResource,
             tailX, textX, firstBaselineY, gap, fontSize, cancellationToken,
             rows.FirstContinuationGapEm * fontSize);

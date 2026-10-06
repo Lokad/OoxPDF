@@ -972,7 +972,7 @@ internal sealed partial class DocxRenderer
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
                     ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth, cancellationToken);
-                int rows = singleRowParts ? 1 : twoFaceRows?.TailLines.Length ??
+                int rows = singleRowParts ? 1 : twoFaceRows?.PrintedRows ??
                     (candidate.WordCompatibleBodyLineHeightEm is not null && candidate.WordCompatibleBodyParts is null
                         ? Math.Max(1, WrapUniformBalloonWords(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth, cancellationToken).Length)
                         : CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth));
@@ -981,6 +981,10 @@ internal sealed partial class DocxRenderer
                 if (twoFaceRows?.FirstContinuationGapEm is double firstGapEm)
                 {
                     continuationsHeight = firstGapEm * fontSize + (rows - 2) * lineGap;
+                    if (rows > 2 && twoFaceRows.SecondContinuationGapEm is double secondGapEm)
+                    {
+                        continuationsHeight = (firstGapEm + secondGapEm) * fontSize + (rows - 3) * lineGap;
+                    }
                 }
                 return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + continuationsHeight +
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;

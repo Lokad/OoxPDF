@@ -2333,14 +2333,14 @@ internal static class DocxCommentsTests
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + tailRows[0].Y - tailRows[^1].Y)) < 0.02d,
                 "Height must include the joined word's source-face fragments.");
 
-            DocxParagraph composed = comment with { Runs = [comment.Runs[0] with { Text = "Review table" }, comment.Runs[1]] };
+            DocxParagraph composed = comment with { Runs = [comment.Runs[0] with { Text = "Review table," }, comment.Runs[1]] };
             DocxDocument fallback = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(composed)] }] };
             var fallbackBalloon = renderer.InspectMarkupBalloons(fallback).Single();
             var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(fallback, null, CancellationToken.None).Single())
                 .Where(show => show.X >= fallbackBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                     !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.True(fallbackShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                "A multi-word prefix that must wrap needs separate composition evidence and retains fallback.");
+                "A punctuated multi-word prefix retains the complete fallback path.");
         }
     }
 
@@ -2401,6 +2401,77 @@ internal static class DocxCommentsTests
             TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The final mark keeps nominal balloon size.");
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - tailRows[^1].Y)) < 0.02d,
                 "Box height must include the distinct first transition and later tail steps.");
+        }
+    }
+
+    public static void DocxWordCompatibleMixedBalloonComposesJoinedPrefixAcrossFontRows()
+    {
+        foreach (bool supplementary in new[] { false, true })
+        foreach (bool boundary in new[] { false, true })
+        foreach (double rightMargin in new[] { 72d, 144d, 207d })
+        {
+            const string prefix = "Review table";
+            int scalarCount = boundary ? 14 : 72;
+            string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", scalarCount / 2)) : new string('a', scalarCount);
+            string tail = word + (boundary ? " " + new string('b', 8) : string.Empty) + " ending.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(prefix + tail, 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "CommentFace"),
+                    new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodyDescender: -350, bodyAscender: 500),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal("Review ", shows[0].Text);
+            TestAssert.Equal("table", shows[1].Text);
+            TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
+            TestAssert.True(shows.Take(2).All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700),
+                "Both prefix rows must retain the prepared prefix face.");
+            var tailRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+            TestAssert.True(tailRows.Length >= (boundary ? 2 : 3), "The composed tail must continue below its mixed row.");
+            double size = tailRows[0].Size;
+            TestAssert.True(Math.Abs(shows[0].Y - shows[1].Y - 1.30d * size) < 0.02d,
+                "The first step uses prefix descent plus the larger complete ascent/line-gap metric.");
+            TestAssert.True(Math.Abs(shows[1].Y - tailRows[0].Y) < 0.001d, "The final prefix word joins the first tail row.");
+            double tailX = shows[1].X + shows[1].Font.MeasureTextPoints("table", size);
+            TestAssert.True(Math.Abs(tailRows[0].X - tailX) < 0.04d, "The tail starts after the residual prefix advance.");
+            if (boundary)
+            {
+                TestAssert.Equal(word + " " + new string('b', 8) + " ", tailRows[0].Text);
+            }
+            for (int i = 0; i < tailRows.Length; i++)
+            {
+                TestAssert.Equal(900, (int)tailRows[i].Font.Font.GetAdvanceWidth(tailRows[i].Font.Font.MapCodePoint('a')));
+                TestAssert.True(tailRows[i].X + tailRows[i].Font.MeasureTextPoints(tailRows[i].Text.TrimEnd(), size)
+                    <= balloon.X + balloon.Width + 0.02d, "Visible tail words must stay inside the balloon.");
+                if (i > 0)
+                {
+                    TestAssert.True(Math.Abs(tailRows[i - 1].Y - tailRows[i].Y - (i == 1 ? 1.15d : 1d) * size) < 0.02d,
+                        "The mixed descent applies once; later rows retain the tail's own metrics.");
+                }
+            }
+            TestAssert.Equal(" ", shows[^1].Text);
+            TestAssert.Equal(500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
+            TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The terminal mark keeps nominal balloon size.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - tailRows[^1].Y)) < 0.02d,
+                "Balloon height includes both font transitions and every later tail row.");
         }
     }
 
@@ -2910,7 +2981,7 @@ internal static class DocxCommentsTests
     }
 
     private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null, short? bodySpaceAdvance = null,
-        short? bodyAdvance = null, short? bodyDescender = null) : IFontResolver
+        short? bodyAdvance = null, short? bodyDescender = null, short? bodyAscender = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
@@ -2939,12 +3010,18 @@ internal static class DocxCommentsTests
                 (int hheaOffset, _) = TestFontBuilder.GetTableRange(bytes, "hhea");
                 System.Buffers.Binary.BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(hheaOffset + 6, 2), descender);
             }
+            if (request.FamilyName == "CommentFace" && bodyAscender is short ascender)
+            {
+                (int hheaOffset, _) = TestFontBuilder.GetTableRange(bytes, "hhea");
+                System.Buffers.Binary.BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(hheaOffset + 4, 2), ascender);
+            }
             return new FontFaceResolution(request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
                 new MemoryFontProgramSource("test:balloon-choice:" + request.FamilyName +
                     (bodyLineGap is null ? string.Empty : ":line-gap:" + bodyLineGap) +
                     (bodySpaceAdvance is null ? string.Empty : ":space:" + bodySpaceAdvance) +
                     (bodyAdvance is null ? string.Empty : ":advance:" + bodyAdvance) +
-                    (bodyDescender is null ? string.Empty : ":descender:" + bodyDescender), bytes), IsFallback: false);
+                    (bodyDescender is null ? string.Empty : ":descender:" + bodyDescender) +
+                    (bodyAscender is null ? string.Empty : ":ascender:" + bodyAscender), bytes), IsFallback: false);
         }
     }
 
