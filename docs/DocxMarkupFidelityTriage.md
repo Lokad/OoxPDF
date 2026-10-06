@@ -1061,6 +1061,46 @@ cached PDFs retain bytes and 551 failed gates; composed pixel residuals remain.
 Inputs, references, accepted-baseline links, rejected-proposal evidence and final
 audits are under `artifacts/plan-revision-20261005/rv06-l37/`.
 
+## RV21-V26: full integration through L37
+
+The isolated Release run at `c6a0b902` passes 2164 checks, fails none and skips
+the unconfigured private-layout diagnostic. It includes 883 DOCX checks and
+excludes the isolated SVG transparency proposal. Release has no warnings or
+errors. Fresh package smoke keeps version 0.1.5 and verifies the exact full-suite
+DLL: `FB3BBCA3CBA6D615E9ACEDD091C5EA91C222EA50FC573A7193D9D229BCE22C30`.
+Evidence is under `artifacts/plan-revision-20261005/milestone-c6a0b902/`.
+
+## RV06-L38: uniform balloon word splitting
+
+Prepared uniform regular comment faces now split overwide words at Unicode
+scalar boundaries. The first-row and continuation widths retain their qualified
+rules; within-word breaks emit no invented spaces. Word-boundary separators and
+the final paragraph-mark face remain explicit. Height and emission use the same
+rows. Mixed, styled, grouped and unprepared fallback branches retain their
+previous admission rules.
+
+The production regression fails before the repair and passes for ASCII and
+supplementary Unicode in both first-row and continuation lanes. A separate
+single-glyph guard preserves progress and spaces even when one glyph exceeds
+the lane. All 885 DOCX checks, 81 balloon checks and six Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL from
+runtime revision `4f3812e1`:
+`C68D720A22D099E35038366027B667B8205AA47A9608B3FECF819E847326940B`.
+
+Across 159 held-out and three new first-row Office controls, five improve error
+and similarity, 157 retain PDF/raster bytes, 161 retain graphics and all retain
+main-document text and comment content. The longer first-row control now uses
+Office's three rows rather than two. Six uniform controls match exact row text,
+spaces and source faces, including six within-word breaks; maximum row-start X
+gap is 0.085pt and baseline gap is 0.170pt. All 34 cached PDFs retain bytes and
+551 failed gates.
+
+Two mixed-source whole-word controls retain fallback break mismatches, together
+with seven older styled/grouped/overwide controls. Prior positioning and composed
+pixel residuals remain; 33 cached cases are partial. Input/reference/candidate
+hashes and exact emission audits are under
+`artifacts/plan-revision-20261005/rv06-l38/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
