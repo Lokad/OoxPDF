@@ -87,7 +87,8 @@ internal sealed partial class DocxRenderer
                 markupContext,
                 labelResource.Embedded,
                 bodyCoverageResource.Embedded,
-                fontResources))
+                fontResources,
+                cancellationToken))
             {
                 foreach (string? text in new string?[] { placement.Title, placement.Body, placement.WordCompatibleTitle, placement.WordCompatibleBody })
                 {
@@ -253,7 +254,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, titleResource?.Embedded, bodyResource?.Embedded, fontResources))
+        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, titleResource?.Embedded, bodyResource?.Embedded, fontResources, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             RenderMarkupBalloonPlacement(placement, graphics, labelResource, titleResource, bodyResource, fallbackFace, markupContext);
@@ -261,7 +262,7 @@ internal sealed partial class DocxRenderer
     }
 
     // Office (comment/unresolved/dense/mirrored references, Word-COM rendered): balloon
-    // titles set in Segoe UI Bold while bodies use the document face (unresolved titles
+    // titles set in Segoe UI Bold while bodies use a regular face (unresolved titles
     // run 4.4pt wider than Aptos at the same size). Resolved once per conversion; a
     // fallback/unresolvable result keeps the label face everywhere (including off-Windows). A
     // Segoe UI Semibold (600) is also rejected: server SKUs may ship the family without its
@@ -300,7 +301,8 @@ internal sealed partial class DocxRenderer
         DocxRelatedStoryLayout? storyLayout,
         string body,
         DocxFontResources? fontResources,
-        PdfEmbeddedFont? legacyBody)
+        PdfEmbeddedFont? legacyBody,
+        CancellationToken cancellationToken)
     {
         // Word preserves the comment's regular face independently of body runs.
         // Keep the legacy path for mixed formatting, compound stories and groups.
@@ -321,6 +323,7 @@ internal sealed partial class DocxRenderer
         DocxRunFontResource? resource = null;
         foreach (DocxTextRun run in paragraph.Runs)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(run.Text)) { continue; }
             if (run.Bold || run.Italic || run.Underline || run.CharacterSpacingPoints != 0d ||
                 run.FieldKind is not null || !fontResources.RunResources.TryGetValue(run, out DocxRunFontResource? candidate) ||
@@ -335,8 +338,12 @@ internal sealed partial class DocxRenderer
         {
             return null;
         }
-        foreach (Rune rune in (body + " ").EnumerateRunes())
+        ushort spaceGlyph = resource.Embedded.Font.MapCodePoint(' ');
+        if (spaceGlyph == 0 || !resource.Embedded.TryGetEncodedCid(spaceGlyph, out _)) { return null; }
+        int runeIndex = 0;
+        foreach (Rune rune in body.EnumerateRunes())
         {
+            if ((runeIndex++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
             ushort glyph = resource.Embedded.Font.MapCodePoint(rune.Value);
             if (glyph == 0 || !resource.Embedded.TryGetEncodedCid(glyph, out _)) { return null; }
         }
@@ -350,7 +357,8 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         PdfEmbeddedFont? labelEmbedded,
         PdfEmbeddedFont? bodyEmbedded,
-        DocxFontResources? fontResources = null)
+        DocxFontResources? fontResources = null,
+        CancellationToken cancellationToken = default)
     {
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
@@ -657,7 +665,7 @@ internal sealed partial class DocxRenderer
                             WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(wordCompatibleCommentBody))
                         {
                             WordCompatibleBodyResource = UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                                ? ResolveUniformCommentBalloonBodyResource(storyLayout, wordCompatibleCommentBody, fontResources, bodyEmbedded)
+                                ? ResolveUniformCommentBalloonBodyResource(storyLayout, wordCompatibleCommentBody, fontResources, bodyEmbedded, cancellationToken)
                                 : null
                         });
                     }
