@@ -1207,6 +1207,44 @@ partial cached cases remain. Input/reference/candidate identities, selected and
 rejected metric models and exact emission audits are under
 `artifacts/plan-revision-20261005/rv06-l41/`.
 
+## RV06-L42: joined two-word prefixes and composed row metrics
+
+A fitting plain two-word ASCII prefix can now move its final word onto the
+first split tail row in its prepared font. The first step uses prefix descent
+plus the larger complete ascent/line-gap metric of the two faces. The second
+uses their larger descent plus tail ascent/line gap; later steps use tail height.
+Height and emission share these phases. The mixed continuation fits visible
+words without reserving the emitted break separator. Existing single-word and
+separated-prefix paths, styled/unprepared guards and cancellation remain active.
+Wider, punctuated or longer prefixes retain their prior admission rules.
+
+Sixteen trusted metric controls cover ten font pairs and three print scales.
+The selected first-step model has maximum error 0.108pt/mean 0.034pt at Office
+font sizes; the second has maximum 0.156pt/mean 0.035pt. Maximizing ascent and
+line gap separately reaches 1.179pt and is rejected. Two word-boundary probes
+confirm that the mixed continuation excludes the emitted blank from visible
+width. The production regression fails before repair and passes for ASCII and
+supplementary scalars at three scales with distinct ascent/descent/gap metrics,
+complete source text, source faces, terminal mark/size and shared box height.
+
+All 889 DOCX checks, 85 balloon checks and ten Linux regressions pass. Release
+has no warnings/errors. Fresh 0.1.5 package smoke contains the exact tested DLL
+from runtime revision `2530bcb9`:
+`437102382717564CD9816F3597D23D36959670C446F52837E00CEB2421C5A20D`.
+Across 188 earlier and twelve new Office comparisons, sixteen improve error
+and similarity, 184 retain PDF/raster/graphics bytes and all retain main-document
+text and comment content. These are 200 distinct input hashes and 199 case IDs;
+the reused ID has identical candidate bytes. All sixteen changed comparisons
+match exact row text, spaces and source faces, including 27 within-word breaks.
+Maximum row-start X gap is 0.838pt and baseline gap is 0.201pt.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Six held-out break
+mismatches remain across leading tail separators, wide prefixes, three parts
+and multiple paragraphs. Prior positioning/composed pixel residuals and 33
+partial cache cases remain. Input/reference/candidate identities, selected and
+rejected models and exact emission audits are under
+`artifacts/plan-revision-20261005/rv06-l42/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
