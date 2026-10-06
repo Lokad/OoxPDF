@@ -63,7 +63,21 @@ internal sealed partial class DocxRenderer
             if (part.Text.Length > body.Length - offset || !body.AsSpan(offset, part.Text.Length).SequenceEqual(part.Text)) { return null; }
             offset += part.Text.Length;
         }
-        if (offset != body.Length || body.Contains("  ", StringComparison.Ordinal)) { return null; }
+        if (offset != body.Length) { return null; }
+        if (body.Contains("  ", StringComparison.Ordinal))
+        {
+            if (parts.Count != 2 || !parts[1].Text.StartsWith("  ", StringComparison.Ordinal) ||
+                parts[1].Text.Length <= 2 || parts[1].Text[2] == ' ' ||
+                parts[1].Text[2..].Contains("  ", StringComparison.Ordinal)) { return null; }
+            string prefix = parts[0].Text;
+            int split = prefix.IndexOf(' ');
+            if (split <= 0 || split != prefix.LastIndexOf(' ') || split == prefix.Length - 1) { return null; }
+            for (int index = 0; index < prefix.Length; index++)
+            {
+                if ((index & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+                if (prefix[index] != ' ' && !char.IsAsciiLetterOrDigit(prefix[index])) { return null; }
+            }
+        }
         return parts.ToArray();
     }
 
@@ -245,8 +259,9 @@ internal sealed partial class DocxRenderer
         double fontSize, double firstTailWidth, double continuationWidth, CancellationToken cancellationToken)
     {
         int split = prefix.Text.IndexOf(' ');
+        int separatorLength = tail.Text.Length > 1 && tail.Text[1] == ' ' ? 2 : 1;
         if (split <= 0 || split != prefix.Text.LastIndexOf(' ') || split == prefix.Text.Length - 1 ||
-            tail.Text.Length < 2 || tail.Text[1] == ' ') { return null; }
+            tail.Text.Length <= separatorLength || tail.Text[separatorLength] == ' ') { return null; }
         for (int i = 0; i < prefix.Text.Length; i++)
         {
             if ((i & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
@@ -257,8 +272,9 @@ internal sealed partial class DocxRenderer
         ushort space = tailFont.MapCodePoint(' ');
         if (space == 0 || !tail.Resource.Embedded.TryGetEncodedCid(space, out _) ||
             prefixFont.UnitsPerEm <= 0 || tailFont.UnitsPerEm <= 0) { return null; }
-        double available = firstTailWidth - tail.Resource.Embedded.MeasureTextPoints(" ", fontSize);
-        string text = tail.Text[1..];
+        string separator = tail.Text[..separatorLength];
+        double available = firstTailWidth - tail.Resource.Embedded.MeasureTextPoints(separator, fontSize);
+        string text = tail.Text[separatorLength..];
         string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (!double.IsFinite(available) || available <= 0d || words.Length < 2) { return null; }
         double firstWordWidth = tail.Resource.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
@@ -272,10 +288,10 @@ internal sealed partial class DocxRenderer
         var lines = WrapUniformBalloonWords(text, tail.Resource.Embedded, fontSize,
             startsBelowPrefix ? -1d : available, continuationWidth, cancellationToken);
         if (lines.Length < 2 || (!startsBelowPrefix && lines[0].Text.Length == 0)) { return null; }
-        // Keep the authored separator in its tail resource and reserve its
+        // Keep the authored separators in their tail resource and reserve their
         // advance beside the complete prefix. A separated first word that
         // does not fit starts below it, including zero-advance first glyphs.
-        lines[0] = lines[0] with { Text = " " + lines[0].Text };
+        lines[0] = lines[0] with { Text = separator + lines[0].Text };
         return new(prefix, tail.Resource, lines, DocxLineMetrics.MeasureHheaLineHeight(tailFont, 1d), transition);
     }
 
