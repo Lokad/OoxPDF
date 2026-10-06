@@ -2398,6 +2398,89 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleUniformBalloonSplitsWordsWithoutInsertingSpaces()
+    {
+        foreach (bool supplementary in new[] { false, true })
+        foreach (bool firstRow in new[] { false, true })
+        {
+            string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
+            string body = (firstRow ? "" : "start. ") + word + " ending.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+            var rows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+            TestAssert.Equal(firstRow ? 3 : 4, rows.Length);
+            TestAssert.Equal(body + " ", string.Concat(shows.Select(show => show.Text)));
+            foreach (var row in rows)
+            {
+                TestAssert.True(row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), row.Size) <= balloon.X + balloon.Width + 0.02d,
+                    "A split word's visible glyphs must stay inside the balloon.");
+                TestAssert.True(!row.Text.Contains('\uFFFD'), "Supplementary glyphs must retain their Unicode mapping.");
+            }
+            double expectedHeight = 9.21d + (rows.Length - 1) * rows[0].Size + 3.4d;
+            TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
+                "Balloon height must include every word-fragment row.");
+        }
+    }
+
+    public static void DocxWordCompatibleUniformBalloonKeepsOverwideSingleGlyphWords()
+    {
+        // One glyph can exceed the lane. The splitter must still advance and
+        // retain both the actual word separator and the final paragraph blank.
+        const string body = "a b";
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+        {
+            Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(comment)], [], [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+        };
+        DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodySpaceAdvance: 200, bodyAdvance: 32700),
+            OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var balloon = renderer.InspectMarkupBalloons(document).Single();
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 32700).ToArray();
+        TestAssert.Equal(body + " ", string.Concat(shows.Select(show => show.Text)));
+        var visible = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+        TestAssert.Equal(2, visible.Length);
+        TestAssert.Equal("a", visible[0].Text);
+        TestAssert.Equal("b", visible[1].Text);
+        double expectedHeight = 9.21d + 2 * visible[0].Size + 3.4d;
+        TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
+            "The title-only first row and two forced glyph rows must not add an empty terminal row.");
+    }
+
     public static void DocxWordCompatibleUniformBalloonUsesBodyLineMetrics()
     {
         string body = string.Join(" ", Enumerable.Repeat("alpha", 30));
@@ -2639,12 +2722,12 @@ internal static class DocxCommentsTests
         }
     }
 
-    private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null, short? bodySpaceAdvance = null) : IFontResolver
+    private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null, short? bodySpaceAdvance = null, short? bodyAdvance = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
             byte[] bytes = TestFontBuilder.CreateTestFont();
-            int advance = request.FamilyName == "CommentFace" ? 700 : request.FamilyName == "OtherCommentFace" ? 900 : 500;
+            int advance = request.FamilyName == "CommentFace" ? bodyAdvance ?? 700 : request.FamilyName == "OtherCommentFace" ? 900 : 500;
             (int offset, _) = TestFontBuilder.GetTableRange(bytes, "hmtx");
             for (int glyph = 0; glyph < TestFontBuilder.GlyphCount; glyph++)
             {
@@ -2666,7 +2749,8 @@ internal static class DocxCommentsTests
             return new FontFaceResolution(request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
                 new MemoryFontProgramSource("test:balloon-choice:" + request.FamilyName +
                     (bodyLineGap is null ? string.Empty : ":line-gap:" + bodyLineGap) +
-                    (bodySpaceAdvance is null ? string.Empty : ":space:" + bodySpaceAdvance), bytes), IsFallback: false);
+                    (bodySpaceAdvance is null ? string.Empty : ":space:" + bodySpaceAdvance) +
+                    (bodyAdvance is null ? string.Empty : ":advance:" + bodyAdvance), bytes), IsFallback: false);
         }
     }
 
