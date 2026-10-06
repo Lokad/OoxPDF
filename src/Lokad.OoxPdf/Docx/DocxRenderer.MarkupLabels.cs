@@ -92,8 +92,11 @@ internal sealed partial class DocxRenderer
                 string candidate = line.Length == 0
                     ? words[index]
                     : line + " " + words[index];
+                // Word's wrapped rows include the separating space. Reserve its
+                // advance while choosing a break, using the emitting body face.
+                string measured = index + 1 < words.Length ? candidate + " " : candidate;
                 if (line.Length != 0 &&
-                    embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+                    embedded.MeasureTextPoints(measured, fontSize) > maxWidth)
                 {
                     break;
                 }

@@ -2186,6 +2186,46 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleBalloonWrapReservesBreakSpace()
+    {
+        string body = string.Join(" ", Enumerable.Repeat("alpha", 30));
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+        {
+            Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(comment)], [], [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+        };
+        DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        var lines = ReadEmbeddedGlyphTextShows(page)
+            .Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
+                show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+        TestAssert.True(lines.Length >= 3, "The probe must wrap across several body rows.");
+        TestAssert.Equal(body, string.Join(" ", lines.Select(show => show.Text.Trim())));
+        for (int index = 0; index < lines.Length - 1; index++)
+        {
+            var line = lines[index];
+            double breakEnd = line.X + line.Font.MeasureTextPoints(line.Text.TrimEnd() + " ", line.Size);
+            double rightEdge = balloon.X + balloon.Width - 0.5d - (index == 0 ? 2.541d : 0d);
+            TestAssert.True(breakEnd <= rightEdge + 0.02d,
+                $"A wrapped row must fit its emitted break space: end={breakEnd}, edge={rightEdge}, text={line.Text}.");
+        }
+    }
+
     private sealed class BalloonTypefaceFontResolver : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
