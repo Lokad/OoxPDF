@@ -582,9 +582,11 @@ body baselines remain identical to the accepted renderer.
 
 Two production regressions cover 32 font/page/start-position variants and
 surrounding-text invariance. The baseline fails the inset check; the proposal
-passes on Windows and Linux. A full DOCX run passes 869 tests before the final
-fallback guards are narrowed. The final guarded proposal passes both Release
-regressions, all 43 API tests and an exact fresh 0.1.5 package smoke. Its PDFs
+passes on Windows and Linux. Full integration at the accepted L20 revision
+passes 2,150 Windows tests, including 869 DOCX checks, with one unconfigured
+private probe skipped. Release builds are clean and the exact fresh 0.1.5
+package smoke loads the DLL tested by the full suite. The scoped proposal also
+passes all 43 API tests. Its PDFs
 retain the measured proposal's bytes for all 24 controls and all 33 cached
 cases; four fallback controls retain the accepted renderer's bytes. Twenty-four
 preserved-layout controls also retain their bytes.
@@ -595,6 +597,45 @@ every measured raster region. Failed gates decrease from 575 to 573, with no
 case increase. One case passes and 32 remain partial. The main review fixture
 closes two last-baseline gates; wider table/markup parity remains incomplete.
 Raw qualification is under `artifacts/plan-revision-20261005/rv06-l20/`.
+
+## Simple Review-Table Border Update (2026-10-06, RV06-L21)
+
+Qualified simple tables now scale solid border widths, junctions and row
+advances by the review print scale. Layout already shrinks table coordinates;
+border paint uses a local inverse projection and a PDF transform to apply the
+width scale once. Following body text consumes the printed border advances.
+The complete-table admission from L20 also gates this repair. Declared heights,
+wrapped or split cells, other border styles and the remaining unqualified
+layouts retain their previous behavior. A shared numeric guard retains the
+legacy border advances and paint if the PDF transform cannot represent the
+scale within 0.1 percent.
+
+Across 40 Word controls, 22 rasters improve and 17 retain their bytes at 144
+DPI. One thin-border control rises from 0.223 to 0.246 MAE at that resolution;
+at 288 and 432 DPI its MAE falls from 0.273 to 0.215 and 0.261 to 0.209, with
+improved similarity. The maximum border-width difference falls from 0.60 to
+0.094 points. New one/three-row controls reduce the maximum following-body
+baseline difference from 2.50 to 0.31 points. Existing two-row bordered controls
+fall from 0.54/0.50 to 0.018/0.025 points. Wider border quantization remains
+approximate.
+
+The initial bounded projection passes 870 DOCX checks with no failures or
+skips. The final numeric guard passes four production regressions on Windows
+and Linux. Both border-advance and numeric-fallback checks have failing prior
+implementations. All 40 qualified, 40 preserved-layout, four fallback and 33
+cached PDFs retain their qualified bytes after the guard. The final Release
+build is clean and a fresh 0.1.5 package smoke loads the DLL used by the focused
+tests. The broader table-border experiment is superseded.
+
+The cached corpus keeps 573 failed gates, one passing case and 32 partial
+cases. All input/reference identities and page counts match; 30 PDFs and
+rasters retain their bytes. The three changed cases improve overall pixel
+error and similarity. The main fixture's balloon-region MAE rises from 7.50 to
+7.70, while its body, table and connector regions improve; its last-baseline
+difference rises from 0.182 to 0.343 points and stays within its gate. These
+remain explicit composition/flow residuals. Comparisons are linked to fresh
+final candidate PDFs by input, reference and output hashes. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l21/`.
 
 ## Inputs
 
