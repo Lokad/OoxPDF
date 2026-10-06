@@ -2949,7 +2949,7 @@ internal static class DocxCommentsTests
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
             if (!hasThird && wrappedThird) { continue; }
-            if (!wrappedFirst && !wrappedSecond) { continue; }
+            if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
             string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
             string prefix = wrappedFirst ? firstWord + " start." : "Review table";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
@@ -3254,7 +3254,7 @@ internal static class DocxCommentsTests
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] })],
+                    [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { ParagraphMarkRun = last.ParagraphMarkRun! with { Bold = true } })],
@@ -3266,7 +3266,7 @@ internal static class DocxCommentsTests
                     var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "Five paragraphs, four paragraphs with a wrapped body, a wrapped third after fitting first and second bodies, explicit line spacing, mixed faces and repeated spaces retain complete fallback.");
+                        "Five paragraphs, four paragraphs with a wrapped body, explicit line spacing, mixed faces and repeated spaces retain complete fallback.");
                 }
                 foreach (var invalidResolver in new[]
                 {

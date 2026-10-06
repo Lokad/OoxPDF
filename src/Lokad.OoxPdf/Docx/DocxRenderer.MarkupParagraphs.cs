@@ -170,8 +170,7 @@ internal sealed partial class DocxRenderer
         double prefixWidth = first.Body.Resource.Embedded.MeasureTextPoints(first.Body.Text, fontSize);
         double tailWidth = second.Body.Resource.Embedded.MeasureTextPoints(second.Body.Text, fontSize);
         if (!double.IsFinite(prefixWidth) || prefixWidth <= 0d ||
-            !double.IsFinite(tailWidth) || tailWidth <= 0d ||
-            (prefixWidth <= firstWidth && tailWidth <= continuationWidth)) { return null; }
+            !double.IsFinite(tailWidth) || tailWidth <= 0d) { return null; }
         DocxUniformBalloonRow[]? firstRows = null;
         double firstTailGap = 0d;
         if (prefixWidth > firstWidth)
@@ -218,6 +217,7 @@ internal sealed partial class DocxRenderer
                 if (thirdRows.Length < 2 || thirdRows[0].Text.Length == 0) { return null; }
             }
         }
+        if (firstRows is null && thirdRows is null && tailWidth <= continuationWidth) { return null; }
         var tailFont = second.Body.Resource.Embedded.Font;
         int index = 0;
         foreach (Rune rune in second.Body.Text.EnumerateRunes())
@@ -231,7 +231,7 @@ internal sealed partial class DocxRenderer
         if (firstGap is null || !double.IsFinite(tailGap) || tailGap <= 0d) { return null; }
         var lines = WrapUniformBalloonWords(second.Body.Text, second.Body.Resource.Embedded, fontSize,
             continuationWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
-        return lines.Length >= (firstRows is null ? 2 : 1) && lines[0].Text.Length != 0
+        return lines.Length >= (firstRows is null && thirdRows is null ? 2 : 1) && lines[0].Text.Length != 0
             ? new(first, second, lines, firstGap.Value, tailGap, third, thirdGap, thirdRows, thirdTailGap, firstRows, firstTailGap) : null;
     }
 
