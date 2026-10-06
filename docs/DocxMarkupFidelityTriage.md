@@ -775,6 +775,45 @@ Same-face continuation admission, mixed composition and existing nonzero
 markup gates remain residuals. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l27/`.
 
+## Same-Face Metric Admission (2026-10-06, RV06-L28)
+
+Qualified comments now carry their line-height ratio independently of a font
+resource replacement. A comment that shares the existing body face keeps its
+resource and subset while gaining the same metric-based pitch as a distinct
+face. Grouped and mixed-face comments retain their previous pitch; invalid
+metrics retain the fallback. No public snapshot or API field changes.
+
+The production regression checks actual same-face rows, their box height and
+the mixed-face fallback. The older wrapped-height assertion now compares its
+four emitted rows with the box rather than assuming a fixed 1.2 factor.
+All 877 DOCX checks and 74 balloon checks pass, as do the portable same-face
+and distinct-face/fallback regressions. The Release build is clean and the
+fresh 0.1.5 package contains the exact tested DLL.
+
+Three new Word controls with matching document/comment faces all improve
+pixel error and similarity. Their largest baseline gap falls from 2.00 to
+0.18 points; all prior 37 control PDFs retain their bytes. Across 33 cached
+cases, 22 PDFs retain their bytes and all page counts/input/reference identities
+hold. The 11 changed PDFs retain font resources and every text-operation field
+except vertical position: 90 operations move. Failed gates fall from 546 to
+544, with no case tally increase; the multi-page case loses two failures.
+
+Pixel results remain mixed. At 144dpi, 12 of 14 changed pages improve error,
+two increase by at most 0.0088, and five lose similarity. Higher-resolution
+checks of the five affected cases retain small differences: each resolution
+has two page-error increases and four similarity decreases. The largest error
+increase at 432dpi is 0.0143 in the multi-column case. In the links/fields
+case, the pitch gets closer to Office while the existing title position stays
+12.71 points above its reference. First-row transitions, anchoring and composed
+layout remain residuals; these results do not establish complete parity.
+Evidence is under `artifacts/plan-revision-20261005/rv06-l28/`.
+
+Full integration pinned to `dc66b4f2`, through L26 and before these pitch
+repairs, passes 2,156 Windows checks with no failures and one unconfigured
+private-layout probe skipped, including 875 DOCX checks. Its fresh 0.1.5
+package contains the exact full-suite DLL. Evidence is under
+`artifacts/plan-revision-20261005/milestone-dc66b4f2/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
