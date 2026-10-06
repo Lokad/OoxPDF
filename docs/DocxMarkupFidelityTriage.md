@@ -1848,6 +1848,16 @@ Across 482 prior and thirty-one fresh controls, twenty-eight improve MAE and SSI
 All 34 cached PDFs retain bytes and 551 failed gates. Twenty-one break mismatches remain: mixed/wrapped paragraphs, four paragraphs, overwide/decorated/separated closing runs, unsupported paragraph-spacing modes and punctuated-prefix/tab/triple-separator/single-leading/extra-tail guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l59/`. The separate full integration at this runtime remains in progress.
 
 
+## RV06-L60: fitting third paragraph after a wrapped middle
+
+A fitting third paragraph after a wrapped middle body retains its own prepared body and nominal paragraph mark. Height and emission share the first transition, middle row pitch and final transition. Wrapped first or third bodies, mixed paragraph faces, decorated marks, four paragraphs and unsupported spacing retain complete fallback. The production reproducer fails before the change; nineteen mixed checks cover 384 two-/three-paragraph scalar/advance/descent/gap/length/mark/scale variants, including 192 new fitting-third variants, with formatting and numeric guards.
+
+Frozen runtime `874caff6` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `f9f900567e6c4231aeff1185abedb711` contains the exact tested DLL, SHA-256 `F68023F010E5C668DB9ACFD680F3FC1C839110E813C70A04314350DEFB349257`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 513 prior and twenty-six fresh controls, twenty-one improve MAE and SSIM and 518 retain PDF/raster/graphics bytes. All 539 retain main-document text and comment content; 514 match Office breaks. All twenty-one changed controls match exact row text, spaces and prepared fonts, including 22 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.214pt. The five fresh fallback guards and one fitting-middle boundary retain exact PDFs. Twenty-two metric controls qualify first/final transitions with maximum errors 0.083/0.071pt; thirty-nine middle row pitches have maximum error 0.082pt. Reusing uniform middle metrics for the final transition misses by up to 1.076pt.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Twenty-five break mismatches remain across mixed/wrapped paragraph bodies, four paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l60/`. Separate full integration V37 through L59/E4 is still running and excludes L60.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
@@ -1881,6 +1891,7 @@ All 34 cached PDFs retain bytes and 551 failed gates. Twenty-one break mismatche
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
 
 
 
