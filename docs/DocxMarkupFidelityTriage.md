@@ -864,6 +864,16 @@ retain their 544 failures; this additional case is separate coverage, not a
 reduction of those failures. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l30/`.
 
+## Additional Continuation Faces (2026-10-06, RV06-L31)
+
+Four held-out Word controls extend uniform comment-face coverage to Georgia,
+Cambria, Consolas and Times New Roman. All preserve body content and match
+Office line breaks, including four Consolas rows. The largest baseline gap is
+0.177 points. Office's small first-row and continuation differences remain;
+these controls support the accepted metric admission without qualifying a
+font-specific positioning constant. No runtime change is introduced. Evidence
+is under `artifacts/plan-revision-20261005/rv06-l31/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
