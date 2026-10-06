@@ -2146,6 +2146,46 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleBalloonTerminalSpaceUsesBodyAdvance()
+    {
+        foreach (string body in new[] { "Review table control.",
+            "Review table control. Check several continuation rows with a body face wider than the title face, keeping each terminal space beside its own text." })
+        {
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+            {
+                Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            PdfPage page = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            var bodyShows = ReadEmbeddedGlyphTextShows(page)
+                .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+            var spaces = bodyShows.Where(show => show.Text == " ").ToArray();
+            TestAssert.True(spaces.Length >= (body.Length < 30 ? 1 : 2), "The probe must emit single-row and continuation terminal spaces.");
+            foreach (var space in spaces)
+            {
+                var line = bodyShows.Single(show => !string.IsNullOrWhiteSpace(show.Text) && Math.Abs(show.Y - space.Y) < 0.01d);
+                double expectedX = line.X + line.Font.MeasureTextPoints(line.Text, line.Size);
+                TestAssert.True(Math.Abs(space.X - expectedX) < 0.04d,
+                    $"A terminal space must follow the actual body advance. expected={expectedX}, actual={space.X}.");
+            }
+        }
+    }
+
     private sealed class BalloonTypefaceFontResolver : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
@@ -2172,10 +2212,10 @@ internal static class DocxCommentsTests
             new MemoryFontProgramSource("test:balloon:" + request.FamilyName, Bytes), IsFallback: false);
     }
 
-    private static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size)> ReadEmbeddedGlyphTextShows(PdfPage page)
+    private static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(PdfPage page)
     {
         foreach (Match show in Regex.Matches(page.Content,
-            @"/(?<font>F\d+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 [-\d.]+ [-\d.]+ Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
+            @"/(?<font>F\d+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
             RegexOptions.Singleline))
         {
             PdfEmbeddedFont font = page.Fonts.Single(resource => resource.ResourceName == show.Groups["font"].Value).Font;
@@ -2190,7 +2230,9 @@ internal static class DocxCommentsTests
                     text.Append(char.ConvertFromUtf32(codePoint));
                 }
             }
-            yield return (font, text.ToString(), double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture));
+            yield return (font, text.ToString(), double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture),
+                double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture),
+                double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture));
         }
     }
 

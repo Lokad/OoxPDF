@@ -1361,7 +1361,7 @@ internal sealed partial class DocxRenderer
         DrawBalloonText(graphics, bodyResource, lines[0], bodyFirstLineX, firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
         if (lines.Length == 1)
         {
-            DrawBalloonText(graphics, bodyResource, " ", bodyFirstLineX + labelResource.Embedded.MeasureTextPoints(lines[0], fontSize), firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            DrawBalloonText(graphics, bodyResource, " ", bodyFirstLineX + bodyResource.Embedded.MeasureTextPoints(lines[0], fontSize), firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
             return;
         }
 
@@ -1383,7 +1383,7 @@ internal sealed partial class DocxRenderer
                 graphics,
                 bodyResource,
                 " ",
-                textX + labelResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
+                textX + bodyResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
                 continuationBaselineY,
                 fontSize,
                 placement.BodyRgb.Red,
