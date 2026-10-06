@@ -74,7 +74,7 @@ cases; family rows overlap on shared patterns so their totals exceed 343).
 | pptx-effects | 5 / 0 / 4 / 0 | Mixed; raster shadows/glows and gradient approximations render, other effects approximate | Per Capabilities effects scope; triage complete 2026-09-22 |
 | pptx-smoke | 6 / 0 / 0 / 0 | Locked | Blank/size discovery must stay exact |
 | docx-layout | 11 / 0 / 49 / 0 | Mixed; greedy-wrap approximations stay approximate | Latin greedy wrapping scope in Capabilities.md; markup cases tracked under docx-markup |
-| docx-markup | 0 / 0 / 33 / 0 (gated via reference cache) | Approximate with margin modes tracked | Reference-cache workflow below |
+| docx-markup | 0 / 0 / 34 / 0 (gated via reference cache) | Approximate with margin modes tracked | Reference-cache workflow below |
 
 Columns are locked / locked-text-ops / approximate / needs-review.
 
@@ -92,7 +92,7 @@ Qualified opaque round-dashed strokes on separate straight subpaths use a native
 - pptx-composition: master and layout inheritance locks case by case; next is extending locked inheritance coverage. Gate: family gates plus pixels.
 - pptx-effects: raster shadows and glows approximate, other effects unsupported with diagnostics; next is held-out Office calibration for further effects. Gate: family 9/9 plus pixels.
 - docx-layout: Latin greedy wrapping with mid-line images across body, table-cell, related-story and static paths plus approximate columns, notes, and floating wrap; Office calibration of image baseline, line growth, and justification is complete; remaining scope is explicit non-goals. Gate: family 60/60, docx-text groups, words and line starts plus pixels.
-- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text. On the validation workstation, all 33 public manifests have cached references covering 25 distinct input/view identities. Office parity remains partial; scoped repairs and remaining layout/balloon/text gates are recorded in `docs/DocxMarkupFidelityTriage.md`. Gate: cached Office gates plus layout snapshots.
+- docx-markup: margin modes tracked with diagnosed fallbacks including word-compatible text. On the validation workstation, all 34 public manifests have cached references covering 26 distinct input/view identities. Office parity remains partial; scoped repairs and remaining layout/balloon/text gates are recorded in `docs/DocxMarkupFidelityTriage.md`. Gate: cached Office gates plus layout snapshots.
 
 SVG gradient geometry is checked after transforms and coordinate mapping, before
 painting. Finite input values whose spans, sampling projection or radial bounds
@@ -214,3 +214,15 @@ markup; the all reference already matches the inline-deletion class;
 links-fields-final is a final-mode case whose ShowRevisions=False reference
 already matches. Check the case manifest markup/geometry before importing: a
 mismatched variant key silently orphans the entry and no gate resolves it.
+
+### Reference field-result matching
+
+Word can refresh unlocked `REF` fields during PDF export. Lokad.OoxPdf preserves
+their stored results, including revision markup. Compare the resulting text
+before attributing a different wrap or downstream balloon position to layout.
+The public `docx-markup-links-fields-locked-all` companion locks its five REF
+fields and keeps their stored results and revisions. Regenerate just that
+companion with `pwsh tools/NewDocxMarkupLinkFieldFixtures.ps1 -LockedOnly`;
+the existing unlocked and note fixtures retain their bytes. Keep both cases:
+the unlocked case measures the field-refresh policy difference, while the
+locked case isolates the remaining spacing, table and pixel differences.

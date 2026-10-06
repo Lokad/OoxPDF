@@ -62,6 +62,7 @@ Supported:
 - Default headers and footers with simple text and `PAGE` field approximation.
 - DOCX markup mode selection for final, original, simple markup, and all markup views.
 - Simple fields and complex fields with cached results, including nested cached-result fields and cached cross-references inside hyperlinks.
+  `REF` cross-references retain stored results; bookmark text is not reevaluated.
 - Markup-compatibility Choice/Fallback selection renders exactly one AlternateContent representation (first understood Choice, else Fallback).
 
 Partial or approximated:

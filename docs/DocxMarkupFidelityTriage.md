@@ -839,6 +839,31 @@ and 32 remain partial. This repairs a text-operation font-state difference;
 existing pixel, body-flow and composed-layout residuals remain. Evidence is
 under `artifacts/plan-revision-20261005/rv06-l29/`.
 
+## REF Result Freshness (2026-10-06, RV06-L30)
+
+The links/fields title's roughly 12.7-point offset comes from an upstream text
+change during Office export. Word refreshes the five unlocked REF fields from
+bookmark text, adding a wrapped row. The candidate retains the stored field
+results and their revisions, as documented by its cached-result capability.
+This difference is not evidence of a comment-anchor selection defect.
+
+Three controls use explicit Word all-markup view settings. The unlocked control
+retains the content mismatch and 12.763-point title delta. Locking the fields
+preserves matching body text and reduces the absolute delta to 0.147 points.
+Refreshing their stored text before locking also matches body text and reduces
+the delta to 0.113 points. Both matched controls agree on line breaks.
+
+The new public locked-field companion changes only five `w:fldLock` attributes
+at the XML level. Its checked-in generator can produce it alone with
+`-LockedOnly`, preserving the previous fixture bytes. Public inventory now has
+344 manifests across ten families. Its controlled Office reference is cached
+under the explicit all/word-compatible variant. The case remains approximate,
+with seven failed gates for spacing, graphics, table geometry and pixels;
+first/last body-baseline deltas are below 0.12 points. The previous 33 cases
+retain their 544 failures; this additional case is separate coverage, not a
+reduction of those failures. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l30/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.

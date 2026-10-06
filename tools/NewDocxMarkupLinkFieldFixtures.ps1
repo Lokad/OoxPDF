@@ -1,5 +1,7 @@
 # Generates DOCX markup link/field fixtures.
 
+param([switch] $LockedOnly)
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -9,7 +11,7 @@ New-Item -ItemType Directory -Force -Path $cases | Out-Null
 . (Join-Path $PSScriptRoot "ZipPackage.ps1")
 
 $output = Join-Path $cases "docx-markup-links-fields.docx"
-New-ZipPackage -Path $output -Entries @{
+$linkFieldEntries = @{
     "[Content_Types].xml" = @'
 <?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -111,6 +113,19 @@ New-ZipPackage -Path $output -Entries @{
 </w:document>
 '@
 }
+
+if (-not $LockedOnly) {
+    New-ZipPackage -Path $output -Entries $linkFieldEntries
+}
+
+# Keep cached REF text and its revisions during Word PDF export. The unlocked
+# companion deliberately retains Word's field-refresh behavior for comparison.
+$lockedEntries = $linkFieldEntries.Clone()
+$lockedEntries["word/document.xml"] = $lockedEntries["word/document.xml"].Replace(
+    '<w:fldSimple w:instr=" REF FieldTarget ">',
+    '<w:fldSimple w:instr=" REF FieldTarget " w:fldLock="true">')
+New-ZipPackage -Path (Join-Path $cases "docx-markup-links-fields-locked.docx") -Entries $lockedEntries
+if ($LockedOnly) { return }
 
 $noteOutput = Join-Path $cases "docx-markup-note-links-fields.docx"
 New-ZipPackage -Path $noteOutput -Entries @{
