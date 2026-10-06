@@ -1864,6 +1864,16 @@ Frozen revision `42c5c717` passes a clean Release build and the full Windows sui
 
 Fresh local 0.1.5 package smoke `6154a2e13898461aa0e7b33bb8dfa4fa` contains the exact full-suite DLL, SHA-256 `4481ED7EDFCD8BFFC22EFB112A5085AB3462790A625434BD1B1A0FC9BAEEF473`. Full-suite/package evidence is under `artifacts/plan-revision-20261005/milestone-42c5c717/`; separate L59 and L60 Office-reference qualification remains authoritative for their scoped visual behavior. Version remains 0.1.5 and release preparation remains deferred.
 
+## RV06-L61: wrapped final paragraph after a wrapped middle
+
+A wrapped final paragraph after a wrapped middle retains its own prepared body and nominal paragraph mark. Height and emission share both adjacent paragraph transitions and each body's row pitch. Wrapped first bodies, mixed paragraph faces, decorated marks, four paragraphs and unsupported spacing retain complete fallback. The production reproducer fails before the change; nineteen mixed checks cover 576 two-/three-paragraph scalar/advance/descent/gap/length/mark/scale variants, including 192 new final-wrap variants, with formatting and numeric guards.
+
+Frozen runtime `e4de3dcd` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `94dd44a7476843689dc50b43ca88151c` contains the exact tested DLL, SHA-256 `A792087190FA3EE3AED19D991342C40E64B25EC4EDE222787951E85E005E5EFD`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 539 prior and twenty-six fresh controls, twenty improve MAE and SSIM and 545 retain PDF/raster/graphics bytes. All 565 retain main-document text and comment content; 537 match Office breaks. All twenty changed controls match exact row text, spaces and prepared fonts, including 41 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.270pt. Five fresh fallback/previously-qualified guards and two fitting-final boundaries retain exact PDFs. Twenty-two metric controls qualify first/final incoming transitions with maximum errors 0.083/0.071pt; forty-four middle row pitches and twenty-five final row pitches have maximum errors 0.082/0.086pt. Reusing middle metrics for the final body's later rows misses by up to 1.316pt.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Twenty-eight break mismatches remain across mixed/wrapped paragraph bodies, four paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l61/`. Separate full integration V38 through L61/E4 remains in progress and excludes later prototypes.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
@@ -1897,6 +1907,7 @@ Fresh local 0.1.5 package smoke `6154a2e13898461aa0e7b33bb8dfa4fa` contains the 
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
 
 
 
