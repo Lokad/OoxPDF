@@ -2538,7 +2538,7 @@ internal static class DocxCommentsTests
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - tailRows[^1].Y)) < 0.02d,
                 "Height includes the mixed first step and later tail rows.");
 
-            foreach (string guardedTail in new[] { " ".PadRight(64) + "ok. " + word + " ending." })
+            foreach (string guardedTail in new[] { " ".PadRight(64) + "ok. " + word + "  ending." })
             {
                 DocxParagraph guardedComment = comment with { Runs = [comment.Runs[0], comment.Runs[1] with { Text = guardedTail }] };
                 DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
@@ -2547,7 +2547,7 @@ internal static class DocxCommentsTests
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "A leading space span exceeding first-row width retains fallback.");
+                    "A leading space span with repeated internal spaces retains fallback.");
             }
         }
     }
@@ -2791,7 +2791,7 @@ internal static class DocxCommentsTests
                 "Height includes the mixed first step and every tail row.");
             foreach ((string guardedPrefix, string guardedTail) in new[]
             {
-                (prefix, " ".PadRight(64) + word + " ending."),
+                (prefix, " ".PadRight(64) + word + "  ending."),
                 (prefix, "  " + word + "  ending."),
                 (prefix + ",", tail)
             })
@@ -2810,7 +2810,7 @@ internal static class DocxCommentsTests
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "An oversized space span, repeated internal spaces or a punctuated prefix retains complete fallback.");
+                    "Repeated internal spaces or a punctuated prefix retains complete fallback.");
             }
         }
     }
@@ -3417,11 +3417,11 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonRetainsFittingLeadingTailSpaceSpan()
+    public static void DocxWordCompatibleMixedBalloonRetainsLeadingTailSpaceSpanAcrossOverflow()
     {
         foreach (bool supplementary in new[] { false, true })
         foreach (bool zeroAdvance in new[] { false, true })
-        foreach (int spaceCount in new[] { 3, 4, 8, 12 })
+        foreach (int spaceCount in new[] { 3, 4, 8, 12, 256, 1024 })
         foreach (bool fittingFirstWord in new[] { false, true })
         foreach (short prefixDescender in new short[] { -50, -350 })
         foreach (int length in new[] { 18, 72 })
@@ -3461,7 +3461,8 @@ internal static class DocxCommentsTests
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
             TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
-            TestAssert.Equal(fittingFirstWord ? spaces + "i " : spaces, shows[1].Text);
+            bool visibleTailOnFirstRow = fittingFirstWord && spaceCount < 256;
+            TestAssert.Equal(visibleTailOnFirstRow ? spaces + "i " : spaces, shows[1].Text);
             TestAssert.Equal(123, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint(' ')));
             double size = shows[1].Size;
             TestAssert.True(Math.Abs(shows[1].Y - shows[0].Y) < 0.001d, "The authored separator stays on the prefix row.");
@@ -3470,7 +3471,13 @@ internal static class DocxCommentsTests
             var tailRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
             TestAssert.True(tailRows.Length >= 1, "The separated word must paint below the prefix.");
             if (zeroAdvance) { TestAssert.Equal(0, (int)tailRows[0].Font.Font.GetAdvanceWidth(tailRows[0].Font.Font.MapCodePoint('a'))); }
-            double firstPitch = (fittingFirstWord ? Math.Max(-prefixDescender / 1000d, 0.2d) : -prefixDescender / 1000d) + 0.8d;
+            if (spaceCount >= 256)
+            {
+                TestAssert.True(shows[1].X + shows[1].Font.MeasureTextPoints(spaces, size) > balloon.X + balloon.Width,
+                    "An overflowing authored space span stays complete beside its prefix.");
+                TestAssert.True(double.IsFinite(balloon.Height), "Overflowing whitespace retains finite layout.");
+            }
+            double firstPitch = (visibleTailOnFirstRow ? Math.Max(-prefixDescender / 1000d, 0.2d) : -prefixDescender / 1000d) + 0.8d;
             TestAssert.True(Math.Abs(shows[0].Y - tailRows[0].Y - firstPitch * size) < 0.02d,
                 "A tail-face separator alone does not replace the visible prefix's descent.");
             foreach (var row in tailRows)
@@ -3491,7 +3498,7 @@ internal static class DocxCommentsTests
                 "Height includes the mixed first step and every tail row.");
             foreach ((string guardedPrefix, string guardedTail) in new[]
             {
-                (prefix, " ".PadRight(256) + word + " ending."),
+                (prefix, " ".PadRight(256) + word + "  ending."),
                 (prefix, spaces + word + "  ending."),
                 (prefix + ",", tail), (prefix, "\t" + word + " ending.")
             })
@@ -3510,7 +3517,7 @@ internal static class DocxCommentsTests
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "An oversized span, repeated internal spaces, punctuated prefix or tab retains complete fallback.");
+                    "Repeated internal spaces, punctuated prefix or tab retains complete fallback.");
             }
         }
     }

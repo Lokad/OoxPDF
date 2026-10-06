@@ -299,7 +299,7 @@ internal sealed partial class DocxRenderer
         double available = firstTailWidth - tail.Resource.Embedded.MeasureTextPoints(separator, fontSize);
         string text = tail.Text[separatorLength..];
         string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (!double.IsFinite(available) || available <= 0d || words.Length < 2) { return null; }
+        if (!double.IsFinite(available) || words.Length < 2) { return null; }
         double firstWordWidth = tail.Resource.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
         if (!double.IsFinite(firstWordWidth)) { return null; }
         bool startsBelowPrefix = firstWordWidth > available;
@@ -312,8 +312,9 @@ internal sealed partial class DocxRenderer
             startsBelowPrefix ? -1d : available, continuationWidth, cancellationToken);
         if (lines.Length < 2 || (!startsBelowPrefix && lines[0].Text.Length == 0)) { return null; }
         // Keep the authored separators in their tail resource and reserve their
-        // advance beside the complete prefix. A separated first word that
-        // does not fit starts below it, including zero-advance first glyphs.
+        // advance beside the complete prefix, even when spaces overflow.
+        // A separated first word that does not fit starts below it, including
+        // zero-advance first glyphs.
         lines[0] = lines[0] with { Text = separator + lines[0].Text };
         return new(prefix, tail.Resource, lines, DocxLineMetrics.MeasureHheaLineHeight(tailFont, 1d), transition);
     }
