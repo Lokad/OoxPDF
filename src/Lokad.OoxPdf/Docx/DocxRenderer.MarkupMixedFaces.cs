@@ -156,7 +156,8 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonBodyPart prefix, DocxMarkupBalloonBodyPart tail,
         double fontSize, double firstLineWidth, double continuationWidth, CancellationToken cancellationToken)
     {
-        if (prefix.Text.IndexOf(' ') <= 0 || prefix.Text.EndsWith(' ') || tail.Text[0] == ' ' ||
+        bool singlePrefixWord = prefix.Text.IndexOf(' ') < 0;
+        if ((!singlePrefixWord && prefix.Text.IndexOf(' ') <= 0) || prefix.Text.EndsWith(' ') || tail.Text[0] == ' ' ||
             !double.IsFinite(firstLineWidth) || firstLineWidth <= 0d) { return null; }
         for (int i = 0; i < prefix.Text.Length; i++)
         {
@@ -166,14 +167,28 @@ internal sealed partial class DocxRenderer
         OpenTypeFont prefixFont = prefix.Resource.Embedded.Font;
         OpenTypeFont tailFont = tail.Resource.Embedded.Font;
         if (prefixFont.UnitsPerEm <= 0 || tailFont.UnitsPerEm <= 0) { return null; }
-        foreach (string word in prefix.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        if (singlePrefixWord)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            double width = prefix.Resource.Embedded.MeasureTextPoints(word, fontSize);
-            if (!double.IsFinite(width) || width <= 0d || width > continuationWidth) { return null; }
+            for (int index = 0; index < prefix.Text.Length; index++)
+            {
+                if ((index & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+                double advance = prefixFont.GetAdvanceWidth(prefixFont.MapCodePoint(prefix.Text[index])) /
+                    (double)prefixFont.UnitsPerEm * fontSize;
+                if (!double.IsFinite(advance) || advance > continuationWidth ||
+                    (index == 0 && (advance <= 0d || advance > firstLineWidth))) { return null; }
+            }
         }
-        string firstPrefixWord = prefix.Text[..prefix.Text.IndexOf(' ')];
-        if (prefix.Resource.Embedded.MeasureTextPoints(firstPrefixWord + " ", fontSize) > firstLineWidth) { return null; }
+        else
+        {
+            foreach (string word in prefix.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                double width = prefix.Resource.Embedded.MeasureTextPoints(word, fontSize);
+                if (!double.IsFinite(width) || width <= 0d || width > continuationWidth) { return null; }
+            }
+            string firstPrefixWord = prefix.Text[..prefix.Text.IndexOf(' ')];
+            if (prefix.Resource.Embedded.MeasureTextPoints(firstPrefixWord + " ", fontSize) > firstLineWidth) { return null; }
+        }
         ushort space = tailFont.MapCodePoint(' ');
         if (space == 0 || !tail.Resource.Embedded.TryGetEncodedCid(space, out _)) { return null; }
         string[] tailWords = tail.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
