@@ -147,21 +147,31 @@ internal sealed partial class DocxRenderer
 
     private sealed record DocxMarkupWrappedParagraphRows(
         DocxMarkupBalloonParagraph First, DocxMarkupBalloonParagraph Second,
-        DocxUniformBalloonRow[] TailRows, double FirstGap, double TailGap)
+        DocxUniformBalloonRow[] TailRows, double FirstGap, double TailGap,
+        DocxMarkupBalloonParagraph? Third = null, double? ThirdGap = null)
     {
-        public double ContinuationsHeight => FirstGap + (TailRows.Length - 1) * TailGap;
+        public double ContinuationsHeight => FirstGap + (TailRows.Length - 1) * TailGap + (ThirdGap ?? 0d);
     }
 
     private static DocxMarkupWrappedParagraphRows? ResolveWordCompatibleWrappedParagraphRows(
         IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,
         double firstWidth, double continuationWidth, CancellationToken cancellationToken)
     {
-        if (paragraphs is not { Count: 2 } || !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
+        if (paragraphs is null || paragraphs.Count is not (2 or 3) || !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         DocxMarkupBalloonParagraph first = paragraphs[0], second = paragraphs[1];
         double prefixWidth = first.Body.Resource.Embedded.MeasureTextPoints(first.Body.Text, fontSize);
         double tailWidth = second.Body.Resource.Embedded.MeasureTextPoints(second.Body.Text, fontSize);
         if (!double.IsFinite(prefixWidth) || prefixWidth <= 0d || prefixWidth > firstWidth ||
             !double.IsFinite(tailWidth) || tailWidth <= continuationWidth) { return null; }
+        DocxMarkupBalloonParagraph? third = paragraphs.Count == 3 ? paragraphs[2] : null;
+        double? thirdGap = null;
+        if (third is not null)
+        {
+            double width = third.Body.Resource.Embedded.MeasureTextPoints(third.Body.Text, fontSize);
+            if (!double.IsFinite(width) || width <= 0d || width > continuationWidth) { return null; }
+            thirdGap = MeasureWordCompatibleParagraphTransition(second, third, fontSize);
+            if (thirdGap is null) { return null; }
+        }
         var tailFont = second.Body.Resource.Embedded.Font;
         int index = 0;
         foreach (Rune rune in second.Body.Text.EnumerateRunes())
@@ -175,7 +185,7 @@ internal sealed partial class DocxRenderer
         if (firstGap is null || !double.IsFinite(tailGap) || tailGap <= 0d) { return null; }
         var lines = WrapUniformBalloonWords(second.Body.Text, second.Body.Resource.Embedded, fontSize,
             continuationWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
-        return lines.Length >= 2 && lines[0].Text.Length != 0 ? new(first, second, lines, firstGap.Value, tailGap) : null;
+        return lines.Length >= 2 && lines[0].Text.Length != 0 ? new(first, second, lines, firstGap.Value, tailGap, third, thirdGap) : null;
     }
 
     private static void RenderWordCompatibleWrappedParagraphRows(
@@ -188,6 +198,15 @@ internal sealed partial class DocxRenderer
             firstY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
         RenderUniformBalloonRows(rows.TailRows, placement, graphics, rows.Second.Body.Resource, rows.Second.Mark,
             continuationX, continuationX, firstY - rows.FirstGap, rows.TailGap, fontSize, cancellationToken);
+        if (rows.Third is { } third)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            double y = firstY - rows.ContinuationsHeight;
+            DrawBalloonText(graphics, third.Body.Resource, third.Body.Text, continuationX, y, fontSize,
+                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            DrawBalloonText(graphics, third.Mark, " ", continuationX + third.Body.Resource.Embedded.MeasureTextPoints(third.Body.Text, fontSize),
+                y, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+        }
     }
 
     private static void RenderWordCompatibleParagraphs(
