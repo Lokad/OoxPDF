@@ -183,7 +183,31 @@ internal sealed partial class DocxRenderer
         if (prefixLines.Length < 2 || prefixLines[0].Text.Length == 0) { return null; }
         double available = continuationWidth - prefix.Resource.Embedded.MeasureTextPoints(prefixLines[^1].Text, fontSize);
         double firstTailWordWidth = tail.Resource.Embedded.MeasureTextPoints(tailWords[0] + " ", fontSize);
-        if (!double.IsFinite(available) || available <= 0d || !double.IsFinite(firstTailWordWidth) || firstTailWordWidth > available) { return null; }
+        if (!double.IsFinite(available) || available <= 0d || !double.IsFinite(firstTailWordWidth)) { return null; }
+        if (firstTailWordWidth > available)
+        {
+            DocxUniformBalloonRow lastPrefixRow = prefixLines[^1];
+            int split = lastPrefixRow.Text.LastIndexOf(' ');
+            if (split > 0)
+            {
+                // The last prefix word joins the first tail word. Move that
+                // whole joined word to a fresh row before splitting its tail.
+                prefixLines[^1] = lastPrefixRow with { Text = lastPrefixRow.Text[..split], SpaceAfter = true };
+                prefixLines = [.. prefixLines, new(lastPrefixRow.Text[(split + 1)..], SpaceAfter: false)];
+                available = continuationWidth - prefix.Resource.Embedded.MeasureTextPoints(prefixLines[^1].Text, fontSize);
+                if (!double.IsFinite(available) || available <= 0d) { return null; }
+            }
+            int scalarIndex = 0;
+            foreach (Rune rune in tailWords[0].EnumerateRunes())
+            {
+                if ((scalarIndex & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+                double advance = tailFont.GetAdvanceWidth(tailFont.MapCodePoint(rune.Value)) /
+                    (double)tailFont.UnitsPerEm * fontSize;
+                if (!double.IsFinite(advance) || advance > continuationWidth ||
+                    (scalarIndex == 0 && (advance <= 0d || advance > available))) { return null; }
+                scalarIndex++;
+            }
+        }
         double prefixHeight = DocxLineMetrics.MeasureHheaLineHeight(prefixFont, 1d);
         double prefixDescent = -prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm;
         double tailDescent = -tailFont.Hhea.HorizontalDescender / (double)tailFont.UnitsPerEm;
