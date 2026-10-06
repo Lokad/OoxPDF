@@ -148,9 +148,11 @@ internal sealed partial class DocxRenderer
     private sealed record DocxMarkupWrappedParagraphRows(
         DocxMarkupBalloonParagraph First, DocxMarkupBalloonParagraph Second,
         DocxUniformBalloonRow[] TailRows, double FirstGap, double TailGap,
-        DocxMarkupBalloonParagraph? Third = null, double? ThirdGap = null)
+        DocxMarkupBalloonParagraph? Third = null, double? ThirdGap = null,
+        DocxUniformBalloonRow[]? ThirdRows = null, double ThirdTailGap = 0d)
     {
-        public double ContinuationsHeight => FirstGap + (TailRows.Length - 1) * TailGap + (ThirdGap ?? 0d);
+        public double ContinuationsHeight => FirstGap + (TailRows.Length - 1) * TailGap + (ThirdGap ?? 0d) +
+            (ThirdRows is null ? 0d : (ThirdRows.Length - 1) * ThirdTailGap);
     }
 
     private static DocxMarkupWrappedParagraphRows? ResolveWordCompatibleWrappedParagraphRows(
@@ -165,12 +167,30 @@ internal sealed partial class DocxRenderer
             !double.IsFinite(tailWidth) || tailWidth <= continuationWidth) { return null; }
         DocxMarkupBalloonParagraph? third = paragraphs.Count == 3 ? paragraphs[2] : null;
         double? thirdGap = null;
+        DocxUniformBalloonRow[]? thirdRows = null;
+        double thirdTailGap = 0d;
         if (third is not null)
         {
             double width = third.Body.Resource.Embedded.MeasureTextPoints(third.Body.Text, fontSize);
-            if (!double.IsFinite(width) || width <= 0d || width > continuationWidth) { return null; }
+            if (!double.IsFinite(width) || width <= 0d) { return null; }
             thirdGap = MeasureWordCompatibleParagraphTransition(second, third, fontSize);
             if (thirdGap is null) { return null; }
+            if (width > continuationWidth)
+            {
+                var thirdFont = third.Body.Resource.Embedded.Font;
+                int thirdIndex = 0;
+                foreach (Rune rune in third.Body.Text.EnumerateRunes())
+                {
+                    if ((thirdIndex++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+                    double scalarWidth = thirdFont.GetAdvanceWidth(thirdFont.MapCodePoint(rune.Value)) * fontSize / thirdFont.UnitsPerEm;
+                    if (!double.IsFinite(scalarWidth) || scalarWidth > continuationWidth) { return null; }
+                }
+                thirdTailGap = DocxLineMetrics.MeasureHheaLineHeight(thirdFont, fontSize);
+                if (!double.IsFinite(thirdTailGap) || thirdTailGap <= 0d) { return null; }
+                thirdRows = WrapUniformBalloonWords(third.Body.Text, third.Body.Resource.Embedded, fontSize,
+                    continuationWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
+                if (thirdRows.Length < 2 || thirdRows[0].Text.Length == 0) { return null; }
+            }
         }
         var tailFont = second.Body.Resource.Embedded.Font;
         int index = 0;
@@ -185,7 +205,8 @@ internal sealed partial class DocxRenderer
         if (firstGap is null || !double.IsFinite(tailGap) || tailGap <= 0d) { return null; }
         var lines = WrapUniformBalloonWords(second.Body.Text, second.Body.Resource.Embedded, fontSize,
             continuationWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
-        return lines.Length >= 2 && lines[0].Text.Length != 0 ? new(first, second, lines, firstGap.Value, tailGap, third, thirdGap) : null;
+        return lines.Length >= 2 && lines[0].Text.Length != 0
+            ? new(first, second, lines, firstGap.Value, tailGap, third, thirdGap, thirdRows, thirdTailGap) : null;
     }
 
     private static void RenderWordCompatibleWrappedParagraphRows(
@@ -201,6 +222,13 @@ internal sealed partial class DocxRenderer
         if (rows.Third is { } third)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (rows.ThirdRows is { } thirdRows)
+            {
+                double thirdY = firstY - rows.FirstGap - (rows.TailRows.Length - 1) * rows.TailGap - rows.ThirdGap!.Value;
+                RenderUniformBalloonRows(thirdRows, placement, graphics, third.Body.Resource, third.Mark,
+                    continuationX, continuationX, thirdY, rows.ThirdTailGap, fontSize, cancellationToken);
+                return;
+            }
             double y = firstY - rows.ContinuationsHeight;
             DrawBalloonText(graphics, third.Body.Resource, third.Body.Text, continuationX, y, fontSize,
                 placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);

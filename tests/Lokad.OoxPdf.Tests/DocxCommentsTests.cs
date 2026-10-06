@@ -2934,9 +2934,10 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonWrapsSecondParagraphAndKeepsFittingThirdWhenPresent()
+    public static void DocxWordCompatibleMixedBalloonWrapsSecondAndThirdParagraphsIndependently()
     {
-        foreach (bool fittingThird in new[] { false, true })
+        foreach (bool hasThird in new[] { false, true })
+        foreach (bool wrappedThird in new[] { false, true })
         foreach (bool supplementary in new[] { false, true })
         foreach (bool zeroFirst in new[] { false, true })
         foreach (short prefixDescender in new short[] { -50, -350 })
@@ -2945,10 +2946,13 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
+            if (!hasThird && wrappedThird) { continue; }
             const string prefix = "Review table";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
             if (zeroFirst) { word = "a" + word[1..].Replace('a', 'b'); }
             string tail = word + " ending.";
+            string thirdWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
+            string thirdText = wrappedThird ? thirdWord + " finish." : "finish.";
             DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
             {
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
@@ -2966,11 +2970,11 @@ internal static class DocxCommentsTests
             };
             DocxParagraph third = first with
             {
-                Runs = [first.Runs[0] with { Text = "finish." }],
+                Runs = [first.Runs[0] with { Text = thirdText }],
                 ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 36d }
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
-                fittingThird
+                hasThird
                     ? [new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third)]
                     : [new DocxParagraphElement(first), new DocxParagraphElement(second)], [], [], null)
             {
@@ -2990,8 +2994,8 @@ internal static class DocxCommentsTests
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(" ", shows[1].Text);
             TestAssert.Equal(firstMarkFace == "AnchorFace" ? 500 : 123, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint(' ')));
-            TestAssert.Equal(prefix + " " + tail + " " + (fittingThird ? "finish. " : string.Empty), string.Concat(shows.Select(show => show.Text)));
-            var tailRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Text != "finish.").ToArray();
+            TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
+            var tailRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
             TestAssert.True(tailRows.Length >= 2, "The second paragraph must wrap independently of the title row.");
             double size = tailRows[0].Size;
             double firstPitch = -prefixDescender / 1000d + 0.8d;
@@ -3011,25 +3015,39 @@ internal static class DocxCommentsTests
             }
             if (zeroFirst) { TestAssert.Equal(0, (int)tailRows[0].Font.Font.GetAdvanceWidth(tailRows[0].Font.Font.MapCodePoint('a'))); }
             TestAssert.Equal(" ", shows[^1].Text);
-            TestAssert.Equal(fittingThird ? 900 : 500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
+            TestAssert.Equal(hasThird ? 900 : 500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
             TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The final mark stays at nominal balloon size.");
-            double thirdPitch = fittingThird ? 0.7d + prefixGap / 1000d : 0d;
-            if (fittingThird)
+            double thirdPitch = hasThird ? 0.7d + prefixGap / 1000d : 0d;
+            double thirdHeight = 0d;
+            if (hasThird)
             {
-                TestAssert.Equal("finish.", shows[^2].Text);
+                var thirdRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 700).ToArray();
+                TestAssert.True(thirdRows.Length >= (wrappedThird ? 2 : 1), "The third paragraph wraps using its own prepared body.");
+                double thirdLinePitch = 0.5d - prefixDescender / 1000d + prefixGap / 1000d;
+                thirdHeight = (thirdRows.Length - 1) * thirdLinePitch * size;
                 TestAssert.Equal(700, (int)shows[^2].Font.Font.GetAdvanceWidth(shows[^2].Font.Font.MapCodePoint('f')));
-                TestAssert.True(Math.Abs(tailRows[^1].Y - shows[^2].Y - thirdPitch * size) < 0.02d,
+                TestAssert.True(Math.Abs(tailRows[^1].Y - thirdRows[0].Y - thirdPitch * size) < 0.02d,
                     "The third paragraph uses the middle body's descent and its own ascent and gap.");
+                for (int index = 1; index < thirdRows.Length; index++)
+                {
+                    TestAssert.True(Math.Abs(thirdRows[index - 1].Y - thirdRows[index].Y - thirdLinePitch * size) < 0.02d,
+                        "Later third-paragraph rows use only their own prepared metrics.");
+                }
+                foreach (var row in thirdRows)
+                {
+                    TestAssert.True(Math.Abs(row.X - tailRows[0].X) < 0.001d && row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
+                        "Third-paragraph rows use the continuation inset and remain inside the balloon.");
+                }
                 TestAssert.True(Math.Abs(shows[^2].X - tailRows[0].X) < 0.001d && Math.Abs(shows[^1].Y - shows[^2].Y) < 0.001d,
                     "The third paragraph and its mark retain the continuation row.");
-                TestAssert.True(Math.Abs(shows[^1].X - shows[^2].X - shows[^2].Font.MeasureTextPoints("finish.", size)) < 0.04d,
+                TestAssert.True(Math.Abs(shows[^1].X - shows[^2].X - shows[^2].Font.MeasureTextPoints(shows[^2].Text, size)) < 0.04d,
                     "The third mark follows its own body's visible advance.");
             }
-            TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size)) < 0.02d,
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight)) < 0.02d,
                 "Height includes the paragraph transition and all later rows.");
             foreach (DocxBodyElement[] guardedElements in new[]
             {
-                new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second) },
+                new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Bold = true }] }) },
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second)],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterLinesValue = "100" } })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Bold = true }] })],
@@ -3043,7 +3061,7 @@ internal static class DocxCommentsTests
                 var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "A wrapped first paragraph, spacing, mixed or decorated second paragraph, repeated spaces, tabs and three paragraphs retain complete fallback.");
+                    "A wrapped first paragraph, spacing, mixed or decorated bodies, repeated spaces and tabs retain complete fallback.");
             }
             if (!supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
@@ -3054,6 +3072,30 @@ internal static class DocxCommentsTests
                     .Where(show => show.X >= oversizedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(oversizedShows.Length > 0 && oversizedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "A second-paragraph scalar wider than the continuation retains complete fallback.");
+                if (wrappedThird)
+                {
+                    DocxRelatedStory guardedStory = story with
+                    {
+                        BodyElements = [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = "Review scope" }] }),
+                            new DocxParagraphElement(second), new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Text = new string('a', 80) + " finish." }] })]
+                    };
+                    foreach (var invalidResolver in new[]
+                    {
+                        new BalloonTypefaceFontResolver(bodyFirstAdvance: 32700),
+                        new BalloonTypefaceFontResolver(bodyAscender: -32700)
+                    })
+                    {
+                        var invalidRenderer = new DocxRenderer(invalidResolver, OoxPdfDocxMarkupMode.AllMarkup,
+                            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                        DocxDocument guarded = document with { RelatedStories = [guardedStory] };
+                        var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
+                        var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                            .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                        TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
+                            invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                            "An overwide third-paragraph scalar or nonpositive incoming transition retains finite complete fallback.");
+                    }
+                }
             }
         }
     }
@@ -3137,7 +3179,7 @@ internal static class DocxCommentsTests
                 {
                     new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(last) },
                     [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last)],
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] })],
+                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
