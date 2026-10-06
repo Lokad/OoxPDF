@@ -1872,7 +1872,7 @@ Frozen runtime `e4de3dcd` passes a clean Release build, **904 DOCX checks, 100 b
 
 Across 539 prior and twenty-six fresh controls, twenty improve MAE and SSIM and 545 retain PDF/raster/graphics bytes. All 565 retain main-document text and comment content; 537 match Office breaks. All twenty changed controls match exact row text, spaces and prepared fonts, including 41 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.270pt. Five fresh fallback/previously-qualified guards and two fitting-final boundaries retain exact PDFs. Twenty-two metric controls qualify first/final incoming transitions with maximum errors 0.083/0.071pt; forty-four middle row pitches and twenty-five final row pitches have maximum errors 0.082/0.086pt. Reusing middle metrics for the final body's later rows misses by up to 1.316pt.
 
-All 34 cached PDFs retain bytes and 551 failed gates. Twenty-eight break mismatches remain across mixed/wrapped paragraph bodies, four paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l61/`. Separate full integration V38 through L61/E4 remains in progress and excludes later prototypes.
+All 34 cached PDFs retain bytes and 551 failed gates. Twenty-eight break mismatches remain across mixed/wrapped paragraph bodies, four paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l61/`. Separate full integration V38 through L61/E4 is complete and excludes later prototypes.
 
 ## RV06-L62: four fitting plain comment paragraphs
 
@@ -1882,7 +1882,13 @@ Frozen runtime `6ca6ef6a` passes a clean Release build, **904 DOCX checks, 100 b
 
 Across 565 prior and twenty-six fresh controls, twenty-two improve MAE and SSIM and 563 retain PDF bytes. All 569 raster/graphics identities pass; six additional fallback PDFs differ only by audited font aliases, with identical glyph operations, font declarations after resolving aliases, decoded embedded font bytes and pixels. Four are fresh guards and two are prior wrapped-four-paragraph guards. All 591 retain main-document text and comment content; 559 match Office breaks. All twenty-two visually changed controls match exact row text, spaces and prepared fonts, with maximum row-start X gap 0.838pt and baseline gap 0.207pt. Twenty-two metric controls cover sixty-six paragraph transitions at maximum error 0.086pt; reusing uniform middle metrics misses by up to 1.336pt.
 
-All 34 cached PDFs retain bytes and 551 failed gates. Thirty-two break mismatches remain across mixed/wrapped paragraph bodies, five paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font and fallback-alias audits, and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l62/`. Separate full integration V38 through L61/E4 remains in progress and excludes L62 and later prototypes.
+All 34 cached PDFs retain bytes and 551 failed gates. Thirty-two break mismatches remain across mixed/wrapped paragraph bodies, five paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font and fallback-alias audits, and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l62/`. Separate full integration V38 through L61/E4 is complete and excludes L62 and later prototypes.
+
+## RV21-V38: full integration through L61 and E4
+
+Frozen revision `e4de3dcd` passes a clean Release build and the full Windows suite: **2186 passed, zero failed, one environmental skip**, including all 904 DOCX checks. The optional private PPTX layout diagnostic lacks its configured input/output. Scope includes accepted runtime through L61, smooth Office-preview SVG transparency E4, locked-field coverage and test helper P2; L62 and later prototypes are excluded.
+
+Fresh local 0.1.5 package smoke `5280366d4f4d452bb27546ef908c4a49` contains the exact full-suite DLL, SHA-256 `0A49318C9AD6A2D5A9F04C9983785C99ACC7F3D23F23B1A35995F272D625DD7A`. Full-suite/package evidence is under `artifacts/plan-revision-20261005/milestone-e4de3dcd/`; separate L61 and L62 Office-reference qualification remains authoritative for their scoped visual behavior. Version remains 0.1.5 and release preparation remains deferred.
 
 ## Inputs
 
@@ -1917,6 +1923,7 @@ All 34 cached PDFs retain bytes and 551 failed gates. Thirty-two break mismatche
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
 
 
 
