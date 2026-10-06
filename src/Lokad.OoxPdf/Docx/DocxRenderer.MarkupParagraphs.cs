@@ -13,9 +13,9 @@ internal sealed partial class DocxRenderer
     {
         // Preserve each plain paragraph's prepared body and mark faces. The
         // measured rendering paths separately admit fitting and wrapped bodies.
-        if (fonts is null || storyLayout is null || storyLayout.Story.BodyElements.Count != 2 ||
+        if (fonts is null || storyLayout is null || storyLayout.Story.BodyElements.Count is not (2 or 3) ||
             storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0) { return null; }
-        var paragraphs = new List<DocxMarkupBalloonParagraph>(2);
+        var paragraphs = new List<DocxMarkupBalloonParagraph>(storyLayout.Story.BodyElements.Count);
         foreach (DocxBodyElement item in storyLayout.Story.BodyElements)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -85,13 +85,52 @@ internal sealed partial class DocxRenderer
     }
 
     private static double? MeasureWordCompatibleParagraphTransition(IReadOnlyList<DocxMarkupBalloonParagraph> paragraphs, double fontSize)
+        => MeasureWordCompatibleParagraphTransition(paragraphs[0], paragraphs[1], fontSize);
+
+    private static double? MeasureWordCompatibleParagraphTransition(
+        DocxMarkupBalloonParagraph previous, DocxMarkupBalloonParagraph next, double fontSize)
     {
-        var first = paragraphs[0].Body.Resource.Embedded.Font;
-        var second = paragraphs[1].Body.Resource.Embedded.Font;
+        var first = previous.Body.Resource.Embedded.Font;
+        var second = next.Body.Resource.Embedded.Font;
         if (first.UnitsPerEm <= 0 || second.UnitsPerEm <= 0) { return null; }
         double gap = (-first.Hhea.HorizontalDescender / (double)first.UnitsPerEm +
             (second.Hhea.HorizontalAscender + second.Hhea.HorizontalLineGap) / (double)second.UnitsPerEm) * fontSize;
         return double.IsFinite(gap) && gap > 0d ? gap : null;
+    }
+
+    private static double[]? ResolveWordCompatibleThreeParagraphGaps(
+        IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,
+        double firstWidth, double continuationWidth)
+    {
+        if (paragraphs is not { Count: 3 }) { return null; }
+        for (int index = 0; index < 3; index++)
+        {
+            DocxMarkupBalloonBodyPart body = paragraphs[index].Body;
+            double width = body.Resource.Embedded.MeasureTextPoints(body.Text, fontSize);
+            if (!double.IsFinite(width) || width <= 0d || width > (index == 0 ? firstWidth : continuationWidth)) { return null; }
+        }
+        double? first = MeasureWordCompatibleParagraphTransition(paragraphs[0], paragraphs[1], fontSize);
+        double? second = MeasureWordCompatibleParagraphTransition(paragraphs[1], paragraphs[2], fontSize);
+        return first is double firstGap && second is double secondGap ? [firstGap, secondGap] : null;
+    }
+
+    private static void RenderWordCompatibleThreeParagraphs(
+        IReadOnlyList<DocxMarkupBalloonParagraph> paragraphs, double[] gaps,
+        DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics, double firstX,
+        double continuationX, double firstY, double fontSize, CancellationToken cancellationToken)
+    {
+        double y = firstY;
+        for (int index = 0; index < 3; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxMarkupBalloonParagraph paragraph = paragraphs[index];
+            double x = index == 0 ? firstX : continuationX;
+            DrawBalloonText(graphics, paragraph.Body.Resource, paragraph.Body.Text, x, y, fontSize,
+                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            DrawBalloonText(graphics, paragraph.Mark, " ", x + paragraph.Body.Resource.Embedded.MeasureTextPoints(paragraph.Body.Text, fontSize),
+                y, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            if (index < 2) { y -= gaps[index]; }
+        }
     }
 
     private sealed record DocxMarkupWrappedParagraphRows(
