@@ -104,7 +104,7 @@ internal sealed partial class DocxRenderer
         if (words.Length < 2) { return null; }
         for (int i = 0; i < words.Length; i++)
         {
-            string measured = words[i] + (i < words.Length - 1 ? " " : "");
+            string measured = words[i] + (i == 0 ? " " : "");
             double width = tail.Embedded.MeasureTextPoints(measured, fontSize);
             if (!double.IsFinite(width) || width > (i == 0 ? tailFirstWidth : continuationWidth)) { return null; }
         }

@@ -967,7 +967,7 @@ internal sealed partial class DocxRenderer
                 string body = candidate.WordCompatibleBody ?? string.Empty;
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
-                ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, out double firstLineWidth, out double continuationWidth);
+                ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
                     ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth);
@@ -1387,7 +1387,7 @@ internal sealed partial class DocxRenderer
         }
 
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
-        ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, out double firstLineWidth, out double continuationWidth);
+        ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, wordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth + WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
         if (TryMeasureWordCompatibleSingleRowParts(placement.WordCompatibleBodyParts, fontSize, firstLineWidth, out _))
         {

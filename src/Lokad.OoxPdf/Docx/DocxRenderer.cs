@@ -95,6 +95,11 @@ internal sealed partial class DocxRenderer
     // This preserves the pre-fix wrap widths bit-for-bit while the emission origin
     // above moves to the Office-true title end.
     private const double WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints = 2.541d;
+    // RV06-L37: trusted font/margin boundary controls give an overlapping 221.33
+    // to 221.405pt design-width interval when the continuation's final blank is
+    // excluded. Office text insets measure 4.42..4.44 design points; using 4.42
+    // on each side gives 221.36pt and keeps the 41-character Courier guard out.
+    private const double WordCompatibleAllMarkupBalloonContinuationWrapInsetDesignPoints = 4.42d;
     // Office A/B (all continuation rows across the unresolved/long/all/dense/
     // landscape/mirrored/original references, Word-COM rendered): continuation
     // lines carry no character spacing (cs=0; the -0.1..-0.76 adjustments are pair

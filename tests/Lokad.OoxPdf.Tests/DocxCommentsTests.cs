@@ -2339,10 +2339,62 @@ internal static class DocxCommentsTests
         for (int index = 0; index < lines.Length - 1; index++)
         {
             var line = lines[index];
-            double breakEnd = line.X + line.Font.MeasureTextPoints(line.Text.TrimEnd() + " ", line.Size);
-            double rightEdge = balloon.X + balloon.Width - 0.5d - (index == 0 ? 2.541d : 0d);
+            string measured = line.Text.TrimEnd() + (index == 0 ? " " : "");
+            double breakEnd = line.X + line.Font.MeasureTextPoints(measured, line.Size);
+            double rightEdge = balloon.X + balloon.Width - (index == 0 ? 0.5d + 2.541d : 0d);
             TestAssert.True(breakEnd <= rightEdge + 0.02d,
-                $"A wrapped row must fit its emitted break space: end={breakEnd}, edge={rightEdge}, text={line.Text}.");
+                $"The first row must reserve its break space; continuation words must stay inside the body: end={breakEnd}, edge={rightEdge}, text={line.Text}.");
+        }
+    }
+
+    public static void DocxWordCompatibleContinuationWrapSeparatesVisibleWidthFromBreakSpace()
+    {
+        // The Office boundary probes agree on visible-word width once the final
+        // separator is excluded. Exercise both a narrow-space pair that must
+        // break and a wide-space pair that must fit, across print scales.
+        foreach (short spaceAdvance in new short[] { 200, 700 })
+        foreach (double marginRight in new[] { 72d, 108d, 144d, 207d })
+        foreach (bool mixed in new[] { false, true })
+        {
+            string first = new('a', 18);
+            string second = new('b', spaceAdvance == 200 ? 17 : 16);
+            string body = $"start. {first} {second} ending.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(mixed ? "x" + body : body, 12d, 14d) with
+            {
+                Runs = mixed
+                    ? [new DocxTextRun("x", 12d, null, false, false, false, null, "OtherCommentFace"),
+                       new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+                    : [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, marginRight, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodySpaceAdvance: spaceAdvance),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single()).ToArray();
+            var lines = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
+                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+            TestAssert.Equal(3, lines.Length);
+            TestAssert.Equal("start.", lines[0].Text.Trim());
+            TestAssert.Equal(spaceAdvance == 200 ? first : first + " " + second, lines[1].Text.Trim());
+            TestAssert.Equal(body, string.Join(" ", lines.Select(show => show.Text.Trim())));
+            if (mixed)
+            {
+                TestAssert.True(shows.Any(show => show.Text == "x" &&
+                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('x')) == 900),
+                    "The admitted first-row prefix must retain its own source face.");
+            }
         }
     }
 
@@ -2587,7 +2639,7 @@ internal static class DocxCommentsTests
         }
     }
 
-    private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null) : IFontResolver
+    private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null, short? bodySpaceAdvance = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
@@ -2599,6 +2651,12 @@ internal static class DocxCommentsTests
                 bytes[offset + glyph * 4] = (byte)(advance >> 8);
                 bytes[offset + glyph * 4 + 1] = (byte)advance;
             }
+            if (request.FamilyName == "CommentFace" && bodySpaceAdvance is short spaceWidth)
+            {
+                // TestFontBuilder maps U+0020 to glyph 1.
+                bytes[offset + 4] = (byte)(spaceWidth >> 8);
+                bytes[offset + 5] = (byte)spaceWidth;
+            }
             if (request.FamilyName == "CommentFace" && bodyLineGap is short gap)
             {
                 (int hheaOffset, _) = TestFontBuilder.GetTableRange(bytes, "hhea");
@@ -2607,7 +2665,8 @@ internal static class DocxCommentsTests
             }
             return new FontFaceResolution(request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
                 new MemoryFontProgramSource("test:balloon-choice:" + request.FamilyName +
-                    (bodyLineGap is null ? string.Empty : ":line-gap:" + bodyLineGap), bytes), IsFallback: false);
+                    (bodyLineGap is null ? string.Empty : ":line-gap:" + bodyLineGap) +
+                    (bodySpaceAdvance is null ? string.Empty : ":space:" + bodySpaceAdvance), bytes), IsFallback: false);
         }
     }
 

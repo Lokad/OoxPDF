@@ -67,7 +67,7 @@ internal sealed partial class DocxRenderer
 
         string[] words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var lines = new List<string>();
-        string firstLine = ConsumeBalloonWords(0, firstLineWidth, out int nextWordIndex);
+        string firstLine = ConsumeBalloonWords(0, firstLineWidth, reserveBreakSpace: true, out int nextWordIndex);
         if (nextWordIndex >= words.Length)
         {
             return [firstLine];
@@ -78,12 +78,12 @@ internal sealed partial class DocxRenderer
         lines.Add(firstLine + " ");
         while (nextWordIndex < words.Length)
         {
-            lines.Add(ConsumeBalloonWords(nextWordIndex, continuationWidth, out nextWordIndex));
+            lines.Add(ConsumeBalloonWords(nextWordIndex, continuationWidth, reserveBreakSpace: false, out nextWordIndex));
         }
 
         return lines.ToArray();
 
-        string ConsumeBalloonWords(int startIndex, double maxWidth, out int nextWordIndex)
+        string ConsumeBalloonWords(int startIndex, double maxWidth, bool reserveBreakSpace, out int nextWordIndex)
         {
             string line = string.Empty;
             int index = startIndex;
@@ -92,9 +92,10 @@ internal sealed partial class DocxRenderer
                 string candidate = line.Length == 0
                     ? words[index]
                     : line + " " + words[index];
-                // Word's wrapped rows include the separating space. Reserve its
-                // advance while choosing a break, using the emitting body face.
-                string measured = index + 1 < words.Length ? candidate + " " : candidate;
+                // First-row admission retains its qualified break-space reserve.
+                // Continuations break on visible words; their emitted separator
+                // may extend into the trailing inset, in its own source face.
+                string measured = reserveBreakSpace && index + 1 < words.Length ? candidate + " " : candidate;
                 if (line.Length != 0 &&
                     embedded.MeasureTextPoints(measured, fontSize) > maxWidth)
                 {
@@ -117,10 +118,11 @@ internal sealed partial class DocxRenderer
 
     // Single source for the Word-compatible balloon body wrap shared by text
     // rendering and row-derived balloon heights: the title plus the first body
-    // words share the top row, an overflowing body wraps once onto a second row.
+    // words share the top row, and an overflowing body continues below it.
     private static void ComputeWordCompatibleBalloonWrapWidths(
         double titleWidth,
         double balloonWidth,
+        double printScale,
         out double firstLineWidth,
         out double continuationWidth)
     {
@@ -129,7 +131,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
         double rightEdge = balloonWidth - 0.5d;
         firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX - WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints);
-        continuationWidth = Math.Max(0d, rightEdge - WordCompatibleAllMarkupBalloonTextInsetXPoints);
+        continuationWidth = Math.Max(0d, balloonWidth - 2d * WordCompatibleAllMarkupBalloonContinuationWrapInsetDesignPoints * printScale);
     }
 
     private static int CountWordCompatibleBalloonTextRows(
