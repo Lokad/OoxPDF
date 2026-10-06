@@ -1380,6 +1380,56 @@ candidate identities and the rejected mixed-descent counterfactual are under
 `artifacts/plan-revision-20261005/rv06-l45/`.
 
 
+## RV21-V30: full integration through L44 and SVG transparency
+
+The isolated Release run at `317a694d` passes 2173 checks, fails none and skips
+only the private PPTX diagnostic whose input/output environment is absent.
+All 891 DOCX checks pass. The clean build and fresh 0.1.5 package contain the
+exact full-suite DLL:
+`5540144785238FB224C00CA22697B49D881F76DE7D40644BB4F0F68395FB172F`.
+This run includes corrected L44 and accepted smooth-preview SVG transparency E4;
+it excludes L45/L46. Evidence is under
+`artifacts/plan-revision-20261005/milestone-317a694d/`.
+
+## RV06-L46: reflow before splitting a joined first tail word
+
+An ordinary ASCII prefix can now wrap in its prepared face before its first
+joined tail word splits across rows. If the final prefix row contains multiple
+words, its last word moves onto a fresh row before tail splitting. The authored
+separator remains at the preceding prefix row's end in its prefix face; no space
+is invented at the font boundary or inside the joined word. The first tail
+scalar must fit the mixed row and have positive advance, and every scalar must
+fit continuation width. Oversized/zero-first scalars and overwide prefix words
+retain fallback. Existing prefix-only/incoming/outgoing/tail-only metrics and
+the final paragraph mark remain shared by height and emission.
+
+Fourteen metric controls cover ten font pairs and three print scales. Incoming
+and outgoing maximum errors are 0.131/0.083pt; rejected prefix/tail-only or
+separate-max-component models retain their counterfactuals. Seventy prefix-only
+and seventeen tail-only pitches have maximum errors of 0.082/0.054pt. Admission
+and multiword final-prefix-row regressions fail before their repairs. The final
+regression checks 144 scalar/gap/space/prefix-count/scale/tail variants plus
+glyph/fallback guards, exact text, prepared faces, all spacing phases, visible
+width, final mark/size and height.
+
+All 893 DOCX checks, 89 balloon checks and fourteen Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `e0699172`:
+`141C6FAB3F418644507BE9758954BFC8325BDE11A18D8F115AFB2DD9100D2702`.
+Across 244 earlier and fourteen new comparisons, fourteen improve MAE and SSIM,
+244 retain PDF/raster/graphics bytes and all retain main-document text and
+comment content. All fourteen changed controls match exact row text, spaces and
+source faces, including 28 within-word breaks. Maximum row-start X gap is 0.838pt
+and baseline gap is 0.221pt. Actual Office break matches reach 252 of 258 inputs.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Six break mismatches remain:
+three-part and multi-paragraph comments, the earlier overwide-prefix-word guard,
+two L45 doubled-separator/punctuation guards and the new oversized-prefix guard.
+Prior positioning/composed pixel residuals and 33 partial cached cases remain.
+Qualification, identities and the rejected unreflowed-prefix prototype are under
+`artifacts/plan-revision-20261005/rv06-l46/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
