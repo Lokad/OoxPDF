@@ -2791,8 +2791,8 @@ internal static class DocxCommentsTests
                 "Height includes the mixed first step and every tail row.");
             foreach ((string guardedPrefix, string guardedTail) in new[]
             {
-                (prefix, " ".PadRight(64) + word + "  ending."),
-                (prefix, "  " + word + "  ending."),
+                (prefix, " ".PadRight(64) + word + "   ending."),
+                (prefix, "  " + word + "   ending."),
                 (prefix + ",", tail)
             })
             {
@@ -2810,7 +2810,7 @@ internal static class DocxCommentsTests
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "Repeated internal spaces or a punctuated prefix retains complete fallback.");
+                    "Three internal spaces or a punctuated prefix retains complete fallback.");
             }
         }
     }
@@ -3417,8 +3417,9 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonRetainsLeadingTailSpaceSpanAcrossOverflow()
+    public static void DocxWordCompatibleMixedBalloonRetainsLeadingAndInternalTailSpaceSpans()
     {
+        foreach (bool doubleInternalSeparator in new[] { false, true })
         foreach (bool supplementary in new[] { false, true })
         foreach (bool zeroAdvance in new[] { false, true })
         foreach (int spaceCount in new[] { 3, 4, 8, 12, 256, 1024 })
@@ -3427,11 +3428,13 @@ internal static class DocxCommentsTests
         foreach (int length in new[] { 18, 72 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
+            if (doubleInternalSeparator && fittingFirstWord) { continue; }
             const string prefix = "Review table";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
             if (zeroAdvance) { word = "a" + word[1..].Replace('a', 'b'); }
             string spaces = " ".PadRight(spaceCount);
-            string tail = spaces + (fittingFirstWord ? "i " : string.Empty) + word + " ending.";
+            string tail = spaces + (fittingFirstWord ? "i " : string.Empty) + word +
+                (doubleInternalSeparator ? "  ending." : " ending.");
             DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
             {
                 Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
@@ -3498,8 +3501,10 @@ internal static class DocxCommentsTests
                 "Height includes the mixed first step and every tail row.");
             foreach ((string guardedPrefix, string guardedTail) in new[]
             {
-                (prefix, " ".PadRight(256) + word + "  ending."),
-                (prefix, spaces + word + "  ending."),
+                (prefix, " ".PadRight(256) + word + "   ending."),
+                (prefix, spaces + word + "   ending."),
+                (prefix, " " + word + "  ending."),
+                (prefix, spaces + "ok. " + word + "  ending."),
                 (prefix + ",", tail), (prefix, "\t" + word + " ending.")
             })
             {
@@ -3517,7 +3522,7 @@ internal static class DocxCommentsTests
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "Repeated internal spaces, punctuated prefix or tab retains complete fallback.");
+                    "Three internal spaces, a single leading separator, extra tail words, punctuated prefix or tab retains complete fallback.");
             }
         }
     }

@@ -69,7 +69,8 @@ internal sealed partial class DocxRenderer
             if (parts.Count != 2) { return null; }
             int leadingSpaces = CountLeadingBalloonSpaces(parts[1].Text, cancellationToken);
             if (leadingSpaces < 2 || leadingSpaces >= parts[1].Text.Length ||
-                parts[1].Text[leadingSpaces..].Contains("  ", StringComparison.Ordinal)) { return null; }
+                (parts[1].Text[leadingSpaces..].Contains("  ", StringComparison.Ordinal) &&
+                 !HasSingleDoubleTailSeparator(parts[1].Text[leadingSpaces..]))) { return null; }
             string prefix = parts[0].Text;
             int split = prefix.IndexOf(' ');
             if (split <= 0 || split != prefix.LastIndexOf(' ') || split == prefix.Length - 1) { return null; }
@@ -80,6 +81,13 @@ internal sealed partial class DocxRenderer
             }
         }
         return parts.ToArray();
+    }
+
+    private static bool HasSingleDoubleTailSeparator(string text)
+    {
+        int split = text.IndexOf(' ');
+        return split > 0 && split + 2 < text.Length && text[split + 1] == ' ' &&
+            text.LastIndexOf(' ') == split + 1;
     }
 
     private static int CountLeadingBalloonSpaces(string text, CancellationToken cancellationToken)
@@ -300,7 +308,9 @@ internal sealed partial class DocxRenderer
         string text = tail.Text[separatorLength..];
         string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (!double.IsFinite(available) || words.Length < 2) { return null; }
-        double firstWordWidth = tail.Resource.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
+        bool preserveInternalSeparator = HasSingleDoubleTailSeparator(text);
+        double firstWordWidth = tail.Resource.Embedded.MeasureTextPoints(words[0] +
+            (preserveInternalSeparator ? "  " : " "), fontSize);
         if (!double.IsFinite(firstWordWidth)) { return null; }
         bool startsBelowPrefix = firstWordWidth > available;
         double prefixDescent = -prefixFont.Hhea.HorizontalDescender / (double)prefixFont.UnitsPerEm;
@@ -309,7 +319,8 @@ internal sealed partial class DocxRenderer
         double transition = descent + (tailFont.Hhea.HorizontalAscender + tailFont.Hhea.HorizontalLineGap) / (double)tailFont.UnitsPerEm;
         if (!double.IsFinite(transition) || transition <= 0d) { return null; }
         var lines = WrapUniformBalloonWords(text, tail.Resource.Embedded, fontSize,
-            startsBelowPrefix ? -1d : available, continuationWidth, cancellationToken);
+            startsBelowPrefix ? -1d : available, continuationWidth, cancellationToken,
+            preserveAsciiSpaces: preserveInternalSeparator);
         if (lines.Length < 2 || (!startsBelowPrefix && lines[0].Text.Length == 0)) { return null; }
         // Keep the authored separators in their tail resource and reserve their
         // advance beside the complete prefix, even when spaces overflow.
