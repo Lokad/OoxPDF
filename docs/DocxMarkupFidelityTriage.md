@@ -1874,6 +1874,16 @@ Across 539 prior and twenty-six fresh controls, twenty improve MAE and SSIM and 
 
 All 34 cached PDFs retain bytes and 551 failed gates. Twenty-eight break mismatches remain across mixed/wrapped paragraph bodies, four paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l61/`. Separate full integration V38 through L61/E4 remains in progress and excludes later prototypes.
 
+## RV06-L62: four fitting plain comment paragraphs
+
+Four plain paragraphs that each fit one row retain their own prepared body and nominal paragraph mark faces. Height and emission share all three adjacent paragraph transitions. Five paragraphs, wrapping, mixed/decorated bodies, decorated marks and unsupported spacing retain complete fallback. The renderer and reader production regressions fail before the change; nineteen mixed checks cover 384 three-/four-paragraph scalar/face/descent/gap/mark/scale variants, including 192 new four-paragraph variants, and the expanded reader regression preserves four marks in all-markup mode while final view and five paragraphs retain their prior policy.
+
+Frozen runtime `6ca6ef6a` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `941e68094d724401a82588d195002211` contains the exact tested DLL, SHA-256 `BFE02371855BF37672BCA5E20F4951A59A54CAFDDC7C40C276A18828D5F08EA0`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 565 prior and twenty-six fresh controls, twenty-two improve MAE and SSIM and 563 retain PDF bytes. All 569 raster/graphics identities pass; six additional fallback PDFs differ only by audited font aliases, with identical glyph operations, font declarations after resolving aliases, decoded embedded font bytes and pixels. Four are fresh guards and two are prior wrapped-four-paragraph guards. All 591 retain main-document text and comment content; 559 match Office breaks. All twenty-two visually changed controls match exact row text, spaces and prepared fonts, with maximum row-start X gap 0.838pt and baseline gap 0.207pt. Twenty-two metric controls cover sixty-six paragraph transitions at maximum error 0.086pt; reusing uniform middle metrics misses by up to 1.336pt.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Thirty-two break mismatches remain across mixed/wrapped paragraph bodies, five paragraphs, overwide/decorated/separated closing runs, unsupported spacing and punctuation/whitespace guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font and fallback-alias audits, and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l62/`. Separate full integration V38 through L61/E4 remains in progress and excludes L62 and later prototypes.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
@@ -1907,6 +1917,7 @@ All 34 cached PDFs retain bytes and 551 failed gates. Twenty-eight break mismatc
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
 
 
 
