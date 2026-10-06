@@ -1499,6 +1499,53 @@ and the new three-space guard. Earlier positioning/composed pixel residuals
 and 33 partial cached cases remain. Qualification and identities are under
 `artifacts/plan-revision-20261005/rv06-l48/`.
 
+## RV21-V31: full integration through L46 and SVG transparency
+
+The isolated Release run at `c0458d1a` passes 2175 checks, fails none and skips
+only the private PPTX diagnostic whose input/output environment is absent.
+All 893 DOCX checks pass. The clean build and fresh 0.1.5 package contain the
+exact full-suite DLL:
+`8CA4C0372C9B4A2BF59DF7CB5064957EFBAC078A405B26A5F3A5851221945C37`.
+This run includes L45/L46 and accepted smooth-preview SVG transparency E4;
+it excludes L47/L48. Evidence is under
+`artifacts/plan-revision-20261005/milestone-c0458d1a/`.
+
+## RV06-L49: a terminal comma before a separated tail
+
+A fitting two-word ASCII prefix ending in one comma now retains its prepared
+font before one leading tail space. The comma stays with the prefix, the
+authored separator stays with the tail, and a fitting first tail word shares
+the row while a larger word starts below it. Existing separator-only/mixed
+descent rules and later tail metrics remain shared by height and emission.
+Colons, internal commas, punctuation-only words and doubled separators beside
+a punctuated prefix retain fallback. Wide punctuated prefixes remain outside
+this admission rule.
+
+Fourteen Office phase controls cover ten font pairs and three print scales:
+twelve separator-only first rows and two visible mixed first rows. The selected
+first-step error is at most 0.131pt; twenty-eight tail-only pitches have maximum
+error 0.082pt. Rejected descent models remain recorded. The production
+reproducer fails before admission. The final regression checks 96 scalar,
+zero-first-glyph, prefix-descent, length, scale and fitting-first-word variants
+plus unsupported-prefix/separator guards. Exact text, fonts, advances, spacing
+phases, visible widths, nominal final mark and matching height remain asserted.
+
+All 896 DOCX checks, 92 balloon checks and seventeen Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `fb521bdb`:
+`A5AEAC236471479ADB25465D4CDDCF35A9DA33AA11FE64A0C8DB672061802A18`.
+Across 286 earlier and fourteen new inputs, fourteen improve MAE and SSIM,
+286 retain PDF/raster/graphics identity and all retain main-document text and
+comment content. All fourteen changed controls match exact row text, spaces
+and source fonts, including twenty within-word breaks. Maximum row-start X gap
+is 0.838pt and baseline gap is 0.207pt. Office break matches reach 295 of 300.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Five break mismatches
+remain: three-part comments, multiple paragraphs, an overwide punctuated prefix
+word, the three-space guard and the new colon guard. Earlier positioning/
+composed pixel residuals and 33 partial cached cases remain. Qualification and
+identities are under `artifacts/plan-revision-20261005/rv06-l49/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
