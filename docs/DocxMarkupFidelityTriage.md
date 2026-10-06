@@ -1101,6 +1101,36 @@ pixel residuals remain; 33 cached cases are partial. Input/reference/candidate
 hashes and exact emission audits are under
 `artifacts/plan-revision-20261005/rv06-l38/`.
 
+## RV06-L39: mixed continuation word splitting
+
+A qualified two-face comment can now split overwide continuation words in the
+prepared tail face. The prefix and first tail word retain their admission gates;
+within-word breaks share the uniform splitter and emit no invented separators.
+The tail face supplies continuation pitch and the resolved paragraph-mark face
+supplies the final blank. Height and emission use the same rows, with cancellation
+checks during scanning and emission.
+
+The production reproducer fails before the repair and passes for ASCII and
+supplementary Unicode at two print scales, while checking distinct source faces,
+complete content, tail metrics, final mark size/face and box height. All 886 DOCX
+checks, 82 balloon checks and seven Linux regressions pass. Release is clean;
+fresh 0.1.5 package smoke contains the exact tested DLL from runtime revision
+`87c518b9`:
+`6F7EFCE649C1A2BB2D46FE86D7F22979FE19D99EA6ABF03DDC38227A8F5CF6DD`.
+
+Across 162 held-out and nine new Office controls, nine improve error and similarity
+and 162 retain PDF, raster and graphics bytes. All retain main-document text and
+comment content. Ten audited controls match exact row text, spaces and source
+faces, including twelve within-word breaks; maximum row-start X gap is 0.085pt
+and baseline gap is 0.177pt. All 34 cached PDFs retain bytes and 551 failed gates.
+
+Six older fallback controls and three new first-word guards retain break
+mismatches. The latter expose a word spanning font runs: Office can move the last
+prefix word into the continuation row before splitting the tail. This requires
+separate row composition and metric evidence. Styled/grouped/unprepared fallbacks,
+prior positioning and composed pixel residuals remain. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l39/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
