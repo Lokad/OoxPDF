@@ -117,7 +117,9 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonBodyPart? ContinuationPrefix = null,
         double? SecondContinuationGapEm = null,
         DocxUniformBalloonRow[]? PrefixLines = null,
-        double? PrefixLineHeightEm = null)
+        double? PrefixLineHeightEm = null,
+        DocxMarkupBalloonBodyPart? ClosingPart = null,
+        double? FinalContinuationGapEm = null)
     {
         public int PrintedRows => TailLines.Length + (PrefixLines is null
             ? ContinuationPrefix is null ? 0 : 1 : PrefixLines.Length - 1);
@@ -131,6 +133,10 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (parts is { Count: 3 })
+        {
+            return ResolveWordCompatibleClosingRunRows(parts, fontSize, firstLineWidth, continuationWidth, cancellationToken);
+        }
         if (parts is not { Count: 2 } || parts[0].Text.Length == 0 || parts[1].Text.Length == 0) { return null; }
         double tailFirstWidth = firstLineWidth - parts[0].Resource.Embedded.MeasureTextPoints(parts[0].Text, fontSize);
         if (!double.IsFinite(tailFirstWidth)) { return null; }
@@ -356,6 +362,12 @@ internal sealed partial class DocxRenderer
         double fontSize,
         CancellationToken cancellationToken)
     {
+        if (rows.ClosingPart is not null)
+        {
+            RenderWordCompatibleClosingRunRows(rows, placement, graphics, terminalResource,
+                textX, bodyFirstLineX, firstBaselineY, fontSize, cancellationToken);
+            return;
+        }
         if (rows.PrefixLines is { } prefixLines)
         {
             double prefixGap = ResolveWordCompatibleBalloonLineGap(rows.PrefixLineHeightEm, fontSize);

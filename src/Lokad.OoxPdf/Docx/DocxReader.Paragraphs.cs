@@ -240,7 +240,7 @@ internal sealed partial class DocxReader
         DocxTextRun? firstCommentRun = retainBalloonParagraphMark
             ? runs.FirstOrDefault(run => !string.IsNullOrWhiteSpace(run.Text)) : null;
         bool retainMixedMark = retainBalloonParagraphMark &&
-            runs.Count(run => !string.IsNullOrWhiteSpace(run.Text)) == 2 &&
+            runs.Count(run => !string.IsNullOrWhiteSpace(run.Text)) is 2 or 3 &&
             runs.Where(run => !string.IsNullOrWhiteSpace(run.Text)).All(run =>
             {
                 cancellationToken.ThrowIfCancellationRequested();

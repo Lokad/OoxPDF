@@ -1002,6 +1002,10 @@ internal sealed partial class DocxRenderer
                         continuationsHeight = (firstGapEm + secondGapEm) * fontSize + (rows - 3) * lineGap;
                     }
                 }
+                if (twoFaceRows?.FinalContinuationGapEm is double finalGapEm)
+                {
+                    continuationsHeight += (finalGapEm - twoFaceRows.TailLineHeightEm!.Value) * fontSize;
+                }
                 return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + continuationsHeight +
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;
             }

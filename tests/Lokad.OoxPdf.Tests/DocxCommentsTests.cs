@@ -2814,6 +2814,125 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleMixedBalloonKeepsFittingClosingRunAndFinalRowMetrics()
+    {
+        foreach (bool supplementary in new[] { false, true })
+        foreach (short prefixAscender in new short[] { 500, 1200 })
+        foreach (short prefixGap in new short[] { 0, 450 })
+        foreach (short prefixDescender in new short[] { -50, -350 })
+        foreach (int repeat in new[] { 24, 40 })
+        foreach (int closingLength in new[] { 1, 12 })
+        foreach (double rightMargin in new[] { 72d, 144d, 207d })
+        {
+            const string prefix = "Review table";
+            string tail = "ok. " + string.Join(" ", Enumerable.Repeat(supplementary ? "a\U0001F600" : "aa", repeat));
+            string closingText = new('i', closingLength);
+            using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                    <Default Extension="xml" ContentType="application/xml"/>
+                    <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/_rels/document.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                    <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = """
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="AnchorFace" w:hAnsi="AnchorFace"/></w:rPr><w:t>Anchor</w:t></w:r><w:r><w:commentReference w:id="1"/></w:r></w:p>
+                    </w:body></w:document>
+                    """,
+                ["word/comments.xml"] = $$"""
+                    <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="Reviewer" w:initials="RV"><w:p>
+                    <w:pPr><w:rPr><w:rFonts w:ascii="AnchorFace" w:hAnsi="AnchorFace"/><w:sz w:val="36"/></w:rPr></w:pPr>
+                    <w:r><w:rPr><w:rFonts w:ascii="CommentFace" w:hAnsi="CommentFace"/></w:rPr><w:t>{{prefix}}</w:t></w:r>
+                    <w:r><w:rPr><w:rFonts w:ascii="OtherCommentFace" w:hAnsi="OtherCommentFace"/></w:rPr><w:t>{{tail}}</w:t></w:r>
+                    <w:r><w:rPr><w:rFonts w:ascii="CommentFace" w:hAnsi="CommentFace"/></w:rPr><w:t>{{closingText}}</w:t></w:r>
+                    </w:p></w:comment></w:comments>
+                    """
+            });
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None,
+                markupMode: OoxPdfDocxMarkupMode.AllMarkup) with { MarginRightPoints = rightMargin };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap, bodySpaceAdvance: 123,
+                bodyDescender: prefixDescender, bodyAscender: prefixAscender), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(prefix, shows[0].Text);
+            TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
+            TestAssert.Equal(prefix + tail + closingText + " ", string.Concat(shows.Select(show => show.Text)));
+            var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
+                show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('a')) == 900).ToArray();
+            TestAssert.True(tailRows.Length >= 3, "The probe must include first, pure-tail and final mixed rows.");
+            double size = tailRows[0].Size;
+            for (int index = 1; index < tailRows.Length; index++)
+            {
+                double pitch = index == 1 ? Math.Max(-prefixDescender / 1000d, 0.2d) + 0.8d :
+                    index == tailRows.Length - 1 ? 0.2d + Math.Max(prefixAscender / 1000d + prefixGap / 1000d, 0.8d) : 1d;
+                TestAssert.True(Math.Abs(tailRows[index - 1].Y - tailRows[index].Y - pitch * size) < 0.02d,
+                    "First, pure-tail and final mixed steps use their own visible font metrics.");
+            }
+            var closing = shows.Single(show => show.Text == closingText);
+            TestAssert.Equal(700, (int)closing.Font.Font.GetAdvanceWidth(closing.Font.Font.MapCodePoint('i')));
+            TestAssert.True(Math.Abs(closing.Y - tailRows[^1].Y) < 0.001d, "The fitting closing run shares the final tail baseline.");
+            TestAssert.True(Math.Abs(closing.X - tailRows[^1].X - tailRows[^1].Font.MeasureTextPoints(tailRows[^1].Text, size)) < 0.04d,
+                "The closing run follows the final tail advance without an invented separator.");
+            TestAssert.Equal(" ", shows[^1].Text);
+            TestAssert.Equal(500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
+            TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The final paragraph mark keeps nominal balloon size.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + tailRows[0].Y - tailRows[^1].Y)) < 0.02d,
+                "Balloon height includes all three row phases.");
+            DocxRelatedStory story = document.RelatedStories.Single();
+            DocxParagraph comment = ((DocxParagraphElement)story.BodyElements.Single()).Paragraph;
+            TestAssert.Equal(" ", comment.ParagraphMarkRun!.Text);
+            TestAssert.Equal("AnchorFace", comment.ParagraphMarkRun.FontFamily);
+            foreach (DocxTextRun[] guardedRuns in new[]
+            {
+                new[] { comment.Runs[0], comment.Runs[1], comment.Runs[2] with { Text = new string('a', 200) } },
+                [comment.Runs[0], comment.Runs[1], comment.Runs[2] with { Bold = true }],
+                [comment.Runs[0], comment.Runs[1] with { Text = " " + tail }, comment.Runs[2]],
+                [comment.Runs[0], comment.Runs[1], comment.Runs[2] with { FontFamily = "OtherCommentFace",
+                    Fonts = comment.Runs[2].Fonts with { Ascii = "OtherCommentFace", HighAnsi = "OtherCommentFace" } }],
+                [comment.Runs[0], comment.Runs[1], comment.Runs[2], comment.Runs[2] with { Text = "end" }],
+                [comment.Runs[0] with { Text = "Review table," }, comment.Runs[1], comment.Runs[2]]
+            })
+            {
+                DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(comment with { Runs = guardedRuns })] }] };
+                var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    $"Guard retains complete fallback: runs={guardedRuns.Length}, closingLength={guardedRuns[2].Text.Length}, bold={guardedRuns[2].Bold}, closingFace={guardedRuns[2].FontFamily}, leadingTail={guardedRuns[1].Text.StartsWith(' ')}, prefixComma={guardedRuns[0].Text.EndsWith(',')}.");
+            }
+            foreach (short advance in new short[] { 0, 32700 })
+            {
+                DocxParagraph guardedComment = comment with
+                {
+                    Runs = [comment.Runs[0], comment.Runs[1] with { Text = "ok. " + new string('a', 30) + " end." }, comment.Runs[2]]
+                };
+                DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
+                var numericRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(tailFirstAdvance: advance), OoxPdfDocxMarkupMode.AllMarkup,
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                var guardedBalloon = numericRenderer.InspectMarkupBalloons(guarded).Single();
+                var guardedShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "Zero-width and overwide tail words retain complete fallback in the closing-run branch.");
+            }
+        }
+    }
+
     public static void DocxReaderRetainsTwoCommentBalloonParagraphMarks()
     {
         foreach (int count in new[] { 1, 2, 3 })
