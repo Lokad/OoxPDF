@@ -2938,6 +2938,7 @@ internal static class DocxCommentsTests
     {
         foreach (bool hasFourth in new[] { false, true })
         foreach (bool hasThird in new[] { false, true })
+        foreach (bool wrappedFourth in new[] { false, true })
         foreach (bool wrappedThird in new[] { false, true })
         foreach (bool wrappedFirst in new[] { false, true })
         foreach (bool wrappedSecond in new[] { false, true })
@@ -2949,6 +2950,7 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
+            if (wrappedFourth && (!hasFourth || !wrappedFirst || wrappedSecond || wrappedThird)) { continue; }
             if (hasFourth && (!hasThird || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
@@ -2979,9 +2981,12 @@ internal static class DocxCommentsTests
                 Runs = [first.Runs[0] with { Text = thirdText }],
                 ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 36d }
             };
+            string fourthText = wrappedFourth
+                ? (supplementary ? string.Concat(Enumerable.Repeat("l\U0001F600", length)) : new string('l', length * 2)) + " last."
+                : "last.";
             DocxParagraph fourth = first with
             {
-                Runs = [new DocxTextRun("last.", 12d, null, false, false, false, null, "AnchorFace")],
+                Runs = [new DocxTextRun(fourthText, 12d, null, false, false, false, null, "AnchorFace")],
                 ParagraphMarkRun = third.ParagraphMarkRun! with { FontSize = 48d }
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
@@ -3004,7 +3009,7 @@ internal static class DocxCommentsTests
             var balloon = renderer.InspectMarkupBalloons(document).Single();
             var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-            TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty) + (hasFourth ? "last. " : string.Empty), string.Concat(shows.Select(show => show.Text)));
+            TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty) + (hasFourth ? fourthText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
             var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
             TestAssert.True(tailRows.Length >= (wrappedSecond ? 2 : 1), "The second paragraph uses its own fitting or wrapped rows independently of the title row.");
             var firstShows = shows.Where(show => show.Y > tailRows[0].Y + 0.001d).ToArray();
@@ -3051,12 +3056,14 @@ internal static class DocxCommentsTests
             TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The final mark stays at nominal balloon size.");
             double thirdPitch = hasThird ? 0.7d + prefixGap / 1000d : 0d;
             double thirdHeight = 0d;
+            double thirdLastY = tailRows[^1].Y;
             if (hasThird)
             {
                 var thirdRows = shows.Where(show => show.Y < tailRows[^1].Y - 0.001d && !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('f')) == 700).ToArray();
                 TestAssert.True(thirdRows.Length >= (wrappedThird ? 2 : 1), "The third paragraph wraps using its own prepared body.");
                 double thirdLinePitch = 0.5d - prefixDescender / 1000d + prefixGap / 1000d;
+                thirdLastY = thirdRows[^1].Y;
                 thirdHeight = (thirdRows.Length - 1) * thirdLinePitch * size;
                 TestAssert.Equal(700, (int)thirdRows[^1].Font.Font.GetAdvanceWidth(thirdRows[^1].Font.Font.MapCodePoint('f')));
                 TestAssert.True(Math.Abs(tailRows[^1].Y - thirdRows[0].Y - thirdPitch * size) < 0.02d,
@@ -3071,22 +3078,39 @@ internal static class DocxCommentsTests
                     TestAssert.True(Math.Abs(row.X - tailRows[0].X) < 0.001d && row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
                         "Third-paragraph rows use the continuation inset and remain inside the balloon.");
                 }
-                TestAssert.True(Math.Abs(shows[^2].X - tailRows[0].X) < 0.001d && Math.Abs(shows[^1].Y - shows[^2].Y) < 0.001d,
-                    "The third paragraph and its mark retain the continuation row.");
-                TestAssert.True(Math.Abs(shows[^1].X - shows[^2].X - shows[^2].Font.MeasureTextPoints(shows[^2].Text, size)) < 0.04d,
+                var thirdMark = shows.Single(show => string.IsNullOrWhiteSpace(show.Text) && Math.Abs(show.Y - thirdRows[^1].Y) < 0.001d);
+                TestAssert.True(Math.Abs(thirdRows[^1].X - tailRows[0].X) < 0.001d && Math.Abs(thirdMark.Size - size) < 0.001d,
+                    "The third paragraph and its nominal mark retain the continuation row.");
+                TestAssert.True(Math.Abs(thirdMark.X - thirdRows[^1].X - thirdRows[^1].Font.MeasureTextPoints(thirdRows[^1].Text, size)) < 0.04d,
                     "The third mark follows its own body's visible advance.");
             }
             double fourthPitch = hasFourth ? -prefixDescender / 1000d + 0.8d : 0d;
+            double fourthHeight = 0d;
             if (hasFourth)
             {
-                TestAssert.Equal("last.", shows[^2].Text);
-                TestAssert.Equal(500, (int)shows[^2].Font.Font.GetAdvanceWidth(shows[^2].Font.Font.MapCodePoint('l')));
-                TestAssert.True(Math.Abs(shows[^4].Y - shows[^2].Y - fourthPitch * size) < 0.02d &&
-                    Math.Abs(shows[^2].X - tailRows[0].X) < 0.001d,
-                    "The fitting fourth body uses its own prepared face and incoming transition.");
+                var fourthRows = shows.Where(show => show.Y < thirdLastY - 0.001d && !string.IsNullOrWhiteSpace(show.Text) &&
+                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('l')) == 500).ToArray();
+                TestAssert.True(fourthRows.Length >= (wrappedFourth ? 2 : 1), "The fourth body fits or wraps in its own prepared face.");
+                fourthHeight = (fourthRows.Length - 1) * size;
+                TestAssert.True(Math.Abs(thirdLastY - fourthRows[0].Y - fourthPitch * size) < 0.02d,
+                    "The fourth body uses the third body's descent and its own ascent and gap once.");
+                foreach (var row in fourthRows)
+                {
+                    TestAssert.True(Math.Abs(row.X - tailRows[0].X) < 0.001d && row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
+                        "Every fourth row uses the continuation inset and fits the balloon.");
+                }
+                for (int index = 1; index < fourthRows.Length; index++)
+                {
+                    TestAssert.True(Math.Abs(fourthRows[index - 1].Y - fourthRows[index].Y - size) < 0.02d,
+                        "Fourth continuations use only their own prepared metrics.");
+                }
+                TestAssert.True(Math.Abs(shows[^1].Y - fourthRows[^1].Y) < 0.001d &&
+                    Math.Abs(shows[^1].X - fourthRows[^1].X - fourthRows[^1].Font.MeasureTextPoints(fourthRows[^1].Text, size)) < 0.04d,
+                    "The nominal fourth mark follows its final row without an invented separator.");
             }
-            TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight + fourthPitch * size)) < 0.02d,
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight + fourthPitch * size + fourthHeight)) < 0.02d,
                 "Height includes the paragraph transition and all later rows.");
+            if (wrappedFourth && (!hasFourth || !wrappedFirst || wrappedSecond || wrappedThird)) { continue; }
             if (hasFourth && !supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
                 if (wrappedThird)
@@ -3140,6 +3164,24 @@ internal static class DocxCommentsTests
                             invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                             "A zero-width or overwide second body or nonpositive second pitch/transition retains finite complete fallback in four paragraphs.");
                     }
+                }
+                if (wrappedFourth)
+                {
+                    var invalidRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(tailDescender: 32700),
+                        OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                    DocxDocument guarded = document with
+                    {
+                        RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first),
+                            new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = "control.", FontFamily = "AnchorFace" }] }),
+                            new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Text = "finish." }] }),
+                            new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 80) + " last.", FontFamily = "OtherCommentFace" }] })] }]
+                    };
+                    var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
+                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                    TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
+                        invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                        "A nonpositive fourth continuation pitch retains complete fallback while its incoming transition remains positive.");
                 }
                 foreach (bool invalidTransition in new[] { false, true })
                 foreach (short advance in new short[] { 0, 32700 })
@@ -3683,7 +3725,7 @@ internal static class DocxCommentsTests
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second) },
                 [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(second)],
-                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = new string('a', 200) }] })],
+                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = new string('a', 200) }] })],
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Bold = true }] }), new DocxParagraphElement(second)]
             })
             {
