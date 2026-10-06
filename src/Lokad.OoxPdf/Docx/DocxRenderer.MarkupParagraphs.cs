@@ -169,7 +169,7 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonParagraph first = paragraphs[0], second = paragraphs[1];
         double prefixWidth = first.Body.Resource.Embedded.MeasureTextPoints(first.Body.Text, fontSize);
         double tailWidth = second.Body.Resource.Embedded.MeasureTextPoints(second.Body.Text, fontSize);
-        if (!double.IsFinite(prefixWidth) || prefixWidth <= 0d || (prefixWidth > firstWidth && paragraphs.Count != 3) ||
+        if (!double.IsFinite(prefixWidth) || prefixWidth <= 0d ||
             !double.IsFinite(tailWidth) || tailWidth <= continuationWidth) { return null; }
         DocxUniformBalloonRow[]? firstRows = null;
         double firstTailGap = 0d;

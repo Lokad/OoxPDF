@@ -2934,7 +2934,7 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonWrapsThreeParagraphBodiesIndependently()
+    public static void DocxWordCompatibleMixedBalloonWrapsTwoAndThreeParagraphBodiesIndependently()
     {
         foreach (bool hasThird in new[] { false, true })
         foreach (bool wrappedThird in new[] { false, true })
@@ -2947,7 +2947,7 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            if (!hasThird && (wrappedThird || wrappedFirst)) { continue; }
+            if (!hasThird && wrappedThird) { continue; }
             string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
             string prefix = wrappedFirst ? firstWord + " start." : "Review table";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
@@ -3069,7 +3069,7 @@ internal static class DocxCommentsTests
             foreach (DocxBodyElement[] guardedElements in new[]
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Bold = true }] }) },
-                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second)],
+                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(third), new DocxParagraphElement(third)],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterLinesValue = "100" } })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Bold = true }] })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
@@ -3082,7 +3082,7 @@ internal static class DocxCommentsTests
                 var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "A wrapped first paragraph, spacing, mixed or decorated bodies, repeated spaces and tabs retain complete fallback.");
+                    "Four paragraphs with a wrapped body, spacing, mixed or decorated bodies, repeated spaces and tabs retain complete fallback.");
             }
             if (!supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
@@ -3121,8 +3121,9 @@ internal static class DocxCommentsTests
                 {
                     DocxDocument guarded = document with
                     {
-                        RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 80) + " start." }] }),
-                            new DocxParagraphElement(second), new DocxParagraphElement(third)] }]
+                        RelatedStories = [story with { BodyElements = hasThird
+                            ? [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 80) + " start." }] }), new DocxParagraphElement(second), new DocxParagraphElement(third)]
+                            : [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 80) + " start." }] }), new DocxParagraphElement(second)] }]
                     };
                     var invalidRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyFirstAdvance: 32700),
                         OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
