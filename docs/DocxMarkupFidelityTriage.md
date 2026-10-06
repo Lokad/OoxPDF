@@ -1669,6 +1669,42 @@ full-suite DLL:
 This run excludes L51/L52. Its report, package link and identities are under
 `artifacts/plan-revision-20261005/milestone-5486a32c/`.
 
+## RV06-L53: fitting closing run after a wrapped two-face body
+
+A plain two-word prefix, a wrapped second face and a same-face closing run
+retain their prepared fonts and terminal mark. When the closing run fits its
+last tail word but overflows the current row, that word moves with the closing
+run onto a new final mixed row. First, pure-tail and final mixed steps share
+layout and emission. The production reader regression fails before changes;
+three-run mark retention is exercised through the actual reader.
+
+Sixteen mixed checks cover 192 scalar/ascent/gap/descent/length/closing-length/
+scale variants, numeric guards and rejected formatting/spacing shapes. All
+901 DOCX checks, 97 balloon checks and twenty-two Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL at
+runtime `cbc07d9c`:
+`93C64100A778163678D73689F69D75B8E0C8C3965A151807441DFFCD48AFCD59`.
+
+Across 353 prior and seventeen fresh inputs, fifteen improve MAE and SSIM,
+353 retain PDF bytes and 355 retain raster/graphics identity. All 370 retain
+main-document text and comment content; 360 match Office breaks. All fifteen
+changed controls match exact row text, spaces and prepared fonts, with maximum
+row-start X gap 0.838pt and baseline gap 0.303pt. Fourteen metric controls support
+the selected first/final steps (maximum errors 0.124/0.141pt); 114 pure-tail
+pitches stay within 0.082pt. Uniform tail metrics reach 0.342/0.900pt first/final
+errors. The rejected proposal without final-row reflow also retains a measured
+long-comment break mismatch. Both counterfactuals are archived. Two new fallback
+PDFs differ only by audited font aliases; resolved operations, font bytes,
+declarations, graphics and rasters retain identity.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Ten break mismatches
+remain: colon, semicolon, overflowing-space, internal-double-space, prior
+wrapped/spacing/three-paragraph and new overwide/decorated/separated closing-run
+guards. Prior positioning/composed pixel residuals and 33 partial cached cases
+remain. Qualification, identities and fallback audits are under
+`artifacts/plan-revision-20261005/rv06-l53/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
@@ -1702,3 +1738,4 @@ This run excludes L51/L52. Its report, package link and identities are under
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
