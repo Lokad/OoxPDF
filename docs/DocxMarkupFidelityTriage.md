@@ -1808,6 +1808,17 @@ Frozen source `7bb4fc6774cf74e3ac6af5a010286f44a8a2625e` passes a clean Release 
 
 The local 0.1.5 package smoke run `9f884216faeb4112971a409040b870ed` verifies the exact tested library bytes, SHA-256 `ECF3578B52A31C8A15B7CCC541DA3CA66E7634C4CA5D5B43B134C8347FA5D103`. The ignored evidence is under `artifacts/plan-revision-20261005/milestone-7bb4fc67/`; qualification completed 2026-10-06 at 13:32:48 UTC. The scoped Office residuals remain recorded with their individual slices. Version stays 0.1.5 and release preparation remains deferred.
 
+## RV06-L57: terminal colon and semicolon in prepared prefixes
+
+One terminal comma, colon or semicolon stays in the prepared prefix face in the existing fitting two-word/separated-tail and overwide single-word/joined-tail paths. The change retains authored punctuation and spaces and reuses the previously qualified row metrics. Internal/doubled punctuation, wrapped multiword punctuated prefixes and separated overwide prefixes keep complete fallback. Both expanded production regressions fail before the change; nineteen mixed checks cover 504 punctuation/scalar/advance/metric/length/scale variants and formatting/numeric guards.
+
+Frozen runtime `b1a5455f` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `914bf7d93e814feb89bed3d6e6df663a` contains the exact tested DLL, SHA-256 `ADC95B8686892B0920F43A2F2C17DE4E5D8CE6914FCE8F47C9AFD9F57A8F83DF`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 430 prior and twenty-eight fresh controls, twenty-six improve MAE and SSIM and 432 retain PDF/raster/graphics bytes. All 458 retain main-document text and comment content; 442 match Office breaks. All twenty-six changed controls match exact row text, spaces and prepared fonts, including 55 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.207pt. All four fresh fallback guards retain exact PDFs. The original colon case improves MAE 0.329→0.198 and SSIM 0.869→0.945; the original semicolon case improves MAE 1.266→0.386 and SSIM 0.674→0.941.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Sixteen break mismatches remain: overflowing/internal-double spaces, mixed/wrapped paragraphs, four paragraphs, overwide/decorated/separated closing runs, unsupported paragraph-spacing modes and the four new punctuated-prefix guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, exact space/font audits, input/reference identities and fallback comparisons are under `artifacts/plan-revision-20261005/rv06-l57/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
