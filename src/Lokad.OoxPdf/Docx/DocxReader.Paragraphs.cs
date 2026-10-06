@@ -239,14 +239,25 @@ internal sealed partial class DocxReader
 
         DocxTextRun? firstCommentRun = retainBalloonParagraphMark
             ? runs.FirstOrDefault(run => !string.IsNullOrWhiteSpace(run.Text)) : null;
+        bool retainMixedMark = retainBalloonParagraphMark &&
+            runs.Count(run => !string.IsNullOrWhiteSpace(run.Text)) == 2 &&
+            runs.Where(run => !string.IsNullOrWhiteSpace(run.Text)).All(run =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
+                    !run.AllCaps && !run.SmallCaps && !run.Hidden && run.VerticalAlignmentValue is null &&
+                    run.HighlightValue is null && run.ShadingFillHex is null && run.CharacterSpacingPoints == 0d &&
+                    run.FieldKind is null && (run.ColorHex is null || run.ColorHex == "000000");
+            });
         bool retainCommentMark = retainBalloonParagraphMark && firstCommentRun is not null &&
             images.Count == 0 && inlineTextBoxes.Count == 0 && fieldReferences.Count == 0 && paragraphRevisions.Count == 0 &&
             runs.Where(run => !string.IsNullOrWhiteSpace(run.Text)).All(run =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 return !run.Bold && !run.Italic && !run.Underline && run.CharacterSpacingPoints == 0d && run.FieldKind is null &&
-                    string.Equals(run.FontFamily, firstCommentRun.FontFamily, StringComparison.OrdinalIgnoreCase) &&
-                    Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts);
+                    (retainMixedMark ||
+                        (string.Equals(run.FontFamily, firstCommentRun.FontFamily, StringComparison.OrdinalIgnoreCase) &&
+                            Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts)));
             });
         DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment)
             ? CreateResolvedTextRun(retainCommentMark ? " " : string.Empty, paragraphMarkRun,

@@ -2437,6 +2437,78 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace()
+    {
+        foreach (string markFamily in new[] { "CommentFace", "OtherCommentFace" })
+        foreach ((string prefix, string tail, bool admitted) in new[]
+        {
+            ("Review ", "table control.", true),
+            ("Review ", string.Join(" ", Enumerable.Repeat("alpha", 30)), true),
+            (string.Join(" ", Enumerable.Repeat("Review", 30)) + " ", "table control.", false)
+        })
+        {
+            using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                      <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/_rels/document.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = """
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                      <w:p><w:commentRangeStart w:id="1"/><w:r><w:rPr><w:rFonts w:ascii="AnchorFace" w:hAnsi="AnchorFace"/><w:sz w:val="24"/></w:rPr><w:t>Body anchor</w:t></w:r><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r></w:p>
+                      <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="4140" w:bottom="1440" w:left="1440"/></w:sectPr>
+                    </w:body></w:document>
+                    """,
+                ["word/comments.xml"] = $$"""
+                    <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="Reviewer" w:initials="RV"><w:p>
+                      <w:pPr><w:rPr><w:rFonts w:ascii="{{markFamily}}" w:hAnsi="{{markFamily}}"/><w:sz w:val="36"/></w:rPr></w:pPr>
+                      <w:r><w:rPr><w:rFonts w:ascii="CommentFace" w:hAnsi="CommentFace"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">{{prefix}}</w:t></w:r>
+                      <w:r><w:rPr><w:rFonts w:ascii="OtherCommentFace" w:hAnsi="OtherCommentFace"/><w:sz w:val="24"/></w:rPr><w:t>{{tail}}</w:t></w:r>
+                    </w:p></w:comment></w:comments>
+                    """
+            });
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null,
+                CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
+            var paragraph = ((DocxParagraphElement)document.RelatedStories.Single().BodyElements.Single()).Paragraph;
+            DocxTextRun mark = paragraph.ParagraphMarkRun ?? throw new InvalidOperationException("The mixed comment paragraph mark must be retained.");
+            TestAssert.Equal(" ", mark.Text);
+            TestAssert.Equal(markFamily, mark.FontFamily);
+            TestAssert.Equal(string.Empty, ((DocxParagraphElement)document.BodyElements[0]).Paragraph.ParagraphMarkRun!.Text);
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X).ToArray();
+            var body = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(prefix + tail, string.Join(" ", body.Select(show => show.Text.Trim())));
+            var final = body[^1];
+            var blank = shows.Single(show => show.Text == " " && Math.Abs(show.Y - final.Y) < 0.01d);
+            TestAssert.Equal(admitted ? (markFamily == "CommentFace" ? 700 : 900) : 500,
+                (int)blank.Font.Font.GetAdvanceWidth(blank.Font.Font.MapCodePoint(' ')));
+            TestAssert.True(Math.Abs(blank.Size - final.Size) < 0.001d, "Declared mark size must not change nominal balloon size.");
+            TestAssert.True(Math.Abs(blank.X - final.X - final.Font.MeasureTextPoints(final.Text, final.Size)) < 0.04d,
+                "The final blank must follow the last visible source-face advance.");
+            foreach (var intermediate in shows.Where(show => show.Text == " " && show.Y > final.Y + 0.01d))
+            {
+                TestAssert.Equal(admitted ? 900 : 500, (int)intermediate.Font.Font.GetAdvanceWidth(intermediate.Font.Font.MapCodePoint(' ')));
+            }
+        }
+    }
+
     public static void DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace()
     {
         foreach (string body in new[] { "Review table control.", string.Join(" ", Enumerable.Repeat("alpha", 30)) })

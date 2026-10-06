@@ -352,14 +352,15 @@ internal sealed partial class DocxRenderer
     private static DocxRunFontResource? ResolveCommentBalloonTerminalResource(
         DocxRelatedStoryLayout? storyLayout,
         DocxRunFontResource? qualifiedBody,
+        IReadOnlyList<DocxMarkupBalloonBodyPart>? qualifiedParts,
         DocxFontResources? fontResources)
     {
-        if (qualifiedBody is null || fontResources is null || storyLayout?.Story.BodyElements.Count != 1 ||
+        if ((qualifiedBody is null && qualifiedParts is null) || fontResources is null || storyLayout?.Story.BodyElements.Count != 1 ||
             storyLayout.Story.BodyElements[0] is not DocxParagraphElement element ||
             element.Paragraph.ParagraphMarkRun is not { } mark || mark.Bold || mark.Italic || mark.Underline ||
             mark.CharacterSpacingPoints != 0d ||
             !fontResources.RunResources.TryGetValue(mark, out DocxRunFontResource? resource) ||
-            ReferenceEquals(resource.Embedded.Font, qualifiedBody.Embedded.Font))
+            (qualifiedBody is not null && ReferenceEquals(resource.Embedded.Font, qualifiedBody.Embedded.Font)))
         {
             return null;
         }
@@ -664,6 +665,9 @@ internal sealed partial class DocxRenderer
                         DocxRunFontResource? qualifiedBody = UsesWordCompatibleAllMarkupTextProfile(markupContext)
                             ? ResolveUniformCommentBalloonBodyResource(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
                             : null;
+                        IReadOnlyList<DocxMarkupBalloonBodyPart>? qualifiedParts = qualifiedBody is null && UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                            ? ResolveMixedCommentBalloonBodyParts(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
+                            : null;
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                             DocxMarkupBalloonKind.Comment,
                             TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
@@ -691,10 +695,8 @@ internal sealed partial class DocxRenderer
                                 ? null : qualifiedBody,
                             WordCompatibleBodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
                                 ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null,
-                            WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, fontResources),
-                            WordCompatibleBodyParts = qualifiedBody is null && UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                                ? ResolveMixedCommentBalloonBodyParts(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
-                                : null
+                            WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, qualifiedParts, fontResources),
+                            WordCompatibleBodyParts = qualifiedParts
                         });
                     }
                 }
@@ -1408,6 +1410,10 @@ internal sealed partial class DocxRenderer
                 textX, bodyFirstLineX, firstBaselineY, fontSize);
             return;
         }
+        // Prepared mixed parts can still fail the row-fit gate. Their retained
+        // mark resource belongs only to the admitted single/two-face branches.
+        DocxRunFontResource terminalResource = placement.WordCompatibleBodyParts is null
+            ? placement.WordCompatibleTerminalResource ?? bodyResource : bodyResource;
         string[] lines = WrapWordCompatibleBalloonBody(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth);
         if (lines.Length == 0)
         {
@@ -1417,7 +1423,7 @@ internal sealed partial class DocxRenderer
         DrawBalloonText(graphics, bodyResource, lines[0], bodyFirstLineX, firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
         if (lines.Length == 1)
         {
-            DrawBalloonText(graphics, placement.WordCompatibleTerminalResource ?? bodyResource, " ", bodyFirstLineX + bodyResource.Embedded.MeasureTextPoints(lines[0], fontSize), firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            DrawBalloonText(graphics, terminalResource, " ", bodyFirstLineX + bodyResource.Embedded.MeasureTextPoints(lines[0], fontSize), firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
             return;
         }
 
@@ -1437,7 +1443,7 @@ internal sealed partial class DocxRenderer
                 WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints);
             DrawBalloonText(
                 graphics,
-                lineIndex == lines.Length - 1 ? placement.WordCompatibleTerminalResource ?? bodyResource : bodyResource,
+                lineIndex == lines.Length - 1 ? terminalResource : bodyResource,
                 " ",
                 textX + bodyResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
                 continuationBaselineY,
