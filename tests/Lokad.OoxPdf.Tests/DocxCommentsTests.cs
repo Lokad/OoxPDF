@@ -2226,7 +2226,50 @@ internal static class DocxCommentsTests
         }
     }
 
-    private sealed class BalloonTypefaceFontResolver : IFontResolver
+    public static void DocxWordCompatibleUniformBalloonUsesBodyLineMetrics()
+    {
+        string body = string.Join(" ", Enumerable.Repeat("alpha", 30));
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+        {
+            Runs = [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(comment)], [], [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+        };
+        DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        foreach (short lineGap in new short[] { 450, -2000 })
+        {
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: lineGap),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single();
+            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            var lines = ReadEmbeddedGlyphTextShows(page)
+                .Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
+                    show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
+            TestAssert.True(lines.Length >= 3, "The body-metric probe must have continuation rows.");
+            double expectedGap = lineGap > 0 ? lines[0].Size * 1.45d : lines[0].Size * 1.2d;
+            for (int index = 1; index < lines.Length; index++)
+            {
+                TestAssert.True(Math.Abs(lines[index - 1].Y - lines[index].Y - expectedGap) < 0.02d,
+                    "Uniform comment continuations must use valid body metrics or retain the fallback pitch.");
+            }
+            double expectedHeight = 9.21d + (lines.Length - 1) * expectedGap + 3.4d;
+            TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
+                "Balloon geometry must use the same pitch as its emitted rows.");
+        }
+    }
+
+    private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
@@ -2238,8 +2281,15 @@ internal static class DocxCommentsTests
                 bytes[offset + glyph * 4] = (byte)(advance >> 8);
                 bytes[offset + glyph * 4 + 1] = (byte)advance;
             }
+            if (request.FamilyName == "CommentFace" && bodyLineGap is short gap)
+            {
+                (int hheaOffset, _) = TestFontBuilder.GetTableRange(bytes, "hhea");
+                bytes[hheaOffset + 8] = (byte)(gap >> 8);
+                bytes[hheaOffset + 9] = (byte)gap;
+            }
             return new FontFaceResolution(request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
-                new MemoryFontProgramSource("test:balloon-choice:" + request.FamilyName, bytes), IsFallback: false);
+                new MemoryFontProgramSource("test:balloon-choice:" + request.FamilyName +
+                    (bodyLineGap is null ? string.Empty : ":line-gap:" + bodyLineGap), bytes), IsFallback: false);
         }
     }
 

@@ -940,7 +940,7 @@ internal sealed partial class DocxRenderer
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, out double firstLineWidth, out double continuationWidth);
                 int rows = CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
                 return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints +
-                    (rows - 1) * fontSize * 1.2d +
+                    (rows - 1) * ResolveWordCompatibleBalloonLineGap(candidate.WordCompatibleBodyResource, fontSize) +
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;
             }
 
@@ -1330,7 +1330,7 @@ internal sealed partial class DocxRenderer
         double fontSize = 9d * wordCompatiblePrintScale;
         double textX = placement.X + WordCompatibleAllMarkupBalloonTextInsetXPoints;
         double firstBaselineY = ResolveWordCompatibleBalloonFirstBaselineY(placement);
-        double lineGap = fontSize * 1.2d;
+        double lineGap = ResolveWordCompatibleBalloonLineGap(placement.WordCompatibleBodyResource, fontSize);
         const byte titleRgb = 0;
 
         DrawBalloonText(
@@ -1390,6 +1390,20 @@ internal sealed partial class DocxRenderer
                 placement.BodyRgb.Green,
                 placement.BodyRgb.Blue);
         }
+    }
+
+    private static double ResolveWordCompatibleBalloonLineGap(DocxRunFontResource? qualifiedBodyResource, double fontSize)
+    {
+        if (qualifiedBodyResource is not null && qualifiedBodyResource.Embedded.Font.UnitsPerEm > 0)
+        {
+            double height = DocxLineMetrics.MeasureHheaLineHeight(qualifiedBodyResource.Embedded.Font, fontSize);
+            if (double.IsFinite(height) && height > 0d)
+            {
+                return height;
+            }
+        }
+
+        return fontSize * 1.2d;
     }
 
     private static double ResolveWordCompatibleBalloonFirstBaselineY(DocxMarkupBalloonPlacement placement)
