@@ -724,6 +724,33 @@ layout probe skipped, including 873 DOCX checks. Its fresh 0.1.5 package
 contains the exact full-suite DLL. Evidence is under
 `artifacts/plan-revision-20261005/milestone-8576f276/`.
 
+## Wrapped Break Spaces (2026-10-06, RV06-L26)
+
+Wrapped balloon rows now reserve the advance of their separating space when
+choosing a line break. The previous width check measured only the visible
+words and could keep an extra word despite the emitted space exceeding the
+available width. The final word retains its existing measurement. A portable
+production regression checks actual emitted rows with deterministic font
+advances; it fails before the change and passes afterward. All 72 balloon
+checks pass, the Release build is clean, and the fresh 0.1.5 package smoke
+contains the exact tested DLL.
+
+Nine new Word controls cross Aptos, Arial and Courier New with inherited,
+9-point and 18-point comment sizes. Word prints nominal 9-point balloon text
+in all nine; the candidate now matches every line break. Six controls improve
+pixel error and similarity and three retain their rasters. Both earlier
+wrapped controls also improve: Courier now matches Word's five rows rather
+than printing four. The other 26 prior controls retain their rasters, including
+the mixed-face fallback, whose composition remains partial. Main-document
+text operations stay unchanged in all 37 controls.
+
+Across the 33 cached cases, 32 PDFs retain their bytes. The changed long-comment
+case improves page MAE from 0.660 to 0.625 and similarity from 0.831 to 0.844;
+its balloon region also improves. All page counts and input/reference identities
+hold. Failed gates remain 546, with no case increase. Font-dependent
+continuation pitch remains a separate residual. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l26/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
