@@ -978,7 +978,16 @@ internal sealed partial class DocxRenderer
                         : CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth));
                 double lineGap = ResolveWordCompatibleBalloonLineGap(twoFaceRows?.TailLineHeightEm ?? candidate.WordCompatibleBodyLineHeightEm, fontSize);
                 double continuationsHeight = (rows - 1) * lineGap;
-                if (twoFaceRows?.FirstContinuationGapEm is double firstGapEm)
+                if (twoFaceRows?.PrefixLines is { } prefixLines)
+                {
+                    double prefixGap = ResolveWordCompatibleBalloonLineGap(twoFaceRows.PrefixLineHeightEm, fontSize);
+                    continuationsHeight = (prefixLines.Length - 2) * prefixGap + twoFaceRows.FirstContinuationGapEm!.Value * fontSize;
+                    if (twoFaceRows.TailLines.Length > 1)
+                    {
+                        continuationsHeight += twoFaceRows.SecondContinuationGapEm!.Value * fontSize + (twoFaceRows.TailLines.Length - 2) * lineGap;
+                    }
+                }
+                else if (twoFaceRows?.FirstContinuationGapEm is double firstGapEm)
                 {
                     continuationsHeight = firstGapEm * fontSize + (rows - 2) * lineGap;
                     if (rows > 2 && twoFaceRows.SecondContinuationGapEm is double secondGapEm)
