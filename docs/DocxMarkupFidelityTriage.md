@@ -1025,6 +1025,42 @@ the fresh 0.1.5 package contains the exact full-suite DLL:
 `503BA96F0E64352CFAB842776BE7313C0574CBCC4C9AF6144795B57382B4B376`.
 Evidence is under `artifacts/plan-revision-20261005/milestone-facef6ad/`.
 
+## RV06-L37: continuation words and separating spaces
+
+Word-compatible continuations now choose breaks using visible words and allow
+the emitted trailing blank into the inset. A measured 4.42pt design inset on each
+side gives 221.36pt of visible width in the existing 230.2pt body. First-row
+admission retains its break-space reserve. Preparation and font coverage stay
+unchanged; height and emission use the same row selection.
+
+Eighteen coarse and nineteen distinct fine Office controls separate Georgia,
+Arial and Aptos boundaries. Reserving the blank gives incompatible font bounds;
+excluding it gives a common 221.331..221.405pt design interval. Twenty-four
+additional margin controls retain the chosen bound across three print scales.
+The earlier half-inset proposal improves coarse controls but fails eight fine
+controls, so it is rejected.
+
+The portable production regression covers narrow and wide separating spaces,
+four print scales and uniform/two-face composition. It fails before the repair
+and passes afterward. All 883 DOCX checks, 79 balloon checks, the new wrap check
+and four Linux regressions pass. Release is clean; fresh 0.1.5 package smoke
+contains the exact tested DLL from runtime revision `f4a2cc44`:
+`235B807E9D70A408E06ADAC41C76EEA1BB468A984D5CA90ADE79552E37980366`.
+
+Across 159 Office controls, 31 improve error and similarity, 128 retain PDF and
+raster bytes, 152 retain graphics, and all retain main-document text. All 61 new
+boundary controls match Office breaks; the earlier Georgia long bodies now do
+too. Seventy controls pass row-level source-face/content audits. Audited row-start
+X gaps reach 0.838pt and baseline gaps reach 0.177pt; unchanged longer controls
+retain their previously recorded drift.
+
+Six whole-word guards retain PDF bytes. Four remain partial because Office splits
+overwide Courier words while the current renderer keeps its existing behavior.
+Seven older styled/grouped/overwide controls retain break mismatches. All 34
+cached PDFs retain bytes and 551 failed gates; composed pixel residuals remain.
+Inputs, references, accepted-baseline links, rejected-proposal evidence and final
+audits are under `artifacts/plan-revision-20261005/rv06-l37/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
