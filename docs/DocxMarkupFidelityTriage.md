@@ -960,6 +960,35 @@ fresh 0.1.5 package smoke contains the exact full-suite DLL:
 `620E02E62AA586027117F7977982EA3E27E06594F4652331476050408B244C5C`.
 Evidence is under `artifacts/plan-revision-20261005/milestone-ca949c0e/`.
 
+## RV06-L35: final paragraph-mark faces in mixed comments
+
+Plain two-run comments now retain a prepared paragraph-mark space. The resolved
+mark face supplies the final blank when the existing single-row or two-face
+continuation gate admits the body; intermediate spaces retain the tail face.
+Overwide or otherwise unqualified mixed paths still emit the legacy final
+blank. Grouped, styled and compound composition remains outside this repair.
+
+The reader-to-renderer reproducer records both failures: a dropped mark, then
+legacy-face emission after reader retention. It now passes short and wrapped
+prefix/tail mark faces at a declared 18pt size, together with overwide fallback.
+All 881 DOCX checks, 78 balloon checks and three Linux regressions pass.
+Release is clean; fresh 0.1.5 package smoke contains the exact tested DLL from
+runtime revision `f058786b`:
+`5DD7607E9260486B9C3025B586B171B8ECE4879B8F63F44CD7C6D35B5446FF64`.
+
+All 92 Office controls retain visible text state, geometry, graphics, rasters
+and pixel metrics. Thirty-two final blank faces change, while 56 PDFs retain
+their bytes. Nine fresh admitted controls match Office's final-space face,
+including the 18pt mark rendered at nominal balloon size. Three fresh fallback
+guards retain PDFs. Four earlier fallback controls additionally register an
+unused Aptos subset, adding 7,956 bytes each while preserving all operations
+and visible faces. This preparation/serialization overhead is explicit.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Georgia's existing wrap
+difference, long-run baseline drift and composed pixel residuals remain.
+Evidence, final-blank and font-resource audits, all identities and exact package
+proof are under `artifacts/plan-revision-20261005/rv06-l35/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
