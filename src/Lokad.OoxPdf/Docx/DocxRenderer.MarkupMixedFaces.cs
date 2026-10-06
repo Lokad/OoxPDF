@@ -104,10 +104,12 @@ internal sealed partial class DocxRenderer
         if (space == 0 || !tail.Embedded.TryGetEncodedCid(space, out _)) { return null; }
         string[] words = parts[1].Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length < 2) { return null; }
-        // Retain the qualified first-word admission. Later words can split
-        // inside the continuation lane using the prepared tail face.
+        // A fitting ASCII word prefix can share its first word with the tail.
+        // Prefixes with spaces or other break opportunities still require the
+        // first tail word to fit; their row composition needs separate evidence.
         double firstWordWidth = tail.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
-        if (!double.IsFinite(firstWordWidth) || firstWordWidth > tailFirstWidth) { return null; }
+        if (!double.IsFinite(firstWordWidth) ||
+            firstWordWidth > tailFirstWidth && !parts[0].Text.All(char.IsAsciiLetterOrDigit)) { return null; }
         var lines = WrapUniformBalloonWords(parts[1].Text, tail.Embedded, fontSize, tailFirstWidth, continuationWidth, cancellationToken);
         if (lines.Length < 2) { return null; }
         double? lineHeightEm = tail.Embedded.Font.UnitsPerEm > 0
