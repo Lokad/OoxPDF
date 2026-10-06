@@ -1165,6 +1165,48 @@ is under `artifacts/plan-revision-20261005/rv06-l40/`; invalid unqualified fixtu
 versions from an XML namespace generation error are retained separately from the
 trusted corrected input identities.
 
+## RV21-V27: full integration through L39
+
+The isolated Release run at `b2a74995` passes 2167 checks, fails none and skips
+only the unconfigured private-layout diagnostic. It includes 886 DOCX checks and
+excludes the isolated SVG transparency proposal. Release has no warnings/errors.
+Fresh 0.1.5 package smoke verifies the exact full-suite DLL:
+`48A0F74DC351C6675858E6AE5350BD37161E03B0F9504DCCE036708CD0725441`.
+Evidence is under `artifacts/plan-revision-20261005/milestone-b2a74995/`.
+
+## RV06-L41: separated prefix and first continuation metrics
+
+A fitting single ASCII word prefix with a preserved trailing separator can now
+place an overwide first tail word below it in the prepared source face. The first
+continuation uses the prefix face's horizontal descent plus the tail face's
+horizontal ascent and line gap. Later continuations retain the tail height.
+Height and emission share these distinct steps; joined multi-word prefixes and
+other admission/fallback rules remain unchanged.
+
+Twelve trusted Office controls cover nine font pairs and three print scales.
+Among the measured alternatives, the selected first-pitch model has maximum
+error 0.156pt/mean 0.043pt at Office font sizes; using the tail height alone reaches
+0.590pt. Including the previous font's line gap performs worse and is rejected.
+The production regression fails before repair and passes for ASCII and
+supplementary Unicode at three scales with distinct descent/line-gap metrics,
+complete text, final mark face/size and box height. All 888 DOCX checks,
+84 balloon checks and nine Linux regressions pass. Release is clean; fresh 0.1.5
+package smoke contains the exact tested DLL from runtime revision `fc0f4fe0`:
+`E9D305077EEFD4481CED65B83E2F816BB03DAC56CF3AC4E23124EBDE6FA7ECD8`.
+
+Across 178 held-out and ten new Office controls, twelve improve error and
+similarity, 176 retain PDF/raster/graphics bytes and all retain main-document
+text and comment content. All twelve repaired controls match exact row text,
+spaces and source faces, including seventeen within-word breaks. Maximum
+row-start X gap is 0.838pt at one print scale; maximum baseline gap is 0.187pt.
+All 34 cached PDFs retain bytes and 551 failed gates.
+
+Nine earlier fallback/composed-prefix controls retain break mismatches. Rich,
+grouped and unprepared paths, prior positioning/composed pixel residuals and 33
+partial cached cases remain. Input/reference/candidate identities, selected and
+rejected metric models and exact emission audits are under
+`artifacts/plan-revision-20261005/rv06-l41/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
