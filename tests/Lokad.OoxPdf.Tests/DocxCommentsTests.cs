@@ -2814,6 +2814,144 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxReaderRetainsTwoCommentBalloonParagraphMarks()
+    {
+        foreach (int count in new[] { 1, 2, 3 })
+        foreach (OoxPdfDocxMarkupMode mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string paragraphs = string.Concat(Enumerable.Range(0, count).Select(index => $$"""
+                <w:p><w:pPr><w:rPr><w:rFonts w:ascii="Mark{{index}}" w:hAnsi="Mark{{index}}"/><w:sz w:val="36"/></w:rPr></w:pPr>
+                <w:r><w:rPr><w:rFonts w:ascii="CommentFace" w:hAnsi="CommentFace"/></w:rPr><w:t>Review</w:t></w:r></w:p>
+                """));
+            using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                    <Default Extension="xml" ContentType="application/xml"/>
+                    <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    <Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = """
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                    <w:p><w:r><w:t>Anchor</w:t></w:r><w:r><w:commentReference w:id="1"/></w:r></w:p>
+                    </w:body></w:document>
+                    """,
+                ["word/_rels/document.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                    <Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>
+                    </Relationships>
+                    """,
+                ["word/comments.xml"] = $$"""
+                    <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1">{{paragraphs}}</w:comment></w:comments>
+                    """
+            });
+            DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: mode);
+            var readParagraphs = document.RelatedStories.Single().BodyElements.Cast<DocxParagraphElement>().Select(element => element.Paragraph).ToArray();
+            TestAssert.Equal(count, readParagraphs.Length);
+            for (int index = 0; index < count; index++)
+            {
+                DocxTextRun? mark = readParagraphs[index].ParagraphMarkRun;
+                if (mode == OoxPdfDocxMarkupMode.AllMarkup && count <= 2)
+                {
+                    TestAssert.True(mark is not null, "One and two plain comment paragraphs retain their mark runs.");
+                    TestAssert.Equal(" ", mark!.Text);
+                    TestAssert.Equal("Mark" + index.ToString(CultureInfo.InvariantCulture), mark.FontFamily);
+                    TestAssert.Equal(18d, mark.FontSize);
+                }
+                else { TestAssert.True(mark is null, "Final view and larger stories retain the prior mark policy."); }
+            }
+        }
+    }
+
+    public static void DocxWordCompatibleMixedBalloonKeepsTwoFittingParagraphsAndTheirMarks()
+    {
+        foreach (bool supplementary in new[] { false, true })
+        foreach (bool sameFace in new[] { false, true })
+        foreach (short prefixDescender in new short[] { -50, -350 })
+        foreach (short prefixGap in new short[] { 0, 450 })
+        foreach (string markFace in new[] { "AnchorFace", "OtherCommentFace" })
+        foreach (double rightMargin in new[] { 72d, 144d, 207d })
+        {
+            const string prefix = "Review table";
+            string tail = supplementary ? "a\U0001F600b" : "control.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph first = DocxTests.CreateDocxLayoutParagraph(prefix, 12d, 14d) with
+            {
+                LineSpacingPoints = null,
+                Runs = [new DocxTextRun(prefix, 12d, null, false, false, false, null, "CommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, markFace)
+            };
+            DocxParagraph second = first with
+            {
+                Runs = [new DocxTextRun(tail, 12d, null, false, false, false, null, sameFace ? "CommentFace" : "OtherCommentFace")],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "AnchorFace", FontSize = 24d }
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(first), new DocxParagraphElement(second)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap, bodySpaceAdvance: 123,
+                bodyDescender: prefixDescender, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(4, shows.Length);
+            TestAssert.Equal(prefix, shows[0].Text);
+            TestAssert.Equal(" ", shows[1].Text);
+            TestAssert.Equal(tail, shows[2].Text);
+            TestAssert.Equal(" ", shows[3].Text);
+            TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
+            TestAssert.Equal(sameFace ? 700 : 900, (int)shows[2].Font.Font.GetAdvanceWidth(shows[2].Font.Font.MapCodePoint('b')));
+            TestAssert.Equal(markFace == "AnchorFace" ? 500 : 900, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint(' ')));
+            TestAssert.Equal(500, (int)shows[3].Font.Font.GetAdvanceWidth(shows[3].Font.Font.MapCodePoint(' ')));
+            double size = shows[0].Size;
+            double pitch = -prefixDescender / 1000d + (sameFace ? 0.5d + prefixGap / 1000d : 0.8d);
+            TestAssert.True(Math.Abs(shows[0].Y - shows[2].Y - pitch * size) < 0.02d,
+                "Paragraph spacing uses the visible first face's descent and next face's ascent and gap.");
+            foreach (int index in new[] { 0, 2 })
+            {
+                TestAssert.True(Math.Abs(shows[index].Y - shows[index + 1].Y) < 0.001d, "Each paragraph mark stays on its own row.");
+                TestAssert.True(Math.Abs(shows[index + 1].Size - size) < 0.001d, "Paragraph marks use nominal balloon size.");
+                TestAssert.True(Math.Abs(shows[index + 1].X - shows[index].X - shows[index].Font.MeasureTextPoints(shows[index].Text, size)) < 0.04d,
+                    "Each paragraph mark follows its own visible advance.");
+            }
+            TestAssert.True(shows[2].X < shows[0].X, "The second paragraph starts at the continuation inset.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + pitch * size)) < 0.02d, "Geometry and emission share the paragraph step.");
+            foreach (DocxBodyElement[] guardedElements in new[]
+            {
+                new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second) },
+                [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterValue = "120" } }), new DocxParagraphElement(second)],
+                [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = new string('a', 200) }] })],
+                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Bold = true }] }), new DocxParagraphElement(second)]
+            })
+            {
+                DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = guardedElements }] };
+                var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "Three paragraphs, spacing, wrapped rows and decorated runs retain complete fallback.");
+            }
+        }
+    }
+
     public static void DocxWordCompatibleMixedBalloonRetainsFittingLeadingTailSpaceSpan()
     {
         foreach (bool supplementary in new[] { false, true })

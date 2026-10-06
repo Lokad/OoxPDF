@@ -61,6 +61,7 @@ internal sealed partial class DocxRenderer
         public double? WordCompatibleBodyLineHeightEm { get; init; }
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
         public IReadOnlyList<DocxMarkupBalloonBodyPart>? WordCompatibleBodyParts { get; init; }
+        public IReadOnlyList<DocxMarkupBalloonParagraph>? WordCompatibleParagraphs { get; init; }
     }
 
     private sealed record DocxMarkupBalloonLaneBand(
@@ -71,6 +72,8 @@ internal sealed partial class DocxRenderer
         int CandidateCount);
 
     private sealed record DocxMarkupBalloonBodyPart(string Text, DocxRunFontResource Resource);
+
+    private sealed record DocxMarkupBalloonParagraph(DocxMarkupBalloonBodyPart Body, DocxRunFontResource Mark);
 
     private sealed record DocxMarkupBalloonPlacement(
         DocxMarkupBalloonKind Kind,
@@ -110,6 +113,7 @@ internal sealed partial class DocxRenderer
         public double? WordCompatibleBodyLineHeightEm { get; init; }
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
         public IReadOnlyList<DocxMarkupBalloonBodyPart>? WordCompatibleBodyParts { get; init; }
+        public IReadOnlyList<DocxMarkupBalloonParagraph>? WordCompatibleParagraphs { get; init; }
 
         public DocxMarkupBalloonPlacementSnapshot ToSnapshot(int pageIndex)
         {

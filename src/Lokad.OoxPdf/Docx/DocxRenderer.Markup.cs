@@ -511,7 +511,8 @@ internal sealed partial class DocxRenderer
                     WordCompatibleBodyResource = candidate.WordCompatibleBodyResource,
                     WordCompatibleBodyLineHeightEm = candidate.WordCompatibleBodyLineHeightEm,
                     WordCompatibleTerminalResource = candidate.WordCompatibleTerminalResource,
-                    WordCompatibleBodyParts = candidate.WordCompatibleBodyParts
+                        WordCompatibleBodyParts = candidate.WordCompatibleBodyParts,
+                        WordCompatibleParagraphs = candidate.WordCompatibleParagraphs
                 });
                 nextTop = y - MarkupBalloonMinimumSpacingPoints;
                 placedBandCandidates.Add(candidate);
@@ -696,7 +697,9 @@ internal sealed partial class DocxRenderer
                             WordCompatibleBodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
                                 ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null,
                             WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, qualifiedParts, fontResources),
-                            WordCompatibleBodyParts = qualifiedParts
+                            WordCompatibleBodyParts = qualifiedParts,
+                            WordCompatibleParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                                ? ResolveCommentBalloonParagraphs(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null
                         });
                     }
                 }
@@ -969,6 +972,10 @@ internal sealed partial class DocxRenderer
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
+                if (ResolveWordCompatibleParagraphGap(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is double paragraphGap)
+                {
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGap + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                }
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
                     ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth, cancellationToken);
@@ -1046,6 +1053,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleBodyLineHeightEm = null,
             WordCompatibleTerminalResource = null,
             WordCompatibleBodyParts = null,
+            WordCompatibleParagraphs = null,
             Kind = group.Select(candidate => candidate.Kind).Distinct().Count() == 1
                 ? group[0].Kind
                 : DocxMarkupBalloonKind.Markup,
@@ -1412,6 +1420,12 @@ internal sealed partial class DocxRenderer
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
         ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, wordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth + WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
+        if (ResolveWordCompatibleParagraphGap(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is double paragraphGap)
+        {
+            RenderWordCompatibleParagraphs(placement.WordCompatibleParagraphs!, placement, graphics, bodyFirstLineX, textX,
+                firstBaselineY, paragraphGap, fontSize, cancellationToken);
+            return;
+        }
         if (TryMeasureWordCompatibleSingleRowParts(placement.WordCompatibleBodyParts, fontSize, firstLineWidth, out _))
         {
             double partX = bodyFirstLineX;

@@ -328,7 +328,7 @@ internal sealed partial class DocxReader
             markupMode,
             cancellationToken,
             retainBalloonParagraphMark: kind == DocxRelatedStoryKind.Comment && markupMode == OoxPdfDocxMarkupMode.AllMarkup &&
-                story.Elements().Count() == 1 && story.Elements().Single().Name == WordprocessingNamespace + "p" &&
+                story.Elements().Count() is 1 or 2 && story.Elements().All(element => element.Name == WordprocessingNamespace + "p") &&
                 !story.Descendants(WordprocessingNamespace + "drawing").Any() && !story.Descendants(WordprocessingNamespace + "pict").Any());
         IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, styles, numbering, markupMode, cancellationToken);
         string? paragraphId = kind == DocxRelatedStoryKind.Comment ? ReadCommentParagraphId(story) : null;
