@@ -223,13 +223,11 @@ internal sealed partial class DocxRenderer
             !double.IsFinite(tailWidth) || tailWidth <= 0d) { return null; }
         if (paragraphs.Count == 4)
         {
-            if (!double.IsFinite(firstWidth) || firstWidth <= 0d ||
-                (prefixWidth > firstWidth) == (tailWidth > continuationWidth)) { return null; }
-            foreach (DocxMarkupBalloonParagraph paragraph in paragraphs.Skip(2))
-            {
-                double width = paragraph.Body.Resource.Embedded.MeasureTextPoints(paragraph.Body.Text, fontSize);
-                if (!double.IsFinite(width) || width <= 0d || width > continuationWidth) { return null; }
-            }
+            double thirdWidth = paragraphs[2].Body.Resource.Embedded.MeasureTextPoints(paragraphs[2].Body.Text, fontSize);
+            double fourthWidth = paragraphs[3].Body.Resource.Embedded.MeasureTextPoints(paragraphs[3].Body.Text, fontSize);
+            if (!double.IsFinite(firstWidth) || firstWidth <= 0d || !double.IsFinite(thirdWidth) || thirdWidth <= 0d ||
+                !double.IsFinite(fourthWidth) || fourthWidth <= 0d || fourthWidth > continuationWidth ||
+                (prefixWidth > firstWidth ? 1 : 0) + (tailWidth > continuationWidth ? 1 : 0) + (thirdWidth > continuationWidth ? 1 : 0) != 1) { return null; }
         }
         DocxUniformBalloonRow[]? firstRows = null;
         double firstTailGap = 0d;
@@ -324,13 +322,15 @@ internal sealed partial class DocxRenderer
                 double thirdY = firstY - rows.FirstContinuationsHeight - rows.FirstGap - (rows.TailRows.Length - 1) * rows.TailGap - rows.ThirdGap!.Value;
                 RenderUniformBalloonRows(thirdRows, placement, graphics, third.Body.Resource, third.Mark,
                     continuationX, continuationX, thirdY, rows.ThirdTailGap, fontSize, cancellationToken);
-                return;
             }
-            double y = firstY - rows.ContinuationsHeight + (rows.FourthGap ?? 0d);
-            DrawBalloonText(graphics, third.Body.Resource, third.Body.Text, continuationX, y, fontSize,
-                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
-            DrawBalloonText(graphics, third.Mark, " ", continuationX + third.Body.Resource.Embedded.MeasureTextPoints(third.Body.Text, fontSize),
-                y, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            else
+            {
+                double y = firstY - rows.ContinuationsHeight + (rows.FourthGap ?? 0d);
+                DrawBalloonText(graphics, third.Body.Resource, third.Body.Text, continuationX, y, fontSize,
+                    placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+                DrawBalloonText(graphics, third.Mark, " ", continuationX + third.Body.Resource.Embedded.MeasureTextPoints(third.Body.Text, fontSize),
+                    y, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            }
         }
         if (rows.Fourth is { } fourth)
         {
