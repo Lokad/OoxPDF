@@ -908,6 +908,39 @@ private-layout probe skipped, including 878 DOCX checks. Its fresh 0.1.5 package
 contains the exact full-suite DLL. Evidence is under
 `artifacts/plan-revision-20261005/milestone-10612c66/`.
 
+## RV06-L33: wrapped two-face comment tails
+
+Plain regular comments with exactly two prepared source-face parts now retain
+the first-row prefix face and wrap the tail in its own face. The prefix must
+fit beside the title; every tail word, including its separating space, must
+fit the applicable row. Tail font metrics drive both baseline pitch and balloon
+height. Styled, grouped, compound, leading-space and individually overwide
+paths retain their previous behavior. No font is created during emission.
+
+The production reproducer fails before the repair and passes afterward,
+checking source CIDs, complete content, first-row advances, continuation breaks,
+pitch and height. All 880 DOCX checks and 77 balloon checks pass, together with
+three Linux regressions and a clean Release build. Fresh 0.1.5 package smoke
+contains the exact tested DLL from runtime revision `d420fdec`:
+`59B3C3B2F3139289B6F30EE12CFF41F42186AF2C893B5C3A4EB104A7C684A556`.
+
+Across 68 Office controls, seven improve error and similarity, 61 retain PDF
+and graphics bytes, and all retain main-document text. The earlier long
+Arial/Courier control now matches twelve Office rows rather than nine; its
+144dpi mean error falls from 1.085 to 0.401 and similarity rises from 0.687 to
+0.915. That control and its fresh counterpart cover the same text/font mechanism,
+with separate recorded input and reference identities.
+
+All six fresh long font pairs preserve Office faces and body content and
+improve pixels; five match line breaks. Cambria/Georgia still produces nine
+rows where Office uses ten. Among the five matching controls, horizontal gaps
+reach 0.106pt and baseline gaps reach 0.483pt on the longer Courier/Arial body.
+These are explicit residuals, alongside mixed final paragraph-mark faces and
+more general composition. All five fallback guards retain PDF bytes, as do
+all 34 cached cases with 551 failed gates. Evidence, including per-control
+hashes and the separate face/content and row audits, is under
+`artifacts/plan-revision-20261005/rv06-l33/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
