@@ -191,7 +191,7 @@ internal sealed partial class DocxRenderer
         bool singlePrefixWord = prefix.Text.IndexOf(' ') < 0;
         if ((!singlePrefixWord && prefix.Text.IndexOf(' ') <= 0) || prefix.Text.EndsWith(' ') || tail.Text[0] == ' ' ||
             !double.IsFinite(firstLineWidth) || firstLineWidth <= 0d) { return null; }
-        int plainPrefixLength = prefix.Text.EndsWith(',') ? prefix.Text.Length - 1 : prefix.Text.Length;
+        int plainPrefixLength = prefix.Text.Length > 0 && (prefix.Text[^1] is ',' or ':' or ';') ? prefix.Text.Length - 1 : prefix.Text.Length;
         if (plainPrefixLength != prefix.Text.Length &&
             (!singlePrefixWord || plainPrefixLength == 0 || !char.IsAsciiLetterOrDigit(prefix.Text[plainPrefixLength - 1]))) { return null; }
         for (int i = 0; i < plainPrefixLength; i++)
@@ -281,8 +281,8 @@ internal sealed partial class DocxRenderer
     {
         int split = prefix.Text.IndexOf(' ');
         int separatorLength = CountLeadingBalloonSpaces(tail.Text, cancellationToken);
-        // A terminal comma stays in the prefix face; other punctuation keeps fallback.
-        int plainPrefixLength = prefix.Text.EndsWith(',') ? prefix.Text.Length - 1 : prefix.Text.Length;
+        // One terminal comma, colon or semicolon stays in the prefix face.
+        int plainPrefixLength = prefix.Text.Length > 0 && (prefix.Text[^1] is ',' or ':' or ';') ? prefix.Text.Length - 1 : prefix.Text.Length;
         if (split <= 0 || split != prefix.Text.LastIndexOf(' ') || split >= plainPrefixLength - 1 ||
             separatorLength == 0 || tail.Text.Length <= separatorLength) { return null; }
         for (int i = 0; i < plainPrefixLength; i++)

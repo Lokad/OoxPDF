@@ -2624,8 +2624,9 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonKeepsSeparatedTailAfterTerminalComma()
+    public static void DocxWordCompatibleMixedBalloonKeepsSeparatedTailAfterTerminalPunctuation()
     {
+        foreach (char punctuation in new[] { ',', ':', ';' })
         foreach (bool supplementary in new[] { false, true })
         foreach (bool zeroAdvance in new[] { false, true })
         foreach (bool fittingFirstWord in new[] { false, true })
@@ -2633,7 +2634,7 @@ internal static class DocxCommentsTests
         foreach (int length in new[] { 18, 72 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            const string prefix = "Review table,";
+            string prefix = "Review table" + punctuation;
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
             if (zeroAdvance) { word = "a" + word[1..].Replace('a', 'b'); }
             string tail = " " + (fittingFirstWord ? "i " : string.Empty) + word + " ending.";
@@ -2696,7 +2697,7 @@ internal static class DocxCommentsTests
                 "Height includes the mixed first step and every tail row.");
             foreach ((string guardedPrefix, string guardedTail) in new[]
             {
-                ("Review table:", tail), ("Review, table,", tail),
+                ("Review table::", tail), ("Review, table,", tail),
                 ("Review ,", tail), (prefix, "  " + word + " ending.")
             })
             {
@@ -2714,7 +2715,7 @@ internal static class DocxCommentsTests
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "A colon, internal comma, punctuation-only word or doubled separator keeps complete fallback.");
+                    "Doubled or internal punctuation, a punctuation-only word or doubled separator keeps complete fallback.");
             }
         }
     }
@@ -3611,7 +3612,7 @@ internal static class DocxCommentsTests
                     {
                         ("a" + new string('b', prefixLength), 0),
                         ("a" + new string('b', prefixLength), 32700),
-                        (prefix + ";", null),
+                        (prefix + ";;", null),
                         (prefix + "\U0001F600", null)
                     })
                     {
@@ -3639,14 +3640,15 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonSplitsOverwideCommaPrefixWordInItsSourceFace()
+    public static void DocxWordCompatibleMixedBalloonSplitsOverwideTerminalPunctuationPrefixWord()
     {
+        foreach (char punctuation in new[] { ',', ':', ';' })
         foreach (bool supplementary in new[] { false, true })
         foreach (short prefixGap in new short[] { 0, 450 })
         foreach (int prefixLength in new[] { 80, 120 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            string prefix = new string('a', prefixLength) + ",";
+            string prefix = new string('a', prefixLength) + punctuation;
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 36)) : new string('a', 72);
             foreach (string tail in new[] { "ok. end.", "ok. " + word + " ending.", word + " ending." })
             {
@@ -3683,7 +3685,7 @@ internal static class DocxCommentsTests
                 TestAssert.True(prefixRows.Length >= 3, "Ordinary prefix words must wrap in their prepared face.");
                 TestAssert.True(tailRows.Length >= 1, "The mixed row must retain its prepared tail face.");
                 TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
-                TestAssert.True(prefixRows.All(row => row.Text.All(character => character == 'a' || character == ',')), "Prefix hard breaks must not invent separators.");
+                TestAssert.True(prefixRows.All(row => row.Text.All(character => character == 'a' || character == punctuation)), "Prefix hard breaks must not invent separators.");
                 double size = tailRows[0].Size;
                 double prefixPitch = 0.85d + prefixGap / 1000d;
                 double incomingPitch = 0.35d + Math.Max(0.5d + prefixGap / 1000d, 0.8d);
@@ -3734,8 +3736,8 @@ internal static class DocxCommentsTests
                 {
                     foreach ((string guardedPrefix, short? firstAdvance) in new (string, short?)[]
                     {
-                        ("a" + new string('b', prefixLength) + ",", 0),
-                        ("a" + new string('b', prefixLength) + ",", 32700),
+                        ("a" + new string('b', prefixLength) + punctuation, 0),
+                        ("a" + new string('b', prefixLength) + punctuation, 32700),
                         (prefix + ",", null),
                         (prefix + "\U0001F600", null)
                     })
@@ -3842,7 +3844,7 @@ internal static class DocxCommentsTests
 
                 foreach ((string guardedPrefix, string guardedTail) in new[]
                 {
-                    (word + ";", "ok. ending."), (prefix.Replace("table", "table,"), tail)
+                    (word + ";;", "ok. ending."), (prefix.Replace("table", "table,"), tail)
                 })
                 {
                     DocxParagraph guardedComment = comment with
@@ -3961,7 +3963,7 @@ internal static class DocxCommentsTests
 
                 foreach ((string guardedPrefix, string guardedTail) in new[]
                 {
-                    (word + ";", "ok. ending."), (prefix.Replace("table", "table,"), tail)
+                    (word + ";;", "ok. ending."), (prefix.Replace("table", "table,"), tail)
                 })
                 {
                     DocxParagraph guardedComment = comment with
