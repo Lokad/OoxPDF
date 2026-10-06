@@ -84,15 +84,17 @@ internal sealed partial class DocxRenderer
     private sealed record DocxMarkupTwoFaceRows(
         DocxMarkupBalloonBodyPart Prefix,
         DocxRunFontResource TailResource,
-        string[] TailLines,
+        DocxUniformBalloonRow[] TailLines,
         double? TailLineHeightEm);
 
     private static DocxMarkupTwoFaceRows? ResolveWordCompatibleTwoFaceRows(
         IReadOnlyList<DocxMarkupBalloonBodyPart>? parts,
         double fontSize,
         double firstLineWidth,
-        double continuationWidth)
+        double continuationWidth,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (parts is not { Count: 2 } || parts[0].Text.Length == 0 || parts[1].Text.Length == 0 ||
             parts[1].Text[0] == ' ') { return null; }
         double tailFirstWidth = firstLineWidth - parts[0].Resource.Embedded.MeasureTextPoints(parts[0].Text, fontSize);
@@ -102,13 +104,11 @@ internal sealed partial class DocxRenderer
         if (space == 0 || !tail.Embedded.TryGetEncodedCid(space, out _)) { return null; }
         string[] words = parts[1].Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length < 2) { return null; }
-        for (int i = 0; i < words.Length; i++)
-        {
-            string measured = words[i] + (i == 0 ? " " : "");
-            double width = tail.Embedded.MeasureTextPoints(measured, fontSize);
-            if (!double.IsFinite(width) || width > (i == 0 ? tailFirstWidth : continuationWidth)) { return null; }
-        }
-        string[] lines = WrapWordCompatibleBalloonBody(parts[1].Text, tail.Embedded, fontSize, tailFirstWidth, continuationWidth);
+        // Retain the qualified first-word admission. Later words can split
+        // inside the continuation lane using the prepared tail face.
+        double firstWordWidth = tail.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
+        if (!double.IsFinite(firstWordWidth) || firstWordWidth > tailFirstWidth) { return null; }
+        var lines = WrapUniformBalloonWords(parts[1].Text, tail.Embedded, fontSize, tailFirstWidth, continuationWidth, cancellationToken);
         if (lines.Length < 2) { return null; }
         double? lineHeightEm = tail.Embedded.Font.UnitsPerEm > 0
             ? DocxLineMetrics.MeasureHheaLineHeight(tail.Embedded.Font, 1d) : null;
@@ -123,23 +123,14 @@ internal sealed partial class DocxRenderer
         double textX,
         double bodyFirstLineX,
         double firstBaselineY,
-        double fontSize)
+        double fontSize,
+        CancellationToken cancellationToken)
     {
         DrawBalloonText(graphics, rows.Prefix.Resource, rows.Prefix.Text, bodyFirstLineX, firstBaselineY, fontSize,
             placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
         double tailX = bodyFirstLineX + rows.Prefix.Resource.Embedded.MeasureTextPoints(rows.Prefix.Text, fontSize);
-        DrawBalloonText(graphics, rows.TailResource, rows.TailLines[0], tailX, firstBaselineY, fontSize,
-            placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
         double gap = ResolveWordCompatibleBalloonLineGap(rows.TailLineHeightEm, fontSize);
-        for (int i = 1; i < rows.TailLines.Length; i++)
-        {
-            double y = firstBaselineY - i * gap;
-            DrawBalloonText(graphics, rows.TailResource, rows.TailLines[i], textX, y, fontSize,
-                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue,
-                WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints);
-            DrawBalloonText(graphics, i == rows.TailLines.Length - 1 ? terminalResource : rows.TailResource, " ",
-                textX + rows.TailResource.Embedded.MeasureTextPoints(rows.TailLines[i], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
-                y, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
-        }
+        RenderUniformBalloonRows(rows.TailLines, placement, graphics, rows.TailResource, terminalResource,
+            tailX, textX, firstBaselineY, gap, fontSize, cancellationToken);
     }
 }

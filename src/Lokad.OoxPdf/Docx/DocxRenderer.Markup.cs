@@ -971,7 +971,7 @@ internal sealed partial class DocxRenderer
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
-                    ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth);
+                    ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth, cancellationToken);
                 int rows = singleRowParts ? 1 : twoFaceRows?.TailLines.Length ??
                     (candidate.WordCompatibleBodyLineHeightEm is not null && candidate.WordCompatibleBodyParts is null
                         ? Math.Max(1, WrapUniformBalloonWords(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth, cancellationToken).Length)
@@ -1408,11 +1408,11 @@ internal sealed partial class DocxRenderer
             return;
         }
         DocxMarkupTwoFaceRows? twoFaceRows = ResolveWordCompatibleTwoFaceRows(placement.WordCompatibleBodyParts,
-            fontSize, firstLineWidth, continuationWidth);
+            fontSize, firstLineWidth, continuationWidth, cancellationToken);
         if (twoFaceRows is not null)
         {
             RenderWordCompatibleTwoFaceRows(twoFaceRows, placement, graphics, placement.WordCompatibleTerminalResource ?? bodyResource,
-                textX, bodyFirstLineX, firstBaselineY, fontSize);
+                textX, bodyFirstLineX, firstBaselineY, fontSize, cancellationToken);
             return;
         }
         // Prepared mixed parts can still fail the row-fit gate. Their retained
