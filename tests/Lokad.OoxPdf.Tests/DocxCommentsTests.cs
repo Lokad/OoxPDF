@@ -2949,7 +2949,7 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            if (hasFourth && (!hasThird || !wrappedFirst || wrappedSecond || wrappedThird)) { continue; }
+            if (hasFourth && (!hasThird || wrappedFirst == wrappedSecond || wrappedThird)) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
             string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
@@ -3089,6 +3089,31 @@ internal static class DocxCommentsTests
                 "Height includes the paragraph transition and all later rows.");
             if (hasFourth && !supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
+                if (wrappedSecond)
+                {
+                    foreach (var resolver in new[]
+                    {
+                        new BalloonTypefaceFontResolver(tailFirstAdvance: 0),
+                        new BalloonTypefaceFontResolver(tailFirstAdvance: 32700),
+                        new BalloonTypefaceFontResolver(tailDescender: 32700)
+                    })
+                    {
+                        DocxDocument guarded = document with
+                        {
+                            RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first),
+                                new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = new string('a', 80) }] }),
+                                new DocxParagraphElement(third), new DocxParagraphElement(fourth)] }]
+                        };
+                        var invalidRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
+                            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                        var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
+                        var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                            .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                        TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
+                            invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                            "A zero-width or overwide second body or nonpositive second pitch/transition retains finite complete fallback in four paragraphs.");
+                    }
+                }
                 foreach (bool invalidTransition in new[] { false, true })
                 foreach (short advance in new short[] { 0, 32700 })
                 {
@@ -3315,7 +3340,7 @@ internal static class DocxCommentsTests
                 foreach (DocxBodyElement[] guardedElements in new[]
                 {
                     new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth), new DocxParagraphElement(last) },
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last), new DocxParagraphElement(fourth)],
+                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth)],

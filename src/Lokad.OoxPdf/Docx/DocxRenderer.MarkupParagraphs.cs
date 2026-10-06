@@ -223,8 +223,9 @@ internal sealed partial class DocxRenderer
             !double.IsFinite(tailWidth) || tailWidth <= 0d) { return null; }
         if (paragraphs.Count == 4)
         {
-            if (!double.IsFinite(firstWidth) || firstWidth <= 0d || prefixWidth <= firstWidth) { return null; }
-            foreach (DocxMarkupBalloonParagraph paragraph in paragraphs.Skip(1))
+            if (!double.IsFinite(firstWidth) || firstWidth <= 0d ||
+                (prefixWidth > firstWidth) == (tailWidth > continuationWidth)) { return null; }
+            foreach (DocxMarkupBalloonParagraph paragraph in paragraphs.Skip(2))
             {
                 double width = paragraph.Body.Resource.Embedded.MeasureTextPoints(paragraph.Body.Text, fontSize);
                 if (!double.IsFinite(width) || width <= 0d || width > continuationWidth) { return null; }
