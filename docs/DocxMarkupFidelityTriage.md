@@ -751,6 +751,30 @@ hold. Failed gates remain 546, with no case increase. Font-dependent
 continuation pitch remains a separate residual. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l26/`.
 
+## Uniform Face Continuation Pitch (2026-10-06, RV06-L27)
+
+Uniform regular comments that already carry their own qualified body resource
+now use that face's horizontal line metrics for continuation spacing and
+balloon height. Both paths share the same calculation. Nonpositive or invalid
+metrics retain the existing pitch. Grouped, mixed-face and legacy resource
+paths also retain their spacing. This admission rule does not yet cover a
+comment whose face is the same as the legacy body face.
+
+The portable production regression uses a body face with distinct line metrics
+and checks emitted baseline differences and matching balloon height. It also
+checks the fallback for nonpositive metrics. All 73 balloon checks pass, the
+Release build is clean, and the exact tested DLL passes fresh 0.1.5 package
+smoke. The regression also passes on Linux.
+
+All nine new Word controls and both earlier wrapped controls improve pixel
+error and similarity without changing line breaks. The largest baseline gap
+across the nine controls falls from 2.00 to 0.18 points. The other 26 controls
+retain their rasters, and all 37 retain their main-document text operations.
+All 33 freshly rendered cached PDFs retain their bytes and 546 failed gates.
+Same-face continuation admission, mixed composition and existing nonzero
+markup gates remain residuals. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l27/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
