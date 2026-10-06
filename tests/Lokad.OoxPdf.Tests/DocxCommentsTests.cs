@@ -2934,10 +2934,11 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonWrapsSecondAndThirdParagraphsIndependently()
+    public static void DocxWordCompatibleMixedBalloonWrapsThreeParagraphBodiesIndependently()
     {
         foreach (bool hasThird in new[] { false, true })
         foreach (bool wrappedThird in new[] { false, true })
+        foreach (bool wrappedFirst in new[] { false, true })
         foreach (bool supplementary in new[] { false, true })
         foreach (bool zeroFirst in new[] { false, true })
         foreach (short prefixDescender in new short[] { -50, -350 })
@@ -2946,8 +2947,9 @@ internal static class DocxCommentsTests
         foreach (string firstMarkFace in new[] { "AnchorFace", "CommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
-            if (!hasThird && wrappedThird) { continue; }
-            const string prefix = "Review table";
+            if (!hasThird && (wrappedThird || wrappedFirst)) { continue; }
+            string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
+            string prefix = wrappedFirst ? firstWord + " start." : "Review table";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
             if (zeroFirst) { word = "a" + word[1..].Replace('a', 'b'); }
             string tail = word + " ending.";
@@ -2991,15 +2993,34 @@ internal static class DocxCommentsTests
             var balloon = renderer.InspectMarkupBalloons(document).Single();
             var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-            TestAssert.Equal(prefix, shows[0].Text);
-            TestAssert.Equal(" ", shows[1].Text);
-            TestAssert.Equal(firstMarkFace == "AnchorFace" ? 500 : 123, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint(' ')));
             TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
-            var tailRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
+            var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
             TestAssert.True(tailRows.Length >= 2, "The second paragraph must wrap independently of the title row.");
+            var firstShows = shows.Where(show => show.Y > tailRows[0].Y + 0.001d).ToArray();
+            var firstRows = firstShows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+            TestAssert.True(firstRows.Length >= (wrappedFirst ? 2 : 1), "The first paragraph wraps within the title and continuation widths.");
+            TestAssert.Equal(prefix + " ", string.Concat(firstShows.Select(show => show.Text)));
+            TestAssert.Equal(" ", firstShows[^1].Text);
+            TestAssert.Equal(firstMarkFace == "AnchorFace" ? 500 : 123, (int)firstShows[^1].Font.Font.GetAdvanceWidth(firstShows[^1].Font.Font.MapCodePoint(' ')));
             double size = tailRows[0].Size;
+            TestAssert.True(Math.Abs(firstShows[^1].Size - size) < 0.001d &&
+                Math.Abs(firstShows[^1].X - firstRows[^1].X - firstRows[^1].Font.MeasureTextPoints(firstRows[^1].Text, size)) < 0.04d,
+                "The first paragraph mark uses nominal size and follows its own final row's advance.");
             double firstPitch = -prefixDescender / 1000d + 0.8d;
-            TestAssert.True(Math.Abs(shows[0].Y - tailRows[0].Y - firstPitch * size) < 0.02d,
+            double firstLinePitch = 0.5d - prefixDescender / 1000d + prefixGap / 1000d;
+            double firstHeight = (firstRows.Length - 1) * firstLinePitch * size;
+            for (int index = 1; index < firstRows.Length; index++)
+            {
+                TestAssert.True(Math.Abs(firstRows[index - 1].Y - firstRows[index].Y - firstLinePitch * size) < 0.02d &&
+                    Math.Abs(firstRows[index].X - tailRows[0].X) < 0.001d,
+                    "First-body continuations use their own metrics and the continuation inset.");
+            }
+            foreach (var row in firstRows)
+            {
+                TestAssert.True(row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
+                    "First-paragraph visible glyphs remain inside the balloon.");
+            }
+            TestAssert.True(Math.Abs(firstRows[^1].Y - tailRows[0].Y - firstPitch * size) < 0.02d,
                 "The paragraph transition uses first descent plus second ascent and gap.");
             foreach (var row in tailRows)
             {
@@ -3021,7 +3042,7 @@ internal static class DocxCommentsTests
             double thirdHeight = 0d;
             if (hasThird)
             {
-                var thirdRows = shows.Skip(2).Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 700).ToArray();
+                var thirdRows = shows.Where(show => show.Y < tailRows[^1].Y - 0.001d && !string.IsNullOrWhiteSpace(show.Text)).ToArray();
                 TestAssert.True(thirdRows.Length >= (wrappedThird ? 2 : 1), "The third paragraph wraps using its own prepared body.");
                 double thirdLinePitch = 0.5d - prefixDescender / 1000d + prefixGap / 1000d;
                 thirdHeight = (thirdRows.Length - 1) * thirdLinePitch * size;
@@ -3043,7 +3064,7 @@ internal static class DocxCommentsTests
                 TestAssert.True(Math.Abs(shows[^1].X - shows[^2].X - shows[^2].Font.MeasureTextPoints(shows[^2].Text, size)) < 0.04d,
                     "The third mark follows its own body's visible advance.");
             }
-            TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight)) < 0.02d,
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight)) < 0.02d,
                 "Height includes the paragraph transition and all later rows.");
             foreach (DocxBodyElement[] guardedElements in new[]
             {
@@ -3095,6 +3116,22 @@ internal static class DocxCommentsTests
                             invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                             "An overwide third-paragraph scalar or nonpositive incoming transition retains finite complete fallback.");
                     }
+                }
+                if (wrappedFirst)
+                {
+                    DocxDocument guarded = document with
+                    {
+                        RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 80) + " start." }] }),
+                            new DocxParagraphElement(second), new DocxParagraphElement(third)] }]
+                    };
+                    var invalidRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyFirstAdvance: 32700),
+                        OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                    var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
+                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                    TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
+                        invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                        "A first-paragraph scalar wider than the continuation retains finite complete fallback.");
                 }
             }
         }
