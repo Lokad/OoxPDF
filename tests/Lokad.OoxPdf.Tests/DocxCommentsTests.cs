@@ -2934,11 +2934,12 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonWrapsTwoAndThreeParagraphBodiesIndependently()
+    public static void DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently()
     {
         foreach (bool hasThird in new[] { false, true })
         foreach (bool wrappedThird in new[] { false, true })
         foreach (bool wrappedFirst in new[] { false, true })
+        foreach (bool wrappedSecond in new[] { false, true })
         foreach (bool supplementary in new[] { false, true })
         foreach (bool zeroFirst in new[] { false, true })
         foreach (short prefixDescender in new short[] { -50, -350 })
@@ -2948,11 +2949,12 @@ internal static class DocxCommentsTests
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
             if (!hasThird && wrappedThird) { continue; }
+            if (!wrappedFirst && !wrappedSecond) { continue; }
             string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
             string prefix = wrappedFirst ? firstWord + " start." : "Review table";
             string word = supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", length / 2)) : new string('a', length);
             if (zeroFirst) { word = "a" + word[1..].Replace('a', 'b'); }
-            string tail = word + " ending.";
+            string tail = wrappedSecond ? word + " ending." : supplementary ? "a\U0001F600b" : "ab.";
             string thirdWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
             string thirdText = wrappedThird ? thirdWord + " finish." : "finish.";
             DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
@@ -2995,7 +2997,7 @@ internal static class DocxCommentsTests
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
             var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
-            TestAssert.True(tailRows.Length >= 2, "The second paragraph must wrap independently of the title row.");
+            TestAssert.True(tailRows.Length >= (wrappedSecond ? 2 : 1), "The second paragraph uses its own fitting or wrapped rows independently of the title row.");
             var firstShows = shows.Where(show => show.Y > tailRows[0].Y + 0.001d).ToArray();
             var firstRows = firstShows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
             TestAssert.True(firstRows.Length >= (wrappedFirst ? 2 : 1), "The first paragraph wraps within the title and continuation widths.");
@@ -3097,7 +3099,7 @@ internal static class DocxCommentsTests
                 {
                     DocxRelatedStory guardedStory = story with
                     {
-                        BodyElements = [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = "Review scope" }] }),
+                        BodyElements = [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = wrappedSecond ? "Review scope" : prefix }] }),
                             new DocxParagraphElement(second), new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Text = new string('a', 80) + " finish." }] })]
                     };
                     foreach (var invalidResolver in new[]
@@ -3119,6 +3121,20 @@ internal static class DocxCommentsTests
                 }
                 if (wrappedFirst)
                 {
+                    DocxDocument zeroSecond = document with
+                    {
+                        RelatedStories = [story with { BodyElements = hasThird
+                            ? [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = "aaa" }] }), new DocxParagraphElement(third)]
+                            : [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = "aaa" }] })] }]
+                    };
+                    var zeroSecondRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(tailFirstAdvance: 0),
+                        OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                    var zeroSecondBalloon = zeroSecondRenderer.InspectMarkupBalloons(zeroSecond).Single();
+                    var zeroSecondShows = ReadEmbeddedGlyphTextShows(zeroSecondRenderer.RenderBlankPages(zeroSecond, null, CancellationToken.None).Single())
+                        .Where(show => show.X >= zeroSecondBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                    TestAssert.True(double.IsFinite(zeroSecondBalloon.Height) && zeroSecondShows.Length > 0 &&
+                        zeroSecondShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                        "A zero-width second body retains finite complete fallback after a wrapped first body.");
                     DocxDocument guarded = document with
                     {
                         RelatedStories = [story with { BodyElements = hasThird
@@ -3236,7 +3252,7 @@ internal static class DocxCommentsTests
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 200) }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
-                    [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last)],
+                    [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(last)],
@@ -3250,7 +3266,7 @@ internal static class DocxCommentsTests
                     var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "Five paragraphs, wrapped first or third bodies, wrapped or decorated fourth bodies, explicit line spacing, mixed faces and repeated spaces retain complete fallback.");
+                        "Five paragraphs, four paragraphs with a wrapped body, a wrapped third after fitting first and second bodies, explicit line spacing, mixed faces and repeated spaces retain complete fallback.");
                 }
                 foreach (var invalidResolver in new[]
                 {
@@ -3523,7 +3539,7 @@ internal static class DocxCommentsTests
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second) },
                 [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(second)],
-                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second)],
+                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second)],
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Bold = true }] }), new DocxParagraphElement(second)]
             })
             {
@@ -3532,7 +3548,7 @@ internal static class DocxCommentsTests
                 var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "Five paragraphs, spacing, a wrapped first paragraph and decorated runs retain complete fallback.");
+                    "Five paragraphs, spacing, four paragraphs with a wrapped first body and decorated runs retain complete fallback.");
             }
         }
     }
