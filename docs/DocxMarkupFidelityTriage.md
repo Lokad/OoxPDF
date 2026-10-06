@@ -697,6 +697,33 @@ gates, with comparisons linked by input, reference and candidate hashes.
 Final-source identity checks retain all 28 qualified control PDFs. Evidence
 is under `artifacts/plan-revision-20261005/rv06-l24/`.
 
+## Terminal Blank Positions (2026-10-06, RV06-L25)
+
+Word-compatible balloons now position terminal spaces using the face that
+actually emits the body. Previously the title face measured that position,
+which could put a blank text operation far from the end of the visible text.
+The production regression uses distinct advances for the two faces and checks
+both single-row and wrapped bodies. It fails before the repair and passes
+afterward. All 71 balloon checks pass, the Release build is clean, and the
+portable regression and exact fresh 0.1.5 package smoke pass.
+
+Twenty-eight independent Office controls retain their raster and graphics
+bytes. Their 31 moved spaces reduce the maximum position gap from 43.676 to
+0.015 points. Across all 33 cached cases, 18 PDFs retain their bytes and the
+15 changed PDFs move only 54 blank operations horizontally. All 36 raster
+pages and all graphics remain identical. Failed gates fall from 573 to 546;
+nine cases each lose three failures, and no case gains a failure. One case
+passes and 32 remain partial. Comparisons retain input, reference and fresh
+candidate hash links. This closes a text-operation position defect; wrapped
+line breaks, continuation pitch and terminal-space typeface remain residuals.
+Evidence is under `artifacts/plan-revision-20261005/rv06-l25/`.
+
+Full integration pinned to `8576f276`, before this terminal-position repair,
+passes 2,154 Windows checks with no failures and one unconfigured private
+layout probe skipped, including 873 DOCX checks. Its fresh 0.1.5 package
+contains the exact full-suite DLL. Evidence is under
+`artifacts/plan-revision-20261005/milestone-8576f276/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
