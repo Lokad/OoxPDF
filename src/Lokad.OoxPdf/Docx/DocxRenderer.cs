@@ -234,7 +234,8 @@ internal sealed partial class DocxRenderer
                 drawingPages.PageAll(pageIndex),
                 effectiveMarkupContext,
                 balloonLabelEmbedded,
-                balloonBodyEmbedded))
+                balloonBodyEmbedded,
+                fontResources))
             {
                 snapshots.Add(placement.ToSnapshot(pageIndex));
             }

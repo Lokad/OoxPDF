@@ -2086,6 +2086,76 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleBalloonUsesUniformCommentTypeface()
+    {
+        foreach (bool mixedFaces in new[] { false, true })
+        {
+            const string body = "Review table control.";
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph(body, 12d, 14d) with
+            {
+                Runs = mixedFaces
+                    ? [new DocxTextRun("Review table ", 12d, null, false, false, false, null, "CommentFace"),
+                       new DocxTextRun("control.", 12d, null, false, false, false, null, "OtherCommentFace")]
+                    : [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(comment)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            PdfPage page = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            bool foundBody = false;
+            foreach (Match show in Regex.Matches(page.Content,
+                @"/(?<font>F\d+) [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 [-\d.]+ [-\d.]+ Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
+                RegexOptions.Singleline))
+            {
+                PdfEmbeddedFont font = page.Fonts.Single(resource => resource.ResourceName == show.Groups["font"].Value).Font;
+                var text = new StringBuilder();
+                foreach (Match chunk in Regex.Matches(show.Groups["show"].Value, @"<(?<hex>[0-9A-F]+)>"))
+                {
+                    string hex = chunk.Groups["hex"].Value;
+                    for (int offset = 0; offset < hex.Length; offset += 4)
+                    {
+                        ushort cid = ushort.Parse(hex.AsSpan(offset, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                        text.Append(char.ConvertFromUtf32(font.UnicodeByCid[cid]));
+                    }
+                }
+                if (text.ToString() != body) { continue; }
+                foundBody = true;
+                TestAssert.Equal(mixedFaces ? 500 : 700, (int)font.Font.GetAdvanceWidth(font.Font.MapCodePoint('R')));
+            }
+            TestAssert.True(foundBody, "The actual balloon body show must retain the complete comment text.");
+        }
+    }
+
+    private sealed class BalloonTypefaceFontResolver : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            byte[] bytes = TestFontBuilder.CreateTestFont();
+            int advance = request.FamilyName == "CommentFace" ? 700 : request.FamilyName == "OtherCommentFace" ? 900 : 500;
+            (int offset, _) = TestFontBuilder.GetTableRange(bytes, "hmtx");
+            for (int glyph = 0; glyph < TestFontBuilder.GlyphCount; glyph++)
+            {
+                bytes[offset + glyph * 4] = (byte)(advance >> 8);
+                bytes[offset + glyph * 4 + 1] = (byte)advance;
+            }
+            return new FontFaceResolution(request.FamilyName, request.FamilyName, new FontStyleKey(request.Bold, request.Italic),
+                new MemoryFontProgramSource("test:balloon-choice:" + request.FamilyName, bytes), IsFallback: false);
+        }
+    }
+
     private sealed class BalloonSubsetFontResolver : IFontResolver
     {
         private static readonly byte[] Bytes = TestFontBuilder.CreateTestFont();

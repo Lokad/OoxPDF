@@ -86,7 +86,8 @@ internal sealed partial class DocxRenderer
                 drawingPages.PageAll(pageIndex),
                 markupContext,
                 labelResource.Embedded,
-                bodyCoverageResource.Embedded))
+                bodyCoverageResource.Embedded,
+                fontResources))
             {
                 foreach (string? text in new string?[] { placement.Title, placement.Body, placement.WordCompatibleTitle, placement.WordCompatibleBody })
                 {
@@ -114,7 +115,8 @@ internal sealed partial class DocxRenderer
                     }
                 }
 
-                if (ShouldRenderWordCompatibleBalloonText(placement, markupContext) &&
+                if (placement.WordCompatibleBodyResource is null &&
+                    ShouldRenderWordCompatibleBalloonText(placement, markupContext) &&
                     !string.IsNullOrWhiteSpace(placement.WordCompatibleBody))
                 {
                     foreach (Rune rune in placement.WordCompatibleBody.EnumerateRunes())
@@ -251,7 +253,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, titleResource?.Embedded, bodyResource?.Embedded))
+        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, titleResource?.Embedded, bodyResource?.Embedded, fontResources))
         {
             cancellationToken.ThrowIfCancellationRequested();
             RenderMarkupBalloonPlacement(placement, graphics, labelResource, titleResource, bodyResource, fallbackFace, markupContext);
@@ -294,13 +296,61 @@ internal sealed partial class DocxRenderer
             fontResources.Fallback;
     }
 
+    private static DocxRunFontResource? ResolveUniformCommentBalloonBodyResource(
+        DocxRelatedStoryLayout? storyLayout,
+        string body,
+        DocxFontResources? fontResources,
+        PdfEmbeddedFont? legacyBody)
+    {
+        // Word preserves the comment's regular face independently of body runs.
+        // Keep the legacy path for mixed formatting, compound stories and groups.
+        if (fontResources is null || storyLayout is null ||
+            storyLayout.Story.BodyElements.Count != 1 ||
+            storyLayout.Story.BodyElements[0] is not DocxParagraphElement element ||
+            storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0)
+        {
+            return null;
+        }
+        DocxParagraph paragraph = element.Paragraph;
+        if (paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
+            paragraph.FieldReferences.Count != 0 || paragraph.Revisions.Count != 0)
+        {
+            return null;
+        }
+
+        DocxRunFontResource? resource = null;
+        foreach (DocxTextRun run in paragraph.Runs)
+        {
+            if (string.IsNullOrWhiteSpace(run.Text)) { continue; }
+            if (run.Bold || run.Italic || run.Underline || run.CharacterSpacingPoints != 0d ||
+                run.FieldKind is not null || !fontResources.RunResources.TryGetValue(run, out DocxRunFontResource? candidate) ||
+                candidate.Resolution.Bold || candidate.Resolution.Italic ||
+                (resource is not null && !ReferenceEquals(resource, candidate)))
+            {
+                return null;
+            }
+            resource = candidate;
+        }
+        if (resource is null || ReferenceEquals(resource.Embedded.Font, legacyBody?.Font))
+        {
+            return null;
+        }
+        foreach (Rune rune in (body + " ").EnumerateRunes())
+        {
+            ushort glyph = resource.Embedded.Font.MapCodePoint(rune.Value);
+            if (glyph == 0 || !resource.Embedded.TryGetEncodedCid(glyph, out _)) { return null; }
+        }
+        return resource;
+    }
+
     private static IReadOnlyList<DocxMarkupBalloonPlacement> BuildMarkupBalloonPlacements(
         DocxLayoutPage page,
         IReadOnlyList<DocxRelatedStoryLayout> relatedStories,
         IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
         DocxMarkupContext markupContext,
         PdfEmbeddedFont? labelEmbedded,
-        PdfEmbeddedFont? bodyEmbedded)
+        PdfEmbeddedFont? bodyEmbedded,
+        DocxFontResources? fontResources = null)
     {
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
@@ -430,7 +480,10 @@ internal sealed partial class DocxRenderer
                     candidate.BodySummaryPartCount,
                     candidate.WordCompatibleBodySummaryPartCount,
                     OverflowStartIndex: null, OverflowEndIndex: null, LaneBandIndex: laneBand.Index,
-                    LaneBandCandidateCount: laneBand.CandidateCount));
+                    LaneBandCandidateCount: laneBand.CandidateCount)
+                {
+                    WordCompatibleBodyResource = candidate.WordCompatibleBodyResource
+                });
                 nextTop = y - MarkupBalloonMinimumSpacingPoints;
                 placedBandCandidates.Add(candidate);
             }
@@ -601,7 +654,12 @@ internal sealed partial class DocxRenderer
                             CommentOpenCount: commentMetrics.OpenCount,
                             CommentReplyCount: commentMetrics.ReplyCount,
                             BodySummaryPartCount: CountBalloonSummaryPart(commentBody),
-                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(wordCompatibleCommentBody)));
+                            WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(wordCompatibleCommentBody))
+                        {
+                            WordCompatibleBodyResource = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                                ? ResolveUniformCommentBalloonBodyResource(storyLayout, wordCompatibleCommentBody, fontResources, bodyEmbedded)
+                                : null
+                        });
                     }
                 }
 
@@ -855,6 +913,7 @@ internal sealed partial class DocxRenderer
         PdfEmbeddedFont? bodyEmbedded,
         double balloonWidth)
     {
+        bodyEmbedded = candidate.WordCompatibleBodyResource?.Embedded ?? bodyEmbedded;
         if (markupContext.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
             markupContext.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
             markupContext.ExpandsMarkupMargin)
@@ -920,6 +979,7 @@ internal sealed partial class DocxRenderer
             : wordCompatibleBodyParts.Length == 0 ? null : TrimBalloonText(string.Join("; ", wordCompatibleBodyParts), textWidth);
         return group[0] with
         {
+            WordCompatibleBodyResource = null,
             Kind = group.Select(candidate => candidate.Kind).Distinct().Count() == 1
                 ? group[0].Kind
                 : DocxMarkupBalloonKind.Markup,
@@ -1176,7 +1236,8 @@ internal sealed partial class DocxRenderer
 
         if (labelResource is not null && bodyResource is not null && ShouldRenderWordCompatibleBalloonText(placement, markupContext))
         {
-            RenderWordCompatibleBalloonText(placement, graphics, titleResource ?? labelResource, bodyResource, markupContext.WordCompatiblePrintScale);
+            RenderWordCompatibleBalloonText(placement, graphics, titleResource ?? labelResource,
+                placement.WordCompatibleBodyResource ?? bodyResource, markupContext.WordCompatiblePrintScale);
             return;
         }
 

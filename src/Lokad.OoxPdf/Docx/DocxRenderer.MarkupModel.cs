@@ -55,7 +55,10 @@ internal sealed partial class DocxRenderer
         int CommentOpenCount,
         int CommentReplyCount,
         int BodySummaryPartCount,
-        int WordCompatibleBodySummaryPartCount);
+        int WordCompatibleBodySummaryPartCount)
+    {
+        public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
+    }
 
     private sealed record DocxMarkupBalloonLaneBand(
         int Index,
@@ -98,6 +101,8 @@ internal sealed partial class DocxRenderer
         int LaneBandIndex,
         int LaneBandCandidateCount)
     {
+        public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
+
         public DocxMarkupBalloonPlacementSnapshot ToSnapshot(int pageIndex)
         {
             return new DocxMarkupBalloonPlacementSnapshot(
