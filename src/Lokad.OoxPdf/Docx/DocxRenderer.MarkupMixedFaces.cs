@@ -1,4 +1,5 @@
 using System.Text;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
 
@@ -78,5 +79,67 @@ internal sealed partial class DocxRenderer
             width += part.Resource.Embedded.MeasureTextPoints(part.Text, fontSize);
         }
         return double.IsFinite(width) && width > 0d && width <= availableWidth;
+    }
+
+    private sealed record DocxMarkupTwoFaceRows(
+        DocxMarkupBalloonBodyPart Prefix,
+        DocxRunFontResource TailResource,
+        string[] TailLines,
+        double? TailLineHeightEm);
+
+    private static DocxMarkupTwoFaceRows? ResolveWordCompatibleTwoFaceRows(
+        IReadOnlyList<DocxMarkupBalloonBodyPart>? parts,
+        double fontSize,
+        double firstLineWidth,
+        double continuationWidth)
+    {
+        if (parts is not { Count: 2 } || parts[0].Text.Length == 0 || parts[1].Text.Length == 0 ||
+            parts[1].Text[0] == ' ') { return null; }
+        double tailFirstWidth = firstLineWidth - parts[0].Resource.Embedded.MeasureTextPoints(parts[0].Text, fontSize);
+        if (!double.IsFinite(tailFirstWidth) || tailFirstWidth <= 0d) { return null; }
+        DocxRunFontResource tail = parts[1].Resource;
+        ushort space = tail.Embedded.Font.MapCodePoint(' ');
+        if (space == 0 || !tail.Embedded.TryGetEncodedCid(space, out _)) { return null; }
+        string[] words = parts[1].Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 2) { return null; }
+        for (int i = 0; i < words.Length; i++)
+        {
+            string measured = words[i] + (i < words.Length - 1 ? " " : "");
+            double width = tail.Embedded.MeasureTextPoints(measured, fontSize);
+            if (!double.IsFinite(width) || width > (i == 0 ? tailFirstWidth : continuationWidth)) { return null; }
+        }
+        string[] lines = WrapWordCompatibleBalloonBody(parts[1].Text, tail.Embedded, fontSize, tailFirstWidth, continuationWidth);
+        if (lines.Length < 2) { return null; }
+        double? lineHeightEm = tail.Embedded.Font.UnitsPerEm > 0
+            ? DocxLineMetrics.MeasureHheaLineHeight(tail.Embedded.Font, 1d) : null;
+        return new(parts[0], tail, lines, lineHeightEm);
+    }
+
+    private static void RenderWordCompatibleTwoFaceRows(
+        DocxMarkupTwoFaceRows rows,
+        DocxMarkupBalloonPlacement placement,
+        PdfGraphicsBuilder graphics,
+        DocxRunFontResource terminalResource,
+        double textX,
+        double bodyFirstLineX,
+        double firstBaselineY,
+        double fontSize)
+    {
+        DrawBalloonText(graphics, rows.Prefix.Resource, rows.Prefix.Text, bodyFirstLineX, firstBaselineY, fontSize,
+            placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+        double tailX = bodyFirstLineX + rows.Prefix.Resource.Embedded.MeasureTextPoints(rows.Prefix.Text, fontSize);
+        DrawBalloonText(graphics, rows.TailResource, rows.TailLines[0], tailX, firstBaselineY, fontSize,
+            placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+        double gap = ResolveWordCompatibleBalloonLineGap(rows.TailLineHeightEm, fontSize);
+        for (int i = 1; i < rows.TailLines.Length; i++)
+        {
+            double y = firstBaselineY - i * gap;
+            DrawBalloonText(graphics, rows.TailResource, rows.TailLines[i], textX, y, fontSize,
+                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue,
+                WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints);
+            DrawBalloonText(graphics, i == rows.TailLines.Length - 1 ? terminalResource : rows.TailResource, " ",
+                textX + rows.TailResource.Embedded.MeasureTextPoints(rows.TailLines[i], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
+                y, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+        }
     }
 }

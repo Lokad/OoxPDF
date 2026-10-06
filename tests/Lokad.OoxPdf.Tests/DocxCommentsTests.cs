@@ -2197,10 +2197,11 @@ internal static class DocxCommentsTests
 
         foreach (bool bold in new[] { true, false })
         {
-            string secondText = bold ? "ok." : string.Join(" ", Enumerable.Repeat("alpha", 30));
+            string firstText = bold ? "Review " : string.Join(" ", Enumerable.Repeat("alpha", 30)) + " ";
+            const string secondText = "ok.";
             DocxParagraph fallbackComment = comment with
             {
-                Runs = [comment.Runs[0], comment.Runs[1] with { Text = secondText, Bold = bold }]
+                Runs = [comment.Runs[0] with { Text = firstText }, comment.Runs[1] with { Text = secondText, Bold = bold }]
             };
             DocxDocument fallbackDocument = document with
             {
@@ -2210,10 +2211,59 @@ internal static class DocxCommentsTests
             var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(fallbackDocument, null, CancellationToken.None).Single())
                 .Where(show => show.X >= fallbackBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                     !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-            TestAssert.Equal("Review " + secondText, string.Join(" ", fallbackShows.Select(show => show.Text.Trim())));
+            TestAssert.Equal(firstText + secondText, string.Join(" ", fallbackShows.Select(show => show.Text.Trim())));
             TestAssert.True(fallbackShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                 "Styled or overwide mixed comments must retain the complete legacy body path.");
         }
+    }
+
+    public static void DocxWordCompatibleWrappedBalloonKeepsPrefixAndTailFaces()
+    {
+        string tail = string.Join(" ", Enumerable.Repeat("alpha", 30));
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph("Review " + tail, 12d, 14d) with
+        {
+            Runs = [new DocxTextRun("Review ", 12d, null, false, false, false, null, "CommentFace"),
+                new DocxTextRun(tail, 12d, null, false, false, false, null, "OtherCommentFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(comment)], [], [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+        };
+        DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var balloon = renderer.InspectMarkupBalloons(document).Single();
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            .Where(show => show.X >= balloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
+                !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal("Review ", shows[0].Text);
+        TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
+        var tailShows = shows[1..];
+        TestAssert.True(tailShows.Length >= 3, "The tail must have multiple continuation rows.");
+        TestAssert.True(tailShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('a')) == 900),
+            "Every tail row must retain its source face.");
+        TestAssert.Equal(tail, string.Join(" ", tailShows.Select(show => show.Text.Trim())));
+        TestAssert.True(Math.Abs(shows[0].Y - tailShows[0].Y) < 0.001d, "Prefix and first tail row share a baseline.");
+        double tailX = shows[0].X + shows[0].Font.MeasureTextPoints(shows[0].Text, shows[0].Size);
+        TestAssert.True(Math.Abs(tailX - tailShows[0].X) < 0.04d, "The tail follows the prefix advance.");
+        for (int i = 0; i < tailShows.Length; i++)
+        {
+            double width = tailShows[i].Font.MeasureTextPoints(tailShows[i].Text.TrimEnd() + (i < tailShows.Length - 1 ? " " : ""), tailShows[i].Size);
+            double right = balloon.X + balloon.Width - 0.5d - (i == 0 ? 2.541d : 0d);
+            TestAssert.True(tailShows[i].X + width <= right + 0.02d, "Each actual tail row must fit its break space.");
+            if (i > 0) { TestAssert.True(Math.Abs(tailShows[i-1].Y - tailShows[i].Y - tailShows[i].Size) < 0.02d, "Tail rows use tail-face line metrics."); }
+        }
+        TestAssert.True(Math.Abs(balloon.Height - (12.61d + tailShows[0].Y - tailShows[^1].Y)) < 0.02d,
+            "Mixed continuation geometry must fit the actual printed rows.");
     }
 
     public static void DocxWordCompatibleBalloonTerminalSpaceUsesBodyAdvance()
@@ -2352,7 +2402,8 @@ internal static class DocxCommentsTests
             {
                 Runs = mixedFaces
                     ? [new DocxTextRun(body[..6], 12d, null, false, false, false, null, "CommentFace"),
-                       new DocxTextRun(body[6..], 12d, null, false, false, false, null, "OtherCommentFace")]
+                       new DocxTextRun(body[6..^6], 12d, null, false, false, false, null, "OtherCommentFace"),
+                       new DocxTextRun(body[^6..], 12d, null, false, false, false, null, "CommentFace")]
                     : [new DocxTextRun(body, 12d, null, false, false, false, null, "CommentFace")]
             };
             DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",

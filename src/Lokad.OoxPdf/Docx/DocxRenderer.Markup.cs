@@ -966,10 +966,13 @@ internal sealed partial class DocxRenderer
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, out double firstLineWidth, out double continuationWidth);
-                int rows = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _)
-                    ? 1 : CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
+                bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
+                DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
+                    ResolveWordCompatibleTwoFaceRows(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, continuationWidth);
+                int rows = singleRowParts ? 1 : twoFaceRows?.TailLines.Length ??
+                    CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
                 return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints +
-                    (rows - 1) * ResolveWordCompatibleBalloonLineGap(candidate.WordCompatibleBodyLineHeightEm, fontSize) +
+                    (rows - 1) * ResolveWordCompatibleBalloonLineGap(twoFaceRows?.TailLineHeightEm ?? candidate.WordCompatibleBodyLineHeightEm, fontSize) +
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;
             }
 
@@ -1395,6 +1398,14 @@ internal sealed partial class DocxRenderer
             }
             DrawBalloonText(graphics, placement.WordCompatibleTerminalResource ?? bodyResource, " ", partX,
                 firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            return;
+        }
+        DocxMarkupTwoFaceRows? twoFaceRows = ResolveWordCompatibleTwoFaceRows(placement.WordCompatibleBodyParts,
+            fontSize, firstLineWidth, continuationWidth);
+        if (twoFaceRows is not null)
+        {
+            RenderWordCompatibleTwoFaceRows(twoFaceRows, placement, graphics, placement.WordCompatibleTerminalResource ?? bodyResource,
+                textX, bodyFirstLineX, firstBaselineY, fontSize);
             return;
         }
         string[] lines = WrapWordCompatibleBalloonBody(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth);
