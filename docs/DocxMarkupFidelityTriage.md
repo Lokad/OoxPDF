@@ -1740,6 +1740,54 @@ and selected/rejected metric audits are under
 `artifacts/plan-revision-20261005/rv06-l54/`.
 
 
+## RV06-L55: three fitting comment paragraphs
+
+Three plain comment paragraphs that each fit one printed row retain their own
+prepared body and nominal-size paragraph-mark faces. The reader retains marks
+for one to three comment paragraphs in all-markup view. Renderer and reader
+regressions fail before their changes. Each paragraph transition uses its
+previous body's descent plus the next body's ascent and line gap; layout and
+emission share both steps. Existing two-paragraph fitting/wrapped paths remain
+qualified. Wrapped bodies, explicit spacing, mixed faces, decorated marks and
+four-paragraph stories retain the complete fallback.
+
+Eighteen mixed checks cover 192 scalar/middle-face/last-face/descent/gap/mark/
+scale variants and formatting/numeric guards. All 903 DOCX checks, 99 balloon
+checks and twenty-four Linux regressions pass. Release is clean; fresh 0.1.5
+package smoke contains the exact tested DLL at runtime `921000ef`:
+`5D268754269295928A5FC48F1AFB209D1E9415F995F65BEF5244D2991A1A9B7E`.
+
+Across 386 prior and nineteen fresh inputs, sixteen improve MAE and SSIM,
+386 retain PDF bytes and 389 retain raster/graphics identity. All 405 retain
+main-document text and comment content; 391 match Office breaks. All sixteen
+changed controls match exact row text, spaces and prepared fonts, with maximum
+row-start X gap 0.838pt and baseline gap 0.187pt. Sixteen Office controls support
+separate adjacent metric steps, with maximum errors 0.131/0.137pt. Rejected
+mark-driven, maximal-mark and uniform-next-face proposals reach larger errors
+and remain archived. Three fallback PDFs differ only by audited font aliases;
+resolved operations, decoded font bytes, declarations, graphics and rasters
+retain identity. The four-paragraph guard retains exact PDF bytes.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Fourteen break mismatches
+remain: colon, semicolon, overflowing-space, internal-double-space, paragraph
+spacing, mixed/wrapped paragraphs, four paragraphs and overwide/decorated/
+separated closing runs. Prior positioning/composed pixel residuals and 33
+partial cached cases remain. Qualification, identities and fallback audits are
+under `artifacts/plan-revision-20261005/rv06-l55/`.
+
+
+## RV21-V34: full integration through L51/L52
+
+Frozen integration at `d03ef3fa`, through L51/L52 and accepted smooth SVG
+transparency E4, passes **2182/0/1**, including 900 DOCX checks, with a clean
+Release build. The sole skip remains the private PPTX diagnostic's missing
+optional input/output configuration. Fresh 0.1.5 package smoke contains the
+exact full-suite DLL:
+`840DBA4D1C47158BC0366D1FAF2187F9DA1E7D52ECF5BBAE7998A2CC9B94A556`.
+This run excludes L53/L54. Its report, package link and identities are under
+`artifacts/plan-revision-20261005/milestone-d03ef3fa/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
@@ -1773,5 +1821,6 @@ and selected/rejected metric audits are under
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
 
 
