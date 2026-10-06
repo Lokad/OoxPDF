@@ -1705,6 +1705,41 @@ remain. Qualification, identities and fallback audits are under
 `artifacts/plan-revision-20261005/rv06-l53/`.
 
 
+## RV06-L54: wrapped second comment paragraph
+
+Two plain comment paragraphs retain their own prepared body and paragraph-mark
+faces when the first fits one row and the second wraps. The first transition
+uses first-body descent plus second-body ascent and line gap; later rows use
+the second body's height. Authored spaces stay in the second body face and
+scalar breaks insert no separators. Layout and emission share these steps;
+marks stay at nominal balloon size. Both fitting paragraphs retain L52's path.
+
+Seventeen mixed checks cover 192 scalar/zero-width/descent/gap/length/mark-face/
+scale variants and wrapped-first, explicit-spacing, mixed/decorated, repeated-
+space, tab, three-paragraph and oversized-scalar guards. All 902 DOCX checks,
+98 balloon checks and twenty-three Linux regressions pass. Release is clean;
+fresh 0.1.5 package smoke contains the exact tested DLL at runtime `7bb4fc67`:
+`B2D332E5C8CF887BC55C7569BF8206C945A91760FABCD7E6C79AF62157E8D566`.
+
+Across 370 prior and sixteen fresh inputs, fifteen improve MAE and SSIM and
+371 retain PDF/raster/graphics identity. All 386 retain main-document text and
+comment content; 375 match Office breaks. All fifteen changed controls match
+exact row text, spaces and prepared fonts, including twenty within-word breaks,
+with maximum row-start X gap 0.838pt and baseline gap 0.207pt. Fifteen metric
+controls support the first transition (maximum error 0.131pt); 38 later pitches
+stay within 0.082pt. Mark-driven, maximal-mark and uniform transition models
+reach 0.495, 1.250 and 0.621pt errors respectively. The two fresh spacing and
+mixed-paragraph guards retain exact PDF bytes.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Eleven break mismatches
+remain: colon, semicolon, overflowing-space, internal-double-space, explicit
+paragraph spacing, three paragraphs, overwide/decorated/separated closing runs,
+and the new spacing/mixed-second-paragraph guards. Prior positioning/composed
+pixel residuals and 33 partial cached cases remain. Qualification, identities
+and selected/rejected metric audits are under
+`artifacts/plan-revision-20261005/rv06-l54/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
@@ -1738,4 +1773,5 @@ remain. Qualification, identities and fallback audits are under
 - [ ] A renderer change driven by a private case should get a public synthetic fixture before it is considered complete.
 - [ ] A public fixture should be tagged by markup mode and subsystem so it can be run independently.
 - [ ] A fix should include either an Office-reference report, a private-safe comparison summary, or a focused unit test that proves the specific behavior.
+
 
