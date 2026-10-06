@@ -1819,6 +1819,24 @@ Across 430 prior and twenty-eight fresh controls, twenty-six improve MAE and SSI
 All 34 cached PDFs retain bytes and 551 failed gates. Sixteen break mismatches remain: overflowing/internal-double spaces, mixed/wrapped paragraphs, four paragraphs, overwide/decorated/separated closing runs, unsupported paragraph-spacing modes and the four new punctuated-prefix guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, exact space/font audits, input/reference identities and fallback comparisons are under `artifacts/plan-revision-20261005/rv06-l57/`.
 
 
+## RV06-L58: overflowing leading tail space spans
+
+The complete authored leading ASCII space span stays in its prepared tail face beside a fitting plain two-word prefix even when the spaces exceed the available first-row width. The following word starts below the prefix. Layout and emission reuse the qualified separator-only first transition and later tail metrics. Internal repeated spaces, punctuated prefixes and tabs retain complete fallback. The production reproducer fails before the change; nineteen mixed checks cover 576 fitting/overflow/scalar/advance/word-shape/descent/length/scale variants, including 192 new overflow variants, with formatting/numeric guards.
+
+Frozen runtime `8c9351e5` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `0b085d43fb95401d84986a99161e662e` contains the exact tested DLL, SHA-256 `502C8685D9F4162AFB2F6FE44F67E17A8A76F7013B0343113072ED264A3D18CA`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 458 prior and twenty-four fresh controls, twenty-one improve MAE and SSIM and 461 retain PDF/raster/graphics bytes. All 482 retain main-document text and comment content; 464 match Office breaks. All twenty-one changed controls match exact row text, spaces and prepared fonts, including 25 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.207pt. One shorter boundary and all three fresh fallback guards retain exact PDFs. All 22 measured first rows contain only tail separators after the prefix; the selected prefix-descent/tail-ascent model has maximum error 0.083pt, while rejected mixed-descent/uniform-tail models reach 0.621pt. Forty-six later row pitches have maximum error 0.082pt.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Eighteen break mismatches remain: internal-double spaces, mixed/wrapped paragraphs, four paragraphs, overwide/decorated/separated closing runs, unsupported paragraph-spacing modes, four punctuated-prefix guards and the three fresh overflow-shape guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, selected/rejected models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l58/`.
+
+
+## RV21-V36: full integration through L55/L56 and E4
+
+Frozen source `5804e48b2365a2e7783c15b38e0cbc309ffe0832` passes a clean Release build and **2,186 tests, zero failures, one skip**, including 904 DOCX checks. The skipped `PptxPrivateLayoutDiagnosticWhenRequested` requires optional private input/output settings. This run covers accepted behavior through L56 and smooth Office SVG transparency E4; it excludes L57 and later prototypes.
+
+The local 0.1.5 package smoke run `74424953c8d541c78ba120dbfd85f9bc` verifies the exact full-suite library bytes, SHA-256 `40B25C1F53F26CDCA96D0FEF1B4322B5B0ABA47F969E9BDD207658A8C5520CAF`. The ignored evidence is under `artifacts/plan-revision-20261005/milestone-5804e48b/`; qualification completed 2026-10-06 at 14:14:24 UTC. Scoped Office residuals remain recorded with their individual slices. Version stays 0.1.5 and release preparation remains deferred.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
