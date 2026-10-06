@@ -2950,7 +2950,7 @@ internal static class DocxCommentsTests
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
             if (hasFourth && (!hasThird || !(wrappedFirst || wrappedSecond || wrappedThird) ||
-                (wrappedThird && (wrappedFirst || wrappedSecond)))) { continue; }
+                (wrappedThird && wrappedSecond))) { continue; }
             if (!hasThird && wrappedThird) { continue; }
             if (!wrappedFirst && !wrappedSecond && !wrappedThird) { continue; }
             string firstWord = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", length / 2)) : new string('f', length);
@@ -3371,7 +3371,7 @@ internal static class DocxCommentsTests
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
-                    [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth)],
+                    [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 200) }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 200) }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "100" } }), new DocxParagraphElement(last)],
