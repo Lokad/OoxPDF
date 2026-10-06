@@ -2138,11 +2138,81 @@ internal static class DocxCommentsTests
                         text.Append(char.ConvertFromUtf32(font.UnicodeByCid[cid]));
                     }
                 }
+                if (mixedFaces) { continue; }
                 if (text.ToString() != body) { continue; }
                 foundBody = true;
                 TestAssert.Equal(mixedFaces ? 500 : 700, (int)font.Font.GetAdvanceWidth(font.Font.MapCodePoint('R')));
             }
-            TestAssert.True(foundBody, "The actual balloon body show must retain the complete comment text.");
+            if (mixedFaces)
+            {
+                var parts = ReadEmbeddedGlyphTextShows(page).Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
+                    !show.Text.StartsWith("Commented", StringComparison.Ordinal) && show.Text != "Body anchor").ToArray();
+                TestAssert.Equal(body, string.Concat(parts.Select(part => part.Text)));
+                TestAssert.Equal(2, parts.Length);
+                TestAssert.Equal(700, (int)parts[0].Font.Font.GetAdvanceWidth(parts[0].Font.Font.MapCodePoint('R')));
+                TestAssert.Equal(900, (int)parts[1].Font.Font.GetAdvanceWidth(parts[1].Font.Font.MapCodePoint('c')));
+            }
+            else
+            {
+                TestAssert.True(foundBody, "The actual balloon body show must retain the complete comment text.");
+            }
+        }
+    }
+
+    public static void DocxWordCompatibleSingleRowBalloonPreservesMixedFaces()
+    {
+        DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+        {
+            Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+        };
+        DocxParagraph comment = DocxTests.CreateDocxLayoutParagraph("Review ok.", 12d, 14d) with
+        {
+            Runs = [new DocxTextRun("Review ", 12d, null, false, false, false, null, "CommentFace"),
+                new DocxTextRun("ok.", 12d, null, false, false, false, null, "OtherCommentFace")]
+        };
+        DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+            [new DocxParagraphElement(comment)], [], [], null)
+        {
+            CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+        };
+        DocxDocument document = new(612d, 792d, 72d, 207d, 72d, 72d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(anchor)], [], [])
+        {
+            RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+        var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var balloon = renderer.InspectMarkupBalloons(document).Single();
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            .Where(show => show.X >= balloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
+                !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal(2, shows.Length);
+        TestAssert.Equal("Review ok.", string.Concat(shows.Select(show => show.Text)));
+        TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
+        TestAssert.Equal(900, (int)shows[1].Font.Font.GetAdvanceWidth(shows[1].Font.Font.MapCodePoint('o')));
+        TestAssert.True(Math.Abs(shows[0].Y - shows[1].Y) < 0.001d, "Mixed faces must retain one shared baseline.");
+        double nextX = shows[0].X + shows[0].Font.MeasureTextPoints(shows[0].Text, shows[0].Size);
+        TestAssert.True(Math.Abs(nextX - shows[1].X) < 0.04d, "The next face must follow the actual emitted advance.");
+        TestAssert.True(Math.Abs(balloon.Height - 12.61d) < 0.02d, "A qualified mixed-face line needs single-row geometry.");
+
+        foreach (bool bold in new[] { true, false })
+        {
+            string secondText = bold ? "ok." : string.Join(" ", Enumerable.Repeat("alpha", 30));
+            DocxParagraph fallbackComment = comment with
+            {
+                Runs = [comment.Runs[0], comment.Runs[1] with { Text = secondText, Bold = bold }]
+            };
+            DocxDocument fallbackDocument = document with
+            {
+                RelatedStories = [story with { BodyElements = [new DocxParagraphElement(fallbackComment)] }]
+            };
+            var fallbackBalloon = renderer.InspectMarkupBalloons(fallbackDocument).Single();
+            var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(fallbackDocument, null, CancellationToken.None).Single())
+                .Where(show => show.X >= fallbackBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
+                    !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal("Review " + secondText, string.Join(" ", fallbackShows.Select(show => show.Text.Trim())));
+            TestAssert.True(fallbackShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                "Styled or overwide mixed comments must retain the complete legacy body path.");
         }
     }
 

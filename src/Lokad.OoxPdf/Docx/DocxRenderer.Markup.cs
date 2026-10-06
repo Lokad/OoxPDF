@@ -509,7 +509,8 @@ internal sealed partial class DocxRenderer
                 {
                     WordCompatibleBodyResource = candidate.WordCompatibleBodyResource,
                     WordCompatibleBodyLineHeightEm = candidate.WordCompatibleBodyLineHeightEm,
-                    WordCompatibleTerminalResource = candidate.WordCompatibleTerminalResource
+                    WordCompatibleTerminalResource = candidate.WordCompatibleTerminalResource,
+                    WordCompatibleBodyParts = candidate.WordCompatibleBodyParts
                 });
                 nextTop = y - MarkupBalloonMinimumSpacingPoints;
                 placedBandCandidates.Add(candidate);
@@ -690,7 +691,10 @@ internal sealed partial class DocxRenderer
                                 ? null : qualifiedBody,
                             WordCompatibleBodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
                                 ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null,
-                            WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, fontResources)
+                            WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, fontResources),
+                            WordCompatibleBodyParts = qualifiedBody is null && UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                                ? ResolveMixedCommentBalloonBodyParts(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
+                                : null
                         });
                     }
                 }
@@ -962,7 +966,8 @@ internal sealed partial class DocxRenderer
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, out double firstLineWidth, out double continuationWidth);
-                int rows = CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
+                int rows = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _)
+                    ? 1 : CountWordCompatibleBalloonTextRows(body, bodyEmbedded, fontSize, firstLineWidth, continuationWidth);
                 return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints +
                     (rows - 1) * ResolveWordCompatibleBalloonLineGap(candidate.WordCompatibleBodyLineHeightEm, fontSize) +
                     WordCompatibleAllMarkupBalloonBottomInsetPoints;
@@ -1014,6 +1019,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleBodyResource = null,
             WordCompatibleBodyLineHeightEm = null,
             WordCompatibleTerminalResource = null,
+            WordCompatibleBodyParts = null,
             Kind = group.Select(candidate => candidate.Kind).Distinct().Count() == 1
                 ? group[0].Kind
                 : DocxMarkupBalloonKind.Markup,
@@ -1378,6 +1384,19 @@ internal sealed partial class DocxRenderer
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
         ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth + WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
+        if (TryMeasureWordCompatibleSingleRowParts(placement.WordCompatibleBodyParts, fontSize, firstLineWidth, out _))
+        {
+            double partX = bodyFirstLineX;
+            foreach (DocxMarkupBalloonBodyPart part in placement.WordCompatibleBodyParts!)
+            {
+                DrawBalloonText(graphics, part.Resource, part.Text, partX, firstBaselineY, fontSize,
+                    placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+                partX += part.Resource.Embedded.MeasureTextPoints(part.Text, fontSize);
+            }
+            DrawBalloonText(graphics, placement.WordCompatibleTerminalResource ?? bodyResource, " ", partX,
+                firstBaselineY, fontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
+            return;
+        }
         string[] lines = WrapWordCompatibleBalloonBody(body, bodyResource.Embedded, fontSize, firstLineWidth, continuationWidth);
         if (lines.Length == 0)
         {
