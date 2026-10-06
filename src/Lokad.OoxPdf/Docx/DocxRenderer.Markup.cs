@@ -980,6 +980,10 @@ internal sealed partial class DocxRenderer
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
+                if (ResolveWordCompatibleLastWrappedParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } lastParagraphRows)
+                {
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + lastParagraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                }
                 if (ResolveWordCompatibleFittingParagraphGaps(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGaps.Sum() + WordCompatibleAllMarkupBalloonBottomInsetPoints;
@@ -1441,6 +1445,12 @@ internal sealed partial class DocxRenderer
         if (ResolveWordCompatibleWrappedParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } paragraphRows)
         {
             RenderWordCompatibleWrappedParagraphRows(paragraphRows, placement, graphics, bodyFirstLineX, textX,
+                firstBaselineY, fontSize, cancellationToken);
+            return;
+        }
+        if (ResolveWordCompatibleLastWrappedParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } lastParagraphRows)
+        {
+            RenderWordCompatibleLastWrappedParagraphRows(lastParagraphRows, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }

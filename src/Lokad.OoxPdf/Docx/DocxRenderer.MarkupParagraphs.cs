@@ -149,6 +149,55 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    private sealed record DocxMarkupLastWrappedParagraphRows(
+        DocxMarkupBalloonParagraph[] Leading, double[] LeadingGaps,
+        DocxMarkupBalloonParagraph Last, DocxUniformBalloonRow[] LastRows,
+        double LastGap, double LastPitch)
+    {
+        public double LastStartHeight => LeadingGaps.Sum() + LastGap;
+        public double ContinuationsHeight => LastStartHeight + (LastRows.Length - 1) * LastPitch;
+    }
+
+    private static DocxMarkupLastWrappedParagraphRows? ResolveWordCompatibleLastWrappedParagraphRows(
+        IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,
+        double firstWidth, double continuationWidth, CancellationToken cancellationToken)
+    {
+        if (paragraphs is null || paragraphs.Count != 4 || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+            !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
+        cancellationToken.ThrowIfCancellationRequested();
+        var leading = paragraphs.Take(3).ToArray();
+        double[]? gaps = ResolveWordCompatibleFittingParagraphGaps(leading, fontSize, firstWidth, continuationWidth);
+        if (gaps is null) { return null; }
+        DocxMarkupBalloonParagraph last = paragraphs[3];
+        double width = last.Body.Resource.Embedded.MeasureTextPoints(last.Body.Text, fontSize);
+        if (!double.IsFinite(width) || width <= continuationWidth) { return null; }
+        double? lastGap = MeasureWordCompatibleParagraphTransition(leading[^1], last, fontSize);
+        var font = last.Body.Resource.Embedded.Font;
+        double pitch = DocxLineMetrics.MeasureHheaLineHeight(font, fontSize);
+        if (lastGap is null || !double.IsFinite(pitch) || pitch <= 0d) { return null; }
+        int index = 0;
+        foreach (Rune rune in last.Body.Text.EnumerateRunes())
+        {
+            if ((index++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+            double scalarWidth = font.GetAdvanceWidth(font.MapCodePoint(rune.Value)) * fontSize / font.UnitsPerEm;
+            if (!double.IsFinite(scalarWidth) || scalarWidth > continuationWidth) { return null; }
+        }
+        var rows = WrapUniformBalloonWords(last.Body.Text, last.Body.Resource.Embedded, fontSize,
+            continuationWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
+        return rows.Length >= 2 && rows[0].Text.Length != 0 ? new(leading, gaps, last, rows, lastGap.Value, pitch) : null;
+    }
+
+    private static void RenderWordCompatibleLastWrappedParagraphRows(
+        DocxMarkupLastWrappedParagraphRows rows, DocxMarkupBalloonPlacement placement,
+        PdfGraphicsBuilder graphics, double firstX, double continuationX, double firstY,
+        double fontSize, CancellationToken cancellationToken)
+    {
+        RenderWordCompatibleFittingParagraphs(rows.Leading, rows.LeadingGaps, placement, graphics,
+            firstX, continuationX, firstY, fontSize, cancellationToken);
+        RenderUniformBalloonRows(rows.LastRows, placement, graphics, rows.Last.Body.Resource, rows.Last.Mark,
+            continuationX, continuationX, firstY - rows.LastStartHeight, rows.LastPitch, fontSize, cancellationToken);
+    }
+
     private sealed record DocxMarkupWrappedParagraphRows(
         DocxMarkupBalloonParagraph First, DocxMarkupBalloonParagraph Second,
         DocxUniformBalloonRow[] TailRows, double FirstGap, double TailGap,

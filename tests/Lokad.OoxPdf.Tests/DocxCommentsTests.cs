@@ -3154,9 +3154,10 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonKeepsThreeAndFourFittingParagraphsAndTheirMarks()
+    public static void DocxWordCompatibleMixedBalloonKeepsLeadingFittingParagraphsAndWrapsFourth()
     {
         foreach (bool fourthParagraph in new[] { false, true })
+        foreach (bool wrappedFourth in new[] { false, true })
         foreach (bool supplementary in new[] { false, true })
         foreach (bool middleSameFace in new[] { false, true })
         foreach (bool lastSameFace in new[] { false, true })
@@ -3165,6 +3166,7 @@ internal static class DocxCommentsTests
         foreach (string markFace in new[] { "AnchorFace", "OtherCommentFace" })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
+            if (!fourthParagraph && wrappedFourth) { continue; }
             string middleText = supplementary ? "a\U0001F600b" : "control.";
             DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
             {
@@ -3186,7 +3188,9 @@ internal static class DocxCommentsTests
                 Runs = [new DocxTextRun("ending.", 12d, null, false, false, false, null, lastSameFace ? "CommentFace" : "OtherCommentFace")],
                 ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 36d }
             };
-            string fourthText = supplementary ? "a\U0001F600b" : "finish.";
+            string fourthText = wrappedFourth
+                ? (supplementary ? string.Concat(Enumerable.Repeat("a\U0001F600", 40)) : new string('a', 80)) + " finish."
+                : supplementary ? "a\U0001F600b" : "finish.";
             DocxParagraph fourth = first with
             {
                 Runs = [first.Runs[0] with { Text = fourthText, FontFamily = "AnchorFace" }],
@@ -3210,7 +3214,7 @@ internal static class DocxCommentsTests
             var balloon = renderer.InspectMarkupBalloons(document).Single();
             var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
-            TestAssert.Equal(fourthParagraph ? 8 : 6, shows.Length);
+            if (!wrappedFourth) { TestAssert.Equal(fourthParagraph ? 8 : 6, shows.Length); }
             TestAssert.Equal("Review table " + middleText + " ending. " + (fourthParagraph ? fourthText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
             TestAssert.Equal(middleSameFace ? 700 : 900, (int)shows[2].Font.Font.GetAdvanceWidth(shows[2].Font.Font.MapCodePoint('b')));
@@ -3225,14 +3229,33 @@ internal static class DocxCommentsTests
             TestAssert.True(Math.Abs(shows[0].Y - shows[2].Y - firstPitch * size) < 0.02d &&
                 Math.Abs(shows[2].Y - shows[4].Y - secondPitch * size) < 0.02d,
                 "Every paragraph transition uses its adjacent prepared body metrics.");
+            int fourthRowsCount = 0;
             if (fourthParagraph)
             {
+                var fourthRows = shows.Skip(6).Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+                fourthRowsCount = fourthRows.Length;
+                TestAssert.True(fourthRowsCount >= (wrappedFourth ? 2 : 1), "The fourth body fits or wraps independently of its three leading paragraphs.");
                 TestAssert.Equal(500, (int)shows[6].Font.Font.GetAdvanceWidth(shows[6].Font.Font.MapCodePoint('b')));
-                TestAssert.Equal(123, (int)shows[7].Font.Font.GetAdvanceWidth(shows[7].Font.Font.MapCodePoint(' ')));
+                TestAssert.Equal(123, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
                 TestAssert.True(Math.Abs(shows[4].Y - shows[6].Y - thirdPitch * size) < 0.02d && Math.Abs(shows[6].X - shows[4].X) < 0.001d,
                     "The fourth paragraph uses its own body and the adjacent third-body descent.");
+                foreach (var row in fourthRows)
+                {
+                    TestAssert.Equal(500, (int)row.Font.Font.GetAdvanceWidth(row.Font.Font.MapCodePoint('b')));
+                    TestAssert.True(Math.Abs(row.X - shows[4].X) < 0.001d && row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
+                        "Every fourth-body row uses its own face and fits the continuation inset.");
+                }
+                for (int index = 1; index < fourthRows.Length; index++)
+                {
+                    TestAssert.True(Math.Abs(fourthRows[index - 1].Y - fourthRows[index].Y - size) < 0.02d,
+                        "Fourth-body continuations use only their own prepared metrics.");
+                }
+                TestAssert.Equal(" ", shows[^1].Text);
+                TestAssert.True(Math.Abs(shows[^1].Y - fourthRows[^1].Y) < 0.001d && Math.Abs(shows[^1].Size - size) < 0.001d &&
+                    Math.Abs(shows[^1].X - fourthRows[^1].X - fourthRows[^1].Font.MeasureTextPoints(fourthRows[^1].Text, size)) < 0.04d,
+                    "The fourth mark retains nominal size and follows its own final row.");
             }
-            foreach (int index in fourthParagraph ? new[] { 0, 2, 4, 6 } : new[] { 0, 2, 4 })
+            foreach (int index in new[] { 0, 2, 4 })
             {
                 TestAssert.Equal(" ", shows[index + 1].Text);
                 TestAssert.True(Math.Abs(shows[index].Y - shows[index + 1].Y) < 0.001d && Math.Abs(shows[index + 1].Size - size) < 0.001d,
@@ -3242,14 +3265,14 @@ internal static class DocxCommentsTests
             }
             TestAssert.True(Math.Abs(shows[2].X - shows[4].X) < 0.001d && shows[2].X < shows[0].X,
                 "Later paragraphs retain the continuation inset.");
-            TestAssert.True(Math.Abs(balloon.Height - (12.61d + (firstPitch + secondPitch + thirdPitch) * size)) < 0.02d,
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + (firstPitch + secondPitch + thirdPitch + Math.Max(0, fourthRowsCount - 1)) * size)) < 0.02d,
                 "Height and emission share every paragraph transition.");
             if (!supplementary && !middleSameFace && !lastSameFace && prefixDescender == -50 && prefixGap == 0 && markFace == "AnchorFace")
             {
                 foreach (DocxBodyElement[] guardedElements in new[]
                 {
                     new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth), new DocxParagraphElement(last) },
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 200) }] })],
+                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last), new DocxParagraphElement(fourth)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth)],
@@ -3266,7 +3289,33 @@ internal static class DocxCommentsTests
                     var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "Five paragraphs, four paragraphs with a wrapped body, explicit line spacing, mixed faces and repeated spaces retain complete fallback.");
+                        "Five paragraphs, four paragraphs with an earlier wrapped body, explicit line spacing, mixed faces and repeated spaces retain complete fallback.");
+                }
+                if (wrappedFourth)
+                {
+                    foreach (var invalidResolver in new[]
+                    {
+                        new BalloonTypefaceFontResolver(tailFirstAdvance: 32700),
+                        new BalloonTypefaceFontResolver(tailFirstAdvance: 0),
+                        new BalloonTypefaceFontResolver(tailDescender: 32700)
+                    })
+                    {
+                        DocxDocument guarded = document with
+                        {
+                            RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first),
+                                new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { FontFamily = "CommentFace" }] }),
+                                new DocxParagraphElement(last with { Runs = [last.Runs[0] with { FontFamily = "CommentFace" }] }),
+                                new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 80), FontFamily = "OtherCommentFace" }] })] }]
+                        };
+                        var invalidRenderer = new DocxRenderer(invalidResolver, OoxPdfDocxMarkupMode.AllMarkup,
+                            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                        var guardedBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
+                        var guardedShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                            .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                        TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
+                            guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                            "An oversized fourth scalar, zero-width fourth body or nonpositive fourth pitch retains finite complete fallback.");
+                    }
                 }
                 foreach (var invalidResolver in new[]
                 {
@@ -4637,7 +4686,8 @@ internal static class DocxCommentsTests
 
     private sealed class BalloonTypefaceFontResolver(short? bodyLineGap = null, short? bodySpaceAdvance = null,
         short? bodyAdvance = null, short? bodyDescender = null, short? bodyAscender = null,
-        short? tailFirstAdvance = null, short? bodyFirstAdvance = null, short? tailSpaceAdvance = null) : IFontResolver
+        short? tailFirstAdvance = null, short? bodyFirstAdvance = null, short? tailSpaceAdvance = null,
+        short? tailDescender = null) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
@@ -4661,6 +4711,11 @@ internal static class DocxCommentsTests
                 int firstGlyphOffset = offset + ('a' - ' ' + 1) * 4;
                 bytes[firstGlyphOffset] = (byte)(firstWidth >> 8);
                 bytes[firstGlyphOffset + 1] = (byte)firstWidth;
+            }
+            if (request.FamilyName == "OtherCommentFace" && tailDescender is short tailDescent)
+            {
+                (int hheaOffset, _) = TestFontBuilder.GetTableRange(bytes, "hhea");
+                System.Buffers.Binary.BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(hheaOffset + 6, 2), tailDescent);
             }
             if (request.FamilyName == "OtherCommentFace" && tailSpaceAdvance is short tailSpaceWidth)
             {
