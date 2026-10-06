@@ -1788,6 +1788,26 @@ This run excludes L53/L54. Its report, package link and identities are under
 `artifacts/plan-revision-20261005/milestone-d03ef3fa/`.
 
 
+## RV06-L56: explicit comment paragraph spacing
+
+Nonnegative integer before/after twips preserve prepared body and paragraph-mark faces in the qualified two-paragraph fitting/wrapped and three-paragraph fitting paths. The Office controls normalize these spacing values. Line spacing, automatic/contextual spacing, negative values and malformed tokens keep existing fallback or intake rejection. The production reproducer fails before the change; nineteen mixed checks cover 108 value/side/body-shape/scale variants and 66 unsupported-token/line/auto/contextual guards. Synthetic maximum-integer tokens remain finite; measured Office parity is bounded to the sampled values and shapes.
+
+Frozen runtime `5804e48b` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `84328e22e85f44b99d6b02e75b0d251e` contains the exact tested DLL, SHA-256 `0F736A54A5EF4A54F9F3C39CBF9F24FAF1A48449AF130ECDD468D10A8C121385`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 405 prior and twenty-five valid fresh controls, twenty-five improve MAE and SSIM and 405 retain PDF/raster/graphics bytes. All 430 retain main-document text and comment content; 416 match Office breaks. All twenty-five changed controls match exact row text, spaces and prepared fonts, with maximum row-start X gap 0.838pt and baseline gap 0.187pt. The three fresh line/auto/negative guards retain exact PDFs. The ignored-spacing metric model has maximum error 0.082pt; rejected maximum/summed-spacing models reach 18.165pt. Nine later row pitches have maximum error 0.029pt.
+
+Office rejects one additional malformed DOCX as corrupt before export, without an orphaned process. Both baseline and candidate CLI reject the identical input with the same twips error and no PDF. This separate intake audit is preserved without inventing an Office reference or counting it among the 430 visual controls.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Fourteen break mismatches remain: terminal colon/semicolon, oversized/internal-double spaces, mixed/wrapped paragraphs, four paragraphs, overwide/decorated/separated closing runs and unsupported paragraph-spacing modes. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, selected/rejected models, input identities and the malformed-input audit are under `artifacts/plan-revision-20261005/rv06-l56/`.
+
+
+
+## RV21-V35: full integration through L54 and E4
+
+Frozen source `7bb4fc6774cf74e3ac6af5a010286f44a8a2625e` passes a clean Release build and **2,184 tests, zero failures, one skip**, including 902 DOCX checks. The skipped `PptxPrivateLayoutDiagnosticWhenRequested` requires optional private input/output settings. This run covers accepted behavior through L54 and smooth Office SVG transparency E4; it excludes L55 and later prototypes.
+
+The local 0.1.5 package smoke run `9f884216faeb4112971a409040b870ed` verifies the exact tested library bytes, SHA-256 `ECF3578B52A31C8A15B7CCC541DA3CA66E7634C4CA5D5B43B134C8347FA5D103`. The ignored evidence is under `artifacts/plan-revision-20261005/milestone-7bb4fc67/`; qualification completed 2026-10-06 at 13:32:48 UTC. The scoped Office residuals remain recorded with their individual slices. Version stays 0.1.5 and release preparation remains deferred.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
