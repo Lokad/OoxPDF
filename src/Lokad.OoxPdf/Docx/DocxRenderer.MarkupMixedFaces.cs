@@ -179,7 +179,7 @@ internal sealed partial class DocxRenderer
         string[] tailWords = tail.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tailWords.Length < 2) { return null; }
         var prefixLines = WrapUniformBalloonWords(prefix.Text, prefix.Resource.Embedded, fontSize,
-            firstLineWidth, continuationWidth, cancellationToken);
+            firstLineWidth, continuationWidth, cancellationToken, reserveFirstRowBreakSpace: false);
         if (prefixLines.Length < 2 || prefixLines[0].Text.Length == 0) { return null; }
         double available = continuationWidth - prefix.Resource.Embedded.MeasureTextPoints(prefixLines[^1].Text, fontSize);
         double firstTailWordWidth = tail.Resource.Embedded.MeasureTextPoints(tailWords[0] + " ", fontSize);

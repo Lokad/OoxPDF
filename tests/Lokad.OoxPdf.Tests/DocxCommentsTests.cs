@@ -2555,6 +2555,7 @@ internal static class DocxCommentsTests
     {
         foreach (bool supplementary in new[] { false, true })
         foreach (short prefixGap in new short[] { 0, 450 })
+        foreach (short prefixSpace in new short[] { 700, 1800 })
         foreach (double rightMargin in new[] { 72d, 144d, 207d })
         {
             string prefix = string.Join(" ", Enumerable.Repeat("Review table", 12));
@@ -2582,7 +2583,7 @@ internal static class DocxCommentsTests
                 {
                     RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
                 };
-                var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap,
+                var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: prefixGap, bodySpaceAdvance: prefixSpace,
                     bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var balloon = renderer.InspectMarkupBalloons(document).Single();
@@ -2596,6 +2597,7 @@ internal static class DocxCommentsTests
                 TestAssert.True(tailRows.Length >= 1, "The mixed row must retain its prepared tail face.");
                 TestAssert.Equal(prefix + tail + " ", string.Concat(shows.Select(show => show.Text)));
                 TestAssert.Equal("table", prefixRows[^1].Text);
+                if (prefixSpace == 1800) { TestAssert.Equal("Review table Review ", prefixRows[0].Text); }
                 double size = tailRows[0].Size;
                 double prefixPitch = 0.85d + prefixGap / 1000d;
                 double incomingPitch = 0.35d + Math.Max(0.5d + prefixGap / 1000d, 0.8d);
