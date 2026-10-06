@@ -1837,6 +1837,17 @@ Frozen source `5804e48b2365a2e7783c15b38e0cbc309ffe0832` passes a clean Release 
 The local 0.1.5 package smoke run `74424953c8d541c78ba120dbfd85f9bc` verifies the exact full-suite library bytes, SHA-256 `40B25C1F53F26CDCA96D0FEF1B4322B5B0ABA47F969E9BDD207658A8C5520CAF`. The ignored evidence is under `artifacts/plan-revision-20261005/milestone-5804e48b/`; qualification completed 2026-10-06 at 14:14:24 UTC. Scoped Office residuals remain recorded with their individual slices. Version stays 0.1.5 and release preparation remains deferred.
 
 
+## RV06-L59: one doubled internal tail separator
+
+One doubled internal ASCII separator between two tail words retains its prepared face and advance after a leading space span beside a fitting plain two-word prefix. Wrapping reserves the authored separator width and emission preserves both spaces. Triple internal separators, a single leading space, extra tail words, tabs and punctuated prefixes retain complete fallback. The production reproducer fails before the change; nineteen mixed checks cover 864 fitting/overflow/internal-separator/scalar/advance/word-shape/descent/length/scale variants, including 288 new doubled-separator variants, with formatting/numeric guards.
+
+Frozen runtime `42c5c717` passes a clean Release build, **904 DOCX checks, 100 balloon checks and twenty-five Linux regressions**. Fresh local 0.1.5 package smoke `4d833f6e615d41d2a4a05857fb27e907` contains the exact tested DLL, SHA-256 `6F8FB86EE0CDCA98726A70868CC00EEE25F70FFE2EB51BF33E10EB2F0A5CD3A5`. The Linux source archive emits two SourceLink warnings; its build has zero errors.
+
+Across 482 prior and thirty-one fresh controls, twenty-eight improve MAE and SSIM and 485 retain PDF/raster/graphics bytes. All 513 retain main-document text and comment content; 492 match Office breaks. All twenty-eight changed controls match exact row text, spaces and prepared fonts, including 23 within-word break rows, with maximum row-start X gap 0.838pt and baseline gap 0.207pt. All five fresh fallback guards retain exact PDFs. Twenty-eight metric controls cover 22 separator-only and six visible mixed first rows; the selected descent/ascent model has maximum error 0.090pt. Thirty-nine later row pitches have maximum error 0.082pt. Short-word boundaries, longer second words and scale controls retain exact Office breaks.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Twenty-one break mismatches remain: mixed/wrapped paragraphs, four paragraphs, overwide/decorated/separated closing runs, unsupported paragraph-spacing modes and punctuated-prefix/tab/triple-separator/single-leading/extra-tail guards. Prior positioning/composed pixel residuals and 33 partial cached cases remain. Qualification, metric models, exact space/font audits and input/reference identities are under `artifacts/plan-revision-20261005/rv06-l59/`. The separate full integration at this runtime remains in progress.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
