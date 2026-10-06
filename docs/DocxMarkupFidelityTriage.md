@@ -1245,6 +1245,52 @@ partial cache cases remain. Input/reference/candidate identities, selected and
 rejected models and exact emission audits are under
 `artifacts/plan-revision-20261005/rv06-l42/`.
 
+## RV21-V28: full integration through L41
+
+The isolated Release run at `d6ec0d8e` passes 2169 checks, fails none and skips
+only the unconfigured private-layout diagnostic. It includes 888 DOCX checks
+and excludes the isolated SVG transparency proposal. Release has no warnings
+or errors. Fresh 0.1.5 package smoke verifies the exact full-suite DLL:
+`A799FC52156F4D34A6031C41C5F058E669893787222225DFB18925E29861AD40`.
+Evidence is under `artifacts/plan-revision-20261005/milestone-d6ec0d8e/`.
+
+## RV06-L43: leading tail separator and mixed descent
+
+A fitting plain two-word ASCII prefix followed by one leading tail separator
+and a fitting first tail word can now wrap in the prepared source faces. The
+separator retains its tail face and consumes that face's advance before fitting
+the first word. The first continuation uses the larger descent of the two faces
+plus tail ascent/line gap; later rows use tail height. Height and emission share
+these steps. Overwide first words, doubled separators and prior admission,
+styled/unprepared and cancellation guards retain their behavior.
+
+Thirteen trusted metric controls cover ten font pairs and three print scales.
+The selected first-step model has maximum error 0.156pt/mean 0.064pt at Office
+font sizes; using tail height alone reaches 0.442pt. Using only prefix descent
+reaches 0.541pt and is rejected. The production regression fails before repair
+and passes for ASCII and supplementary scalars at three scales with distinct
+prefix-space/ascent/descent/gap metrics, exact source text, tail-space face,
+later word splits, terminal mark/size and box height. All 890 DOCX checks,
+86 balloon checks and eleven Linux regressions pass. Release is clean; fresh
+0.1.5 package smoke contains the exact tested DLL from runtime `bdd36a67`:
+`DFAFEA493173DD815093651AC34FDE8F39F788ED3058ADD31C663611F02AF91D`.
+
+Across 200 earlier and thirteen new Office comparisons, thirteen improve error
+and similarity, 200 retain PDF/raster/graphics bytes and all retain main-document
+text and comment content. All thirteen changed comparisons match exact row
+text, spaces and source faces. The comparison now retains separately emitted
+whitespace before grouping rows, avoiding a mismatch caused solely by different
+text-operator segmentation. All 213 comparisons were reconciled against the
+same candidate/reference hashes; the exact space/face audit is independent.
+Maximum row-start X gap is 0.838pt and baseline gap is 0.197pt.
+
+All 34 cached PDFs retain bytes and 551 failed gates. Four earlier break
+mismatches remain across wide prefixes, three parts and multiple paragraphs;
+two new leading-overwide-first-word guards also retain fallback. Prior
+positioning/composed pixel residuals and 33 partial cache cases remain. Evidence
+and input/reference/candidate identities are under
+`artifacts/plan-revision-20261005/rv06-l43/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
