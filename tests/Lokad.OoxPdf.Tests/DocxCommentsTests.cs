@@ -3474,7 +3474,7 @@ internal static class DocxCommentsTests
     {
         foreach (string? beforeAuto in new string?[] { null, "1", "0", "true", "false", "on", "off" })
         foreach (string? afterAuto in new string?[] { null, "1", "0", "true", "false", "on", "off" })
-        foreach (string? beforeLines in new string?[] { null, "100", "200" })
+        foreach (string? beforeLines in new string?[] { null, "100", "200", "300" })
         foreach (string? afterLines in new string?[] { null, "100", "200" })
         foreach (string value in new[] { "120", "0", "480", "4294967295" })
         foreach (int spacingKind in new[] { 0, 1, 2 })
@@ -3574,7 +3574,7 @@ internal static class DocxCommentsTests
             {
                 var invalidSpacing = new List<DocxParagraphSpacing>
                 {
-                    DocxParagraphSpacing.Empty with { BeforeLinesValue = "300" },
+                    DocxParagraphSpacing.Empty with { BeforeLinesValue = "400" },
                     DocxParagraphSpacing.Empty with { AfterLinesValue = "300" },
                     DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "invalid" },
                     DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "invalid" },
