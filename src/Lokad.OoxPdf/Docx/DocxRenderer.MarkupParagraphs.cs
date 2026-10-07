@@ -59,9 +59,9 @@ internal sealed partial class DocxRenderer
         run.FieldKind is null && (run.ColorHex is null || run.ColorHex == "000000");
 
     private static bool IsWordCompatibleBalloonParagraphSpacing(DocxParagraphSpacing spacing) =>
-        // Office normalizes explicit before/after twips and canonical afterLines=100 in comment balloons.
+        // Office normalizes explicit before/after twips and canonical before/afterLines=100 in comment balloons.
         // Keep other line tokens, automatic and contextual spacing on the existing path.
-        spacing.BeforeLinesValue is null && (spacing.AfterLinesValue is null or "100") &&
+        (spacing.BeforeLinesValue is null or "100") && (spacing.AfterLinesValue is null or "100") &&
         spacing.BeforeAutoSpacingValue is null && spacing.AfterAutoSpacingValue is null &&
         spacing.LineValue is null && spacing.LineRuleValue is null && spacing.ContextualSpacing is null &&
         IsBalloonParagraphTwipsToken(spacing.BeforeValue) && IsBalloonParagraphTwipsToken(spacing.AfterValue);

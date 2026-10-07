@@ -3472,6 +3472,7 @@ internal static class DocxCommentsTests
 
     public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
     {
+        foreach (bool beforeLines in new[] { false, true })
         foreach (bool afterLines in new[] { false, true })
         foreach (string value in new[] { "120", "0", "480", "4294967295" })
         foreach (int spacingKind in new[] { 0, 1, 2 })
@@ -3488,7 +3489,7 @@ internal static class DocxCommentsTests
                 LineSpacingPoints = null,
                 Runs = [new DocxTextRun("Review table", 12d, null, false, false, false, null, "CommentFace")],
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace"),
-                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, AfterLinesValue = afterLines ? "100" : null }
+                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeLinesValue = beforeLines ? "100" : null, AfterLinesValue = afterLines ? "100" : null }
             };
             DocxParagraph second = first with
             {
@@ -3571,7 +3572,7 @@ internal static class DocxCommentsTests
             {
                 var invalidSpacing = new List<DocxParagraphSpacing>
                 {
-                    DocxParagraphSpacing.Empty with { BeforeLinesValue = "100" },
+                    DocxParagraphSpacing.Empty with { BeforeLinesValue = "200" },
                     DocxParagraphSpacing.Empty with { AfterLinesValue = "200" },
                     DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "1" },
                     DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "0" },
