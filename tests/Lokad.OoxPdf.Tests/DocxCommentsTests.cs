@@ -3473,7 +3473,7 @@ internal static class DocxCommentsTests
     public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
     {
         foreach (string? beforeAuto in new string?[] { null, "1", "0", "true", "false", "on" })
-        foreach (string? afterAuto in new string?[] { null, "1", "0", "true", "false" })
+        foreach (string? afterAuto in new string?[] { null, "1", "0", "true", "false", "on" })
         foreach (string? beforeLines in new string?[] { null, "100", "200" })
         foreach (string? afterLines in new string?[] { null, "100", "200" })
         foreach (string value in new[] { "120", "0", "480", "4294967295" })
