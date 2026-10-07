@@ -3472,6 +3472,7 @@ internal static class DocxCommentsTests
 
     public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
     {
+        foreach (bool afterAuto in new[] { false, true })
         foreach (bool beforeLines in new[] { false, true })
         foreach (bool afterLines in new[] { false, true })
         foreach (string value in new[] { "120", "0", "480", "4294967295" })
@@ -3489,7 +3490,7 @@ internal static class DocxCommentsTests
                 LineSpacingPoints = null,
                 Runs = [new DocxTextRun("Review table", 12d, null, false, false, false, null, "CommentFace")],
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace"),
-                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeLinesValue = beforeLines ? "100" : null, AfterLinesValue = afterLines ? "100" : null }
+                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, AfterAutoSpacingValue = afterAuto ? "1" : null, BeforeLinesValue = beforeLines ? "100" : null, AfterLinesValue = afterLines ? "100" : null }
             };
             DocxParagraph second = first with
             {
@@ -3594,7 +3595,7 @@ internal static class DocxCommentsTests
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
                         guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "Line, automatic, contextual, malformed, signed and oversized-integer spacing retain finite complete fallback.");
+                        "Line, unqualified automatic, contextual, malformed, signed and oversized-integer spacing retain finite complete fallback.");
                 }
             }
         }
