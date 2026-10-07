@@ -979,6 +979,10 @@ internal sealed partial class DocxRenderer
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + mixedFourthRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
+                if (ResolveWordCompatibleWrappedMixedFourthRows(candidate.WordCompatibleFittingMixedFourth, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedFourthRows)
+                {
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + wrappedMixedFourthRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                }
                 if (ResolveWordCompatibleFiveParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } fiveParagraphRows)
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + fiveParagraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
@@ -1451,6 +1455,12 @@ internal sealed partial class DocxRenderer
         if (ResolveWordCompatibleFittingMixedFourthRows(placement.WordCompatibleFittingMixedFourth, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedFourthRows)
         {
             RenderWordCompatibleFittingMixedFourthRows(mixedFourthRows, placement, graphics, bodyFirstLineX, textX,
+                firstBaselineY, fontSize, cancellationToken);
+            return;
+        }
+        if (ResolveWordCompatibleWrappedMixedFourthRows(placement.WordCompatibleFittingMixedFourth, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedFourthRows)
+        {
+            RenderWordCompatibleWrappedMixedFourthRows(wrappedMixedFourthRows, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }
