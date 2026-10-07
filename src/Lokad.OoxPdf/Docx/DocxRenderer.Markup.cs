@@ -972,6 +972,10 @@ internal sealed partial class DocxRenderer
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
+                if (ResolveWordCompatibleFiveParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } fiveParagraphRows)
+                {
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + fiveParagraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                }
                 if (ResolveWordCompatibleParagraphGap(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is double paragraphGap)
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGap + WordCompatibleAllMarkupBalloonBottomInsetPoints;
@@ -1436,6 +1440,12 @@ internal sealed partial class DocxRenderer
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
         ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, wordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth + WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
+        if (ResolveWordCompatibleFiveParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } fiveParagraphRows)
+        {
+            RenderWordCompatibleFiveParagraphRows(fiveParagraphRows, placement, graphics, bodyFirstLineX, textX,
+                firstBaselineY, fontSize, cancellationToken);
+            return;
+        }
         if (ResolveWordCompatibleParagraphGap(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is double paragraphGap)
         {
             RenderWordCompatibleParagraphs(placement.WordCompatibleParagraphs!, placement, graphics, bodyFirstLineX, textX,

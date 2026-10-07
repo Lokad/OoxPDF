@@ -1,4 +1,4 @@
-using System.Globalization;
+using static Lokad.OoxPdf.Docx.DocxBalloonParagraphPolicy;
 using System.Text;
 using Lokad.OoxPdf.Pdf;
 
@@ -14,7 +14,7 @@ internal sealed partial class DocxRenderer
     {
         // Preserve each plain paragraph's prepared body and mark faces. The
         // measured rendering paths separately admit fitting and wrapped bodies.
-        if (fonts is null || storyLayout is null || storyLayout.Story.BodyElements.Count is not (2 or 3 or 4) ||
+        if (fonts is null || storyLayout is null || storyLayout.Story.BodyElements.Count is not (2 or 3 or 4 or 5) ||
             storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0) { return null; }
         var paragraphs = new List<DocxMarkupBalloonParagraph>(storyLayout.Story.BodyElements.Count);
         foreach (DocxBodyElement item in storyLayout.Story.BodyElements)
@@ -22,11 +22,7 @@ internal sealed partial class DocxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             if (item is not DocxParagraphElement element) { return null; }
             DocxParagraph paragraph = element.Paragraph;
-            if (paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
-                paragraph.FieldReferences.Count != 0 || paragraph.Revisions.Count != 0 ||
-                paragraph.ListLabel is not null || paragraph.Alignment != DocxTextAlignment.Left ||
-                paragraph.Indent != DocxParagraphIndent.Empty || paragraph.TabStops.Count != 0 ||
-                !IsWordCompatibleBalloonParagraphSpacing(paragraph.Spacing) || paragraph.LineSpacingPoints is not null ||
+            if (!HasPlainBalloonParagraphShape(paragraph) ||
                 paragraph.ParagraphMarkRun is not { } mark || !IsPlainBalloonParagraphRun(mark) ||
                 !fonts.RunResources.TryGetValue(mark, out DocxRunFontResource? markResource) ||
                 markResource.Resolution.Bold || markResource.Resolution.Italic || markResource.Resolution.IsFallback ||
@@ -52,23 +48,6 @@ internal sealed partial class DocxRenderer
         return string.Join(" ", paragraphs.Select(paragraph => paragraph.Body.Text)) == preview ? paragraphs : null;
     }
 
-    private static bool IsPlainBalloonParagraphRun(DocxTextRun run) =>
-        !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
-        !run.AllCaps && !run.SmallCaps && !run.Hidden && run.VerticalAlignmentValue is null &&
-        run.HighlightValue is null && run.ShadingFillHex is null && run.CharacterSpacingPoints == 0d &&
-        run.FieldKind is null && (run.ColorHex is null || run.ColorHex == "000000");
-
-    private static bool IsWordCompatibleBalloonParagraphSpacing(DocxParagraphSpacing spacing) =>
-        // Office normalizes explicit twips, beforeLines=100/200/300, afterLines=100/200/300, beforeAutospacing=0/1/true/false/on/off and afterAutospacing=0/1/true/false/on/off.
-        // Keep unqualified line/automatic tokens and contextual spacing on the existing path.
-        (spacing.BeforeLinesValue is null or "100" or "200" or "300") && (spacing.AfterLinesValue is null or "100" or "200" or "300") &&
-        (spacing.BeforeAutoSpacingValue is null or "0" or "1" or "true" or "false" or "on" or "off") && (spacing.AfterAutoSpacingValue is null or "0" or "1" or "true" or "false" or "on" or "off") &&
-        spacing.LineValue is null && spacing.LineRuleValue is null && spacing.ContextualSpacing is null &&
-        IsBalloonParagraphTwipsToken(spacing.BeforeValue) && IsBalloonParagraphTwipsToken(spacing.AfterValue);
-
-    private static bool IsBalloonParagraphTwipsToken(string? value) =>
-        value is null || uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out _);
-
     private static bool HasEncodedBalloonParagraphText(DocxRunFontResource resource, string text, CancellationToken cancellationToken)
     {
         int index = 0;
@@ -81,6 +60,72 @@ internal sealed partial class DocxRenderer
         }
         return true;
     }
+
+    private sealed record DocxMarkupFiveParagraphRows(
+        DocxMarkupBalloonParagraph[] Paragraphs, DocxUniformBalloonRow[][] BodyRows,
+        double[] Pitches, double[] Transitions)
+    {
+        public double ContinuationsHeight => Enumerable.Range(0, Paragraphs.Length)
+            .Sum(index => (BodyRows[index].Length - 1) * Pitches[index]) + Transitions.Sum();
+    }
+
+    private static DocxMarkupFiveParagraphRows? ResolveWordCompatibleFiveParagraphRows(
+        IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,
+        double firstWidth, double continuationWidth, CancellationToken cancellationToken)
+    {
+        if (paragraphs is not { Count: 5 } || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+            !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
+        var bodies = new DocxUniformBalloonRow[5][];
+        var pitches = new double[5];
+        var transitions = new double[4];
+        for (int index = 0; index < paragraphs.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxMarkupBalloonParagraph paragraph = paragraphs[index];
+            var font = paragraph.Body.Resource.Embedded.Font;
+            double width = paragraph.Body.Resource.Embedded.MeasureTextPoints(paragraph.Body.Text, fontSize);
+            if (font.UnitsPerEm <= 0 || !double.IsFinite(width) || width <= 0d) { return null; }
+            int scalarIndex = 0;
+            foreach (Rune rune in paragraph.Body.Text.EnumerateRunes())
+            {
+                if ((scalarIndex++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
+                double scalarWidth = font.GetAdvanceWidth(font.MapCodePoint(rune.Value)) * fontSize / font.UnitsPerEm;
+                if (!double.IsFinite(scalarWidth) || scalarWidth > continuationWidth) { return null; }
+            }
+            double pitch = DocxLineMetrics.MeasureHheaLineHeight(font, fontSize);
+            if (!double.IsFinite(pitch) || pitch <= 0d) { return null; }
+            pitches[index] = pitch;
+            bodies[index] = WrapUniformBalloonWords(paragraph.Body.Text, paragraph.Body.Resource.Embedded, fontSize,
+                index == 0 ? firstWidth : continuationWidth, continuationWidth, cancellationToken,
+                reserveFirstRowBreakSpace: false);
+            if (bodies[index].Length == 0 || bodies[index][0].Text.Length == 0) { return null; }
+            if (index > 0)
+            {
+                double? transition = MeasureWordCompatibleParagraphTransition(paragraphs[index - 1], paragraph, fontSize);
+                if (transition is null) { return null; }
+                transitions[index - 1] = transition.Value;
+            }
+        }
+        var result = new DocxMarkupFiveParagraphRows(paragraphs.ToArray(), bodies, pitches, transitions);
+        return double.IsFinite(result.ContinuationsHeight) ? result : null;
+    }
+
+    private static void RenderWordCompatibleFiveParagraphRows(
+        DocxMarkupFiveParagraphRows rows, DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics,
+        double firstX, double continuationX, double firstY, double fontSize, CancellationToken cancellationToken)
+    {
+        double y = firstY;
+        for (int index = 0; index < rows.Paragraphs.Length; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxMarkupBalloonParagraph paragraph = rows.Paragraphs[index];
+            RenderUniformBalloonRows(rows.BodyRows[index], placement, graphics, paragraph.Body.Resource, paragraph.Mark,
+                index == 0 ? firstX : continuationX, continuationX, y, rows.Pitches[index], fontSize, cancellationToken);
+            y -= (rows.BodyRows[index].Length - 1) * rows.Pitches[index];
+            if (index < rows.Transitions.Length) { y -= rows.Transitions[index]; }
+        }
+    }
+
 
     private static double? ResolveWordCompatibleParagraphGap(
         IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs, double fontSize,

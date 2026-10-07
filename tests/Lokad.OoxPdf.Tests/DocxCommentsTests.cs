@@ -2934,6 +2934,154 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleMixedBalloonWrapsFiveParagraphsIndependently()
+    {
+        foreach (int wrappedMask in Enumerable.Range(0, 32))
+        foreach (bool supplementary in new[] { false, true })
+        foreach (short bodyGap in new short[] { 0, 450 })
+        foreach (double rightMargin in new[] { 72d, 207d })
+        {
+            string[] families = ["CommentFace", "OtherCommentFace", "AnchorFace", "CommentFace", "OtherCommentFace"];
+            string[] markFamilies = ["AnchorFace", "CommentFace", "OtherCommentFace", "AnchorFace", "CommentFace"];
+            var paragraphs = new DocxParagraph[5];
+            for (int index = 0; index < paragraphs.Length; index++)
+            {
+                string word = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", 40)) : new string('f', 80);
+                string text = (wrappedMask & (1 << index)) != 0 ? word + " ending." : "end.";
+                paragraphs[index] = DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
+                {
+                    LineSpacingPoints = null,
+                    Runs = [new DocxTextRun(text, 12d, null, false, false, false, null, families[index])],
+                    ParagraphMarkRun = new DocxTextRun(" ", 18d + index * 6d, null, false, false, false, null, markFamilies[index])
+                };
+            }
+            DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            DocxRelatedStory story = new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(), [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            DocxDocument document = new(612d, 792d, 72d, rightMargin, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: bodyGap, bodySpaceAdvance: 123,
+                bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.Text.Length != 0 && show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(string.Concat(paragraphs.Select(paragraph => paragraph.Runs[0].Text + " ")),
+                string.Concat(shows.Select(show => show.Text)));
+            int offset = 0;
+            double expectedHeight = 12.61d;
+            double previousY = 0d, previousDescentEm = 0d;
+            for (int paragraphIndex = 0; paragraphIndex < 5; paragraphIndex++)
+            {
+                int start = offset;
+                string joined = string.Empty;
+                string expectedText = paragraphs[paragraphIndex].Runs[0].Text + " ";
+                while (offset < shows.Length && joined != expectedText) { joined += shows[offset++].Text; }
+                TestAssert.Equal(expectedText, joined);
+                var paragraphShows = shows.Skip(start).Take(offset - start).ToArray();
+                var mark = paragraphShows[^1];
+                var bodyRows = paragraphShows.Take(paragraphShows.Length - 1)
+                    .GroupBy(show => show.Y).Select(group => new
+                    {
+                        Text = string.Concat(group.Select(show => show.Text)),
+                        group.First().X, group.First().Y, group.First().Size, group.First().Font
+                    }).ToArray();
+                TestAssert.True(bodyRows.Length >= ((wrappedMask & (1 << paragraphIndex)) != 0 ? 2 : 1),
+                    "Each five-paragraph body fits or wraps independently.");
+                var firstRow = bodyRows[0];
+                var lastRow = bodyRows[^1];
+                int expectedAdvance = families[paragraphIndex] == "CommentFace" ? 700 : families[paragraphIndex] == "OtherCommentFace" ? 900 : 500;
+                TestAssert.Equal(expectedAdvance, (int)firstRow.Font.Font.GetAdvanceWidth(firstRow.Font.Font.MapCodePoint('R')));
+                double size = firstRow.Size;
+                var font = firstRow.Font.Font;
+                double pitch = (-font.Hhea.HorizontalDescender + font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) * size / font.UnitsPerEm;
+                for (int row = 1; row < bodyRows.Length; row++)
+                {
+                    TestAssert.True(Math.Abs(bodyRows[row - 1].Y - bodyRows[row].Y - pitch) < 0.02d,
+                        "Every continuation uses its own prepared body's pitch.");
+                }
+                if (paragraphIndex > 0)
+                {
+                    double transition = (previousDescentEm +
+                        (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm) * size;
+                    TestAssert.True(Math.Abs(previousY - firstRow.Y - transition) < 0.02d,
+                        "All four adjacent transitions use previous descent and next ascent/gap.");
+                    expectedHeight += transition;
+                }
+                expectedHeight += (bodyRows.Length - 1) * pitch;
+                previousY = lastRow.Y;
+                previousDescentEm = -font.Hhea.HorizontalDescender / (double)font.UnitsPerEm;
+                int expectedMarkAdvance = markFamilies[paragraphIndex] == "CommentFace" ? 123 : markFamilies[paragraphIndex] == "OtherCommentFace" ? 900 : 500;
+                TestAssert.Equal(" ", mark.Text);
+                TestAssert.Equal(expectedMarkAdvance, (int)mark.Font.Font.GetAdvanceWidth(mark.Font.Font.MapCodePoint(' ')));
+                TestAssert.True(Math.Abs(mark.Size - size) < 0.001d && Math.Abs(mark.Y - lastRow.Y) < 0.001d &&
+                    Math.Abs(mark.X - lastRow.X - lastRow.Font.MeasureTextPoints(lastRow.Text, size)) < 0.04d,
+                    "Each nominal mark follows its own final body row and prepared advance.");
+                foreach (var row in bodyRows)
+                {
+                    TestAssert.True(!row.Text.Contains('\uFFFD') &&
+                        row.X + row.Font.MeasureTextPoints(row.Text.TrimEnd(), size) <= balloon.X + balloon.Width + 0.02d,
+                        "Unicode progress and visible widths remain bounded in every paragraph.");
+                }
+            }
+            TestAssert.Equal(shows.Length, offset);
+
+            TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
+                "Inspection and emission share every continuation and all four paragraph transitions.");
+            if (wrappedMask == 0 && !supplementary && bodyGap == 0 && rightMargin == 72d)
+            {
+                foreach (var resolver in new[]
+                {
+                    new BalloonTypefaceFontResolver(bodyAdvance: 0, bodySpaceAdvance: 0),
+                    new BalloonTypefaceFontResolver(bodyFirstAdvance: 32700),
+                    new BalloonTypefaceFontResolver(bodyAscender: -32700),
+                    new BalloonTypefaceFontResolver(tailDescender: 32700)
+                })
+                {
+                    var guardedParagraphs = paragraphs.ToArray();
+                    guardedParagraphs[0] = guardedParagraphs[0] with { Runs = [guardedParagraphs[0].Runs[0] with { Text = "aaa" }] };
+                    DocxDocument guarded = document with
+                    {
+                        RelatedStories = [story with { BodyElements = guardedParagraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray() }]
+                    };
+                    var invalidRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
+                        OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                    var guardedBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
+                    var guardedRows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                    TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedRows.Length > 0 &&
+                        guardedRows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                        "Zero-width and overwide bodies and nonpositive five-paragraph pitches retain finite complete fallback.");
+                }
+
+                foreach (DocxBodyElement[] guardedElements in new[]
+                {
+                    paragraphs.Append(paragraphs[4]).Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray(),
+                    paragraphs.Select((paragraph, index) => (DocxBodyElement)new DocxParagraphElement(index == 4 ? paragraph with { Runs = [paragraph.Runs[0] with { Bold = true }] } : paragraph)).ToArray(),
+                    paragraphs.Select((paragraph, index) => (DocxBodyElement)new DocxParagraphElement(index == 4 ? paragraph with { Spacing = paragraph.Spacing with { AfterLinesValue = "400" } } : paragraph)).ToArray()
+                })
+                {
+                    DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = guardedElements }] };
+                    var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
+                    var guardedRows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                    TestAssert.True(guardedRows.Length > 0 && guardedRows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                        "Six paragraphs, decorated fifth bodies and unsupported spacing retain complete fallback.");
+                }
+            }
+        }
+    }
+
+
     public static void DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently()
     {
         foreach (bool hasFourth in new[] { false, true })
@@ -3208,7 +3356,7 @@ internal static class DocxCommentsTests
             foreach (DocxBodyElement[] guardedElements in new[]
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Bold = true }] }) },
-                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(third), new DocxParagraphElement(third), new DocxParagraphElement(third)],
+                [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(third), new DocxParagraphElement(third), new DocxParagraphElement(third), new DocxParagraphElement(third)],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterLinesValue = "400" } })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Bold = true }] })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
@@ -3221,7 +3369,7 @@ internal static class DocxCommentsTests
                 var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "Five paragraphs, spacing, mixed or decorated bodies, repeated spaces and tabs retain complete fallback.");
+                    "Six paragraphs, spacing, mixed or decorated bodies, repeated spaces and tabs retain complete fallback.");
             }
             if (!supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
             {
@@ -3408,7 +3556,7 @@ internal static class DocxCommentsTests
             {
                 foreach (DocxBodyElement[] guardedElements in new[]
                 {
-                    new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth), new DocxParagraphElement(last) },
+                    new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth), new DocxParagraphElement(last), new DocxParagraphElement(last) },
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
@@ -3423,7 +3571,7 @@ internal static class DocxCommentsTests
                     var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                        "Five paragraphs, explicit line spacing, mixed/decorated faces and repeated spaces retain complete fallback.");
+                        "Six paragraphs, explicit line spacing, mixed/decorated faces and repeated spaces retain complete fallback.");
                 }
                 if (wrappedFourth)
                 {
@@ -3602,15 +3750,26 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxReaderRetainsOneToFourCommentBalloonParagraphMarks()
+    public static void DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks()
     {
-        foreach (int count in new[] { 1, 2, 3, 4, 5 })
+        foreach (int count in new[] { 1, 2, 3, 4, 5, 6 })
         foreach (OoxPdfDocxMarkupMode mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string guard in new[] { "plain", "mixed", "decorated", "before400", "after400", "autoYes" })
         {
+            if (count != 5 && guard != "plain") { continue; }
             string paragraphs = string.Concat(Enumerable.Range(0, count).Select(index => $$"""
                 <w:p><w:pPr><w:rPr><w:rFonts w:ascii="Mark{{index}}" w:hAnsi="Mark{{index}}"/><w:sz w:val="36"/></w:rPr></w:pPr>
                 <w:r><w:rPr><w:rFonts w:ascii="CommentFace" w:hAnsi="CommentFace"/></w:rPr><w:t>Review</w:t></w:r></w:p>
                 """));
+            paragraphs = guard switch
+            {
+                "mixed" => paragraphs.Replace("</w:p>", "<w:r><w:rPr><w:rFonts w:ascii=\"OtherFace\" w:hAnsi=\"OtherFace\"/></w:rPr><w:t> suffix</w:t></w:r></w:p>"),
+                "decorated" => paragraphs.Replace("<w:r><w:rPr>", "<w:r><w:rPr><w:b/>"),
+                "before400" => paragraphs.Replace("<w:pPr>", "<w:pPr><w:spacing w:beforeLines=\"400\"/>"),
+                "after400" => paragraphs.Replace("<w:pPr>", "<w:pPr><w:spacing w:afterLines=\"400\"/>"),
+                "autoYes" => paragraphs.Replace("<w:pPr>", "<w:pPr><w:spacing w:afterAutospacing=\"yes\"/>"),
+                _ => paragraphs
+            };
             using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
             {
                 ["[Content_Types].xml"] = """
@@ -3646,9 +3805,9 @@ internal static class DocxCommentsTests
             for (int index = 0; index < count; index++)
             {
                 DocxTextRun? mark = readParagraphs[index].ParagraphMarkRun;
-                if (mode == OoxPdfDocxMarkupMode.AllMarkup && count <= 4)
+                if (mode == OoxPdfDocxMarkupMode.AllMarkup && count <= 5 && guard == "plain")
                 {
-                    TestAssert.True(mark is not null, "One to four plain comment paragraphs retain their mark runs.");
+                    TestAssert.True(mark is not null, "One to five plain comment paragraphs retain their mark runs.");
                     TestAssert.Equal(" ", mark!.Text);
                     TestAssert.Equal("Mark" + index.ToString(CultureInfo.InvariantCulture), mark.FontFamily);
                     TestAssert.Equal(18d, mark.FontSize);
@@ -3724,7 +3883,7 @@ internal static class DocxCommentsTests
             TestAssert.True(Math.Abs(balloon.Height - (12.61d + pitch * size)) < 0.02d, "Geometry and emission share the paragraph step.");
             foreach (DocxBodyElement[] guardedElements in new[]
             {
-                new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second) },
+                new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second) },
                 [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "400" } }), new DocxParagraphElement(second)],
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Bold = true }] }), new DocxParagraphElement(second)]
             })
@@ -3734,7 +3893,7 @@ internal static class DocxCommentsTests
                 var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
-                    "Five paragraphs, unsupported spacing and decorated runs retain complete fallback.");
+                    "Six paragraphs, unsupported spacing and decorated runs retain complete fallback.");
             }
         }
     }
