@@ -3472,7 +3472,7 @@ internal static class DocxCommentsTests
 
     public static void DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing()
     {
-        foreach (bool beforeAuto in new[] { false, true })
+        foreach (string? beforeAuto in new string?[] { null, "1", "0" })
         foreach (string? afterAuto in new string?[] { null, "1", "0" })
         foreach (bool beforeLines in new[] { false, true })
         foreach (bool afterLines in new[] { false, true })
@@ -3491,7 +3491,7 @@ internal static class DocxCommentsTests
                 LineSpacingPoints = null,
                 Runs = [new DocxTextRun("Review table", 12d, null, false, false, false, null, "CommentFace")],
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace"),
-                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeAutoSpacingValue = beforeAuto ? "1" : null, AfterAutoSpacingValue = afterAuto, BeforeLinesValue = beforeLines ? "100" : null, AfterLinesValue = afterLines ? "100" : null }
+                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeAutoSpacingValue = beforeAuto, AfterAutoSpacingValue = afterAuto, BeforeLinesValue = beforeLines ? "100" : null, AfterLinesValue = afterLines ? "100" : null }
             };
             DocxParagraph second = first with
             {
@@ -3576,7 +3576,7 @@ internal static class DocxCommentsTests
                 {
                     DocxParagraphSpacing.Empty with { BeforeLinesValue = "200" },
                     DocxParagraphSpacing.Empty with { AfterLinesValue = "200" },
-                    DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "0" },
+                    DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "invalid" },
                     DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "invalid" },
                     DocxParagraphSpacing.Empty with { LineValue = "480" },
                     DocxParagraphSpacing.Empty with { LineRuleValue = "exact" },
