@@ -3209,7 +3209,7 @@ internal static class DocxCommentsTests
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(third with { Runs = [third.Runs[0] with { Bold = true }] }) },
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(second), new DocxParagraphElement(third), new DocxParagraphElement(third), new DocxParagraphElement(third)],
-                [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterLinesValue = "200" } })],
+                [new DocxParagraphElement(first), new DocxParagraphElement(second with { Spacing = second.Spacing with { AfterLinesValue = "300" } })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Bold = true }] })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
                 [new DocxParagraphElement(first), new DocxParagraphElement(second with { Runs = [second.Runs[0] with { Text = word + "  ending." }] })],
@@ -3412,7 +3412,7 @@ internal static class DocxCommentsTests
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Bold = true }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last), new DocxParagraphElement(fourth with { ParagraphMarkRun = fourth.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = new string('a', 200) }] }), new DocxParagraphElement(last with { Runs = [last.Runs[0] with { Text = new string('a', 200), Bold = true }] })],
-                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "200" } }), new DocxParagraphElement(last)],
+                    [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Spacing = middle.Spacing with { AfterLinesValue = "300" } }), new DocxParagraphElement(last)],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { Runs = [last.Runs[0], first.Runs[0] with { Text = " suffix." }] })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle), new DocxParagraphElement(last with { ParagraphMarkRun = last.ParagraphMarkRun! with { Bold = true } })],
                     [new DocxParagraphElement(first), new DocxParagraphElement(middle with { Runs = [middle.Runs[0] with { Text = "two  words" }] }), new DocxParagraphElement(last)]
@@ -3475,7 +3475,7 @@ internal static class DocxCommentsTests
         foreach (string? beforeAuto in new string?[] { null, "1", "0", "true", "false" })
         foreach (string? afterAuto in new string?[] { null, "1", "0", "true", "false" })
         foreach (string? beforeLines in new string?[] { null, "100", "200" })
-        foreach (bool afterLines in new[] { false, true })
+        foreach (string? afterLines in new string?[] { null, "100", "200" })
         foreach (string value in new[] { "120", "0", "480", "4294967295" })
         foreach (int spacingKind in new[] { 0, 1, 2 })
         foreach (int bodyKind in new[] { 0, 1, 2 })
@@ -3491,7 +3491,7 @@ internal static class DocxCommentsTests
                 LineSpacingPoints = null,
                 Runs = [new DocxTextRun("Review table", 12d, null, false, false, false, null, "CommentFace")],
                 ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace"),
-                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeAutoSpacingValue = beforeAuto, AfterAutoSpacingValue = afterAuto, BeforeLinesValue = beforeLines, AfterLinesValue = afterLines ? "100" : null }
+                Spacing = DocxParagraphSpacing.Empty with { AfterValue = spacingKind != 1 ? value : null, BeforeAutoSpacingValue = beforeAuto, AfterAutoSpacingValue = afterAuto, BeforeLinesValue = beforeLines, AfterLinesValue = afterLines }
             };
             DocxParagraph second = first with
             {
@@ -3575,7 +3575,7 @@ internal static class DocxCommentsTests
                 var invalidSpacing = new List<DocxParagraphSpacing>
                 {
                     DocxParagraphSpacing.Empty with { BeforeLinesValue = "300" },
-                    DocxParagraphSpacing.Empty with { AfterLinesValue = "200" },
+                    DocxParagraphSpacing.Empty with { AfterLinesValue = "300" },
                     DocxParagraphSpacing.Empty with { BeforeAutoSpacingValue = "invalid" },
                     DocxParagraphSpacing.Empty with { AfterAutoSpacingValue = "invalid" },
                     DocxParagraphSpacing.Empty with { LineValue = "480" },
@@ -3725,7 +3725,7 @@ internal static class DocxCommentsTests
             foreach (DocxBodyElement[] guardedElements in new[]
             {
                 new DocxBodyElement[] { new DocxParagraphElement(first), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second), new DocxParagraphElement(second) },
-                [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "200" } }), new DocxParagraphElement(second)],
+                [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "300" } }), new DocxParagraphElement(second)],
                 [new DocxParagraphElement(first with { Runs = [first.Runs[0] with { Bold = true }] }), new DocxParagraphElement(second)]
             })
             {
