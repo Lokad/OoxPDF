@@ -173,3 +173,23 @@ include startup and earlier work. Neither these numbers nor image/page-content
 reservations establish arbitrary-document OOM immunity. Broader resource mixes,
 resolver eviction, charts/shading retention and other host/GC settings remain
 separate workloads.
+
+
+## PNG-S1 scanline decoding, 2026-10-08
+
+Frozen runtime `aabe6d3274142067cf52df6ee7c922fda5a4b5a3` streams inflated ordinary/Adam7 rows into final RGB/alpha planes, retaining exact compressed IDAT staging and two maximum-width row buffers. The reservation includes those buffers and final planes before allocation and remains owned through downstream transforms. The default 512 MiB cap and per-image pixel caps remain; configured-limit admission changes with the revised estimate. This is an estimated reservation, not a process-memory ceiling.
+
+Twenty moderate flat/noisy inputs (256/512/1024 square, 128 by 4096 and 4096 by 128, ordinary/Adam7) retain identical RGB/alpha hashes and release their reservations. Each input receives one warm-up and three isolated-scope samples. Current-thread allocated volume excludes input fixture creation; final-plane lengths and forced-GC retained deltas are recorded separately. No process peak is measured. At 1024 square the final planes occupy 4,194,304 bytes:
+
+| Format / pattern | Previous allocated bytes | Streaming allocated bytes | Previous reservation | Streaming reservation |
+|---|---:|---:|---:|---:|
+| Ordinary / flat-opaque | 8533816 | 4248360 | 8389632 | 4247487 |
+| Ordinary / noise | 12905272 | 8627976 | 8389632 | 8627104 |
+| Adam7 / flat-opaque | 8550912 | 4250968 | 8390528 | 4250089 |
+| Adam7 / noise | 12921688 | 8628936 | 8390528 | 8627999 |
+
+All twenty allocate less; flat-image reservations fall while noisy-image reservations can rise because compressed IDAT was previously omitted. A production allocation bound fails against full-image inflate storage and passes with row-width scratch. Thirty-four Windows and thirty-four Linux imaging checks pass, including 88 format/filter/pass-boundary inputs, split IDAT, truncation exceptions, failure cleanup and deterministic cancellation. A 36-byte fixture cap converts and 35 bytes rejects before publishing on both platforms; resource-summary peaks remain deterministic. Affected checks also pass: 201 OOXML, 36 DOCX-image, and all 21 non-SVG PPTX raster-image tests. SVG vectors do not invoke PNG decoding; their partial group log is archived and full integration retains vector coverage. Twelve public image PDFs and all 34 cached markup PDFs retain bytes; the cache keeps 545 failed gates.
+
+The first freeze passes 34 Windows imaging checks but 33/34 on Linux because native zlib encodes the tiny budget fixture differently (IDAT 15 versus 13 bytes). Its checkout and failed evidence are archived. The correction changes only tests and their fixture: a valid stored-deflate PNG has IDAT 18 bytes and pins the portable 36/35-byte boundary. Decoder source remains identical to `a1913986`.
+
+Exact local 0.1.5 package smoke contains tested Windows DLL SHA-256 `0386257E5E5AF9A6A7D2BED05EFE43F3270224E57AB61772ED27F1FEB456877B`. Evidence is under `artifacts/plan-revision-20261005/png-s1/`. Compressed IDAT staging remains; downstream compression/retention and full-suite integration are separate. Release preparation remains deferred.
