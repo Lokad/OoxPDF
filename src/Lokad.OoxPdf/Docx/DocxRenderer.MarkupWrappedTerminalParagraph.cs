@@ -54,10 +54,8 @@ internal sealed partial class DocxRenderer
         double lastWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
             closing.Resource.Embedded.MeasureTextPoints(closing.Text, size);
         if (!double.IsFinite(lastWidth)) { return null; }
-        // Preserved closing-only reflow is qualified for three paragraphs.
-        if (lastWidth > continuationWidth && leadingCount == 1 && closing.Text.StartsWith(' ')) { return null; }
         bool closingOwnRow = false;
-        if (lastWidth > continuationWidth && leadingCount == 2 && closing.Text.StartsWith(' '))
+        if (lastWidth > continuationWidth && leadingCount is (1 or 2) && closing.Text.StartsWith(' '))
         {
             // Office keeps the breakable separator in its closing face on the
             // preceding row, then moves the complete closing word to its own row.

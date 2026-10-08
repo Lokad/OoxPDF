@@ -3491,6 +3491,81 @@ internal static class DocxCommentsTests
             "Height includes the independent closing-only transition.");
     }
 
+    public static void DocxWordCompatibleMixedBalloonMovesPreservedSecondClosingRunToOwnRow()
+    {
+        foreach (bool wrappedLeading in new[] { false, true })
+        foreach (bool supplementary in new[] { false, true })
+        foreach (short gap in new short[] { 0, 450 })
+        foreach (bool canonicalSpacing in new[] { false, true })
+        {
+            string leadingText = wrappedLeading ? new string('m', 72) + " ending." : "end.";
+            var first = DocxTests.CreateDocxLayoutParagraph(leadingText, 12d, 14d) with
+            {
+                LineSpacingPoints = null,
+                Runs = [new DocxTextRun(leadingText, 12d, null, false, false, false, null, "CommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+            };
+            string prefix = new string('a', 80) + (supplementary ? "\U0001F600" : "") + " finish.";
+            string closing = " " + new string('m', 15) + ".";
+            var terminal = first with
+            {
+                Runs = [first.Runs[0] with { Text = prefix }, first.Runs[0] with { Text = closing, FontFamily = "OtherCommentFace" }],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 30d }
+            };
+            if (canonicalSpacing)
+            {
+                first = first with { Spacing = first.Spacing with
+                {
+                    BeforeLinesValue = "300", AfterLinesValue = "300", BeforeAutoSpacingValue = "off", AfterAutoSpacingValue = "on",
+                    BeforeValue = "120", AfterValue = "240"
+                } };
+                terminal = terminal with { Spacing = first.Spacing };
+            }
+            var anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(first), new DocxParagraphElement(terminal)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(leadingText + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
+            var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
+            var last = rows[^1].ToArray();
+            var preceding = rows[^2].ToArray();
+            TestAssert.Equal(closing.TrimStart(' '), last[0].Text);
+            TestAssert.Equal(" ", last[1].Text);
+            TestAssert.Equal(2, last.Length);
+            TestAssert.True(preceding[0].Text.EndsWith(" finish.", StringComparison.Ordinal),
+                "A preserved closing separator keeps the preceding whole word on its original row.");
+            TestAssert.Equal(" ", preceding[^1].Text);
+            TestAssert.Equal(last[0].Font, preceding[^1].Font);
+            double size = last[0].Size;
+            var previousFont = preceding[0].Font.Font;
+            var closingFont = last[0].Font.Font;
+            double transition = (-previousFont.Hhea.HorizontalDescender / (double)previousFont.UnitsPerEm +
+                (closingFont.Hhea.HorizontalAscender + closingFont.Hhea.HorizontalLineGap) / (double)closingFont.UnitsPerEm) * size;
+            TestAssert.True(Math.Abs(preceding[0].Y - last[0].Y - transition) < 0.02d,
+                "A closing-only row uses its own ascent/gap and the preceding first-body descent.");
+            TestAssert.True(Math.Abs(last[0].X - preceding[0].X) < 0.001d &&
+                Math.Abs(last[1].X - last[0].X - last[0].Font.MeasureTextPoints(last[0].Text, size)) < 0.04d,
+                "The closing-only row resets to the continuation inset and retains its nominal mark advance.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - last[0].Y)) < 0.03d,
+                "Height includes the independent closing-only transition.");
+        }
+    }
+
     public static void DocxWordCompatibleMixedBalloonWrapsSecondBodyBeforeFittingClosingRun()
     {
         foreach (int prefixLength in new[] { 80, 88, 96 })
