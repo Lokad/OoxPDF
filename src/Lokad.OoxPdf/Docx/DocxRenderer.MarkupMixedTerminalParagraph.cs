@@ -63,7 +63,7 @@ internal sealed partial class DocxRenderer
         if (paragraphs is null || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         int leadingCount = paragraphs.Leading.Count;
-        if (leadingCount is not (2 or 3)) { return null; }
+        if (leadingCount is not (1 or 2 or 3)) { return null; }
         var rows = new DocxUniformBalloonRow[leadingCount][];
         var pitches = new double[leadingCount];
         var transitions = new double[leadingCount];
