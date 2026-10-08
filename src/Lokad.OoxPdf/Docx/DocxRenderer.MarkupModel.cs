@@ -62,7 +62,7 @@ internal sealed partial class DocxRenderer
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
         public IReadOnlyList<DocxMarkupBalloonBodyPart>? WordCompatibleBodyParts { get; init; }
         public IReadOnlyList<DocxMarkupBalloonParagraph>? WordCompatibleParagraphs { get; init; }
-        public DocxMarkupFittingMixedFourthParagraph? WordCompatibleFittingMixedFourth { get; init; }
+        public DocxMarkupMixedTerminalParagraph? WordCompatibleFittingMixedTerminal { get; init; }
     }
 
     private sealed record DocxMarkupBalloonLaneBand(
@@ -115,7 +115,7 @@ internal sealed partial class DocxRenderer
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
         public IReadOnlyList<DocxMarkupBalloonBodyPart>? WordCompatibleBodyParts { get; init; }
         public IReadOnlyList<DocxMarkupBalloonParagraph>? WordCompatibleParagraphs { get; init; }
-        public DocxMarkupFittingMixedFourthParagraph? WordCompatibleFittingMixedFourth { get; init; }
+        public DocxMarkupMixedTerminalParagraph? WordCompatibleFittingMixedTerminal { get; init; }
 
         public DocxMarkupBalloonPlacementSnapshot ToSnapshot(int pageIndex)
         {

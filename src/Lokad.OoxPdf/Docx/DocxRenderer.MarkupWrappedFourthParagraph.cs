@@ -6,7 +6,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private sealed record DocxMarkupWrappedMixedFourthRows(
-        DocxMarkupFittingMixedFourthParagraph Paragraphs,
+        DocxMarkupMixedTerminalParagraph Paragraphs,
         DocxUniformBalloonRow[][] LeadingRows, double[] Pitches, double[] Transitions,
         DocxUniformBalloonRow[] FourthRows, double FourthPitch, double FinalPitch)
     {
@@ -16,10 +16,10 @@ internal sealed partial class DocxRenderer
     }
 
     private static DocxMarkupWrappedMixedFourthRows? ResolveWordCompatibleWrappedMixedFourthRows(
-        DocxMarkupFittingMixedFourthParagraph? paragraphs, double size, double firstWidth,
+        DocxMarkupMixedTerminalParagraph? paragraphs, double size, double firstWidth,
         double continuationWidth, CancellationToken cancellationToken)
     {
-        if (paragraphs is null || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+        if (paragraphs is null || paragraphs.Leading.Count != 3 || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         var rows = new DocxUniformBalloonRow[3][];
         var pitches = new double[3];

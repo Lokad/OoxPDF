@@ -6,22 +6,22 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private sealed record DocxMarkupFittingMixedFourthParagraph(
+    private sealed record DocxMarkupMixedTerminalParagraph(
         IReadOnlyList<DocxMarkupBalloonParagraph> Leading,
         DocxMarkupBalloonBodyPart[] Parts, DocxRunFontResource Mark);
 
-    private static DocxMarkupFittingMixedFourthParagraph? ResolveCommentFittingMixedFourthParagraph(
+    private static DocxMarkupMixedTerminalParagraph? ResolveCommentMixedTerminalParagraph(
         DocxRelatedStoryLayout? layout, string preview, DocxFontResources? fonts, CancellationToken cancellationToken)
     {
-        if (layout is null || fonts is null || layout.Story.BodyElements.Count != 4 ||
+        if (layout is null || fonts is null || layout.Story.BodyElements.Count is not (3 or 4) ||
             layout.InlineImages.Count != 0 || layout.FloatingDrawings.Count != 0 ||
-            layout.Story.BodyElements[3] is not DocxParagraphElement last ||
+            layout.Story.BodyElements[^1] is not DocxParagraphElement last ||
             !HasPlainBalloonParagraphShape(last.Paragraph) ||
             last.Paragraph.ParagraphMarkRun is not { } mark || !IsPlainBalloonParagraphRun(mark) ||
             !fonts.RunResources.TryGetValue(mark, out DocxRunFontResource? markResource) ||
             markResource.Resolution.Bold || markResource.Resolution.Italic || markResource.Resolution.IsFallback ||
             !HasEncodedBalloonParagraphText(markResource, " ", cancellationToken)) { return null; }
-        var elements = layout.Story.BodyElements.Take(3).ToArray();
+        var elements = layout.Story.BodyElements.Take(layout.Story.BodyElements.Count - 1).ToArray();
         if (elements.Any(element => element is not DocxParagraphElement)) { return null; }
         string leadingPreview = string.Join(" ", elements.Cast<DocxParagraphElement>()
             .Select(element => string.Concat(element.Paragraph.Runs.Select(run => run.Text)).Trim(' ')));
@@ -42,30 +42,32 @@ internal sealed partial class DocxRenderer
                 !HasEncodedBalloonParagraphText(resource, text, cancellationToken)) { return null; }
             parts[index] = new(text, resource);
         }
-        string fourthText = parts[0].Text + parts[1].Text;
+        string terminalText = parts[0].Text + parts[1].Text;
         if (ReferenceEquals(parts[0].Resource.Embedded.Font, parts[1].Resource.Embedded.Font) ||
-            fourthText.Contains("  ", StringComparison.Ordinal) || leadingPreview + " " + fourthText != preview) { return null; }
+            terminalText.Contains("  ", StringComparison.Ordinal) || leadingPreview + " " + terminalText != preview) { return null; }
         return new(leading, parts, markResource);
     }
 
-    private sealed record DocxMarkupFittingMixedFourthRows(
-        DocxMarkupFittingMixedFourthParagraph Paragraphs,
+    private sealed record DocxMarkupFittingMixedTerminalRows(
+        DocxMarkupMixedTerminalParagraph Paragraphs,
         DocxUniformBalloonRow[][] LeadingRows, double[] Pitches, double[] Transitions)
     {
-        public double ContinuationsHeight => Enumerable.Range(0, 3)
+        public double ContinuationsHeight => Enumerable.Range(0, Paragraphs.Leading.Count)
             .Sum(index => (LeadingRows[index].Length - 1) * Pitches[index]) + Transitions.Sum();
     }
 
-    private static DocxMarkupFittingMixedFourthRows? ResolveWordCompatibleFittingMixedFourthRows(
-        DocxMarkupFittingMixedFourthParagraph? paragraphs, double size, double firstWidth,
+    private static DocxMarkupFittingMixedTerminalRows? ResolveWordCompatibleFittingMixedTerminalRows(
+        DocxMarkupMixedTerminalParagraph? paragraphs, double size, double firstWidth,
         double continuationWidth, CancellationToken cancellationToken)
     {
         if (paragraphs is null || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
-        var rows = new DocxUniformBalloonRow[3][];
-        var pitches = new double[3];
-        var transitions = new double[3];
-        for (int index = 0; index < 3; index++)
+        int leadingCount = paragraphs.Leading.Count;
+        if (leadingCount is not (2 or 3)) { return null; }
+        var rows = new DocxUniformBalloonRow[leadingCount][];
+        var pitches = new double[leadingCount];
+        var transitions = new double[leadingCount];
+        for (int index = 0; index < leadingCount; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var body = paragraphs.Leading[index].Body;
@@ -105,20 +107,20 @@ internal sealed partial class DocxRenderer
             nextAscent = Math.Max(nextAscent, (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm);
         }
         if (!double.IsFinite(totalWidth) || totalWidth > continuationWidth) { return null; }
-        var previous = paragraphs.Leading[2].Body.Resource.Embedded.Font;
+        var previous = paragraphs.Leading[leadingCount - 1].Body.Resource.Embedded.Font;
         double finalStep = (-previous.Hhea.HorizontalDescender / (double)previous.UnitsPerEm + nextAscent) * size;
         if (!double.IsFinite(finalStep) || finalStep <= 0d) { return null; }
-        transitions[2] = finalStep;
-        var result = new DocxMarkupFittingMixedFourthRows(paragraphs, rows, pitches, transitions);
+        transitions[leadingCount - 1] = finalStep;
+        var result = new DocxMarkupFittingMixedTerminalRows(paragraphs, rows, pitches, transitions);
         return double.IsFinite(result.ContinuationsHeight) ? result : null;
     }
 
-    private static void RenderWordCompatibleFittingMixedFourthRows(
-        DocxMarkupFittingMixedFourthRows rows, DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics,
+    private static void RenderWordCompatibleFittingMixedTerminalRows(
+        DocxMarkupFittingMixedTerminalRows rows, DocxMarkupBalloonPlacement placement, PdfGraphicsBuilder graphics,
         double firstX, double continuationX, double firstY, double size, CancellationToken cancellationToken)
     {
         double y = firstY;
-        for (int index = 0; index < 3; index++)
+        for (int index = 0; index < rows.Paragraphs.Leading.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var paragraph = rows.Paragraphs.Leading[index];
