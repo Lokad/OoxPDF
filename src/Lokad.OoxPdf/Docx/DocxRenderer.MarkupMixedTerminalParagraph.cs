@@ -13,7 +13,7 @@ internal sealed partial class DocxRenderer
     private static DocxMarkupMixedTerminalParagraph? ResolveCommentMixedTerminalParagraph(
         DocxRelatedStoryLayout? layout, string preview, DocxFontResources? fonts, CancellationToken cancellationToken)
     {
-        if (layout is null || fonts is null || layout.Story.BodyElements.Count is not (3 or 4) ||
+        if (layout is null || fonts is null || layout.Story.BodyElements.Count is not (2 or 3 or 4) ||
             layout.InlineImages.Count != 0 || layout.FloatingDrawings.Count != 0 ||
             layout.Story.BodyElements[^1] is not DocxParagraphElement last ||
             !HasPlainBalloonParagraphShape(last.Paragraph) ||
@@ -26,7 +26,7 @@ internal sealed partial class DocxRenderer
         string leadingPreview = string.Join(" ", elements.Cast<DocxParagraphElement>()
             .Select(element => string.Concat(element.Paragraph.Runs.Select(run => run.Text)).Trim(' ')));
         var leading = ResolveCommentBalloonParagraphs(layout with { Story = layout.Story with { BodyElements = elements } },
-            leadingPreview, fonts, cancellationToken);
+            leadingPreview, fonts, cancellationToken, allowSingleParagraph: elements.Length == 1);
         if (leading is null) { return null; }
         DocxTextRun[] runs = last.Paragraph.Runs.Where(run => run.Text.Length != 0).ToArray();
         if (runs.Length != 2) { return null; }

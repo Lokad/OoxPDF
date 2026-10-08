@@ -19,7 +19,7 @@ internal sealed partial class DocxRenderer
         DocxMarkupMixedTerminalParagraph? paragraphs, double size, double firstWidth,
         double continuationWidth, CancellationToken cancellationToken)
     {
-        if (paragraphs is null || paragraphs.Leading.Count is not (2 or 3) || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+        if (paragraphs is null || paragraphs.Leading.Count is not (1 or 2 or 3) || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         int leadingCount = paragraphs.Leading.Count;
         var rows = new DocxUniformBalloonRow[leadingCount][];
@@ -54,6 +54,8 @@ internal sealed partial class DocxRenderer
         double lastWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
             closing.Resource.Embedded.MeasureTextPoints(closing.Text, size);
         if (!double.IsFinite(lastWidth)) { return null; }
+        // Preserved closing-only reflow is qualified for three paragraphs.
+        if (lastWidth > continuationWidth && leadingCount == 1 && closing.Text.StartsWith(' ')) { return null; }
         bool closingOwnRow = false;
         if (lastWidth > continuationWidth && leadingCount == 2 && closing.Text.StartsWith(' '))
         {
