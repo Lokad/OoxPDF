@@ -181,7 +181,7 @@ internal sealed partial class DocxRenderer
         }
 
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codepoints, cancellationToken);
-        string name = "F" + (mutableResources.Count + 1).ToString(CultureInfo.InvariantCulture);
+        string name = "F" + (mutableResources.Count(resource => resource.ResourceName.StartsWith("F", StringComparison.Ordinal)) + 1).ToString(CultureInfo.InvariantCulture);
         mutableResources.Add(new PdfFontResource(name, embedded));
         return new DocxRunFontResource(name, embedded, source.Resolution);
     }
@@ -224,7 +224,7 @@ internal sealed partial class DocxRenderer
         }
 
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(titleFont, glyphs, cancellationToken);
-        string name = "F" + (mutableResources.Count + 1).ToString(CultureInfo.InvariantCulture);
+        string name = "F" + (mutableResources.Count(resource => resource.ResourceName.StartsWith("F", StringComparison.Ordinal)) + 1).ToString(CultureInfo.InvariantCulture);
         mutableResources.Add(new PdfFontResource(name, embedded));
         return new DocxRunFontResource(name, embedded, resolution);
     }

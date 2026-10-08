@@ -23,14 +23,39 @@ internal sealed partial class DocxRenderer
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
         var reportedUnembeddableFaces = new HashSet<(string StableId, int FaceIndex)>();
         plan = SubstituteUnembeddableFonts(plan, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
-        PrepareResolvedRunFontResources(plan, resources, runResources, fontCache, cancellationToken);
-        DocxRunFontResource? fallback = PrepareFallbackFontResource(plan, fontResolver, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
-        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(plan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
+        // Five-paragraph mixed terminals previously retained no marks. Give their
+        // newly retained marks separate subsets and names, so a rejected fitting
+        // path cannot change body subsets or renumber surviving fallback fonts.
+        var separateMarks = new HashSet<DocxTextRun>(ReferenceEqualityComparer.Instance);
+        if (includeReviewAutofitMarks)
+        {
+            foreach (DocxRelatedStory story in document.RelatedStories)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (story.Kind != DocxRelatedStoryKind.Comment ||
+                    !DocxBalloonParagraphPolicy.HasMixedFiveParagraphTerminal(story.BodyElements)) { continue; }
+                foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(story))
+                {
+                    if (paragraph.ParagraphMarkRun is { } mark) { separateMarks.Add(mark); }
+                }
+            }
+        }
+        DocxFontPlan bodyPlan = separateMarks.Count == 0 ? plan : new(plan.Runs.Where(run => !separateMarks.Contains(run.Run)).ToArray());
+        PrepareResolvedRunFontResources(bodyPlan, resources, runResources, fontCache, cancellationToken);
+        DocxRunFontResource? fallback = PrepareFallbackFontResource(bodyPlan, fontResolver, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
+        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(bodyPlan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
+        if (separateMarks.Count != 0)
+        {
+            var markResources = new List<PdfFontResource>();
+            PrepareResolvedRunFontResources(new(plan.Runs.Where(run => separateMarks.Contains(run.Run)).ToArray()),
+                markResources, runResources, fontCache, cancellationToken, resourcePrefix: "M");
+            resources.AddRange(markResources);
+        }
         IDocxTextMeasurer? innerMeasurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
             ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache)
             : null;
         ReportMissingGlyphs(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken);
-        Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(plan, runResources, diagnosticSink, cancellationToken);
+        Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(bodyPlan, runResources, diagnosticSink, cancellationToken);
         List<PdfFallbackFontResource> fallbackFontResources = fallbackFaces.Values
             .DistinctBy(face => face.Font.ResourceKey, StringComparer.Ordinal)
             .OrderBy(face => face.ResourceName, StringComparer.Ordinal)
@@ -316,7 +341,8 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string resourcePrefix = "F")
     {
         var resolvedRuns = new List<(DocxResolvedRunTypeface Run, FontFaceResolution Resolution)>();
         foreach (DocxResolvedRunTypeface run in plan.Runs)
@@ -346,7 +372,7 @@ internal sealed partial class DocxRenderer
             }
 
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, glyphs, cancellationToken);
-            string name = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
+            string name = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             var runResource = new DocxRunFontResource(name, embedded, resolution);
             resources.Add(new PdfFontResource(name, embedded));
             foreach (DocxResolvedRunTypeface run in group.Select(item => item.Run))
