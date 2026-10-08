@@ -2452,6 +2452,22 @@ Sixteen targets cover four font profiles across both preceding wrap masks, four 
 
 Frozen runtime `14af00c0` passes clean Release and **2190 passed, 0 failed, 1 skipped**, including 908 DOCX checks. The optional private PPTX layout diagnostic lacks configured input/output. Exact local 0.1.5 package smoke `38c2894c637746d5931985e7337292c4` contains the full-suite DLL, SHA-256 `9EBF9438BC6C64632A2A97BAB85778961B762C1E8AD001E7AB867D8037CE97F5`. This run covers L20 through L103/E4 and excludes L104 and later prototypes. Evidence is under `artifacts/plan-revision-20261005/milestone-14af00c0/`. Release preparation remains deferred.
 
+## RV06-L106: two fitting terminal body faces in two paragraphs
+
+Frozen runtime `3d3038c7770eb84da29a48f304ee1662c63acf16` extends the fitting mixed terminal resolver to one preceding paragraph. Existing scoped preparation supplies that paragraph; its own rows and continuation pitch remain independent. The terminal row retains both body faces, their measured advances and the nominal-size mark. The preceding body's descent plus the larger terminal-body ascent/gap defines the single transition used by height and emission. Wrapped-second and three-/four-paragraph terminal behavior retain bytes.
+
+A production regression fails before change because fallback collapses preceding and terminal content. Clean Release, 27 mixed checks and one paragraph-reader check pass, including 64 new wrap-mask/Unicode/font-order/gap/margin/canonical-spacing combinations and numeric/formatting/run-count/width guards. Broader qualification passes **912 DOCX / 108 balloon / 33 Linux checks**. The source archive yields two expected SourceLink warnings on Linux. Exact local 0.1.5 package smoke `53baaa30bca64441bf534e44444b038f` contains the tested Windows DLL, SHA-256 `F667E48925F9B1BED5C475534453184C6197F989C93969373726FC99673FCAD8`.
+
+All **2342 controls** preserve content and main text: 21 improve MAE and SSIM, 2321 retain PDF/raster/graphics bytes, 2258 match Office row breaks and none regress pixels. All 21 changed inputs match exact spaces/fonts; 39 within-word rows, 39 pitches and 21 transitions are independently audited. Maximum pitch/transition errors are 0.0754531249999362/0.14071875000004pt; row start-X/baseline gaps are 0.0849999999999795/0.234000000000037pt. Forty-two body runs and 21 nominal marks retain starts/advances within 0.127999999999986/0.104999999999961pt.
+
+Sixteen fresh targets cover four font profiles, both preceding wrap masks, canonical spacing and preserved leading spaces. Six negative fixtures retain PDF/raster/graphics bytes. The prior fitting-second guard now matches Office's five-row layout; four independent font pairs establish the same behavior. All 195 earlier fitting/wrapped terminal paths retain PDF/raster/graphics bytes. Input/reference identities and exact extracted spaces/fonts remain mandatory. Cache retains all 34 PDFs and 545 failed gates.
+
+84 control break mismatches remain. Preserved two-paragraph closing-only overflow, nonfitting closing runs, mixed intermediate paragraphs, extra runs, decoration and unqualified spacing retain fallback. Prior font-transition, positioning and composed pixel residuals remain explicit. The rejected maximum-final-descent model and independent Cambria/Courier New counterprobe remain preserved under L102. Evidence is under `artifacts/plan-revision-20261005/rv06-l106/`. Release preparation remains deferred.
+
+## RV21-V61: full integration through L104 and smooth SVG transparency
+
+Frozen runtime `d6baeaeb` passes clean Release and **2192 passed, 0 failed, 1 skipped**, including 910 DOCX checks. The optional private PPTX layout diagnostic lacks configured input/output. Exact local 0.1.5 package smoke `33ed2a95553846cfad55f380a8e45f8a` contains the full-suite DLL, SHA-256 `1A027671AE786F07CDE61FC80F63DEBC78B0B96AE8069E2928BCEE778D176C49`. This run covers L20 through L104/E4 and excludes L105 and later prototypes. Evidence is under `artifacts/plan-revision-20261005/milestone-d6baeaeb/`. Release preparation remains deferred.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
