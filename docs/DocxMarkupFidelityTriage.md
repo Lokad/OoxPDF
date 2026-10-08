@@ -2398,6 +2398,27 @@ A separate Office-only Cambria→Courier New counterprobe rejects taking the lar
 
 Frozen runtime `f4b15257` passes clean Release and **2187 passed, 0 failed, 1 skipped**, including 905 DOCX checks. The optional private PPTX layout diagnostic lacks configured input/output. Exact local 0.1.5 package smoke `df55a00d73634a5b8ec7d180273978c8` contains the full-suite DLL, SHA-256 `E9F20FF1EE067CDDFE6A354BDF4F580AC93AB39636AD050A042830F14A5D2D26`. This run covers L20 through L100/E4 and excludes L101 and later prototypes. Evidence is under `artifacts/plan-revision-20261005/milestone-f4b15257/`. Release preparation remains deferred.
 
+## RV06-L103: two fitting terminal body faces in three comment paragraphs
+
+Three-paragraph word-compatible all-markup balloons retain both plain fitting terminal body faces and the nominal paragraph-mark face. Each preceding paragraph retains its fitting/wrapped rows and own continuation pitch. The two adjacent transitions share the geometry/emission model; the final transition uses the preceding body's descent plus the larger terminal-body ascent/gap. The prepared terminal model also preserves the qualified four-paragraph fitting/wrapped paths. Wrapped mixed thirds, mixed intermediate bodies, extra runs, decoration and unqualified spacing retain fallback.
+
+The production renderer regression fails on the frozen parent, then passes across 128 preceding-wrap-mask, Unicode, face-order, line-gap, margin and canonical-spacing patterns. Twenty-three mixed checks preserve 4608 earlier body, 256 five-body, 256 fitting-fourth, 768 wrapped-fourth and 84672 spacing variants. Own pitches, both transitions, both final-body advances, nominal mark, exact content and height are checked. Numeric, width, run-count and formatting guards remain active. An older fitting-third fallback assertion now covers an actually wrapped mixed third, which retains fallback.
+
+Frozen runtime `14af00c0` passes clean Release, **908 DOCX checks, 104 balloon checks and twenty-nine Linux regressions**. Exact local 0.1.5 package smoke `39e09bd8c33242aab8ba99a1cde87875` contains the tested DLL, SHA-256 `A220A2AA82C57647B4A871E603C91260DA10A187C33ED26E86AD2E2B11DE09A6`. The Linux source archive emits two SourceLink warnings and zero build errors.
+
+Across 2220 prior controls, thirty fresh fixtures and four independent font pairs, 30 improve MAE and SSIM and 2224 retain PDF/raster/graphics bytes, with no image regressions. All 2254 retain main-document text and comment content; 2184 match Office breaks. All thirty changed inputs match exact extracted row text, spaces and prepared fonts, including 77 within-word rows. Maximum row-start X/baseline gaps are 0.085/0.234pt. Own prepared-face models cover 82 continuation pitches and sixty transitions, with maximum errors 0.075/0.111pt. Terminal body/mark start-X gaps are 0.169/0.108pt.
+
+Twenty-four targets cover four font profiles across all four preceding wrap masks, four canonical-spacing profiles and four preserved-leading-space profiles. All six negative fixtures retain PDF/raster/graphics bytes. Both cached fitting-third inputs improve and match Office's three- and five-row layouts. All 112 qualified fitting/wrapped fourth-body inputs retain PDF/raster/graphics bytes. The exact run-position audit includes separately emitted Office leading blanks in their own body face; exact text/spaces and advances are retained across operator segmentation. Every input/reference pair retains its own hash. All 34 cached reference PDFs retain bytes, with 545 failed gates and no increases.
+
+70 control break mismatches remain. Wrapped mixed thirds and mixed intermediate paragraphs remain guarded. Prior Arial/Cambria final-pitch, five-paragraph Georgia/Calibri transition, positioning and composed pixel residuals remain explicit. The rejected maximum-final-descent model and its independent Cambria/Courier New counterprobe remain preserved under L102. Evidence is under `artifacts/plan-revision-20261005/rv06-l103/`. Full-suite scope is recorded separately and release preparation remains deferred.
+
+## RV21-V58: full integration through L101 and smooth SVG transparency
+
+Frozen runtime `00eb04fd` passes clean Release and **2188 passed, 0 failed, 1 skipped**, including 906 DOCX checks. The optional private PPTX layout diagnostic lacks configured input/output. Exact local 0.1.5 package smoke `015b18cb924740a49da681b4159cb79f` contains the full-suite DLL, SHA-256 `5A2583347F5B3833C4773792C39A41C8D7681D3D01A1C3EBB9528E0D1264460C`. This run covers L20 through L101/E4 and excludes L102 and later prototypes. Evidence is under `artifacts/plan-revision-20261005/milestone-00eb04fd/`. Release preparation remains deferred.
+## RV21-V59: full integration through L102 and smooth SVG transparency
+
+Frozen runtime `47e876e4` passes clean Release and **2189 passed, 0 failed, 1 skipped**, including 907 DOCX checks. The optional private PPTX layout diagnostic lacks configured input/output. Exact local 0.1.5 package smoke `c14d15f01db245d2930c7b78501e87ce` contains the full-suite DLL, SHA-256 `59E58C0F36DD42FECA6904317C1D7241A4E0AD0A8AA62678129DDF306365FF92`. This run covers L20 through L102/E4 and excludes L103 and later prototypes. Evidence is under `artifacts/plan-revision-20261005/milestone-47e876e4/`. Release preparation remains deferred.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
