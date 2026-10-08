@@ -53,10 +53,9 @@ internal sealed partial class DocxRenderer
         if (terminalRows.Length < 2 || terminalRows.Any(row => row.Text.Length == 0)) { return null; }
         double lastWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
             closing.Resource.Embedded.MeasureTextPoints(closing.Text, size);
-        // Fifth-paragraph overflow with an authored closing separator retains fallback.
-        if (!double.IsFinite(lastWidth) || (leadingCount == 4 && lastWidth > continuationWidth && closing.Text.StartsWith(' '))) { return null; }
+        if (!double.IsFinite(lastWidth)) { return null; }
         bool closingOwnRow = false;
-        if (lastWidth > continuationWidth && leadingCount is (1 or 2 or 3) && closing.Text.StartsWith(' '))
+        if (lastWidth > continuationWidth && leadingCount is (1 or 2 or 3 or 4) && closing.Text.StartsWith(' '))
         {
             // Office keeps the breakable separator in its closing face on the
             // preceding row, then moves the complete closing word to its own row.
@@ -66,7 +65,7 @@ internal sealed partial class DocxRenderer
                 closing.Resource.Embedded.MeasureTextPoints(" ", size);
             bool canMoveClosingWord = closingWord.Length != 0 && !closingWord.Contains(' ') && double.IsFinite(closingWidth) &&
                 closingWidth <= continuationWidth && double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth;
-            if (!canMoveClosingWord && leadingCount is (1 or 2)) { return null; }
+            if (!canMoveClosingWord && leadingCount is (1 or 2 or 4)) { return null; }
             // Fourth-paragraph inputs outside the closing-only scope retain their prior reflow.
             closingOwnRow = canMoveClosingWord;
         }
