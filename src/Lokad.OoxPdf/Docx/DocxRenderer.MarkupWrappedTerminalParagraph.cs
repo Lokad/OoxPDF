@@ -58,12 +58,22 @@ internal sealed partial class DocxRenderer
         if (lastWidth > continuationWidth && leadingCount is (1 or 2 or 3 or 4) && closing.Text.StartsWith(' '))
         {
             // Office keeps the breakable separator in its closing face on the
-            // preceding row, then moves the complete closing word to its own row.
+            // preceding row, then moves the complete qualified closing run to its own row.
             string closingWord = closing.Text[1..];
             double closingWidth = closing.Resource.Embedded.MeasureTextPoints(closingWord, size);
             double precedingWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
                 closing.Resource.Embedded.MeasureTextPoints(" ", size);
-            bool canMoveClosingWord = closingWord.Length != 0 && !closingWord.Contains(' ') && double.IsFinite(closingWidth) &&
+            int wordSeparator = closingWord.IndexOf(' ');
+            bool hasTwoFittingWords = leadingCount == 4 && wordSeparator > 0 && wordSeparator < closingWord.Length - 1 &&
+                closingWord.LastIndexOf(' ') == wordSeparator;
+            if (hasTwoFittingWords)
+            {
+                // A first closing word that fits here may remain on this row in Office.
+                double firstClosingWordWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
+                    closing.Resource.Embedded.MeasureTextPoints(closing.Text[..(wordSeparator + 1)], size);
+                hasTwoFittingWords = double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth > continuationWidth;
+            }
+            bool canMoveClosingWord = closingWord.Length != 0 && (!closingWord.Contains(' ') || hasTwoFittingWords) && double.IsFinite(closingWidth) &&
                 closingWidth <= continuationWidth && double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth;
             if (!canMoveClosingWord && leadingCount is (1 or 2 or 4)) { return null; }
             // Fourth-paragraph inputs outside the closing-only scope retain their prior reflow.
