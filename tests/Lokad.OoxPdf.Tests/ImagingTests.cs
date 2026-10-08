@@ -381,19 +381,19 @@ internal static class ImagingTests
     {
         // R02: the working-set reservation stays live while the decoded-pixel owner
         // is alive and releases on dispose, with the peak recorded. The 2x1 RGB PNG
-        // pins IDAT (15), two scanlines (12), and RGB (6) at 33 bytes.
-        byte[] png = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255]);
+        // pins IDAT (18), two scanlines (12), and RGB (6) at 36 bytes.
+        byte[] png = TestFixtures.CreateTinyStoredRgbPng();
         using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
         OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
         using (DecodedPixels owned = PngImage.ReadOwned(png))
         {
             TestAssert.Equal(2, owned.Width);
             TestAssert.Equal(1, owned.Height);
-            TestAssert.Equal(33, budget.LiveImageBytes);
+            TestAssert.Equal(36, budget.LiveImageBytes);
         }
 
         TestAssert.Equal(0, budget.LiveImageBytes);
-        TestAssert.Equal(33, budget.PeakLiveImageBytes);
+        TestAssert.Equal(36, budget.PeakLiveImageBytes);
     }
 
     public static void OwnedPixelsReleaseReservationOnDecodeFailure()

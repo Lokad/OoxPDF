@@ -66,6 +66,14 @@ internal static class TestFixtures
         return CreatePng(width, height, 2, null, null, rgb, 3);
     }
 
+    // A valid 2x1 red/blue PNG with a stored deflate block: IDAT is always
+    // 18 bytes, independent of the platform zlib encoder. Budget boundaries
+    // use this fixture rather than the variable compressed encoder output.
+    public static byte[] CreateTinyStoredRgbPng()
+    {
+        return Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAEklEQVR4AQEHAPj/AP8AAAAA/wcAAf9VNrrHAAAAAElFTkSuQmCC");
+    }
+
     public static byte[] CreateRgbaPng(int width, int height, byte[] rgba)
     {
         return CreatePng(width, height, 6, null, null, rgba, 4);
