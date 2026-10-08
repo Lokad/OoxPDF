@@ -19,7 +19,7 @@ internal sealed partial class DocxRenderer
         DocxMarkupMixedTerminalParagraph? paragraphs, double size, double firstWidth,
         double continuationWidth, CancellationToken cancellationToken)
     {
-        if (paragraphs is null || paragraphs.Leading.Count is not (1 or 2 or 3) || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+        if (paragraphs is null || paragraphs.Leading.Count is not (1 or 2 or 3 or 4) || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         int leadingCount = paragraphs.Leading.Count;
         var rows = new DocxUniformBalloonRow[leadingCount][];
@@ -53,7 +53,8 @@ internal sealed partial class DocxRenderer
         if (terminalRows.Length < 2 || terminalRows.Any(row => row.Text.Length == 0)) { return null; }
         double lastWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
             closing.Resource.Embedded.MeasureTextPoints(closing.Text, size);
-        if (!double.IsFinite(lastWidth)) { return null; }
+        // Fifth-paragraph overflow with an authored closing separator retains fallback.
+        if (!double.IsFinite(lastWidth) || (leadingCount == 4 && lastWidth > continuationWidth && closing.Text.StartsWith(' '))) { return null; }
         bool closingOwnRow = false;
         if (lastWidth > continuationWidth && leadingCount is (1 or 2 or 3) && closing.Text.StartsWith(' '))
         {
