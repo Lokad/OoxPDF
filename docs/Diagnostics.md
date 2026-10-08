@@ -181,6 +181,11 @@ shared process. Defaults are generous multiples of the per-site caps:
   reservation using per-format working-set estimates held across
   decode/transform/compress by decoded-pixel ownership (R02; R01 reserves
   before component-plane allocation; JPEG passthrough holds none).
+  PNG streams inflated scanlines into the final pixel planes and reserves the
+  exact IDAT staging length, two maximum-width scanlines, and RGB/alpha planes.
+  The estimate excludes the caller's input bytes and runtime object overhead.
+  Configured limits apply to this estimate; admission can change for images near
+  a limit because compressed IDAT is included and full-image inflate storage is removed.
 
 Crossing any budget throws `OoxPdfLimitExceededException` before further
 expansion: no partial PDF is published (file output stays atomic) and the

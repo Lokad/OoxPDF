@@ -101,30 +101,24 @@ internal sealed class PngImage
         }
 
         int pngBitsPerPixel = colorType switch { 0 or 3 => bitDepth, 2 => 24, 4 => 16, 6 => 32, _ => 8 };
-        long maxInflated = MaxInflatedBytes(width, height, pngBitsPerPixel, interlace);
-        // R02: reserve the true simultaneous working set (inflated scanlines plus
-        // output planes) before inflating. Ownership transfers to the caller, which
-        // holds it across crop/recolor/compress work; the peak is reported in
-        // CONVERSION_RESOURCE_SUMMARY. Zero when the header is missing (existing
-        // validation still throws below); outside a conversion scope this is a null
-        // no-op and pixel caps still apply.
-        // Staging below carries exact header-sized capacities, so decode scratch stays within this estimate.
+        int maximumStride = checked((width * pngBitsPerPixel + 7) / 8);
+        long compressedTotal = 0L;
+        foreach ((int Offset, int Length) range in idatRanges)
+        {
+            compressedTotal = checked(compressedTotal + range.Length);
+        }
+        // Reserve deterministic decode buffers before staging or pixel allocation:
+        // compressed IDAT, two maximum-width scanlines and final pixel planes.
+        // DecodedPixels keeps this estimate live through downstream transforms.
         bool hasAlpha = colorType is 3 or 4 or 6 || (colorType == 0 && transparency is { Length: >= 2 });
         long liveEstimate = width <= 0 || height <= 0
             ? 0
-            : checked(maxInflated + checked((long)width * height * 3L) + (hasAlpha ? checked((long)width * height) : 0));
+            : checked(compressedTotal + 2L * maximumStride + checked((long)width * height * (hasAlpha ? 4L : 3L)));
         OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
         try
         {
-            // IDAT payloads arrive as slices of the input buffer, so stage them once
-            // into an exactly-sized array instead of growing an accumulator with
-            // doubling resize overlap.
-            long compressedTotal = 0L;
-            foreach ((int Offset, int Length) range in idatRanges)
-            {
-                compressedTotal = checked(compressedTotal + range.Length);
-            }
-
+            // Keep the existing exact-sized IDAT staging; scanlines are decoded
+            // directly from the inflater instead of retaining a full inflated image.
             byte[] compressed = new byte[checked((int)compressedTotal)];
             int compressedFill = 0;
             foreach ((int Offset, int Length) range in idatRanges)
@@ -135,65 +129,18 @@ internal sealed class PngImage
 
             using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
             using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-            // The inflated size is deterministic from the dimensions, so carry
-            // an exactly-sized buffer instead of growing one with doubling
-            // resize overlap.
-            using var output = new MemoryStream(checked((int)maxInflated));
-            CopyInflated(zlib, output, maxInflated, cancellationToken);
-            // decode from the inflated buffer in place instead of trimming a
-            // second full-size copy. The truncation guards below throw the same exception
-            // types short input always produced, preserving crop-fallback behavior.
-            PngImage decoded = Decode(output.GetBuffer(), (int)output.Length, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+            PngImage decoded = Decode(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (zlib.ReadByte() != -1)
+            {
+                throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
+            }
             return new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, liveReservation);
         }
         catch
         {
             liveReservation?.Dispose();
             throw;
-        }
-    }
-
-    private static long MaxInflatedBytes(int width, int height, int bitsPerPixel, int interlace)
-    {
-        if (interlace == 1)
-        {
-            long total = 0;
-            for (int pass = 0; pass < 7; pass++)
-            {
-                int passWidth = Adam7Size(width, Adam7StartX[pass], Adam7StepX[pass]);
-                int passHeight = Adam7Size(height, Adam7StartY[pass], Adam7StepY[pass]);
-                if (passWidth == 0 || passHeight == 0)
-                {
-                    continue;
-                }
-
-                total = checked(total + (checked((long)passWidth * bitsPerPixel + 7L) / 8L + 1L) * passHeight);
-            }
-
-            return total;
-        }
-
-        return checked(((long)width * bitsPerPixel + 7L) / 8L + 1L) * height;
-    }
-
-    private static void CopyInflated(System.IO.Compression.ZLibStream source, MemoryStream destination, long maxBytes, CancellationToken cancellationToken)
-    {
-        byte[] buffer = new byte[81920];
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            int read = source.Read(buffer, 0, buffer.Length);
-            if (read == 0)
-            {
-                return;
-            }
-
-            if (checked(destination.Length + read) > maxBytes)
-            {
-                throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
-            }
-
-            destination.Write(buffer, 0, read);
         }
     }
 
@@ -210,7 +157,7 @@ internal sealed class PngImage
         };
     }
 
-    private static PngImage Decode(byte[] decompressed, int length, int width, int height, int bitDepth, int colorType, int interlace, byte[]? palette, byte[]? transparency, CancellationToken cancellationToken)
+    private static PngImage Decode(Stream decompressed, int width, int height, int bitDepth, int colorType, int interlace, byte[]? palette, byte[]? transparency, CancellationToken cancellationToken)
     {
         if (colorType == 3 && (palette is null || palette.Length % 3 != 0))
         {
@@ -234,97 +181,65 @@ internal sealed class PngImage
             return colorType == 0 && transparency is { Length: >= 2 };
         }
 
+        int maximumStride = checked((width * bitsPerPixel + 7) / 8);
+        var previous = new byte[maximumStride];
+        var current = new byte[maximumStride];
         if (interlace == 1)
         {
-            DecodeAdam7();
-            return new PngImage(width, height, rgb, alpha);
-        }
-
-        int stride = (width * bitsPerPixel + 7) / 8;
-        var previous = new byte[stride];
-        var current = new byte[stride];
-        int source = 0;
-        for (int y = 0; y < height; y++)
-        {
-            if ((y & 63) == 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            if ((uint)source >= (uint)length)
-            {
-                throw new IndexOutOfRangeException("PNG pixel data is truncated.");
-            }
-
-            byte filter = decompressed[source++];
-            if ((long)source + stride > length)
-            {
-                throw new ArgumentOutOfRangeException(nameof(decompressed), "PNG pixel data is truncated.");
-            }
-
-            decompressed.AsSpan(source, stride).CopyTo(current);
-            source += stride;
-            Unfilter(filter, current, previous, filterBytesPerPixel);
-            for (int x = 0; x < width; x++)
-            {
-                WritePixel(bitDepth, colorType, current, x, y * width + x, palette, transparency, rgb, alpha);
-            }
-
-            (previous, current) = (current, previous);
-            Array.Clear(current);
-        }
-
-        return new PngImage(width, height, rgb, alpha);
-
-        void DecodeAdam7()
-        {
-            int adam7Source = 0;
             for (int pass = 0; pass < 7; pass++)
             {
                 int passWidth = Adam7Size(width, Adam7StartX[pass], Adam7StepX[pass]);
                 int passHeight = Adam7Size(height, Adam7StartY[pass], Adam7StepY[pass]);
-                if (passWidth == 0 || passHeight == 0)
-                {
-                    continue;
-                }
-
-                int adam7Stride = (passWidth * bitsPerPixel + 7) / 8;
-                var adam7Previous = new byte[adam7Stride];
-                var adam7Current = new byte[adam7Stride];
+                if (passWidth == 0 || passHeight == 0) { continue; }
+                int stride = checked((passWidth * bitsPerPixel + 7) / 8);
+                Array.Clear(previous);
                 for (int row = 0; row < passHeight; row++)
                 {
-                    if ((row & 63) == 0)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-
-                    if ((uint)adam7Source >= (uint)length)
-                    {
-                        throw new IndexOutOfRangeException("PNG pixel data is truncated.");
-                    }
-
-                    byte filter = decompressed[adam7Source++];
-                    if ((long)adam7Source + adam7Stride > length)
-                    {
-                        throw new ArgumentOutOfRangeException(nameof(decompressed), "PNG pixel data is truncated.");
-                    }
-
-                    decompressed.AsSpan(adam7Source, adam7Stride).CopyTo(adam7Current);
-                    adam7Source += adam7Stride;
-                    Unfilter(filter, adam7Current, adam7Previous, filterBytesPerPixel);
-
+                    ReadScanline(decompressed, current.AsSpan(0, stride), previous.AsSpan(0, stride), filterBytesPerPixel, cancellationToken);
                     int y = Adam7StartY[pass] + row * Adam7StepY[pass];
                     for (int x = 0; x < passWidth; x++)
                     {
                         int finalX = Adam7StartX[pass] + x * Adam7StepX[pass];
-                        WritePixel(bitDepth, colorType, adam7Current, x, y * width + finalX, palette, transparency, rgb, alpha);
+                        WritePixel(bitDepth, colorType, current, x, y * width + finalX, palette, transparency, rgb, alpha);
                     }
-
-                    (adam7Previous, adam7Current) = (adam7Current, adam7Previous);
-                    Array.Clear(adam7Current);
+                    (previous, current) = (current, previous);
                 }
             }
         }
+        else
+        {
+            for (int y = 0; y < height; y++)
+            {
+                ReadScanline(decompressed, current, previous, filterBytesPerPixel, cancellationToken);
+                for (int x = 0; x < width; x++)
+                {
+                    WritePixel(bitDepth, colorType, current, x, y * width + x, palette, transparency, rgb, alpha);
+                }
+                (previous, current) = (current, previous);
+            }
+        }
+        return new PngImage(width, height, rgb, alpha);
+    }
+
+    private static void ReadScanline(Stream source, Span<byte> current, ReadOnlySpan<byte> previous,
+        int filterBytesPerPixel, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        int filter = source.ReadByte();
+        if (filter < 0) { throw new IndexOutOfRangeException("PNG pixel data is truncated."); }
+        int filled = 0;
+        while (filled < current.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int read = source.Read(current[filled..]);
+            if (read == 0)
+            {
+                // Keep the existing truncated-row exception used by renderer recovery.
+                throw new ArgumentOutOfRangeException("decompressed", "PNG pixel data is truncated.");
+            }
+            filled += read;
+        }
+        Unfilter((byte)filter, current, previous, filterBytesPerPixel);
     }
 
     private static int Adam7Size(int size, int start, int step)
@@ -422,7 +337,7 @@ internal sealed class PngImage
         return transparency is { Length: >= 2 } && transparency[0] == 0 && transparency[1] == gray;
     }
 
-    private static void Unfilter(byte filter, byte[] current, byte[] previous, int bpp)
+    private static void Unfilter(byte filter, Span<byte> current, ReadOnlySpan<byte> previous, int bpp)
     {
         for (int i = 0; i < current.Length; i++)
         {
