@@ -2633,6 +2633,22 @@ Regular-control residual maxima remain **2.619pt cell bounds**, **3.140pt connec
 
 Evidence is under `artifacts/plan-revision-20261005/rv06-l116/`; preliminary, frozen and inherited hashes remain distinct.
 
+## RV06-L117: printed page capacity and table-row fragments
+
+Plain automatic review-table rows now compare their already printed line heights against the printed body-frame capacity. Page-boundary fragments receive the existing qualified table-baseline projection, retaining line pitch and subsequent-row flow. Fragment membership uses the same printed font inset as projection; testing nominal baselines against printed row heights could otherwise discard a terminal line when the font inset exceeded the printed pitch. The complete-range comment anchor path now requires a typed table-cell story. Wrapped header paragraphs retain their established fallback; this guard does not claim Office parity for static stories.
+
+Frozen runtime `9f23553806b9ffac1c34dbe117f1c9ebc2f8c967` and DLL `AEBFC0B9906B3C63F154FF8EB1B376693D261B3ED9F52FE0834ED30453ECD895` pass **932 DOCX /120 balloon checks**, executing **934 distinct methods**, and **53 Linux regressions**, with zero failures or skips. Windows Release and inspector builds are clean; the git-free Linux archive has two expected SourceLink warnings. All five unchanged new regressions fail against the exact accepted L116 DLL. Exact local 0.1.5 package smoke `13299f4fbe814f6eb23f774c4abe2f88` contains the qualified DLL. Release preparation remains deferred.
+
+**24 independent Word 16 / Letter controls** cover Calibri 11/24-point long rows, solid/no borders, fitting and splitting rows, single-line continuations, and a following row moving to page two. Every control matches main text content, total page count, and first-cell physical-line allocation. **12 changed PDFs improve first-page MAE and SSIM; 12 PDFs retain bytes**. All **24 preserve-layout PDFs** retain bytes. First-cell baseline error is at most **0.220pt**. Source-backed geometry maps **58/58 cell fragments**, with no unresolved cells and at most **0.864pt** cell-bound error. Physical lines are grouped by page/baseline; PDF text-operation counts are not line counts because Office can split a word into several operations.
+
+The original long wrapped control now matches **Office two pages**, distributing its **22 first-cell lines as 18/4**, with the second cell on page two. Previously the candidate kept the entire table on one page. First-page 144-DPI MAE improves **2.602→0.440**, and SSIM **0.875→0.985**. The formerly missing second page has MAE **0.180**, SSIM **0.981**, unchanged visible content, and all three source cell fragments mapped.
+
+Fresh frozen conversion preserves **2761 inherited control PDFs**, all **36 previously qualified regular table PDFs and 36 preserve PDFs**, and **27/28 earlier table controls**; the changed earlier control is the qualified long case above. All **34 cached public PDFs** retain bytes and their existing **542 failed gates**. Reused visual evidence retains input/reference/PDF/report/raster/graphics hashes. The cached cases remain partial apart from the previously passing case.
+
+The pagination change admits plain automatic single-paragraph top-aligned cells with implicit or disabled widow control. Explicit keep/widow policies, declared heights, cantSplit/header rows, vertical merges, nested tables, drawings, multiple paragraphs, non-top alignment and explicit line heights retain the prior capacity path. Header/footer/note content and multiple columns also retain prior capacity. Office proof is bounded to the controls above; earlier Courier New geometry, balloon positioning, composed drift and unsupported scopes remain. Full V69 integration through L115 excludes L116/L117; complete affected qualification avoids another immediate full-suite run.
+
+Evidence is under `artifacts/plan-revision-20261005/rv06-l117/`, including `evidence.json`, `office-pagination-summary.json`, `office-cell-geometry-summary.json`, the separate legacy proof, inherited/regular-table identities, and unchanged cached gates. Frozen runtime, package and later documentation integration hashes remain distinct.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
