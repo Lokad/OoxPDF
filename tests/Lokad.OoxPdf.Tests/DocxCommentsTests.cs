@@ -44,11 +44,13 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleExactBodySpacingRetainsProtectedFallbacks()
+    public static void DocxWordCompatibleExactBodySpacingPrintsProtectedAdvances()
     {
         DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
         foreach (DocxParagraphKeepRules rules in new[]
                  { DocxParagraphKeepRules.Empty with { KeepLines = true }, DocxParagraphKeepRules.Empty with { KeepNext = true } })
         {
@@ -62,9 +64,82 @@ internal static class DocxCommentsTests
             };
             double FollowingBaseline(double height) => renderer.InspectTextEmission(WithHeight(height)).Lines
                 .Single(line => line.ContainerStoryKind == "Body" && line.SourceBlockIndex == 2).Segments[0].BaselineY;
-            TestAssert.True(Math.Abs(FollowingBaseline(72d) - FollowingBaseline(90d) - 18d) < .000001d,
-                "Protected paragraph estimates must retain the existing exact-height advance until independently qualified.");
+            TestAssert.True(Math.Abs(FollowingBaseline(72d) - FollowingBaseline(90d) - 18d * scale) < .000001d,
+                "Protected paragraph flow must consume the same printed exact-height advance as ordinary body flow.");
         }
+    }
+
+    public static void DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary()
+    {
+        // Independent public Word controls move a protected exact-height pair
+        // before it enters the bottom margin in the scaled review output.
+        DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true) with
+        {
+            MarginTopPoints = 72d, MarginBottomPoints = 72d, PageSettings = DocxPageSettings.Empty
+        };
+        DocxParagraph Exact(string text, double height, bool keep = false) =>
+            DocxTests.CreateDocxLayoutParagraph(text, 12d, height) with
+            {
+                Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" },
+                KeepRules = keep ? DocxParagraphKeepRules.Empty with { KeepNext = true, KeepLines = true }
+                    : DocxParagraphKeepRules.Empty
+            };
+        foreach (OoxPdfDocxMarkupGeometryMode mode in new[]
+                 { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
+        foreach ((double fillerHeight, int expectedPages) in new[] { (460d, 1), (510d, 2) })
+        {
+            DocxDocument document = source with
+            {
+                BodyElements = [source.BodyElements[0], new DocxParagraphElement(Exact("Public filler", fillerHeight)),
+                    new DocxParagraphElement(Exact("Protected chain", 72d, keep: true)),
+                    new DocxParagraphElement(Exact("Following body", 90d))]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
+            var layout = renderer.InspectLayout(document);
+            TestAssert.Equal(expectedPages, layout.Pages.Count);
+            var body = renderer.InspectTextEmission(document).Lines.Where(line => line.ContainerStoryKind == "Body").ToArray();
+            TestAssert.Equal(body.Single(line => line.SourceBlockIndex == 2).PageIndex,
+                body.Single(line => line.SourceBlockIndex == 3).PageIndex);
+            if (mode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && expectedPages == 2)
+            {
+                double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                    DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, mode));
+                var nominal = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document);
+                foreach (int block in new[] { 2, 3 })
+                {
+                    double baseline = nominal.Lines.Single(line => line.ContainerStoryKind == "Body" &&
+                        line.SourceBlockIndex == block).Segments[0].BaselineY;
+                    double expected = document.PageHeightPoints / 2d +
+                        (baseline - document.PageHeightPoints / 2d) * scale;
+                    TestAssert.True(Math.Abs(body.Single(line => line.SourceBlockIndex == block).Segments[0].BaselineY - expected) < .000001d,
+                        "An exact keep chain starting a continuation page must retain the independently scaled body origin.");
+                }
+            }
+        }
+    }
+
+    public static void DocxWordCompatibleExactBodyFrameRetainsHeaderFallback()
+    {
+        // The new printed frame is admitted independently for simple body-only
+        // documents; a header retains the previous overflow boundary.
+        DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true) with
+        {
+            MarginTopPoints = 72d, MarginBottomPoints = 72d
+        };
+        DocxParagraph Exact(string text, double height) => DocxTests.CreateDocxLayoutParagraph(text, 12d, height) with
+        {
+            Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }
+        };
+        DocxDocument document = source with
+        {
+            BodyElements = [source.BodyElements[0], new DocxParagraphElement(Exact("Public filler", 510d)),
+                new DocxParagraphElement(Exact("Plain spacer", 72d)),
+                new DocxParagraphElement(Exact("Following body", 90d))]
+        };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1, renderer.InspectLayout(document).Pages.Count);
     }
 
     public static void DocxWordCompatibleBalloonsUseRoundedCorners()

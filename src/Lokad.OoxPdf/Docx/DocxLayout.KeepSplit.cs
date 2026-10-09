@@ -355,6 +355,12 @@ internal sealed partial class DocxLayoutEngine
             suppress);
     }
 
+    private static bool ShouldScaleExactBodyAdvance(DocxParagraph paragraph, DocxLineHeightProfile profile, double fontSize)
+    {
+        return profile.Source == DocxLineHeightSource.ExactLineSpacing && profile.LineHeight > fontSize &&
+            paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+    }
+
     private static DocxKeepBlockEstimate EstimateKeptParagraphBlock(
         IReadOnlyList<DocxBodyElement> elements,
         int elementIndex,
@@ -362,7 +368,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         int? pageNumber,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        bool scaleExactBodyAdvances)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -370,7 +377,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         DocxParagraph paragraph = paragraphElement.Paragraph;
-        double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale);
+        double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
         int paragraphCount = 1;
         int firstTableRowCount = 0;
         int nextSearchIndex = elementIndex + 1;
@@ -385,7 +392,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale,
                     paragraphSpacingScale);
                 height += spacingProfile.AppliedBeforeSpacing;
-                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale);
+                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
                 paragraphCount++;
                 paragraph = nextParagraph.Paragraph;
                 nextSearchIndex = nextIndex + 1;
@@ -478,11 +485,13 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
-    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale)
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale, bool scaleExactBodyAdvances)
     {
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
-        double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
+        DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+        double lineHeight = scaleExactBodyAdvances && ShouldScaleExactBodyAdvance(paragraph, profile, fontSize)
+            ? profile.LineHeight * fixedScale : profile.LineHeight;
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);
         if (textSpans.Count != 0)
         {
