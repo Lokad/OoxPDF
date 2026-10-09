@@ -2814,6 +2814,48 @@ Release preparation stays deferred at 0.1.5. Evidence is under
 `artifacts/plan-revision-20261005/rv06-l124/`; frozen runtime, package and later
 documentation integration identities remain distinct.
 
+## RV06-L125: exact-height keep chains and printed page boundaries
+
+Protected exact-height body paragraphs now consume the same printed advance as
+ordinary exact-height paragraphs. Keep-chain estimates share that eligibility.
+For single-column text-paragraph bodies without headers, footers, tables, notes,
+section breaks or inline objects, exact-height overflow uses the printed body
+height. An exact paragraph opening a continuation page retains the document's
+scaled body origin. Other frame paths keep their previous fallback.
+
+Frozen **3caa30b5** qualifies **954 DOCX /122 balloon /76 Linux** checks and
+**956 distinct Windows methods**, clean Windows builds and exact local **0.1.5**
+package `dcbad482fdcd457aadadf8cb29529a27`. The validated original catalogue covers
+**2242 methods: 2241 passed /0 failed /1 optional private-document skip** through
+disjoint affected and remaining reports for the same frozen binaries. This is
+reconciled coverage, not one unfiltered invocation. Both new regressions fail
+against the exact L124 library; the header-frame fallback guard passes.
+
+Four independent Word16 controls retain content on each page and match page
+counts. Two recover a previously missing second page; a separate fitting chain
+stays on one page. The formerly protected lane-band variant improves MAE
+**3.111689→1.169825** and SSIM **0.451477→0.832709**. Four comparable pages improve
+both metrics. The two recovered pages each reach **SSIM 0.992890**; their absent
+parent pages have no comparable pixel metric. Body baselines lie within
+**0.332pt** of Word. Four preserve outputs retain bytes. Fresh frozen conversion
+matches the independently compared prototype PDFs, transferring six raster-page
+reports with their original tool and library provenance.
+
+All **34 cached comparisons** regenerate source-layout and comparison evidence;
+their PDFs retain bytes and all **510 failed gates** remain without increases.
+All **2911 inherited/table inputs** convert freshly and retain their accepted
+L124 PDF bytes, allowing previous structural evidence to transfer by identity.
+
+The initial 9.7pt continuation-origin error remains archived with the corrected
+proof and setup failures. The initial control named `keep-chain-fit` actually
+overflows in Word; the distinct 360pt filler control establishes fitting behavior.
+Automatic/tight-exact continuation frames, composed/static/table/note/column,
+inline/floating interactions and earlier numbering, hit-area and break residuals
+remain unqualified. Nine lane-band gates and continuous revision bars across
+unchanged spacers remain. Release preparation stays deferred at 0.1.5. Evidence:
+`artifacts/plan-revision-20261005/rv06-l125/`. Frozen runtime, exact package and
+later documentation integration identities remain distinct.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
