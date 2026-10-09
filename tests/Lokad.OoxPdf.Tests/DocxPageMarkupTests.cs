@@ -452,6 +452,55 @@ internal static class DocxPageMarkupTests
         }
     }
 
+    public static void DocxWordCompatibleRevisionBarsSkipUnchangedParagraphs()
+    {
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "11", "Reviewer", null, "inserted", null, []);
+        DocxParagraph Changed(string text) => DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
+        {
+            Revisions = [revision]
+        };
+        DocxParagraph first = Changed("First changed paragraph"), last = Changed("Last changed paragraph");
+        DocxParagraph plain = DocxTests.CreateDocxLayoutParagraph("Unchanged public spacer", 12d, 72d) with
+        {
+            Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }
+        };
+        foreach ((bool gap, bool blank) in new[] { (true, false), (true, true), (false, false) })
+        {
+            DocxParagraph spacer = blank ? plain with
+            {
+                Runs = [new DocxTextRun("", 12d, null, false, false, false, null, null)]
+            } : plain;
+            DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument(gap ? [first, spacer, last] : [first, last]) with
+            {
+                PageWidthPoints = 612d, PageHeightPoints = 792d
+            };
+            PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+            int count = Regex.Matches(page.Content, @"27\.925\s+-?[\d.]+\s+0\.475\s+[\d.]+\s+re\s+f\b").Count;
+            TestAssert.Equal(gap ? 2 : 1, count);
+        }
+    }
+
+    public static void DocxWordCompatibleRevisionBarsRetainTableFallback()
+    {
+        var revision = new DocxRevisionInfo(DocxRevisionKind.Insertion, "11", "Reviewer", null, "inserted", null, []);
+        DocxParagraph changed = DocxTests.CreateDocxLayoutParagraph("Changed public paragraph", 12d, 14d) with
+        {
+            Revisions = [revision]
+        };
+        DocxParagraph plain = DocxTests.CreateDocxLayoutParagraph("Unchanged table", 12d, 14d);
+        var table = new DocxTable("fixed", [120d],
+            [new DocxTableRow([new DocxTableCell("Unchanged table", [plain], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
+        DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([changed]) with
+        {
+            PageWidthPoints = 612d, PageHeightPoints = 792d,
+            BodyElements = [new DocxParagraphElement(changed), new DocxTableElement(table), new DocxParagraphElement(changed)]
+        };
+        PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+        TestAssert.Equal(1, Regex.Matches(page.Content, @"27\.925\s+-?[\d.]+\s+0\.475\s+[\d.]+\s+re\s+f\b").Count);
+    }
+
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBar()
     {
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Revision bar public probe", 10d, 12d) with

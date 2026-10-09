@@ -82,6 +82,66 @@ internal sealed partial class DocxRenderer
             top = top is null ? y + height : Math.Max(top.Value, y + height);
         }
 
+        void PaintRevisionBounds()
+        {
+            if (bottom is null || top is null)
+            {
+                return;
+            }
+
+            double barBottom = Math.Max(0d, bottom.Value - WordCompatibleAllMarkupRevisionBarBottomOutsetPoints);
+            double barTop = Math.Min(page.Height, top.Value - WordCompatibleAllMarkupRevisionBarTopInsetPoints);
+            double barHeight = Math.Max(0d, barTop - barBottom);
+            if (barHeight > 0d)
+            {
+                graphics.SetFillRgb(0, 0, 0);
+                graphics.FillRectangle(
+                    WordCompatibleAllMarkupRevisionBarXPoints,
+                    barBottom,
+                    WordCompatibleAllMarkupRevisionBarWidthPoints,
+                    barHeight);
+            }
+            bottom = null;
+            top = null;
+        }
+
+        bool separateBodyBands = page.ColumnFrames.Count <= 1 &&
+            page.StaticTextLines.Count == 0 && page.StaticInlineImages.Count == 0 &&
+            page.StaticTableRows.Count == 0 && page.StaticInlineTextBoxes.Count == 0 &&
+            page.PlacedRelatedStories.Count == 0 && !drawingPages.PageAll(pageIndex).Any() &&
+            page.Items.All(item => item is DocxTextLineLayout { SourceParagraph: not null, SourceBlockIndex: >= 0 } line &&
+                (line.Story is null || line.Story?.Kind == DocxStoryKind.Body));
+        if (separateBodyBands)
+        {
+            int? lastChangedBlock = null;
+            foreach (DocxTextLineLayout line in page.Items.Cast<DocxTextLineLayout>())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!HasTextLineRevision(line))
+                {
+                    PaintRevisionBounds();
+                    lastChangedBlock = null;
+                    continue;
+                }
+
+                // Word joins adjacent changed paragraphs, but leaves an unchanged
+                // paragraph clear. A skipped source block can be an empty spacer
+                // with no emitted text line and still separates the changed bands.
+                int sourceBlock = line.SourceBlockIndex!.Value;
+                if (lastChangedBlock is { } previous && sourceBlock > previous + 1)
+                {
+                    PaintRevisionBounds();
+                }
+                double scaledFontSize = line.FontSize * ResolveTextEmissionFontScale(markupContext);
+                double height = Math.Max(6d, line.LineHeight ?? scaledFontSize * 1.2d);
+                double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
+                IncludeRevisionBounds(baselineY - height * 0.25d, height);
+                lastChangedBlock = sourceBlock;
+            }
+            PaintRevisionBounds();
+            return;
+        }
+
         foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -108,25 +168,7 @@ internal sealed partial class DocxRenderer
             IncludeRevisionBounds(row.Y, Math.Max(6d, row.Height));
         }
 
-        if (bottom is null || top is null)
-        {
-            return;
-        }
-
-        double barBottom = Math.Max(0d, bottom.Value - WordCompatibleAllMarkupRevisionBarBottomOutsetPoints);
-        double barTop = Math.Min(page.Height, top.Value - WordCompatibleAllMarkupRevisionBarTopInsetPoints);
-        double barHeight = Math.Max(0d, barTop - barBottom);
-        if (barHeight <= 0d)
-        {
-            return;
-        }
-
-        graphics.SetFillRgb(0, 0, 0);
-        graphics.FillRectangle(
-            WordCompatibleAllMarkupRevisionBarXPoints,
-            barBottom,
-            WordCompatibleAllMarkupRevisionBarWidthPoints,
-            barHeight);
+        PaintRevisionBounds();
 
         bool HasTableRowRevision(DocxTableRowLayout row)
         {
