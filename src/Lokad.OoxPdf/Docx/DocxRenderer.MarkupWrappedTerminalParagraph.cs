@@ -8,11 +8,15 @@ internal sealed partial class DocxRenderer
     private sealed record DocxMarkupWrappedMixedTerminalRows(
         DocxMarkupMixedTerminalParagraph Paragraphs,
         DocxUniformBalloonRow[][] LeadingRows, double[] Pitches, double[] Transitions,
-        DocxUniformBalloonRow[] TerminalRows, double TerminalPitch, double FinalPitch, bool ClosingOwnRow)
+        DocxUniformBalloonRow[] TerminalRows, double TerminalPitch, double FinalPitch, bool ClosingOwnRow,
+        string? PartialClosingPrefix, string? PartialClosingSuffix, double MixedTerminalPitch)
     {
+        public bool HasClosingRow => ClosingOwnRow || PartialClosingSuffix is not null;
+
         public double ContinuationsHeight => Enumerable.Range(0, Paragraphs.Leading.Count)
             .Sum(index => (LeadingRows[index].Length - 1) * Pitches[index]) + Transitions.Sum() +
-            (TerminalRows.Length - (ClosingOwnRow ? 1 : 2)) * TerminalPitch + FinalPitch;
+            (TerminalRows.Length - (HasClosingRow ? 1 : 2)) * TerminalPitch + FinalPitch +
+            (PartialClosingSuffix is null ? 0d : MixedTerminalPitch - TerminalPitch);
     }
 
     private static DocxMarkupWrappedMixedTerminalRows? ResolveWordCompatibleWrappedMixedTerminalRows(
@@ -55,6 +59,8 @@ internal sealed partial class DocxRenderer
             closing.Resource.Embedded.MeasureTextPoints(closing.Text, size);
         if (!double.IsFinite(lastWidth)) { return null; }
         bool closingOwnRow = false;
+        string? partialClosingPrefix = null;
+        string? partialClosingSuffix = null;
         if (lastWidth > continuationWidth && leadingCount is (1 or 2 or 3 or 4) && closing.Text.StartsWith(' '))
         {
             // Office keeps the breakable separator in its closing face on the
@@ -64,22 +70,29 @@ internal sealed partial class DocxRenderer
             double precedingWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
                 closing.Resource.Embedded.MeasureTextPoints(" ", size);
             int wordSeparator = closingWord.IndexOf(' ');
-            bool hasTwoFittingWords = leadingCount == 4 && wordSeparator > 0 && wordSeparator < closingWord.Length - 1 &&
+            bool hasTwoWords = leadingCount == 4 && wordSeparator > 0 && wordSeparator < closingWord.Length - 1 &&
                 closingWord.LastIndexOf(' ') == wordSeparator;
-            if (hasTwoFittingWords)
+            bool hasTwoFittingWords = false;
+            if (hasTwoWords)
             {
-                // A first closing word that fits here may remain on this row in Office.
                 double firstClosingWordWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
                     closing.Resource.Embedded.MeasureTextPoints(closing.Text[..(wordSeparator + 1)], size);
                 hasTwoFittingWords = double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth > continuationWidth;
+                if (double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth <= continuationWidth &&
+                    double.IsFinite(closingWidth) && closingWidth <= continuationWidth &&
+                    double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth)
+                {
+                    partialClosingPrefix = closing.Text[..(wordSeparator + 2)];
+                    partialClosingSuffix = closingWord[(wordSeparator + 1)..];
+                }
             }
             bool canMoveClosingWord = closingWord.Length != 0 && (!closingWord.Contains(' ') || hasTwoFittingWords) && double.IsFinite(closingWidth) &&
                 closingWidth <= continuationWidth && double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth;
-            if (!canMoveClosingWord && leadingCount is (1 or 2 or 4)) { return null; }
+            if (!canMoveClosingWord && partialClosingSuffix is null && leadingCount is (1 or 2 or 4)) { return null; }
             // Fourth-paragraph inputs outside the closing-only scope retain their prior reflow.
             closingOwnRow = canMoveClosingWord;
         }
-        if (lastWidth > continuationWidth && !closingOwnRow)
+        if (lastWidth > continuationWidth && !closingOwnRow && partialClosingSuffix is null)
         {
             string last = terminalRows[^1].Text;
             int boundary = last.LastIndexOf(' ');
@@ -96,11 +109,15 @@ internal sealed partial class DocxRenderer
         double firstAscent = (firstFont.Hhea.HorizontalAscender + firstFont.Hhea.HorizontalLineGap) / (double)firstFont.UnitsPerEm;
         double closingAscent = (closingFont.Hhea.HorizontalAscender + closingFont.Hhea.HorizontalLineGap) / (double)closingFont.UnitsPerEm;
         double firstStep = (-previous.Hhea.HorizontalDescender / (double)previous.UnitsPerEm + firstAscent) * size;
-        double finalPitch = (-firstFont.Hhea.HorizontalDescender / (double)firstFont.UnitsPerEm + (closingOwnRow ? closingAscent : Math.Max(firstAscent, closingAscent))) * size;
+        double finalPitch = (-firstFont.Hhea.HorizontalDescender / (double)firstFont.UnitsPerEm + (closingOwnRow || partialClosingSuffix is not null ? closingAscent : Math.Max(firstAscent, closingAscent))) * size;
         double terminalPitch = DocxLineMetrics.MeasureHheaLineHeight(firstFont, size);
         if (!double.IsFinite(firstStep) || firstStep <= 0d || !double.IsFinite(finalPitch) || finalPitch <= 0d) { return null; }
+        double mixedTerminalPitch = (-firstFont.Hhea.HorizontalDescender / (double)firstFont.UnitsPerEm +
+            Math.Max(firstAscent, closingAscent)) * size;
+        if (!double.IsFinite(mixedTerminalPitch) || mixedTerminalPitch <= 0d) { return null; }
         transitions[leadingCount - 1] = firstStep;
-        var result = new DocxMarkupWrappedMixedTerminalRows(paragraphs, rows, pitches, transitions, terminalRows, terminalPitch, finalPitch, closingOwnRow);
+        var result = new DocxMarkupWrappedMixedTerminalRows(paragraphs, rows, pitches, transitions, terminalRows, terminalPitch, finalPitch, closingOwnRow,
+            partialClosingPrefix, partialClosingSuffix, mixedTerminalPitch);
         return double.IsFinite(result.ContinuationsHeight) ? result : null;
     }
 
@@ -140,21 +157,25 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             bool last = index == rows.TerminalRows.Length - 1;
-            if (index > 0) { y -= last && !rows.ClosingOwnRow ? rows.FinalPitch : rows.TerminalPitch; }
+            if (index > 0)
+            {
+                y -= last && rows.PartialClosingSuffix is not null ? rows.MixedTerminalPitch :
+                    last && !rows.ClosingOwnRow ? rows.FinalPitch : rows.TerminalPitch;
+            }
             string text = rows.TerminalRows[index].Text + (!last && rows.TerminalRows[index].SpaceAfter ? " " : string.Empty);
             DrawBalloonText(graphics, first.Resource, text, continuationX, y, size,
                 placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
             if (last)
             {
                 double x = continuationX + first.Resource.Embedded.MeasureTextPoints(text, size);
-                if (rows.ClosingOwnRow)
+                if (rows.HasClosingRow)
                 {
-                    DrawBalloonText(graphics, closing.Resource, " ", x, y, size,
+                    DrawBalloonText(graphics, closing.Resource, rows.PartialClosingPrefix ?? " ", x, y, size,
                         placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
                     y -= rows.FinalPitch;
                     x = continuationX;
                 }
-                string closingText = rows.ClosingOwnRow ? closing.Text[1..] : closing.Text;
+                string closingText = rows.PartialClosingSuffix ?? (rows.ClosingOwnRow ? closing.Text[1..] : closing.Text);
                 DrawBalloonText(graphics, closing.Resource, closingText, x, y, size,
                     placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue);
                 x += closing.Resource.Embedded.MeasureTextPoints(closingText, size);
