@@ -28,7 +28,7 @@ Supported:
 
 Partial or approximated:
 
-- Text boxes support paragraphs, runs, font size, color, bold, italic, underline, and left, center, or right alignment, with simple Latin greedy wrapping.
+- Text boxes support paragraphs, runs, font size, color, bold, italic, underline, and left, center, or right alignment, with simple Latin greedy wrapping. Emergency splitting of unbroken first-token text in horizontal two/three-column frames uses the column edge. Single/four-plus columns and rotated/no-wrap paths retain their prior approximations; general font metrics, column balancing and autofit remain partial.
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Table rendering honors merges and explicit borders with vertical-anchor approximations, but per-edge border styles, rich table styles beyond the first-pass built-ins, and fine vertical metrics remain approximate.
 - Shape rendering supports only a small preset geometry set.
