@@ -99,6 +99,12 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
+        if (svg.Root is { } root && IsFullyTransparentSvgContainer(root))
+        {
+            graphics.RestoreState();
+            return;
+        }
+
         var gradients = ReadSvgGradients(svg);
         var radialGradients = ReadSvgRadialGradients(svg);
         ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName);
@@ -119,7 +125,7 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
             // they do not paint into the picture or activate paint diagnostics.
-            if (IsSvgDefinitionElement(element))
+            if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element))
             {
                 continue;
             }
@@ -374,7 +380,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in svg.Descendants())
         {
             string name = element.Name.LocalName;
-            if (IsSupportedSvgElement(name) || IsSvgDefinitionElement(element))
+            if (IsSupportedSvgElement(name) || IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element))
             {
                 continue;
             }
@@ -403,7 +409,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             string name = element.Name.LocalName;
-            if (name is "svg" or "g" && !IsSvgDefinitionElement(element))
+            if (name is "svg" or "g" && !IsSvgDefinitionElement(element) && !IsInFullyTransparentSvgContainer(element))
             {
                 IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
                 string? opacity = style.TryGetValue("opacity", out string? value) ? value : (string?)element.Attribute("opacity");
@@ -412,6 +418,7 @@ internal sealed partial class PptxRenderer
             if (name is "linearGradient" or "radialGradient" &&
                 (string?)element.Attribute("id") is { } id && usedGradientIds.Contains(id))
             {
+                if (ReadUniformSvgStopOpacity(element) is not null) { continue; }
                 foreach (XElement stop in element.Elements().Where(child => child.Name.LocalName == "stop"))
                 {
                     IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
@@ -431,6 +438,52 @@ internal sealed partial class PptxRenderer
         void Report(string message) => diagnosticSink(new OoxPdfDiagnostic(
             "SVG_UNSUPPORTED_CONTENT", OoxPdfSeverity.Warning, message, partName,
             PageIndex: null, SlideIndex: slideIndex, Feature: "svg", Fallback: "Partial"));
+    }
+
+    private static bool IsFullyTransparentSvgContainer(XElement element)
+    {
+        if (element.Name.LocalName is not ("svg" or "g") || element.Attribute("opacity") is not { } opacity)
+        {
+            return false;
+        }
+        // Office-authored numeric attributes are qualified. CSS overrides and
+        // percentage container opacity retain their previous diagnostic fallback.
+        if (element.Attribute("style") is not null && ReadSvgStyleDeclarations(element).ContainsKey("opacity"))
+        {
+            return false;
+        }
+        return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) && value == 0d;
+    }
+
+    private static bool IsInFullyTransparentSvgContainer(XElement element)
+    {
+        foreach (XElement ancestor in element.AncestorsAndSelf())
+        {
+            if (IsFullyTransparentSvgContainer(ancestor)) { return true; }
+        }
+        return false;
+    }
+
+    private static double? ReadUniformSvgStopOpacity(XElement gradient)
+    {
+        double? uniform = null;
+        foreach (XElement stop in gradient.Elements().Where(e => e.Name.LocalName == "stop"))
+        {
+            if (stop.Attribute("style") is not null && ReadSvgStyleDeclarations(stop).ContainsKey("stop-opacity"))
+            {
+                return null;
+            }
+            double value = 1d;
+            if (stop.Attribute("stop-opacity") is { } opacity &&
+                (!double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
+                 !double.IsFinite(value) || value < 0d || value > 1d))
+            {
+                return null;
+            }
+            if (uniform is { } previous && value != previous) { return null; }
+            uniform = value;
+        }
+        return uniform ?? 1d;
     }
 
     private static bool IsSupportedSvgElement(string name)
@@ -763,7 +816,8 @@ internal sealed partial class PptxRenderer
                 {
                     continue;
                 }
-                gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
+                gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
+                    { UniformStopOpacity = ReadUniformSvgStopOpacity(gradient) };
             }
         }
 
@@ -910,14 +964,14 @@ internal sealed partial class PptxRenderer
             gradientId = gradient.Groups["id"].Value;
             if (gradients.TryGetValue(gradientId, out SvgGradient? svgGradient))
             {
-                paint = new SvgPaint(null, svgGradient, opacity);
+                paint = new SvgPaint(null, svgGradient, opacity * (svgGradient.UniformStopOpacity ?? 1d));
                 failure = SvgFillFailure.None;
                 return true;
             }
             if (radialGradients.TryGetValue(gradientId, out SvgRadialGradient? svgRadial))
             {
                 radial = svgRadial;
-                paint = new SvgPaint(null, null, opacity);
+                paint = new SvgPaint(null, null, opacity * (svgRadial.UniformStopOpacity ?? 1d));
                 failure = SvgFillFailure.None;
                 return true;
             }
@@ -1437,7 +1491,8 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")));
+            gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
+                { UniformStopOpacity = ReadUniformSvgStopOpacity(gradient) };
         }
         return gradients;
     }

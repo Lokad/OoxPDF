@@ -1990,6 +1990,76 @@ internal static class PptxImagesTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("unresolvable", StringComparison.Ordinal)), "Resolvable radial gradients must render.");
     }
 
+    public static void PptxSvgUniformNumericStopOpacityMatchesFillOpacity()
+    {
+        foreach (string kind in new[] { "linearGradient", "radialGradient" })
+        foreach (double alpha in new[] { 0d, .25d, .5d, 1d })
+        {
+            string value = alpha.ToString(CultureInfo.InvariantCulture);
+            string actual = $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><defs><{kind} id=\"g\"><stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"{value}\"/><stop offset=\"1\" stop-color=\"#0000FF\" stop-opacity=\"{value}\"/></{kind}></defs><path d=\"M0 0H100V50H0Z\" fill=\"url(#g)\" fill-opacity=\"0.5\" opacity=\"0.5\"/></svg>";
+            string expected = $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><defs><{kind} id=\"g\"><stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></{kind}></defs><path d=\"M0 0H100V50H0Z\" fill=\"url(#g)\" fill-opacity=\"{(alpha * .25d).ToString(CultureInfo.InvariantCulture)}\"/></svg>";
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            TestAssert.True(RenderSvgOpacityTest(actual, diagnostics).AsSpan().SequenceEqual(RenderSvgOpacityTest(expected)),
+                "Uniform stop alpha must match equivalent fill alpha, including node/fill multiplication and zero opacity.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" || d.Id == "PPTX_NODE_RENDER_FAILED"),
+                "Qualified numeric uniform stop opacity must render without fallback diagnostics.");
+        }
+    }
+
+    public static void PptxSvgZeroOpacityContainersMatchRemovedContent()
+    {
+        const string blue = "<path d=\"M0 0H100V50H0Z\" fill=\"#0000FF\"/>";
+        const string hidden = "<text>Unused content</text><path d=\"M0 0H100V50H0Z\" fill=\"url(#g)\"/><path d=\"M10 5H90V45H10Z\" fill=\"#FF0000\" stroke=\"#00FF00\"/>";
+        string Wrap(string contents, string attributes = "") => "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\" " + attributes + "><defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"0.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient></defs>" + contents + "</svg>";
+        foreach ((string actual, string expected) in new[]
+        {
+            (Wrap(blue + hidden, "opacity=\"0\""), Wrap("")),
+            (Wrap(blue + "<g opacity=\"0.0\">" + hidden + "</g>"), Wrap(blue)),
+            (Wrap(blue + "<g opacity=\"0\"><g opacity=\"1\">" + hidden + "</g></g>"), Wrap(blue))
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            TestAssert.True(RenderSvgOpacityTest(actual, diagnostics).AsSpan().SequenceEqual(RenderSvgOpacityTest(expected)),
+                "Zero-opacity containers must match removal of their contents, including nested unit-opacity descendants.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" || d.Id == "PPTX_NODE_RENDER_FAILED"),
+                "Invisible containers must not activate unsupported-content or used-gradient diagnostics.");
+        }
+    }
+
+    public static void PptxSvgUnqualifiedOpacityRetainsPaintAndDiagnostics()
+    {
+        string Wrap(string gradient, string root = "", string container = "") => "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\" " + root + "><defs><radialGradient id=\"g\">" + gradient + "</radialGradient></defs><g " + container + "><path d=\"M0 0H100V50H0Z\" fill=\"url(#g)\"/></g></svg>";
+        const string opaque = "<stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
+        byte[] expected = RenderSvgOpacityTest(Wrap(opaque));
+        foreach (string actual in new[]
+        {
+            Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"0.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>"),
+            Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\" style=\"stop-opacity:0.5\"/>"),
+            Wrap(opaque, "opacity=\"0.5\""), Wrap(opaque, container: "opacity=\"0.5\""),
+            Wrap(opaque, container: "opacity=\"0\" style=\"opacity:0.5\"")
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            TestAssert.True(RenderSvgOpacityTest(actual, diagnostics).AsSpan().SequenceEqual(expected),
+                "Unqualified opacity must retain the previous opaque paint fallback.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT") &&
+                !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "The retained opacity fallback must diagnose without losing the picture.");
+        }
+    }
+
+    private static byte[] RenderSvgOpacityTest(string svg, List<OoxPdfDiagnostic>? diagnostics = null)
+    {
+        string input = WriteSvgGradientDeck(svg);
+        string output = Path.Combine(Path.GetTempPath(), "ooxpdf-svg-opacity-" + Guid.NewGuid().ToString("N") + ".pdf");
+        try
+        {
+            OoxPdfOptions options = diagnostics is null ? new() : new() { DiagnosticSink = diagnostics.Add };
+            OoxPdfConverter.Convert(input, output, options);
+            return File.ReadAllBytes(output);
+        }
+        finally { File.Delete(input); File.Delete(output); }
+    }
+
     public static void PptxSvgIgnoredContainerAndStopOpacityDiagnosesOnlyUsedPaint()
     {
         string input = WriteSvgGradientDeck("""
