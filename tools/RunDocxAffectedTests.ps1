@@ -15,6 +15,24 @@ foreach ($name in @('docx-tests.json', 'balloon-tests.json', 'evidence.json')) {
 }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
+$temporaryDirectory = Join-Path $output 'temporary-files'
+# Crowded Windows temp directories can make fixture path creation dominate tests.
+# Restrict this environment change to each runner invocation and its children.
+function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
+    New-Item -ItemType Directory -Force -Path $temporaryDirectory | Out-Null
+    $previousTmp = [Environment]::GetEnvironmentVariable('TMP')
+    $previousTemp = [Environment]::GetEnvironmentVariable('TEMP')
+    try {
+        [Environment]::SetEnvironmentVariable('TMP', $temporaryDirectory)
+        [Environment]::SetEnvironmentVariable('TEMP', $temporaryDirectory)
+        dotnet $runner @Arguments *> $Log
+        return $LASTEXITCODE
+    }
+    finally {
+        [Environment]::SetEnvironmentVariable('TMP', $previousTmp)
+        [Environment]::SetEnvironmentVariable('TEMP', $previousTemp)
+    }
+}
 $catalogPath = Join-Path $output 'catalog.txt'
 dotnet $runner --list *> $catalogPath
 if ($LASTEXITCODE -ne 0) { throw 'Test catalogue failed' }
@@ -37,6 +55,7 @@ $inventory = [ordered]@{
     AdditionalMethods = @($missing.Name)
     LibrarySha256 = $libraryHash
     TestAssemblySha256 = $runnerHash
+    TemporaryDirectory = $temporaryDirectory
 }
 if ($ListOnly) { $inventory | ConvertTo-Json -Depth 5; return }
 
@@ -59,8 +78,8 @@ function Read-CompleteReport([string] $Path, [string[]] $ExpectedNames) {
     return $report
 }
 $docxPath = Join-Path $output 'docx-tests.json'
-dotnet $runner --test Docx --report $docxPath *> (Join-Path $output 'docx-tests.log')
-if ($LASTEXITCODE -ne 0) { throw 'DOCX qualification failed' }
+$exitCode = Invoke-FrozenTests @('--test', 'Docx', '--report', $docxPath) (Join-Path $output 'docx-tests.log')
+if ($exitCode -ne 0) { throw 'DOCX qualification failed' }
 $docxReport = Read-CompleteReport $docxPath @($docx.Name)
 $sources = [Collections.Generic.List[object]]::new()
 $sources.Add([pscustomobject]@{ Report = $docxPath; Sha256 = (Get-FileHash $docxPath).Hash })
@@ -74,8 +93,8 @@ foreach ($test in $missing) {
         throw ('Ambiguous additional test selector: ' + $test.Name)
     }
     $path = Join-Path $output ($test.Name + '.json')
-    dotnet $runner --test $test.Name --report $path *> (Join-Path $output ($test.Name + '.log'))
-    if ($LASTEXITCODE -ne 0) { throw ('Additional qualification failed: ' + $test.Name) }
+    $exitCode = Invoke-FrozenTests @('--test', $test.Name, '--report', $path) (Join-Path $output ($test.Name + '.log'))
+    if ($exitCode -ne 0) { throw ('Additional qualification failed: ' + $test.Name) }
     $report = Read-CompleteReport $path @($test.Name)
     $balloonRows.Add($report.tests[0])
     $sources.Add([pscustomobject]@{ Report = $path; Sha256 = (Get-FileHash $path).Hash })

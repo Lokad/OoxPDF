@@ -1910,7 +1910,8 @@ internal static class DocxMarkupTests
         TestAssert.Contains("[0.475 0.475] 0 d", page.Content);
         TestAssert.Contains("27.925 ", page.Content);
         TestAssert.Contains("0 0 1 rg", page.Content);
-        TestAssert.True(DocxTests.CountOccurrences(page.Content, " re B*") >= 1, "Markup balloons should render as fill/stroke rectangle primitives.");
+        TestAssert.True(DocxTests.CountOccurrences(page.Content, " c") >= 4 && page.Content.Contains("h" + Environment.NewLine + "B*", StringComparison.Ordinal),
+            "Markup balloons should render as closed fill/stroke paths with rounded corners.");
         TestAssert.True(DocxTests.CountOccurrences(page.Content, " l S") >= 6, "Comment ranges and balloon connectors should render stroked line primitives.");
         TestAssert.True(DocxTests.CountOccurrences(page.Content, " re f") >= 8, "Decorations, change bars, comment markers, and table borders should render filled rectangle primitives.");
     }

@@ -15,6 +15,15 @@ The repository vendors the exact rasterizer binary (`tools/vendor/pdfium/win-x64
 
 ## Running A Case
 
+For affected DOCX qualification, use `tools/RunDocxAffectedTests.ps1` with the
+frozen runner and a fresh output directory. It runs overlapping DOCX/balloon
+methods once and gives each runner invocation the output directory's
+`temporary-files/` path through process-local `TMP` and `TEMP`, restoring both
+variables afterward. This avoids slow fixture creation in a crowded Windows
+temp directory. Keep the generated files with the ignored validation output.
+For other test batches, use a fresh ignored temp directory in the launching
+process; retain the same frozen binaries, fixtures and checks.
+
 ```powershell
 pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-basic-paragraphs/case.json
 ```
