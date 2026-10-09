@@ -391,9 +391,11 @@ internal sealed partial class PptxRenderer
                         double chunkMaxWidth = frame.Orientation == PptxTextOrientation.Horizontal
                             ? effectiveTextWidth
                             : frame.TextWidth;
-                        // Vertical chunks split strictly at the column edge: Office breaks them
-                        // tighter than the wrap tolerance ('tic' splits at +2.19 over in a 21.81 column).
-                        double chunkFitTolerance = frame.Orientation == PptxTextOrientation.Vertical
+                        // Vertical and qualified two/three-column chunks split at the column edge.
+                        // A font-sized allowance changes the character boundary of unbroken
+                        // column text and displaces its following lines.
+                        double chunkFitTolerance = frame.Orientation == PptxTextOrientation.Vertical ||
+                            (frame.Orientation == PptxTextOrientation.Horizontal && frame.ColumnCount is 2 or 3)
                             ? PptxTextMetricRules.CoordinateTolerance
                             : PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
                         // Office glues trailing spaces to the final vertical chunk ('al ')

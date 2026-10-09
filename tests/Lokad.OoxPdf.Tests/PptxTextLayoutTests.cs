@@ -1030,6 +1030,99 @@ internal static class PptxTextLayoutTests
         TestAssert.True(lines.All(line => line.NaturalEndX <= line.EndX + 0.01d), "Expected split lines to stay inside their column widths.");
     }
 
+    public static void PptxColumnChunksKeepUnbrokenTextWithinTheirEdges()
+    {
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
+        foreach (int columns in new[] { 2, 3 })
+        foreach (double size in new[] { 12d, 18d })
+        foreach (double spacing in new[] { -0.1d, 0d, 0.2d })
+        {
+            double fourGlyphs = font.GetAdvanceWidth(font.MapCodePoint('A')) * size / font.UnitsPerEm * 4d + spacing * 3d;
+            int[] lineLengths = RenderColumnChunkGlyphCounts(columns, fourGlyphs - 0.5d, size, spacing, wrap: true);
+            TestAssert.Equal(3, lineLengths[0]);
+            TestAssert.Equal(48, lineLengths.Sum());
+            TestAssert.True(lineLengths.All(count => count <= 3), "Emergency column wrapping must retain every glyph inside the measured edge.");
+        }
+    }
+
+    public static void PptxColumnChunksPreserveUnqualifiedAndNoWrapBehavior()
+    {
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
+        double width = font.GetAdvanceWidth(font.MapCodePoint('A')) * 12d / font.UnitsPerEm * 4d - 0.5d;
+        int[] single = RenderColumnChunkGlyphCounts(1, width, 12d, 0d, wrap: true);
+        TestAssert.Equal(4, single[0]);
+        TestAssert.Equal(48, single.Sum());
+        int[] fourColumns = RenderColumnChunkGlyphCounts(4, width, 12d, 0d, wrap: true);
+        TestAssert.Equal(4, fourColumns[0]);
+        TestAssert.Equal(48, fourColumns.Sum());
+        int[] unwrapped = RenderColumnChunkGlyphCounts(3, width, 12d, 0d, wrap: false);
+        TestAssert.Equal(1, unwrapped.Length);
+        TestAssert.Equal(48, unwrapped[0]);
+    }
+
+    public static void PptxColumnChunksMatchOfficeUnspacedPublicBoundary()
+    {
+        string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            TestAssert.Skip("Environmental precondition not met: (!File.Exists(cambria))");
+        }
+
+        string input = FindVisualCase("pptx-ladder-04-typography-unspaced-column-tc-probe.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Lines).ToArray();
+        TestAssert.Equal("ALPHAALPHAALPHAAL", string.Concat(lines[0].Spans.Select(span => span.Text)));
+        using ZipArchive archive = ZipFile.OpenRead(input);
+        using Stream xml = archive.GetEntry("ppt/slides/slide1.xml")!.Open();
+        XDocument slide = XDocument.Load(xml);
+        string source = string.Concat(slide.Descendants(XName.Get("t", "http://schemas.openxmlformats.org/drawingml/2006/main")).Select(t => t.Value));
+        TestAssert.Equal(source, string.Concat(lines.SelectMany(line => line.Spans).Select(span => span.Text)));
+    }
+
+    private static int[] RenderColumnChunkGlyphCounts(int columns, double columnWidth, double size, double spacing, bool wrap)
+    {
+        string pdf = Encoding.Latin1.GetString(RenderColumnChunkPdf(columns, columnWidth, size, spacing, wrap));
+        return Regex.Matches(pdf, @"\[(?<payload>[^\]]+)\] TJ")
+            .Select(match => Regex.Matches(match.Groups["payload"].Value, "<0001>").Count).Where(count => count != 0).ToArray();
+    }
+
+    private static byte[] RenderColumnChunkPdf(int columns, double columnWidth, double size, double spacing, bool wrap)
+    {
+        double frameWidth = columnWidth * columns + 8.5d * (columns - 1);
+        string slide = $$"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp>
+                <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{Math.Round(frameWidth * 12700d).ToString(CultureInfo.InvariantCulture)}}" cy="3810000"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                <p:txBody><a:bodyPr numCol="{{columns}}" spcCol="107950" lIns="0" rIns="0" tIns="0" bIns="0" wrap="{{(wrap ? "square" : "none")}}"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                  <a:p><a:r><a:rPr sz="{{Math.Round(size * 100d).ToString(CultureInfo.InvariantCulture)}}" spc="{{Math.Round(spacing * 100d).ToString(CultureInfo.InvariantCulture)}}"><a:latin typeface="TestFont"/></a:rPr><a:t>{{new string('A', 48)}}</a:t></a:r></a:p>
+                </p:txBody>
+              </p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """;
+        using MemoryStream input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = slide
+        });
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = new ColumnChunkFontResolver() });
+        return output.ToArray();
+    }
+
+    private sealed class ColumnChunkFontResolver : IFontResolver
+    {
+        private readonly MemoryFontProgramSource program = new("column-chunk-test", TestFontBuilder.CreateTestFont());
+
+        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "TestFont",
+            new FontStyleKey(false, false, 400, 0, false), program, IsFallback: false);
+    }
+
     public static void PptxSyntheticNoAutoFitTextOverwideFirstSegmentUsesOfficeWrapFitTolerance()
     {
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");

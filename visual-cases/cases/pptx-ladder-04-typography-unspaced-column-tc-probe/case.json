@@ -3,12 +3,25 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-unspaced-column-tc-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "columns", "text-state", "tc", "font-metrics", "probe", "approximate"],
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "columns",
+    "text-state",
+    "tc",
+    "font-metrics",
+    "probe",
+    "approximate"
+  ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.0,
+    "minStructuralSimilarity": 0.95,
+    "minForegroundRecall": 0.9
   },
   "allowedUnsupportedFeatures": []
 }
