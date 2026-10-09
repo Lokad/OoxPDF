@@ -2772,6 +2772,48 @@ typography and break residuals remain. Release preparation remains deferred at
 the original attempt remains under `rv06-l123/`. Frozen runtime, exact package
 and later documentation integration identities remain distinct.
 
+## RV06-L124: printed advances for explicit body line heights
+
+In the public lane-band case, 90pt and 72pt exact-height paragraphs left the
+following body text and review balloons about 36pt below Word. The renderer now
+scales the consumed advance for text-only, single-column body paragraphs in
+scaled Word-compatible review output when the exact box exceeds the font size.
+It retains the authored baseline box and the existing single scale of clickable
+line boxes. Keep-lines/keep-next paragraphs, columns, images, text boxes, smaller
+exact boxes, tables and notes retain their previous paths.
+
+Frozen runtime **6004d2e4** qualifies **952 DOCX /122 balloon /74 Linux** checks
+and **954 distinct Windows methods**, clean Windows builds and an exact local
+**0.1.5** package (`ef02c2b0abe64238ad3e4c96b3dab99e`). The original catalogue
+validates with **2240 methods: 2239 passed /0 failed /1 optional private-document
+skip**. Disjoint affected and remaining reports cover the same frozen binaries;
+this is reconciled coverage, not one unfiltered invocation. The advance regression
+fails against the exact L123 library, while the protected-paragraph guard passes.
+
+Four independently exported Office controls cover small exact heights, wrapped
+paragraphs, another font and protected paragraphs. Three improve both MAE and
+SSIM, with admitted body baseline differences at most **0.251pt**. The protected
+control retains its PDF and its roughly **36pt** fallback difference. All four
+retain page counts and decoded word multisets; preserve output remains identical.
+Fresh frozen conversion matches the compared prototype PDFs, transferring pinned
+pixel/text/graphics evidence with its original library provenance.
+
+All **34 cached gates** regenerate layout and comparison evidence from frozen
+Release. **33 PDFs retain bytes**; lane-band failures fall **17→9**, reducing the
+total **518→510** with no increases and unchanged page counts. Its MAE improves
+**3.111689→1.169825** and SSIM **0.451477→0.832709**. Fresh conversion of all
+**2911 inherited/table inputs** retains their PDF bytes, allowing transfer of
+previously qualified structural evidence by identity.
+
+The caught prototype hyperlink double-scale failure remains archived alongside
+the corrected passing guard and setup failures. Nine lane-band gates remain,
+including typography and graphics; continuous revision bars still cross unchanged
+spacers. Protected flow requires its own keep-chain pagination evidence. Earlier
+numbering, note, link hit-area, composed-layout and break residuals remain.
+Release preparation stays deferred at 0.1.5. Evidence is under
+`artifacts/plan-revision-20261005/rv06-l124/`; frozen runtime, package and later
+documentation integration identities remain distinct.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
