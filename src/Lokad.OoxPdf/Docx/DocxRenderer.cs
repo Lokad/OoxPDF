@@ -947,6 +947,8 @@ internal sealed partial class DocxRenderer
         bool suppressCommentReferenceSpacer = ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext);
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations();
+        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), PdfLinkDestination> noteDestinations =
+            CreateNoteDestinations(layout, markupContext, cancellationToken);
         int imageIndex = 1;
         var imageCache = new Dictionary<string, PdfImageXObject?>();
 
@@ -1308,6 +1310,8 @@ internal sealed partial class DocxRenderer
                 EmitLineLinkRects(previousLineLinks, previousLineTop, previousLineBottomFallback);
             }
 
+            annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
+                markupContext, noteDestinations, cancellationToken));
             return annotations;
 
         void EmitLineLinkRects(

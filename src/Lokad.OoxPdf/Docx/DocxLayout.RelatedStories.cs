@@ -301,6 +301,8 @@ internal sealed partial class DocxLayoutEngine
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
+                cursorTop = ResolveFittingDocumentEndnoteStartTop(activePage, activePlacedStories, cursorTop,
+                    documentEndStories, documentEndSeparatorLayout, separatorMeasurer, printScale);
                 if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
                 {
                     // RV06 endnote probes: document-end endnotes draw the separator rule

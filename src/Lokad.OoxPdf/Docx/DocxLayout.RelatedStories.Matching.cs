@@ -180,6 +180,34 @@ internal sealed partial class DocxLayoutEngine
         return Math.Min(designBodyBottom, placedStoryBottom) - FootnoteSeparatorGapPoints;
     }
 
+    private static double ResolveFittingDocumentEndnoteStartTop(
+        DocxLayoutPage page, IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories, double fallbackTop,
+        IReadOnlyList<DocxRelatedStoryLayout> endnotes, DocxRelatedStoryLayout? separator,
+        IDocxTextMeasurer? measurer, double printScale)
+    {
+        // Bottom-anchored footnotes are not the end of the body flow. Admit the
+        // space above them only when the complete plain endnote block fits.
+        // Overflowing, scaled and complex stories retain the continuation path.
+        if (Math.Abs(printScale - 1d) > 0.000000001d || endnotes.Count == 0 ||
+            endnotes.Any(story => story.TextLines.Count == 0 || story.TableRows.Count != 0 ||
+                story.InlineImages.Count != 0 || story.FloatingDrawings.Count != 0)) return fallbackTop;
+        DocxPlacedRelatedStoryLayout[] footnotes = placedStories
+            .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote).ToArray();
+        if (footnotes.Length == 0) return fallbackTop;
+        double candidateTop = ResolveEndnoteStartTop(page, placedStories
+            .Where(story => story.StoryLayout.Story.Kind != DocxRelatedStoryKind.Footnote).ToArray(), printScale);
+        double requiredHeight = endnotes.Sum(story => Math.Max(0d, story.ContentHeight)) +
+            endnotes.Count * FootnoteSeparatorGapPoints;
+        if (separator is not null)
+        {
+            (DocxTextRun? mark, double size) = FindSeparatorMarkFont(separator.TextLines);
+            double gap = Math.Max(ResolveSeparatorGapPoints(mark, size, measurer),
+                endnotes.Max(story => ResolveFootnoteContentGapPoints(story.TextLines, mark, size, measurer)));
+            requiredHeight += ResolveSizeDrivenSeparatorHeight(separator, page, measurer, endnotes) + gap;
+        }
+        return candidateTop - requiredHeight >= footnotes.Max(story => story.TopY) ? candidateTop : fallbackTop;
+    }
+
     private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)
     {
         return page.Items

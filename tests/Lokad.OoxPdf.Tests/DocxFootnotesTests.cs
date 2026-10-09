@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -12,6 +14,133 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFootnotesTests
 {
+
+    public static void DocxReaderRetainsAutomaticNoteStoryMarks()
+    {
+        foreach (string fixture in NoteNavigationFixtures)
+        {
+            DocxDocument document = ReadNoteNavigationFixture(fixture);
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements))
+            foreach (DocxInlineReference reference in paragraph.InlineReferences)
+            {
+                if (reference.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)) continue;
+                DocxRelatedStory story = document.RelatedStories.Single(story => story.Kind == reference.Kind && story.Id == reference.Id);
+                TestAssert.Equal(reference.DisplayText!, story.Paragraphs[0].Runs[0].Text);
+                TestAssert.Equal(DocxRunVerticalAlignment.Superscript, story.Paragraphs[0].Runs[0].VerticalAlignment);
+            }
+        }
+    }
+
+    public static void DocxNoteReferenceAnnotationsNavigateAcrossPages()
+    {
+        foreach (string fixture in NoteNavigationFixtures)
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            DocxDocument document = ReadNoteNavigationFixture(fixture);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+            PdfLinkAnnotation[] links = pages.SelectMany(page => page.Annotations).ToArray();
+            int expected = fixture is "note-nav-two-footnotes" or "note-nav-mixed-notes" or "note-nav-numbered-ids" ? 2 : 1;
+            TestAssert.Equal(expected, links.Length);
+            TestAssert.True(links.All(link => link.IsDestination && link.Width > 0d && link.Height > 0d),
+                "Every visible note marker must have a measurable internal link.");
+            TestAssert.Equal(expected, links.Select(link => link.Destination).Distinct().Count());
+            foreach (PdfLinkAnnotation link in links)
+            {
+                PdfLinkDestination target = link.Destination!.Value;
+                TestAssert.True(target.PageIndex >= 0 && target.PageIndex < pages.Length &&
+                    target.Top > 0d && target.Top <= pages[target.PageIndex].Height,
+                    "Note destinations must resolve to a rendered page location.");
+            }
+            if (fixture == "note-nav-endnote-page-two")
+            {
+                TestAssert.Equal(2, pages.Length);
+                TestAssert.Equal(1, links[0].Destination!.Value.PageIndex);
+            }
+        }
+    }
+
+    public static void DocxNoteReferenceAnnotationsRequireVisibleSourceAndTarget()
+    {
+        DocxDocument source = ReadNoteNavigationFixture("note-nav-footnote-body");
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxDocument orphan = source with { RelatedStories = [] };
+        TestAssert.Equal(0, renderer.RenderBlankPages(orphan, null, CancellationToken.None).Sum(page => page.Annotations.Count));
+        DocxParagraph paragraph = source.Paragraphs.Single();
+        int markerRun = paragraph.InlineReferences.Single().SourceRunIndex;
+        DocxDocument hidden = source with { BodyElements = [new DocxParagraphElement(paragraph with
+            { Runs = paragraph.Runs.Where(run => run.SourceRunIndex != markerRun).ToArray() })] };
+        TestAssert.Equal(0, renderer.RenderBlankPages(hidden, null, CancellationToken.None).Sum(page => page.Annotations.Count));
+    }
+
+    public static void DocxReaderNoteStoryMarksFollowFilteredBodyLabels()
+    {
+        string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-nav-two-footnotes.docx"));
+        var parts = new Dictionary<string, string>();
+        using (ZipArchive archive = ZipFile.OpenRead(seed))
+        {
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                using var reader = new StreamReader(entry.Open());
+                parts[entry.FullName] = reader.ReadToEnd();
+            }
+        }
+        XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XDocument xml = XDocument.Parse(parts["word/document.xml"]);
+        XElement marker = xml.Descendants(word + "footnoteReference").First().Parent!;
+        marker.ReplaceWith(new XElement(word + "del", new XAttribute(word + "id", "9"),
+            new XAttribute(word + "author", "Public reviewer"), new XElement(marker)));
+        parts["word/document.xml"] = xml.ToString();
+        string input = TestFixtures.WriteTempPackage(".docx", parts);
+        try
+        {
+            foreach (OoxPdfDocxMarkupMode mode in new[]
+                { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
+            {
+                DocxDocument document = DocxTests.ReadDocx(input, mode);
+                DocxInlineReference[] references = document.Paragraphs.SelectMany(paragraph => paragraph.InlineReferences).ToArray();
+                TestAssert.Equal(mode == OoxPdfDocxMarkupMode.Final ? 1 : 2, references.Length);
+                foreach (DocxInlineReference reference in references)
+                {
+                    DocxRelatedStory story = document.RelatedStories.Single(story => story.Kind == reference.Kind && story.Id == reference.Id);
+                    TestAssert.Equal(reference.DisplayText!, story.Paragraphs[0].Runs[0].Text);
+                }
+            }
+        }
+        finally { File.Delete(input); }
+    }
+
+    public static void DocxFittingDocumentEndnotesStayAboveFootnoteArea()
+    {
+        DocxDocument document = ReadNoteNavigationFixture("note-nav-mixed-notes");
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxLayoutSnapshot fitting = renderer.InspectLayout(document);
+        TestAssert.Equal(1, fitting.Pages.Count);
+        var footnotes = fitting.Pages[0].PlacedRelatedStories.Where(story => story.Kind == "Footnote").ToArray();
+        var endnotes = fitting.Pages[0].PlacedRelatedStories.Where(story => story.Kind == "Endnote").ToArray();
+        TestAssert.True(endnotes.Length > 0 && endnotes.Min(story => story.TopY - story.Height) >= footnotes.Max(story => story.TopY),
+            "Fitting document endnotes belong below the body and above the complete footnote area.");
+        DocxRelatedStory endnote = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Endnote && story.IsNormalStoryType);
+        DocxParagraph paragraph = endnote.Paragraphs[0];
+        DocxRelatedStory longEndnote = endnote with { BodyElements = [new DocxParagraphElement(paragraph with
+            { Runs = [paragraph.Runs[0], paragraph.Runs[1] with { Text = string.Join(' ', Enumerable.Repeat("Long endnote content", 500)) }] })] };
+        DocxDocument overflowing = document with { RelatedStories = document.RelatedStories.Select(story => ReferenceEquals(story, endnote) ? longEndnote : story).ToArray() };
+        DocxLayoutSnapshot fallback = renderer.InspectLayout(overflowing);
+        TestAssert.True(fallback.Pages.Count > 1 && !fallback.Pages[0].PlacedRelatedStories.Any(story => story.Kind == "Endnote"),
+            "Endnotes that exceed the free gap retain continuation placement and cannot overlap footnotes.");
+    }
+
+    private static readonly string[] NoteNavigationFixtures =
+    ["note-nav-footnote-body", "note-nav-footnote-table", "note-nav-endnote-body", "note-nav-endnote-page-two",
+     "note-nav-two-footnotes", "note-nav-mixed-notes", "note-nav-numbered-ids", "note-nav-shared-run"];
+
+    private static DocxDocument ReadNoteNavigationFixture(string fixture) => DocxTests.ReadDocx(
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx")),
+        OoxPdfDocxMarkupMode.AllMarkup);
+
     public static void DocxWordCompatibleAllMarkupClampsCommentConnectorAnchorsAtPageEdge()
     {
         DocxTextRun run = new("Edge anchor", 10d, null, false, false, false, null, null)

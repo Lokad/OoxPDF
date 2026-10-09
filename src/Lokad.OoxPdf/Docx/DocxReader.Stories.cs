@@ -190,11 +190,25 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        HashSet<string>? warnedParts = null)
+        HashSet<string>? warnedParts = null,
+        IReadOnlyList<DocxBodyElement>? mainBodyElements = null)
     {
+        var noteLabels = new Dictionary<(DocxRelatedStoryKind Kind, string Id), string>();
+        foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(mainBodyElements ?? []))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (DocxInlineReference reference in paragraph.InlineReferences)
+            {
+                if (reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+                    reference.Id is { } id && !string.IsNullOrEmpty(reference.DisplayText))
+                {
+                    noteLabels.TryAdd((reference.Kind, id), reference.DisplayText);
+                }
+            }
+        }
         return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels))
             .ToArray();
     }
 
@@ -241,7 +255,8 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken,
         IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        HashSet<string>? warnedParts = null)
+        HashSet<string>? warnedParts = null,
+        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), string>? noteLabels = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -260,6 +275,20 @@ internal sealed partial class DocxReader
         foreach (XElement storyElement in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+                (string?)storyElement.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
+                (string?)storyElement.Attribute(WordprocessingNamespace + "id") is { } id &&
+                noteLabels is not null && noteLabels.TryGetValue((kind, id), out string? label))
+            {
+                // This XML belongs to the current story read. Replace only explicit
+                // automatic marks, retaining run properties and source child positions.
+                // Numbering comes from the filtered main story, including table cells.
+                foreach (XElement mark in storyElement.Descendants(WordprocessingNamespace + (storyElementName + "Ref")).ToArray())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    mark.ReplaceWith(new XElement(WordprocessingNamespace + "t", label));
+                }
+            }
             DocxRelatedStory story = ReadRelatedStory(kind, part.Name, storyElement, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
             if (story.BodyElements.Count > 0)
             {
