@@ -2609,6 +2609,16 @@ All 51 changed inputs match exact row text, spaces and font faces. 325 within-wo
 
 Four-word and doubled-separator closings, complete closings wider than continuation width, trailing first-body separators, mixed intermediate bodies, extra runs, decoration, larger stories and unqualified spacing retain fallback. 159 control break mismatches remain. Evidence is under `artifacts/plan-revision-20261005/rv06-l115/`. Version remains 0.1.5; release preparation is deferred. Full milestone integration is recorded separately.
 
+## RV21-V69: combined-batch delivery checkpoint
+
+The isolated full integration at frozen runtime `68fb5864be5e8defec512216f52dfb4a9b68d91a` completes through L115/E4 and PNG-S1: **2211 passed, zero failed, one skipped**, including **924 DOCX checks**. The only skip is the unconfigured optional private PPTX diagnostic. Release builds are clean. Exact local 0.1.5 package smoke `d7fb25be34e247998153572ff883ea05` contains the full-suite DLL SHA-256 `64AD48D48572CCA21223B20E8146C7C2DCB86102D7E57C69BF10899D28434220`. Source and package hashes are checked again after the run; later prototypes are excluded.
+
+L115's separate qualification retains its own exact DLL/package hashes, 924 DOCX/120 balloon/45 Linux checks, 2761 controls, 51 MAE/SSIM improvements, 2710 PDF/raster/graphics identities and all content/main identities. All 34 cached PDFs remain identical with 545 existing failed gates. The original Office export variability, positioning/font-transition limits and unsupported scopes remain recorded. This checkpoint completes the integrated implementation and validation work; version remains 0.1.5 and release preparation is deferred.
+
+Future affected qualification uses `tools/RunDocxAffectedTests.ps1` to execute overlapping DOCX/balloon methods once for one frozen assembly. The actual catalogue currently has 924 DOCX methods covering 118 of 120 balloon methods; two missing-font checks complete the balloon group. Source reports and both library/test-assembly hashes are pinned, incomplete reports or ambiguous selectors are rejected, and catalogue listing does not claim tests passed. The helper was checked with the PowerShell parser and the actual frozen catalogue; the completed L115 qualification preserves its original independently executed reports. Full integration runs remain milestone checks. Public cached fixtures guide the next coherent wrapped-table/range-anchor investigation; no representative user documents are required.
+
+Evidence is under `artifacts/plan-revision-20261005/milestone-l115/`. The delivery-workflow commit adds no renderer changes and does not require another full-suite run.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
