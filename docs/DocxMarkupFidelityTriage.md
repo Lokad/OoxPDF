@@ -2705,6 +2705,17 @@ All **34 cached public PDFs** freshly retain bytes, with **518 failed gates** an
 
 Remaining errors are retained. Two settings-only controls still use **105/106 versus Office 1/2**, producing four source-rectangle errors around **7.582pt**. Three single-line note-link rectangles omit Office's **8/24-point** body after-spacing hit area; twenty of twenty-seven source rectangles are within 1pt. Custom marks, back-links, settings precedence/restarts, mixed visible-balloon drift, table/image/column flow and earlier fallback boundaries remain incomplete. The full L119 catalogue milestone excludes L120/L121. Evidence is under `artifacts/plan-revision-20261005/rv06-l121/`; runtime, package and documentation integration identities remain separate.
 
+## RV06-L122: plain headers retain an independent body anchor
+
+A plain header previously selected the vertical shift for the whole review page. Independent Word references place the header correctly but leave the candidate body **8.797pt too low**. Paragraph-first, single-column bodies now select their own first baseline; static header lines retain their existing emission origin. Admission requires exactly one plain header line on every page, with no static images, tables or inline text boxes. Composed static stories, table-first bodies and multiple columns keep their previous fallback. Comment anchors, body link rectangles and bookmark destinations follow the corrected body context; mapped notes retain their coordinates.
+
+Frozen runtime **8fb4e585**, library SHA-256 **1A93E4F02A32036EAE1013892D2FBEF74C1B183A472652771020CB8C484D21EE**, passes **949 DOCX /121 balloon /70 Linux** checks, executing **951 distinct Windows methods** with no failures or skips. Both unchanged new regressions fail against the exact accepted L121 library; the mixed-frame guard passes. Windows Release and source-inspector builds are clean. The Git-free Linux archive retains two expected SourceLink warnings. Exact local **0.1.5** package smoke is `511ebb7368ec401aa73d817af1519a84`.
+
+All **15 existing Office controls** match content and page counts: **six pixel improvements, nine PDF identities and 15 preserve identities**. Admitted body baseline error falls below **0.12pt**. The 24pt mixed control improves whole-page 144-DPI MAE **16.119→3.821** and SSIM **0.083→0.927**. Every frozen candidate is freshly converted; its exact PDF identity transfers the pinned prototype's independently measured raster, text and graphics evidence. Fresh conversion also verifies **2911 inherited/table PDF identities in 65.544 seconds**. All **34 cached source-layout, structural and pixel reports** regenerate, retaining every PDF and **518 failed gates**, with no increases.
+
+All **14 actual note links** retain source and destination pages. Their after-spacing hit-area differences remain: **6.017pt** in admitted scaled controls, **8.002pt** in nominal controls, and **8.737pt** in the table-header fallback. The table-header body baseline still differs by **8.797pt**. Existing settings-only/restart/multi-section numbering, scaled or complex note flow, inherited break mismatches, and cached spacing/painting errors remain incomplete. This qualifies the scoped body anchor, not full Office parity. The L119 full-catalogue milestone excludes L120-L122; release preparation remains deferred. Evidence is under `artifacts/plan-revision-20261005/rv06-l122/`.
+
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
