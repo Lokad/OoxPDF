@@ -12,6 +12,76 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    public static void DocxWordCompatiblePlainHeaderDoesNotDisplaceBodyText()
+    {
+        // Independent Word controls keep the body at its own center-scaled origin.
+        // A header changes neither that origin nor the narrowed body line breaks.
+        foreach (double bodySize in new[] { 12d, 24d })
+        foreach (double headerSize in new[] { 10d, 12d, 18d })
+        {
+            DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
+            DocxParagraph body = source.Paragraphs[0] with
+            {
+                Runs = source.Paragraphs[0].Runs.Select(run => run with { FontSize = bodySize }).ToArray()
+            };
+            DocxParagraph header = DocxTests.CreateDocxLayoutParagraph("Header", headerSize, headerSize);
+            DocxDocument withHeader = source with
+            {
+                BodyElements = [new DocxParagraphElement(body)],
+                PageSettings = source.PageSettings with
+                {
+                    HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>
+                        { ["default"] = [new DocxParagraphElement(header)] }
+                }
+            };
+            DocxDocument withoutHeader = withHeader with { PageSettings = DocxPageSettings.Empty };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxTextEmissionSegmentSnapshot FirstBody(DocxDocument document) => renderer.InspectTextEmission(document).Lines
+                .First(line => line.ContainerStoryKind == "Body" && line.SourceBlockIndex == 0).Segments
+                .First(segment => !segment.IsTerminalLineSpace);
+            DocxTextEmissionSegmentSnapshot expected = FirstBody(withoutHeader), actual = FirstBody(withHeader);
+            TestAssert.True(Math.Abs(actual.BaselineY - expected.BaselineY) < .000001d,
+                "A plain header must not choose the body text anchor.");
+            TestAssert.True(Math.Abs(actual.X - expected.X) < .000001d &&
+                Math.Abs(actual.FontSize - expected.FontSize) < .000001d,
+                "The body must keep its printed width and font scale.");
+            DocxTextEmissionSegmentSnapshot printedHeader = renderer.InspectTextEmission(withHeader).Lines
+                .First(line => line.StoryKind == "Header").Segments.First(segment => !segment.IsTerminalLineSpace);
+            DocxLayoutItemSnapshot headerLine = renderer.InspectLayout(withHeader).Pages[0].StaticItems
+                .First(item => item.Kind == "StaticHeaderTextLine");
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(withHeader,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            double headerBaseline = withHeader.PageHeightPoints / 2d +
+                (headerLine.Y - withHeader.PageHeightPoints / 2d) * scale;
+            TestAssert.True(Math.Abs(printedHeader.BaselineY - headerBaseline) < .000001d,
+                "The header must retain its independently scaled origin.");
+        }
+    }
+
+    public static void DocxWordCompatiblePlainHeaderPreservesBodyLinkGeometry()
+    {
+        DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
+        DocxParagraph body = source.Paragraphs[0] with
+        {
+            BookmarkAnchors = [new DocxBookmarkAnchor("1", "BodyTarget", 0, 0, 0)],
+            Hyperlinks = [new DocxHyperlinkSpan(null, "BodyTarget", null, null, null, null, null, 0, 1, 0, 3, 1)]
+        };
+        DocxDocument withHeader = source with { BodyElements = [new DocxParagraphElement(body)] };
+        DocxDocument withoutHeader = withHeader with { PageSettings = DocxPageSettings.Empty };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        PdfLinkAnnotation expected = renderer.RenderBlankPages(withoutHeader, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation actual = renderer.RenderBlankPages(withHeader, null, CancellationToken.None).Single().Annotations.Single();
+        TestAssert.True(Math.Abs(actual.X - expected.X) < .000001d && Math.Abs(actual.Y - expected.Y) < .000001d &&
+            Math.Abs(actual.Width - expected.Width) < .000001d && Math.Abs(actual.Height - expected.Height) < .000001d,
+            "Adding a plain header must preserve the body's clickable text rectangle.");
+        TestAssert.True(actual.Destination is { } target && expected.Destination is { } baseline &&
+            target.PageIndex == baseline.PageIndex && target.Left == baseline.Left &&
+            Math.Abs(target.Top.GetValueOrDefault(double.NaN) - baseline.Top.GetValueOrDefault(double.NaN)) < .000001d,
+            "The body bookmark viewport must follow the corrected text origin.");
+    }
+
     public static void DocxWordCompatibleUnusedCommentPartsRetainNominalBodyFrame()
     {
         foreach (bool revised in new[] { false, true })

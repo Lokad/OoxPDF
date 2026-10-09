@@ -41,6 +41,9 @@ internal sealed record DocxMarkupContext(
     public IReadOnlySet<DocxParagraph>? WordCompatibleMainStoryCommentParagraphs { get; init; }
     // The review lane belongs to printed balloons, not the presence of a comment part.
     public bool? WordCompatibleHasPrintedBalloons { get; init; }
+    // Plain headers retain their established emission origin when body text
+    // selects its own first-baseline anchor on a scaled review page.
+    public double WordCompatibleStaticTextYAdjustmentPoints { get; init; }
     public bool IsCommentMarkupVisible(DocxParagraph paragraph) =>
         WordCompatibleMainStoryCommentParagraphs?.Contains(paragraph) ?? true;
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)

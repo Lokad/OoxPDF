@@ -305,7 +305,7 @@ internal sealed partial class DocxRenderer
                     useWordCompatibleTextProfile));
             }
 
-            foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page))
+            foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page, effectiveMarkupContext))
             {
                 AddLine(line, isStaticStory: true, "Static", line.Story?.ToKindString(), line.Story?.VariantType);
             }
@@ -839,15 +839,33 @@ internal sealed partial class DocxRenderer
             firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
         }
 
+        double? firstBodyBaselineY = firstBaselineY;
         foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page, includeTextBoxes: false))
         {
             firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
         }
 
+        bool hasBalloons = markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document);
+        double legacyOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height, hasBalloons);
+        // Word independently scales the first body and header origins. Their
+        // continuation pitches are already scaled by layout. A higher header
+        // must not move the body down by the unscaled distance between them.
+        // Preserve the established static origin, and keep composed static
+        // stories and table-first or multi-column bodies on their prior path.
+        bool useBodyAnchor = UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
+            markupContext.WordCompatiblePrintScale < 1d && firstBodyBaselineY is not null &&
+            page.Items.FirstOrDefault() is DocxTextLineLayout &&
+            layout.Pages.All(candidate => candidate.ColumnFrames.Count <= 1 &&
+                candidate.StaticTextLines.Count == 1 && candidate.StaticTextLines[0].Story?.Kind == DocxStoryKind.Header &&
+                candidate.StaticInlineImages.Count == 0 && candidate.StaticTableRows.Count == 0 &&
+                candidate.StaticInlineTextBoxes.Count == 0);
+        double bodyOffset = useBodyAnchor
+            ? ResolveWordCompatibleTextYOffset(markupContext, firstBodyBaselineY, page.Height, hasBalloons)
+            : legacyOffset;
         return markupContext with
         {
-            WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height,
-                markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document))
+            WordCompatibleTextYOffset = bodyOffset,
+            WordCompatibleStaticTextYAdjustmentPoints = bodyOffset - legacyOffset
         };
     }
 
@@ -990,7 +1008,7 @@ internal sealed partial class DocxRenderer
                 imageCache, ref imageIndex,
                 layoutPage.Height);
 
-            IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage).ToArray();
+            IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage, markupContext).ToArray();
             for (int itemIndex = 0; itemIndex < staticItems.Count; itemIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();

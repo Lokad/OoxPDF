@@ -43,7 +43,7 @@ internal sealed partial class DocxRenderer
         // R12: page drawings arrive from the once-per-pass page index instead of
         // re-filtering both drawing lists for every page.
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        return EnumerateStaticTextLines(page)
+        return EnumerateStaticTextLines(page, markupContext)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumerateMappedPlacedNoteStoryTextLines(page, map))
             .Concat(EnumerateInlineTextBoxTextLines(page))
@@ -177,7 +177,7 @@ internal sealed partial class DocxRenderer
         double pageHeight)
     {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        return EnumerateStaticTextLines(page)
+        return EnumerateStaticTextLines(page, markupContext)
             .Concat(EnumerateBodyTextLines(page))
             .Concat(EnumerateMappedPlacedNoteStoryTextLines(page, map))
             .Concat(EnumerateInlineTextBoxTextLines(page))
@@ -298,9 +298,9 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static IEnumerable<DocxLayoutItem> EnumerateStaticLayoutItems(DocxLayoutPage page)
+    private static IEnumerable<DocxLayoutItem> EnumerateStaticLayoutItems(DocxLayoutPage page, DocxMarkupContext markupContext)
     {
-        return page.StaticTextLines
+        return page.StaticTextLines.Select(line => AdjustStaticTextLine(line, markupContext))
             .Cast<DocxLayoutItem>()
             .Concat(page.StaticInlineImages)
             .Concat(page.StaticInlineTextBoxes)
@@ -314,16 +314,22 @@ internal sealed partial class DocxRenderer
             });
     }
 
-    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page)
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, DocxMarkupContext? markupContext = null)
     {
-        return EnumerateStaticTextLines(page, includeTextBoxes: true);
+        return EnumerateStaticTextLines(page, includeTextBoxes: true, markupContext);
     }
 
-    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, bool includeTextBoxes)
+    private static DocxTextLineLayout AdjustStaticTextLine(DocxTextLineLayout line, DocxMarkupContext? markupContext)
+    {
+        double adjustment = markupContext?.WordCompatibleStaticTextYAdjustmentPoints ?? 0d;
+        return adjustment == 0d ? line : TranslateTextLine(line, 0d, adjustment);
+    }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext = null)
     {
         foreach (DocxTextLineLayout line in page.StaticTextLines)
         {
-            yield return line;
+            yield return AdjustStaticTextLine(line, markupContext);
         }
 
         if (includeTextBoxes)
