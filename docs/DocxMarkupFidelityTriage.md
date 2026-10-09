@@ -2856,6 +2856,48 @@ unchanged spacers remain. Release preparation stays deferred at 0.1.5. Evidence:
 `artifacts/plan-revision-20261005/rv06-l125/`. Frozen runtime, exact package and
 later documentation integration identities remain distinct.
 
+## RV06-L126: revision bars leave unchanged body paragraphs clear
+
+On plain single-column body pages, Word-compatible all-markup now joins adjacent
+changed paragraphs and splits revision bars around unchanged paragraphs. Empty
+spacer blocks with no emitted line also separate the bands. Composed/static,
+table, note, column, inline and floating pages retain the aggregate-bar fallback.
+Existing bar x, width and top/bottom calibration stays unchanged.
+
+Frozen **754bedc2** qualifies **956 DOCX /122 balloon /78 Linux** checks and
+**958 distinct Windows methods**, clean Windows builds and exact local **0.1.5**
+package `ae66ceda2f7f4767aa3ad2659ad4a6ad`. The validated original catalogue covers
+**2244 methods: 2243 passed /0 failed /1 optional private-document skip** through
+disjoint affected and remaining reports for the same frozen binaries. This is
+reconciled coverage, not one unfiltered invocation. The separated-bar regression
+fails against the exact L125 library; the table fallback guard passes.
+
+Four independent Word16 controls cover large spacers, smaller text spacers,
+empty spacers and adjacent changes. All bar counts match: three separated bands
+in the first three controls, one joined band in the adjacent control. Three
+improve both MAE and SSIM; the adjacent control retains PDF bytes. All four
+preserve outputs retain bytes. Fresh frozen conversion matches the independently
+compared prototype PDFs, transferring pinned raster/graphics/text reports with
+their original library and tool provenance. Bounds still differ by up to
+**0.928pt**. Strict classic-xref object/content comparisons retain every byte
+outside the admitted revision-bar paint; an unrelated same-length font-size
+mutation is rejected by the comparator.
+
+All **34 cached comparisons** regenerate. **33 PDFs retain bytes**; the lane-band
+case now paints three bars instead of one and improves MAE
+**1.169825→1.143093** and SSIM **0.832709→0.839722**. Its failures fall **9→7**,
+reducing the total **510→508** without increases or page-count changes. Every
+other PDF object/content byte and all 34 text/font/layout/emission reports retain
+identity. Across the cached corpus, bar counts change **14→16**. Fresh conversion
+of all **2911 inherited/table inputs** retains their accepted L125 PDF bytes.
+
+The corrected regex probe and compile setup failures remain archived. Existing
+bar calibration and composed-page grouping need further evidence. Numbering,
+typography, note/link, frame and inherited break residuals remain. Release
+preparation stays deferred at 0.1.5. Evidence:
+`artifacts/plan-revision-20261005/rv06-l126/`. Frozen runtime, exact package and
+later documentation integration identities remain distinct.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
