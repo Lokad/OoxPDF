@@ -14,6 +14,8 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 
 ## Tools
 
+- `tools/RunDocxAffectedTests.ps1`: qualify overlapping DOCX/balloon methods once for one frozen assembly, with report/hash provenance.
+- `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
 - `tools/CompareVisualReports.ps1`: compare two visual family reports for regressions.
