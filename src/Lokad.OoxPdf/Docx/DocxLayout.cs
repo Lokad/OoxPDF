@@ -1139,7 +1139,15 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             double paragraphFontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, paragraphFontSize, textMeasurer);
-            double lineHeight = lineHeightProfile.LineHeight;
+            double baselineLineHeight = lineHeightProfile.LineHeight;
+            bool scalesExactBodyAdvance = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
+                lineHeightProfile.Source == DocxLineHeightSource.ExactLineSpacing && baselineLineHeight > paragraphFontSize &&
+                paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
+                effective.KeepRules.KeepLines != true && effective.KeepRules.KeepNext != true;
+            // The authored exact box already receives its baseline-offset scale below.
+            // Consume its printed height independently; scaling that baseline box again
+            // would displace the exact paragraph while fixing its following text.
+            double lineHeight = scalesExactBodyAdvance ? baselineLineHeight * paragraphSpacingScale : baselineLineHeight;
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph) &&
@@ -1170,7 +1178,7 @@ internal sealed partial class DocxLayoutEngine
 
                 // RV05: ordered inline atoms (body path). Affined images in text-mixed
                 // paragraphs attach to wrapped lines at run position; wrapping is untouched.
-                midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective)), lineHeight);
+                midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective)), lineHeight);
                 double? typographicBaselineInset = lineHeightProfile.Source == DocxLineHeightSource.BodySingleLineAuto
                     ? DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer) : null;
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
@@ -1207,7 +1215,7 @@ internal sealed partial class DocxLayoutEngine
                     };
                     double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, paragraphFontSize, textMeasurer);
                     double? bodyTierAMax = DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, textMeasurer);
-                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, lineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
+                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
                     baselineOffset = typographicBaselineInset ?? baselineOffset;
                     if (HasNoSpacingElement(effective) && Math.Abs(paragraphFontSize - 11d) < 0.000000001d)
                     {
@@ -1324,7 +1332,7 @@ internal sealed partial class DocxLayoutEngine
                             ? rawBaselineOffset * paragraphSpacingScale : null,
                         BodyLineBoxHeightPoints = lineHeightProfile.Source switch
                         {
-                            DocxLineHeightSource.ExactLineSpacing => lineHeight * paragraphSpacingScale,
+                            DocxLineHeightSource.ExactLineSpacing => baselineLineHeight * paragraphSpacingScale,
                             DocxLineHeightSource.BodySingleLineAuto => lineHeight,
                             _ => null
                         }

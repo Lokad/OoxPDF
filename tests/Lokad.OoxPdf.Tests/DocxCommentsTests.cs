@@ -12,6 +12,61 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    public static void DocxWordCompatibleExactBodySpacingKeepsPrintedFollowingText()
+    {
+        // The cached lane-band case accumulates an unscaled 90pt/72pt advance.
+        // Word scales each consumed exact box, while its first baseline already
+        // follows the authored box through the existing offset transition.
+        DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
+        DocxParagraph spacer = DocxTests.CreateDocxLayoutParagraph("Public spacer", 12d, 12d);
+        DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("Following body", 12d, 12d);
+        DocxDocument WithHeight(double height) => source with
+        {
+            BodyElements = [source.BodyElements[0], new DocxParagraphElement(spacer with
+            {
+                LineSpacingPoints = height,
+                Spacing = spacer.Spacing with { LineValue = (height * 20d).ToString(CultureInfo.InvariantCulture), LineRuleValue = "exact" }
+            }), new DocxParagraphElement(following)]
+        };
+        foreach (OoxPdfDocxMarkupGeometryMode mode in new[]
+                 { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
+        {
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, mode));
+            double Baseline(DocxDocument document, int block) => renderer.InspectTextEmission(document).Lines
+                .Single(line => line.ContainerStoryKind == "Body" && line.SourceBlockIndex == block).Segments[0].BaselineY;
+            DocxDocument shortBox = WithHeight(72d), tallBox = WithHeight(90d);
+            TestAssert.True(Math.Abs(Baseline(shortBox, 2) - Baseline(tallBox, 2) - 18d * scale) < .000001d,
+                "Following body text must consume the printed exact-height box, without accumulating nominal height.");
+            TestAssert.True(Math.Abs(Baseline(shortBox, 1) - Baseline(tallBox, 1) - 18d * .8d * scale) < .000001d,
+                "The exact paragraph's own first baseline must keep its authored box and receive the offset scale once.");
+        }
+    }
+
+    public static void DocxWordCompatibleExactBodySpacingRetainsProtectedFallbacks()
+    {
+        DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        foreach (DocxParagraphKeepRules rules in new[]
+                 { DocxParagraphKeepRules.Empty with { KeepLines = true }, DocxParagraphKeepRules.Empty with { KeepNext = true } })
+        {
+            DocxDocument WithHeight(double height) => source with
+            {
+                BodyElements = [source.BodyElements[0], new DocxParagraphElement(
+                    DocxTests.CreateDocxLayoutParagraph("Protected spacer", 12d, height) with
+                    {
+                        Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }, KeepRules = rules
+                    }), new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Following body", 12d, 12d))]
+            };
+            double FollowingBaseline(double height) => renderer.InspectTextEmission(WithHeight(height)).Lines
+                .Single(line => line.ContainerStoryKind == "Body" && line.SourceBlockIndex == 2).Segments[0].BaselineY;
+            TestAssert.True(Math.Abs(FollowingBaseline(72d) - FollowingBaseline(90d) - 18d) < .000001d,
+                "Protected paragraph estimates must retain the existing exact-height advance until independently qualified.");
+        }
+    }
+
     public static void DocxWordCompatibleBalloonsUseRoundedCorners()
     {
         // Cached public Word exports paint each review box with four cubic arcs.
