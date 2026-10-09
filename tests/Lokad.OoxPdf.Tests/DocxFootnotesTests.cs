@@ -40,7 +40,7 @@ internal static class DocxFootnotesTests
     {
         DocxDocument document = ReadNoteNavigationFixture("note-nav-numbered-ids");
         TestAssert.Equal(105, document.Settings.FootnoteReferenceSettings.NumberStart!.Value);
-        TestAssert.Equal("105", document.Paragraphs[0].InlineReferences[0].DisplayText!);
+        TestAssert.Equal("1", document.Paragraphs[0].InlineReferences[0].DisplayText!);
         // Parsing settings remains independent of applying a section's overrides.
         DocxDocument section = ReadNoteNavigationFixture("note-number-section-only-105");
         TestAssert.True(section.Settings.FootnoteReferenceSettings.NumberStart is null,
@@ -57,6 +57,115 @@ internal static class DocxFootnotesTests
             xml.Descendants(word + "footnotePr").Single().Add(new XElement(word + "numRestart",
                 new XAttribute(word + "val", "eachPage"))));
         TestAssert.Equal("1", restarting.Paragraphs[0].InlineReferences[0].DisplayText!);
+    }
+
+    public static void DocxSingleSectionNoteNumbersUseSectionDefaultsInsteadOfDocumentSettings()
+    {
+        foreach ((string kind, string documentFormat, string? sectionFormat, int? sectionStart, bool properties, string[] expected) in new[]
+        {
+            ("footnote", "decimal", (string?)null, (int?)null, true, new[] { "1", "2" }),
+            ("footnote", "decimal", (string?)null, (int?)null, false, new[] { "1", "2" }),
+            ("footnote", "upperRoman", (string?)null, (int?)null, true, new[] { "1", "2" }),
+            ("footnote", "upperRoman", (string?)null, (int?)4, true, new[] { "4", "5" }),
+            ("footnote", "upperRoman", (string?)"decimalZero", (int?)null, true, new[] { "01", "02" }),
+            ("footnote", "upperRoman", (string?)"lowerLetter", (int?)4, true, new[] { "d", "e" }),
+            ("endnote", "decimal", (string?)null, (int?)null, true, new[] { "i", "ii" }),
+            ("endnote", "decimal", (string?)null, (int?)null, false, new[] { "i", "ii" }),
+            ("endnote", "decimal", (string?)null, (int?)4, true, new[] { "iv", "v" }),
+            ("endnote", "upperRoman", (string?)"decimalZero", (int?)null, true, new[] { "01", "02" }),
+            ("endnote", "upperRoman", (string?)"lowerLetter", (int?)4, true, new[] { "d", "e" })
+        })
+        {
+            DocxDocument document = ReadNotePrecedenceFixture(kind, documentFormat, sectionFormat, sectionStart, properties);
+            DocxNoteReferenceSettings authored = kind == "endnote"
+                ? document.Settings.EndnoteReferenceSettings : document.Settings.FootnoteReferenceSettings;
+            TestAssert.Equal(105, authored.NumberStart!.Value);
+            TestAssert.Equal(documentFormat, authored.NumberFormatValue!);
+            CheckNoteLabels(document, expected);
+        }
+    }
+
+    public static void DocxNoteDecimalZeroLabelsCrossTenWithoutExtraPadding()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+            CheckNoteLabels(ReadNotePrecedenceFixture(kind, "decimal", "decimalZero", 9, true), ["09", "10"]);
+    }
+
+    public static void DocxSingleSectionNoteNumbersPreserveInvalidAndRestartFallbacks()
+    {
+        XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", null, 0, true), ["105", "106"]);
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", "cardinalText", null, true), ["105", "106"]);
+        // An unsupported format retains the prior partial override of a valid start.
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", "cardinalText", 4, true), ["4", "5"]);
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", "upperRoman", 4, true, (xml, _) =>
+            xml.Descendants(word + "footnotePr").Single().Add(new XElement(word + "numRestart",
+                new XAttribute(word + "val", "eachPage")))), ["105", "106"]);
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", "decimalZero", null, true, (_, settings) =>
+            settings.Descendants(word + "footnotePr").Single().Add(new XElement(word + "numRestart",
+                new XAttribute(word + "val", "eachPage")))), ["105", "106"]);
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", null, null, true, (xml, _) =>
+            xml.Descendants(word + "body").Single().AddFirst(new XElement(word + "p", new XElement(word + "pPr",
+                new XElement(xml.Descendants(word + "sectPr").Single()))))), ["105", "106"]);
+        CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", null, null, true, (xml, _) =>
+            xml.Descendants(word + "sectPr").Single().Remove()), ["105", "106"]);
+    }
+
+    private static void CheckNoteLabels(DocxDocument document, string[] expected)
+    {
+        DocxInlineReference[] references = document.Paragraphs.SelectMany(p => p.InlineReferences).ToArray();
+        TestAssert.Equal(expected.Length, references.Length);
+        for (int i = 0; i < expected.Length; i++)
+        {
+            TestAssert.Equal(expected[i], references[i].DisplayText!);
+            DocxRelatedStory story = document.RelatedStories.Single(s => s.Kind == references[i].Kind && s.Id == references[i].Id);
+            TestAssert.Equal(expected[i], story.Paragraphs[0].Runs[0].Text);
+        }
+    }
+
+    private static DocxDocument ReadNotePrecedenceFixture(string kind, string documentFormat, string? sectionFormat,
+        int? sectionStart, bool sectionProperties, Action<XDocument, XDocument>? modify = null)
+    {
+        string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-nav-numbered-ids.docx"));
+        var parts = new Dictionary<string, string>();
+        using (ZipArchive archive = ZipFile.OpenRead(seed))
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            using var reader = new StreamReader(entry.Open());
+            parts[entry.FullName] = reader.ReadToEnd();
+        }
+        XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XDocument document = XDocument.Parse(parts["word/document.xml"]);
+        XElement section = document.Descendants(word + "sectPr").Single();
+        section.Elements().Where(e => e.Name == word + "footnotePr" || e.Name == word + "endnotePr").Remove();
+        if (kind == "endnote")
+        {
+            foreach (XElement reference in document.Descendants(word + "footnoteReference")) reference.Name = word + "endnoteReference";
+            foreach (XElement style in document.Descendants(word + "rStyle"))
+                if ((string?)style.Attribute(word + "val") == "FootnoteReference") style.SetAttributeValue(word + "val", "EndnoteReference");
+            parts["word/endnotes.xml"] = parts["word/footnotes.xml"].Replace("footnote", "endnote", StringComparison.Ordinal)
+                .Replace("Footnote", "Endnote", StringComparison.Ordinal);
+            parts.Remove("word/footnotes.xml");
+            foreach (string part in new[] { "[Content_Types].xml", "word/_rels/document.xml.rels" })
+                parts[part] = parts[part].Replace("footnotes", "endnotes", StringComparison.Ordinal);
+        }
+        if (sectionProperties)
+        {
+            var properties = new XElement(word + kind + "Pr",
+                new XElement(word + "pos", new XAttribute(word + "val", kind == "footnote" ? "pageBottom" : "docEnd")));
+            if (sectionFormat is not null) properties.Add(new XElement(word + "numFmt", new XAttribute(word + "val", sectionFormat)));
+            if (sectionStart is not null) properties.Add(new XElement(word + "numStart", new XAttribute(word + "val", sectionStart.Value)));
+            section.Add(properties);
+        }
+        var settings = new XDocument(new XElement(word + "settings", new XElement(word + kind + "Pr",
+            new XElement(word + "numFmt", new XAttribute(word + "val", documentFormat)),
+            new XElement(word + "numStart", new XAttribute(word + "val", 105)))));
+        modify?.Invoke(document, settings);
+        parts["word/document.xml"] = document.ToString();
+        parts["word/settings.xml"] = settings.ToString();
+        string input = TestFixtures.WriteTempPackage(".docx", parts);
+        try { return DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup); }
+        finally { File.Delete(input); }
     }
 
     public static void DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale()

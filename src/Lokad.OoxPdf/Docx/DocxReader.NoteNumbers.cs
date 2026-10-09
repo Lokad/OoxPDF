@@ -13,8 +13,9 @@ internal sealed partial class DocxReader
             return settings;
         }
 
-        // The body counters remain document-wide. Apply explicit single-section
-        // overrides; section restarts and document-setting precedence keep fallback.
+        // The body counters remain document-wide. Word uses section starts/formats
+        // and their defaults rather than the corresponding document settings.
+        // Multi-section and restart numbering still retain the prior fallback.
         return settings with
         {
             FootnoteReferenceSettings = Apply(settings.FootnoteReferenceSettings, "footnotePr"),
@@ -32,16 +33,18 @@ internal sealed partial class DocxReader
             bool hasStart = section.NumberStart is > 0;
             bool hasFormat = section.NumberFormatValue is "decimal" or "decimalZero" or
                 "lowerRoman" or "upperRoman" or "lowerLetter" or "upperLetter";
-            if (!hasStart && !hasFormat)
-            {
-                return authored;
-            }
+            // Admit omitted or supported section properties only. Malformed starts,
+            // unsupported formats and document restart requests keep the previous
+            // partial override behavior, including its authored-property fallback.
+            bool useSectionDefaults = (section.NumberStartValue is null || hasStart) &&
+                (section.NumberFormatValue is null || hasFormat) &&
+                authored.NumberRestartValue is null or "continuous";
 
             return authored with
             {
-                NumberStartValue = hasStart ? section.NumberStartValue : authored.NumberStartValue,
-                NumberStart = hasStart ? section.NumberStart : authored.NumberStart,
-                NumberFormatValue = hasFormat ? section.NumberFormatValue : authored.NumberFormatValue,
+                NumberStartValue = hasStart ? section.NumberStartValue : useSectionDefaults ? null : authored.NumberStartValue,
+                NumberStart = hasStart ? section.NumberStart : useSectionDefaults ? null : authored.NumberStart,
+                NumberFormatValue = hasFormat ? section.NumberFormatValue : useSectionDefaults ? null : authored.NumberFormatValue,
             };
         }
     }

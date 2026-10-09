@@ -15,6 +15,7 @@ internal sealed partial class DocxReader
     {
         return format switch
         {
+            "decimalZero" => value.ToString("D2", CultureInfo.InvariantCulture),
             "lowerRoman" => ToRomanNumeral(value).ToLowerInvariant(),
             "upperRoman" => ToRomanNumeral(value),
             "lowerLetter" => ToAlphabeticNumber(value, upper: false),
