@@ -193,3 +193,19 @@ All twenty allocate less; flat-image reservations fall while noisy-image reserva
 The first freeze passes 34 Windows imaging checks but 33/34 on Linux because native zlib encodes the tiny budget fixture differently (IDAT 15 versus 13 bytes). Its checkout and failed evidence are archived. The correction changes only tests and their fixture: a valid stored-deflate PNG has IDAT 18 bytes and pins the portable 36/35-byte boundary. Decoder source remains identical to `a1913986`.
 
 Exact local 0.1.5 package smoke contains tested Windows DLL SHA-256 `0386257E5E5AF9A6A7D2BED05EFE43F3270224E57AB61772ED27F1FEB456877B`. Evidence is under `artifacts/plan-revision-20261005/png-s1/`. Compressed IDAT staging remains; downstream compression/retention and full-suite integration are separate. Release preparation remains deferred.
+
+## SVG group stream ownership, 2026-10-10
+
+RV07-E6 uses the existing content admission and resident window for isolated SVG
+Form streams as well as page streams. Each group's ASCII payload charges once
+before its retained snapshot; page admission counts the remaining page stream.
+Completed page/group streams enter one chunked spill store, with blanked resource
+descriptors and weak source identities. A retained strong-key staging map fails
+the streaming collection regression; the qualified weak map releases earlier
+payload owners. Spill/resident outputs retain exact bytes, and cancellation closes
+the delete-on-close spill file. All output bytes retain admission before writing.
+
+Fourteen infrastructure regressions pass on Windows and Linux, including large
+streams beyond the 64KiB scratch chunk and exact/zero limits. The earlier measured
+workloads contain no SVG groups; mixed SVG peak memory remains unmeasured.
+Evidence: `artifacts/plan-revision-20261005/rv07-e6/`.

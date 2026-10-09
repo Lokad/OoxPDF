@@ -103,7 +103,9 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 - `SVG_UNSUPPORTED_CONTENT`: unparsable SVG pictures and unusable viewBoxes are errors with the picture ignored; unsupported elements, path commands, gradients, and paint are warnings with the affected content partially omitted. One diagnostic per construct kind.
   Numeric zero-opacity root/group containers do not paint or activate warnings
   for their contents. Uniform numeric stop-opacity attributes on referenced
-  gradients multiply fill/node alpha. Partial group/root opacity and varying,
+  gradients multiply fill/node alpha. Numeric partial opacity on the outer SVG
+  and group containers isolates supported paint, up to 32 nested groups. Partial
+  CSS/percentage container alpha, excluded nested SVG/deeper containers and varying,
   CSS or percentage stop opacity retain warnings for ignored behavior. Unused
   definitions and effective unit opacity do not add these warnings; inline
   style overrides presentation attributes.
@@ -150,8 +152,8 @@ shared process. Defaults are generous multiples of the per-site caps:
 - `MaxWorkbookModelsPerConversion` (default 100): total retained chart workbook
   models; cached models do not recharge (R04).
 - `MaxPagesPerConversion` (default 10,000): total PDF pages serialized (R06).
-- `MaxPdfContentBytesPerConversion` (default 1 GiB): total encoded page-content
-  bytes serialized (R06).
+- `MaxPdfContentBytesPerConversion` (default 1 GiB): total encoded page and isolated SVG
+  group content bytes, charged once at production admission (R06, RV07-E6).
 - `MaxOutputBytesPerConversion` (default 2 GiB): total PDF output bytes admitted before each write
   while the conversion scope is still open; a zero budget writes nothing (R06.1).
 - `MaxPdfFontBytesPerConversion` (default 256 MiB): total embedded font program
@@ -166,8 +168,8 @@ shared process. Defaults are generous multiples of the per-site caps:
   fallback) font program bytes at subset construction (R06.2). Identical-merge
   fast paths build nothing and do not recharge. Intentionally separate from the
   serialized font cap.
-- `MaxResidentPageContentBytesPerConversion` (default 64 MiB): page-content bytes
-  retained in memory during staged emission (R06.3). Past the window, content spills
+- `MaxResidentPageContentBytesPerConversion` (default 64 MiB): page and isolated SVG group content
+  bytes retained in one shared window during staged emission (R06.3, RV07-E6). Past the window, content spills
   to a delete-on-close temp file and is re-read in order, so output stays
   byte-identical while stageable payload retention follows the window. Spilled volume
   is reported as `pageContentSpilledBytes`; escalation notifies once per conversion
