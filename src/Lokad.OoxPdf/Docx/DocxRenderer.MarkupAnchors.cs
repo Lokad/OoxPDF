@@ -17,12 +17,14 @@ internal sealed partial class DocxRenderer
         DocxTextLineLayout fallbackLine,
         IReadOnlyList<DocxTextLineLayout> anchorTextLines,
         DocxParagraph paragraph,
-        DocxInlineReference reference)
+        DocxInlineReference reference,
+        DocxMarkupContext markupContext)
     {
         DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
             string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
         if (range is not null &&
-            TryResolveCommentRangeEndAnchor(fallbackLine, anchorTextLines, paragraph, range, out DocxTextLineLayout anchorLine, out _))
+            TryResolveCommentRangeEndAnchor(fallbackLine, anchorTextLines, paragraph, range,
+                UsesWordCompatibleAllMarkupTextProfile(markupContext), out DocxTextLineLayout anchorLine, out _))
         {
             return anchorLine;
         }
@@ -44,6 +46,7 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxTextLineLayout> anchorTextLines,
         DocxParagraph paragraph,
         DocxCommentRange range,
+        bool preferCompleteSourceRunEnd,
         out DocxTextLineLayout anchorLine,
         out double anchorX)
     {
@@ -54,6 +57,12 @@ internal sealed partial class DocxRenderer
                 anchorLine = candidateLine;
                 return true;
             }
+        }
+
+        if (preferCompleteSourceRunEnd &&
+            TryResolveCompletePreviousSourceRunEnd(line, anchorTextLines, paragraph, range, out anchorLine, out anchorX))
+        {
+            return true;
         }
 
         foreach (DocxTextLineLayout candidateLine in EnumerateCommentAnchorSearchLines(line, anchorTextLines, paragraph))
@@ -79,6 +88,61 @@ internal sealed partial class DocxRenderer
         return false;
     }
 
+    private static bool TryResolveCompletePreviousSourceRunEnd(
+        DocxTextLineLayout line,
+        IReadOnlyList<DocxTextLineLayout> anchorTextLines,
+        DocxParagraph paragraph,
+        DocxCommentRange range,
+        out DocxTextLineLayout anchorLine,
+        out double anchorX)
+    {
+        anchorLine = line;
+        anchorX = 0d;
+        if (line.SourceBlockIndex is not null || range.EndSourceRunIndex is not { } endRun ||
+            endRun <= 0 || range.EndTextOffset != 0)
+        {
+            return false;
+        }
+
+        // An end marker between source runs has no visible segment of its own.
+        // Find the terminal fragment across the paragraph, then require the
+        // complete preceding source run on this page before moving the anchor.
+        var fragments = EnumerateCommentAnchorSearchLines(line, anchorTextLines, paragraph)
+            .SelectMany(candidate => candidate.Segments.Select(segment => (Line: candidate, Segment: segment)))
+            .Where(item => item.Segment.SourceTextRunIndex >= 0 && item.Segment.SourceTextRunIndex < endRun &&
+                (range.StartSourceRunIndex is null || item.Segment.SourceTextRunIndex >= range.StartSourceRunIndex.Value))
+            .ToArray();
+        if (fragments.Length == 0)
+        {
+            return false;
+        }
+
+        int runIndex = fragments.Max(item => item.Segment.SourceTextRunIndex);
+        int expectedRunIndex = paragraph.Runs.Where(run => run.SourceRunIndex >= 0 && run.SourceRunIndex < endRun &&
+                (range.StartSourceRunIndex is null || run.SourceRunIndex >= range.StartSourceRunIndex.Value))
+            .Select(run => run.SourceRunIndex).DefaultIfEmpty(-1).Max();
+        if (runIndex != expectedRunIndex)
+        {
+            return false;
+        }
+        DocxTextRun[] sourceRuns = paragraph.Runs.Where(run => run.SourceRunIndex == runIndex).ToArray();
+        if (sourceRuns.Length == 0)
+        {
+            return false;
+        }
+        int expectedEnd = sourceRuns.Max(run => run.SourceTextOffsetInRun + run.Text.Length);
+        var terminal = fragments.Where(item => item.Segment.SourceTextRunIndex == runIndex)
+            .OrderByDescending(item => item.Segment.SourceTextOffsetInRun + item.Segment.Text.Length).First();
+        if (terminal.Segment.SourceTextOffsetInRun + terminal.Segment.Text.Length != expectedEnd)
+        {
+            return false;
+        }
+
+        anchorLine = terminal.Line;
+        anchorX = terminal.Segment.X + Math.Max(0d, terminal.Segment.Width);
+        return true;
+    }
+
     private static double ResolveCommentAnchorX(
         DocxTextLineLayout line,
         IReadOnlyList<DocxTextLineLayout> anchorTextLines,
@@ -91,7 +155,8 @@ internal sealed partial class DocxRenderer
         if (range is not null)
         {
             if (UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                TryResolveCommentRangeEndAnchor(line, anchorTextLines, paragraph, range, out DocxTextLineLayout anchorLine, out double wordCompatibleRangeEndX))
+                TryResolveCommentRangeEndAnchor(line, anchorTextLines, paragraph, range, true,
+                    out DocxTextLineLayout anchorLine, out double wordCompatibleRangeEndX))
             {
                 return wordCompatibleRangeEndX + ResolveTextEmissionXOffset(markupContext) -
                     WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints;

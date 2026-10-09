@@ -3633,6 +3633,16 @@ $tableGridDeltaSummary = New-RectDeltaSummary "table-grid" $referenceTableRects 
 $tableGridDeltaCountForGate = if ($candidateLayoutTableCount -eq 0) { $null } else { $tableGridDeltaSummary.DeltaCount }
 $tableGridMaxBoundsDeltaForGate = if ($candidateLayoutTableCount -eq 0) { $null } else { $tableGridDeltaSummary.MaxBoundsDelta }
 
+# Keep the broad table-like gates; source-backed cell clips provide separate
+# triage so comment brackets, connectors and balloons cannot masquerade as cells.
+$sourceCellGeometryPath = Join-Path $geometryDir 'source-table-cell-geometry.json'
+& (Join-Path $PSScriptRoot 'SummarizeDocxTableCellGeometry.ps1') `
+    -LayoutSnapshot (Join-Path $candidateDocxInspect 'layout-snapshot.json') `
+    -ReferenceGraphics (Join-Path $referencePdfInspect 'graphics-operations.json') `
+    -CandidateGraphics (Join-Path $candidatePdfInspect 'graphics-operations.json') `
+    -OutputPath $sourceCellGeometryPath
+$sourceCellGeometry = Read-JsonObjectIfExists $sourceCellGeometryPath
+
 $referenceConnectorRects = @(Select-GraphicRects $referenceGraphicsOperationItems -Predicate { param($op) Test-ConnectorLikeGraphic $op } -Subtype "connector")
 $candidateConnectorRects = @(Select-GraphicRects $candidateGraphicsOperationItems -Predicate { param($op) Test-ConnectorLikeGraphic $op } -Subtype "connector")
 $connectorComparison = @(Compare-RectLists $referenceConnectorRects $candidateConnectorRects $ConnectorBoundsTolerance)
@@ -3897,6 +3907,7 @@ $summary = [ordered]@{
     }
     TableGridDelta = $tableGridDeltaSummary
     TableGridGateSourceTableCount = $candidateLayoutTableCount
+    SourceTableCellGeometry = $sourceCellGeometry
     ConnectorDelta = $connectorDeltaSummary
     ConnectorEndpointDelta = $connectorEndpointDeltaSummary
     ConnectorLaneEndpointDelta = $connectorLaneEndpointDeltaSummary

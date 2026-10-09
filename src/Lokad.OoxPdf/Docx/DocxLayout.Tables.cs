@@ -43,7 +43,7 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxTableCellLayout cell = row.Cells[cellIndex];
                 IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
-                if (cell.TextLines.Count != 1 || cell.InlineImages.Count != 0 || cell.InlineTextBoxes.Count != 0 ||
+                if (cell.TextLines.Count == 0 || cell.InlineImages.Count != 0 || cell.InlineTextBoxes.Count != 0 ||
                     cell.NestedRows.Count != 0 || cell.Cell.HasVerticalMerge || paragraphs.Count != 1 ||
                     paragraphs[0].EffectiveProperties.LineSpacingPoints is not null ||
                     !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
@@ -107,7 +107,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     Y = cell.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
                     Height = cell.Height - borderAdvanceCorrection,
-                    TextLines = [cell.TextLines[0] with { BaselineY = cell.TextLines[0].BaselineY + baselineCorrection }]
+                    TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY + baselineCorrection }).ToArray()
                 };
             }
 

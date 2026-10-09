@@ -654,7 +654,7 @@ internal sealed partial class DocxRenderer
                         string commentBody = TrimBalloonText(BuildCommentBalloonPreview(storyLayout, replies ?? []), textWidth);
                         string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout);
                         DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
-                        DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference);
+                        DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference, markupContext);
                         // RV06: Word-compatible comment balloons wear the first-seen
                         // author color; other profiles keep the legacy cream palette.
                         int commentAuthorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);

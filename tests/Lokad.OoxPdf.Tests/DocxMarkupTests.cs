@@ -154,6 +154,162 @@ internal static class DocxMarkupTests
         }
     }
 
+    public static void DocxReviewWrappedTableCellsUsePrintedInsetsAndRetainLinePitch()
+    {
+        // Automatic wrapped cells use the same printed first-baseline inset as
+        // single-line cells. Their continuation pitch and surrounding flow survive.
+        foreach (double bodySize in new[] { 12d, 18d })
+        foreach (double cellSize in new[] { 11d, 24d })
+        foreach (double pageWidth in new[] { 612d, 792d })
+        foreach (bool tableFirst in new[] { false, true })
+        {
+            DocxDocument document = CreateReviewTableInsetDocument(bodySize, cellSize, pageWidth, tableFirst);
+            DocxTable original = document.Tables.Single();
+            DocxTableCell originalCell = original.Rows.Single().Cells.Single();
+            const string cellText = "AAA AAA AAA AAA AAA AAA AAA AAA";
+            DocxParagraph paragraph = originalCell.Paragraphs.Single() with
+            {
+                Runs = [originalCell.Paragraphs.Single().Runs.Single() with { Text = cellText }]
+            };
+            DocxTable table = original with
+            {
+                ColumnWidthsPoints = [80d],
+                Rows = [original.Rows.Single() with { Cells = [originalCell with { Text = cellText, Paragraphs = [paragraph] }] }]
+            };
+            document = WithTable(table);
+            DocxDocument fallback = WithTable(table with { Rows = [table.Rows.Single() with { HeightRuleValue = "auto" }] });
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            DocxTableCellSnapshot cell = renderer.InspectLayout(document).Pages.Single().TableRows.Single().Cells.Single();
+            TestAssert.True(cell.TextLineCount > 1, "The production layout must actually wrap the cell.");
+            double inset = cell.Y + cell.Height - cell.ResolvedPaddingTopPoints - cell.FirstBaselineY!.Value;
+            TestAssert.True(Math.Abs(inset - cellSize * 0.94d * scale) < 0.000001d,
+                $"Wrapped review cell inset must follow its printed font size. Expected={cellSize * 0.94d * scale}, actual={inset}.");
+            DocxTextEmissionSnapshot actual = renderer.InspectTextEmission(document);
+            DocxTextEmissionSnapshot legacy = renderer.InspectTextEmission(fallback);
+            double[] actualBaselines = CellBaselines(actual);
+            double[] legacyBaselines = CellBaselines(legacy);
+            TestAssert.Equal(legacyBaselines.Length, actualBaselines.Length);
+            for (int index = 1; index < actualBaselines.Length; index++)
+            {
+                TestAssert.True(Math.Abs((actualBaselines[index - 1] - actualBaselines[index]) -
+                    (legacyBaselines[index - 1] - legacyBaselines[index])) < 0.000001d,
+                    "Review projection must preserve every continuation pitch.");
+            }
+            DocxTextEmissionSegmentSnapshot[] actualBody = BodySegments(actual);
+            DocxTextEmissionSegmentSnapshot[] legacyBody = BodySegments(legacy);
+            TestAssert.Equal(legacyBody.Length, actualBody.Length);
+            for (int index = 0; index < actualBody.Length; index++)
+            {
+                TestAssert.Equal(legacyBody[index].X, actualBody[index].X);
+                TestAssert.Equal(legacyBody[index].BaselineY, actualBody[index].BaselineY);
+                TestAssert.Equal(legacyBody[index].PdfFontSize, actualBody[index].PdfFontSize);
+            }
+
+            DocxDocument WithTable(DocxTable replacement) => document with
+            {
+                BodyElements = tableFirst
+                    ? [new DocxTableElement(replacement), document.BodyElements[^1]]
+                    : [document.BodyElements[0], new DocxTableElement(replacement), document.BodyElements[^1]],
+                FallbackTables = [replacement]
+            };
+            static double[] CellBaselines(DocxTextEmissionSnapshot snapshot) => snapshot.Lines
+                .Where(line => line.SourceBlockIndex is null && !line.IsStaticStory)
+                .Select(line => line.Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY).ToArray();
+            static DocxTextEmissionSegmentSnapshot[] BodySegments(DocxTextEmissionSnapshot snapshot) => snapshot.Lines
+                .Where(line => line.SourceBlockIndex is not null && !line.IsStaticStory)
+                .SelectMany(line => line.Segments).Where(segment => !segment.IsTerminalLineSpace).ToArray();
+        }
+    }
+
+    public static void DocxWordCompatibleWrappedTableCommentAnchorsAtCompleteRangeEnd()
+    {
+        foreach (double width in new[] { 60d, 100d })
+        foreach (bool multipleSourceRuns in new[] { false, true })
+        {
+            const string text = "AAA AAA AAA AAA AAA AAA AAA AAA";
+            DocxParagraph paragraph = DocxTests.CreateCommentRangeParagraph(text, "1");
+            paragraph = paragraph with { CommentRanges = [paragraph.CommentRanges[0] with { EndTextOffset = 0 }] };
+            if (multipleSourceRuns)
+            {
+                paragraph = paragraph with
+                {
+                    Runs = [paragraph.Runs[0] with { Text = "AAA AAA ", SourceRunIndex = 0 },
+                        paragraph.Runs[0] with { Text = text[8..], SourceRunIndex = 1 }],
+                    InlineReferences = [paragraph.InlineReferences[0] with { SourceRunIndex = 2 }],
+                    CommentRanges = [paragraph.CommentRanges[0] with { EndSourceRunIndex = 2, EndTextOffset = 0 }]
+                };
+            }
+            var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var table = new DocxTable("fixed", [width], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([]) with
+            {
+                PageWidthPoints = 612d,
+                BodyElements = [new DocxTableElement(table)],
+                FallbackTables = [table],
+                RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], [], [], null)]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines
+                .Where(line => line.SourceBlockIndex is null && !line.IsStaticStory).ToArray();
+            TestAssert.True(lines.Length > 1, "The range must span multiple physical cell lines.");
+            DocxTextEmissionSegmentSnapshot[] lastSegments = lines[^1].Segments.Where(segment => !segment.IsTerminalLineSpace).ToArray();
+            double lastBaseline = lastSegments[0].BaselineY;
+            double lastEnd = lastSegments[^1].X + lastSegments[^1].Width;
+            DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
+            TestAssert.True(lastBaseline - placement.AnchorY > 0d && lastBaseline - placement.AnchorY < 6d,
+                $"A complete wrapped range must connect at its final physical line. Last={lastBaseline}, anchor={placement.AnchorY}.");
+            TestAssert.True(placement.AnchorConnectorX < lastEnd - 3d && placement.AnchorConnectorX > lastEnd - 7d,
+                $"The connector must follow the terminal range fragment. End={lastEnd}, anchor={placement.AnchorConnectorX}.");
+        }
+    }
+
+    public static void DocxWordCompatibleWrappedTableCommentRetainsUnqualifiedEndFallback()
+    {
+        foreach (int boundary in new[] { 0, 1, 2, 3 })
+        {
+            const string text = "AAA AAA AAA AAA AAA AAA AAA AAA";
+            DocxParagraph paragraph = DocxTests.CreateCommentRangeParagraph(text, "1");
+            paragraph = paragraph with { CommentRanges = [paragraph.CommentRanges[0] with { EndTextOffset = 0 }] };
+            paragraph = boundary switch
+            {
+                0 => paragraph with { CommentRanges = [paragraph.CommentRanges[0] with { EndTextOffset = 1 }] },
+                1 => paragraph with { Runs = [paragraph.Runs[0] with { SourceRunIndex = -1 }] },
+                2 => paragraph with { Runs = [paragraph.Runs[0], paragraph.Runs[0] with
+                    { Text = "AAA", Hidden = true, SourceTextOffsetInRun = text.Length }] },
+                _ => paragraph with
+                {
+                    Runs = [paragraph.Runs[0], paragraph.Runs[0] with { Text = "AAA", Hidden = true, SourceRunIndex = 1 }],
+                    CommentRanges = [paragraph.CommentRanges[0] with { EndSourceRunIndex = 2 }],
+                    InlineReferences = [paragraph.InlineReferences[0] with { SourceRunIndex = 2 }]
+                }
+            };
+            var cell = new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var table = new DocxTable("fixed", [60d], [new DocxTableRow([cell], null)]);
+            DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([]) with
+            {
+                PageWidthPoints = 612d,
+                BodyElements = [new DocxTableElement(table)],
+                FallbackTables = [table],
+                RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                    [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], [], [], null)]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines
+                .Where(line => line.SourceBlockIndex is null && !line.IsStaticStory).ToArray();
+            TestAssert.True(lines.Length > 1, "The guarded range must wrap.");
+            double firstBaseline = lines[0].Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY;
+            DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
+            TestAssert.True(firstBaseline - placement.AnchorY > 0d && firstBaseline - placement.AnchorY < 6d,
+                $"Incomplete or unqualified source ends retain the prior physical-line fallback. Boundary={boundary}, first={firstBaseline}, anchor={placement.AnchorY}.");
+        }
+    }
+
     private static DocxDocument CreateReviewTableInsetDocument(double bodySize, double cellSize, double pageWidth, bool tableFirst)
     {
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("CCC", bodySize, 30d) with { LineSpacingPoints = null };
