@@ -98,7 +98,7 @@ internal sealed partial class DocxRenderer
     {
         anchorLine = line;
         anchorX = 0d;
-        if (line.SourceBlockIndex is not null || range.EndSourceRunIndex is not { } endRun ||
+        if (line.Story?.Kind != DocxStoryKind.TableCell || range.EndSourceRunIndex is not { } endRun ||
             endRun <= 0 || range.EndTextOffset != 0)
         {
             return false;

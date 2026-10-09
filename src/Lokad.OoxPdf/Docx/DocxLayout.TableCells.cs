@@ -46,7 +46,8 @@ internal sealed partial class DocxLayoutEngine
         double cellY,
         double cellHeight,
         int fragmentIndex,
-        int fragmentCount)
+        int fragmentCount,
+        double baselineCorrection = 0d)
     {
         bool IsTextLineVisibleInCellFragment()
         {
@@ -56,7 +57,8 @@ internal sealed partial class DocxLayoutEngine
             }
     
             double bottom = fragmentIndex == 0 ? cellY - 0.001d : cellY + 0.001d;
-            return line.BaselineY >= bottom && line.BaselineY <= cellY + cellHeight + 0.001d;
+            double baselineY = line.BaselineY + baselineCorrection;
+            return baselineY >= bottom && baselineY <= cellY + cellHeight + 0.001d;
         }
 
         return cellPageBreakAlignsWithFragmentBoundary

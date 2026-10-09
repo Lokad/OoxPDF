@@ -1029,18 +1029,36 @@ internal sealed partial class DocxLayoutEngine
                 int itemCountBeforeTable = currentItems.Count;
                 int currentTableIndex = tableIndex++;
                 bool tableActiveFrameHasContent = false;
+                double reviewPaginationScale = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
+                    page.PageSettings.HeaderParagraphsByType.Values.All(paragraphs => paragraphs.Count == 0) &&
+                    page.PageSettings.FooterParagraphsByType.Values.All(paragraphs => paragraphs.Count == 0) &&
+                    page.PageSettings.HeaderBodyElementsByType.Values.All(elements => elements.Count == 0) &&
+                    page.PageSettings.FooterBodyElementsByType.Values.All(elements => elements.Count == 0) &&
+                    page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
+                    page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
+                    document.RelatedStories.All(story => story.Kind == DocxRelatedStoryKind.Comment) &&
+                    CanUseReviewTablePageCapacity(tableElement.Table) ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
                     tableActiveFrameHasContent = true;
                 }
 
-                Action advanceTableBoundary = page.ColumnFrames.Count > 1
+                Action advanceTableBoundaryCore = page.ColumnFrames.Count > 1
                     ? () =>
                     {
                         AdvanceColumnOrPage();
                         tableActiveFrameHasContent = false;
                     }
                     : FinishPage;
+                Action advanceTableBoundary = reviewPaginationScale < 1d && textMeasurer is not null
+                    ? () =>
+                    {
+                        ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
+                            textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken, allowPageBoundaryFragments: true);
+                        advanceTableBoundaryCore();
+                        itemCountBeforeTable = 0;
+                    }
+                    : advanceTableBoundaryCore;
                 Func<bool> hasTableBoundaryContent = page.ColumnFrames.Count > 1
                     ? () => HasCurrentColumnContent() || tableActiveFrameHasContent
                     : HasPageContent;
@@ -1062,10 +1080,14 @@ internal sealed partial class DocxLayoutEngine
                         commentMarkerLabels: commentMarkerLabels);
                 }
 
-                LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo());
-                if (scaleBaselineOffsetTransitions && completedPagesBeforeTable == pages.Count && textMeasurer is not null)
+                LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
+                    reviewPaginationScale: reviewPaginationScale);
+                if (scaleBaselineOffsetTransitions &&
+                    (completedPagesBeforeTable == pages.Count || reviewPaginationScale < 1d) && textMeasurer is not null)
                 {
-                    ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset, textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken);
+                    ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
+                        textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
+                        allowPageBoundaryFragments: reviewPaginationScale < 1d);
                 }
                 if (currentItems.Count > itemCountBeforeTable)
                 {

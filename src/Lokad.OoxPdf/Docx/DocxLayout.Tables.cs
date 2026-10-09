@@ -17,7 +17,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer measurer,
         double printScale,
         ref double cursorY,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool allowPageBoundaryFragments = false)
     {
         if (!double.IsFinite(printScale) || printScale >= 1d || printScale <= 0d || firstItem >= items.Count)
         {
@@ -31,7 +32,8 @@ internal sealed partial class DocxLayoutEngine
         for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (items[itemIndex] is not DocxTableRowLayout row || row.FragmentCount != 1 ||
+            if (items[itemIndex] is not DocxTableRowLayout row ||
+                row.FragmentCount != 1 && !(allowPageBoundaryFragments && row.FragmentReason == "PageBoundary") ||
                 row.HeightRuleValue is not null || row.DeclaredHeightPoints is not null)
             {
                 return;
@@ -142,8 +144,11 @@ internal sealed partial class DocxLayoutEngine
         Action markBoundaryContent,
         CancellationToken cancellationToken,
         double paragraphSpacingScale,
-        DocxTableCellTextLinesMemo? cellMemo = null)
+        DocxTableCellTextLinesMemo? cellMemo = null,
+        double reviewPaginationScale = 1d)
     {
+        if (!double.IsFinite(reviewPaginationScale) || reviewPaginationScale <= 0d || reviewPaginationScale >= 1d ||
+            !CanUseReviewTablePageCapacity(table)) reviewPaginationScale = 1d;
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
             .Select((row, rowIndex) => (row, rowIndex))
             .TakeWhile(entry => entry.row.IsHeader)
@@ -156,7 +161,10 @@ internal sealed partial class DocxLayoutEngine
             DocxTableRow row = table.Rows[rowIndex];
             IReadOnlyList<double> rowHeights = frame.RowHeights;
             double rowHeight = rowHeights[rowIndex];
-            double remainingPageHeight = Math.Max(0d, cursorY - marginBottom);
+            // Review rows already use printed line pitches. Compare those rows
+            // against the printed body-frame height, not the nominal paper frame.
+            double flowBottom = marginBottom + frame.PageContentHeight * (1d - reviewPaginationScale);
+            double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
             if (!row.CantSplit &&
                 TryResolveExplicitTableCellPageBreakBoundaries(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, getPageNumber(), pageCount: null, out IReadOnlyList<double> explicitBreakBoundaries, paragraphSpacingScale: paragraphSpacingScale))
             {
@@ -187,12 +195,12 @@ internal sealed partial class DocxLayoutEngine
                 // whole lines that fit (floor capacity); the boundary is floored to whole
                 // line pitches so a fractional remainder never squeezes an extra line in.
                 double firstFragmentHeight = FloorTableRowFragmentHeightToPitch(remainingPageHeight, splitPitch);
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, firstFragmentHeight, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, firstFragmentHeight, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo, reviewPaginationScale);
                 markBoundaryContent();
                 continue;
             }
 
-            if (cursorY - rowHeight < marginBottom && hasPageContent())
+            if (rowHeight > remainingPageHeight && hasPageContent())
             {
                 finishPage();
                 if (!row.IsHeader)
@@ -258,6 +266,12 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo).Lines;
+                if (reviewPaginationScale < 1d)
+                {
+                    double correction = ResolveTableCellFirstBaselineInset(
+                        GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textMeasurer) * (1d - reviewPaginationScale);
+                    textLines = textLines.Select(line => line with { BaselineY = line.BaselineY + correction }).ToArray();
+                }
                 laidOutCells.Add((GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textLines));
                 splitLineBaselines.AddRange(textLines.Select(line => line.BaselineY));
             }
@@ -294,7 +308,8 @@ internal sealed partial class DocxLayoutEngine
                         if (splitsParagraph &&
                             (keepRules.KeepNext == true ||
                                 keepRules.KeepLines == true ||
-                                (keepRules.WidowControl != false &&
+                                ((keepRules.WidowControl == true ||
+                                    reviewPaginationScale == 1d && keepRules.WidowControl is null) &&
                                     (firstFragmentLineCount == 1 || continuationLineCount == 1))))
                         {
                             return true;
@@ -336,6 +351,31 @@ internal sealed partial class DocxLayoutEngine
 
             return false;
         }
+    }
+
+    private static bool CanUseReviewTablePageCapacity(DocxTable table)
+    {
+        // Independent Word controls qualify plain automatic rows with implicit
+        // or disabled widow control. Keep authored pagination and complex cell
+        // content on the existing path until their own references qualify them.
+        foreach (DocxTableRow row in table.Rows)
+        {
+            if (row.IsHeader || row.CantSplit || row.HeightRuleValue is not null || row.HeightPoints is not null)
+                return false;
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                IReadOnlyList<DocxBodyElement> elements = GetTableCellLayoutBodyElements(cell);
+                if (elements.Count != 1 || elements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
+                    cell.HasVerticalMerge || paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
+                    paragraph.InlineReferences.Count != 0 || paragraph.EffectiveProperties.LineSpacingPoints is not null ||
+                    paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true ||
+                    paragraph.KeepRules.WidowControl == true ||
+                    !string.IsNullOrEmpty(cell.VerticalAlignmentValue) &&
+                        !string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+        }
+        return true;
     }
 
     private static DocxTableLayoutFrame CreateTableLayoutFrame(
@@ -1037,7 +1077,8 @@ internal sealed partial class DocxLayoutEngine
         Action finishPage,
         double paragraphSpacingScale,
         double splitPitch,
-        DocxTableCellTextLinesMemo? cellMemo = null)
+        DocxTableCellTextLinesMemo? cellMemo = null,
+        double reviewPaginationScale = 1d)
     {
         AddSplitTableRowLayout(
             table,
@@ -1055,7 +1096,8 @@ internal sealed partial class DocxLayoutEngine
             finishPage,
             paragraphSpacingScale,
             splitPitch,
-            cellMemo);
+            cellMemo,
+            reviewPaginationScale);
     }
 
     private static void AddSplitTableRowLayout(
@@ -1074,7 +1116,8 @@ internal sealed partial class DocxLayoutEngine
         Action finishPage,
         double paragraphSpacingScale,
         double splitPitch,
-        DocxTableCellTextLinesMemo? cellMemo = null)
+        DocxTableCellTextLinesMemo? cellMemo = null,
+        double reviewPaginationScale = 1d)
     {
         DocxTableLayoutFrame initialFrame = resolveFrame();
         IReadOnlyList<double> initialRowHeights = initialFrame.RowHeights;
@@ -1085,8 +1128,8 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double continuationContentHeight = row.IsHeader
-            ? initialFrame.PageContentHeight
-            : Math.Max(1d, initialFrame.PageContentHeight - SumRepeatedTableHeaderRowsHeight());
+            ? initialFrame.PageContentHeight * reviewPaginationScale
+            : Math.Max(1d, initialFrame.PageContentHeight * reviewPaginationScale - SumRepeatedTableHeaderRowsHeight());
         IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, fragmentBoundariesFromRowTop, continuationContentHeight, splitPitch);
         double consumedHeight = 0d;
         for (int fragmentIndex = 0; fragmentIndex < fragmentHeights.Count; fragmentIndex++)
@@ -1113,7 +1156,8 @@ internal sealed partial class DocxLayoutEngine
                 Story: null,
                 pageCount: null,
                 paragraphSpacingScale: paragraphSpacingScale,
-                cellMemo: cellMemo));
+                cellMemo: cellMemo,
+                reviewFragmentBaselineScale: reviewPaginationScale));
             cursorY -= fragmentHeight;
             consumedHeight += fragmentHeight;
 
@@ -1440,7 +1484,8 @@ internal sealed partial class DocxLayoutEngine
         DocxStoryId? Story,
         int? pageCount,
         double paragraphSpacingScale,
-        DocxTableCellTextLinesMemo? cellMemo = null)
+        DocxTableCellTextLinesMemo? cellMemo = null,
+        double reviewFragmentBaselineScale = 1d)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -1538,9 +1583,16 @@ internal sealed partial class DocxLayoutEngine
             (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>())
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex);
+            // Membership uses the same printed inset as the later geometry
+            // projection. Testing nominal baselines can discard a final line
+            // whose nominal font inset exceeds the already printed line pitch.
+            double fragmentBaselineCorrection = reviewFragmentBaselineScale < 1d && textMeasurer is not null
+                ? ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(contentCell)),
+                    textMeasurer) * (1d - reviewFragmentBaselineScale) : 0d;
             IReadOnlyList<DocxTextLineLayout> textLines = cellTextLines
                     .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, line, FragmentIndex, FragmentCount))
-                    .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight, FragmentIndex, FragmentCount))
+                    .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight,
+                        FragmentIndex, FragmentCount, fragmentBaselineCorrection))
                     .ToArray();
             (IReadOnlyList<DocxInlineImageLayout> cellInlineImages, IReadOnlyList<DocxInlineTextBoxLayout> cellInlineTextBoxes) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>())

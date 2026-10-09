@@ -310,6 +310,161 @@ internal static class DocxMarkupTests
         }
     }
 
+    public static void DocxReviewTablePaginationUsesPrintedPageCapacity()
+    {
+        DocxDocument document = CreateReviewPaginationDocument(includeFollowingRow: false);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        TestAssert.Equal(2, layout.Pages.Count);
+        DocxTableRowSnapshot[] fragments = layout.Pages.SelectMany(page => page.TableRows).ToArray();
+        TestAssert.Equal(2, fragments.Length);
+        TestAssert.True(fragments.All(row => row.FragmentCount == 2 && row.FragmentReason == "PageBoundary"),
+            "A long automatic review row must split at the printed page capacity.");
+        TestAssert.Equal(fragments[0].TextLineCount + fragments[1].TextLineCount,
+            renderer.InspectTextEmission(document).Lines.Count(line => line.SourceBlockIndex is null && !line.IsStaticStory));
+    }
+
+    public static void DocxReviewTablePaginationKeepsFollowingRowsOnContinuation()
+    {
+        DocxDocument document = CreateReviewPaginationDocument(includeFollowingRow: true);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxLayoutSnapshot layout = renderer.InspectLayout(document);
+        TestAssert.Equal(2, layout.Pages.Count);
+        TestAssert.True(layout.Pages[0].TableRows.All(row => row.RowIndex == 0),
+            "The following row must not remain on the overflowing first page.");
+        TestAssert.True(layout.Pages[1].TableRows.Any(row => row.RowIndex == 0 && row.FragmentIndex == 1) &&
+            layout.Pages[1].TableRows.Any(row => row.RowIndex == 1),
+            "The row continuation and following row must share the second page when they fit.");
+    }
+
+    private static DocxDocument CreateReviewPaginationDocument(bool includeFollowingRow)
+    {
+        DocxDocument document = CreateReviewTableInsetDocument(12d, 24d, 612d, tableFirst: false);
+        DocxTable original = document.Tables.Single();
+        DocxTableCell cell = original.Rows.Single().Cells.Single();
+        string content = string.Join(' ', Enumerable.Repeat("AAA", 84));
+        DocxParagraph paragraph = cell.Paragraphs.Single() with
+        {
+            Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = content }]
+        };
+        DocxTableRow longRow = original.Rows.Single() with { Cells = [cell with { Text = content, Paragraphs = [paragraph] }] };
+        DocxTable table = original with { Rows = includeFollowingRow ? [longRow, original.Rows.Single()] : [longRow] };
+        return document with
+        {
+            BodyElements = [document.BodyElements[0], new DocxTableElement(table), document.BodyElements[2]],
+            FallbackTables = [table]
+        };
+    }
+
+    public static void DocxReviewTableSplitProjectionPreservesContinuationPitch()
+    {
+        DocxDocument document = CreateReviewPaginationDocument(includeFollowingRow: false);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+        DocxTableRowSnapshot[] fragments = renderer.InspectLayout(document).Pages
+            .SelectMany(page => page.TableRows).Where(row => row.RowIndex == 0).ToArray();
+        TestAssert.Equal(2, fragments.Length);
+        DocxTableCellSnapshot cell = fragments[0].Cells.Single();
+        double inset = cell.Y + cell.Height - cell.ResolvedPaddingTopPoints - cell.FirstBaselineY!.Value;
+        TestAssert.True(Math.Abs(inset - 24d * 0.94d * scale) < 0.000001d,
+            $"The first split fragment must retain its printed first-cell inset. Inset={inset}.");
+        var preserve = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        TestAssert.Equal(28, fragments.Sum(fragment => fragment.TextLineCount));
+        TestAssert.Equal(28, preserve.InspectLayout(document).Pages.SelectMany(page => page.TableRows).Sum(row => row.TextLineCount));
+        double[] pitches = renderer.InspectTextEmission(document).Lines
+            .Where(line => line.SourceBlockIndex is null && !line.IsStaticStory)
+            .GroupBy(line => line.PageIndex).SelectMany(group => group.Zip(group.Skip(1),
+                (first, second) => first.Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY -
+                    second.Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY)).ToArray();
+        TestAssert.True(pitches.Length > 1 && pitches.All(pitch => Math.Abs(pitch - pitches[0]) < 0.000001d),
+            "Table projection must retain the same line pitch within every page fragment.");
+    }
+
+    public static void DocxReviewTablePaginationHonorsExplicitKeepAndWidowRules()
+    {
+        DocxDocument original = CreateReviewPaginationDocument(includeFollowingRow: false);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        bool checkedSingleContinuation = false;
+        foreach (int wordCount in new[] { 68, 72, 76, 80, 84 })
+        {
+            DocxDocument automatic = WithRules(DocxParagraphKeepRules.Empty);
+            DocxTableRowSnapshot[] fragments = renderer.InspectLayout(automatic).Pages.SelectMany(page => page.TableRows).ToArray();
+            if (fragments.Length != 2 || fragments[1].TextLineCount != 1) continue;
+            checkedSingleContinuation = true;
+            DocxTableRowSnapshot[] explicitOff = renderer.InspectLayout(WithRules(DocxParagraphKeepRules.Empty with
+                { WidowControl = false })).Pages.SelectMany(page => page.TableRows).ToArray();
+            TestAssert.Equal(2, explicitOff.Length);
+            TestAssert.Equal(1, explicitOff[1].TextLineCount);
+            foreach (DocxParagraphKeepRules rules in new[]
+            {
+                DocxParagraphKeepRules.Empty with { WidowControl = true },
+                DocxParagraphKeepRules.Empty with { KeepLines = true },
+                DocxParagraphKeepRules.Empty with { KeepNext = true }
+            })
+            {
+                DocxLayoutSnapshot protectedLayout = renderer.InspectLayout(WithRules(rules));
+                // Explicit keep policies retain the established page-capacity path;
+                // the Office-qualified implicit/off widow case must not widen it.
+                TestAssert.Equal(1, protectedLayout.Pages.Count);
+                TestAssert.Equal(1, protectedLayout.Pages[0].TableRows.Count);
+                TestAssert.Equal(1, protectedLayout.Pages[0].TableRows[0].FragmentCount);
+                TestAssert.Equal(fragments.Sum(fragment => fragment.TextLineCount),
+                    protectedLayout.Pages[0].TableRows[0].TextLineCount);
+            }
+
+            DocxDocument WithRules(DocxParagraphKeepRules rules)
+            {
+                string text = string.Join(' ', Enumerable.Repeat("AAA", wordCount));
+                DocxTable table = original.Tables.Single();
+                DocxTableCell cell = table.Rows.Single().Cells.Single();
+                DocxParagraph paragraph = cell.Paragraphs.Single() with
+                {
+                    Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }], KeepRules = rules
+                };
+                table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Text = text, Paragraphs = [paragraph] }] }] };
+                return original with
+                {
+                    BodyElements = [original.BodyElements[0], new DocxTableElement(table), original.BodyElements[2]],
+                    FallbackTables = [table]
+                };
+            }
+        }
+        TestAssert.True(checkedSingleContinuation,
+            "The control family must exercise an implicit widow rule with exactly one continuation line.");
+    }
+
+    public static void DocxWordCompatibleWrappedHeaderCommentRetainsPriorRangeFallback()
+    {
+        DocxParagraph paragraph = DocxTests.CreateCommentRangeParagraph(string.Join(' ', Enumerable.Repeat("AAA", 100)), "1");
+        paragraph = paragraph with { CommentRanges = [paragraph.CommentRanges[0] with { EndTextOffset = 0 }] };
+        DocxDocument document = DocxTests.CreateAllMarkupWrapProbeDocument([DocxTests.CreateDocxLayoutParagraph("CCC", 12d, 14d)]) with
+        {
+            PageWidthPoints = 612d,
+            PageSettings = DocxPageSettings.Empty with
+            {
+                HeaderDistancePoints = 180d,
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+                { ["default"] = [new DocxParagraphElement(paragraph)] }
+            },
+            RelatedStories = [new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public comment.", 10d, 12d))], [], [], null)]
+        };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines.Where(line => line.IsStaticStory).ToArray();
+        TestAssert.True(lines.Length > 1, "The static-story control must wrap.");
+        double first = lines[0].Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY;
+        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
+        TestAssert.True(first - placement.AnchorY > 0d && first - placement.AnchorY < 6d,
+            $"Unqualified wrapped header paragraphs retain their prior range-anchor fallback. First={first}, anchor={placement.AnchorY}.");
+    }
+
     private static DocxDocument CreateReviewTableInsetDocument(double bodySize, double cellSize, double pageWidth, bool tableFirst)
     {
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("CCC", bodySize, 30d) with { LineSpacingPoints = null };
