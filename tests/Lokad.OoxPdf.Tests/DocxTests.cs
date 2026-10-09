@@ -70,7 +70,7 @@ internal static class DocxTests
             "The " + flowName + " fixture should include a laid-out text line.");
     }
 
-    internal static void AssertWordCompatibleCommentRangeMarkerRendered(DocxDocument document, string flowName)
+    internal static void AssertWordCompatibleCommentRangeMarkerRendered(DocxDocument document, string flowName, bool expectedVisible = true)
     {
         var renderer = new DocxRenderer(
             fontResolver: null,
@@ -78,6 +78,16 @@ internal static class DocxTests
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
         PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+
+        if (!expectedVisible)
+        {
+            TestAssert.True(!page.Content.Contains("0.973 0.863 0.867 rg", StringComparison.Ordinal) &&
+                !page.Content.Contains("0.82 0.204 0.22 RG", StringComparison.Ordinal),
+                "Word-compatible all-markup must omit comment range markers for " + flowName + ".");
+            TestAssert.True(CountPdfTextShows(page.Content) > 0,
+                "Suppressing comment markers must retain the text in " + flowName + ".");
+            return;
+        }
 
         TestAssert.True(
             CountOccurrences(page.Content, " 11.625 re f") >= 1,

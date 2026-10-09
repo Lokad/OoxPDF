@@ -1635,7 +1635,7 @@ internal static class DocxTablesMarkupTests
             "All-markup table formatting revisions should place table/row/cell revision balloon candidates from placed endnote table rows.");
     }
 
-    public static void DocxWordCompatibleAllMarkupRendersCommentRangeBracketsInStoryTables()
+    public static void DocxWordCompatibleAllMarkupOmitsCommentRangeBracketsInStoryTables()
     {
         DocxTable staticTable = DocxTests.CreateCommentRangeTable("Static table range", "8");
         DocxPageSettings staticSettings = DocxPageSettings.Empty with
@@ -1650,7 +1650,7 @@ internal static class DocxTablesMarkupTests
             {
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "static header table cell text");
+            "static header table cell text", expectedVisible: false);
 
         DocxParagraph footnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
         {
@@ -1680,10 +1680,10 @@ internal static class DocxTablesMarkupTests
                 RelatedStories = [footnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "placed footnote table cell text");
+            "placed footnote table cell text", expectedVisible: false);
     }
 
-    public static void DocxWordCompatibleAllMarkupAnchorsStoryTableCommentConnectorsAtCellRangeEnd()
+    public static void DocxWordCompatibleAllMarkupOmitsStoryTableCommentConnectors()
     {
         var renderer = new DocxRenderer(
             fontResolver: null,
@@ -1767,47 +1767,13 @@ internal static class DocxTablesMarkupTests
         AssertStoryTableCommentConnectorAnchoredAtRangeEnd(renderer, footnoteDocument, "placed footnote table");
 
         static void AssertStoryTableCommentConnectorAnchoredAtRangeEnd(
-            DocxRenderer renderer,
-            DocxDocument document,
-            string flowName)
+            DocxRenderer renderer, DocxDocument document, string flowName)
         {
-            DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
-                .Single(item => item.Kind == "Comment");
-            DocxTextEmissionLineSnapshot line = renderer.InspectTextEmission(document).Lines
-                .Single(item => item.CommentReferenceCount == 1 && item.Segments.Any(segment => !segment.IsTerminalLineSpace));
-            DocxTextEmissionSegmentSnapshot[] visibleSegments = line.Segments
-                .Where(segment => !segment.IsTerminalLineSpace)
-                .ToArray();
-            // Connector placement uses the layout range; glyph export rounding is separate.
-            double rangeEndX = visibleSegments[^1].X + visibleSegments[^1].Width;
-            double baselineY = visibleSegments[0].BaselineY;
-            double anchorDelta = baselineY - placement.AnchorY;
-
-            if (baselineY < document.MarginBottomPoints)
-            {
-                TestAssert.True(
-                    Math.Abs(placement.AnchorY - document.MarginBottomPoints) < 0.001d,
-                    string.Create(
-                        CultureInfo.InvariantCulture,
-                        $"Word-compatible all-markup should clamp {flowName} comment connector Y to the page bottom margin when the placed story table line is below the usable page. AnchorY={placement.AnchorY}, BaselineY={baselineY}, MarginBottom={document.MarginBottomPoints}."));
-            }
-            else
-            {
-                // Office: balloon titles land on the anchor row (title ~= row baseline - 0.5),
-                // so the resolved anchor sits the 2.44 row inset below the emitted baseline by construction.
-                TestAssert.True(
-                    anchorDelta > 0d && anchorDelta < 6d,
-                    string.Create(
-                        CultureInfo.InvariantCulture,
-                        $"Word-compatible all-markup should anchor {flowName} comment connector Y to the story table-cell line. AnchorY={placement.AnchorY}, BaselineY={baselineY}."));
-            }
-
-            TestAssert.True(
-                placement.AnchorConnectorX < rangeEndX - 3d &&
-                placement.AnchorConnectorX > rangeEndX - 7d,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Word-compatible all-markup should anchor {flowName} comment connector X near the layout story table range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
+            TestAssert.Equal(0, renderer.InspectMarkupBalloons(document).Count);
+            TestAssert.True(renderer.InspectTextEmission(document).Lines.Any(line => line.CommentReferenceCount == 1),
+                "The source comment and text in " + flowName + " must survive inspection.");
+            TestAssert.Equal(1, new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(document).Count);
         }
     }
 

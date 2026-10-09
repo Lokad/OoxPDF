@@ -448,7 +448,8 @@ internal sealed partial class DocxRenderer
             WordCompatibleTextYOffset = yOffset, CommentMarkerLabels = markerLabels,
             WordCompatibleMainStoryCommentParagraphs = visibleComments,
             WordCompatibleHasPrintedBalloons = UsesWordCompatibleAllMarkupTextProfile(effective)
-                ? HasWordCompatibleBalloonContent(document, effective) : null };
+                ? (effective.RendersCommentBalloons && HasBalloonableCommentAnchor(document)) ||
+                    (effective.RendersRevisionBalloons && HasAnyNonVoidPropertyRevision(document)) : null };
     }
 
     private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;

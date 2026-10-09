@@ -12,6 +12,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    public static void DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane()
+    {
+        DocxDocument document = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: false);
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAA", 10d, 12d) with
+        {
+            Revisions = [new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, "9", "Reviewer",
+                null, "rPrChange", null, ["b"])]
+        };
+        document = document with
+        {
+            PageSettings = document.PageSettings with
+            {
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+                    { ["default"] = [new DocxParagraphElement(paragraph)] }
+            }
+        };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        TestAssert.Equal(1, renderer.InspectMarkupBalloons(document).Count);
+        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)));
+        TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
+            .Any(page => page.Content.Contains("0.949 g", StringComparison.Ordinal)),
+            "A surviving formatting balloon retains its lane even when its story does not trigger body print scale.");
+    }
+
     public static void DocxWordCompatibleStaticAndNoteCommentsUseNominalCanvas()
     {
         foreach (string kind in new[] { "header", "footer", "footnote", "endnote" })
@@ -905,7 +931,7 @@ internal static class DocxCommentsTests
             {
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "static header text");
+            "static header text", expectedVisible: false);
 
         DocxParagraph drawingAnchor = DocxTests.CreateDocxLayoutParagraph("Drawing anchor", 10d, 12d);
         DocxParagraph textBoxParagraph = DocxTests.CreateCommentRangeParagraph("Text box range", "4");
@@ -940,7 +966,7 @@ internal static class DocxCommentsTests
             {
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "floating text-box text");
+            "floating text-box text", expectedVisible: false);
 
         DocxParagraph staticTextBoxParagraph = DocxTests.CreateCommentRangeParagraph("Static text box range", "5");
         DocxPageSettings staticFloatingSettings = DocxPageSettings.Empty with
@@ -955,7 +981,7 @@ internal static class DocxCommentsTests
             {
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "static floating text-box text");
+            "static floating text-box text", expectedVisible: false);
 
         DocxParagraph footnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
         {
@@ -985,7 +1011,7 @@ internal static class DocxCommentsTests
                 RelatedStories = [footnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "placed footnote text");
+            "placed footnote text", expectedVisible: false);
 
         DocxParagraph endnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
         {
@@ -1015,7 +1041,7 @@ internal static class DocxCommentsTests
                 RelatedStories = [endnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             },
-            "placed endnote text");
+            "placed endnote text", expectedVisible: false);
     }
 
     public static void DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers()

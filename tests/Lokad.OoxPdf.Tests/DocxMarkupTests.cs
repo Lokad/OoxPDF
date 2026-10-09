@@ -1747,7 +1747,7 @@ internal static class DocxMarkupTests
         }
     }
 
-    public static void DocxWordCompatibleAllMarkupPaintsReviewLaneBackground()
+    public static void DocxWordCompatibleAllMarkupOmitsReviewLaneForOrphanCommentReference()
     {
         string input = DocxTests.WriteCommentMarkerProbeDocx();
         using FileStream stream = File.OpenRead(input);
@@ -1760,8 +1760,8 @@ internal static class DocxMarkupTests
             .RenderBlankPages(document, null, CancellationToken.None)
             .Single();
 
-        TestAssert.Contains("0.949 g", page.Content);
-        TestAssert.Contains("411.93 89.475 199.7 614.25 re f", page.Content);
+        TestAssert.True(!page.Content.Contains("0.949 g", StringComparison.Ordinal),
+            "An unmatched commentReference must not paint an empty review lane.");
     }
 
     public static void DocxWordCompatibleAllMarkupMirrorsReviewLaneBackground()
