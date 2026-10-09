@@ -19,6 +19,7 @@ internal static class TestCatalog
         .. FromType("ooxml", typeof(OoxResourceGuaranteeTests)),
         .. FromType("ooxml", typeof(OoxMissingFontTests)),
         .. FromType("pdf", typeof(PdfWriterTests)),
+        .. FromType("pdf", typeof(PdfTransparencyGroupTests)),
         .. FromType("pdf", typeof(PdfResourceIndexTests)),
         .. FromType("pdf", typeof(PdfIdentityTests)),
         .. FromType(ClassifyPptx, typeof(PptxTests)),

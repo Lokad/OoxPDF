@@ -10,13 +10,19 @@ internal sealed class PdfStagedDocument : IDisposable
 
     private bool disposed;
 
-    internal PdfStagedDocument(IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging)
+    internal PdfStagedDocument(IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries)
     {
         Pages = pages;
         this.staging = staging;
+        PageEntries = pageEntries;
+        GroupEntries = groupEntries;
     }
 
     public IReadOnlyList<PdfPage> Pages { get; }
+
+    internal IReadOnlyList<int> PageEntries { get; }
+
+    internal IReadOnlyDictionary<PdfTransparencyGroup, int> GroupEntries { get; }
 
     internal PdfPageContentStaging Staging
     {

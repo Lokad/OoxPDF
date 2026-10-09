@@ -2,7 +2,9 @@ using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Pdf;
 
-// R06.3: page-content spill store for staged emission. Content bytes stay in
+// R06.3: page/group content spill store for staged emission. The historical
+// page methods address stream entries; RV07-E6 maps both pages and isolated SVG
+// groups into this one resident window. Content bytes stay in
 // memory while they fit the resident window; past the window they escalate to a
 // length-prefixed temp file (8-byte little-endian lengths) and memory is released.
 // Page order is preserved in both modes, so emission stays byte-identical.

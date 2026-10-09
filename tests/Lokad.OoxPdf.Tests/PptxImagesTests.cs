@@ -2035,7 +2035,9 @@ internal static class PptxImagesTests
         {
             Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"0.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>"),
             Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\" style=\"stop-opacity:0.5\"/>"),
-            Wrap(opaque, "opacity=\"0.5\""), Wrap(opaque, container: "opacity=\"0.5\""),
+            Wrap(opaque, "opacity=\"50%\""), Wrap(opaque, container: "opacity=\".5\" style=\"opacity:.5\""),
+            Wrap(opaque, container: "opacity=\"-0.5\""),
+            Wrap(opaque).Replace("<g >", "<svg opacity=\".5\">", StringComparison.Ordinal).Replace("</g>", "</svg>", StringComparison.Ordinal),
             Wrap(opaque, container: "opacity=\"0\" style=\"opacity:0.5\"")
         })
         {
@@ -2045,6 +2047,47 @@ internal static class PptxImagesTests
             TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT") &&
                 !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "The retained opacity fallback must diagnose without losing the picture.");
         }
+    }
+
+    public static void PptxSvgNumericContainerOpacityIsolatesOverlappingChildren()
+    {
+        const string paint = "<path d=\"M0 0H100V50H0Z\" fill=\"#0000FF\"/><path d=\"M10 5H90V45H10Z\" fill=\"#FF0000\"/>";
+        foreach (string svg in new[]
+        {
+            "<svg viewBox=\"0 0 100 50\" opacity=\".5\">" + paint + "</svg>",
+            "<svg viewBox=\"0 0 100 50\"><g opacity=\".5\">" + paint + "</g></svg>"
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
+            TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+            TestAssert.Contains("/I true /K false", pdf);
+            TestAssert.Contains("/ca 0.5 /CA 0.5", pdf);
+            TestAssert.True(!diagnostics.Any(d => d.Id is "SVG_UNSUPPORTED_CONTENT" or "PPTX_NODE_RENDER_FAILED"), "Qualified numeric container alpha must retain both paints without fallback.");
+        }
+    }
+
+    public static void PptxSvgNestedAndSiblingContainerOpacityPreservesPaintOrder()
+    {
+        const string svg = "<svg viewBox=\"0 0 100 50\"><g opacity=\".5\"><path d=\"M0 0H100V50H0Z\" fill=\"#0000FF\"/><g opacity=\".25\"><path d=\"M10 5H90V45H10Z\" fill=\"#FF0000\"/></g><path d=\"M25 10H75V40H25Z\" fill=\"#00FF00\"/></g><g opacity=\".75\"><path d=\"M30 15H70V35H30Z\"/></g></svg>";
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
+        TestAssert.Equal(3, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+        int blue = pdf.IndexOf("0 0 1 rg", StringComparison.Ordinal);
+        int nested = pdf.IndexOf("/Tr1 Do", blue, StringComparison.Ordinal);
+        int green = pdf.IndexOf("0 1 0 rg", nested, StringComparison.Ordinal);
+        TestAssert.True(blue >= 0 && nested > blue && green > nested, "Nested invocation must remain between its surrounding sibling paints.");
+        TestAssert.True(!diagnostics.Any(d => d.Id is "SVG_UNSUPPORTED_CONTENT" or "PPTX_NODE_RENDER_FAILED"), "Nested numeric groups must render without fallback.");
+    }
+
+    public static void PptxSvgContainerIsolationDepthHasDiagnosedFallback()
+    {
+        string opening = string.Concat(Enumerable.Repeat("<g opacity=\".5\">", 33));
+        string closing = string.Concat(Enumerable.Repeat("</g>", 33));
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest("<svg viewBox=\"0 0 100 50\">" + opening + "<path d=\"M0 0H100V50H0Z\"/>" + closing + "</svg>", diagnostics));
+        TestAssert.Equal(32, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+        TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores opacity on 1 container", StringComparison.Ordinal)) && !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Excess nesting must keep bounded painted output and diagnose the excluded alpha.");
     }
 
     private static byte[] RenderSvgOpacityTest(string svg, List<OoxPdfDiagnostic>? diagnostics = null)
@@ -2075,7 +2118,7 @@ internal static class PptxImagesTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-        TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores opacity on 2 containers", StringComparison.Ordinal)));
+        TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores opacity on 1 container", StringComparison.Ordinal)));
         TestAssert.Equal(1, diagnostics.Count(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores stop-opacity on 2 gradient stops", StringComparison.Ordinal)));
         TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Ignored opacity must preserve the picture.");
 

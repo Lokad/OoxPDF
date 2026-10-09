@@ -55,9 +55,9 @@ public sealed class OoxConversionLimits
     public long MaxPagesPerConversion { get; init; } = 10_000;
 
     /// <summary>
-    /// Maximum PDF page-content bytes serialized per conversion (default
+    /// Maximum PDF page and SVG transparency-group content bytes per conversion (default
     /// 1,073,741,824, i.e. 1 GiB). Counts encoded content-stream bytes across all
-    /// pages once up front during serialization (R06).
+    /// pages and isolated SVG groups once at production admission (R06, RV07-E6).
     /// </summary>
     public long MaxPdfContentBytesPerConversion { get; init; } = 1073741824;
 
@@ -103,8 +103,8 @@ public sealed class OoxConversionLimits
     public long MaxRetainedFontBytesPerConversion { get; init; } = 268435456;
 
     /// <summary>
-    /// Maximum page-content bytes retained in memory per conversion (default 67,108,864,
-    /// i.e. 64 MiB). Page content past this resident window spills to a delete-on-close
+    /// Maximum staged page and SVG transparency-group content bytes retained in memory per conversion (default 67,108,864,
+    /// i.e. 64 MiB). Content past this shared resident window spills to a delete-on-close
     /// temp file during staged emission and is re-read in order, so output stays
     /// byte-identical while stageable payload retention follows the window (R06.3).
     /// </summary>

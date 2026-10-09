@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Lokad.OoxPdf.Diagnostics;
 
@@ -45,8 +46,8 @@ internal sealed class PdfDocumentWriter
     }
 
     // R06.3: staged emission. The producer enumerable is drained once: each page is
-    // validated, its content bytes are encoded a single time and handed to the spill
-    // store, and only the blanked descriptor is retained. Planning, numbering, and
+    // validated, its page/group content bytes are encoded a single time and handed
+    // to one spill store, and only blanked descriptors are retained. Planning, numbering, and
     // emission then run over descriptors with content re-read in order, so output
     // stays byte-identical while stageable payload retention follows the window.
     public static long WriteStaged(
@@ -80,6 +81,26 @@ internal sealed class PdfDocumentWriter
         try
         {
             var blanked = new List<PdfPage>();
+            var pageEntries = new List<int>();
+            // Weak source identities allow duplicate references to share their
+            // staged descriptor without retaining previous pages' payload strings.
+            var stagedGroups = new ConditionalWeakTable<PdfTransparencyGroup, PdfTransparencyGroup>();
+            var groupEntries = new Dictionary<PdfTransparencyGroup, int>();
+            PdfTransparencyGroup StageGroup(PdfTransparencyGroup group)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (stagedGroups.TryGetValue(group, out PdfTransparencyGroup? existing)) { return existing; }
+                PdfTransparencyGroupResource[] children = group.Groups
+                    .Select(child => new PdfTransparencyGroupResource(child.ResourceName, StageGroup(child.Group))).ToArray();
+                int entry = staging.Count;
+                staging.BeginPage(cancellationToken);
+                AppendEncodedPageContent(staging, group.Content, cancellationToken);
+                staging.EndPage(cancellationToken);
+                var descriptor = new PdfTransparencyGroup(group.Bounds, string.Empty, group.ExtGStates, group.Shadings, children);
+                stagedGroups.Add(group, descriptor);
+                groupEntries.Add(descriptor, entry);
+                return descriptor;
+            }
             int pageIndex = 0;
             foreach (PdfPage page in pages)
             {
@@ -90,10 +111,13 @@ internal sealed class PdfDocumentWriter
                 }
 
                 PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
+                pageEntries.Add(staging.Count);
                 staging.BeginPage(cancellationToken);
                 AppendEncodedPageContent(staging, page.Content, cancellationToken);
                 staging.EndPage(cancellationToken);
-                blanked.Add(page with { Content = string.Empty });
+                PdfTransparencyGroupResource[] groups = page.Groups
+                    .Select(group => new PdfTransparencyGroupResource(group.ResourceName, StageGroup(group.Group))).ToArray();
+                blanked.Add(page with { Content = string.Empty, Groups = groups });
                 pageIndex++;
             }
 
@@ -107,7 +131,7 @@ internal sealed class PdfDocumentWriter
                 OoxConversionBudget.Current?.NotePageContentSpilled(staging.SpilledBytes);
             }
 
-            return new PdfStagedDocument(blanked, staging);
+            return new PdfStagedDocument(blanked, staging, pageEntries, groupEntries);
         }
         catch
         {
@@ -153,15 +177,15 @@ internal sealed class PdfDocumentWriter
         staged.ThrowIfDisposed();
         IReadOnlyList<PdfPage> pages = staged.Pages;
         PdfPageContentStaging staging = staged.Staging;
-        if (staging.Count != pages.Count)
+        if (staging.Count != pages.Count + staged.GroupEntries.Count || staged.PageEntries.Count != pages.Count)
         {
-            throw new InvalidDataException("Staged page count mismatch.");
+            throw new InvalidDataException("Staged content entry count mismatch.");
         }
 
-        return WriteCore(stream, pages, staging, cancellationToken, creationDate);
+        return WriteCore(stream, pages, staging, staged.PageEntries, staged.GroupEntries, cancellationToken, creationDate);
     }
 
-    private static long WriteCore(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
+    private static long WriteCore(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var writer = new PdfObjectWriter(stream, cancellationToken);
@@ -182,28 +206,9 @@ internal sealed class PdfDocumentWriter
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
                 $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(numbers.AnnotationObjectsByPage[i])} >>\n"));
-            int contentLength = staging.GetPageLength(i, cancellationToken);
+            int contentLength = staging.GetPageLength(pageEntries[i], cancellationToken);
             writer.WriteContentStreamHeader(contentObjectNumber, contentLength);
-            byte[] copy = ArrayPool<byte>.Shared.Rent(PdfPageContentStaging.ChunkByteCount);
-            try
-            {
-                int offset = 0;
-                while (offset < contentLength)
-                {
-                    int read = staging.ReadPageBytes(i, copy, 0, offset, Math.Min(copy.Length, contentLength - offset), cancellationToken);
-                    if (read == 0)
-                    {
-                        throw new InvalidDataException("Page content spill store ended unexpectedly.");
-                    }
-
-                    writer.WriteContentStreamBytes(copy.AsSpan(0, read));
-                    offset += read;
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(copy);
-            }
+            CopyStagedContent(writer, staging, pageEntries[i], contentLength, cancellationToken);
 
             writer.WriteContentStreamTrailer();
         }
@@ -242,6 +247,18 @@ internal sealed class PdfDocumentWriter
         {
             cancellationToken.ThrowIfCancellationRequested();
             WriteTilingPatternObject(writer, pattern, numbers.PatternObjects[pattern.ResourceKey], numbers.ImageObjects);
+        }
+
+        foreach (PdfTransparencyGroup group in plan.Groups)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int entry = groupEntries[group];
+            PdfRectangle bounds = group.Bounds;
+            string resources = BuildResourceDictionary([], [], [], group.ExtGStates, group.Shadings, [], group.Groups);
+            writer.WriteContentStreamHeader(numbers.GroupObjects[group], staging.GetPageLength(entry, cancellationToken),
+                $"/Type /XObject /Subtype /Form /BBox [{FormatNumber(bounds.X)} {FormatNumber(bounds.Y)} {FormatNumber(bounds.X + bounds.Width)} {FormatNumber(bounds.Y + bounds.Height)}] /Group << /S /Transparency /CS /DeviceRGB /I true /K false >> /Resources {resources}");
+            CopyStagedContent(writer, staging, entry, staging.GetPageLength(entry, cancellationToken), cancellationToken);
+            writer.WriteContentStreamTrailer();
         }
 
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -322,25 +339,29 @@ internal sealed class PdfDocumentWriter
             return builder.ToString();
         }
 
-        string BuildResources(PdfPage page)
+        string BuildResources(PdfPage page) => BuildResourceDictionary(page.Fonts, page.FallbackFonts, page.Images, page.ExtGStates, page.Shadings, page.Patterns, page.Groups);
+
+        string BuildResourceDictionary(IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfFallbackFontResource> fallbackFonts,
+            IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> states, IReadOnlyList<PdfShadingResource> shadings,
+            IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfTransparencyGroupResource> groups)
         {
-            if (page.Fonts.Count == 0 && page.FallbackFonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0 && page.Patterns.Count == 0)
+            if (fonts.Count == 0 && fallbackFonts.Count == 0 && images.Count == 0 && states.Count == 0 && shadings.Count == 0 && patterns.Count == 0 && groups.Count == 0)
             {
                 return "<< >>";
             }
 
             var builder = new StringBuilder("<<");
-            if (page.Fonts.Count != 0 || page.FallbackFonts.Count != 0)
+            if (fonts.Count != 0 || fallbackFonts.Count != 0)
             {
                 builder.Append(" /Font <<");
-                foreach (PdfFontResource font in page.Fonts)
+                foreach (PdfFontResource font in fonts)
                 {
                     FontObjectNumbers objects = numbers.FontObjects[font.Font.ResourceKey];
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
                     builder.Append(CultureInfo.InvariantCulture, $"{objects.Type0} 0 R");
                 }
 
-                foreach (PdfFallbackFontResource font in page.FallbackFonts)
+                foreach (PdfFallbackFontResource font in fallbackFonts)
                 {
                     FallbackFontObjectNumbers objects = numbers.FallbackFontObjects[font.Font.ResourceKey];
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
@@ -350,23 +371,28 @@ internal sealed class PdfDocumentWriter
                 builder.Append(" >>");
             }
 
-            if (page.Images.Count != 0)
+            if (images.Count != 0 || groups.Count != 0)
             {
                 builder.Append(" /XObject <<");
-                foreach (PdfImageResource image in page.Images)
+                foreach (PdfImageResource image in images)
                 {
                     ImageObjectNumbers objects = numbers.ImageObjects[image.Image.ResourceKey];
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
                     builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
                 }
 
+                foreach (PdfTransparencyGroupResource group in groups)
+                {
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(group.ResourceName)).Append(' ');
+                    builder.Append(CultureInfo.InvariantCulture, $"{numbers.GroupObjects[group.Group]} 0 R");
+                }
                 builder.Append(" >>");
             }
 
-            if (page.ExtGStates.Count != 0)
+            if (states.Count != 0)
             {
                 builder.Append(" /ExtGState <<");
-                foreach (PdfExtGStateResource state in page.ExtGStates)
+                foreach (PdfExtGStateResource state in states)
                 {
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(state.ResourceName));
                     builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)}");
@@ -381,10 +407,10 @@ internal sealed class PdfDocumentWriter
                 builder.Append(" >>");
             }
 
-            if (page.Shadings.Count != 0)
+            if (shadings.Count != 0)
             {
                 builder.Append(" /Shading <<");
-                foreach (PdfShadingResource shading in page.Shadings)
+                foreach (PdfShadingResource shading in shadings)
                 {
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(shading.ResourceName));
                     builder.Append(CultureInfo.InvariantCulture, $" {numbers.ShadingObjects[shading.Shading.ResourceKey]} 0 R");
@@ -393,10 +419,10 @@ internal sealed class PdfDocumentWriter
                 builder.Append(" >>");
             }
 
-            if (page.Patterns.Count != 0)
+            if (patterns.Count != 0)
             {
                 builder.Append(" /Pattern <<");
-                foreach (PdfTilingPatternResource pattern in page.Patterns)
+                foreach (PdfTilingPatternResource pattern in patterns)
                 {
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(pattern.ResourceName));
                     builder.Append(CultureInfo.InvariantCulture, $" {numbers.PatternObjects[pattern.Pattern.ResourceKey]} 0 R");
@@ -408,6 +434,23 @@ internal sealed class PdfDocumentWriter
             builder.Append(" >>");
             return builder.ToString();
         }
+    }
+
+    private static void CopyStagedContent(PdfObjectWriter writer, PdfPageContentStaging staging, int entry, int length, CancellationToken cancellationToken)
+    {
+        byte[] copy = ArrayPool<byte>.Shared.Rent(PdfPageContentStaging.ChunkByteCount);
+        try
+        {
+            int offset = 0;
+            while (offset < length)
+            {
+                int read = staging.ReadPageBytes(entry, copy, 0, offset, Math.Min(copy.Length, length - offset), cancellationToken);
+                if (read == 0) { throw new InvalidDataException("Content spill store ended unexpectedly."); }
+                writer.WriteContentStreamBytes(copy.AsSpan(0, read));
+                offset += read;
+            }
+        }
+        finally { ArrayPool<byte>.Shared.Return(copy); }
     }
 
     private static void WriteFontObjects(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects, CancellationToken cancellationToken)
@@ -720,7 +763,8 @@ internal sealed class PdfDocumentWriter
         IReadOnlyList<PdfImageXObject> Images,
         IReadOnlyList<PdfShading> Shadings,
         IReadOnlyList<PdfLuminositySoftMask> SoftMasks,
-        IReadOnlyList<PdfTilingPattern> Patterns);
+        IReadOnlyList<PdfTilingPattern> Patterns,
+        IReadOnlyList<PdfTransparencyGroup> Groups);
 
     private sealed record PdfDocumentNumbers(
         IReadOnlyDictionary<string, FontObjectNumbers> FontObjects,
@@ -729,12 +773,27 @@ internal sealed class PdfDocumentWriter
         IReadOnlyDictionary<string, int> ShadingObjects,
         IReadOnlyDictionary<string, int> SoftMaskObjects,
         IReadOnlyDictionary<string, int> PatternObjects,
+        IReadOnlyDictionary<PdfTransparencyGroup, int> GroupObjects,
         IReadOnlyList<int[]> AnnotationObjectsByPage,
         int ObjectCount,
         int? InfoObjectNumber);
 
     private static PdfDocumentPlan BuildDocumentPlan(IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken)
-    {        List<PdfEmbeddedFont> fonts = pages
+    {
+        var groups = new List<PdfTransparencyGroup>();
+        var seen = new HashSet<PdfTransparencyGroup>();
+        void Gather(PdfTransparencyGroup group)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!seen.Add(group)) { return; }
+            groups.Add(group);
+            foreach (PdfTransparencyGroupResource child in group.Groups) { Gather(child.Group); }
+        }
+        foreach (PdfPage page in pages)
+        {
+            foreach (PdfTransparencyGroupResource group in page.Groups) { Gather(group.Group); }
+        }
+        List<PdfEmbeddedFont> fonts = pages
             .SelectMany(p => p.Fonts.Select(f => f.Font))
             .GroupBy(f => f.ResourceKey, StringComparer.Ordinal)
             .Select(group => PdfEmbeddedFont.Merge(group, cancellationToken))
@@ -749,12 +808,14 @@ internal sealed class PdfDocumentWriter
             .SelectMany(p => p.Images
                 .Select(i => i.Image)
                 .Concat(p.ExtGStates.Select(s => s.SoftMask?.Image).OfType<PdfImageXObject>())
-                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image)))),
+                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image))))
+                .Concat(groups.SelectMany(group => group.ExtGStates.Select(state => state.SoftMask?.Image).OfType<PdfImageXObject>())),
             static image => image.ResourceKey,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         List<PdfShading> shadings = pages
             .SelectMany(p => p.Shadings.Select(s => s.Shading))
+            .Concat(groups.SelectMany(group => group.Shadings.Select(shading => shading.Shading)))
             .DistinctBy(s => s.ResourceKey)
             .ToList();
         cancellationToken.ThrowIfCancellationRequested();
@@ -764,11 +825,12 @@ internal sealed class PdfDocumentWriter
             .ToList();
         List<PdfLuminositySoftMask> softMasks = pages
             .SelectMany(p => p.ExtGStates)
+            .Concat(groups.SelectMany(group => group.ExtGStates))
             .Select(s => s.SoftMask).OfType<PdfLuminositySoftMask>()
             .DistinctBy(s => s.ResourceKey)
             .ToList();
 
-        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, softMasks, patterns);
+        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, softMasks, patterns, groups);
     }
 
 
@@ -832,7 +894,14 @@ internal sealed class PdfDocumentWriter
             patternObjects[plan.Patterns[i].ResourceKey] = patternObjectBase + i;
         }
 
-        int annotationObjectBase = patternObjectBase + plan.Patterns.Count;
+        int groupObjectBase = patternObjectBase + plan.Patterns.Count;
+        var groupObjects = new Dictionary<PdfTransparencyGroup, int>();
+        for (int i = 0; i < plan.Groups.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            groupObjects.Add(plan.Groups[i], groupObjectBase + i);
+        }
+        int annotationObjectBase = groupObjectBase + plan.Groups.Count;
         var annotationObjectsByPage = new List<int[]>(pages.Count);
         int nextAnnotationObject = annotationObjectBase;
         foreach (PdfPage page in pages)
@@ -855,7 +924,7 @@ internal sealed class PdfDocumentWriter
             objectCount = nextAnnotationObject - 1;
         }
 
-        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
+        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, groupObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
     }
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
 

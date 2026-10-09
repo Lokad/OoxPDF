@@ -120,6 +120,15 @@ internal sealed partial class PptxRenderer
         int nonFiniteGradientPaths = 0;
         int vectorEffectStrokes = 0;
         HashSet<string>? usedGradientIds = diagnosticSink is null ? null : new(StringComparer.Ordinal);
+        var isolation = new List<(XElement Container, PdfGraphicsBuilder Parent, PdfGraphicsBuilder Child, double Opacity)>();
+        var admittedContainers = new HashSet<XElement>();
+        void CloseGroup()
+        {
+            var entry = isolation[^1];
+            isolation.RemoveAt(isolation.Count - 1);
+            graphics = entry.Parent;
+            graphics.DrawTransparencyGroup(entry.Child, new PdfRectangle(imageX, imageY, imageWidth, imageHeight), entry.Opacity);
+        }
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate)))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -128,6 +137,21 @@ internal sealed partial class PptxRenderer
             if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element))
             {
                 continue;
+            }
+
+            XElement[] containers = element.Ancestors().Reverse()
+                .Where(ancestor => ReadNumericSvgContainerOpacity(ancestor) is > 0d and < 1d)
+                .Take(PdfTransparencyGroup.MaxDepth).ToArray();
+            int shared = 0;
+            while (shared < isolation.Count && shared < containers.Length && ReferenceEquals(isolation[shared].Container, containers[shared])) { shared++; }
+            while (isolation.Count > shared) { CloseGroup(); }
+            for (int i = shared; i < containers.Length; i++)
+            {
+                XElement container = containers[i];
+                var child = new PdfGraphicsBuilder();
+                isolation.Add((container, graphics, child, ReadNumericSvgContainerOpacity(container)!.Value));
+                admittedContainers.Add(container);
+                graphics = child;
             }
             string? data = element.Name.LocalName == "path" ? (string?)element.Attribute("d") : ConvertSvgShapeToPathData(element);
             if (string.IsNullOrWhiteSpace(data))
@@ -359,8 +383,9 @@ internal sealed partial class PptxRenderer
                 }
             }
         }
+        while (isolation.Count > 0) { CloseGroup(); }
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
-        ReportIgnoredSvgOpacity(svg, usedGradientIds, diagnosticSink, slideIndex, partName, cancellationToken);
+        ReportIgnoredSvgOpacity(svg, usedGradientIds, admittedContainers, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
     }
@@ -400,7 +425,7 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
-    private static void ReportIgnoredSvgOpacity(XDocument svg, HashSet<string>? usedGradientIds, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
+    private static void ReportIgnoredSvgOpacity(XDocument svg, HashSet<string>? usedGradientIds, HashSet<XElement> admittedContainers, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
         if (diagnosticSink is null || usedGradientIds is null) { return; }
         int containerCount = 0;
@@ -413,7 +438,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(element);
                 string? opacity = style.TryGetValue("opacity", out string? value) ? value : (string?)element.Attribute("opacity");
-                if (ReadSvgOpacityValue(opacity) < 1d) { containerCount++; }
+                if (ReadSvgOpacityValue(opacity) < 1d && !admittedContainers.Contains(element)) { containerCount++; }
             }
             if (name is "linearGradient" or "radialGradient" &&
                 (string?)element.Attribute("id") is { } id && usedGradientIds.Contains(id))
@@ -438,6 +463,18 @@ internal sealed partial class PptxRenderer
         void Report(string message) => diagnosticSink(new OoxPdfDiagnostic(
             "SVG_UNSUPPORTED_CONTENT", OoxPdfSeverity.Warning, message, partName,
             PageIndex: null, SlideIndex: slideIndex, Feature: "svg", Fallback: "Partial"));
+    }
+
+    private static double? ReadNumericSvgContainerOpacity(XElement element)
+    {
+        if (element.Name.LocalName is not ("svg" or "g") || element.Attribute("opacity") is not { } opacity ||
+            (element.Name.LocalName == "svg" && element.Parent is not null) ||
+            (element.Attribute("style") is not null && ReadSvgStyleDeclarations(element).ContainsKey("opacity")))
+        {
+            return null;
+        }
+        return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
+            double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
     }
 
     private static bool IsFullyTransparentSvgContainer(XElement element)

@@ -59,12 +59,12 @@ internal sealed class PdfObjectWriter
     // RV11-P1: chunked content-stream emission. The header carries the known
     // total length; callers stream the payload in bounded chunks, so spilled
     // pages are never fully resident during emission.
-    public void WriteContentStreamHeader(int objectNumber, int contentLength)
+    public void WriteContentStreamHeader(int objectNumber, int contentLength, string dictionaryEntries = "")
     {
         cancellationToken.ThrowIfCancellationRequested();
         offsets.Add(position);
         WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
-        WriteAscii(FormattableString.Invariant($"<< /Length {contentLength} >>\nstream\n"));
+        WriteAscii(FormattableString.Invariant($"<<{(dictionaryEntries.Length == 0 ? string.Empty : " " + dictionaryEntries)} /Length {contentLength} >>\nstream\n"));
     }
 
     public void WriteContentStreamBytes(ReadOnlySpan<byte> chunk)

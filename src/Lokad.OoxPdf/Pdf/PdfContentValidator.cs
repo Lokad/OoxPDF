@@ -8,13 +8,15 @@ namespace Lokad.OoxPdf.Pdf;
 // Tiling-pattern streams get the same treatment against their own image sets,
 // since pattern content is caller-supplied free text; soft-mask streams are
 // generated next to their resources and stay consistent by construction.
+// Isolated SVG Form streams are checked in their own resource namespaces, with
+// bounded nesting, before any source content is staged or output is written.
 internal static class PdfContentValidator
 {
     public static void ValidatePage(PdfPage page, int pageIndex, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         RequireUniqueNames(page.Fonts.Select(font => font.ResourceName).Concat(page.FallbackFonts.Select(font => font.ResourceName)), "font", pageIndex);
-        RequireUniqueNames(page.Images.Select(image => image.ResourceName), "image", pageIndex);
+        RequireUniqueNames(page.Images.Select(image => image.ResourceName).Concat(page.Groups.Select(group => group.ResourceName)), "XObject", pageIndex);
         RequireUniqueNames(page.ExtGStates.Select(state => state.ResourceName), "graphics-state", pageIndex);
         RequireUniqueNames(page.Shadings.Select(shading => shading.ResourceName), "shading", pageIndex);
         RequireUniqueNames(page.Patterns.Select(pattern => pattern.ResourceName), "pattern", pageIndex);
@@ -23,17 +25,54 @@ internal static class PdfContentValidator
             page.Content,
             $"PDF page {pageIndex + 1}",
             new HashSet<string>(page.Fonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName)).Concat(page.FallbackFonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName))), StringComparer.Ordinal),
-            new HashSet<string>(page.Images.Select(image => PdfEmbeddedFont.SanitizeName(image.ResourceName)), StringComparer.Ordinal),
+            new HashSet<string>(page.Images.Select(image => PdfEmbeddedFont.SanitizeName(image.ResourceName)).Concat(page.Groups.Select(group => PdfEmbeddedFont.SanitizeName(group.ResourceName))), StringComparer.Ordinal),
             new HashSet<string>(page.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(page.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(page.Patterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)), StringComparer.Ordinal),
             cancellationToken);
+
+        var active = new HashSet<PdfTransparencyGroup>();
+        foreach (PdfTransparencyGroupResource group in page.Groups)
+        {
+            ValidateGroup(group.Group, pageIndex, 1, active, cancellationToken);
+        }
 
         foreach (PdfTilingPatternResource pattern in page.Patterns)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ValidatePattern(pattern, pageIndex, cancellationToken);
         }
+    }
+
+    private static void ValidateGroup(PdfTransparencyGroup group, int pageIndex, int depth, HashSet<PdfTransparencyGroup> active, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (depth > PdfTransparencyGroup.MaxDepth || !active.Add(group))
+        {
+            throw new InvalidDataException("PDF transparency group nesting is cyclic or exceeds its supported depth.");
+        }
+        PdfRectangle bounds = group.Bounds;
+        if (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) ||
+            !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) ||
+            !double.IsFinite(bounds.X + bounds.Width) || !double.IsFinite(bounds.Y + bounds.Height) ||
+            bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            throw new InvalidDataException("PDF transparency groups require finite positive bounds.");
+        }
+        RequireUniqueNames(group.Groups.Select(child => child.ResourceName), "group XObject", pageIndex);
+        RequireUniqueNames(group.ExtGStates.Select(state => state.ResourceName), "group graphics-state", pageIndex);
+        RequireUniqueNames(group.Shadings.Select(shading => shading.ResourceName), "group shading", pageIndex);
+        ValidateContent(group.Content, $"PDF page {pageIndex + 1} transparency group",
+            new HashSet<string>(StringComparer.Ordinal),
+            new HashSet<string>(group.Groups.Select(child => PdfEmbeddedFont.SanitizeName(child.ResourceName)), StringComparer.Ordinal),
+            new HashSet<string>(group.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
+            new HashSet<string>(group.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
+            new HashSet<string>(StringComparer.Ordinal), cancellationToken);
+        foreach (PdfTransparencyGroupResource child in group.Groups)
+        {
+            ValidateGroup(child.Group, pageIndex, depth + 1, active, cancellationToken);
+        }
+        active.Remove(group);
     }
 
     private static void ValidatePattern(PdfTilingPatternResource pattern, int pageIndex, CancellationToken cancellationToken)

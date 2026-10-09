@@ -11,6 +11,7 @@ internal sealed class PdfGraphicsBuilder
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
     private readonly List<PdfTilingPatternResource> patterns = [];
+    private readonly List<PdfTransparencyGroupResource> groups = [];
     private readonly HashSet<string> usedFontResourceNames = new(StringComparer.Ordinal);
     private readonly List<string> fontUseOrder = [];
     // R10: registration indexes mirroring the append-only resource lists. Dictionary
@@ -31,6 +32,27 @@ internal sealed class PdfGraphicsBuilder
     public IReadOnlySet<string> UsedFontResourceNames => usedFontResourceNames;
 
     public int StateDepth => stateDepth;
+
+    public IReadOnlyList<PdfTransparencyGroupResource> Groups => groups;
+
+    public void DrawTransparencyGroup(PdfGraphicsBuilder child, PdfRectangle bounds, double opacity)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+        if (child.stateDepth != 0 || child.usedFontResourceNames.Count != 0 || child.patterns.Count != 0)
+        {
+            throw new InvalidDataException("SVG transparency groups require balanced vector content.");
+        }
+        // Admit once before creating the retained ASCII snapshot. The page
+        // charge covers the invocation; nested payloads have their own admission.
+        OoxConversionBudget.Current?.ChargePdfContentBytes(child.builder.Length);
+        var group = new PdfTransparencyGroup(bounds, child.builder.ToString(), child.extGStates, child.shadings, child.groups);
+        string name = "Tr" + (groups.Count + 1).ToString(CultureInfo.InvariantCulture);
+        groups.Add(new PdfTransparencyGroupResource(name, group));
+        SaveState();
+        SetAlpha(opacity, opacity);
+        builder.Append('/').Append(name).AppendLine(" Do");
+        RestoreState();
+    }
 
     public void SetFillRgb(byte red, byte green, byte blue)
     {
@@ -578,11 +600,11 @@ internal sealed class PdfGraphicsBuilder
     // so a failed node rewinds its paint without disturbing earlier nodes. Font/image caches are intentionally
     // outside the boundary: orphan entries are inert, while index rollback could
     // dangle references held by surviving content.
-    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount);
+    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount, int GroupCount);
 
     public ContentMark MarkContent()
     {
-        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count);
+        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count, groups.Count);
     }
 
     public void TruncateContent(ContentMark mark)
@@ -611,6 +633,11 @@ internal sealed class PdfGraphicsBuilder
         while (patterns.Count > mark.PatternCount)
         {
             patterns.RemoveAt(patterns.Count - 1);
+        }
+
+        while (groups.Count > mark.GroupCount)
+        {
+            groups.RemoveAt(groups.Count - 1);
         }
 
         stateDepth = Math.Max(0, mark.StateDepth);
