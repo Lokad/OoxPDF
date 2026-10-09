@@ -915,7 +915,7 @@ internal static class DocxTablesTests
         TestAssert.Equal("A {NUMPAGES} B", line.Text);
     }
 
-    public static void DocxReaderUsesNoteReferenceSettingsForBodyAndTableMarkers()
+    public static void DocxReaderUsesSectionNoteDefaultsForBodyAndTableMarkers()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
@@ -973,11 +973,11 @@ internal static class DocxTablesTests
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
         DocxParagraph bodyParagraph = document.Paragraphs[0];
-        TestAssert.Equal("iv", bodyParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote).DisplayText ?? string.Empty);
-        TestAssert.Equal("B", bodyParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
+        TestAssert.Equal("1", bodyParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Footnote).DisplayText ?? string.Empty);
+        TestAssert.Equal("i", bodyParagraph.InlineReferences.Single(reference => reference.Kind == DocxRelatedStoryKind.Endnote).DisplayText ?? string.Empty);
         DocxParagraph cellParagraph = document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single();
-        TestAssert.Equal("v", cellParagraph.InlineReferences.Single().DisplayText ?? string.Empty);
-        TestAssert.Equal("v", cellParagraph.Runs.Last().Text);
+        TestAssert.Equal("2", cellParagraph.InlineReferences.Single().DisplayText ?? string.Empty);
+        TestAssert.Equal("2", cellParagraph.Runs.Last().Text);
     }
 
     public static void DocxSyntheticTableCellInlinePngRendersImageXObject()
