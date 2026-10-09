@@ -196,6 +196,10 @@ internal sealed partial class DocxLayoutEngine
         if (footnotes.Length == 0) return fallbackTop;
         double candidateTop = ResolveEndnoteStartTop(page, placedStories
             .Where(story => story.StoryLayout.Story.Kind != DocxRelatedStoryKind.Footnote).ToArray(), printScale);
+        if (CanUseNominalDocumentEndnoteFlow(page, separator, printScale, endnotes))
+        {
+            candidateTop -= ResolveTrailingBodyAfterSpacing(page);
+        }
         double requiredHeight = endnotes.Sum(story => Math.Max(0d, story.ContentHeight)) +
             endnotes.Count * FootnoteSeparatorGapPoints;
         if (separator is not null)
@@ -203,9 +207,46 @@ internal sealed partial class DocxLayoutEngine
             (DocxTextRun? mark, double size) = FindSeparatorMarkFont(separator.TextLines);
             double gap = Math.Max(ResolveSeparatorGapPoints(mark, size, measurer),
                 endnotes.Max(story => ResolveFootnoteContentGapPoints(story.TextLines, mark, size, measurer)));
-            requiredHeight += ResolveSizeDrivenSeparatorHeight(separator, page, measurer, endnotes) + gap;
+            requiredHeight += ResolveDocumentEndnoteSeparatorHeight(separator, page, measurer, endnotes, printScale) + gap;
         }
         return candidateTop - requiredHeight >= footnotes.Max(story => story.TopY) ? candidateTop : fallbackTop;
+    }
+
+    private static bool CanUseNominalDocumentEndnoteFlow(
+        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale,
+        IReadOnlyList<DocxRelatedStoryLayout> contentStories)
+    {
+        if (Math.Abs(printScale - 1d) > 0.000000001d || separator is null ||
+            separator.TextLines.Count != 1 || !string.IsNullOrWhiteSpace(separator.TextLines[0].Text) || separator.TableRows.Count != 0 ||
+            separator.InlineImages.Count != 0 || separator.FloatingDrawings.Count != 0 ||
+            separator.Story.BodyElements.Count != 1 ||
+            contentStories.Any(story => story.TableRows.Count != 0 || story.InlineImages.Count != 0 || story.FloatingDrawings.Count != 0) ||
+            page.ColumnFrames.Count > 1 ||
+            page.Items.Count == 0 || page.Items.Any(item => item is not DocxTextLineLayout))
+        {
+            return false;
+        }
+
+        return page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout
+            { SourceParagraph: { } paragraph } &&
+            paragraph.Spacing.AfterLinesValue is null && paragraph.Spacing.AfterAutoSpacingValue is null &&
+            double.IsFinite(paragraph.EffectiveProperties.SpacingAfterPoints);
+    }
+
+    private static double ResolveTrailingBodyAfterSpacing(DocxLayoutPage page) =>
+        page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph }
+            ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) : 0d;
+
+    private static double ResolveDocumentEndnoteSeparatorHeight(
+        DocxRelatedStoryLayout separator, DocxLayoutPage page, IDocxTextMeasurer? measurer,
+        IReadOnlyList<DocxRelatedStoryLayout> contentStories, double printScale)
+    {
+        double height = ResolveSizeDrivenSeparatorHeight(separator, page, measurer, contentStories);
+        // The empty separator carries eight latent points in the legacy story
+        // layout. Nominal document-end flow uses the last body paragraph's actual
+        // after-spacing instead; separator paragraph spacing is ignored by Office.
+        return CanUseNominalDocumentEndnoteFlow(page, separator, printScale, contentStories)
+            ? Math.Max(0d, height - DocxDefaults.DefaultParagraphAfterSpacingPoints) : height;
     }
 
     private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)

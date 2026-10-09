@@ -301,6 +301,10 @@ internal sealed partial class DocxLayoutEngine
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
+                if (CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
+                {
+                    cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
+                }
                 cursorTop = ResolveFittingDocumentEndnoteStartTop(activePage, activePlacedStories, cursorTop,
                     documentEndStories, documentEndSeparatorLayout, separatorMeasurer, printScale);
                 if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
@@ -315,11 +319,13 @@ internal sealed partial class DocxLayoutEngine
                     // An overflowing separator would strand its rule at the margin while content
                     // slices onto fresh pages (Office keeps separator and content together);
                     // turn first, mirroring overflowing-item placement everywhere else.
-                    if (ResolveSizeDrivenSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories) > cursorTop - activePage.MarginBottom)
+                    if (ResolveDocumentEndnoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) > cursorTop - activePage.MarginBottom)
                     {
                         MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
-                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories);
+                    double? nominalSeparatorHeight = CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
+                        ? ResolveDocumentEndnoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
+                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                     double endnoteContentGapPoints = 0d;
@@ -1285,17 +1291,23 @@ internal sealed partial class DocxLayoutEngine
         double separatorTop,
         IDocxTextMeasurer? separatorMeasurer,
         bool useSizeDrivenPlacementHeight = false,
-        IReadOnlyList<DocxRelatedStoryLayout>? contentStoriesForHhea = null)
+        IReadOnlyList<DocxRelatedStoryLayout>? contentStoriesForHhea = null,
+        double? placementHeightOverride = null)
     {
         double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         if (useSizeDrivenPlacementHeight)
         {
             separatorHeight = ResolveSizeDrivenSeparatorHeight(separatorLayout, page, separatorMeasurer, contentStoriesForHhea);
         }
+        separatorHeight = placementHeightOverride ?? separatorHeight;
         double separatorBottom = separatorTop - separatorHeight;
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(separatorLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
         DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: separatorBottom + ruleBottomOffsetPoints);
+        if (placementHeightOverride.HasValue)
+        {
+            placedSeparator = placedSeparator with { Height = separatorHeight };
+        }
         placedSeparator = placedSeparator with { SeparatorThickness = ruleThicknessPoints };
         if (useSizeDrivenPlacementHeight)
         {

@@ -14,6 +14,90 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFootnotesTests
 {
+    public static void DocxSingleSectionNoteNumbersUseExplicitSectionProperties()
+    {
+        foreach ((string fixture, string[] expected) in new[]
+        {
+            ("note-number-section-only-105", new[] { "105", "106" }),
+            ("note-section-footnote-roman-4", new[] { "iv", "v" }),
+            ("note-section-endnote-start-5", new[] { "v" }),
+            ("note-number-both-105", new[] { "105", "106" })
+        })
+        {
+            DocxDocument document = ReadNoteNavigationFixture(fixture);
+            DocxInlineReference[] references = document.Paragraphs.SelectMany(p => p.InlineReferences).ToArray();
+            TestAssert.Equal(expected.Length, references.Length);
+            for (int i = 0; i < expected.Length; i++)
+            {
+                TestAssert.Equal(expected[i], references[i].DisplayText!);
+                DocxRelatedStory story = document.RelatedStories.Single(s => s.Kind == references[i].Kind && s.Id == references[i].Id);
+                TestAssert.Equal(expected[i], story.Paragraphs[0].Runs[0].Text);
+            }
+        }
+    }
+
+    public static void DocxSingleSectionNoteNumbersKeepUnsupportedFallbacks()
+    {
+        DocxDocument document = ReadNoteNavigationFixture("note-nav-numbered-ids");
+        TestAssert.Equal(105, document.Settings.FootnoteReferenceSettings.NumberStart!.Value);
+        TestAssert.Equal("105", document.Paragraphs[0].InlineReferences[0].DisplayText!);
+        // Parsing settings remains independent of applying a section's overrides.
+        DocxDocument section = ReadNoteNavigationFixture("note-number-section-only-105");
+        TestAssert.True(section.Settings.FootnoteReferenceSettings.NumberStart is null,
+            "Section numbering must not rewrite the authored document settings snapshot.");
+        XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        DocxDocument malformed = ReadModifiedNoteNumberingFixture("note-number-section-only-105", xml =>
+            xml.Descendants(word + "numStart").Single().SetAttributeValue(word + "val", "0"));
+        TestAssert.Equal("1", malformed.Paragraphs[0].InlineReferences[0].DisplayText!);
+        DocxDocument multiple = ReadModifiedNoteNumberingFixture("note-number-section-only-105", xml =>
+            xml.Descendants(word + "body").Single().AddFirst(new XElement(word + "p", new XElement(word + "pPr",
+                new XElement(xml.Descendants(word + "sectPr").Single())))));
+        TestAssert.Equal("1", multiple.Paragraphs.SelectMany(p => p.InlineReferences).First().DisplayText!);
+        DocxDocument restarting = ReadModifiedNoteNumberingFixture("note-number-section-only-105", xml =>
+            xml.Descendants(word + "footnotePr").Single().Add(new XElement(word + "numRestart",
+                new XAttribute(word + "val", "eachPage"))));
+        TestAssert.Equal("1", restarting.Paragraphs[0].InlineReferences[0].DisplayText!);
+    }
+
+    public static void DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale()
+    {
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        double Top(string fixture) => renderer.InspectLayout(ReadNoteNavigationFixture(fixture)).Pages[0]
+            .PlacedRelatedStories.Single(s => s.Kind == "Endnote" && s.Id == "1").TopY;
+        double zero = Top("note-nav-endnote-body");
+        TestAssert.True(Math.Abs(zero - Top("note-body-after-8") - 8d) < 0.001d,
+            "Document endnotes must follow eight points of trailing body spacing.");
+        TestAssert.True(Math.Abs(zero - Top("note-body-after-24") - 24d) < 0.001d,
+            "Document endnotes must follow twenty-four points of trailing body spacing.");
+        TestAssert.True(Math.Abs(zero - Top("note-body-default-after-8") - 8d) < 0.001d,
+            "Inherited body spacing participates in document-endnote flow.");
+        foreach (string fixture in new[] { "note-separator-after-8", "note-separator-after-24", "note-separator-before-24", "note-separator-default-after-8" })
+        {
+            TestAssert.True(Math.Abs(zero - Top(fixture)) < 0.001d,
+                "The separator's own paragraph spacing must not replace body flow spacing.");
+        }
+    }
+
+    private static DocxDocument ReadModifiedNoteNumberingFixture(string fixture, Action<XDocument> modify)
+    {
+        string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
+        var parts = new Dictionary<string, string>();
+        using (ZipArchive archive = ZipFile.OpenRead(seed))
+        {
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                using var reader = new StreamReader(entry.Open());
+                parts[entry.FullName] = reader.ReadToEnd();
+            }
+        }
+        XDocument xml = XDocument.Parse(parts["word/document.xml"]);
+        modify(xml);
+        parts["word/document.xml"] = xml.ToString();
+        string input = TestFixtures.WriteTempPackage(".docx", parts);
+        try { return DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup); }
+        finally { File.Delete(input); }
+    }
 
     public static void DocxReaderRetainsAutomaticNoteStoryMarks()
     {
