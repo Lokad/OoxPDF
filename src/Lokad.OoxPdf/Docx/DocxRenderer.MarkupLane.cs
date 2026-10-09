@@ -18,7 +18,8 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxMarkupContext markupContext)
     {
-        if (!UsesWordCompatibleAllMarkupTextProfile(markupContext))
+        if (!UsesWordCompatibleAllMarkupTextProfile(markupContext) ||
+            markupContext.WordCompatibleHasPrintedBalloons == false)
         {
             return;
         }

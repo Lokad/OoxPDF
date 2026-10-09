@@ -437,8 +437,18 @@ internal sealed partial class DocxRenderer
             : 0d;
         IReadOnlyDictionary<string, string>? markerLabels = UsesWordCompatibleAllMarkupTextProfile(effective) && effective.RendersCommentBalloons
             ? BuildWordCompatibleCommentMarkerLabels(document, cancellationToken) : null;
+        IEnumerable<DocxParagraph> mainParagraphs = document.BodyElements.Count == 0
+            ? document.Paragraphs.Concat(document.Tables.SelectMany(DocxBlockTraversal.EnumerateTableParagraphs))
+            : DocxBlockTraversal.EnumerateBodyParagraphs(document);
+        IReadOnlySet<DocxParagraph>? visibleComments = UsesWordCompatibleAllMarkupTextProfile(effective)
+            ? new HashSet<DocxParagraph>(mainParagraphs.Where(paragraph => paragraph.InlineReferences.Any(
+                reference => reference.Kind == DocxRelatedStoryKind.Comment)), ReferenceEqualityComparer.Instance)
+            : null;
         return effective with { WordCompatiblePrintScale = printScale, WordCompatibleTextXOffset = xOffset,
-            WordCompatibleTextYOffset = yOffset, CommentMarkerLabels = markerLabels };
+            WordCompatibleTextYOffset = yOffset, CommentMarkerLabels = markerLabels,
+            WordCompatibleMainStoryCommentParagraphs = visibleComments,
+            WordCompatibleHasPrintedBalloons = UsesWordCompatibleAllMarkupTextProfile(effective)
+                ? HasWordCompatibleBalloonContent(document, effective) : null };
     }
 
     private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;
@@ -467,10 +477,9 @@ internal sealed partial class DocxRenderer
         return document.PageWidthPoints / designWidth;
     }
 
-    // A page carries Word-compatible balloons when anchored comments or formatting
-    // revisions exist in any ballooning story (body, static, placed, floating text boxes).
-    // The lane-fit scale trigger stays narrower (body-anchored only); the anchor follows
-    // balloons wherever Word shows them.
+    // Word balloons comments from the main story and formatting revisions from
+    // the separately qualified revision stories. Only printed balloons sustain
+    // the fitted text anchor; hidden static/note comments do not.
     private static bool HasAnyWordCompatibleBalloon(DocxDocument document)
     {
         return HasBalloonableCommentAnchor(document) || HasAnyNonVoidPropertyRevision(document);
@@ -487,13 +496,10 @@ internal sealed partial class DocxRenderer
         return markupContext.RendersRevisionBalloons && HasNonVoidPropertyChangeRevision(document);
     }
 
-    // Office A/B (w6-tbxctl plus w6-staticfloat probes, Word-COM rendered, plus
-    // uniformity for placed stories): Word balloons body-anchored comments but never
-    // floating-textbox ones (body-flow, static, or placed - Word rejects
-    // anchor-in-footnote files so the placed case extends the probed policy by
-    // uniformity), so a comment anchored only in floating drawings must not reserve
-    // the balloon lane. Anchors match parts by id,
-    // mirroring balloon matching, so orphan references reserve nothing either.
+    // Independent Word references omit header/footer/note comments, including
+    // their table cells, and retain main-body comments in mixed documents.
+    // Earlier textbox probes also omit those comments. Only matched main-story
+    // anchors reserve the review lane; orphan references reserve nothing.
     private static bool HasBalloonableCommentAnchor(DocxDocument document)
     {
         HashSet<string> commentPartIds = document.RelatedStories
@@ -532,23 +538,6 @@ internal sealed partial class DocxRenderer
         if (document.Paragraphs.Any(HasCommentReference) || document.Tables.Any(TableHasCommentReference))
         {
             return true;
-        }
-
-        if (document.HeaderParagraphs.Concat(document.FooterParagraphs).Any(HasCommentReference) ||
-            DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType).Any(HasCommentReference) ||
-            DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType).Any(HasCommentReference) ||
-            DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings).Any(HasCommentReference))
-        {
-            return true;
-        }
-
-        foreach (DocxRelatedStory story in document.RelatedStories)
-        {
-            if (story.Paragraphs.Any(HasCommentReference) ||
-                story.Tables.Any(TableHasCommentReference))
-            {
-                return true;
-            }
         }
 
         return false;

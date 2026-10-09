@@ -639,6 +639,7 @@ internal sealed partial class DocxRenderer
                 }
 
                 if (markupContext.RendersCommentBalloons &&
+                    markupContext.IsCommentMarkupVisible(paragraph) &&
                     !textBoxParagraphs.Contains(RuntimeHelpers.GetHashCode(paragraph)))
                 {
                     foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))

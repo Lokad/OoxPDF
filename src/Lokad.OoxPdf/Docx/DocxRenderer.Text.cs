@@ -777,7 +777,8 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        if (markupContext.DrawsCommentMarkers && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment))
+        if (markupContext.DrawsCommentMarkers && markupContext.IsCommentMarkupVisible(paragraph) &&
+            paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
             if (UsesWordCompatibleAllMarkupTextProfile(markupContext))
             {

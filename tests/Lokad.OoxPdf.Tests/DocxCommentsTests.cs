@@ -12,6 +12,100 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    public static void DocxWordCompatibleStaticAndNoteCommentsUseNominalCanvas()
+    {
+        foreach (string kind in new[] { "header", "footer", "footnote", "endnote" })
+        foreach (bool inTable in new[] { false, true })
+        {
+            DocxDocument document = CreateStoryVisibilityDocument(kind, inTable, bodyComment: false);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            TestAssert.Equal(1d, scale);
+            TestAssert.Equal(0, renderer.InspectMarkupBalloons(document).Count);
+            DocxTextEmissionLineSnapshot[] body = renderer.InspectTextEmission(document).Lines
+                .Where(line => !line.IsStaticStory && line.ContainerStoryKind == "Body" && line.SourceBlockIndex == 0).ToArray();
+            DocxTextEmissionSegmentSnapshot[] bodyText = body.SelectMany(line => line.Segments)
+                .Where(segment => !segment.IsTerminalLineSpace && segment.CharacterProfile.LetterCount > 0)
+                .ToArray();
+            TestAssert.True(bodyText.Length > 0 && bodyText.All(segment => Math.Abs(segment.PdfFontSize - 12d) < .000001d),
+                "A comment outside the main body must not shrink its printed font: " + kind + "/" + inTable + " " +
+                string.Join(",", body.SelectMany(line => line.Segments).Select(segment => segment.Role + ":" + segment.TextLength + ":" + segment.PdfFontSize)));
+            TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
+                .All(page => !page.Content.Contains("0.949 g", StringComparison.Ordinal)),
+                "Hidden story comments must not paint an empty review lane.");
+            TestAssert.Equal(1, new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(document).Count);
+        }
+    }
+
+    public static void DocxWordCompatibleMixedStoryCommentsRetainBodyAnchor()
+    {
+        foreach (string kind in new[] { "header", "footer", "footnote", "endnote" })
+        foreach (bool inTable in new[] { false, true })
+        {
+            DocxDocument document = CreateStoryVisibilityDocument(kind, inTable, bodyComment: true);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            DocxMarkupBalloonPlacementSnapshot[] placements = renderer.InspectMarkupBalloons(document)
+                .Where(placement => placement.Kind == "Comment").ToArray();
+            TestAssert.Equal(1, placements.Length);
+            double bodyBaseline = renderer.InspectTextEmission(document).Lines
+                .First(line => !line.IsStaticStory && line.SourceBlockIndex == 0).Segments
+                .First(segment => !segment.IsTerminalLineSpace).BaselineY;
+            TestAssert.True(Math.Abs(placements[0].AnchorY - bodyBaseline) < 6d,
+                "The surviving balloon must connect to the body paragraph.");
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            TestAssert.True(scale > 0d && scale < 1d, "A surviving body comment must retain its printed review canvas.");
+            TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
+                .Any(page => page.Content.Contains("0.949 g", StringComparison.Ordinal)),
+                "A surviving body comment must retain the review lane background.");
+            TestAssert.Equal(2, new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(document).Count);
+        }
+    }
+
+    private static DocxDocument CreateStoryVisibilityDocument(string kind, bool inTable, bool bodyComment)
+    {
+        DocxParagraph body = bodyComment ? DocxTests.CreateCommentRangeParagraph("CCC", "3")
+            : DocxTests.CreateDocxLayoutParagraph("CCC", 12d, 14d);
+        DocxParagraph foreign = DocxTests.CreateCommentRangeParagraph("AAA", "1");
+        DocxBodyElement foreignElement = inTable
+            ? new DocxTableElement(new DocxTable("fixed", [160d],
+                [new DocxTableRow([new DocxTableCell("AAA", [foreign], null, null, null, null, [], DocxTableCellMargins.Empty)], null)]))
+            : new DocxParagraphElement(foreign);
+        DocxPageSettings settings = DocxPageSettings.Empty;
+        var stories = new List<DocxRelatedStory>
+        {
+            new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("AAA", 10d, 12d))], [], [], null)
+        };
+        if (bodyComment) stories.Add(new(DocxRelatedStoryKind.Comment, "/word/comments.xml", "3",
+            [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("CCC", 10d, 12d))], [], [], null));
+        if (kind is "header" or "footer")
+        {
+            var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+                { ["default"] = [foreignElement] };
+            settings = kind == "header" ? settings with { HeaderBodyElementsByType = elements }
+                : settings with { FooterBodyElementsByType = elements };
+        }
+        else
+        {
+            DocxRelatedStoryKind noteKind = kind == "footnote" ? DocxRelatedStoryKind.Footnote : DocxRelatedStoryKind.Endnote;
+            body = body with { InlineReferences = [.. body.InlineReferences,
+                new DocxInlineReference(noteKind, "9", null, DisplayText: "1", SourceRunIndex: 0, RunChildIndex: 1, TextOffsetInRun: 3)] };
+            stories.Add(new(noteKind, kind == "footnote" ? "/word/footnotes.xml" : "/word/endnotes.xml", "9",
+                [foreignElement], [], [], null));
+        }
+        return DocxTests.CreateAllMarkupWrapProbeDocument([body]) with
+        {
+            PageWidthPoints = 612d, PageHeightPoints = 792d, PageSettings = settings,
+            RelatedStories = stories, MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+        };
+    }
+
     public static void DocxAllMarkupRendererDrawsCommentBalloons()
     {
         string input = DocxTests.WriteCommentMarkerProbeDocx();

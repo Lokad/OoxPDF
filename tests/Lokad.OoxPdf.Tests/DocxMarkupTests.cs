@@ -439,7 +439,7 @@ internal static class DocxMarkupTests
             "The control family must exercise an implicit widow rule with exactly one continuation line.");
     }
 
-    public static void DocxWordCompatibleWrappedHeaderCommentRetainsPriorRangeFallback()
+    public static void DocxWordCompatibleWrappedHeaderCommentPreservesTextWithoutMarkup()
     {
         DocxParagraph paragraph = DocxTests.CreateCommentRangeParagraph(string.Join(' ', Enumerable.Repeat("AAA", 100)), "1");
         paragraph = paragraph with { CommentRanges = [paragraph.CommentRanges[0] with { EndTextOffset = 0 }] };
@@ -459,10 +459,11 @@ internal static class DocxMarkupTests
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxTextEmissionLineSnapshot[] lines = renderer.InspectTextEmission(document).Lines.Where(line => line.IsStaticStory).ToArray();
         TestAssert.True(lines.Length > 1, "The static-story control must wrap.");
-        double first = lines[0].Segments.First(segment => !segment.IsTerminalLineSpace).BaselineY;
-        DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
-        TestAssert.True(first - placement.AnchorY > 0d && first - placement.AnchorY < 6d,
-            $"Unqualified wrapped header paragraphs retain their prior range-anchor fallback. First={first}, anchor={placement.AnchorY}.");
+        TestAssert.Equal(0, renderer.InspectMarkupBalloons(document).Count);
+        TestAssert.Equal(1, new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(document).Count);
+        TestAssert.True(lines.Sum(line => line.TextLength) >= 300,
+            "Suppressing unsupported header comment markup must retain the wrapped header text.");
     }
 
     private static DocxDocument CreateReviewTableInsetDocument(double bodySize, double cellSize, double pageWidth, bool tableFirst)

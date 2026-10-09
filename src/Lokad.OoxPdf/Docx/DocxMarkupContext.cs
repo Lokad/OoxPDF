@@ -35,6 +35,14 @@ internal sealed record DocxMarkupContext(
     // per-page fallback.
     public MarkupCommentStoryIndex? CommentStoryIndex { get; init; }
     public IReadOnlyDictionary<string, string>? CommentMarkerLabels { get; init; }
+    // Word prints comments anchored in the main story, including its table cells.
+    // A reference set distinguishes identical paragraph values in other stories.
+    // Null keeps the established policy for other geometry modes and entry paths.
+    public IReadOnlySet<DocxParagraph>? WordCompatibleMainStoryCommentParagraphs { get; init; }
+    // The review lane belongs to printed balloons, not the presence of a comment part.
+    public bool? WordCompatibleHasPrintedBalloons { get; init; }
+    public bool IsCommentMarkupVisible(DocxParagraph paragraph) =>
+        WordCompatibleMainStoryCommentParagraphs?.Contains(paragraph) ?? true;
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {
         DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;
