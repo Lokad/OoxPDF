@@ -75,24 +75,25 @@ internal sealed partial class DocxRenderer
             int secondSeparator = wordSeparator < 0 ? -1 : closingWord.IndexOf(' ', wordSeparator + 1);
             bool hasThreeWords = leadingCount == 4 && wordSeparator > 0 && secondSeparator > wordSeparator + 1 &&
                 secondSeparator < closingWord.Length - 1 && closingWord.LastIndexOf(' ') == secondSeparator;
-            bool hasTwoFittingWords = false;
+            bool hasFittingClosingWords = false;
             if (hasTwoWords || hasThreeWords)
             {
                 double firstClosingWordWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
                     closing.Resource.Embedded.MeasureTextPoints(closing.Text[..(wordSeparator + 1)], size);
-                hasTwoFittingWords = hasTwoWords && double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth > continuationWidth;
+                hasFittingClosingWords = double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth > continuationWidth;
                 double secondClosingWordWidth = hasThreeWords ? first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
                     closing.Resource.Embedded.MeasureTextPoints(closing.Text[..(secondSeparator + 1)], size) : double.PositiveInfinity;
-                bool secondWordOverflows = !hasThreeWords || double.IsFinite(secondClosingWordWidth) && secondClosingWordWidth > continuationWidth;
-                if (double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth <= continuationWidth && secondWordOverflows &&
+                if (double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth <= continuationWidth &&
+                    (!hasThreeWords || double.IsFinite(secondClosingWordWidth)) &&
                     double.IsFinite(closingWidth) && closingWidth <= continuationWidth &&
                     double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth)
                 {
-                    partialClosingPrefix = closing.Text[..(wordSeparator + 2)];
-                    partialClosingSuffix = closingWord[(wordSeparator + 1)..];
+                    int splitSeparator = hasThreeWords && secondClosingWordWidth <= continuationWidth ? secondSeparator : wordSeparator;
+                    partialClosingPrefix = closing.Text[..(splitSeparator + 2)];
+                    partialClosingSuffix = closingWord[(splitSeparator + 1)..];
                 }
             }
-            bool canMoveClosingWord = closingWord.Length != 0 && (!closingWord.Contains(' ') || hasTwoFittingWords) && double.IsFinite(closingWidth) &&
+            bool canMoveClosingWord = closingWord.Length != 0 && (!closingWord.Contains(' ') || hasFittingClosingWords) && double.IsFinite(closingWidth) &&
                 closingWidth <= continuationWidth && double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth;
             if (!canMoveClosingWord && partialClosingSuffix is null && leadingCount is (1 or 2 or 4)) { return null; }
             // Fourth-paragraph inputs outside the closing-only scope retain their prior reflow.

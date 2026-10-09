@@ -4107,6 +4107,110 @@ internal static class DocxCommentsTests
         }
     }
 
+    public static void DocxWordCompatibleMixedBalloonMovesPreservedThreeWordFifthClosingRunToOwnRow()
+    {
+        foreach (int wrapMask in Enumerable.Range(0, 16))
+        foreach (bool supplementary in new[] { false, true })
+        foreach (short gap in new short[] { 0, 450 })
+        foreach (bool canonicalSpacing in new[] { false, true })
+        {
+            string leadingText = (wrapMask & 1) != 0 ? new string('m', 72) + " ending." : "end.";
+            var first = DocxTests.CreateDocxLayoutParagraph(leadingText, 12d, 14d) with
+            {
+                LineSpacingPoints = null,
+                Runs = [new DocxTextRun(leadingText, 12d, null, false, false, false, null, "CommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+            };
+            var leading = Enumerable.Range(0, 4).Select(index =>
+            {
+                string text = (wrapMask & (1 << index)) == 0 ? "end." : new string('m', 72) + " ending.";
+                return first with { Runs = [first.Runs[0] with { Text = text, FontFamily = index == 1 ? "OtherCommentFace" : "CommentFace" }] };
+            }).ToArray();
+            string prefix = new string('a', 80) + (supplementary ? "\U0001F600" : "") + " finish.";
+            string closing = " " + new string('m', 15) + " m m.";
+            var terminal = first with
+            {
+                Runs = [first.Runs[0] with { Text = prefix }, first.Runs[0] with { Text = closing, FontFamily = "OtherCommentFace" }],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 30d }
+            };
+            if (canonicalSpacing)
+            {
+                first = first with { Spacing = first.Spacing with
+                {
+                    BeforeLinesValue = "300", AfterLinesValue = "300", BeforeAutoSpacingValue = "off", AfterAutoSpacingValue = "on",
+                    BeforeValue = "120", AfterValue = "240"
+                } };
+                leading = leading.Select(paragraph => paragraph with { Spacing = first.Spacing }).ToArray();
+                terminal = terminal with { Spacing = first.Spacing };
+            }
+            var anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
+            var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
+            TestAssert.True(rows.Length >= 7, "Four preceding bodies and terminal source rows remain distinct.");
+            var last = rows[^1].ToArray();
+            var preceding = rows[^2].ToArray();
+            TestAssert.Equal(closing.TrimStart(' '), last[0].Text);
+            TestAssert.Equal(" ", last[1].Text);
+            TestAssert.Equal(2, last.Length);
+            TestAssert.True(preceding[0].Text.EndsWith(" finish.", StringComparison.Ordinal),
+                "A preserved closing separator keeps the preceding whole word on its original row.");
+            TestAssert.Equal(" ", preceding[^1].Text);
+            TestAssert.Equal(last[0].Font, preceding[^1].Font);
+            double size = last[0].Size;
+            var previousFont = preceding[0].Font.Font;
+            var closingFont = last[0].Font.Font;
+            double transition = (-previousFont.Hhea.HorizontalDescender / (double)previousFont.UnitsPerEm +
+                (closingFont.Hhea.HorizontalAscender + closingFont.Hhea.HorizontalLineGap) / (double)closingFont.UnitsPerEm) * size;
+            TestAssert.True(Math.Abs(preceding[0].Y - last[0].Y - transition) < 0.02d,
+                "A closing-only row uses its own ascent/gap and the preceding first-body descent.");
+            TestAssert.True(Math.Abs(last[0].X - preceding[0].X) < 0.001d &&
+                Math.Abs(last[1].X - last[0].X - last[0].Font.MeasureTextPoints(last[0].Text, size)) < 0.04d,
+                "The closing-only row resets to the continuation inset and retains its nominal mark advance.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - last[0].Y)) < 0.03d,
+                "Height includes the independent closing-only transition.");
+            foreach (DocxParagraph rejected in new[]
+            {
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + new string('m', 120) }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " a " + new string('m', 120) + "." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmm." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + closing }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmm  mmmmmmm." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmm mmmmmmm mmmmmmm fourth." }] },
+                terminal with { Runs = [terminal.Runs[0] with { Text = prefix + " " }, terminal.Runs[1] with { Text = closing.TrimStart(' ') }] },
+                terminal with { Runs = [.. terminal.Runs, terminal.Runs[0] with { Text = " extra." }] },
+                terminal with { Runs = [terminal.Runs[0] with { Bold = true }, terminal.Runs[1]] },
+                terminal with { Spacing = terminal.Spacing with { AfterLinesValue = "400" } }
+            })
+            {
+                var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
+                var rejectedDocument = document with { RelatedStories = [rejectedStory] };
+                var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                    .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "Overwide two-word/doubled closing separators, trailing prefixes, extra runs, decoration and unqualified spacing retain fallback: " + rejected.Runs[1].Text);
+            }
+        }
+    }
+
     public static void DocxWordCompatibleMixedBalloonKeepsFittingFirstWordOfFifthClosingRun()
     {
         foreach (int wrapMask in Enumerable.Range(0, 16))
@@ -4306,10 +4410,123 @@ internal static class DocxCommentsTests
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " a " + new string('m', 120) + "." }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmm." }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + closing }] },
-                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " a b " + new string('m', 15) + "." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " a b c " + new string('m', 15) + "." }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = closing + " fourth." }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + new string('m', 20) + " abc def." }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = closing.Replace(". third.", ".  third.", StringComparison.Ordinal) }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmm  mmmmmmm." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmm mmmmmmm mmmmmmm fourth." }] },
+                terminal with { Runs = [terminal.Runs[0] with { Text = prefix + " " }, terminal.Runs[1] with { Text = closing.TrimStart(' ') }] },
+                terminal with { Runs = [.. terminal.Runs, terminal.Runs[0] with { Text = " extra." }] },
+                terminal with { Runs = [terminal.Runs[0] with { Bold = true }, terminal.Runs[1]] },
+                terminal with { Spacing = terminal.Spacing with { AfterLinesValue = "400" } }
+            })
+            {
+                var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
+                var rejectedDocument = document with { RelatedStories = [rejectedStory] };
+                var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                    .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
+                    "Unqualified three-word boundaries retain fallback: " + rejected.Runs[1].Text);
+            }
+        }
+    }
+
+    public static void DocxWordCompatibleMixedBalloonKeepsFittingFirstTwoWordsOfThreeWordFifthClosingRun()
+    {
+        foreach (int wrapMask in Enumerable.Range(0, 16))
+        foreach (bool supplementary in new[] { false, true })
+        foreach (short gap in new short[] { 0, 450 })
+        foreach (bool canonicalSpacing in new[] { false, true })
+        {
+            string leadingText = (wrapMask & 1) != 0 ? new string('m', 72) + " ending." : "end.";
+            var first = DocxTests.CreateDocxLayoutParagraph(leadingText, 12d, 14d) with
+            {
+                LineSpacingPoints = null,
+                Runs = [new DocxTextRun(leadingText, 12d, null, false, false, false, null, "CommentFace")],
+                ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "AnchorFace")
+            };
+            var leading = Enumerable.Range(0, 4).Select(index =>
+            {
+                string text = (wrapMask & (1 << index)) == 0 ? "end." : new string('m', 72) + " ending.";
+                return first with { Runs = [first.Runs[0] with { Text = text, FontFamily = index == 1 ? "OtherCommentFace" : "CommentFace" }] };
+            }).ToArray();
+            string prefix = new string('a', 80) + (supplementary ? "\U0001F600" : "") + " finish.";
+            string closing = " a b " + new string('m', 15) + ".";
+            var terminal = first with
+            {
+                Runs = [first.Runs[0] with { Text = prefix }, first.Runs[0] with { Text = closing, FontFamily = "OtherCommentFace" }],
+                ParagraphMarkRun = first.ParagraphMarkRun! with { FontFamily = "OtherCommentFace", FontSize = 30d }
+            };
+            if (canonicalSpacing)
+            {
+                first = first with { Spacing = first.Spacing with
+                {
+                    BeforeLinesValue = "300", AfterLinesValue = "300", BeforeAutoSpacingValue = "off", AfterAutoSpacingValue = "on",
+                    BeforeValue = "120", AfterValue = "240"
+                } };
+                leading = leading.Select(paragraph => paragraph with { Spacing = first.Spacing }).ToArray();
+                terminal = terminal with { Spacing = first.Spacing };
+            }
+            var anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
+            {
+                Runs = [new DocxTextRun("Body anchor", 12d, null, false, false, false, null, "AnchorFace")]
+            };
+            var story = new DocxRelatedStory(DocxRelatedStoryKind.Comment, "/word/comments.xml", "1",
+                [.. leading.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)), new DocxParagraphElement(terminal)], [], [], null)
+            {
+                CommentMetadata = new DocxCommentMetadata("Reviewer", "RV", null, null, null, null, null)
+            };
+            var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty,
+                [], [], [], [new DocxParagraphElement(anchor)], [], [])
+            {
+                RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
+            var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var balloon = renderer.InspectMarkupBalloons(document).Single();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
+            var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
+            TestAssert.True(rows.Length >= 7, "Four preceding bodies and terminal source rows remain distinct.");
+            var last = rows[^1].ToArray();
+            var preceding = rows[^2].ToArray();
+            TestAssert.Equal(new string('m', 15) + ".", last[0].Text);
+            TestAssert.Equal(" ", last[1].Text);
+            TestAssert.Equal(2, last.Length);
+            TestAssert.True(preceding[0].Text.EndsWith(" finish.", StringComparison.Ordinal),
+                "A preserved closing separator keeps the preceding whole word on its original row.");
+            TestAssert.Equal(" a b ", preceding[^1].Text);
+            TestAssert.Equal(last[0].Font, preceding[^1].Font);
+            double size = last[0].Size;
+            var previousFont = preceding[0].Font.Font;
+            var closingFont = last[0].Font.Font;
+            double mixedPitch = (-previousFont.Hhea.HorizontalDescender / (double)previousFont.UnitsPerEm +
+                Math.Max((previousFont.Hhea.HorizontalAscender + previousFont.Hhea.HorizontalLineGap) / (double)previousFont.UnitsPerEm,
+                    (closingFont.Hhea.HorizontalAscender + closingFont.Hhea.HorizontalLineGap) / (double)closingFont.UnitsPerEm)) * size;
+            TestAssert.True(Math.Abs(rows[^3].Key - rows[^2].Key - mixedPitch) < 0.02d,
+                "The last first-body row includes the fitting closing face's ascent/gap.");
+            double transition = (-previousFont.Hhea.HorizontalDescender / (double)previousFont.UnitsPerEm +
+                (closingFont.Hhea.HorizontalAscender + closingFont.Hhea.HorizontalLineGap) / (double)closingFont.UnitsPerEm) * size;
+            TestAssert.True(Math.Abs(preceding[0].Y - last[0].Y - transition) < 0.02d,
+                "A closing-only row uses its own ascent/gap and the preceding first-body descent.");
+            TestAssert.True(Math.Abs(last[0].X - preceding[0].X) < 0.001d &&
+                Math.Abs(last[1].X - last[0].X - last[0].Font.MeasureTextPoints(last[0].Text, size)) < 0.04d,
+                "The closing-only row resets to the continuation inset and retains its nominal mark advance.");
+            TestAssert.True(Math.Abs(balloon.Height - (12.61d + shows[0].Y - last[0].Y)) < 0.03d,
+                "Height includes the independent closing-only transition.");
+            foreach (DocxParagraph rejected in new[]
+            {
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + new string('m', 120) }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " a " + new string('m', 120) + "." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmm." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + closing }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " a b c " + new string('m', 15) + "." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = closing + " fourth." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " " + new string('m', 20) + " abc def." }] },
+                terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = closing.Replace(" a b ", " a b  ", StringComparison.Ordinal) }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmm  mmmmmmm." }] },
                 terminal with { Runs = [terminal.Runs[0], terminal.Runs[1] with { Text = " mmmmmmm mmmmmmm mmmmmmm fourth." }] },
                 terminal with { Runs = [terminal.Runs[0] with { Text = prefix + " " }, terminal.Runs[1] with { Text = closing.TrimStart(' ') }] },
