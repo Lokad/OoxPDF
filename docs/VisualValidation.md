@@ -235,3 +235,44 @@ companion with `pwsh tools/NewDocxMarkupLinkFieldFixtures.ps1 -LockedOnly`;
 the existing unlocked and note fixtures retain their bytes. Keep both cases:
 the unlocked case measures the field-refresh policy difference, while the
 locked case isolates the remaining spacing, table and pixel differences.
+
+## RV07-E5: bounded SVG opacity (2026-10-10)
+
+Uniform numeric `stop-opacity` attributes now multiply the existing fill/node alpha.
+Numeric zero-opacity root/group containers do not paint or activate diagnostics
+for their invisible contents. Varying stops, percentage/CSS stop alpha and partial
+container opacity retain their prior fallback. The selected reference remains
+PowerPoint16's smooth PNG preview; its PDF-export transparency holes are outside
+the target. Office rewrites SVG styles and percentages during import, so evidence
+pins the original source separately from the SVG actually stored in the PPTX.
+
+Frozen runtime **e9ff75a5** passes one unfiltered original catalogue invocation:
+**2250 registered /2249 passed /0 failed /1 optional private-document skip**.
+It includes **110 SVG /131 images /959 DOCX** methods and the prior L127 note
+fixes. Eight targeted Linux checks pass; Windows builds are clean and the
+git-free Linux archive retains two expected SourceLink warnings. Two unchanged
+final regressions fail against the exact L127 library; the fallback guard passes.
+The exact local **0.1.5** package smoke is `90c728feb5974e92b81cf3a8c6fdaf68`.
+
+Seventeen new Office slides yield **ten paired MAE/SSIM improvements** and seven
+unchanged guard rasters. The two later controls independently cover a vertical
+three-color linear gradient and a shifted reflecting three-color radial gradient.
+Fresh frozen PDFs match the separately compared prototype PDFs, transferring
+pinned preview/raster/graphics evidence with its original library provenance.
+Radial MAE falls **11.412→0.054**; the independent reflecting case falls
+**17.181→0.236**. Linear sampling remains approximate (vertical MAE **0.327**,
+SSIM **0.987976**); opacity support does not widen the gradient geometry claim.
+
+Across **39 prior SVG decks**, 38 retain exact PDF bytes. One older opacity deck
+changes its uniform-stop slide: MAE **11.421→0.051**, SSIM
+**0.799984→0.999999** against its original Office preview. Its other five rasters
+retain bytes. All **2911 inherited/table PDFs** retain accepted L127 bytes.
+Eighty fresh DOCX comparison PDFs also retain bytes; cached markup failures stay
+**508**, with original source-layout/structural/raster provenance preserved.
+
+The caught test-helper compile error and initial corpus identity stop remain
+archived. Partial group/root opacity, varying stop alpha, overlapping composition,
+gradient strokes and earlier chart/text/DOCX residuals remain. Version stays
+0.1.5; release preparation is deferred. Evidence:
+`artifacts/plan-revision-20261005/rv07-e5/`. Frozen runtime, package and subsequent
+documentation integration identities remain distinct.
