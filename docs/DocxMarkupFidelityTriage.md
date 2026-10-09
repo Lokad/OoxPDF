@@ -2716,6 +2716,62 @@ All **15 existing Office controls** match content and page counts: **six pixel i
 All **14 actual note links** retain source and destination pages. Their after-spacing hit-area differences remain: **6.017pt** in admitted scaled controls, **8.002pt** in nominal controls, and **8.737pt** in the table-header fallback. The table-header body baseline still differs by **8.797pt**. Existing settings-only/restart/multi-section numbering, scaled or complex note flow, inherited break mismatches, and cached spacing/painting errors remain incomplete. This qualifies the scoped body anchor, not full Office parity. The L119 full-catalogue milestone excludes L120-L122; release preparation remains deferred. Evidence is under `artifacts/plan-revision-20261005/rv06-l122/`.
 
 
+## RV06-L123: rounded review boxes and a complete-catalogue checkpoint
+
+The cached Word references consistently paint review boxes with nominal 3pt
+corner radii and nominal 0.5pt borders. Non-overflow Word-compatible balloons
+now use four cubic corners, scaled border widths and round joins. Other geometry
+modes and overflow summaries retain their rectangle path. Existing rounded PDF
+primitives retain their output. Text, layout and connector operations remain
+unchanged outside the admitted box paint.
+
+Frozen runtime **bd490134**, library SHA-256
+**F97FB85830C77F9DDD175B70FFE7A9B3F41F414F7BF72C99F365A0C3A4DD3708**,
+passes **950 DOCX /122 balloon /72 Linux** checks, with **952 distinct Windows
+methods**. Clean Windows builds, two expected Git-free Linux SourceLink warnings
+and exact local **0.1.5** package smoke `f0995d2aee2b469e95400c2413be5345`
+are recorded. The unchanged corner regression fails against the exact accepted
+L122 library; the independent body-anchor guard passes.
+
+The complete original catalogue validates, and reconciled disjoint coverage of
+the same frozen library/test binaries covers **2238 registered methods:
+2237 passed /0 failed /1 skipped**. The affected reports cover 952 methods and
+the original remaining delegates cover 1286. Only the unconfigured optional
+private PPTX diagnostic is skipped. This checkpoint includes L120-L123 and is
+not a single unfiltered runner invocation.
+
+All **34 cached cases** retain their text/font/layout/emission reports and page
+counts, with **48 rounded boxes** across 15 changed PDFs. Of 18 changed pages,
+all improve MAE and 17 improve SSIM; links-fields-all SSIM decreases by about
+**0.000051** while MAE improves. All **518 failed gates** remain, with no
+increases. The original painting snapshot generated fresh structural and pixel
+comparisons. Final frozen conversion freshly matches all 34 compared PDFs;
+renderer, CLI and inspector source identity plus exact PDF identities transfer
+the pinned reports with their original DLL provenance. No new raster comparison
+is claimed for that final identity transfer.
+
+Fresh conversion and strict PDF object/content comparisons cover all **2911
+inherited/table inputs**: **61 PDF identities and 2850 painting-only changes**,
+with every other object/content byte retained. Conversion takes **67.861 seconds**
+and comparisons **29.889 seconds**. Changed inherited pixels are neither claimed
+identical nor rerastered; the cached Office pixel proof remains separate.
+
+The first qualification records **949 DOCX passes and one obsolete square-box
+assertion failure**. That assertion now requires rounded closed fill/stroke
+paths; the failure and stopped partial catalogue remain archived. A .NET10
+timing probe measures median fixture-path creation at **1332ms** in the existing
+temp directory versus **0.175ms** in a fresh ignored directory. The affected
+test helper now isolates TMP/TEMP for runner invocations and restores them
+afterward. Observed DOCX test time drops **1585.8→137.3 seconds**; the complete
+1286-method remainder takes **39.4 seconds**. These are local validation timings,
+not controlled end-to-end or renderer performance claims.
+
+Earlier numbering, link hit-area, composed header/table/column, note-flow,
+typography and break residuals remain. Release preparation remains deferred at
+0.1.5. Evidence is under `artifacts/plan-revision-20261005/rv06-l123-final/`;
+the original attempt remains under `rv06-l123/`. Frozen runtime, exact package
+and later documentation integration identities remain distinct.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
