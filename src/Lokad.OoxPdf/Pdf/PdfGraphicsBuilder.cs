@@ -259,6 +259,12 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("f");
     }
 
+    public void FillStrokeRoundedRectangleEvenOdd(double x, double y, double width, double height, double radius)
+    {
+        AppendRoundedRectanglePath(x, y, width, height, radius, explicitClosingLine: true);
+        builder.AppendLine("B*");
+    }
+
     public void FillRoundedRectangleEvenOdd(double x, double y, double width, double height, double radius)
     {
         AppendRoundedRectanglePath(x, y, width, height, radius);
@@ -671,7 +677,7 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("h");
     }
 
-    private void AppendRoundedRectanglePath(double x, double y, double width, double height, double radius)
+    private void AppendRoundedRectanglePath(double x, double y, double width, double height, double radius, bool explicitClosingLine = false)
     {
         const double kappa = 0.5522847498307936d;
         double r = Math.Clamp(radius, 0d, Math.Min(width, height) / 2d);
@@ -685,6 +691,10 @@ internal sealed class PdfGraphicsBuilder
         Curve(x + width, y + r - ox, x + width - r + ox, y, x + width - r, y);
         builder.Append(PdfDocumentWriter.FormatNumber(x + r)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
         Curve(x + r - ox, y, x, y + r - ox, x, y + r);
+        if (explicitClosingLine)
+        {
+            builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y + height - r)).AppendLine(" l");
+        }
         builder.AppendLine("h");
     }
 

@@ -1335,8 +1335,22 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonRgb strokeRgb = ResolveMarkupBalloonBodyStrokeRgb(placement, markupContext);
         graphics.SetFillRgb(fillRgb.Red, fillRgb.Green, fillRgb.Blue);
         graphics.SetStrokeRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
-        graphics.SetLineWidth(ResolveMarkupBalloonBodyStrokeWidth(markupContext));
-        graphics.FillStrokeRectangleEvenOdd(placement.X, placement.Y, placement.Width, placement.Height);
+        if (!placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext))
+        {
+            // Public Word references use a nominal 3pt corner radius and a
+            // roughly half-point border, both scaled with the review canvas.
+            graphics.SaveState();
+            graphics.SetLineWidth(0.5d * markupContext.WordCompatiblePrintScale);
+            graphics.SetLineJoin(1);
+            graphics.FillStrokeRoundedRectangleEvenOdd(placement.X, placement.Y, placement.Width, placement.Height,
+                3d * markupContext.WordCompatiblePrintScale);
+            graphics.RestoreState();
+        }
+        else
+        {
+            graphics.SetLineWidth(ResolveMarkupBalloonBodyStrokeWidth(markupContext));
+            graphics.FillStrokeRectangleEvenOdd(placement.X, placement.Y, placement.Width, placement.Height);
+        }
         if (!placement.IsOverflowSummary)
         {
             RenderMarkupBalloonConnector(placement, graphics, markupContext);

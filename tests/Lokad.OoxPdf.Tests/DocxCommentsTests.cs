@@ -12,6 +12,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    public static void DocxWordCompatibleBalloonsUseRoundedCorners()
+    {
+        // Cached public Word exports paint each review box with four cubic arcs.
+        DocxDocument document = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
+        var resolver = new TestFaceFontResolver();
+        PdfPage word = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+        TestAssert.Equal(4, Regex.Matches(word.Content, @"(?m)\bc\r?$").Count);
+        TestAssert.Contains("1 j", word.Content);
+        PdfPage preserve = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        TestAssert.Equal(0, Regex.Matches(preserve.Content, @"(?m)\bc\r?$").Count);
+        TestAssert.Contains(" re B*", preserve.Content);
+    }
+
     public static void DocxWordCompatiblePlainHeaderDoesNotDisplaceBodyText()
     {
         // Independent Word controls keep the body at its own center-scaled origin.
