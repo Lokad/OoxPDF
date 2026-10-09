@@ -78,7 +78,7 @@ Partial or approximated:
 - `Final` and `Original` DOCX markup modes filter inserted/deleted and moved content before layout.
 - `SimpleMarkup` renders final text with page-margin change bars and compact comment markers.
 - `AllMarkup` renders inline revision styling plus first-pass comment and tracked-change balloons with metadata or revision-kind summaries, preview text, table/image fallback markers, and connectors.
-- Footnote and endnote bodies place first-pass as related stories; split-note continuation stays approximate.
+- Footnote and endnote bodies place first-pass as related stories; split-note continuation stays approximate. Automatic labels in one section use explicit section starts/formats or their defaults, including minimum two-digit `decimalZero`; authored document settings remain inspectable. Restart and multiple-section numbering remain approximate.
 - Multi-column sections flow explicit breaks with first-pass exclusion geometry while continuous balancing stays approximate.
 - Markup modes keep the authored PDF media box and text-column geometry; no expanded review-pane margin is created.
 

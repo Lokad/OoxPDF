@@ -2898,6 +2898,48 @@ preparation stays deferred at 0.1.5. Evidence:
 `artifacts/plan-revision-20261005/rv06-l126/`. Frozen runtime, exact package and
 later documentation integration identities remain distinct.
 
+## RV06-L127: section note defaults and decimalZero labels
+
+Single-section automatic footnote/endnote labels now use explicit section starts
+and formats, with defaults **1/decimal** and **1/lowerRoman** respectively.
+Word16 ignores corresponding document-level starts/formats in the qualified
+controls. The authored document settings remain available unchanged in inspection.
+`decimalZero` now pads to a minimum of two digits: **01/02**, and **09/10** across
+the boundary. Body, table-cell and matching inside-note labels stay consistent.
+Malformed properties, unsupported formats and restart requests retain the prior
+numbering-selection fallback; multiple/no-section counters also keep that fallback.
+
+Frozen runtime **b9c70d9a** qualifies **959 DOCX /122 balloon** checks, **961 distinct
+Windows methods**, **12 focused Linux checks**, clean Windows builds and the exact
+local **0.1.5** package `2c3f03d0ff0e4cd59ce7b9577fb0d720`. Four unchanged final regressions
+fail against the exact accepted L126 library; the unsupported-fallback guard passes.
+The initial decimalZero failure and obsolete body/table document-setting assertion
+remain archived. The final DOCX run is **959/0/0**. The last complete-catalogue
+checkpoint remains L126 (**2243/0/1**); it excludes this later batch.
+
+Thirteen Office16 controls cover settings-only and partial/complete section
+overrides for both note kinds, missing section note properties, the zero-padding
+boundary and body-to-table numbering. Eleven improve both MAE and SSIM; two
+already-correct complete overrides retain PDF bytes. All decoded content and page
+counts match; **26 actual links** reach the correct pages, with source bounds
+within **0.640pt**. Eighteen of twenty earlier note controls retain accepted and
+original L121 PDF bytes. The two settings-only controls now match Word's **1/2**
+labels and improve both pixel metrics.
+
+Fresh final conversion proves **80 PDF identities** with the independently
+compared outputs: 13 Office outputs, 13 preserve outputs, 20 earlier notes and
+34 cached markup cases. Original raster/text/graphics/link and source-layout
+reports retain their original **2AA265C2** library provenance; this is identity
+transfer, not fresh final raster/structural execution. All **2911 inherited/table
+inputs** freshly retain accepted L126 bytes. The cached total remains **508**
+failed gates, with no page-count changes.
+
+Restart/multiple-section numbering, custom marks, back-links, after-spacing link
+hit areas, broader note flow and earlier layout/break residuals remain incomplete.
+The documented stored-result REF policy remains. Release preparation stays
+deferred at 0.1.5. Evidence: `artifacts/plan-revision-20261005/rv06-l127-final/`,
+with original comparisons and retained failed attempts under `rv06-l127/`.
+
 ## Inputs
 
 - [ ] Confirm the reference came from a trusted Office export produced on a setup that was already proven headless and non-interactive.
