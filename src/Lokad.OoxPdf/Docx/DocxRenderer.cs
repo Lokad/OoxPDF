@@ -846,7 +846,8 @@ internal sealed partial class DocxRenderer
 
         return markupContext with
         {
-            WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height, HasAnyWordCompatibleBalloon(document))
+            WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height,
+                markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document))
         };
     }
 
@@ -1450,7 +1451,9 @@ internal sealed partial class DocxRenderer
 
     private static OoxPdfDocxMarkupGeometryMode ResolveEffectiveMarkupGeometryMode(DocxMarkupContext context)
     {
-        return context.ExpandsMarkupMargin
+        // A Word review frame is needed only when visible balloons occupy the lane.
+        // Hidden story comments and orphan parts keep the authored wrap width.
+        return context.ExpandsMarkupMargin && context.WordCompatibleHasPrintedBalloons != false
             ? context.GeometryMode
             : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
     }

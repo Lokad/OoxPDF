@@ -12,6 +12,87 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    public static void DocxWordCompatibleUnusedCommentPartsRetainNominalBodyFrame()
+    {
+        foreach (bool revised in new[] { false, true })
+        {
+            DocxDocument document = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: false);
+            DocxParagraph body = DocxTests.CreateDocxLayoutParagraph(string.Join(' ', Enumerable.Repeat("AAA", 160)), 24d, 24d);
+            if (revised) body = body with
+            {
+                Revisions = [new DocxRevisionInfo(DocxRevisionKind.Insertion, "4", "Reviewer", null, "ins", null, [])]
+            };
+            document = document with { BodyElements = [new DocxParagraphElement(body)], PageSettings = DocxPageSettings.Empty };
+            var word = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var preserve = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxLayoutSnapshot actual = word.InspectLayout(document), nominal = preserve.InspectLayout(document);
+            TestAssert.Equal(0d, actual.MarkupMarginReservePoints);
+            TestAssert.Equal(nominal.Pages.Count, actual.Pages.Count);
+            TestAssert.Equal(nominal.Pages.Sum(page => page.TextLineCount), actual.Pages.Sum(page => page.TextLineCount));
+        }
+    }
+
+    public static void DocxWordCompatibleHiddenBodyCommentsKeepNominalTextPlacement()
+    {
+        DocxDocument document = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
+        document = document with { Settings = document.Settings with
+            { RevisionViewSettings = DocxRevisionViewSettings.Empty with { ShowComments = false } } };
+        var word = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var preserve = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        TestAssert.Equal(0, word.InspectMarkupBalloons(document).Count);
+        TestAssert.Equal(0d, word.InspectLayout(document).MarkupMarginReservePoints);
+        DocxTextEmissionSegmentSnapshot FirstBody(DocxRenderer renderer) => renderer.InspectTextEmission(document).Lines
+            .First(line => line.ContainerStoryKind == "Body" && line.SourceBlockIndex == 0).Segments
+            .First(segment => !segment.IsTerminalLineSpace);
+        TestAssert.True(Math.Abs(FirstBody(word).BaselineY - FirstBody(preserve).BaselineY) < .000001d,
+            "Comments hidden by document settings must not retain the fitted balloon text shift.");
+    }
+
+    public static void DocxWordCompatibleHiddenCommentsPreserveAuthoredBodyFrame()
+    {
+        foreach (string kind in new[] { "header", "footer", "footnote", "endnote" })
+        foreach (bool inTable in new[] { false, true })
+        {
+            DocxDocument document = CreateStoryVisibilityDocument(kind, inTable, bodyComment: false);
+            DocxParagraph body = DocxTests.CreateDocxLayoutParagraph(string.Join(' ', Enumerable.Repeat("AAA", 160)), 24d, 24d)
+                with { InlineReferences = document.Paragraphs[0].InlineReferences };
+            document = document with { BodyElements = [new DocxParagraphElement(body)] };
+            var word = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var preserve = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxLayoutSnapshot actual = word.InspectLayout(document), nominal = preserve.InspectLayout(document);
+            TestAssert.Equal(0d, actual.MarkupMarginReservePoints);
+            TestAssert.Equal(nominal.Pages.Count, actual.Pages.Count);
+            TestAssert.Equal(nominal.Pages.Sum(page => page.TextLineCount), actual.Pages.Sum(page => page.TextLineCount));
+            TestAssert.True(actual.Pages.Zip(nominal.Pages).All(pair =>
+                Math.Abs(pair.First.ColumnFrameWidthSum - pair.Second.ColumnFrameWidthSum) < .000001d),
+                "A hidden story comment must not narrow the authored body frame.");
+        }
+    }
+
+    public static void DocxWordCompatibleMixedStoryCommentsKeepScaledBodyFrame()
+    {
+        foreach (string kind in new[] { "header", "footer", "footnote", "endnote" })
+        foreach (bool inTable in new[] { false, true })
+        {
+            DocxDocument document = CreateStoryVisibilityDocument(kind, inTable, bodyComment: true);
+            var word = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            DocxLayoutSnapshot actual = word.InspectLayout(document);
+            double authoredWidth = document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints;
+            TestAssert.True(actual.MarkupMarginReservePoints > 0d && actual.Pages.All(page =>
+                Math.Abs(page.ColumnFrameWidthSum - authoredWidth * scale) < .000001d),
+                "A visible body comment must retain the existing scaled body frame.");
+        }
+    }
+
     public static void DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane()
     {
         DocxDocument document = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: false);
