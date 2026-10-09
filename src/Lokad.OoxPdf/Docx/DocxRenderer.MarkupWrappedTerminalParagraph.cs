@@ -63,8 +63,8 @@ internal sealed partial class DocxRenderer
         string? partialClosingSuffix = null;
         if (lastWidth > continuationWidth && leadingCount is (1 or 2 or 3 or 4) && closing.Text.StartsWith(' '))
         {
-            // Office keeps the breakable separator in its closing face on the
-            // preceding row, then moves the complete qualified closing run to its own row.
+            // Office preserves breakable closing separators on the preceding row.
+            // A qualified fitting prefix stays there; the remaining closing text moves together.
             string closingWord = closing.Text[1..];
             double closingWidth = closing.Resource.Embedded.MeasureTextPoints(closingWord, size);
             double precedingWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
@@ -72,13 +72,19 @@ internal sealed partial class DocxRenderer
             int wordSeparator = closingWord.IndexOf(' ');
             bool hasTwoWords = leadingCount == 4 && wordSeparator > 0 && wordSeparator < closingWord.Length - 1 &&
                 closingWord.LastIndexOf(' ') == wordSeparator;
+            int secondSeparator = wordSeparator < 0 ? -1 : closingWord.IndexOf(' ', wordSeparator + 1);
+            bool hasThreeWords = leadingCount == 4 && wordSeparator > 0 && secondSeparator > wordSeparator + 1 &&
+                secondSeparator < closingWord.Length - 1 && closingWord.LastIndexOf(' ') == secondSeparator;
             bool hasTwoFittingWords = false;
-            if (hasTwoWords)
+            if (hasTwoWords || hasThreeWords)
             {
                 double firstClosingWordWidth = first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
                     closing.Resource.Embedded.MeasureTextPoints(closing.Text[..(wordSeparator + 1)], size);
-                hasTwoFittingWords = double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth > continuationWidth;
-                if (double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth <= continuationWidth &&
+                hasTwoFittingWords = hasTwoWords && double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth > continuationWidth;
+                double secondClosingWordWidth = hasThreeWords ? first.Resource.Embedded.MeasureTextPoints(terminalRows[^1].Text, size) +
+                    closing.Resource.Embedded.MeasureTextPoints(closing.Text[..(secondSeparator + 1)], size) : double.PositiveInfinity;
+                bool secondWordOverflows = !hasThreeWords || double.IsFinite(secondClosingWordWidth) && secondClosingWordWidth > continuationWidth;
+                if (double.IsFinite(firstClosingWordWidth) && firstClosingWordWidth <= continuationWidth && secondWordOverflows &&
                     double.IsFinite(closingWidth) && closingWidth <= continuationWidth &&
                     double.IsFinite(precedingWidth) && precedingWidth <= continuationWidth)
                 {
