@@ -105,7 +105,7 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (counts[paragraph] == 1) continue;
-            if (spacing.Before <= 0d || paragraph.Spacing.ContextualSpacing == true) candidates.Remove(paragraph);
+            if (spacing.Before <= 0d) candidates.Remove(paragraph);
             else candidates[paragraph] = spacing with { After = 0d };
         }
         return candidates;

@@ -1,0 +1,32 @@
+{
+  "id": "docx-ladder-04-note-current-contextual-multiline-before-spacing-endnote",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-current-contextual-multiline-before-spacing-endnote.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "notes",
+    "navigation",
+    "spacing",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_ENDNOTE"
+    ],
+    "maxMeanAbsoluteError": 2.3,
+    "minStructuralSimilarity": 0.53,
+    "minForegroundRecall": 0.56,
+    "maxChangedPixelRatioAtThreshold16": 0.024
+  },
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_ENDNOTE"
+  ]
+}
