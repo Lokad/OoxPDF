@@ -1617,3 +1617,37 @@ The generator reproduces nine current payloads, with 26 earlier note payloads
 transferred through unchanged source/helper/fixture Git blobs. The local
 0.1.5 package smoke passes against the exact frozen runtime. Release
 preparation is deferred.
+
+## RV06-L145: minimum paragraph spacing in vertically aligned table cells
+
+Runtime **89633277** corrects plain minimum-height paragraph slots in eligible
+centered/bottom body table cells with positive exact/minimum row heights,
+including an omitted minimum rule. The alignment model uses actual laid-out
+content height and the terminal bottom-border advance. Ordinary/exact neighbors
+move with the aligned content. Row height, following flow, wrapping, glyph
+advances, font resources, horizontal bounds, graphics and destinations stay
+unchanged. Automatic rows, positive vertical margins, rich runs, headers and
+complex/scaled/fragmented cells retain their prior non-top fallback.
+
+The qualification covers 70 independent Word 16 controls, two public generator
+cases and four historical controls. All 69 admitted comparisons improve both
+MAE and SSIM; seven guards retain exact PDF/PNG bytes. All 76 text multisets
+and page counts match Word. The 264 improved in-cell paragraph baselines have
+at most 0.212pt admitted first-baseline error. The rejected model for positive
+vertical margins remains archived because both image metrics did not improve.
+
+Supplemental source mapping resolves all 103 cell clips. The 96 admitted cells
+retain up to 2.04pt absolute bounds error, and guarded margin cases retain up
+to 6.99pt. Raw graphics gates are unchanged; mapping does not establish absolute
+geometry parity. Broader table note ownership and after-spacing remain partial.
+
+The frozen runtime passes 2,400 registered Windows checks (2,399 pass, one
+optional private skip) and 223 Linux checks (six existing Arial skips).
+Windows Release builds have zero warnings/errors; Linux retains two archive
+SourceLink warnings. All 2,911 inherited DOCX and 251 broader PDFs retain bytes
+and page counts. Of 1,091 prior visual PDFs, 1,089 retain bytes and two outputs
+of one centered control are freshly requalified; all 1,167 qualified outputs
+reproduce their compared bytes. The generator reproduces 11 current payloads,
+with 26 earlier note payloads transferred through unchanged Git blobs.
+The local 0.1.5 package smoke passes against the exact frozen runtime. Release
+preparation is deferred.
