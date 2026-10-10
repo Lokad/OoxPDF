@@ -738,3 +738,40 @@ cases across ten families. RV08-T4's full runtime/Linux/package qualification
 remains applicable through unchanged source and assembly identities. No full suite
 or package rerun is needed for these two text-only fixture changes. Version0.1.5
 and deferred release preparation are retained.
+
+## RV08-T6: bounded PowerPoint no-wrap distribution (2026-10-10)
+
+Plain distributed text in a no-wrap/noAutofit frame previously stretched across
+the frame. Office retains nominal advances for the qualified horizontal,
+single-column, unrotated/unflipped, non-table ASCII paragraphs. The resolved
+paragraph rule now suppresses stretching without changing active kerning,
+normal justification or wrapping. Bullets, tabs, manual breaks, non-ASCII text,
+other frame modes and other alignment values retain existing behavior.
+
+Thirty primary and36 independent font/size/spacing/inheritance/width/exclusion
+controls are pinned in original and Office-imported syntax. Each syntax yields
+19 paired MAE/SSIM improvements and47 raster identities, with no mixed results.
+The reproducible public no-wrap case repeats the primary geometry: MAE improves
+.8009 to.0298 and SSIM.411048 to.995125. Its approximate gate requires MAE<=.1,
+SSIM>=.99 and foreground recall>=.95. Measured recall.957897 failed the provisional
+.98 bound before qualification; glyph-edge differences remain. This case is not
+counted as an additional independent control or exact font parity.
+
+Four portable synthetic-font methods cover nominal PDF placement and active
+kerning, inheritance and mixed paragraphs, XML/scene agreement, and excluded
+frame/script/manual-break fallback. Three unchanged semantic methods fail the
+exact T5 parent; fallback passes. The rejected broader word-spacing model retains
+its exact source, binary, PDB and comparisons. Grouped Office text operations can
+contain per-glyph TJ adjustments; operation counts alone establish no spacing rule.
+
+Frozen Windows clean Release passes2311 methods, zero failures and one optional
+private-document skip from2312 registered methods, including91 PDF,130 SVG,
+151 image,171 typography and959 DOCX checks. Linux passes85 PDF plus43 targeted
+checks, with six existing Windows-Arial skips and two archive SourceLink warnings.
+Both inventories validate347 cases across ten families. Fresh conversions retain
+all96 existing typography PDFs,60 SVG PDFs,11 related control-deck PDFs,
+2911 inherited DOCX PDFs and80 DOCX comparison PDFs, with no inherited page changes.
+The34 cached DOCX cases and508 failed gates transfer through fresh PDF identity;
+no new reference-cache gate is claimed. All six candidate Office deck PDFs retain
+their compared bytes after the source freeze. Packed0.1.5 smoke passes. API,
+dependencies and version stay unchanged; release preparation remains deferred.
