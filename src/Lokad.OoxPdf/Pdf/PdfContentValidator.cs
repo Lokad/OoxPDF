@@ -20,6 +20,7 @@ internal static class PdfContentValidator
         RequireUniqueNames(page.ExtGStates.Select(state => state.ResourceName), "graphics-state", pageIndex);
         RequireUniqueNames(page.Shadings.Select(shading => shading.ResourceName), "shading", pageIndex);
         RequireUniqueNames(page.Patterns.Select(pattern => pattern.ResourceName), "pattern", pageIndex);
+        ValidateMaskGroups(page.ExtGStates, page.Groups);
 
         ValidateContent(
             page.Content,
@@ -62,6 +63,7 @@ internal static class PdfContentValidator
         RequireUniqueNames(group.Groups.Select(child => child.ResourceName), "group XObject", pageIndex);
         RequireUniqueNames(group.ExtGStates.Select(state => state.ResourceName), "group graphics-state", pageIndex);
         RequireUniqueNames(group.Shadings.Select(shading => shading.ResourceName), "group shading", pageIndex);
+        ValidateMaskGroups(group.ExtGStates, group.Groups);
         ValidateContent(group.Content, $"PDF page {pageIndex + 1} transparency group",
             new HashSet<string>(StringComparer.Ordinal),
             new HashSet<string>(group.Groups.Select(child => PdfEmbeddedFont.SanitizeName(child.ResourceName)), StringComparer.Ordinal),
@@ -73,6 +75,20 @@ internal static class PdfContentValidator
             ValidateGroup(child.Group, pageIndex, depth + 1, active, cancellationToken);
         }
         active.Remove(group);
+    }
+
+    private static void ValidateMaskGroups(IReadOnlyList<PdfExtGStateResource> states, IReadOnlyList<PdfTransparencyGroupResource> groups)
+    {
+        HashSet<string>? names = null;
+        foreach (PdfExtGStateResource state in states)
+        {
+            if (state.LuminosityGroupName is not { } name) { continue; }
+            names ??= new HashSet<string>(groups.Select(group => PdfEmbeddedFont.SanitizeName(group.ResourceName)), StringComparer.Ordinal);
+            if (state.SoftMask is not null || !names.Contains(PdfEmbeddedFont.SanitizeName(name)))
+            {
+                throw new InvalidDataException("PDF vector soft masks require a single local transparency group resource.");
+            }
+        }
     }
 
     private static void ValidatePattern(PdfTilingPatternResource pattern, int pageIndex, CancellationToken cancellationToken)

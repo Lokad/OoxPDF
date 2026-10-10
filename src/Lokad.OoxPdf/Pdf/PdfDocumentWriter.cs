@@ -351,6 +351,7 @@ internal sealed class PdfDocumentWriter
             }
 
             var builder = new StringBuilder("<<");
+            Dictionary<string, PdfTransparencyGroup>? maskGroups = null;
             if (fonts.Count != 0 || fallbackFonts.Count != 0)
             {
                 builder.Append(" /Font <<");
@@ -399,6 +400,12 @@ internal sealed class PdfDocumentWriter
                     if (state.SoftMask is not null)
                     {
                         builder.Append(CultureInfo.InvariantCulture, $" /SMask << /S /Luminosity /G {numbers.SoftMaskObjects[state.SoftMask.ResourceKey]} 0 R >>");
+                    }
+                    else if (state.LuminosityGroupName is { } name)
+                    {
+                        maskGroups ??= groups.ToDictionary(resource => PdfEmbeddedFont.SanitizeName(resource.ResourceName), resource => resource.Group, StringComparer.Ordinal);
+                        PdfTransparencyGroup group = maskGroups[PdfEmbeddedFont.SanitizeName(name)];
+                        builder.Append(CultureInfo.InvariantCulture, $" /SMask << /S /Luminosity /G {numbers.GroupObjects[group]} 0 R /BC [0 0 0] >>");
                     }
 
                     builder.Append(" >>");

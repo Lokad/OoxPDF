@@ -620,9 +620,11 @@ internal sealed partial class PptxRenderer
     private sealed record SvgRadialGradient(double Cx, double Cy, double Radius, bool HasFocal, IReadOnlyList<SvgGradientStop> Stops, bool IsUserSpace, SvgGradientSpread Spread)
     {
         public double? UniformStopOpacity { get; init; } = 1d;
+        public bool HasNumericStopOpacity { get; init; }
+        public bool HasIdentityGradientTransform { get; init; }
     }
 
-    private readonly record struct SvgGradientStop(double Offset, RgbColor Color);
+    private readonly record struct SvgGradientStop(double Offset, RgbColor Color, double? Opacity = 1d);
 
     private readonly record struct SvgPathBounds(double MinX, double MinY, double MaxX, double MaxY)
     {

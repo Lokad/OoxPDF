@@ -123,6 +123,8 @@ internal sealed partial class PptxRenderer
         HashSet<string>? usedGradientIds = diagnosticSink is null ? null : new(StringComparer.Ordinal);
         var isolation = new List<(XElement Container, PdfGraphicsBuilder Parent, PdfGraphicsBuilder Child, double Opacity)>();
         var admittedContainers = new HashSet<XElement>();
+        var admittedGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
+        var fallbackGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
         void CloseGroup()
         {
             var entry = isolation[^1];
@@ -257,9 +259,10 @@ internal sealed partial class PptxRenderer
                 {
                     focalRadialGradients++;
                 }
+                bool varyingAlphaAdmitted = false;
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds radialBounds))
                 {
-                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
+                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted))
                     {
                         nonFiniteGradientPaths++;
                     }
@@ -273,6 +276,10 @@ internal sealed partial class PptxRenderer
                 else if (badCommand is null)
                 {
                     unreadablePaths++;
+                }
+                if (gradientId is not null)
+                {
+                    (varyingAlphaAdmitted ? admittedGradientAlpha : fallbackGradientAlpha).Add(gradientId);
                 }
             }
             else if (paint.Gradient is { } gradient)
@@ -386,7 +393,7 @@ internal sealed partial class PptxRenderer
         }
         while (isolation.Count > 0) { CloseGroup(); }
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
-        ReportIgnoredSvgOpacity(svg, usedGradientIds, admittedContainers, diagnosticSink, slideIndex, partName, cancellationToken);
+        ReportIgnoredSvgOpacity(svg, usedGradientIds, admittedContainers, admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
     }
@@ -426,7 +433,7 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
-    private static void ReportIgnoredSvgOpacity(XDocument svg, HashSet<string>? usedGradientIds, HashSet<XElement> admittedContainers, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
+    private static void ReportIgnoredSvgOpacity(XDocument svg, HashSet<string>? usedGradientIds, HashSet<XElement> admittedContainers, HashSet<string> admittedGradientAlpha, HashSet<string> fallbackGradientAlpha, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
         if (diagnosticSink is null || usedGradientIds is null) { return; }
         int containerCount = 0;
@@ -444,7 +451,8 @@ internal sealed partial class PptxRenderer
             if (name is "linearGradient" or "radialGradient" &&
                 (string?)element.Attribute("id") is { } id && usedGradientIds.Contains(id))
             {
-                if (ReadUniformSvgStopOpacity(element) is not null) { continue; }
+                if (ReadUniformSvgStopOpacity(element) is not null ||
+                    (admittedGradientAlpha.Contains(id) && !fallbackGradientAlpha.Contains(id))) { continue; }
                 foreach (XElement stop in element.Elements().Where(child => child.Name.LocalName == "stop"))
                 {
                     IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(stop);
@@ -507,21 +515,19 @@ internal sealed partial class PptxRenderer
         double? uniform = null;
         foreach (XElement stop in gradient.Elements().Where(e => e.Name.LocalName == "stop"))
         {
-            if (stop.Attribute("style") is not null && ReadSvgStyleDeclarations(stop).ContainsKey("stop-opacity"))
-            {
-                return null;
-            }
-            double value = 1d;
-            if (stop.Attribute("stop-opacity") is { } opacity &&
-                (!double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
-                 !double.IsFinite(value) || value < 0d || value > 1d))
-            {
-                return null;
-            }
-            if (uniform is { } previous && value != previous) { return null; }
+            double? value = ReadNumericSvgStopOpacity(stop);
+            if (value is null || (uniform is { } previous && value != previous)) { return null; }
             uniform = value;
         }
         return uniform ?? 1d;
+    }
+
+    private static double? ReadNumericSvgStopOpacity(XElement stop)
+    {
+        if (stop.Attribute("style") is not null && ReadSvgStyleDeclarations(stop).ContainsKey("stop-opacity")) { return null; }
+        if (stop.Attribute("stop-opacity") is not { } opacity) { return 1d; }
+        return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
+            double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
     }
 
     private static bool IsSupportedSvgElement(string name)
@@ -824,7 +830,7 @@ internal sealed partial class PptxRenderer
                 // RV07: a missing stop-color defaults to black (PowerPoint normalizes black
                 // stops by dropping the attribute); present-but-unparseable colors still filter out.
                 .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
-                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0)))
+                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0), stop.Opacity))
                 .OrderBy(stop => stop.Offset)
                 .ToArray();
             if (!string.IsNullOrWhiteSpace(id) && stops.Length > 0)
@@ -862,11 +868,11 @@ internal sealed partial class PptxRenderer
         return gradients;
     }
 
-    private static (double Offset, RgbColor? Color, bool HasColorAttribute) ReadSvgGradientStop(XElement stop)
+    private static (double Offset, RgbColor? Color, bool HasColorAttribute, double? Opacity) ReadSvgGradientStop(XElement stop)
     {
         string? stopColorAttribute = (string?)stop.Attribute("stop-color");
         RgbColor? stopColor = RgbColor.TryParseCssColor(stopColorAttribute, out RgbColor parsedStopColor) ? parsedStopColor : null;
-        return (ReadSvgOffset((string?)stop.Attribute("offset")), stopColor, !string.IsNullOrWhiteSpace(stopColorAttribute));
+        return (ReadSvgOffset((string?)stop.Attribute("offset")), stopColor, !string.IsNullOrWhiteSpace(stopColorAttribute), ReadNumericSvgStopOpacity(stop));
     }
 
     private static double ReadSvgOffset(string? value)
@@ -1484,7 +1490,7 @@ internal sealed partial class PptxRenderer
                 .Select(ReadSvgGradientStop)
                 .Where(stop => !double.IsNaN(stop.Offset))
                 .Where(stop => stop.Color is not null || !stop.HasColorAttribute)
-                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0)))
+                .Select(stop => new SvgGradientStop(stop.Offset, stop.Color ?? new RgbColor(0, 0, 0), stop.Opacity))
                 .OrderBy(stop => stop.Offset)
                 .ToArray();
             if (string.IsNullOrWhiteSpace(id) || stops.Length == 0)
@@ -1530,12 +1536,17 @@ internal sealed partial class PptxRenderer
             }
 
             gradients[id] = new SvgRadialGradient(rawCx, rawCy, rawRadius, fx != cx || fy != cy, stops, userSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
-                { UniformStopOpacity = ReadUniformSvgStopOpacity(gradient) };
+            {
+                UniformStopOpacity = ReadUniformSvgStopOpacity(gradient),
+                HasNumericStopOpacity = gradient.Elements().Where(e => e.Name.LocalName == "stop").All(e => ReadNumericSvgStopOpacity(e) is not null),
+                HasIdentityGradientTransform = gradientTransform.IsIdentity
+            };
         }
         return gradients;
     }
-    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted)
     {
+        varyingAlphaAdmitted = false;
         double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
         double pathHeight = Math.Max(0.001d, pathBounds.MaxY - pathBounds.MinY);
         double centerX;
@@ -1614,6 +1625,31 @@ internal sealed partial class PptxRenderer
         }
         if (nativeShading)
         {
+            double maskX = imageX + (pathBounds.MinX - minX) * scaleX;
+            double maskY = imageY + imageHeight - (pathBounds.MaxY - minY) * scaleY;
+            double maskWidth = Math.Max(0.001d, imageX + (pathBounds.MaxX - minX) * scaleX - maskX);
+            double maskHeight = Math.Max(0.001d, imageY + imageHeight - (pathBounds.MinY - minY) * scaleY - maskY);
+            if (allowAlphaMask && radial.UniformStopOpacity is null && radial.HasNumericStopOpacity &&
+                radial.HasIdentityGradientTransform && !radial.HasFocal &&
+                (!radial.IsUserSpace || transform.IsIdentity) &&
+                radial.Spread == SvgGradientSpread.Pad && radial.Stops.Count <= 256 &&
+                double.IsFinite(maskWidth) && double.IsFinite(maskHeight) &&
+                double.IsFinite(maskX + maskWidth) && double.IsFinite(maskY + maskHeight))
+            {
+                var mask = new PdfGraphicsBuilder();
+                mask.SaveState();
+                mask.Transform(printedRadiusX, 0d, 0d, printedRadiusY,
+                    imageX + (centerX - minX) * scaleX,
+                    imageY + imageHeight - (centerY - minY) * scaleY);
+                mask.PaintRadialShading(radial.Stops.Select(stop =>
+                {
+                    byte alpha = (byte)Math.Round(stop.Opacity!.Value * 255d);
+                    return new PdfShadingStop(stop.Offset, alpha, alpha, alpha);
+                }).ToArray());
+                mask.RestoreState();
+                graphics.SetVectorLuminositySoftMask(mask, new PdfRectangle(maskX, maskY, maskWidth, maskHeight), opacity, 1d);
+                varyingAlphaAdmitted = true;
+            }
             graphics.SaveState();
             graphics.Transform(printedRadiusX * cycleCount, 0d, 0d, printedRadiusY * cycleCount,
                 imageX + (centerX - minX) * scaleX,

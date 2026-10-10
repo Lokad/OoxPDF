@@ -233,6 +233,172 @@ internal static class PdfTransparencyGroupTests
         TestAssert.Contains("/GS1 << /ca 0.75 /CA 0.75", pdf);
     }
 
+
+    public static void VectorSoftMasksBindLocalFormsAcrossIndependentNamespaces()
+    {
+        var first = Masked(.25);
+        var second = Masked(.75);
+        var enclosing = new PdfGraphicsBuilder();
+        enclosing.DrawTransparencyGroup(second, Bounds, .5);
+        string pdf = Encoding.ASCII.GetString(Write([Page(first), Page(enclosing)]));
+        var bindings = System.Text.RegularExpressions.Regex.Matches(pdf,
+            @"/XObject << /Tr1 (\d+) 0 R >> /ExtGState << /GSV1 << /ca (?:0.25|0.75) /CA 1 /SMask << /S /Luminosity /G (\d+) 0 R");
+        TestAssert.Equal(2, bindings.Count);
+        foreach (System.Text.RegularExpressions.Match binding in bindings)
+        {
+            TestAssert.Equal(binding.Groups[1].Value, binding.Groups[2].Value);
+        }
+        TestAssert.True(bindings[0].Groups[1].Value != bindings[1].Groups[1].Value,
+            "Equal local mask names must resolve independently in page and parent Form resources.");
+        TestAssert.Equal(3, Count(pdf, "/Subtype /Form"));
+        TestAssert.Equal(2, Count(pdf, "/S /Luminosity"));
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, @" Do\r?\n").Count);
+        TestAssert.Contains("/BC [0 0 0]", pdf);
+    }
+
+    public static void VectorSoftMasksAdmitOnceAndRollbackResourcesTogether()
+    {
+        PdfGraphicsBuilder mask = Mask();
+        long length = mask.ToString().Length;
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxPdfContentBytesPerConversion = length }))
+        {
+            var parent = new PdfGraphicsBuilder();
+            parent.SetVectorLuminositySoftMask(mask, Bounds, .5, 1);
+            TestAssert.Equal(length, scope.Budget.PdfContentBytes);
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => parent.SetVectorLuminositySoftMask(mask, Bounds, .5, 1));
+            TestAssert.Equal(1, parent.ExtGStates.Count);
+            TestAssert.Equal(1, parent.Groups.Count);
+        }
+        using (OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxPdfContentBytesPerConversion = length - 1 }))
+        {
+            var rejected = new PdfGraphicsBuilder();
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => rejected.SetVectorLuminositySoftMask(mask, Bounds, .5, 1));
+            TestAssert.Equal(string.Empty, rejected.ToString());
+            TestAssert.Equal(0, rejected.Groups.Count);
+            TestAssert.Equal(0, rejected.ExtGStates.Count);
+        }
+        var builder = new PdfGraphicsBuilder();
+        builder.SetFillRgb(0, 0, 255);
+        var mark = builder.MarkContent();
+        builder.SetVectorLuminositySoftMask(mask, Bounds, .5, 1);
+        builder.TruncateContent(mark);
+        TestAssert.Equal(0, builder.Groups.Count);
+        TestAssert.Equal(0, builder.ExtGStates.Count);
+        builder.SetVectorLuminositySoftMask(mask, Bounds, .75, 1);
+        TestAssert.Equal("Tr1", builder.ExtGStates.Single().LuminosityGroupName!);
+        TestAssert.Equal("GSV1", builder.ExtGStates.Single().ResourceName);
+        Write([Page(builder)]);
+    }
+
+    public static void VectorSoftMasksShareSpillWindowWithoutRetainingSourceContent()
+    {
+        PdfPage page = Page(Masked(.5, 30_000));
+        byte[] resident = Write([page]);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages([page],
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        TestAssert.Equal(2, staged.Staging.Count);
+        TestAssert.Equal(1, staged.GroupEntries.Count);
+        TestAssert.True(staged.Staging.SpilledBytes > 65_536, "Large vector masks must spill through the shared content store.");
+        TestAssert.Equal(string.Empty, staged.Pages.Single().Content);
+        TestAssert.Equal(string.Empty, staged.GroupEntries.Keys.Single().Content);
+        TestAssert.Equal("Tr1", staged.Pages.Single().ExtGStates.Single().LuminosityGroupName!);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        TestAssert.True(resident.AsSpan().SequenceEqual(output.ToArray()), "Spilled mask references and content must retain bytes.");
+    }
+
+    public static void VectorSoftMasksRejectForeignOrAmbiguousBindingsBeforeOutput()
+    {
+        var local = new PdfTransparencyGroup(Bounds, "0 g\n", [], [], []);
+        var image = PdfImageXObject.RgbPng(1, 1, [0, 0, 0], null);
+        var imageMask = new PdfLuminositySoftMask(image, 0, 0, 100, 100, 0, 0, 0, 0);
+        foreach (PdfPage page in new[]
+        {
+            new PdfPage(100, 100, "/GS1 gs\n", [], [], [new("GS1", 1, 1, null, "Foreign")], [], [], [], groups: [new("Tr1", local)]),
+            new PdfPage(100, 100, "/GS1 gs\n", [], [], [new("GS1", 1, 1, imageMask, "Tr1")], [], [], [], groups: [new("Tr1", local)]),
+            GroupPage(new PdfTransparencyGroup(Bounds, "/GS1 gs\n", [new("GS1", 1, 1, null, "Tr1")], [], []))
+        })
+        {
+            using var output = new MemoryStream();
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.Equal(0, output.Length);
+        }
+    }
+
+    public static void VectorSoftMasksReleaseEarlierPayloadOwnersDuringStreamingStaging()
+    {
+        WeakReference? earlier = null;
+        IEnumerable<PdfPage> Pages()
+        {
+            yield return WeakMaskPage(out earlier);
+            yield return new PdfPage(100, 100, "0 g\n");
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            TestAssert.True(earlier is { IsAlive: false }, "Mask graphics-state bindings must not retain earlier source Form payloads.");
+            yield return new PdfPage(100, 100, "0 g\n");
+        }
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        TestAssert.Equal(1, staged.GroupEntries.Count);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        TestAssert.Contains("/S /Luminosity", Encoding.ASCII.GetString(output.ToArray()));
+    }
+
+    public static void VectorSoftMasksRetainExactOutputAdmissionAndCancellationCleanup()
+    {
+        PdfPage page = Page(Masked(.5, 30_000));
+        byte[] expected = Write([page]);
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = expected.Length }))
+        {
+            TestAssert.True(expected.AsSpan().SequenceEqual(Write([page])), "An exact output budget must admit every mask byte once.");
+            TestAssert.Equal(expected.Length, scope.Budget.PdfOutputBytes);
+        }
+        foreach (long maximum in new long[] { 0, expected.Length - 1 })
+        {
+            using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = maximum });
+            using var output = new MemoryStream();
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.True(output.Length <= maximum, "Mask streams cannot write beyond the admitted output.");
+        }
+        string[] before = Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp");
+        using var cancellation = new CancellationTokenSource();
+        IEnumerable<PdfPage> Pages()
+        {
+            yield return page;
+            cancellation.Cancel();
+            yield return page;
+        }
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPages(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token));
+        TestAssert.True(before.Order(StringComparer.Ordinal).SequenceEqual(Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp").Order(StringComparer.Ordinal)),
+            "Cancelled mask staging must remove its owned spill file.");
+    }
+
+    private static PdfGraphicsBuilder Mask(int repetitions = 0)
+    {
+        var mask = new PdfGraphicsBuilder();
+        mask.PaintRadialShading([new(0, 0, 0, 0), new(1, 255, 255, 255)]);
+        for (int i = 0; i < repetitions; i++) { mask.FillRectangle(0, 0, 100, 100); }
+        return mask;
+    }
+    private static PdfGraphicsBuilder Masked(double alpha, int repetitions = 0)
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.SaveState();
+        graphics.SetVectorLuminositySoftMask(Mask(repetitions), Bounds, alpha, 1);
+        graphics.SetFillRgb(255, 0, 0);
+        graphics.FillRectangle(0, 0, 100, 100);
+        graphics.RestoreState();
+        return graphics;
+    }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static PdfPage WeakMaskPage(out WeakReference reference)
+    {
+        var mask = new PdfTransparencyGroup(Bounds, string.Concat(Enumerable.Repeat("0 g\n", 40_000)), [], [], []);
+        reference = new WeakReference(mask);
+        return new PdfPage(100, 100, "/GS1 gs\n0 0 100 100 re f\n", [], [], [new("GS1", 1, 1, null, "Tr1")], [], [], [], groups: [new("Tr1", mask)]);
+    }
+
     private static PdfRectangle Bounds => new(0, 0, 100, 100);
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]

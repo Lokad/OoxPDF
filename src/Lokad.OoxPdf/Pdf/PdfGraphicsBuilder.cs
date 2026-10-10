@@ -37,6 +37,24 @@ internal sealed class PdfGraphicsBuilder
 
     public void DrawTransparencyGroup(PdfGraphicsBuilder child, PdfRectangle bounds, double opacity)
     {
+        string name = RegisterTransparencyGroup(child, bounds);
+        SaveState();
+        SetAlpha(opacity, opacity);
+        builder.Append('/').Append(name).AppendLine(" Do");
+        RestoreState();
+    }
+
+    public void SetVectorLuminositySoftMask(PdfGraphicsBuilder child, PdfRectangle bounds, double fillAlpha, double strokeAlpha)
+    {
+        string groupName = RegisterTransparencyGroup(child, bounds);
+        string stateName = "GSV" + (extGStates.Count + 1).ToString(CultureInfo.InvariantCulture);
+        extGStateIndex[stateName] = extGStates.Count;
+        extGStates.Add(new PdfExtGStateResource(stateName, Math.Clamp(fillAlpha, 0d, 1d), Math.Clamp(strokeAlpha, 0d, 1d), null, groupName));
+        builder.Append('/').Append(stateName).AppendLine(" gs");
+    }
+
+    private string RegisterTransparencyGroup(PdfGraphicsBuilder child, PdfRectangle bounds)
+    {
         ArgumentNullException.ThrowIfNull(child);
         if (child.stateDepth != 0 || child.usedFontResourceNames.Count != 0 || child.patterns.Count != 0)
         {
@@ -48,10 +66,7 @@ internal sealed class PdfGraphicsBuilder
         var group = new PdfTransparencyGroup(bounds, child.builder.ToString(), child.extGStates, child.shadings, child.groups);
         string name = "Tr" + (groups.Count + 1).ToString(CultureInfo.InvariantCulture);
         groups.Add(new PdfTransparencyGroupResource(name, group));
-        SaveState();
-        SetAlpha(opacity, opacity);
-        builder.Append('/').Append(name).AppendLine(" Do");
-        RestoreState();
+        return name;
     }
 
     public void SetFillRgb(byte red, byte green, byte blue)

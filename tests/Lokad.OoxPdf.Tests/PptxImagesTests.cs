@@ -2121,7 +2121,6 @@ internal static class PptxImagesTests
         byte[] expected = RenderSvgOpacityTest(Wrap(opaque));
         foreach (string actual in new[]
         {
-            Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"0.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>"),
             Wrap("<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\" style=\"stop-opacity:0.5\"/>"),
             Wrap(opaque, "opacity=\"50%\""), Wrap(opaque, container: "opacity=\".5\" style=\"opacity:.5\""),
             Wrap(opaque, container: "opacity=\"-0.5\""),
@@ -2177,6 +2176,106 @@ internal static class PptxImagesTests
         TestAssert.Equal(32, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
         TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores opacity on 1 container", StringComparison.Ordinal)) && !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Excess nesting must keep bounded painted output and diagnose the excluded alpha.");
     }
+
+
+    public static void PptxSvgVaryingNumericRadialStopAlphaUsesOneVectorMask()
+    {
+        const string stops = "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\".5\" stop-color=\"#00FF00\" stop-opacity=\".75\"/><stop offset=\"1\" stop-color=\"#0000FF\" stop-opacity=\".5\"/>";
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingRadialSvg(stops, bodyAttrs: "opacity=\".5\" fill-opacity=\".5\""), diagnostics));
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/S /Luminosity").Count);
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+        TestAssert.Equal(2, System.Text.RegularExpressions.Regex.Matches(pdf, "/ShadingType 3").Count);
+        TestAssert.Contains("/ca 0.25 /CA 1 /SMask", pdf);
+        TestAssert.Contains("/C0 [0.251 0.251 0.251]", pdf);
+        TestAssert.Contains("/C1 [0.749 0.749 0.749]", pdf);
+        TestAssert.Contains("/C1 [0.502 0.502 0.502]", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id is "SVG_UNSUPPORTED_CONTENT" or "PPTX_NODE_RENDER_FAILED"),
+            "Admitted numeric radial stop alpha must render without an ignored-alpha diagnostic.");
+    }
+
+    public static void PptxSvgVaryingRadialMaskRestoresBeforeStrokeAndLaterPaint()
+    {
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingRadialSvg(VaryingRadialStops,
+            bodyAttrs: "stroke=\"#00FF00\" stroke-width=\"2\"",
+            after: "<rect x=\"10\" y=\"5\" width=\"20\" height=\"15\" fill=\"#00FF00\"/>")));
+        int start = pdf.IndexOf("stream\n", StringComparison.Ordinal) + "stream\n".Length;
+        string page = pdf.Substring(start, pdf.IndexOf("endstream", start, StringComparison.Ordinal) - start);
+        var stack = new Stack<bool>(); bool masked = false; int gradients = 0, strokes = 0, laterPaint = 0;
+        foreach (string raw in page.Split('\n'))
+        {
+            string line = raw.Trim();
+            if (line == "q") { stack.Push(masked); }
+            else if (line == "Q") { masked = stack.Pop(); }
+            else if (line.EndsWith(" gs", StringComparison.Ordinal) && line.StartsWith("/GSV", StringComparison.Ordinal)) { masked = true; }
+            else if (line.EndsWith(" sh", StringComparison.Ordinal))
+            {
+                TestAssert.True(masked, "The clipped color shading must receive the varying mask."); gradients++;
+            }
+            else if (line == "S") { TestAssert.True(!masked, "The independently painted stroke must restore its mask."); strokes++; }
+            else if (gradients > 0 && line == "f") { TestAssert.True(!masked, "Later paths must restore the prior mask state."); laterPaint++; }
+        }
+        TestAssert.Equal(1, gradients); TestAssert.Equal(1, strokes); TestAssert.Equal(1, laterPaint); TestAssert.Equal(0, stack.Count);
+    }
+
+    public static void PptxSvgVaryingRadialAlphaRetainsExcludedGeometryFallbacks()
+    {
+        foreach (string attrs in new[] { "spreadMethod=\"repeat\" r=\".2\"", "spreadMethod=\"reflect\" r=\".2\"",
+            "gradientTransform=\"scale(.75,.6)\"", "fx=\".2\" fy=\".1\"" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            byte[] actual = RenderSvgOpacityTest(VaryingRadialSvg(VaryingRadialStops, attrs), diagnostics);
+            byte[] opaque = RenderSvgOpacityTest(VaryingRadialSvg(VaryingRadialStops.Replace(" stop-opacity=\".25\"", string.Empty, StringComparison.Ordinal), attrs));
+            TestAssert.True(actual.AsSpan().SequenceEqual(opaque), "Excluded varying-alpha geometry must retain prior color paint bytes.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)) &&
+                !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Excluded alpha must diagnose and preserve the picture.");
+        }
+        string tiny = "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\".00001\" stop-color=\"#00FF00\" stop-opacity=\".5\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
+        var smallDiagnostics = new List<OoxPdfDiagnostic>();
+        string smallPdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingRadialSvg(tiny), smallDiagnostics));
+        TestAssert.True(!smallPdf.Contains("/S /Luminosity", StringComparison.Ordinal) && smallDiagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
+            "Unrepresentable native stop intervals must retain diagnosed sampling.");
+    }
+
+    public static void PptxSvgVaryingRadialMaskBoundsStopCountAndIsolationDepth()
+    {
+        foreach (int count in new[] { 256, 257 })
+        {
+            string stops = string.Concat(Enumerable.Range(0, count).Select(i => "<stop offset=\"" +
+                ((double)i / (count - 1)).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\" stop-opacity=\"" +
+                (i == 0 ? ".25" : "1") + "\"/>"));
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingRadialSvg(stops), diagnostics));
+            TestAssert.Equal(count == 256, pdf.Contains("/S /Luminosity", StringComparison.Ordinal));
+            TestAssert.Equal(count > 256, diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)));
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Stop-count admission must preserve fallback paint.");
+        }
+        foreach (int depth in new[] { 31, 32 })
+        {
+            string svg = VaryingRadialSvg(VaryingRadialStops);
+            svg = svg.Replace("</defs>", "</defs>" + string.Concat(Enumerable.Repeat("<g opacity=\".5\">", depth)), StringComparison.Ordinal)
+                .Replace("</svg>", string.Concat(Enumerable.Repeat("</g>", depth)) + "</svg>", StringComparison.Ordinal);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
+            TestAssert.Equal(32, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+            TestAssert.Equal(depth == 31, pdf.Contains("/S /Luminosity", StringComparison.Ordinal));
+            TestAssert.Equal(depth == 32, diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)));
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Mask admission must preserve the maximum existing isolation depth.");
+        }
+        string mixed = VaryingRadialSvg(VaryingRadialStops, after:
+            string.Concat(Enumerable.Repeat("<g opacity=\".5\">", 32)) +
+            "<path d=\"M0 0H100V50H0Z\" fill=\"url(#paint)\"/>" + string.Concat(Enumerable.Repeat("</g>", 32)));
+        var mixedDiagnostics = new List<OoxPdfDiagnostic>();
+        string mixedPdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(mixed, mixedDiagnostics));
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(mixedPdf, "/S /Luminosity").Count);
+        TestAssert.True(mixedDiagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)) &&
+            !mixedDiagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "One admitted use must not suppress another use's depth fallback diagnostic.");
+    }
+
+    private const string VaryingRadialStops = "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
+    private static string VaryingRadialSvg(string stops, string attrs = "", string bodyAttrs = "", string after = "") =>
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><defs><radialGradient id=\"paint\" " + attrs + ">" + stops +
+        "</radialGradient></defs><path d=\"M0 0H100V50H0Z\" fill=\"url(#paint)\" " + bodyAttrs + "/>" + after + "</svg>";
 
     private static byte[] RenderSvgOpacityTest(string svg, List<OoxPdfDiagnostic>? diagnostics = null)
     {
