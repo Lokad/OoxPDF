@@ -1515,3 +1515,36 @@ inherited and251 broader outputs retain PDF/page identities. Of752 prior visual
 outputs,750 retain bytes; two old note grids are freshly requalified against
 their exact Word references. All810 qualified outputs reproduce in root. The
 local0.1.5 package smoke passes; release preparation remains deferred.
+
+## RV06-L142: minimum-height placement across table paragraphs
+
+Runtime `891d05ae` extends the qualified excess-above-baseline rule to first,
+middle, final and single-line minimum-height paragraphs in eligible plain body
+table cells. Automatic/exact neighbors, row heights, following flow, wrapping,
+glyph advances and graphics retain their prior geometry. Uniform font/full
+metrics, top-alignment, numeric-spacing, unsplit/unscaled body guards remain.
+Note before/after ownership retains its earlier bounded admission.
+
+113 independent Word 16 controls plus three public duplicates cover fonts,
+sizes, minimum heights, paragraph positions and mixed spacing transitions.
+98 changed raster comparisons improve both MAE and SSIM; 18 retain images and
+16 retain PDF bytes. 233 paragraph baselines improve, with maximum admitted
+absolute error 0.173pt. Natural-height floors include two raster-identical
+PDF-only rounding changes. All controls retain Word words/page counts and
+parent graphics; neighboring automatic/exact text remains fixed. Eight complex
+guards retain PDF and PNG identities. Three public cases remain approximate.
+
+Four semantic checks fail twice on the exact accepted parent and preserve flow
+and excluded paths there. Windows passes 2390 of 2391 registered methods with
+one optional private skip; Linux passes 85 PDF plus 129 targeted methods with
+six existing Arial skips and two archive SourceLink warnings. Fresh 2911
+inherited DOCX and 251 broader PDFs retain bytes/pages. All 926 frozen visual
+PDF identities transfer compared evidence, including all 810 prior controls.
+The generator reproduces five current payloads and transfers 26 earlier note
+payload results through unchanged source/helper/fixture Git blobs.
+
+A temporary prototype audit with two reused output paths was superseded by a
+fresh audit with unique namespaces and all final files rehashed. Its provenance
+remains archived; accepted comparisons and outputs have independent paths.
+Cached markup failures and broader complex table/note compositions remain
+partial. Keep version 0.1.5; release preparation remains deferred.
