@@ -1548,3 +1548,36 @@ fresh audit with unique namespaces and all final files rehashed. Its provenance
 remains archived; accepted comparisons and outputs have independent paths.
 Cached markup failures and broader complex table/note compositions remain
 partial. Keep version 0.1.5; release preparation remains deferred.
+
+## RV06-L143: minimum-height paragraphs in declared table rows
+
+Runtime `f0ce24e4` applies the existing excess-above-baseline rule to eligible
+plain body cells with positive exact/minimum row height, including an omitted
+minimum rule. Explicit automatic row height ignores its authored value and
+receives the same paragraph correction. Row geometry, following flow, ordinary
+and exact neighbors, wrapping, glyph advances and graphics remain unchanged.
+Headers, complex/scaled/fragmented cells and malformed height rules retain their
+earlier admission. Note rectangle ownership remains bounded as before.
+
+80 independent Word controls plus two public duplicates and three historical
+repetitions produce 77 paired MAE/SSIM improvements. Six complex guards retain
+PDF/PNG bytes, while two fully clipped variants retain images. 144 paragraph
+baselines improve with maximum 0.146pt absolute error. All page counts match and
+84 of 85 Word text multisets match; an unchanged nested guard retains a clipped
+text omission. Source-backed diagnostics match 144 of 148 cell clips within 1.110pt;
+four historical minimum-row clips and 175 unclassified reference clips remain
+explicit. These supplemental diagnostics do not change existing graphics gates.
+
+Windows passes 2393 of 2394 methods with one optional private skip. Linux passes
+85 PDF plus 132 targeted methods, with six existing Arial skips and two archive
+SourceLink warnings. Fresh 2911 inherited and 251 broader PDFs retain bytes/pages.
+Among 926 prior visuals, 923 retain bytes and three declared-row controls reproduce
+fresh Word comparisons. All 1011 qualified outputs retain their compared identities
+in root. Seven generator payloads reproduce; 26 earlier results transfer through
+unchanged source/helper/fixture Git blobs. Each inherited input has a separate
+output path, including the two inputs that previously shared a case ID.
+
+The separate cleanup commit archives 425 root-level agent scratch files with
+verified hashes and ignores local validation snapshots. Keep 0.1.5; release
+preparation remains deferred. Cached markup and broader composed-layout gaps
+remain partial.
