@@ -453,7 +453,7 @@ internal sealed partial class DocxLayoutEngine
             AlignedMinimumRowBottomMargins = rowBottomMargins,
             AutomaticMinimumRowPlacement = adjustAlignedMinimumMargins &&
                 alignedMinimumAvailableHeight is { } available && rowHeights.Sum() <= available &&
-                IsEligibleAutomaticMinimumRow(table, textMeasurer, paragraphSpacingScale, allowAutomaticMinimumGridPlacement)
+                IsEligibleAutomaticMinimumTable(table, textMeasurer, paragraphSpacingScale, allowAutomaticMinimumGridPlacement)
         };
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
@@ -1615,7 +1615,7 @@ internal sealed partial class DocxLayoutEngine
                 cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer,
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
                     rowIndex < tableContext.AlignedMinimumRowBottomMargins.Count ? tableContext.AlignedMinimumRowBottomMargins[rowIndex] : 0d,
-                    tableContext.AutomaticMinimumRowPlacement);
+                    tableContext.AutomaticMinimumRowPlacement && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue));
             // Membership uses the same printed inset as the later geometry
             // projection. Testing nominal baselines can discard a final line
             // whose nominal font inset exceeds the already printed line pitch.

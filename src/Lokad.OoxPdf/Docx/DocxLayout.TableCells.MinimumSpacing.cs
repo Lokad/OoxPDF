@@ -129,15 +129,29 @@ internal sealed partial class DocxLayoutEngine
         return row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, fixedScale)).Max();
     }
 
-    private static bool IsEligibleAutomaticMinimumRow(
+    internal static bool HasAutomaticTableRowHeight(double? height, string? rule)
+    {
+        return (height is null && rule is null) ||
+            string.Equals(rule, "auto", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsEligibleAutomaticMinimumTable(
         DocxTable table, IDocxTextMeasurer? measurer, double fixedScale, bool allowGrid)
     {
         if (fixedScale != 1d || table.Rows.Count == 0 ||
             (!allowGrid && (table.Rows.Count != 1 || table.Rows[0].Cells.Count != 1)))
             return false;
-        return table.Rows.All(row => row.Cells.Count > 0 &&
-            ((row.HeightPoints is null && row.HeightRuleValue is null) ||
-                string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)) &&
+        bool allAutomatic = table.Rows.All(row => HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue));
+        // Mixed-height admission is qualified only for complete two-by-two
+        // body grids. Other composed shapes retain their previous fallback.
+        if (!allAutomatic && (!allowGrid || table.Rows.Count != 2 || table.Rows.Any(row => row.Cells.Count != 2)))
+            return false;
+        return table.Rows.Any(row => HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) &&
+            table.Rows.All(row => row.Cells.Count > 0 &&
+            (HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) ||
+                row.HeightPoints is > 0d &&
+                (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))) &&
             row.Cells.All(cell => cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top &&
                 IsEligibleTableMinimumCell(table, row, cell, measurer) &&
                 cell.Paragraphs.All(p => p.Runs.Count != 0) &&

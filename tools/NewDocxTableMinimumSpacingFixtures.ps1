@@ -1,7 +1,8 @@
 # Generates public plain table-grid minimum-height probes from the note-spacing seed.
-param([string] $OutputDirectory, [switch] $ParagraphPositionProbes, [switch] $DeclaredRowHeightProbes, [switch] $MixedParagraphFontProbes, [switch] $AlignedCellSpacingProbes, [switch] $AlignedCellMarginProbes, [switch] $CellContentClipProbes, [switch] $AutomaticCellSpacingProbes, [switch] $AutomaticContentClipProbes, [switch] $DoubleCellBorderProbes, [switch] $AutomaticGridProbes)
+param([string] $OutputDirectory, [switch] $ParagraphPositionProbes, [switch] $DeclaredRowHeightProbes, [switch] $MixedParagraphFontProbes, [switch] $AlignedCellSpacingProbes, [switch] $AlignedCellMarginProbes, [switch] $CellContentClipProbes, [switch] $AutomaticCellSpacingProbes, [switch] $AutomaticContentClipProbes, [switch] $DoubleCellBorderProbes, [switch] $AutomaticGridProbes, [switch] $MixedHeightGridProbes)
 $ErrorActionPreference = 'Stop'
-if (@($ParagraphPositionProbes, $DeclaredRowHeightProbes, $MixedParagraphFontProbes, $AlignedCellSpacingProbes, $AlignedCellMarginProbes, $CellContentClipProbes, $AutomaticCellSpacingProbes, $AutomaticContentClipProbes, $DoubleCellBorderProbes, $AutomaticGridProbes | Where-Object { $_ }).Count -gt 1) { throw 'Choose one probe family' }
+if (@($ParagraphPositionProbes, $DeclaredRowHeightProbes, $MixedParagraphFontProbes, $AlignedCellSpacingProbes, $AlignedCellMarginProbes, $CellContentClipProbes, $AutomaticCellSpacingProbes, $AutomaticContentClipProbes, $DoubleCellBorderProbes, $AutomaticGridProbes, $MixedHeightGridProbes | Where-Object { $_ }).Count -gt 1) { throw 'Choose one probe family' }
+if ($MixedHeightGridProbes) { $AutomaticGridProbes = $true }
 if ($DoubleCellBorderProbes) { $AutomaticContentClipProbes = $true }
 if ($AutomaticGridProbes) { $AutomaticContentClipProbes = $true }
 $repo = Split-Path -Parent $PSScriptRoot
@@ -53,6 +54,14 @@ foreach ($spec in $specs) {
     for ($ri = 1; $ri -le $spec[1]; $ri++) {
         $row = $document.CreateElement('w', 'tr', $word)
         [void] $table.AppendChild($row)
+        if ($MixedHeightGridProbes -and $ri -eq 1) {
+            $properties = $document.CreateElement('w', 'trPr', $word)
+            $height = $document.CreateElement('w', 'trHeight', $word)
+            [void] $height.SetAttribute('val', $word, '3600')
+            [void] $height.SetAttribute('hRule', $word, 'exact')
+            [void] $properties.AppendChild($height)
+            [void] $row.AppendChild($properties)
+        }
         if (($DeclaredRowHeightProbes -or $alignedProbes) -and !$AutomaticCellSpacingProbes -and !$AutomaticContentClipProbes) {
             $properties = $document.CreateElement('w', 'trPr', $word)
             $height = $document.CreateElement('w', 'trHeight', $word)
@@ -156,6 +165,6 @@ foreach ($spec in $specs) {
         }
     }
     $entries['word/document.xml'] = $document.OuterXml
-    $name = if ($AutomaticGridProbes) { 'table-automatic-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DoubleCellBorderProbes) { 'table-double-border-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticContentClipProbes) { 'table-automatic-content-clip-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticCellSpacingProbes) { 'table-automatic-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($CellContentClipProbes) { 'table-margin-content-clip-' + $spec[0] + '.docx' } elseif ($AlignedCellMarginProbes) { 'table-aligned-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($alignedProbes) { 'table-aligned-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($MixedParagraphFontProbes) { 'table-mixed-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DeclaredRowHeightProbes) { 'table-declared-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($ParagraphPositionProbes) { 'table-paragraph-minimum-line-spacing-' + $spec[0] + '.docx' } else { 'table-minimum-line-spacing-' + $spec[0] + '.docx' }
+    $name = if ($MixedHeightGridProbes) { 'table-mixed-height-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticGridProbes) { 'table-automatic-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DoubleCellBorderProbes) { 'table-double-border-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticContentClipProbes) { 'table-automatic-content-clip-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticCellSpacingProbes) { 'table-automatic-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($CellContentClipProbes) { 'table-margin-content-clip-' + $spec[0] + '.docx' } elseif ($AlignedCellMarginProbes) { 'table-aligned-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($alignedProbes) { 'table-aligned-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($MixedParagraphFontProbes) { 'table-mixed-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DeclaredRowHeightProbes) { 'table-declared-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($ParagraphPositionProbes) { 'table-paragraph-minimum-line-spacing-' + $spec[0] + '.docx' } else { 'table-minimum-line-spacing-' + $spec[0] + '.docx' }
     New-ZipPackage -Path (Join-Path $OutputDirectory $name) -Entries $entries
 }
