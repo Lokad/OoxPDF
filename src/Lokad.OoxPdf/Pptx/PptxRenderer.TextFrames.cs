@@ -294,7 +294,6 @@ internal sealed partial class PptxRenderer
                     }
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
                     bool useNumberingLabelLayout = useNumberSequence &&
-                        paragraph.Bullet.SizeKind == PptxParagraphBulletSizeKind.Text && paragraph.Bullet.FontTypeface is null &&
                         paragraphStyle.Indent.Hanging <= PptxTextMetricRules.CoordinateTolerance &&
                         paragraphStyle.Alignment == TextAlignment.Left &&
                         paragraphStyle.TabStops.Count == 0 &&
@@ -307,8 +306,22 @@ internal sealed partial class PptxRenderer
                         ? bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, false) + runStyle.CharacterSpacing
                         : 0d;
                     useNumberingLabelLayout &= numberingEndX <= columnStartX + effectiveTextWidth;
+                    if (useNumberingLabelLayout &&
+                        (paragraph.Bullet.SizeKind != PptxParagraphBulletSizeKind.Text || paragraph.Bullet.FontTypeface is not null))
+                    {
+                        // Keep narrow override frames on their existing fallback
+                        // when the first body fragment cannot fit after the label.
+                        PptxTextFlowSegment firstBodyFragment = flowRun.Segments.FirstOrDefault(segment =>
+                            segment.Draw && !string.IsNullOrWhiteSpace(segment.AdvanceText));
+                        double fragmentWidth = advanceEstimator.Measure(firstBodyFragment.AdvanceText ?? string.Empty,
+                            runStyle.FontSize * firstBodyFragment.FontScale, runStyle.Typeface,
+                            runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                        useNumberingLabelLayout &= numberingEndX + fragmentWidth <= columnStartX + effectiveTextWidth;
+                    }
                     if (useNumberingLabelLayout)
                     {
+                        // Office automatic numbering follows the body face even
+                        // when a bullet font is authored. The label keeps its size.
                         bulletStyle = bulletStyle with { Typeface = runStyle.Typeface };
                     }
                     double bulletEndX = useNumberingLabelLayout ? numberingEndX : bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);

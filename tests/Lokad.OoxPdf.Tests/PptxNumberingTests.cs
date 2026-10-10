@@ -74,7 +74,8 @@ internal static class PptxNumberingTests
         foreach (string marker in new[] { "<a:buSzPct val=\"150000\"/>", "<a:buFont typeface=\"TestFont\"/>" })
         {
             AssertLabels(["9.", "1.", "2."], Paragraph(9, marker: marker) + Paragraph(marker: marker) + Paragraph(marker: marker));
-            TestAssert.Equal(108d, Read(Paragraph(100, marker: marker)).Single(s => s.Run.Text == "PublicItem").Run.X);
+            double expected = marker.Contains("buSzPct", StringComparison.Ordinal) ? 162d : 138d;
+            TestAssert.Equal(expected, Read(Paragraph(100, marker: marker)).Single(s => s.Run.Text == "PublicItem").Run.X);
         }
         AssertLabels(["9.", "10.", "11."], Paragraph(9, "arabicPlain") + Paragraph(kind: "arabicPlain") + Paragraph(kind: "arabicPlain"));
         TestAssert.Equal(108d, Read(Paragraph(100, hanging: 18)).Single(s => s.Run.Text == "PublicItem").Run.X);
@@ -109,22 +110,22 @@ internal static class PptxNumberingTests
         AssertLabels(["1.", "1."], Paragraph() + emptyPlain + Paragraph());
     }
 
-    public static void PptxNumberingOverridePreservesAuthoredLabelStyleAndPlacement()
+    public static void PptxNumberingOverrideFollowsOfficeLabelFontAndPlacement()
     {
         foreach ((string marker, string family, double size) in new[]
         {
-            ("<a:buFont typeface=\"LabelFont\"/>", "LabelFont", 24d),
+            ("<a:buFont typeface=\"LabelFont\"/>", "TestFont", 24d),
             ("<a:buSzPct val=\"150000\"/>", "TestFont", 36d),
             ("<a:buSzPts val=\"1200\"/>", "TestFont", 12d),
-            ("<a:buSzPct val=\"150000\"/><a:buFont typeface=\"LabelFont\"/>", "LabelFont", 36d)
+            ("<a:buSzPct val=\"150000\"/><a:buFont typeface=\"LabelFont\"/>", "TestFont", 36d)
         })
         {
             var spans = Read(Paragraph(100, marker: marker));
             var label = spans.Single(s => s.Run.Text == "100.");
             TestAssert.Equal(family, label.Run.FontFamily);
             TestAssert.Equal(size, label.Run.FontSize);
-            TestAssert.True(label.Run.KerningEnabled, "Override labels must retain their existing kerning rule.");
-            TestAssert.Equal(108d, spans.Single(s => s.Run.Text == "PublicItem").Run.X);
+            TestAssert.True(!label.Run.KerningEnabled, "Qualified override labels use Office nominal advances.");
+            TestAssert.Equal(Math.Max(108d, 90d + 2d * size), spans.Single(s => s.Run.Text == "PublicItem").Run.X);
         }
     }
 
@@ -145,6 +146,76 @@ internal static class PptxNumberingTests
         {
             double[] styled = Read(Paragraph(marker: marker) + Paragraph(marker: marker)).Where(s => s.Run.Text == "PublicItem").Select(s => s.Run.Y).ToArray();
             TestAssert.True(normal.SequenceEqual(styled), "A larger automatic-number label must preserve the body-font paragraph pitch.");
+        }
+    }
+
+    public static void PptxNumberingClearanceUsesBodyTypefaceAndAuthoredSize()
+    {
+        foreach ((string marker, double size) in new[]
+        {
+            ("<a:buFont typeface=\"LabelFont\"/>", 24d),
+            ("<a:buSzPct val=\"150000\"/>", 36d),
+            ("<a:buSzPts val=\"1200\"/>", 12d),
+            ("<a:buSzPts val=\"3600\"/><a:buFont typeface=\"LabelFont\"/>", 36d)
+        })
+        {
+            var spans = Read(Paragraph(100, marker: marker));
+            var label = spans.Single(s => s.Run.Text == "100.").Run;
+            TestAssert.Equal("TestFont", label.FontFamily);
+            TestAssert.Equal(size, label.FontSize);
+            TestAssert.Equal(90d, label.X);
+            TestAssert.True(!label.KerningEnabled, "Office auto-number labels use nominal advances.");
+            TestAssert.Equal(90d + 2d * size, spans.Single(s => s.Run.Text == "PublicItem").Run.X);
+        }
+    }
+
+    public static void PptxNumberingClearanceIncludesTrailingSpacingAndNominalAdvances()
+    {
+        foreach (double spacing in new[] { 1.5d, -0.5d })
+        {
+            var spans = Read(Paragraph(100, marker: "<a:buSzPts val=\"3600\"/>", spacing: spacing));
+            TestAssert.Equal(90d + 72d + 4d * spacing, spans.Single(s => s.Run.Text == "PublicItem").Run.X);
+            TestAssert.True(!spans.Single(s => s.Run.Text == "100.").Run.KerningEnabled, "The label must not introduce pair kerning.");
+        }
+        var alpha = Read(Paragraph(27, "alphaUcPeriod", marker: "<a:buSzPct val=\"150000\"/><a:buFont typeface=\"LabelFont\"/>"));
+        TestAssert.Equal(151.2d, alpha.Single(s => s.Run.Text == "PublicItem").Run.X);
+        TestAssert.Equal("TestFont", alpha.Single(s => s.Run.Text == "AA.").Run.FontFamily);
+    }
+
+    public static void PptxNumberingClearanceKeepsContinuationIndentAndSceneAgreement()
+    {
+        string marker = "<a:buSzPts val=\"3600\"/>";
+        var manual = Read(Paragraph(100, marker: marker, suffix: "<a:br/><a:r><a:rPr sz=\"2400\"><a:latin typeface=\"TestFont\"/></a:rPr><a:t>Continuation</a:t></a:r>"));
+        TestAssert.Equal(162d, manual.Single(s => s.Run.Text == "PublicItem").Run.X);
+        TestAssert.Equal(108d, manual.Single(s => s.Run.Text == "Continuation").Run.X);
+        var wrapped = Read(Paragraph(100, marker: marker, text: "AAAA BBBB CCCC"), width: 180);
+        var words = wrapped.Where(s => s.Run.Text.Contains('A') || s.Run.Text.Contains('B') || s.Run.Text.Contains('C')).ToArray();
+        TestAssert.True(words.Length >= 2 && words[0].Run.X == 162d && words.Skip(1).Any(s => s.Run.X == 108d),
+            "Only the first body fragment moves; wrapped continuation keeps the authored margin.");
+    }
+
+    public static void PptxNumberingClearanceRetainsExcludedFrameAndNarrowFallbacks()
+    {
+        string marker = "<a:buSzPts val=\"3600\"/><a:buFont typeface=\"LabelFont\"/>";
+        var variants = new[]
+        {
+            Read(Paragraph(100, marker: marker, hanging: 18)),
+            Read(Paragraph(100, marker: marker), body: "wrap=\"square\" numCol=\"2\""),
+            Read(Paragraph(100, marker: marker), autofit: "<a:normAutofit/>"),
+            Read(Paragraph(100, marker: marker), shape: "flipH=\"1\""),
+            Read(Paragraph(100, marker: marker), shape: "flipV=\"1\""),
+            Read(Paragraph(100, marker: marker), shape: "rot=\"900000\""),
+            // The short label fits, but the first body fragment does not.
+            Read(Paragraph(1, marker: marker), width: 56),
+            Read(Paragraph(100, "arabicPlain", marker: marker)),
+            Read(Paragraph(numbering: false, marker: marker + "<a:buChar char=\"*\"/>"))
+        };
+        foreach (var spans in variants)
+        {
+            var label = spans.First(s => s.Run.Text != "PublicItem").Run;
+            TestAssert.Equal("LabelFont", label.FontFamily);
+            TestAssert.True(label.KerningEnabled, "Excluded layouts retain their label emission rule.");
+            TestAssert.Equal(108d, spans.Single(s => s.Run.Text == "PublicItem").Run.X);
         }
     }
 
