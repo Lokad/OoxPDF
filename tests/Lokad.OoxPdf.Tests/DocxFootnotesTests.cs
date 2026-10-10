@@ -597,7 +597,8 @@ internal static class DocxFootnotesTests
                     { section.Element(NoteWord + "cols")?.Remove(); section.Add(new XElement(NoteWord + "cols", new XAttribute(NoteWord + "num", "2"))); }
                 if (variant == 5) paragraph.AddBeforeSelf(new XElement(NoteWord + "p", new XElement(NoteWord + "pPr",
                     new XElement(NoteWord + "contextualSpacing"), new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "after", "120"))),
-                    new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
+                    new XElement(NoteWord + "r", new XElement(NoteWord + "t",
+                        "Public preceding paragraph. " + string.Concat(Enumerable.Repeat("wrapped words ", 35))))));
             };
             double baseline = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, false, 0, 24, true, guard))[0].Height;
             double changed = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, false, 12, 24, true, guard))[0].Height;
@@ -615,6 +616,105 @@ internal static class DocxFootnotesTests
             text.Value = string.Join(' ', Enumerable.Repeat("Public wrapped paragraph text", 35));
             modify?.Invoke(xml);
         });
+
+    public static void DocxMultilineContextualNoteBeforeSpacingOwnsResolvedGaps()
+    {
+        CheckMultilineContextualNoteGaps(sameStyle: true);
+    }
+
+    public static void DocxMultilineContextualNoteBeforeSpacingKeepsDifferentStyleOwnership()
+    {
+        CheckMultilineContextualNoteGaps(sameStyle: false);
+    }
+
+    private static void CheckMultilineContextualNoteGaps(bool sameStyle)
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (bool exact in new[] { false, true })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            double lineHeight = RenderCustomNoteLinks(ReadMultilineContextualNoteFixture(kind, custom, 0, 0, 0, true, sameStyle, exact), geometry)[0].Height;
+            foreach ((int before, int previousAfter) in new[] { (12, 6), (6, 12), (24, 6) })
+            foreach (int after in new[] { 0, 24 })
+            {
+                DocxDocument document = ReadMultilineContextualNoteFixture(kind, custom, before, after, previousAfter, true, sameStyle, exact);
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(document, geometry);
+                TestAssert.Equal(4, links.Length);
+                TestAssert.True(Math.Abs(links[0].Height - lineHeight - Math.Max(0, before - previousAfter)) < .000001d,
+                    "A first-line multiline mark owns only its unconsumed before-gap, including contextual predecessor suppression.");
+                TestAssert.Equal((double)before, document.Paragraphs[1].SpacingBeforePoints);
+                TestAssert.Equal((double)after, document.Paragraphs[1].SpacingAfterPoints);
+                TestAssert.Equal((double)previousAfter, document.Paragraphs[0].SpacingAfterPoints);
+            }
+        }
+    }
+
+    public static void DocxMultilineContextualNoteBeforeSpacingKeepsLaterLineSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (bool exact in new[] { false, true })
+        foreach (bool sameStyle in new[] { false, true })
+        {
+            double baseline = RenderCustomNoteLinks(ReadMultilineContextualNoteFixture(kind, custom, 0, 0, 0, false, sameStyle, exact))[0].Height;
+            foreach (int before in new[] { 6, 12, 24 })
+            {
+                PdfLinkAnnotation mark = RenderCustomNoteLinks(ReadMultilineContextualNoteFixture(kind, custom, before, 24, 6, false, sameStyle, exact))[0];
+                TestAssert.True(Math.Abs(mark.Height - baseline) < .000001d,
+                    "Later-line marks retain their line slot after contextual predecessors.");
+            }
+        }
+    }
+
+    public static void DocxMultilineContextualNoteBeforeSpacingRetainsExcludedPredecessors()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (int variant in new[] { 0, 1, 2, 3 })
+        {
+            Action<XDocument> guard = xml =>
+            {
+                XElement previous = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+                if (variant == 0) previous.Descendants(NoteWord + "t").First().Value = "Public previous text " + string.Concat(Enumerable.Repeat("wrapped words ", 35));
+                if (variant == 1) previous.Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "afterAutospacing", "1");
+                if (variant == 2) previous.Elements(NoteWord + "r").Remove();
+                if (variant == 3) previous.ElementsAfterSelf(NoteWord + "p").First().Element(NoteWord + "pPr")!.Add(new XElement(NoteWord + "contextualSpacing"));
+            };
+            double baseline = RenderCustomNoteLinks(ReadMultilineContextualNoteFixture(kind, false, 0, 24, 6, true, true, false, guard))[0].Height;
+            double spaced = RenderCustomNoteLinks(ReadMultilineContextualNoteFixture(kind, false, 12, 24, 6, true, true, false, guard))[0].Height;
+            TestAssert.True(Math.Abs(baseline - spaced) < .000001d,
+                $"Excluded predecessor variant {variant} ({kind}) retains its line slot: baseline={baseline}, spaced={spaced}.");
+        }
+    }
+
+    private static DocxDocument ReadMultilineContextualNoteFixture(string kind, bool custom, int before, int after,
+        int previousAfter, bool first, bool sameStyle, bool exact, Action<XDocument>? modify = null)
+    {
+        DocxDocument document = ReadMultilineNoteSpacingFixture(kind, custom, before, after, first, xml =>
+        {
+            XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+            if (exact)
+            {
+                XElement spacing = paragraph.Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!;
+                spacing.SetAttributeValue(NoteWord + "line", "480"); spacing.SetAttributeValue(NoteWord + "lineRule", "exact");
+            }
+            paragraph.AddBeforeSelf(new XElement(NoteWord + "p", new XElement(NoteWord + "pPr",
+                new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", previousAfter * 20),
+                    new XAttribute(NoteWord + "line", "240"), new XAttribute(NoteWord + "lineRule", "auto")),
+                new XElement(NoteWord + "contextualSpacing")),
+                new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
+            modify?.Invoke(xml);
+        });
+        if (sameStyle) return document;
+        DocxParagraph previous = document.Paragraphs[0];
+        DocxParagraph different = previous with { StyleId = "PublicPrevious" };
+        return document with
+        {
+            BodyElements = document.BodyElements.Select(e => e is DocxParagraphElement p && ReferenceEquals(p.Paragraph, previous)
+                ? (DocxBodyElement)new DocxParagraphElement(different) : e).ToArray()
+        };
+    }
 
     public static void DocxContextualNoteContributionLinksFollowSuppressedGaps()
     {

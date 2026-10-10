@@ -48,13 +48,6 @@ internal sealed partial class DocxRenderer
                     line.ParagraphAfterSpacing ?? 0d);
             }
         }
-        foreach ((DocxParagraph paragraph, NoteReferenceSpacing spacing) in candidates.ToArray())
-        {
-            if (counts[paragraph] == 1) continue;
-            if (spacing.Before <= 0d || paragraph.Spacing.ContextualSpacing == true) candidates.Remove(paragraph);
-            else candidates[paragraph] = spacing with { After = 0d };
-        }
-
         DocxParagraph? previous = null;
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
@@ -65,7 +58,9 @@ internal sealed partial class DocxRenderer
             DocxParagraph paragraph = current.Paragraph;
             if (paragraph.SpacingBeforePoints > 0d && previous is not null &&
                 (counts.GetValueOrDefault(previous) > 1 ||
-                 previous.Spacing.ContextualSpacing == true && counts.GetValueOrDefault(paragraph) != 1 ||
+                 previous.Spacing.ContextualSpacing == true && counts.GetValueOrDefault(paragraph) != 1 &&
+                     (counts.GetValueOrDefault(previous) != 1 ||
+                      previous.Runs.All(r => string.IsNullOrWhiteSpace(r.Text))) ||
                  previous.SpacingBeforePoints < 0d || previous.SpacingAfterPoints < 0d ||
                  previous.Spacing.BeforeAutoSpacingValue is not null || previous.Spacing.BeforeLinesValue is not null ||
                  previous.Spacing.AfterAutoSpacingValue is not null || previous.Spacing.AfterLinesValue is not null ||
@@ -103,6 +98,15 @@ internal sealed partial class DocxRenderer
                 };
             }
             previous = paragraph;
+        }
+        // Resolve the predecessor's contribution before deciding whether a
+        // multiline paragraph owns a positive first-line before-gap.
+        foreach ((DocxParagraph paragraph, NoteReferenceSpacing spacing) in candidates.ToArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (counts[paragraph] == 1) continue;
+            if (spacing.Before <= 0d || paragraph.Spacing.ContextualSpacing == true) candidates.Remove(paragraph);
+            else candidates[paragraph] = spacing with { After = 0d };
         }
         return candidates;
     }
