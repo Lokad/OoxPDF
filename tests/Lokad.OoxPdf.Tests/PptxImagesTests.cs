@@ -568,6 +568,94 @@ internal static class PptxImagesTests
         TestAssert.Contains("0.012 0 0.988 rg", pdf);
     }
 
+    public static void PptxSvgPictureQuarterTurnClipKeepsTheRotatedFootprint()
+    {
+        foreach (int rotation in new[] { 90, 270 })
+        foreach (bool isolated in new[] { false, true })
+        {
+            var corners = ReadSvgPictureDeviceClip(rotation, isolated);
+            TestAssert.True(Math.Abs(corners.Min(p => p.X) - 180) < .3 && Math.Abs(corners.Max(p => p.X) - 396) < .3 &&
+                Math.Abs(corners.Min(p => p.Y) - 144) < .3 && Math.Abs(corners.Max(p => p.Y) - 576) < .3,
+                "A quarter-turn viewport must retain the full 216x432 device-space footprint, including content below the unrotated clip.");
+        }
+    }
+
+    public static void PptxSvgPictureObliqueClipKeepsItsCentreAndRotatedExtent()
+    {
+        foreach (int rotation in new[] { 30, 45, 165 })
+        foreach (bool isolated in new[] { false, true })
+        {
+            var corners = ReadSvgPictureDeviceClip(rotation, isolated);
+            double radians = rotation * Math.PI / 180;
+            double expectedWidth = 432 * Math.Abs(Math.Cos(radians)) + 216 * Math.Abs(Math.Sin(radians));
+            double expectedHeight = 432 * Math.Abs(Math.Sin(radians)) + 216 * Math.Abs(Math.Cos(radians));
+            TestAssert.True(Math.Abs(corners.Average(p => p.X) - 288) < .3 && Math.Abs(corners.Average(p => p.Y) - 360) < .3 &&
+                Math.Abs(corners.Max(p => p.X) - corners.Min(p => p.X) - expectedWidth) < .3 &&
+                Math.Abs(corners.Max(p => p.Y) - corners.Min(p => p.Y) - expectedHeight) < .3,
+                "Oblique picture clipping must retain its centre and the projected rectangle extent, for opaque and isolated SVG paint.");
+        }
+    }
+
+    // Independent device-space interpretation of the viewport clip. It observes
+    // page content instead of calling the renderer's shape-transform helper.
+    private static (double X, double Y)[] ReadSvgPictureDeviceClip(int rotation, bool isolated)
+    {
+        string content = "<path d=\"M0 0H100V50H0Z\" fill=\"#0000FF\"/>";
+        if (isolated) { content = "<g opacity=\".5\">" + content + "</g>"; }
+        string original = WriteSvgGradientDeck("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\">" + content + "</svg>");
+        string input = string.Empty;
+        string output = Path.Combine(Path.GetTempPath(), "ooxpdf-svg-picture-clip-" + Guid.NewGuid().ToString("N") + ".pdf");
+        try
+        {
+            var entries = new Dictionary<string, byte[]>();
+            using (var source = ZipFile.OpenRead(original))
+            {
+                foreach (ZipArchiveEntry entry in source.Entries)
+                {
+                    using var bytes = new MemoryStream();
+                    using Stream stream = entry.Open();
+                    stream.CopyTo(bytes);
+                    entries.Add(entry.FullName, bytes.ToArray());
+                }
+            }
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XDocument slide = XDocument.Parse(Encoding.UTF8.GetString(entries["ppt/slides/slide1.xml"]));
+            XElement transform = slide.Descendants(a + "xfrm").Single();
+            transform.SetAttributeValue("rot", rotation * 60_000);
+            transform.Element(a + "ext")!.SetAttributeValue("cx", 5_486_400);
+            transform.Element(a + "ext")!.SetAttributeValue("cy", 2_743_200);
+            entries["ppt/slides/slide1.xml"] = Encoding.UTF8.GetBytes(slide.ToString());
+            input = TestFixtures.WriteTempPackage(".pptx", entries);
+            OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            int start = pdf.IndexOf("stream\n", StringComparison.Ordinal) + "stream\n".Length;
+            int end = pdf.IndexOf("endstream", start, StringComparison.Ordinal);
+            string page = pdf.Substring(start, end - start);
+            double[] matrix = [1, 0, 0, 1, 0, 0];
+            foreach (string line in page.Split('\n'))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.EndsWith(" cm", StringComparison.Ordinal))
+                {
+                    double[] n = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(6).Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+                    double[] m = matrix;
+                    matrix = [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
+                        m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
+                        m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+                }
+                else if (trimmed.EndsWith(" re W n", StringComparison.Ordinal))
+                {
+                    double[] rectangle = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(4).Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+                    double x = rectangle[0], y = rectangle[1], width = rectangle[2], height = rectangle[3];
+                    return new[] { (x, y), (x + width, y), (x + width, y + height), (x, y + height) }
+                        .Select(p => (matrix[0] * p.Item1 + matrix[2] * p.Item2 + matrix[4], matrix[1] * p.Item1 + matrix[3] * p.Item2 + matrix[5])).ToArray();
+                }
+            }
+            throw new InvalidOperationException("Expected a picture viewport clip.");
+        }
+        finally { File.Delete(original); if (input.Length > 0) { File.Delete(input); } File.Delete(output); }
+    }
+
     private static string WriteSvgGradientDeck(string svg)
     {
         return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

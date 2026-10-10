@@ -89,14 +89,15 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
-        {
-            graphics.ClipRectangle(imageX, imageY, imageWidth, imageHeight);
-        }
-
         if (Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
         {
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
+        }
+
+        if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
+        {
+            // The viewport rotates with the picture, matching the raster path.
+            graphics.ClipRectangle(imageX, imageY, imageWidth, imageHeight);
         }
 
         if (svg.Root is { } root && IsFullyTransparentSvgContainer(root))
