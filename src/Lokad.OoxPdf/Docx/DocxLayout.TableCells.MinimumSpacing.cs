@@ -6,13 +6,14 @@ internal sealed partial class DocxLayoutEngine
         DocxTable table, DocxTableRow row, DocxTableCell cell,
         IReadOnlyList<DocxTextLineLayout> lines, IDocxTextMeasurer? measurer)
     {
+        if (!lines.Any(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing)) return lines;
         if (row.HeightPoints is not null || row.IsHeader ||
             table.Revisions.Count != 0 || row.Revisions.Count != 0 || cell.Revisions.Count != 0 ||
             table.CellSpacingPoints is > 0d || table.UseLegacyTableGrid || cell.GridSpan != 1 ||
             cell.HasVerticalMerge || cell.NoWrap || cell.FitText ||
             cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top ||
             cell.TextDirectionValue is not (null or "lrTb") ||
-            cell.Paragraphs.Count is < 1 or > 2 || cell.BodyElements.Count != cell.Paragraphs.Count ||
+            cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
             cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
             cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p)) ||
             !DocxLineMetrics.TableCellFontSizesUniform(cell.Paragraphs) ||
@@ -26,24 +27,34 @@ internal sealed partial class DocxLayoutEngine
             r.EffectiveProperties.Bold != firstRun.EffectiveProperties.Bold ||
             r.EffectiveProperties.Italic != firstRun.EffectiveProperties.Italic))
             return lines;
-        DocxParagraph current = cell.Paragraphs[^1];
-        DocxTextLineLayout[] currentLines = lines.Where(l => ReferenceEquals(l.SourceParagraph, current)).ToArray();
-        if (currentLines.Length <= 1 || currentLines[0].LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
-            current.Runs.Count == 0 || cell.Paragraphs.Count == 2 &&
-            lines.Count(l => ReferenceEquals(l.SourceParagraph, cell.Paragraphs[0])) != 1)
-            return lines;
-        double natural = metrics.MeasureSingleLineHeight(current.Runs[0], currentLines[0].FontSize);
-        if (!(natural > 0d) || !double.IsFinite(natural)) return lines;
-        double slotHeight = currentLines[0].LineHeight ?? 0d;
-        if (!(slotHeight > 0d) || !double.IsFinite(slotHeight)) return lines;
-        double excess = Math.Max(0d, slotHeight - natural);
-        double inset = DocxLineMetrics.ResolveTableCellFirstBaselineInset([current], measurer) + excess;
+        var byParagraph = new Dictionary<DocxParagraph, List<DocxTextLineLayout>>(ReferenceEqualityComparer.Instance);
+        foreach (DocxTextLineLayout line in lines)
+        {
+            if (line.SourceParagraph is not { } paragraph) continue;
+            if (!byParagraph.TryGetValue(paragraph, out var paragraphLines))
+                byParagraph.Add(paragraph, paragraphLines = []);
+            paragraphLines.Add(line);
+        }
+        var adjustments = new Dictionary<DocxParagraph, (double Excess, double Inset)>(ReferenceEqualityComparer.Instance);
+        foreach ((DocxParagraph paragraph, List<DocxTextLineLayout> paragraphLines) in byParagraph)
+        {
+            if (paragraph.Runs.Count == 0 ||
+                paragraphLines[0].LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing)
+                continue;
+            double natural = metrics.MeasureSingleLineHeight(paragraph.Runs[0], paragraphLines[0].FontSize);
+            double slotHeight = paragraphLines[0].LineHeight ?? 0d;
+            if (!(natural > 0d) || !double.IsFinite(natural) || !(slotHeight > 0d) || !double.IsFinite(slotHeight)) continue;
+            double excess = Math.Max(0d, slotHeight - natural);
+            double inset = DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], measurer) + excess;
+            adjustments.Add(paragraph, (excess, inset));
+        }
+        if (adjustments.Count == 0) return lines;
         // Word puts the excess minimum-height slot above the first baseline.
         // Cursor advances and row measurement already include this space.
-        return lines.Select(l => ReferenceEquals(l.SourceParagraph, current) ? l with
+        return lines.Select(l => l.SourceParagraph is { } p && adjustments.TryGetValue(p, out var adjustment) ? l with
         {
-            BaselineY = l.BaselineY - excess,
-            BodyLineBoxBaselineInsetPoints = inset,
+            BaselineY = l.BaselineY - adjustment.Excess,
+            BodyLineBoxBaselineInsetPoints = adjustment.Inset,
             BodyLineBoxHeightPoints = l.LineHeight
         } : l).ToArray();
     }

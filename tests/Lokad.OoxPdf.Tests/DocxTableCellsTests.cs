@@ -12,6 +12,105 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableParagraphMinimumSingleLinesFollowIndependentWordSlots()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string pattern in new[] { "min-single", "min-single,auto", "auto,min-single", "auto-wrap,min-single", "min-single,exact", "auto,min-single,auto" })
+        {
+            DocxLayout actual = CreateParagraphMinimumLayout(pattern, full);
+            DocxLayout legacy = CreateParagraphMinimumLayout(pattern, full, "declared-auto");
+            DocxTableRowLayout expected = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            DocxTableRowLayout corrected = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(expected.Y, corrected.Y);
+            TestAssert.Equal(expected.Height, corrected.Height);
+            DocxTextLineLayout[] before = expected.Cells.Single().TextLines.ToArray();
+            DocxTextLineLayout[] after = corrected.Cells.Single().TextLines.ToArray();
+            for (int i = 0; i < after.Length; i++)
+                TestAssert.True(Math.Abs(before[i].BaselineY - after[i].BaselineY -
+                    (after[i].LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing ? 10d : 0d)) < .000001d,
+                    "Independent Word single lines use the same excess-above-baseline slot and retain their ordinary/exact neighbors.");
+        }
+    }
+
+    public static void DocxTableParagraphMinimumPlacementMatchesWordPositionsAndTransitions()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string pattern in new[] { "min,auto", "min,exact", "min,min", "auto-wrap,min", "auto,min,auto", "min,min,min", "min,exact-wrap,min", "min,auto-wrap,min" })
+        {
+            DocxTableCellLayout legacy = CreateParagraphMinimumLayout(pattern, full, "declared-auto").Pages[0]
+                .Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            DocxTableCellLayout actual = CreateParagraphMinimumLayout(pattern, full).Pages[0]
+                .Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            TestAssert.Equal(legacy.TextLines.Count, actual.TextLines.Count);
+            for (int i = 0; i < actual.TextLines.Count; i++)
+            {
+                DocxTextLineLayout line = actual.TextLines[i];
+                bool minimum = line.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
+                    actual.TextLines.Count(l => ReferenceEquals(l.SourceParagraph, line.SourceParagraph)) > 1;
+                TestAssert.True(Math.Abs(legacy.TextLines[i].BaselineY - line.BaselineY - (minimum ? 10d : 0d)) < .000001d,
+                    "Word puts the 24-minus-14pt excess above each wrapped minimum paragraph, preserving automatic/exact neighbors.");
+            }
+        }
+    }
+
+    public static void DocxTableParagraphMinimumPlacementPreservesRowsAndFollowingFlow()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string pattern in new[] { "min,auto", "min,exact", "min,min", "auto,min,auto", "min,exact-wrap,min" })
+        {
+            DocxLayout actual = CreateParagraphMinimumLayout(pattern, full);
+            DocxLayout legacy = CreateParagraphMinimumLayout(pattern, full, "declared-auto");
+            DocxTableRowLayout expectedRow = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            DocxTableRowLayout actualRow = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(expectedRow.Y, actualRow.Y);
+            TestAssert.Equal(expectedRow.Height, actualRow.Height);
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableParagraphMinimumPlacementRetainsExcludedCellsAndRows()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "declared-auto", "header", "center", "rich", "mixed" })
+        {
+            DocxLayout actual = CreateParagraphMinimumLayout("min,min,min", full, variant);
+            TestAssert.True(actual.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
+                .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
+                "The broader paragraph-position rule retains declared/header rows and complex cells.");
+        }
+    }
+
+    private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "")
+    {
+        DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
+        {
+            bool wrapped = token == "min" || token.EndsWith("-wrap", StringComparison.Ordinal);
+            string rule = token.StartsWith("min", StringComparison.Ordinal) ? "atLeast" : token.StartsWith("exact", StringComparison.Ordinal) ? "exact" : "auto";
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph(wrapped ? "Wrapped word Wrapped word Wrapped word Wrapped word" : "Short", 12d, 24d) with
+            {
+                LineSpacingPoints = rule == "auto" ? null : 24d,
+                SpacingBeforePoints = index == 0 ? 0d : 6d, SpacingAfterPoints = 6d,
+                Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, rule == "auto" ? "240" : "480", rule, null)
+            };
+            return paragraph with { Runs = paragraph.Runs.Select(r => r with
+            {
+                FontFamily = variant == "mixed" && index == 1 ? "HiAsc" : "LoAsc",
+                Text = r.Text + (variant == "rich" ? "\n" : string.Empty)
+            }).ToArray() };
+        }).ToArray();
+        var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
+            { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
+        DocxTableRow row = new([cell], variant == "declared-auto" ? 0d : null);
+        if (variant == "declared-auto") row = row with { HeightRuleValue = "auto" };
+        if (variant == "header") row = row with { IsHeader = true };
+        DocxTable table = new(null, [120d], [row]);
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 12d, 14d) with { LineSpacingPoints = null };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(after)], [table]) with
+            { PageWidthPoints = 220d, PageHeightPoints = 700d };
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
+    }
+
     public static void DocxTableGridMinimumLinePlacementMatchesIndependentWord()
     {
         foreach ((int rowCount, int columnCount) in new[] { (1, 2), (2, 1), (2, 2) })
