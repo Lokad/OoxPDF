@@ -90,12 +90,18 @@ internal sealed partial class DocxRenderer
                         DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], fontResources.TextMeasurer);
                     double top = line.BaselineY - yOffset + inset;
                     double height = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? line.FontSize * 1.2d;
-                    if (singleLineSpacingParagraphs.Contains(paragraph) && line.ParagraphAfterSpacing is { } after &&
-                        top - height - after >= page.MarginBottom)
+                    if (singleLineSpacingParagraphs.Contains(paragraph))
                     {
-                        // Word extends a one-line paragraph's note hit area through
-                        // after-spacing; multiline marks keep their line slot.
-                        height += after;
+                        // The predecessor owns its after-spacing. Word assigns only
+                        // the remaining collapsed before-gap to this paragraph.
+                        double before = Math.Max(0d, (line.AppliedBeforeSpacing ?? 0d) - (line.PendingAfterSpacing ?? 0d));
+                        double after = line.ParagraphAfterSpacing ?? 0d;
+                        if ((before == 0d || top + before <= page.Height - page.MarginTop + .000001d) &&
+                            top - height - after >= page.MarginBottom)
+                        {
+                            top += before;
+                            height += before + after;
+                        }
                     }
                     if (width > 0d && height > 0d)
                     {

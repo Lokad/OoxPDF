@@ -361,7 +361,7 @@ internal static class DocxFootnotesTests
                 XElement paragraph = body.Elements(NoteWord + "p").First();
                 XElement props = paragraph.Element(NoteWord + "pPr")!;
                 XElement spacing = props.Element(NoteWord + "spacing")!;
-                if (variant == 0) spacing.SetAttributeValue(NoteWord + "before", "240");
+                if (variant == 0) spacing.SetAttributeValue(NoteWord + "beforeLines", "100");
                 if (variant == 1) props.Add(new XElement(NoteWord + "contextualSpacing"));
                 if (variant == 2) spacing.SetAttributeValue(NoteWord + "afterAutospacing", "1");
                 if (variant == 3) spacing.SetAttributeValue(NoteWord + "afterLines", "100");
@@ -395,6 +395,127 @@ internal static class DocxFootnotesTests
                 parts["word/" + kind + "s.xml"] = notes.ToString();
             }
             modify?.Invoke(xml);
+        });
+
+    public static void DocxNoteBeforeSpacingOwnsOnlyTheUnconsumedGap()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        foreach (int? precedingAfter in new int?[] { null, 6, 24, 36 })
+        {
+            PdfLinkAnnotation baseline = RenderCustomNoteLinks(ReadNoteBeforeSpacingFixture(kind, custom, 0, precedingAfter), geometry)[0];
+            foreach (int before in new[] { 6, 12, 36 })
+            {
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(ReadNoteBeforeSpacingFixture(kind, custom, before, precedingAfter), geometry);
+                TestAssert.Equal(4, links.Length);
+                double ownedGap = Math.Max(0d, before - (precedingAfter ?? 0));
+                TestAssert.True(Math.Abs(links[0].Height - baseline.Height - ownedGap) < .000001d,
+                    "Word gives the note paragraph only the before-gap beyond its predecessor's after-spacing.");
+                TestAssert.True(Math.Abs(links[0].Y + links[0].Height - baseline.Y - baseline.Height) < .000001d,
+                    "The gap's top stays anchored while the line moves through before-spacing.");
+                TestAssert.True(Math.Abs(links[0].Width - baseline.Width) < .000001d, "Spacing must not change horizontal marker ownership.");
+            }
+        }
+    }
+
+    public static void DocxNoteBeforeSpacingIncludesInheritedAndSectionSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            DocxDocument inherited = ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+            {
+                XElement props = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First().Element(NoteWord + "pPr")!;
+                props.Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "before", null);
+                props.Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "after", "480");
+                props.AddFirst(new XElement(NoteWord + "pStyle", new XAttribute(NoteWord + "val", "PublicNoteGap")));
+                XDocument styles = XDocument.Parse(parts["word/styles.xml"]);
+                styles.Root!.Add(new XElement(NoteWord + "style", new XAttribute(NoteWord + "type", "paragraph"),
+                    new XAttribute(NoteWord + "styleId", "PublicNoteGap"), new XElement(NoteWord + "basedOn", new XAttribute(NoteWord + "val", "Normal")),
+                    new XElement(NoteWord + "pPr", new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "240")))));
+                parts["word/styles.xml"] = styles.ToString();
+            });
+            PdfLinkAnnotation direct = RenderCustomNoteLinks(ReadNoteBeforeSpacingFixture(kind, false, 12, null))[0];
+            PdfLinkAnnotation styled = RenderCustomNoteLinks(inherited)[0];
+            TestAssert.True(Math.Abs(direct.Height - styled.Height) < .000001d && Math.Abs(direct.Y - styled.Y) < .000001d,
+                "Inherited and direct before-spacing must resolve the same note slot.");
+            DocxDocument section = ReadNoteHitAreaFixture(kind, false, 0, xml =>
+            {
+                XElement props = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").ElementAt(2).Element(NoteWord + "pPr")!;
+                props.Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "before", "240");
+                props.Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "after", "480");
+            });
+            PdfLinkAnnotation baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, false, 0))[2];
+            PdfLinkAnnotation changed = RenderCustomNoteLinks(section)[2];
+            TestAssert.True(Math.Abs(changed.Height - baseline.Height - 36d) < .000001d,
+                "A new section owns its before-spacing without the preceding section's pending gap.");
+        }
+    }
+
+    public static void DocxNoteBeforeSpacingIncludesExactLineSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        {
+            Action<XDocument> exact = xml =>
+            {
+                XElement spacing = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First().Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!;
+                spacing.SetAttributeValue(NoteWord + "line", "480"); spacing.SetAttributeValue(NoteWord + "lineRule", "exact");
+            };
+            PdfLinkAnnotation baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 24, exact))[0];
+            PdfLinkAnnotation changed = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 24, xml =>
+            {
+                exact(xml); xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First().Element(NoteWord + "pPr")!
+                    .Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "before", "240");
+            }))[0];
+            TestAssert.True(Math.Abs(changed.Height - baseline.Height - 12d) < .000001d, "Exact line slots own the independent before-gap.");
+        }
+    }
+
+    public static void DocxNoteBeforeSpacingRetainsComplexGapFallbacks()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (int variant in Enumerable.Range(0, 7))
+        {
+            Action<XDocument> guard = xml =>
+            {
+                XElement body = xml.Root!.Element(NoteWord + "body")!, paragraph = body.Elements(NoteWord + "p").First();
+                XElement props = paragraph.Element(NoteWord + "pPr")!, spacing = props.Element(NoteWord + "spacing")!;
+                spacing.SetAttributeValue(NoteWord + "before", "240");
+                if (variant == 0) spacing.SetAttributeValue(NoteWord + "beforeAutospacing", "1");
+                if (variant == 1) spacing.SetAttributeValue(NoteWord + "beforeLines", "100");
+                if (variant == 2) props.Add(new XElement(NoteWord + "contextualSpacing"));
+                if (variant == 3) paragraph.Descendants(NoteWord + "t").Last().Value = string.Join(' ', Enumerable.Repeat("Public wrapped paragraph text", 35));
+                if (variant == 4) paragraph.Add(new XElement(NoteWord + "r", new XElement(NoteWord + "br", new XAttribute(NoteWord + "type", "page"))));
+                if (variant is 5 or 6)
+                {
+                    var previous = new XElement(NoteWord + "p", new XElement(NoteWord + "pPr",
+                        new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", "120"))),
+                        new XElement(NoteWord + "r", new XElement(NoteWord + "t", variant == 5 ?
+                            string.Join(' ', Enumerable.Repeat("Public wrapped predecessor", 35)) : "Public preceding paragraph")));
+                    if (variant == 6) previous.Element(NoteWord + "pPr")!.Add(new XElement(NoteWord + "contextualSpacing"));
+                    paragraph.AddBeforeSelf(previous);
+                }
+            };
+            PdfLinkAnnotation baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, false, 0, guard))[0];
+            PdfLinkAnnotation spaced = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, false, 24, guard))[0];
+            TestAssert.True(Math.Abs(baseline.Height - spaced.Height) < .000001d,
+                "Complex gap ownership retains the prior rectangle; variant " + variant);
+        }
+    }
+
+    private static DocxDocument ReadNoteBeforeSpacingFixture(string kind, bool custom, int before, int? precedingAfter) =>
+        ReadNoteHitAreaFixture(kind, custom, 24, xml =>
+        {
+            XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+            paragraph.Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!
+                .SetAttributeValue(NoteWord + "before", (before * 20).ToString(CultureInfo.InvariantCulture));
+            if (precedingAfter is { } after)
+                paragraph.AddBeforeSelf(new XElement(NoteWord + "p", new XElement(NoteWord + "pPr", new XElement(NoteWord + "spacing",
+                    new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", (after * 20).ToString(CultureInfo.InvariantCulture)),
+                    new XAttribute(NoteWord + "line", "240"), new XAttribute(NoteWord + "lineRule", "auto"))),
+                    new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
         });
 
     public static void DocxCustomNoteMarksHonorExplicitFalseFlags()
