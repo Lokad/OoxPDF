@@ -825,3 +825,48 @@ DOCXcases/508failed gates transfer through fresh PDF identity; no new cache gate
 claimed. Packed0.1.5smoke passes; API/dependencies/version stay unchanged and release
 preparation remains deferred. The content audit explicitly replaces four stale T3
 pre-maintenance reference paths with their pinned qualified repaired targets.
+
+## RV08-T8: automatic-number font and first-fragment clearance (2026-10-10)
+
+Font/size-overridden number labels previously left the first body fragment at
+the authored margin even when it overlapped the label. Independent Office16
+controls also show that automatic labels follow the first body run font despite
+an authored bullet font; size-only labels follow that face too. The bounded path
+now uses the body face and nominal glyph advances, preserves authored label size,
+and includes trailing character spacing in clearance. A36pt “100.” over24pt Arial
+moves the candidate body from108pt to160.066pt, compared with Office159.98pt.
+Roman IV controls independently distinguish nominal advances from pair kerning.
+
+The existing left/horizontal/single-column/unrotated/unflipped/non-table/no-tab/
+no-normal-autofit/nonpositive-hanging-indent/label-fits-frame bounds remain. For
+overrides the first drawable body fragment must also fit after the label. The
+initial label-only-fit prototype regresses a50pt frame on both metrics and is
+retained with exact source/DLL/PDB/report. Default-label admission retains bytes.
+Continuation margins and body-font paragraph pitch stay intact. Character bullets,
+table/unsupported numbering and excluded frames retain font/kerning/placement
+fallback. Wrapped and manual-break flow remain partial even where metrics improve.
+
+48new independently authored controls plus85priorT7controls give133distinct
+controls per syntax. One repeated singleton boundary remains counted once.
+Original and Office-imported syntax each yield87paired MAE/SSIM improvements and
+46raster identities, with no metric tradeoffs or both-metric regression. All131
+inspectable text sequences match; two rotated references lack page-level text
+operations and retain rasters. Four new portable methods cover body-face/size,
+nominal advances/trailing spacing, continuation/scene agreement and fallback.
+Three unchanged new methods fail exact T7 parent; the fallback guard passes.
+
+The public mixed-list fixture retains its input and decoded text, improving
+MAE.4622→.4194 and SSIM.968632→.973070. Its existing approximate gate strengthens
+to MAE≤.45/SSIM≥.97; the changed-pixel bound remains. Classification stays approximate.
+The other96current typography PDFs freshly retain accepted bytes. After freeze,
+all14compared control-deck PDFs,60priorSVG and97current typography PDFs reproduce
+their qualified bytes. Fifteen of17older guard decks retain bytes; two numbering
+decks improve on four pages, with68other raster identities.
+
+Frozen Windows clean Release/full2321registered/2320passed/0failed/1optional skip
+includes91PDF/130SVG/151images/180typography/959DOCX. Linux85PDF+52targeted=137passes,
+six existing Windows-Arial skips, two archive SourceLink warnings. Both inventories
+validate347cases/10families. Fresh2911inheritedDOCX and80comparison PDFs retain
+bytes, with no inherited page changes. The34cachedDOCXcases/508failed gates transfer
+only through fresh PDF identity; no new cache gate is claimed. Packed0.1.5smoke
+passes. API/dependencies/version stay unchanged; release preparation is deferred.
