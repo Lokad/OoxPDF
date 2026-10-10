@@ -8,11 +8,19 @@ internal sealed partial class DocxLayoutEngine
         if (fixedScale != 1d || table.Rows.Count is < 1 or > 2 ||
             table.ColumnWidthsPoints.Count is < 1 or > 2)
             return false;
+        // Mixed top rows reuse the qualified declared and automatic geometry
+        // only in a complete two-by-two grid.
+        bool mixedRows = table.Rows.Count == 2 && table.ColumnWidthsPoints.Count == 2 &&
+            table.Rows.Any(row => HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) &&
+            table.Rows.Any(row => row.HeightPoints is > 0d &&
+                (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)));
         return table.Rows.All(row =>
             row.Cells.Count == table.ColumnWidthsPoints.Count &&
+            (mixedRows && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) ||
             row.HeightPoints is > 0d && double.IsFinite(row.HeightPoints.Value) &&
             (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)) &&
+                string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))) &&
             row.Cells.All(cell => cell.VerticalAlignment == DocxTableCellVerticalAlignment.Top &&
                 (cell.VerticalAlignmentValue is null ||
                     string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) &&
@@ -31,6 +39,9 @@ internal sealed partial class DocxLayoutEngine
         if (fixedScale != 1d || table.Rows.Count is < 1 or > 2 ||
             table.ColumnWidthsPoints.Count is < 1 or > 2)
             return false;
+        if (table.Rows.Any(row => HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) &&
+            IsEligibleDeclaredTopContentTable(table, measurer, fixedScale))
+            return true;
         // Top masks have independent admission. They never enable the
         // centered/bottom paragraph-slot alignment calculation.
         return table.Rows.All(row =>

@@ -430,6 +430,7 @@ internal sealed partial class DocxLayoutEngine
                     .DefaultIfEmpty(0d)
                     .Max();
             bool eligibleTopRow = adjustAlignedMinimumMargins && allowDeclaredTopMargins &&
+                !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) &&
                 (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
                     contentHeight <= row.HeightPoints!.Value + rowTopPadding);
             if (allowDeclaredTopMargins) declaredTopContentClips[rowIndex] = eligibleTopRow;
