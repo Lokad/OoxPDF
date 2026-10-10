@@ -1082,3 +1082,52 @@ All2911inheritedDOCX and251broader transfer PDFs retain bytes with no inherited
 page changes.34cached cases/508failed gates transfer only through fresh identity;
 no new cache gate is claimed. Packed0.1.5smoke passes. API/dependencies/version
 remain unchanged; release preparation is deferred.
+
+
+## RV06-L131: single-line note hit areas through after-spacing (2026-10-10)
+
+Word16 expands a one-line paragraph's note link through after-spacing; multiline
+paragraphs retain line-only slots even when the mark is on their last line.
+Actual rendered lines are counted across the full layout by paragraph identity.
+Ordinary unscaled, one-column body paragraphs with automatic/exact line boxes,
+no before/contextual/auto/line-unit spacing and a fitting lower bound add actual
+after-spacing to the existing hit-area height. Rendered glyphs, horizontal bounds
+and note destinations are unchanged. Paragraphs without note destinations skip
+the line count. Tables, static content, floats, mirror margins, rich/revision
+content, lists, hyperlinks and manual/page-break layouts retain prior behavior.
+
+24primary +22held-out +2public controls cover42independent geometries. Four
+zero-spacing baselines repeat earlier geometry and public probes duplicate primary
+geometry. Twelve independent extended-slot controls plus the public duplicates
+match56actualOffice link source/destination pages and vertical bounds within.005pt.
+Thirty guards/four baselines retain PDFs; all48parent/candidate rasters match.
+Allpage counts agree.46decoded-word multisets match with page/baseline separators;
+two revision guards retain L128 document-start numbering rather than Word section
+labels. Before-spacing12 expands Word's slot upward and downward; that rule and
+auto/line-unit/table/revision bounds remain partial pending separate admission.
+
+An initial null-source-paragraph-index check admitted no ordinary body paragraphs
+(their index is0). Its source/library, no-op comparisons and two semantic failures
+are retained. Corrected four portable methods pass; two fail exact L130 and two
+guard methods pass both. Default/pagination/custom/spacing fixture regeneration
+reproduces every ZIP payload; container timestamps/order are excluded.
+Two public gates retain existing note approximation warnings and per-page numeric
+limits, matching pages/dimensions and separately audited vertical annotations.
+Footnote gates are MAE<=.42/SSIM>=.80/recall>=.80/changed<=.0055; endnotes use
+.95/.60/.56/.010. Pixel gates establish no new painting improvement claim.
+
+Frozen runtime **0f115006** passes clean Windows Release and one full catalogue:
+2347registered/2346passed/0failed/1optionalprivate-document skip, including91PDF,
+130SVG,151images,184typography and981methods containingDocx. Linux passes85PDF+
+85targeted checks, six existing WindowsArial skips and two archive SourceLink
+warnings. Both inventories validate356cases/10families. Fresh identities transfer
+48current comparisons and144prior note outputs through192freshPDFidentities.
+All2911inheritedDOCX PDFs retain bytes with no inherited page changes. Of251broader
+comparisons,248 retain PDFs:77DOCX comparisons,60SVG,98typography,13prior note
+controls. Three older direct24/direct8/inherited8pt note controls improve their
+actual Office vertical bounds from24/8pt error to.002pt with exact parent rasters,
+unchanged destinations/pages and one link each. They add no newly authored controls.
+The original strict-transfer failure is retained; qualified changed-output bindings
+are separate.34cached cases/508failed gates transfer only through fresh exact
+unchangedPDFidentity; no new cache gate is claimed. Packed0.1.5smoke passes.
+API/dependencies/version remain unchanged; release preparation is deferred.
