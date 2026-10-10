@@ -1292,3 +1292,34 @@ Those two historical 6pt rectangle residuals are resolved. All 2911 inherited
 DOCX and 251 broader PDFs retain bytes and page counts. The 34 cached markup cases
 /508 failed gates transfer only through fresh unchanged PDF identity. Local 0.1.5
 package smoke passes. API/dependencies/version stay unchanged; release deferred.
+
+
+## RV06-L136: current-contextual multiline note bounds (2026-10-10)
+
+First-line note marks now retain a positive resolved before-gap when the current
+multiline paragraph uses contextual spacing. Section starts and different-style
+predecessors can own such gaps. Matching styles keep suppression; later-line marks
+remain line-only and multiline marks omit after-spacing. Plain successor, numeric
+spacing, nonempty one-line predecessor and existing layout guards remain. Painting,
+horizontal bounds and note destinations are unchanged.
+
+64 controls cover 62 independent geometries. Twenty-four independent and two
+public duplicate controls qualify 26 rectangles; all 104 links in those controls
+match Word vertically within 0.005pt. Thirty-six guards retain PDF bytes. All 64
+retain rasters, decoded-word multisets and page counts. Two independent omitted/
+explicit default-style alias controls add two partial rectangle changes, retaining
+their 6pt layout/bounds residual without worsening the maximum error. They add no
+Office-bound admissions. Four portable methods pass; two fail exact L135 and two
+guards pass both. All 18 generator ZIP payloads reproduce. Qualified source/DLL/PDB
+remain archived. Public multiline painting and its new visual gates remain approximate.
+
+Frozen runtime **6511b496** passes clean Windows Release: 2368 registered /2367
+passed /0 failed /1 optional private-document skip, including 91 PDF, 130 SVG,
+151 images, 184 typography and 1002 methods containing Docx. Linux passes 85 PDF
++106 targeted methods with six existing Arial skips and two archive SourceLink
+warnings. Both inventories validate 366 cases across ten families. Fresh visual
+proof reproduces 64 current and 396 unchanged prior PDFs through 460 conversions.
+All 2911 inherited DOCX and 251 broader PDFs retain bytes and page counts. The 34
+cached markup cases /508 failed gates transfer only through fresh unchanged PDF
+identity. Local 0.1.5 package smoke passes. API/dependencies/version stay unchanged;
+release preparation remains deferred.
