@@ -1717,3 +1717,15 @@ The local dependency-free 0.1.5 package smoke passes; release preparation remain
 deferred. The generator reproduces 15 payloads and transfers 26 earlier note
 payloads through unchanged Git blobs. Malformed preliminary generator trials
 are retained locally and excluded from qualification.
+
+## RV06-L148: minimum slots in bounded automatic-height cells
+
+Runtime **39758d08** corrects paragraph minimum-height excess in plain centered/bottom one-row/one-cell body tables that fit their current frame. Absent heights and explicit automatic heights are included; authored automatic values are ignored. Natural-height floors retain exact previous emission. Row geometry, ordinary/exact neighbors, following flow, graphics operations and all link rectangles/destinations remain unchanged. Broader grids, rich/static/related/scaled/fragmented and frame-boundary paths retain fallback.
+
+50 independent Word16 controls, seven historical repeats, 12 trusted guards and two public cases qualify 55 paired MAE/SSIM improvements and 16 exact PDF/preview identities. All 71 text multisets/pages match Word. 57 first baselines improve; non-compound residual is at most 0.267pt. Two compound-border controls improve but retain 2.043pt error. Supplemental mapping resolves 35/83 source clips and leaves 48 automatic/compound clips unresolved; clip parity is not admitted.
+
+The initial floor model fails the natural-floor regression; the guarded prototype passes 39 related checks. Exact-parent tests fail once and retain three passes. The Calibri public trial improves relative metrics but misses the unchanged 0.84 SSIM gate at 0.8377. That failure is archived; both Arial companion cases pass inherited numeric/diagnostic gates.
+
+Windows 2411 registered/2410 passes/one optional private skip, with zero Release warnings/errors. Linux 234 passes with six existing Arial skips and two source-archive SourceLink warnings. 2911 inherited DOCX and 251 broader PDFs retain bytes/pages. Of 1281 earlier visual outputs, 1272 retain bytes and nine outputs of seven inputs receive fresh independent comparisons. All 4514 qualified corpus outputs, including 1352 visual PDFs, reproduce frozen bytes. The generator reproduces 17 payloads and transfers 26 earlier note payloads through unchanged Git blobs. Local 0.1.5 package smoke passes; release preparation remains deferred.
+
+An existing spill-file directory-snapshot assertion failed in the initial full catalogue. The same frozen binaries pass its isolated check and the complete rerun, with no spill files remaining. The cause is unestablished; both reports are preserved.
