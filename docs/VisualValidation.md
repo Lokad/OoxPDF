@@ -588,3 +588,75 @@ The initial generated table URI and synthetic disabled-threshold errors remain
 retained excluded attempts; corrected controls pass. Accidental generator-prelude
 fixture rewrites were restored in the owned worktree before freezing.
 Evidence: `artifacts/plan-revision-20261005/rv08-t2/`. Keep0.1.5;release deferred.
+
+## RV07-E10: bounded SVG linear gradient strokes (2026-10-10)
+
+Supported gradient rims previously disappeared with an unsupported-stroke warning.
+Uniformly numeric linear-pad strokes now use native axial PDF shading patterns.
+Their matrices map into the parent stream's initial user space independently of
+later path transforms, following PDF 32000-1 section 8.7.2. Page and isolated Form
+pattern resources share validation, snapshot/rollback, shading value deduplication,
+weak staging, the page spill window and existing output/admission limits.
+The public API, dependencies and version remain unchanged.
+
+Admission requires unrotated/unflipped pictures, forward axes, identity gradient
+transforms, 2..256 usable stops, represented intervals at least .001, and serialized
+projection error at most .001. User-space paths require identity transforms;
+positive axis box transforms remain approximate. Plain numeric node/stroke/stop
+alpha is supported. Partial CSS/percentage container opacity, nested SVG viewports,
+excess depth and filled elements with partial node opacity retain diagnosed omission.
+Radial, varying-alpha, reverse and repeat/reflect strokes also retain omission.
+Supported root/group isolation uses local pattern resources; fill masks restore
+before strokes and later paint. General Form graphics-inspector traversal is not added.
+
+Forty-six independent Office controls produce **34 imported paired MAE/SSIM
+improvements and twelve raster identities**. Original syntax produces **32 paired
+improvements and fourteen identities**. Office normalizes percentage stops and CSS
+root opacity; imported and original SVGs are pinned separately through slide
+relationships. These are 46 controls, not 92 independent examples. Basic rectangle
+MAE improves **4.428→.029**, SSIM **.045320→.999986**. Ellipses, opaque filled shapes,
+curves, joins, forward/diagonal axes, user units, viewport stretch, uniform alpha,
+group overlap, fill-mask restoration, later solid paint and dash caps/phase are covered.
+Scaled box-path source syntax retains MAE up to **1.126 / SSIM .766568**; negative
+square dash phase retains **SSIM .980362**. These material improvements do not
+establish general SVG stroke parity. Transparent zero-alpha paint retains a raster;
+whole-PDF identity is not inferred from that result.
+
+Initial solid square-cap compensation worsens gradient gaps and is now limited to
+solid paint. A combined fill/stroke B attempt worsens the opaque filled inner rim
+from MAE .029 / SSIM .999712 to 1.147/.884237. Separate paint remains; translucent
+filled-node isolation needs another design. The rejected source, exact binaries,
+comparisons and narrower opacity attempts remain archived.
+
+The reproducible one-page public case is
+`pptx-ladder-07-svg-linear-gradient-stroke`; it repeats the primary rectangle.
+Regenerate with `tools/NewSvgStrokeRadialFixtures.ps1 -ProbeSet linear-stroke-controls
+-OutputPath tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-linear-gradient-stroke.pptx`.
+Its approximate gate requires MAE≤.1 / SSIM≥.999 / histogram≥.995 / recall≥.99.
+It passes Office preview (.029/.999986) and PDF export (.038/.999931), recall 1.
+PNG previews remain separate from Office PDF rasters, preserving the selected policy.
+
+Six portable PDF methods cover local bindings, shading deduplication, rollback,
+defensive snapshots, invalid names/printed geometry, spill, exact/zero admission,
+cancellation cleanup and release of prior Form owners. Six portable SVG methods
+cover alpha, source-unit/stretch projection, nested Forms, state restoration,
+square/round dash paint, eighteen fallback byte controls and the 256-stop boundary.
+All six unchanged native semantic methods fail exact accepted T3/T2 runtime;
+the exclusion checks reach the final native boundary assertion on that parent.
+
+Frozen runtime **0d3523a1** passes one unfiltered catalogue:
+**2302 registered /2301 passed /0 failed /1 optional private-document skip**,
+including **91 PDF /130 SVG /151 images /161 typography /959 DOCX** methods.
+Linux passes **85 PDF +33 targeted =118 methods**, with six existing Windows-Arial
+skips and two expected git-free SourceLink warnings. Windows builds are clean.
+Exact local **0.1.5** package smoke `0222aff23de74b35ad6ab427d77171bd` passes.
+
+All **53 prior SVG /96 current typography /2911 inherited DOCX /80 DOCX comparison**
+PDFs freshly retain accepted bytes. The typography set includes all four corrected
+T3 fixtures and the T2 zero-kerning case. Inherited page counts remain; 34 cached
+markup cases retain 508 failed gates through exact PDF identity, without rerunning
+their reference gates. The T3 boundary raw-operation gates remain partial.
+Fresh frozen PDF identities transfer the seven Office/public deck comparisons while
+preserving their original source/library/Office/raster provenance. Inventory:
+346 public manifests across ten families, validated on Windows and Linux.
+Evidence: `artifacts/plan-revision-20261005/rv07-e10/`. Keep 0.1.5; release deferred.
