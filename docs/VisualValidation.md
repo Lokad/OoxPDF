@@ -524,3 +524,52 @@ PNG/raster provenance. General Form graphics-inspector traversal is not claimed.
 Public inventory remains344manifests/ten families. Evidence:
 `artifacts/plan-revision-20261005/rv07-e9/`. Keep0.1.5;release preparation deferred.
 Other mapped geometry, stroke/path-level composition and renderer gaps remain.
+
+## RV08-T2: bounded PPTX no-wrap zero kerning (2026-10-10)
+
+Explicit/inherited `kern="0"` now disables pair kerning for plain left-aligned,
+non-bullet shape paragraphs in unrotated horizontal, single-column,
+`wrap="none"`/`noAutofit` frames. Previously it enabled pair adjustments, so
+nominal rows contracted toward the positively kerned row. Both XML and scene-fed
+run cascades now resolve the admitted setting before measurement and emission.
+Positive thresholds and absence retain their rules. Wrapped, centered/right/
+justified, table/bullet, autofit, rotated, vertical and multiple-column contexts
+retain their prior approximation. No emission flag, PDF writer, public API or
+dependency change survives the investigation.
+
+Fifty-four PowerPoint PDF controls produce **20 paired MAE/SSIM improvements and
+34 guard raster identities**. They cover9..24point text, five font families,
+tracking, inherited/default overrides, fragmented and mixed runs, manual breaks,
+underline/highlight and per-paragraph alignment guards. The24pt primary control's
+2400 threshold is active at equality; it is an active guard. Twenty-four wrapped
+triplet pages and29earlier T1 control pages retain whole PDF bytes separately.
+
+Broad emission-only separation regresses Arial9 even when its line breaks stay
+unchanged. Broad no-wrap alignment regresses centered Cambria. Both rejected
+source patches, exact binaries/PDBs and original comparisons are archived.
+The observed Office residual spacing cannot be identified with pair kerning
+alone. Font advances, baselines and other text layout remain approximate.
+
+New reproducible public case
+`pptx-ladder-04-typography-no-wrap-zero-kerning-probe` improves MAE
+**1.508→0.617**, SSIM **.715052→.921390**, foreground recall **.705270→.898226**.
+Its approximate gate requiresMAE≤.8/SSIM≥.90/recall≥.88. Three portable synthetic
+font regressions cover nominal/active glyph advances, cascade precedence,
+per-paragraph admission and thirteen exclusion byte guards. Two unchanged
+frozen semantics fail exact accepted E9; the exclusion guard passes.
+
+Frozen runtime **2e8a0409** passes one unfiltered catalogue:
+**2290 registered /2289 passed /0 failed /1 optional private-document skip**,
+including **85PDF /124SVG /145images /161typography /959DOCX** methods.
+Linux passes **79PDF +27targeted =106methods**, with six existing Windows-Arial
+skips and two expected git-free SourceLink warnings. Windows builds are clean;
+exact local0.1.5 package smoke `205a6398a22b4888b05dac23ae7d6c5c` passes.
+
+All53priorSVG/95typography/2911inheritedDOCX/80DOCXcomparison PDFs freshly retain
+bytes. No inherited page-count changes;34cached markup cases retain508failed
+gates. Original Office/raster/comparison-library evidence transfers only through
+fresh exact frozen PDF identity. Inventory:345public manifests/ten families.
+The initial generated table URI and synthetic disabled-threshold errors remain
+retained excluded attempts; corrected controls pass. Accidental generator-prelude
+fixture rewrites were restored in the owned worktree before freezing.
+Evidence: `artifacts/plan-revision-20261005/rv08-t2/`. Keep0.1.5;release deferred.
