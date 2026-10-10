@@ -919,3 +919,56 @@ with no inherited page changes. The 34 cached DOCX cases and 508 failed gates
 transfer only through fresh PDF identity; no new cache gate is claimed. Packed
 0.1.5 smoke passes. API, dependencies and version stay unchanged; release
 preparation is deferred.
+
+
+## RV06-L128: section occurrence counts for DOCX notes (2026-10-10)
+
+Word 16 controls establish section-local starts/formats and continuous versus
+`eachSect` numbering for footnotes and endnotes. A continuous section adds its
+start to the number of earlier automatic occurrences: two earlier notes followed
+by start 9 produce 11 and 12, even when those earlier sections restarted at 4.
+`eachSect` counts from the current section boundary. Omitted section properties
+use decimal footnotes/lowerRoman endnotes and start 1, without inheriting document
+starts/formats/restarts. Authored document settings remain inspectable.
+
+Admission covers an entire note kind's simple section sequence independently of
+the other kind: valid starts up to 32767, the six existing decimal/Roman/letter
+formats, and omitted/continuous/eachSect restarts. Closing section properties apply
+to preceding body elements, including table references and paragraphs split at
+manual breaks. Custom marks do not advance automatic counters. Each-page settings,
+unsupported/malformed section settings, revision bodies and hidden/nested section
+boundaries keep the prior fallback. The existing single-section partial override
+policy remains available outside this admission.
+
+Fifty independent public controls give 44 supported visible-label and decoded-word
+matches, 43 case-average MAE/SSIM improvements and six excluded-control PDF
+identities. Word does not encode every paragraph separator as whitespace; decoded
+word audits explicitly separate pages and text baselines. Four individual pages
+trade pixel metrics despite better case averages. A same-page footnote section
+retains the previous one-page candidate versus two Word pages; its labels match.
+Layout, font metrics and note spacing remain approximate.
+
+Eight new portable methods pass; seven fail the exact previous runtime and one
+fallback guard passes both. Repeated labels keep distinct destinations. Across
+52 authored controls, 186 candidate links resolve; 176 links across 49 controls
+match actual Office source/destination pages without positional ambiguity. The
+same-page pagination case keeps two unmapped reference links. Each custom-mark
+control keeps three candidate links versus four Word links; positional matches
+are not claimed for those two controls.
+
+Two new approximate public probes duplicate primary geometry and are not extra
+independent controls. They have fresh Office references and pass per-page numeric
+gates: footnotes MAE <=.42/SSIM >=.80/recall >=.80; endnotes MAE <=.95/SSIM >=.60/
+recall >=.56, plus page/dimension/diagnostic and changed-pixel checks. Regenerating
+the fixtures reproduces every ZIP entry payload; ZIP timestamps/order are excluded.
+
+Frozen runtime **e90bac15** passes clean Windows Release and one full catalogue:
+2333 registered/2332 passed/0 failed/1 optional private-document skip, including
+91 PDF, 130 SVG, 151 images, 184 typography and 967 methods with Docx in their name.
+Linux passes 85 PDF +71 targeted checks, with six existing Windows-Arial skips and
+two archive SourceLink warnings. Both inventories validate 350 cases in ten families.
+All 2911 inherited DOCX PDFs and 251 transfer PDFs retain bytes: 80 DOCX comparisons,
+60 SVG, 98 current typography and 13 prior single-section note controls. There are
+no inherited page changes. The 34 cached cases/508 failed gates transfer solely
+through fresh PDF identity; no new cache gate is claimed. Packed 0.1.5 smoke passes.
+API, dependencies and version remain unchanged; release preparation is deferred.
