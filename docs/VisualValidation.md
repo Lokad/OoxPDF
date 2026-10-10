@@ -1323,3 +1323,45 @@ All 2911 inherited DOCX and 251 broader PDFs retain bytes and page counts. The 3
 cached markup cases /508 failed gates transfer only through fresh unchanged PDF
 identity. Local 0.1.5 package smoke passes. API/dependencies/version stay unchanged;
 release preparation remains deferred.
+
+
+## RV06-L137: declared default contextual style identity (2026-10-10)
+
+Plain numeric body/table boundaries now match an omitted paragraph style with the
+unambiguous declared default paragraph style for contextual spacing. The existing
+note-bound rules use the same identity. Authored identifiers, property inheritance
+and existing raw matches remain intact. Missing/off/multiple declarations,
+malformed style elements, rich/auto/line-unit boundaries and static/related stories
+retain fallback. The declared default's identifier can differ from Normal.
+
+64 Office controls plus two public duplicates cover 62 independent geometries.
+Thirty-eight independent and two public controls improve both aggregate MAE and
+SSIM. Twenty-six controls retain PDF/raster identities. All 66 match Word's decoded
+word multisets and page counts. Seventy changed ordinary-control rectangles are
+qualified; all 152 links in 38 ordinary supported controls match Word vertically
+within 0.005pt, including two supported PDF identities. Four table controls correct
+their first boundary and improve visually, changing eight rectangles while
+retaining a 24.007pt trailing-cell residual. Two historical undeclared-default
+aliases retain exact PDFs and their 6pt residual. Partial cases add no full
+annotation admission. Horizontal bounds and actual destinations remain unchanged.
+
+Four portable methods pass; two fail exact L136 and two preservation/guard methods
+pass both. All 20 generator ZIP payloads reproduce. Public multiline painting
+remains approximate under the new MAE<=2.30, SSIM>=.57/.53, recall>=.65/.56 and
+changed<=.024 gates. First-boundary flow is checked absolutely; wrapped after-gap
+contributions are checked against matching flags-off Word controls, separating
+the retained cumulative line-height drift. Initial invalid table inputs and cloned
+duplicate style names are retained excluded fixture attempts; accepted inputs
+have valid section placement and distinct style names. Qualified source/DLL/PDB
+remain archived.
+
+Frozen runtime **4ba1ca56** passes clean Windows Release: 2372 registered /2371
+passed /0 failed /1 optional private-document skip, including 91 PDF, 130 SVG,
+151 images, 184 typography and 1006 methods containing Docx. Linux passes 85 PDF
++110 targeted methods, with six existing Arial skips and two archive SourceLink
+warnings. Both inventories validate 368 cases across ten families. Fresh visual
+proof reproduces 66 current and 460 unchanged prior PDFs through 526 conversions.
+All 2911 inherited DOCX and 251 broader PDFs retain bytes and page counts. The 34
+cached markup cases /508 failed gates transfer only through fresh unchanged PDF
+identity. Local 0.1.5 package smoke passes. API/dependencies/version stay unchanged;
+release preparation remains deferred.
