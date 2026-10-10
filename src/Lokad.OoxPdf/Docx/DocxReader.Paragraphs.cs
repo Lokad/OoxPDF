@@ -18,7 +18,7 @@ internal sealed partial class DocxReader
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle? tableCellStyle,
-        Dictionary<DocxRelatedStoryKind, int>? inlineReferenceCounters,
+        DocxNoteReferenceCounters? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
         DocxRevisionInfo? inheritedRevision,
         OoxPdfDocxMarkupMode markupMode,
@@ -1148,7 +1148,7 @@ internal sealed partial class DocxReader
         List<DocxInlineReference> inlineReferences,
         List<DocxCommentRange> commentRanges,
         List<DocxCommentRangeStart> openCommentRanges,
-        Dictionary<DocxRelatedStoryKind, int>? inlineReferenceCounters,
+        DocxNoteReferenceCounters? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
         List<DocxTextRun> runs)
     {
@@ -1239,9 +1239,7 @@ internal sealed partial class DocxReader
             DocxNoteReferenceSettings settings = kind == DocxRelatedStoryKind.Endnote
                 ? (documentSettings ?? DocxDocumentSettings.Empty).EndnoteReferenceSettings
                 : (documentSettings ?? DocxDocumentSettings.Empty).FootnoteReferenceSettings;
-            inlineReferenceCounters.TryGetValue(kind, out int current);
-            int next = current == 0 ? settings.NumberStart ?? 1 : current + 1;
-            inlineReferenceCounters[kind] = next;
+            int next = inlineReferenceCounters.Next(kind, settings);
             // RV06 endnote probe: ECMA-376 defaults differ by kind (decimal footnotes,
             // lowerRoman endnotes); Office numbers the first style-less endnote "i".
             string? numberFormat = settings.NumberFormatValue

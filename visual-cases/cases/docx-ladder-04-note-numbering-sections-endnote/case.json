@@ -1,0 +1,27 @@
+{
+  "id": "docx-ladder-04-note-numbering-sections-endnote",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-sections-endnote.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "notes",
+    "numbering",
+    "sections",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.95,
+    "minStructuralSimilarity": 0.6,
+    "minForegroundRecall": 0.56,
+    "maxChangedPixelRatioAtThreshold16": 0.01
+  },
+  "allowedUnsupportedFeatures": []
+}

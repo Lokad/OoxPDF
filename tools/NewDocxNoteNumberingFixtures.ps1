@@ -1,0 +1,86 @@
+# Generates public two-section footnote/endnote numbering probes.
+param([string] $OutputDirectory)
+
+$ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$cases = Join-Path $repoRoot 'tests/Lokad.OoxPdf.Tests/Cases'
+if (!$OutputDirectory) { $OutputDirectory = $cases }
+New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
+. (Join-Path $PSScriptRoot 'ZipPackage.ps1')
+
+$seed = Join-Path $cases 'note-nav-numbered-ids.docx'
+$archive = [IO.Compression.ZipFile]::OpenRead($seed)
+$source = @{}
+try {
+    foreach ($entry in $archive.Entries) {
+        $reader = [IO.StreamReader]::new($entry.Open())
+        try { $source[$entry.FullName] = $reader.ReadToEnd() }
+        finally { $reader.Dispose() }
+    }
+}
+finally { $archive.Dispose() }
+
+$word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+foreach ($kind in @('footnote', 'endnote')) {
+    $entries = @{} + $source
+    [xml] $document = $entries['word/document.xml']
+    $ns = [Xml.XmlNamespaceManager]::new($document.NameTable)
+    $ns.AddNamespace('w', $word)
+    $body = $document.SelectSingleNode('/w:document/w:body', $ns)
+    $sectionTemplate = $body.SelectSingleNode('w:sectPr', $ns).CloneNode($true)
+    $paragraphTemplate = $body.SelectSingleNode('w:p', $ns).CloneNode($true)
+    $body.RemoveAll()
+    [xml] $notes = $entries['word/footnotes.xml']
+    $noteNs = [Xml.XmlNamespaceManager]::new($notes.NameTable)
+    $noteNs.AddNamespace('w', $word)
+    $noteTemplate = $notes.SelectSingleNode('/w:footnotes/w:footnote[@w:id="37"]', $noteNs).CloneNode($true)
+    foreach ($note in @($notes.SelectNodes('/w:footnotes/w:footnote[not(@w:type)]', $noteNs))) {
+        [void] $notes.DocumentElement.RemoveChild($note)
+    }
+    $labels = @('Alpha', 'Bravo', 'Charlie', 'Delta')
+    $ids = @(37, 4, 73, 8)
+    foreach ($sectionIndex in 0..1) {
+        $section = $sectionTemplate.CloneNode($true)
+        foreach ($node in @($section.SelectNodes('w:footnotePr|w:endnotePr|w:type', $ns))) {
+            [void] $section.RemoveChild($node)
+        }
+        $format = @('lowerRoman', 'decimalZero')[$sectionIndex]
+        $start = @(4, 9)[$sectionIndex]
+        $properties = $document.CreateElement('w', ($kind + 'Pr'), $word)
+        $position = if ($kind -eq 'footnote') { 'pageBottom' } else { 'docEnd' }
+        $properties.InnerXml = "<w:pos xmlns:w='$word' w:val='$position'/><w:numFmt xmlns:w='$word' w:val='$format'/><w:numStart xmlns:w='$word' w:val='$start'/><w:numRestart xmlns:w='$word' w:val='eachSect'/>"
+        [void] $section.PrependChild($properties)
+        $type = $document.CreateElement('w', 'type', $word)
+        [void] $type.SetAttribute('val', $word, 'nextPage')
+        [void] $section.AppendChild($type)
+        foreach ($within in 0..1) {
+            $index = 2 * $sectionIndex + $within
+            $paragraph = $paragraphTemplate.CloneNode($true)
+            $texts = @($paragraph.SelectNodes('.//w:t', $ns))
+            $texts[0].InnerText = $labels[$index] + ' public body before note '
+            $texts[-1].InnerText = ' and after note.'
+            [void] $paragraph.SelectSingleNode('.//w:footnoteReference', $ns).SetAttribute('id', $word, [string]$ids[$index])
+            [void] $body.AppendChild($paragraph)
+            $note = $noteTemplate.CloneNode($true)
+            [void] $note.SetAttribute('id', $word, [string]$ids[$index])
+            $note.SelectSingleNode('.//w:t', $noteNs).InnerText = ' Public destination ' + $labels[$index] + '.'
+            [void] $notes.DocumentElement.AppendChild($note)
+        }
+        if ($sectionIndex -eq 0) {
+            [void] $paragraph.SelectSingleNode('w:pPr', $ns).AppendChild($section)
+        }
+        else { [void] $body.AppendChild($section) }
+    }
+    $entries['word/footnotes.xml'] = $notes.OuterXml
+    $entries['word/document.xml'] = $document.OuterXml
+    if ($kind -eq 'endnote') {
+        $entries['word/document.xml'] = $entries['word/document.xml'].Replace('footnoteReference', 'endnoteReference').Replace('FootnoteReference', 'EndnoteReference')
+        $entries['word/endnotes.xml'] = $entries['word/footnotes.xml'].Replace('footnote', 'endnote').Replace('Footnote', 'Endnote')
+        $entries.Remove('word/footnotes.xml')
+        foreach ($part in @('[Content_Types].xml', 'word/_rels/document.xml.rels')) {
+            $entries[$part] = $entries[$part].Replace('footnotes', 'endnotes')
+        }
+    }
+    $entries['word/settings.xml'] = "<w:settings xmlns:w='$word'><w:${kind}Pr><w:numFmt w:val='decimal'/><w:numStart w:val='105'/></w:${kind}Pr></w:settings>"
+    New-ZipPackage -Path (Join-Path $OutputDirectory "note-sections-$kind.docx") -Entries $entries
+}

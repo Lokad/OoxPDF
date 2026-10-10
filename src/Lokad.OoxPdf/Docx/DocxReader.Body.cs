@@ -48,12 +48,20 @@ internal sealed partial class DocxReader
 
         var elements = new List<DocxBodyElement>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
-        var inlineReferenceCounters = new Dictionary<DocxRelatedStoryKind, int>();
+        var inlineReferenceCounters = new DocxNoteReferenceCounters();
+        DocxDocumentSettings authoredSettings = documentSettings;
+        documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);
+        IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
         foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(bodyChildren, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;
+            if (noteSections.TryGetValue(element, out DocxNoteReferenceSection? noteSection))
+            {
+                documentSettings = noteSection.Settings;
+                inlineReferenceCounters.EnterSection(noteSection);
+            }
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
