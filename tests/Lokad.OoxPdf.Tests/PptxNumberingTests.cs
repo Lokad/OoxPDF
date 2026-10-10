@@ -219,6 +219,85 @@ internal static class PptxNumberingTests
         }
     }
 
+    public static void PptxNumberingWrapKeepsWordsWithinAuthoredWidth()
+    {
+        string marker = "<a:buSzPts val=\"1200\"/>";
+        var narrow = Read(Paragraph(1, marker: marker, text: "AA BB"), width: 104);
+        var a = narrow.Single(s => s.Run.Text.Contains("AA", StringComparison.Ordinal)).Run;
+        var bb = narrow.Single(s => s.Run.Text.Contains("BB", StringComparison.Ordinal)).Run;
+        // AA + space + BB uses 70.56pt; the authored body width is 68pt.
+        TestAssert.True(bb.Y < a.Y, "Automatic numbering must wrap the word beyond the authored edge.");
+        TestAssert.Equal(108d, a.X);
+        TestAssert.Equal(108d, bb.X);
+        var fitting = Read(Paragraph(1, marker: marker, text: "AA BB"), width: 107);
+        TestAssert.Equal(fitting.Single(s => s.Run.Text.Contains("AA", StringComparison.Ordinal)).Run.Y,
+            fitting.Single(s => s.Run.Text.Contains("BB", StringComparison.Ordinal)).Run.Y);
+    }
+
+    public static void PptxNumberingWrapKeepsSplitWordsAndSceneAgreement()
+    {
+        string suffix = "<a:r><a:rPr sz=\"2400\" kern=\"1\"><a:latin typeface=\"TestFont\"/></a:rPr><a:t>B</a:t></a:r>";
+        var split = Read(Paragraph(1, marker: "<a:buSzPts val=\"1200\"/>", text: "AA B", suffix: suffix), width: 104);
+        var a = split.Single(s => s.Run.Text.Contains("AA", StringComparison.Ordinal)).Run;
+        var pieces = split.Where(s => s.Run.Text.Contains('B')).Select(s => s.Run).ToArray();
+        TestAssert.True(pieces.Length >= 1 && pieces.All(s => s.Y < a.Y), "A word split across runs must move together to the continuation line.");
+        TestAssert.Equal(108d, pieces[0].X);
+        TestAssert.Equal(2, string.Concat(pieces.Select(s => s.Text)).Count(c => c == 'B'));
+        TestAssert.True(pieces.All(s => s.Y == pieces[0].Y), "Both run fragments must stay on one continuation baseline.");
+    }
+
+    public static void PptxNumberingWrapPreservesCountersPitchAndContinuationMargins()
+    {
+        string marker = "<a:buSzPts val=\"1200\"/>";
+        var spans = Read(Paragraph(9, marker: marker, text: "AA BB") + Paragraph(9, marker: marker, text: "AA BB"), width: 104);
+        string[] labels = spans.Where(s => s.Run.Text is "9." or "10.").Select(s => s.Run.Text).ToArray();
+        TestAssert.True(labels.SequenceEqual(new[] { "9.", "10." }), "Wrapping must retain equal-setting counters.");
+        var firstWords = spans.Where(s => s.Run.Text.Contains("AA", StringComparison.Ordinal)).Select(s => s.Run).ToArray();
+        var lastWords = spans.Where(s => s.Run.Text.Contains("BB", StringComparison.Ordinal)).Select(s => s.Run).ToArray();
+        TestAssert.Equal(2, firstWords.Length);
+        TestAssert.Equal(2, lastWords.Length);
+        TestAssert.True(Math.Abs(firstWords[0].Y - firstWords[1].Y - 57.6d) < .001d,
+            "Two wrapped body-font rows must advance the next paragraph by 57.6pt.");
+        for (int i = 0; i < 2; i++)
+        {
+            TestAssert.Equal(108d, firstWords[i].X);
+            TestAssert.Equal(108d, lastWords[i].X);
+            TestAssert.True(Math.Abs(firstWords[i].Y - lastWords[i].Y - 28.8d) < .001d, "Continuation pitch stays at the body font size.");
+        }
+    }
+
+    public static void PptxNumberingWrapRetainsCharacterAndExcludedFallbacks()
+    {
+        string marker = "<a:buSzPts val=\"1200\"/>";
+        string text = "AA BB";
+        var variants = new[]
+        {
+            Read(Paragraph(numbering: false, marker: marker + "<a:buChar char=\"*\"/>", text: text), width: 104),
+            Read(Paragraph(1, marker: marker, text: text, hanging: 18), width: 104),
+            Read(Paragraph(1, marker: marker, text: text), width: 104, autofit: "<a:normAutofit/>"),
+            Read(Paragraph(1, marker: marker, text: text), width: 104, autofit: "<a:spAutoFit/>"),
+            Read(Paragraph(1, marker: marker, text: text), width: 104, body: "wrap=\"none\""),
+            Read(Paragraph(1, marker: marker, text: text), width: 104, shape: "rot=\"900000\""),
+            Read(Paragraph(1, marker: marker, text: text), width: 104, shape: "flipH=\"1\""),
+            Read(Paragraph(1, marker: marker, text: text), width: 104, shape: "flipV=\"1\""),
+            Read(Paragraph(1, "arabicPlain", marker: marker, text: text), width: 104),
+            Read(Paragraph(1, marker: marker + "<a:tabLst><a:tab pos=\"914400\" algn=\"l\"/></a:tabLst>", text: text), width: 104),
+            Read(Paragraph(1, marker: marker, text: "AA\u00a0BB"), width: 104),
+            Read(Paragraph(1, marker: marker, text: text, suffix: "<a:br/><a:r><a:rPr sz=\"2400\"><a:latin typeface=\"TestFont\"/></a:rPr><a:t>Continuation</a:t></a:r>"), width: 104)
+        };
+        foreach (var spans in variants)
+        {
+            var a = spans.Single(s => s.Run.Text.Contains("AA", StringComparison.Ordinal)).Run;
+            var bb = spans.Single(s => s.Run.Text.Contains("BB", StringComparison.Ordinal)).Run;
+            TestAssert.Equal(a.Y, bb.Y);
+        }
+        var oversizedFirstWord = Read(Paragraph(1, text: "AA BB"), width: 69);
+        var first = oversizedFirstWord.Single(s => s.Run.Text.Contains("AA", StringComparison.Ordinal)).Run;
+        var number = oversizedFirstWord.Single(s => s.Run.Text == "1.").Run;
+        TestAssert.Equal(number.Y, first.Y);
+        TestAssert.Equal(114d, first.X);
+    }
+
     private static string Paragraph(int? start = null, string kind = "arabicPeriod", int level = 0,
         string text = "PublicItem", bool numbering = true, string marker = "", string suffix = "", double spacing = 0d, int hanging = -18)
     {

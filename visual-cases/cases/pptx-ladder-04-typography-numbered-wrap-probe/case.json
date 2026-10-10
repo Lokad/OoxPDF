@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-04-typography-numbered-wrap-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-numbered-wrap-probe.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "bullet",
+    "numbering",
+    "wrapping",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.12,
+    "minStructuralSimilarity": 0.98,
+    "minForegroundRecall": 0.96
+  },
+  "allowedUnsupportedFeatures": []
+}

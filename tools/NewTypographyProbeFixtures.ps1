@@ -399,3 +399,11 @@ New-TypographyProbe `
           <a:p><a:pPr algn="dist"/><a:r><a:rPr sz="1800" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Public teams compare stock.</a:t></a:r><a:endParaRPr sz="1800"><a:latin typeface="Arial"/></a:endParaRPr></a:p>
           <a:p><a:pPr algn="dist"/><a:r><a:rPr sz="1800" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Public teams compare stock.</a:t></a:r><a:endParaRPr sz="1800"><a:latin typeface="Arial"/></a:endParaRPr></a:p>
 '@
+
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-numbered-wrap-probe" `
+    -Transform '<a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2413000" cy="4445000"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" wrap="square" vertOverflow="overflow"><a:noAutofit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l" lvl="0" marL="457200" indent="-228600"><a:buSzPts val="3600"/><a:buAutoNum type="arabicPeriod" startAt="100"/></a:pPr><a:r><a:rPr sz="2400" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Public planning teams compare stock and delivery signals.</a:t></a:r><a:endParaRPr sz="2400"><a:latin typeface="Arial"/></a:endParaRPr></a:p>
+'@

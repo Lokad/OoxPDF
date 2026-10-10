@@ -245,6 +245,7 @@ internal sealed partial class PptxRenderer
             PptxTextSpanLayout? noBreakAnchorSpan = null;
             string pendingNoBreakAdvanceText = string.Empty;
             int remainingDrawableSegments = CountDrawableTextSegments(flowParagraph);
+            bool useNumberingWordWrap = false;
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
                 PptxTextRunModel modelRun = flowRun.Source;
@@ -323,6 +324,20 @@ internal sealed partial class PptxRenderer
                         // Office automatic numbering follows the body face even
                         // when a bullet font is authored. The label keeps its size.
                         bulletStyle = bulletStyle with { Typeface = runStyle.Typeface };
+                    }
+                    useNumberingWordWrap = useNumberingLabelLayout && allowWrapping && HasNoAutoFit(frame.BodyProperties) &&
+                        paragraph.Runs.All(run => run.Kind == PptxTextRunKind.Text &&
+                            run.Text.All(character => character is >= ' ' and <= '~'));
+                    if (useNumberingWordWrap)
+                    {
+                        // Strict word fitting must not introduce an empty body
+                        // line when the first word already exceeds the frame.
+                        PptxTextFlowSegment firstBodyFragment = flowRun.Segments.FirstOrDefault(segment =>
+                            segment.Draw && !string.IsNullOrWhiteSpace(segment.AdvanceText));
+                        double fragmentWidth = advanceEstimator.Measure(firstBodyFragment.AdvanceText ?? string.Empty,
+                            runStyle.FontSize * firstBodyFragment.FontScale, runStyle.Typeface,
+                            runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                        useNumberingWordWrap &= Math.Max(cursorX, numberingEndX) + fragmentWidth <= columnStartX + effectiveTextWidth;
                     }
                     double bulletEndX = useNumberingLabelLayout ? numberingEndX : bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
                     TextRun bulletRun = new(bulletText, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, useNumberingLabelLayout ? false : runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: false, Outline: null, StrictClip: strictClip);
@@ -535,6 +550,8 @@ internal sealed partial class PptxRenderer
                         ? PptxTextMetricRules.CoordinateTolerance
                         : IsCenteredTableCellText(frame, paragraphStyle)
                         ? PptxTextMetricRules.CenteredTableCellWrapTolerance(fragmentFontSize, effectiveTextWidth)
+                        : useNumberingWordWrap
+                        ? PptxTextMetricRules.CoordinateTolerance
                         : bulletText is not null
                         ? PptxTextMetricRules.BulletWrapFitTolerance(fragmentFontSize)
                         : HasShapeAutoFit(frame.BodyProperties)
