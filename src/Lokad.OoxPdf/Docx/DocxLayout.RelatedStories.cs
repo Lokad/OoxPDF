@@ -1922,7 +1922,9 @@ internal sealed partial class DocxLayoutEngine
                 };
             }
 
-            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
+            // Note-story placement/reserve heights need their own qualification;
+            // keep their existing spacing fallback while body contributions improve.
+            DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
             if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
             {
                 // RV06 endnote-spacing probes (Word 16.0, edge-endsepsp/endsepspb):

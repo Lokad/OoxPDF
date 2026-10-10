@@ -468,6 +468,113 @@ internal static class DocxTextSpacingTests
         TestAssert.Equal(20d, Math.Round(lines[0].BaselineY - lines[1].BaselineY, 3));
     }
 
+    public static void DocxContextualContributionSpacingMatchesIndependentWordMatrix()
+    {
+        foreach ((bool previousFlag, bool currentFlag, double gap12Before6After, double gap6Before12After) in new[]
+        {
+            (false, false, 12d, 12d), (false, true, 6d, 12d),
+            (true, false, 6d, 0d), (true, true, 0d, 0d)
+        })
+        foreach (bool sameStyle in new[] { true, false })
+        foreach (bool largerBefore in new[] { true, false })
+        {
+            double before = largerBefore ? 12d : 6d, after = largerBefore ? 6d : 12d;
+            DocxTextLineLayout[] lines = CreateContextualContributionLines(previousFlag, currentFlag, sameStyle, before, after);
+            double expected = sameStyle ? (largerBefore ? gap12Before6After : gap6Before12After) : 12d;
+            TestAssert.True(Math.Abs(lines[0].BaselineY - lines[1].BaselineY - 10d - expected) < .000001d,
+                "The first boundary follows the independent Word flag/style/gap matrix.");
+            TestAssert.True(Math.Abs(lines[1].BaselineY - lines[2].BaselineY - (currentFlag ? 10d : 34d)) < .000001d,
+                "The following same-style paragraph suppresses only the contextual predecessor's after contribution.");
+        }
+    }
+
+    public static void DocxContextualContributionSpacingPreservesAuthoredSnapshots()
+    {
+        foreach (bool sameStyle in new[] { true, false })
+        {
+            DocxTextLineLayout[] lines = CreateContextualContributionLines(true, true, sameStyle, 12d, 6d);
+            TestAssert.Equal(6d, lines[1].PendingAfterSpacing ?? -1d);
+            TestAssert.Equal(12d, lines[1].ParagraphBeforeSpacing ?? -1d);
+            TestAssert.Equal(24d, lines[1].ParagraphAfterSpacing ?? -1d);
+            TestAssert.Equal(24d, lines[2].PendingAfterSpacing ?? -1d);
+            TestAssert.Equal(sameStyle ? 0d : 12d, lines[1].AppliedBeforeSpacing ?? -1d);
+            TestAssert.True(lines[1].ContextualSpacingSuppressed == sameStyle, "Different styles preserve the ordinary collapsed boundary.");
+        }
+    }
+
+    public static void DocxContextualContributionSpacingKeepsChainEstimatesAligned()
+    {
+        var intro = new DocxParagraph([new DocxTextRun("Intro", 10d, null, false, false, false, null, null)], [], "Body",
+            DocxTextAlignment.Left, null, 0d, 0d, 1d, 10d, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, null);
+        var previous = intro with { Runs = [new DocxTextRun("Previous", 10d, null, false, false, false, null, null)],
+            SpacingAfterPoints = 6d, Spacing = DocxParagraphSpacing.Empty with { ContextualSpacing = true },
+            KeepRules = DocxParagraphKeepRules.Empty with { KeepNext = true } };
+        var current = intro with { Runs = [new DocxTextRun("Alpha", 10d, null, false, false, false, null, null)], SpacingBeforePoints = 12d };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(
+            [new DocxParagraphElement(intro), new DocxParagraphElement(previous), new DocxParagraphElement(current)], [])
+            with { PageHeightPoints = 58d, MarginTopPoints = 10d, MarginBottomPoints = 10d };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        TestAssert.Equal(1, layout.Pages.Count);
+        TestAssert.Equal(3, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
+    }
+
+    public static void DocxContextualContributionSpacingRetainsStaticStoryFallback()
+    {
+        var previous = new DocxParagraph([new DocxTextRun("Previous header", 10d, null, false, false, false, null, null)], [], "Header",
+            DocxTextAlignment.Left, null, 0d, 6d, 1d, 24d,
+            DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }, DocxParagraphKeepRules.Empty, null);
+        var current = previous with { Runs = [new DocxTextRun("Current header", 10d, null, false, false, false, null, null)],
+            SpacingBeforePoints = 12d, SpacingAfterPoints = 0d,
+            Spacing = previous.Spacing with { ContextualSpacing = true } };
+        var body = previous with { Runs = [new DocxTextRun("Body", 10d, null, false, false, false, null, null)],
+            SpacingAfterPoints = 0d };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(body)], []) with
+        {
+            PageSettings = DocxPageSettings.Empty with
+            {
+                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [previous, current] }
+            }
+        };
+        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0].StaticTextLines.ToArray();
+        TestAssert.Equal(2, lines.Length);
+        DocxDocument control = document with
+        {
+            PageSettings = document.PageSettings with
+            {
+                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>
+                { ["default"] = [previous with { SpacingAfterPoints = 0d }, current with { SpacingBeforePoints = 0d }] }
+            }
+        };
+        DocxTextLineLayout[] controlLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(control, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages[0].StaticTextLines.ToArray();
+        TestAssert.Equal(controlLines[1].BaselineY, lines[1].BaselineY);
+        TestAssert.True(Math.Abs(lines[0].BaselineY - lines[1].BaselineY -
+            (controlLines[0].BaselineY - controlLines[1].BaselineY)) < .000001d,
+            "Static-story line-height residuals retain the prior contextual-spacing fallback.");
+    }
+
+    private static DocxTextLineLayout[] CreateContextualContributionLines(bool previousFlag, bool currentFlag,
+        bool sameStyle, double before, double previousAfter)
+    {
+        var previous = new DocxParagraph([new DocxTextRun("Previous", 10d, null, false, false, false, null, null)], [], "Previous",
+            DocxTextAlignment.Left, null, 0d, previousAfter, 1d, 10d,
+            DocxParagraphSpacing.Empty with { ContextualSpacing = previousFlag }, DocxParagraphKeepRules.Empty, null);
+        var current = previous with { Runs = [new DocxTextRun("Alpha", 10d, null, false, false, false, null, null)],
+            StyleId = sameStyle ? "Previous" : "Current", SpacingBeforePoints = before, SpacingAfterPoints = 24d,
+            Spacing = DocxParagraphSpacing.Empty with { ContextualSpacing = currentFlag } };
+        var next = current with { Runs = [new DocxTextRun("Bravo", 10d, null, false, false, false, null, null)],
+            SpacingBeforePoints = 0d, SpacingAfterPoints = 0d, Spacing = DocxParagraphSpacing.Empty };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(
+            [new DocxParagraphElement(previous), new DocxParagraphElement(current), new DocxParagraphElement(next)], []);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.SelectMany(p => p.Items.OfType<DocxTextLineLayout>()).ToArray();
+    }
+
     public static void DocxSyntheticContextualSpacingSuppressesSameStyleGap()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

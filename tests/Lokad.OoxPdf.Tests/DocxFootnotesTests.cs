@@ -492,7 +492,7 @@ internal static class DocxFootnotesTests
                 {
                     var previous = new XElement(NoteWord + "p", new XElement(NoteWord + "pPr",
                         new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", "120"))),
-                        new XElement(NoteWord + "r", new XElement(NoteWord + "t", variant == 5 ?
+                        new XElement(NoteWord + "r", new XElement(NoteWord + "t", variant is 5 or 6 ?
                             string.Join(' ', Enumerable.Repeat("Public wrapped predecessor", 35)) : "Public preceding paragraph")));
                     if (variant == 6) previous.Element(NoteWord + "pPr")!.Add(new XElement(NoteWord + "contextualSpacing"));
                     paragraph.AddBeforeSelf(previous);
@@ -615,6 +615,40 @@ internal static class DocxFootnotesTests
             text.Value = string.Join(' ', Enumerable.Repeat("Public wrapped paragraph text", 35));
             modify?.Invoke(xml);
         });
+
+    public static void DocxContextualNoteContributionLinksFollowSuppressedGaps()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            double lineHeight = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 0), geometry)[0].Height;
+            foreach (bool previousFlag in new[] { false, true })
+            foreach (bool currentFlag in new[] { false, true })
+            {
+                DocxDocument document = ReadNoteHitAreaFixture(kind, custom, 24, xml =>
+                {
+                    XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+                    XElement props = paragraph.Element(NoteWord + "pPr")!;
+                    props.Element(NoteWord + "spacing")!.SetAttributeValue(NoteWord + "before", "240");
+                    props.Add(new XElement(NoteWord + "contextualSpacing", new XAttribute(NoteWord + "val", currentFlag ? "1" : "0")));
+                    paragraph.AddBeforeSelf(new XElement(NoteWord + "p", new XElement(NoteWord + "pPr",
+                        new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", "120"),
+                            new XAttribute(NoteWord + "line", "240"), new XAttribute(NoteWord + "lineRule", "auto")),
+                        new XElement(NoteWord + "contextualSpacing", new XAttribute(NoteWord + "val", previousFlag ? "1" : "0"))),
+                        new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
+                });
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(document, geometry);
+                TestAssert.Equal(4, links.Length);
+                TestAssert.True(Math.Abs(links[0].Height - lineHeight - (currentFlag ? 0d : 30d)) < .000001d,
+                    "A contextual mark omits its suppressed before/after contributions; predecessor suppression preserves the unconsumed before-gap.");
+                TestAssert.Equal(12d, document.Paragraphs[1].SpacingBeforePoints);
+                TestAssert.Equal(24d, document.Paragraphs[1].SpacingAfterPoints);
+                TestAssert.Equal(6d, document.Paragraphs[0].SpacingAfterPoints);
+            }
+        }
+    }
 
     public static void DocxCustomNoteMarksHonorExplicitFalseFlags()
     {

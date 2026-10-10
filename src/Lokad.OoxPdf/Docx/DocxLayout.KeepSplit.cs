@@ -322,37 +322,47 @@ internal sealed partial class DocxLayoutEngine
         return string.IsNullOrWhiteSpace(styleId) ? string.Empty : styleId;
     }
 
+    internal static bool HasSameContextualSpacingStyle(DocxParagraph? previous, DocxParagraph current) =>
+        previous is not null && string.Equals(NormalizeContextualSpacingStyleId(previous.StyleId),
+            NormalizeContextualSpacingStyleId(current.StyleId), StringComparison.Ordinal);
+
+    internal static bool IsPlainContextualSpacingParagraph(DocxParagraph paragraph) =>
+        double.IsFinite(paragraph.SpacingBeforePoints) && double.IsFinite(paragraph.SpacingAfterPoints) &&
+        paragraph.SpacingBeforePoints >= 0d && paragraph.SpacingAfterPoints >= 0d &&
+        paragraph.Spacing.BeforeAutoSpacingValue is null && paragraph.Spacing.BeforeLinesValue is null &&
+        paragraph.Spacing.AfterAutoSpacingValue is null && paragraph.Spacing.AfterLinesValue is null &&
+        paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 && paragraph.FieldReferences.Count == 0 &&
+        paragraph.CommentRanges.Count == 0 && paragraph.Revisions.Count == 0 && paragraph.RevisionRanges.Count == 0 &&
+        paragraph.ListLabel is null && paragraph.Hyperlinks.Count == 0 &&
+        paragraph.Runs.All(r => !r.Text.Contains('\n') && !r.Text.Contains('\r') && !r.Text.Contains('\t'));
+
     private static DocxParagraphSpacingProfile ResolveParagraphSpacingProfile(
         DocxParagraph? previousParagraph,
         DocxParagraph paragraph,
         double pendingAfterSpacing,
-        double spacingScale)
+        double spacingScale,
+        bool resolveContextualContributions = true)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-        bool ShouldSuppressContextualSpacing()
-        {
-            DocxEffectiveParagraphProperties currentEffective = paragraph.EffectiveProperties;
-            DocxEffectiveParagraphProperties? previousEffective = previousParagraph?.EffectiveProperties;
-            return currentEffective.Spacing.ContextualSpacing == true &&
-                previousEffective is not null &&
-                string.Equals(
-                    NormalizeContextualSpacingStyleId(previousEffective.StyleId),
-                    NormalizeContextualSpacingStyleId(currentEffective.StyleId),
-                    StringComparison.Ordinal);
-        }
-
-        bool suppress = ShouldSuppressContextualSpacing();
+        bool sameStyle = HasSameContextualSpacingStyle(previousParagraph, paragraph);
+        bool suppressBefore = sameStyle && effective.Spacing.ContextualSpacing == true;
+        bool suppressAfter = sameStyle && previousParagraph!.Spacing.ContextualSpacing == true;
+        bool admitted = resolveContextualContributions && sameStyle && IsPlainContextualSpacingParagraph(previousParagraph!) &&
+            IsPlainContextualSpacingParagraph(paragraph);
         double spacingBefore = effective.SpacingBeforePoints * spacingScale;
         double spacingAfter = effective.SpacingAfterPoints * spacingScale;
-        double appliedBefore = suppress
-            ? 0d
-            : Math.Max(pendingAfterSpacing, spacingBefore);
+        // Word collapses the ordinary gap before suppressing each paragraph's
+        // contribution. Keep raw values available to layout inspection.
+        double beforeContribution = Math.Max(0d, spacingBefore - pendingAfterSpacing);
+        double appliedBefore = !admitted || !suppressBefore && !suppressAfter
+            ? (suppressBefore ? 0d : Math.Max(pendingAfterSpacing, spacingBefore))
+            : (suppressAfter ? 0d : pendingAfterSpacing) + (suppressBefore ? 0d : beforeContribution);
         return new DocxParagraphSpacingProfile(
             pendingAfterSpacing,
             spacingBefore,
             spacingAfter,
             appliedBefore,
-            suppress);
+            admitted ? suppressBefore || suppressAfter : suppressBefore);
     }
 
     private static bool ShouldScaleExactBodyAdvance(DocxParagraph paragraph, DocxLineHeightProfile profile, double fontSize)
