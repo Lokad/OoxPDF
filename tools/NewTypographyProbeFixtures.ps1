@@ -390,3 +390,12 @@ New-TypographyProbe `
 '@
 
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"
+
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-no-wrap-distribution-probe" `
+    -Transform '<a:xfrm><a:off x="914400" y="914400"/><a:ext cx="6350000" cy="4445000"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" wrap="none" vertOverflow="overflow"><a:noAutofit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr algn="dist"/><a:r><a:rPr sz="1800" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Public teams compare stock.</a:t></a:r><a:endParaRPr sz="1800"><a:latin typeface="Arial"/></a:endParaRPr></a:p>
+          <a:p><a:pPr algn="dist"/><a:r><a:rPr sz="1800" kern="1200"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Public teams compare stock.</a:t></a:r><a:endParaRPr sz="1800"><a:latin typeface="Arial"/></a:endParaRPr></a:p>
+'@

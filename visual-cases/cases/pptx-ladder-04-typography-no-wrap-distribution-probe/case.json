@@ -1,0 +1,25 @@
+{
+  "id": "pptx-ladder-04-typography-no-wrap-distribution-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-no-wrap-distribution-probe.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "alignment",
+    "distribution",
+    "no-wrap",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.1,
+    "minStructuralSimilarity": 0.99,
+    "minForegroundRecall": 0.95
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -199,7 +199,8 @@ internal sealed partial class PptxRenderer
         bool cullOutOfFrameLines,
         double baselineY,
         double clipY,
-        double clipHeight)
+        double clipHeight,
+        bool suppressNoWrapDistribution = false)
     {
         // Office drops out-of-frame lines under vertOverflow clip (ellipsis keeps its own last-line marker logic): the
         // anchor-overflow reference emits 5 text operations where the unculled
@@ -211,7 +212,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        AddAlignedParagraphLine(lines, line, box, alignment, textX, textWidth, justify, distribute, advanceEstimator);
+        AddAlignedParagraphLine(lines, line, box, alignment, textX, textWidth, justify,
+            distribute && !suppressNoWrapDistribution, advanceEstimator);
     }
 
     private static void AddAlignedParagraphLine(
@@ -313,6 +315,20 @@ internal sealed partial class PptxRenderer
     private static bool IsWordJustifiedAlignment(TextAlignment alignment)
     {
         return alignment is TextAlignment.Justify or TextAlignment.JustLow or TextAlignment.ThaiDistributed;
+    }
+
+    private static bool UsesNoWrapAsciiDistribution(PptxTextFrameModel frame, PptxTextParagraphModel paragraph)
+    {
+        // Office keeps nominal advances for these no-wrap distributed paragraphs.
+        // Other scripts and frame modes retain the existing distribution rules.
+        return paragraph.Style.Alignment == TextAlignment.Distributed &&
+            paragraph.Bullet.Kind == PptxParagraphBulletKind.None && paragraph.Style.TabStops.Count == 0 &&
+            !paragraph.HasManualLineBreak && frame.Orientation == PptxTextOrientation.Horizontal &&
+            Math.Abs(frame.TextRotationDegrees) <= PptxTextMetricRules.CoordinateTolerance &&
+            !frame.TextFlipHorizontal && !frame.TextFlipVertical && !frame.TableRowIndex.HasValue &&
+            frame.ColumnCount == 1 && frame.BodyProperties.AutofitMode == PptxTextAutofitMode.None &&
+            frame.BodyProperties.WrapMode == PptxTextWrapMode.None &&
+            paragraph.Runs.All(run => run.Text.All(character => character is >= ' ' and <= '~'));
     }
 
     private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth, TextAdvanceEstimator advanceEstimator)
