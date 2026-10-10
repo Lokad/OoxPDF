@@ -2272,6 +2272,188 @@ internal static class PptxImagesTests
             !mixedDiagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "One admitted use must not suppress another use's depth fallback diagnostic.");
     }
 
+    public static void PptxSvgVaryingNumericLinearStopAlphaUsesOneVectorMask()
+    {
+        const string stops = "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\".5\" stop-color=\"#00FF00\" stop-opacity=\".75\"/><stop offset=\"1\" stop-color=\"#0000FF\" stop-opacity=\".5\"/>";
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingLinearSvg(stops, bodyAttrs: "opacity=\".5\" fill-opacity=\".5\""), diagnostics));
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/S /Luminosity").Count);
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+        TestAssert.Equal(2, System.Text.RegularExpressions.Regex.Matches(pdf, "/ShadingType 2").Count);
+        TestAssert.Contains("/ca 0.25 /CA 1 /SMask", pdf);
+        TestAssert.Contains("/C0 [0.251 0.251 0.251]", pdf);
+        TestAssert.Contains("/C1 [0.749 0.749 0.749]", pdf);
+        TestAssert.Contains("/C1 [0.502 0.502 0.502]", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id is "SVG_UNSUPPORTED_CONTENT" or "PPTX_NODE_RENDER_FAILED"),
+            "Admitted numeric linear stop alpha must render without an ignored-alpha diagnostic.");
+    }
+
+    public static void PptxSvgVaryingLinearMaskRestoresBeforeStrokeAndLaterPaint()
+    {
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops,
+            bodyAttrs: "stroke=\"#00FF00\" stroke-width=\"2\"",
+            after: "<rect x=\"10\" y=\"5\" width=\"20\" height=\"15\" fill=\"#00FF00\"/>")));
+        int start = pdf.IndexOf("stream\n", StringComparison.Ordinal) + "stream\n".Length;
+        string page = pdf.Substring(start, pdf.IndexOf("endstream", start, StringComparison.Ordinal) - start);
+        var stack = new Stack<bool>(); bool masked = false; int gradients = 0, strokes = 0, laterPaint = 0;
+        foreach (string raw in page.Split('\n'))
+        {
+            string line = raw.Trim();
+            if (line == "q") { stack.Push(masked); }
+            else if (line == "Q") { masked = stack.Pop(); }
+            else if (line.EndsWith(" gs", StringComparison.Ordinal) && line.StartsWith("/GSV", StringComparison.Ordinal)) { masked = true; }
+            else if (line.EndsWith(" sh", StringComparison.Ordinal))
+            {
+                TestAssert.True(masked, "The clipped color shading must receive the varying mask."); gradients++;
+            }
+            else if (line == "S") { TestAssert.True(!masked, "The independently painted stroke must restore its mask."); strokes++; }
+            else if (gradients > 0 && line == "f") { TestAssert.True(!masked, "Later paths must restore the prior mask state."); laterPaint++; }
+        }
+        TestAssert.Equal(1, gradients); TestAssert.Equal(1, strokes); TestAssert.Equal(1, laterPaint); TestAssert.Equal(0, stack.Count);
+    }
+
+    public static void PptxSvgVaryingLinearMaskBoundsStopCountAndIsolationDepth()
+    {
+        foreach (int count in new[] { 256, 257 })
+        {
+            string stops = string.Concat(Enumerable.Range(0, count).Select(i => "<stop offset=\"" +
+                ((double)i / (count - 1)).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\" stop-opacity=\"" +
+                (i == 0 ? ".25" : "1") + "\"/>"));
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingLinearSvg(stops), diagnostics));
+            TestAssert.Equal(count == 256, pdf.Contains("/S /Luminosity", StringComparison.Ordinal));
+            TestAssert.Equal(count > 256, diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)));
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Stop-count admission must preserve fallback paint.");
+        }
+        foreach (int depth in new[] { 31, 32 })
+        {
+            string svg = VaryingLinearSvg(VaryingLinearStops);
+            svg = svg.Replace("</defs>", "</defs>" + string.Concat(Enumerable.Repeat("<g opacity=\".5\">", depth)), StringComparison.Ordinal)
+                .Replace("</svg>", string.Concat(Enumerable.Repeat("</g>", depth)) + "</svg>", StringComparison.Ordinal);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
+            TestAssert.Equal(32, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+            TestAssert.Equal(depth == 31, pdf.Contains("/S /Luminosity", StringComparison.Ordinal));
+            TestAssert.Equal(depth == 32, diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)));
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Mask admission must preserve the maximum existing isolation depth.");
+        }
+        string mixed = VaryingLinearSvg(VaryingLinearStops, after:
+            string.Concat(Enumerable.Repeat("<g opacity=\".5\">", 32)) +
+            "<path d=\"M0 0H100V50H0Z\" fill=\"url(#paint)\"/>" + string.Concat(Enumerable.Repeat("</g>", 32)));
+        var mixedDiagnostics = new List<OoxPdfDiagnostic>();
+        string mixedPdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(mixed, mixedDiagnostics));
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(mixedPdf, "/S /Luminosity").Count);
+        TestAssert.True(mixedDiagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)) &&
+            !mixedDiagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "One admitted use must not suppress another use's depth fallback diagnostic.");
+    }
+
+
+    public static void PptxSvgVaryingLinearProjectionPreservesBoxAndUserUnits()
+    {
+        foreach ((double width, double height) in new[] { (144d, 72d), (216d, 36d) })
+        {
+            double[] box = LinearNativeMatrix(VaryingLinearSvg(VaryingLinearStops, "x2=\"1\" y2=\"1\""), width, height);
+            TestAssert.Equal(width, box[0]); TestAssert.Equal(-height, box[1]);
+            TestAssert.Equal(-width, box[2]); TestAssert.Equal(-height, box[3]);
+            TestAssert.True(Math.Abs(LinearProjection(box, box[4] + width, box[5]) - .5d) < .00001d &&
+                Math.Abs(LinearProjection(box, box[4], box[5] - height) - .5d) < .00001d,
+                "Object-box diagonal projection must assign equal fractions to the right/top and left/bottom corners under stretch.");
+            double[] user = LinearNativeMatrix(VaryingLinearSvg(VaryingLinearStops,
+                "gradientUnits=\"userSpaceOnUse\" x2=\"100\" y2=\"50\""), width, height);
+            TestAssert.True(Math.Abs(LinearProjection(user, user[4] + width, user[5]) - .8d) < .00001d &&
+                Math.Abs(LinearProjection(user, user[4], user[5] - height) - .2d) < .00001d,
+                "User-unit diagonal projection must retain source-unit fractions under stretch.");
+        }
+        double[] rounded = LinearNativeMatrix(VaryingLinearSvg(VaryingLinearStops, "x1=\".123456\" x2=\".987654\""), 144d, 72d);
+        foreach (double fraction in new[] { 0d, 1d })
+        {
+            double actual = LinearProjection(rounded, 72d + fraction * 144d, rounded[5]);
+            double expected = (fraction - .123456d) / (.987654d - .123456d);
+            TestAssert.True(Math.Abs(actual - expected) <= .001d, "Serialized native projection must meet its corner-error bound.");
+        }
+        double[] scaled = LinearNativeMatrix(VaryingLinearSvg(VaryingLinearStops, "y2=\"1\"",
+            "transform=\"translate(8,3) scale(.8,.7)\""), 144d, 72d);
+        TestAssert.Equal(115.2d, scaled[0]); TestAssert.Equal(-50.4d, scaled[1]);
+        TestAssert.Equal(-115.2d, scaled[2]); TestAssert.Equal(-50.4d, scaled[3]);
+    }
+
+    public static void PptxSvgVaryingLinearAlphaRetainsExcludedGeometryFallbacks()
+    {
+        foreach (string attrs in new[] { "spreadMethod=\"repeat\" x2=\".2\"", "spreadMethod=\"reflect\" x2=\".2\"",
+            "gradientTransform=\"scale(.75,.6)\"", "x1=\"1\" x2=\"0\"", "x2=\"0\" y1=\"1\" y2=\"0\"",
+            "x1=\".314159\" x2=\".31417\"", "x1=\".5\" x2=\".5\"" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            byte[] actual = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops, attrs), diagnostics);
+            byte[] opaque = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops.Replace(" stop-opacity=\".25\"", string.Empty, StringComparison.Ordinal), attrs));
+            TestAssert.True(actual.AsSpan().SequenceEqual(opaque), "Excluded varying linear geometry must retain prior sampled paint bytes.");
+            TestAssert.True(diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)) &&
+                !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "Excluded linear alpha must diagnose without losing the picture.");
+        }
+        foreach (string stops in new[]
+        {
+            "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"50%\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
+            "<stop offset=\"0\" stop-color=\"#FF0000\" style=\"stop-opacity:.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>",
+            "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\".00001\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>"
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingLinearSvg(stops), diagnostics));
+            TestAssert.True(!pdf.Contains("/S /Luminosity", StringComparison.Ordinal) && diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
+                "Excluded syntax or native stop spacing must retain diagnosed sampling.");
+        }
+        var transformed = new List<OoxPdfDiagnostic>();
+        string transformedPdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops,
+            "gradientUnits=\"userSpaceOnUse\" x2=\"100\"", "transform=\"translate(5,3)\""), transformed));
+        TestAssert.True(!transformedPdf.Contains("/S /Luminosity", StringComparison.Ordinal) && transformed.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
+            "Unqualified user-space path transforms must retain their alpha fallback.");
+        foreach (string transform in new[] { "rotate(30,50,25)", "skewX(20)", "translate(100,0) scale(-1,1)" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string bodyAttrs = "transform=\"" + transform + "\"";
+            byte[] actual = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops, bodyAttrs: bodyAttrs), diagnostics);
+            byte[] opaque = RenderSvgOpacityTest(VaryingLinearSvg(VaryingLinearStops.Replace(" stop-opacity=\".25\"", string.Empty, StringComparison.Ordinal), bodyAttrs: bodyAttrs));
+            TestAssert.True(actual.AsSpan().SequenceEqual(opaque) && diagnostics.Any(d => d.Message.Contains("ignores stop-opacity", StringComparison.Ordinal)),
+                "Rotated/sheared/reflected SVG element gradients must retain their diagnosed sampling.");
+        }
+    }
+
+    private const string VaryingLinearStops = VaryingRadialStops;
+    private static string VaryingLinearSvg(string stops, string attrs = "", string bodyAttrs = "", string after = "") =>
+        VaryingRadialSvg(stops, attrs, bodyAttrs, after).Replace("radialGradient", "linearGradient", StringComparison.Ordinal);
+    private static double LinearProjection(double[] matrix, double x, double y) =>
+        (matrix[3] * (x - matrix[4]) - matrix[2] * (y - matrix[5])) / (matrix[0] * matrix[3] - matrix[1] * matrix[2]);
+    private static double[] LinearNativeMatrix(string svg, double width, double height)
+    {
+        string original = WriteSvgGradientDeck(svg), input = original;
+        string output = Path.Combine(Path.GetTempPath(), "ooxpdf-svg-linear-projection-" + Guid.NewGuid().ToString("N") + ".pdf");
+        try
+        {
+            var entries = new Dictionary<string, byte[]>();
+            using (ZipArchive source = ZipFile.OpenRead(original))
+            {
+                foreach (ZipArchiveEntry entry in source.Entries)
+                {
+                    using var bytes = new MemoryStream(); using Stream stream = entry.Open(); stream.CopyTo(bytes);
+                    entries.Add(entry.FullName, bytes.ToArray());
+                }
+            }
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XDocument slide = XDocument.Parse(Encoding.UTF8.GetString(entries["ppt/slides/slide1.xml"]));
+            XElement ext = slide.Descendants(a + "xfrm").Single().Element(a + "ext")!;
+            ext.SetAttributeValue("cx", width * 12700d); ext.SetAttributeValue("cy", height * 12700d);
+            entries["ppt/slides/slide1.xml"] = Encoding.UTF8.GetBytes(slide.ToString());
+            input = TestFixtures.WriteTempPackage(".pptx", entries); OoxPdfConverter.Convert(input, output);
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            int start = pdf.IndexOf("stream\n", StringComparison.Ordinal) + "stream\n".Length;
+            string page = pdf.Substring(start, pdf.IndexOf("endstream", start, StringComparison.Ordinal) - start);
+            TestAssert.True(page.Split('\n').Any(line => line.Trim().EndsWith(" sh", StringComparison.Ordinal)), "Native linear paint must expose its projection matrix.");
+            string matrix = page.Split('\n').Last(line => line.Trim().EndsWith(" cm", StringComparison.Ordinal));
+            return matrix.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(6).Select(v => double.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+        }
+        finally { File.Delete(original); if (input != original) { File.Delete(input); } File.Delete(output); }
+    }
+
     private const string VaryingRadialStops = "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
     private static string VaryingRadialSvg(string stops, string attrs = "", string bodyAttrs = "", string after = "") =>
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><defs><radialGradient id=\"paint\" " + attrs + ">" + stops +

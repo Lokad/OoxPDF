@@ -284,9 +284,10 @@ internal sealed partial class PptxRenderer
             }
             else if (paint.Gradient is { } gradient)
             {
+                bool varyingAlphaAdmitted = false;
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
-                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY))
+                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted))
                     {
                         nonFiniteGradientPaths++;
                     }
@@ -300,6 +301,10 @@ internal sealed partial class PptxRenderer
                 else if (badCommand is null)
                 {
                     unreadablePaths++;
+                }
+                if (gradientId is not null)
+                {
+                    (varyingAlphaAdmitted ? admittedGradientAlpha : fallbackGradientAlpha).Add(gradientId);
                 }
             }
             else if (paint.Color is { } color)
@@ -673,8 +678,11 @@ internal sealed partial class PptxRenderer
         double imageY,
         double imageHeight,
         double scaleX,
-        double scaleY)
+        double scaleY,
+        bool allowAlphaMask,
+        out bool varyingAlphaAdmitted)
     {
+        varyingAlphaAdmitted = false;
         // RV07: objectBoundingBox vectors normalize into path space while
         // userSpaceOnUse vectors stay in user units; strips run along the
         // dominant gradient axis so vertical gradients vary top to bottom.
@@ -728,6 +736,34 @@ internal sealed partial class PptxRenderer
             graphics.SaveState();
             graphics.SetAlpha(opacity, 1d);
         }
+        SvgTransform? axial = allowAlphaMask ? ReadSvgLinearAlphaTransform(gradient, transform, effective,
+            pathBounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY) : null;
+        if (axial is { } matrix)
+        {
+            var mask = new PdfGraphicsBuilder();
+            mask.SaveState();
+            mask.Transform(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY);
+            mask.PaintAxialShading(0d, 0d, 1d, 0d, gradient.Stops.Select(stop =>
+            {
+                byte alpha = (byte)Math.Round(stop.Opacity!.Value * 255d);
+                return new PdfShadingStop(stop.Offset, alpha, alpha, alpha);
+            }).ToArray());
+            mask.RestoreState();
+            double maskX = imageX + (pathBounds.MinX - minX) * scaleX;
+            double maskY = imageY + imageHeight - (pathBounds.MaxY - minY) * scaleY;
+            graphics.SetVectorLuminositySoftMask(mask, new PdfRectangle(maskX, maskY,
+                Math.Max(0.001d, imageX + (pathBounds.MaxX - minX) * scaleX - maskX),
+                Math.Max(0.001d, imageY + imageHeight - (pathBounds.MinY - minY) * scaleY - maskY)), opacity, 1d);
+            graphics.SaveState();
+            graphics.Transform(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY);
+            graphics.PaintAxialShading(0d, 0d, 1d, 0d, gradient.Stops.Select(stop =>
+                new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
+            graphics.RestoreState();
+            if (opacity < 1d) { graphics.RestoreState(); }
+            graphics.RestoreState();
+            varyingAlphaAdmitted = true;
+            return true;
+        }
         if (Math.Abs(effective.X2 - effective.X1) >= Math.Abs(effective.Y2 - effective.Y1))
         {
             int stripCount = Math.Clamp((int)Math.Ceiling(pathWidth / 2d), 16, 128);
@@ -776,6 +812,54 @@ internal sealed partial class PptxRenderer
 
         graphics.RestoreState();
         return true;
+    }
+
+    private static SvgTransform? ReadSvgLinearAlphaTransform(SvgGradient gradient, SvgTransform pathTransform,
+        SvgGradient effective, SvgPathBounds bounds, double minX, double minY, double imageX, double imageY,
+        double imageHeight, double scaleX, double scaleY)
+    {
+        if (gradient.UniformStopOpacity is not null || !gradient.HasNumericStopOpacity ||
+            !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad ||
+            (gradient.IsUserSpace && !pathTransform.IsIdentity) || gradient.Stops.Count is < 2 or > 256 ||
+            (!gradient.IsUserSpace && (pathTransform.M11 <= 0d || pathTransform.M22 <= 0d || pathTransform.M12 != 0d || pathTransform.M21 != 0d)) ||
+            (gradient.Stops[0].Offset != 0d && gradient.Stops[0].Offset < 0.001d) ||
+            (gradient.Stops[^1].Offset != 1d && gradient.Stops[^1].Offset > 0.999d)) { return null; }
+        for (int i = 1; i < gradient.Stops.Count; i++)
+        {
+            if (gradient.Stops[i].Offset - gradient.Stops[i - 1].Offset < 0.001d) { return null; }
+        }
+        double unitWidth = gradient.IsUserSpace ? 1d : bounds.MaxX - bounds.MinX;
+        double unitHeight = gradient.IsUserSpace ? 1d : bounds.MaxY - bounds.MinY;
+        double startX = gradient.IsUserSpace ? effective.X1 : gradient.X1;
+        double startY = gradient.IsUserSpace ? effective.Y1 : gradient.Y1;
+        double dx = gradient.IsUserSpace ? effective.X2 - effective.X1 : gradient.X2 - gradient.X1;
+        double dy = gradient.IsUserSpace ? effective.Y2 - effective.Y1 : gradient.Y2 - gradient.Y1;
+        // Office reversals have a distinct preview fallback; keep prior sampling.
+        if (unitWidth <= 0d || unitHeight <= 0d || dx < 0d || dy < 0d) { return null; }
+        double lengthSquared = dx * dx + dy * dy;
+        // Keep the source perpendicular axis through anisotropic viewport mapping.
+        double a = dx * unitWidth * scaleX, b = -dy * unitHeight * scaleY;
+        double c = -dy * unitWidth * scaleX, d = -dx * unitHeight * scaleY;
+        double e = imageX + (effective.X1 - minX) * scaleX;
+        double f = imageY + imageHeight - (effective.Y1 - minY) * scaleY;
+        if (!double.IsFinite(a) || !double.IsFinite(b) || !double.IsFinite(c) || !double.IsFinite(d) ||
+            !double.IsFinite(e) || !double.IsFinite(f) || !double.IsFinite(lengthSquared) || lengthSquared <= 0d) { return null; }
+        double Printed(double value) => double.Parse(PdfDocumentWriter.FormatNumber(value), CultureInfo.InvariantCulture);
+        var matrix = new SvgTransform(Printed(a), Printed(b), Printed(c), Printed(d), Printed(e), Printed(f));
+        double determinant = matrix.M11 * matrix.M22 - matrix.M12 * matrix.M21;
+        if (!double.IsFinite(determinant) || determinant == 0d) { return null; }
+        foreach ((double x, double y) in new[] { (bounds.MinX, bounds.MinY), (bounds.MinX, bounds.MaxY), (bounds.MaxX, bounds.MinY), (bounds.MaxX, bounds.MaxY) })
+        {
+            double coordinateX = gradient.IsUserSpace ? x : (x - bounds.MinX) / unitWidth;
+            double coordinateY = gradient.IsUserSpace ? y : (y - bounds.MinY) / unitHeight;
+            double source = ((coordinateX - startX) * dx + (coordinateY - startY) * dy) / lengthSquared;
+            double printedX = Printed(imageX + (x - minX) * scaleX);
+            double printedY = Printed(imageY + imageHeight - (y - minY) * scaleY);
+            double actual = (matrix.M22 * (printedX - matrix.OffsetX) - matrix.M21 * (printedY - matrix.OffsetY)) / determinant;
+            // Projection error is affine: corner bounds cover the clipped path.
+            if (!double.IsFinite(source) || !double.IsFinite(actual) || Math.Abs(actual - source) > 0.001d) { return null; }
+        }
+        return matrix;
     }
 
     private static bool AreSvgGradientBoundsMappable(SvgPathBounds bounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
@@ -861,7 +945,11 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
                 gradients[id] = new SvgGradient(rawX1, rawY1, rawX2, rawY2, stops, linearUserSpace, ReadSvgGradientSpread((string?)gradient.Attribute("spreadMethod")))
-                    { UniformStopOpacity = ReadUniformSvgStopOpacity(gradient) };
+                {
+                    UniformStopOpacity = ReadUniformSvgStopOpacity(gradient),
+                    HasNumericStopOpacity = gradient.Elements().Where(e => e.Name.LocalName == "stop").All(e => ReadNumericSvgStopOpacity(e) is not null),
+                    HasIdentityGradientTransform = gradientTransform.IsIdentity
+                };
             }
         }
 
