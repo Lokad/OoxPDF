@@ -1131,3 +1131,45 @@ The original strict-transfer failure is retained; qualified changed-output bindi
 are separate.34cached cases/508failed gates transfer only through fresh exact
 unchangedPDFidentity; no new cache gate is claimed. Packed0.1.5smoke passes.
 API/dependencies/version remain unchanged; release preparation is deferred.
+
+
+## RV06-L132: note hit areas own the unconsumed before-gap (2026-10-10)
+
+Word16 assigns a note-bearing paragraph only the before-gap remaining beyond its
+predecessor's after-spacing. With 12pt before-spacing, a preceding 6pt after-gap
+leaves 6pt owned above the line; preceding 24/36pt leaves none. Direct/inherited
+settings, automatic/exact slots, section starts and empty predecessors are
+qualified in ordinary unscaled, one-column paragraphs rendered on one body line.
+The rectangle expands upward and retains the qualified after-spacing below.
+After-only upper-bound behavior remains unchanged. Wrapped/contextual/rich
+predecessors and multiline/contextual/auto/line-unit/scaled/static/table/column/
+manual/page-break layouts keep fallback. Glyphs, horizontal bounds and actual
+note destinations remain unchanged.
+
+28 primary +12 held-out +2 public controls cover 38 independent geometries. Two
+primary cases reuse exact L131 before12 inputs and references; public probes
+duplicate primary geometry. Twenty independent controls and four duplicates
+change 24 rectangles. All 96 links in those supported controls match Word's
+vertical bounds within 0.005pt, including unchanged links. Eighteen guards retain
+PDF bytes; all 42 retain rasters, decoded-word multisets and page counts. Four
+portable methods pass; three fail exact L131 and one guard passes both. The same
+test source is pinned for both builds. The qualified prototype source/DLL/PDB
+remains archived. An accidental unchanged-root build is retained and excluded
+from prototype qualification. All ten generator ZIP payloads reproduce.
+
+Two new public cases require matching pages/dimensions, only the corresponding
+note approximation warning and per-page numeric gates: footnotes use
+MAE<=.42/SSIM>=.80/recall>=.80/changed<=.0055; endnotes use .95/.60/.56/.010.
+Annotations are audited separately; no new painting improvement is claimed.
+
+Frozen runtime **71de81e8** passes clean Windows Release and one full catalogue:
+2351 registered /2350 passed /0 failed /1 optional private-document skip, including
+91 PDF, 130 SVG, 151 images, 184 typography and 985 methods containing Docx. Linux
+passes 85 PDF +89 targeted methods, with six existing Arial skips and two archive
+SourceLink warnings. Both inventories validate 358 cases across ten families.
+Fresh PDF identity transfers 42 current comparisons, 206 unchanged prior outputs
+and two requalified identical before12 inputs through 250 conversions. All 2911
+inherited DOCX and 251 broader comparison PDFs retain bytes and page counts.
+The 34 cached markup cases /508 failed gates transfer only through fresh exact
+unchanged PDF identity. Local 0.1.5 package smoke passes. API/dependencies/version
+remain unchanged; release preparation is deferred.
