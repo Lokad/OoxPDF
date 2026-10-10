@@ -775,3 +775,53 @@ The34 cached DOCX cases and508 failed gates transfer through fresh PDF identity;
 no new reference-cache gate is claimed. All six candidate Office deck PDFs retain
 their compared bytes after the source freeze. Packed0.1.5 smoke passes. API,
 dependencies and version stay unchanged; release preparation remains deferred.
+
+## RV08-T7: numbering overrides, alphabetic labels and body pitch (2026-10-10)
+
+Mixed-level lists with bullet font/size overrides previously shared a global
+counter, producing1–7 where Office uses parent/child sequences1/1/2/2/1/1/3.
+Known-format valid-level/start non-table numbering now uses per-level sequences
+independently from label geometry. Overridden font/size/kerning and first-fragment
+X remain; default label-clearance admission is unchanged. Run-free plain paragraphs
+clear the qualified sequence map. A larger qualified number label no longer enlarges
+body-font paragraph pitch:36pt labels over24pt body retain28.8pt advances, replacing
+43.2pt advances. Character/table/unsupported numbering retains its prior height rule.
+
+Office alphabetic labels repeat letters (z,aa,bb; zz,aaa,bbb), with a1..30repeat cycle.
+Controls pin the779/780/781,806/807 and1560/1561 boundaries, larger1024/2048/4096/
+8192/16384 starts and32767 continuation. Formatting allocates at most30letters in
+the qualified branch. Table/malformed fallback and shared DOCX alphabetic formatting
+remain unchanged. Earlier spreadsheet-style alpha expectations are corrected against
+these independent Office controls. Counter-only and pre-empty-boundary prototypes
+retain exact source/binaries and comparisons; neither is qualified incidentally.
+
+86 authored controls include one duplicate singleton32767 boundary, so85 distinct
+controls are counted per syntax. Original syntax gives80paired MAE/SSIM improvements,
+three raster identities and two metric tradeoffs; import gives79improvements, four
+identities and the same tradeoffs. All84inspectable text sequences match Office;
+rotated text has no page-level Office operations and improves by raster. The Times
+equal-start case raises MAE1.35982→1.36326 and SSIM.389113→.390548. The30letter Y case
+raises MAE1.43121→1.59600 and SSIM.267517→.303779 while correcting its label. No
+both-metric regression remains. Wrapping, clipping, normal autofit and centered/bottom
+anchor controls improve. Label-clearance/font residuals remain: in the36pt-label probe,
+Office body starts120.02/140.06pt, while candidate retains108pt; baselines now agree
+within.04pt. This batch establishes no complete override-label layout parity.
+
+The existing public mixed-list case now matches decoded labels and improves
+MAE.4991→.4622, SSIM.962934→.968632. Its approximate gate strengthens to MAE<=.6 and
+SSIM>=.965; fixture and classification stay unchanged. All96other public PDFs retain
+bytes. Five new portable methods cover counters, inheritance/style/empty transitions,
+authored label geometry, alphabetic cycles and body pitch. Four unchanged new methods
+fail exact T6 parent; the label-style/placement guard passes.
+
+Frozen Windows clean Release/full2317registered/2316passed/0failed/1optional skip
+includes91PDF/130SVG/151images/176typography/959DOCX. Linux85PDF+48targeted=133passes,
+six existing Windows-Arial skips, two archive SourceLink warnings. Both inventories
+validate347cases/10families. Ten new control-deck PDFs retain their compared bytes
+after freeze. Fresh60SVG/2911inheritedDOCX/80comparison PDFs retain bytes, with no
+inherited page changes. Fourteen of17related guard decks retain bytes; three older
+numbering decks improve on five pages with98other raster identities. The34cached
+DOCXcases/508failed gates transfer through fresh PDF identity; no new cache gate is
+claimed. Packed0.1.5smoke passes; API/dependencies/version stay unchanged and release
+preparation remains deferred. The content audit explicitly replaces four stale T3
+pre-maintenance reference paths with their pinned qualified repaired targets.
