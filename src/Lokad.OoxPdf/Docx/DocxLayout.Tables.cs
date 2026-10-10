@@ -391,7 +391,9 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double paragraphSpacingScale,
-        IReadOnlyDictionary<string, string>? commentMarkerLabels = null)
+        IReadOnlyDictionary<string, string>? commentMarkerLabels = null,
+        bool adjustAlignedMinimumMargins = false,
+        double? alignedMinimumAvailableHeight = null)
     {
         DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels);
         var tableContext = new DocxTableLayoutContext(
@@ -412,7 +414,8 @@ internal sealed partial class DocxLayoutEngine
             table.LayoutValue,
             table.Revisions);
         var rowHeights = new double[table.Rows.Count];
-        double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, bool isLastRow)
+        var rowBottomMargins = new double[table.Rows.Count];
+        double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, bool isLastRow, int rowIndex)
         {
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -422,14 +425,30 @@ internal sealed partial class DocxLayoutEngine
                     .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
                     .DefaultIfEmpty(0d)
                     .Max();
-            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow);
+            double bottomMargin = adjustAlignedMinimumMargins
+                ? ResolveAlignedMinimumRowBottomMargin(table, row, textMeasurer, paragraphSpacingScale, contentHeight) : 0d;
+            rowBottomMargins[rowIndex] = bottomMargin;
+            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
         }
 
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale, isLastRow: rowIndex == table.Rows.Count - 1);
+            rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale,
+                isLastRow: rowIndex == table.Rows.Count - 1, rowIndex: rowIndex);
         }
+
+        // Admit the new declared-margin geometry only when the complete table
+        // fits the current body frame; page-boundary fragmentation keeps fallback.
+        if (adjustAlignedMinimumMargins && alignedMinimumAvailableHeight is { } availableHeight &&
+            rowHeights.Sum() > availableHeight)
+        {
+            adjustAlignedMinimumMargins = false;
+            for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+                rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale,
+                    isLastRow: rowIndex == table.Rows.Count - 1, rowIndex: rowIndex);
+        }
+        tableContext = tableContext with { AlignedMinimumRowBottomMargins = rowBottomMargins };
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
@@ -954,7 +973,7 @@ internal sealed partial class DocxLayoutEngine
 
     // W6-a1: fixed table geometry joins scaled space; fixedScale reuses the layout
     // spacing scale (identical in every mode).
-    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight, double fixedScale, bool isLastRow)
+    private static double ResolveTableRowHeight(DocxTableRow row, double contentHeight, double fixedScale, bool isLastRow, double declaredBottomMarginAdvance = 0d)
     {
         double MaxBottomBorderWidth()
         {
@@ -967,7 +986,7 @@ internal sealed partial class DocxLayoutEngine
         if (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
             row.HeightPoints is { } exactHeight)
         {
-            double exact = Math.Max(1d, exactHeight * fixedScale);
+            double exact = Math.Max(1d, exactHeight * fixedScale) + declaredBottomMarginAdvance;
             if (isLastRow)
             {
                 // Office A/B (w8 exact-row probe, Word-COM rendered plus PdfInspect
@@ -986,7 +1005,7 @@ internal sealed partial class DocxLayoutEngine
         if (row.HeightPoints is not null &&
             !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
         {
-            declaredHeight += ResolveTableRowTopPadding(row, fixedScale);
+            declaredHeight += ResolveTableRowTopPadding(row, fixedScale) + declaredBottomMarginAdvance;
         }
 
         double height = Math.Max(declaredHeight, contentHeight);
@@ -1588,7 +1607,8 @@ internal sealed partial class DocxLayoutEngine
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer,
-                    contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1);
+                    contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
+                    rowIndex < tableContext.AlignedMinimumRowBottomMargins.Count ? tableContext.AlignedMinimumRowBottomMargins[rowIndex] : 0d);
             // Membership uses the same printed inset as the later geometry
             // projection. Testing nominal baselines can discard a final line
             // whose nominal font inset exceeds the already printed line pitch.

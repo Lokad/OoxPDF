@@ -185,7 +185,10 @@ internal sealed record DocxTableLayoutContext(
     double? IndentPoints,
     double? CellSpacingPoints,
     string? LayoutValue,
-    IReadOnlyList<DocxRevisionInfo>? Revisions);
+    IReadOnlyList<DocxRevisionInfo>? Revisions)
+{
+    public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
+}
 
 internal sealed record DocxTableCellLayout(
     DocxTableCell Cell,

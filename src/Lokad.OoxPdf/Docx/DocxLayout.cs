@@ -1162,7 +1162,9 @@ internal sealed partial class DocxLayoutEngine
                         pageNumber: pages.Count + 1,
                         pageCount: null,
                         paragraphSpacingScale: paragraphSpacingScale,
-                        commentMarkerLabels: commentMarkerLabels);
+                        commentMarkerLabels: commentMarkerLabels,
+                        adjustAlignedMinimumMargins: true,
+                        alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom());
                 }
 
                 LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),

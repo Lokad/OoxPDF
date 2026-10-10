@@ -5,37 +5,11 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<DocxTextLineLayout> AdjustTableMinimumLinePlacement(
         DocxTable table, DocxTableRow row, DocxTableCell cell,
         IReadOnlyList<DocxTextLineLayout> lines, IDocxTextMeasurer? measurer,
-        double cellHeight, double rowTopPadding, double usedHeight, bool isLastRow)
+        double cellHeight, double rowTopPadding, double usedHeight, bool isLastRow, double marginAdvance)
     {
         if (!lines.Any(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing)) return lines;
-        // Explicit automatic height ignores its authored value, as does row measurement.
-        if (row.HeightPoints is { } height &&
-            !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) &&
-            (!(height > 0d) || !double.IsFinite(height) ||
-            row.HeightRuleValue is not null &&
-            !string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)))
-            return lines;
-        if (row.IsHeader ||
-            table.Revisions.Count != 0 || row.Revisions.Count != 0 || cell.Revisions.Count != 0 ||
-            table.CellSpacingPoints is > 0d || table.UseLegacyTableGrid || cell.GridSpan != 1 ||
-            cell.HasVerticalMerge || cell.NoWrap || cell.FitText ||
-            cell.TextDirectionValue is not (null or "lrTb") ||
-            cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
-            cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
-            cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p)) ||
-            measurer is not IDocxLineMetricsProvider metrics ||
-            measurer is not IDocxStaticTextMetricsProvider ||
-            measurer is not IDocxHheaDescenderProvider || measurer is not IDocxHheaLineGapProvider)
-            return lines;
-        // Font changes between plain paragraphs have independent line metrics.
-        // Rich runs within one paragraph retain the earlier placement model.
-        if (cell.Paragraphs.Any(p => p.Runs.Count > 0 && p.Runs.Skip(1).Any(r =>
-            !string.Equals(r.EffectiveProperties.FontFamily, p.Runs[0].EffectiveProperties.FontFamily, StringComparison.OrdinalIgnoreCase) ||
-            r.EffectiveProperties.FontSize != p.Runs[0].EffectiveProperties.FontSize ||
-            r.EffectiveProperties.Bold != p.Runs[0].EffectiveProperties.Bold ||
-            r.EffectiveProperties.Italic != p.Runs[0].EffectiveProperties.Italic)))
-            return lines;
+        if (!IsEligibleTableMinimumCell(table, row, cell, measurer)) return lines;
+        var metrics = (IDocxLineMetricsProvider)measurer!;
         double alignmentShift = 0d;
         if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top)
         {
@@ -43,7 +17,6 @@ internal sealed partial class DocxLayoutEngine
             // hangs below it; the first-baseline inset is already applied.
             if (row.HeightPoints is not > 0d ||
                 string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) ||
-                cell.Margins.TopPoints is > 0d || cell.Margins.BottomPoints is > 0d ||
                 cell.Paragraphs.Any(p => p.Runs.Count == 0)) return lines;
             double topPadding = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, 1d);
             double bottomPadding = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, 1d);
@@ -51,8 +24,11 @@ internal sealed partial class DocxLayoutEngine
             double borderAdvance = isLastRow ? row.Cells
                 .Select(c => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(c.Borders, "bottom")))
                 .DefaultIfEmpty(0d).Max() : 0d;
+            if (bottomPadding > 0d && marginAdvance == 0d) return lines;
             double oldExtra = Math.Max(0d, cellHeight - topPadding - bottomPadding - baselineInset - usedHeight);
-            double newExtra = Math.Max(0d, cellHeight - topPadding - bottomPadding - borderAdvance - usedHeight);
+            // Declared rows include their bottom margin in their advance, outside
+            // the paragraph-slot extent used for vertical alignment.
+            double newExtra = Math.Max(0d, cellHeight - topPadding - marginAdvance - borderAdvance - usedHeight);
             alignmentShift = ResolveVerticalContentOffset(cell, newExtra) - ResolveVerticalContentOffset(cell, oldExtra);
         }
         var byParagraph = new Dictionary<DocxParagraph, List<DocxTextLineLayout>>(ReferenceEqualityComparer.Instance);
@@ -87,4 +63,58 @@ internal sealed partial class DocxLayoutEngine
             BodyLineBoxHeightPoints = l.LineHeight
         } : alignmentShift == 0d ? l : l with { BaselineY = l.BaselineY - alignmentShift }).ToArray();
     }
+    private static bool IsEligibleTableMinimumCell(
+        DocxTable table, DocxTableRow row, DocxTableCell cell, IDocxTextMeasurer? measurer)
+    {
+        // Explicit automatic height ignores its authored value, as does row measurement.
+        if (row.HeightPoints is { } height &&
+            !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) &&
+            (!(height > 0d) || !double.IsFinite(height) ||
+            row.HeightRuleValue is not null &&
+            !string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)))
+            return false;
+        if (row.IsHeader ||
+            table.Revisions.Count != 0 || row.Revisions.Count != 0 || cell.Revisions.Count != 0 ||
+            table.CellSpacingPoints is > 0d || table.UseLegacyTableGrid || cell.GridSpan != 1 ||
+            cell.HasVerticalMerge || cell.NoWrap || cell.FitText ||
+            cell.TextDirectionValue is not (null or "lrTb") ||
+            cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
+            cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
+            cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p)) ||
+            measurer is not IDocxLineMetricsProvider ||
+            measurer is not IDocxStaticTextMetricsProvider ||
+            measurer is not IDocxHheaDescenderProvider || measurer is not IDocxHheaLineGapProvider)
+            return false;
+        // Font changes between plain paragraphs have independent line metrics.
+        // Rich runs within one paragraph retain the earlier placement model.
+        if (cell.Paragraphs.Any(p => p.Runs.Count > 0 && p.Runs.Skip(1).Any(r =>
+            !string.Equals(r.EffectiveProperties.FontFamily, p.Runs[0].EffectiveProperties.FontFamily, StringComparison.OrdinalIgnoreCase) ||
+            r.EffectiveProperties.FontSize != p.Runs[0].EffectiveProperties.FontSize ||
+            r.EffectiveProperties.Bold != p.Runs[0].EffectiveProperties.Bold ||
+            r.EffectiveProperties.Italic != p.Runs[0].EffectiveProperties.Italic)))
+            return false;
+        return true;
+    }
+
+    private static double ResolveAlignedMinimumRowBottomMargin(
+        DocxTable table, DocxTableRow row, IDocxTextMeasurer? measurer,
+        double fixedScale, double? measuredContentHeight = null)
+    {
+        if (fixedScale != 1d || row.HeightPoints is not > 0d ||
+            string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) ||
+            row.Cells.Count == 0 || row.Cells.Any(cell =>
+                cell.VerticalAlignment == DocxTableCellVerticalAlignment.Top ||
+                !IsEligibleTableMinimumCell(table, row, cell, measurer) ||
+                cell.Paragraphs.Any(p => p.Runs.Count == 0) ||
+                !cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
+                    string.Equals(p.EffectiveProperties.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))))
+            return 0d;
+        // Content-dominated minimum rows retain their earlier geometry.
+        if (!string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
+            measuredContentHeight is { } content && content > row.HeightPoints.Value + ResolveTableRowTopPadding(row, fixedScale))
+            return 0d;
+        return row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, fixedScale)).Max();
+    }
+
 }
