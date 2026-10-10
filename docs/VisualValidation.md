@@ -1485,3 +1485,33 @@ minimum-height probes are freshly requalified against their exact Word
 references. All 752 compared outputs reproduce in the integrated checkout.
 The two public cases remain approximate. The local 0.1.5 package smoke passes;
 release preparation remains deferred.
+
+## RV06-L141: minimum-height placement in plain table grids
+
+Runtime `a886860b` extends the established excess-above-baseline correction per
+eligible body cell in multirow/multicell grids. All cell, row, font metrics,
+fragmentation and related/static guards remain. Row heights, following flow,
+wrapping, font state, glyph advances and graphics remain unchanged. Header,
+declared-height and complex cells retain their existing model.
+
+Fifty-four independent Word controls cover 1x2, 2x1 and 2x2 grids, first/following
+paragraphs, Calibri/Arial minima18/24/36, Times New Roman24 and mixed row/column
+face/size state. Two public duplicates and two historical note grids are counted
+separately. All 58 match Word word multisets and page counts. Fifty changed
+raster comparisons improve both MAE and SSIM; eight guards retain exact PDFs
+and PNGs. The 136 improved cell baselines retain at most0.214pt absolute error,
+including inherited row/border rounding. Historical note links and destinations
+remain unchanged; their missing6pt before contribution remains partial.
+
+Three semantic checks give one failure on the exact preceding DLL and two
+preservation passes. The public generator reproduces its two new ZIP payloads;
+the earlier26 reproducibility results transfer through unchanged generator,
+helper and fixture Git blobs. New public thresholds cover both measured pages;
+the inherited second-page text remains unchanged and approximate.
+
+Frozen validation:2387 Windows methods,2386 passes,one optional private skip;
+Linux85 PDF and125 targeted passes with six existing Arial skips. Fresh2911
+inherited and251 broader outputs retain PDF/page identities. Of752 prior visual
+outputs,750 retain bytes; two old note grids are freshly requalified against
+their exact Word references. All810 qualified outputs reproduce in root. The
+local0.1.5 package smoke passes; release preparation remains deferred.
