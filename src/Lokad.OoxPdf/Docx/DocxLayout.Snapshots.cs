@@ -414,7 +414,12 @@ internal sealed record DocxTableCellSnapshot(
     int BodyElementCount,
     int ManualBreakElementCount,
     int PageBreakElementCount,
-    int NestedTableElementCount);
+    int NestedTableElementCount)
+{
+    public DocxTableCellClipSnapshot? ContentClip { get; init; }
+}
+
+internal sealed record DocxTableCellClipSnapshot(bool Admitted, double X, double Y, double Width, double Height);
 
 internal sealed record DocxTextEmissionSnapshot(
     string MarkupMode,

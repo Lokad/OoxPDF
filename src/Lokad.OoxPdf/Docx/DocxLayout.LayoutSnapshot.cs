@@ -805,7 +805,7 @@ internal sealed partial record DocxLayoutSnapshot(
     private static DocxTableRowSnapshot ToTableRowSnapshot(DocxTableRowLayout row, int rowIndex, double pageMarginBottom)
     {
         IReadOnlyList<DocxTableCellSnapshot> cells = row.Cells
-            .Select(ToTableCellSnapshot)
+            .Select((cell, index) => ToTableCellSnapshot(row, cell, index))
             .ToArray();
         double? firstBaselineY = cells
             .Select(cell => cell.FirstBaselineY)
@@ -864,7 +864,7 @@ internal sealed partial record DocxLayoutSnapshot(
             cells);
     }
 
-    private static DocxTableCellSnapshot ToTableCellSnapshot(DocxTableCellLayout cellLayout, int cellIndex)
+    private static DocxTableCellSnapshot ToTableCellSnapshot(DocxTableRowLayout row, DocxTableCellLayout cellLayout, int cellIndex)
     {
         DocxTableCell cell = cellLayout.Cell;
         DocxTableCell visualCell = cellLayout.VisualCell;
@@ -879,6 +879,7 @@ internal sealed partial record DocxLayoutSnapshot(
         string cellText = string.Concat(paragraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
         string visualCellText = string.Concat(visualParagraphs.SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
         TextProfile textProfile = BuildTextProfile();
+        DocxTableCellClipSnapshot clip = DocxRenderer.ResolveTableCellContentClip(row, cellLayout);
         return new DocxTableCellSnapshot(
             cellIndex,
             cellLayout.X,
@@ -948,7 +949,7 @@ internal sealed partial record DocxLayoutSnapshot(
             bodyElements.Count,
             bodyElements.OfType<DocxManualBreakElement>().Count(),
             bodyElements.OfType<DocxPageBreakElement>().Count(),
-            bodyElements.OfType<DocxTableElement>().Count());
+            bodyElements.OfType<DocxTableElement>().Count()) with { ContentClip = clip.Admitted ? clip : null };
 
         TextProfile BuildTextProfile()
         {

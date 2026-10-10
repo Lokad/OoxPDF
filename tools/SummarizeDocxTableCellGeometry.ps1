@@ -28,8 +28,10 @@ $candidate = @(Read-CellClips $CandidateGraphics)
 $cells = @(for ($pageIndex=0; $pageIndex -lt $layout.Pages.Count; $pageIndex++) {
     foreach ($row in @($layout.Pages[$pageIndex].TableRows)) {
         foreach ($cell in @($row.Cells)) {
+            $clip = if ($cell.ContentClip -and $cell.ContentClip.Admitted) { $cell.ContentClip } else { $cell }
             [pscustomobject]@{ Page=$pageIndex+1; Table=$row.TableIndex; Row=$row.RowIndex; Cell=$cell.CellIndex;
-                X=[double]$cell.X; Y=[double]$cell.Y; Width=[double]$cell.Width; Height=[double]$cell.Height;
+                X=[double]$clip.X; Y=[double]$clip.Y; Width=[double]$clip.Width; Height=[double]$clip.Height;
+                ClipMode=if($cell.ContentClip -and $cell.ContentClip.Admitted){'AdmittedContentBox'}else{'CellBox'};
                 Ownership=$cell.VisualOwnership; FragmentCount=$row.FragmentCount }
         }
     }
@@ -58,6 +60,7 @@ foreach ($page in @($cells | Group-Object Page)) {
     foreach ($cell in $pageCells) {
         $row = [ordered]@{ Page=$cell.Page; Table=$cell.Table; Row=$cell.Row; Cell=$cell.Cell;
             SourceOwnership=$cell.Ownership; SourceFragmentCount=$cell.FragmentCount; Status='UnresolvedSourceMapping';
+            SourceClipMode=$cell.ClipMode;
             CandidateClip=$null; ReferenceClip=$null; MaxBoundsDelta=$null }
         $matches = @(if ($uniqueTranslation) { $pageClips | Where-Object {
             [Math]::Abs($_.X-($cell.X+$offsetX)) -le $CandidateMappingTolerance -and
@@ -89,7 +92,7 @@ foreach ($page in @($cells | Group-Object Page)) {
 }
 $matched=@($results|Where-Object Status -eq 'MatchedSourceCellClip')
 [ordered]@{
-    Method='Supplemental source-dimension and translation mapping of rectangular cell clips; does not alter gates'
+    Method='Supplemental effective source clip dimensions and translation mapping; does not alter gates or tolerances'
     SourceCellCount=$cells.Count; MatchedCellCount=$matched.Count; UnresolvedCellCount=$cells.Count-$matched.Count
     CandidateRectangularClipCount=$candidate.Count; ReferenceRectangularClipCount=$reference.Count
     UnclassifiedCandidateClipCount=$candidate.Count-$usedCandidate.Count

@@ -12,6 +12,83 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableMarginClipUsesWordContentBounds()
+    {
+        DocxDocument document = ReadMarginClipFixture("center");
+        var renderer = MarginClipRenderer();
+        string content = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content;
+        // Word's 1pt borders quantize to 0.96pt in our existing border geometry.
+        TestAssert.Contains("72.48 540 467.04 173.04 re W n", content);
+        TestAssert.True(!content.Contains("72 527.04 468 192.96 re W n", StringComparison.Ordinal),
+            "The content mask must exclude the positive margins inside the unchanged cell border.");
+        using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(renderer.InspectLayout(document)));
+        var cell = json.RootElement.GetProperty("Pages")[0].GetProperty("TableRows")[0].GetProperty("Cells")[0];
+        TestAssert.True(cell.TryGetProperty("ContentClip", out var clip) && clip.ValueKind == System.Text.Json.JsonValueKind.Object,
+            "The source snapshot must expose the content rectangle used for PDF clipping.");
+        TestAssert.True(clip.GetProperty("Admitted").GetBoolean(), "The bounded body cell should be admitted.");
+        TestAssert.True(Math.Abs(clip.GetProperty("Y").GetDouble() - 540d) < .001d,
+            "Snapshot and emitted content clip must share the Word-qualified bottom bound.");
+    }
+
+    public static void DocxTableMarginClipUsesRowMarginsAndTerminalBorder()
+    {
+        DocxDocument document = ReadMarginClipFixture("bottom");
+        var renderer = MarginClipRenderer();
+        string content = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content;
+        foreach (string rectangle in new[] {
+            "72.48 540 233.04 173.04", "306.48 540 233.04 173.04",
+            "72.48 348 233.04 173.04", "306.48 348 233.04 173.04" })
+            TestAssert.Contains(rectangle + " re W n", content);
+        TestAssert.Equal(4, Regex.Matches(content, " re W n").Count);
+        TestAssert.Equal(2, renderer.InspectLayout(document).Pages[0].TableRows.Count);
+    }
+
+    public static void DocxTableMarginClipRetainsUnsupportedGeometry()
+    {
+        DocxDocument source = ReadMarginClipFixture("center");
+        DocxTable original = source.BodyElements.OfType<DocxTableElement>().Single().Table;
+        foreach (string variant in new[] { "auto", "header", "top", "rich", "compound", "frame" })
+        {
+            DocxTableRow row = original.Rows.Single();
+            if (variant == "auto") row = row with { HeightRuleValue = "auto" };
+            if (variant == "header") row = row with { IsHeader = true };
+            if (variant == "frame") row = row with { HeightPoints = 720d };
+            if (variant is "top" or "rich" or "compound") row = row with { Cells = row.Cells.Select(cell =>
+            {
+                if (variant == "top") return cell with { VerticalAlignmentValue = "top" };
+                if (variant == "compound") return cell with { Borders = cell.Borders.Select(border => border with { Value = "double" }).ToArray() };
+                DocxParagraph[] paragraphs = cell.Paragraphs.Select(paragraph => paragraph with {
+                    Runs = paragraph.Runs.Select(run => run with { Text = run.Text + "\n" }).ToArray() }).ToArray();
+                return cell with { Paragraphs = paragraphs,
+                    BodyElements = paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph)).ToArray() };
+            }).ToArray() };
+            DocxTable table = original with { Rows = [row] };
+            DocxDocument document = source with {
+                BodyElements = source.BodyElements.Select(e => e is DocxTableElement ? (DocxBodyElement)new DocxTableElement(table) : e).ToArray(),
+                FallbackTables = [table] };
+            var renderer = MarginClipRenderer();
+            var snapshot = renderer.InspectLayout(document);
+            string content = string.Concat(renderer.RenderBlankPages(document, null, CancellationToken.None).Select(page => page.Content));
+            TestAssert.True(snapshot.Pages.Sum(page => page.TableRows.Count) > 0, "Fallback controls must contain rendered table cells.");
+            foreach (var cell in snapshot.Pages.SelectMany(page => page.TableRows).SelectMany(row => row.Cells))
+            {
+                string rectangle = string.Join(" ", new[] { cell.X, cell.Y, cell.Width, cell.Height }.Select(PdfDocumentWriter.FormatNumber));
+                TestAssert.True(content.Contains(rectangle + " re W n", StringComparison.Ordinal),
+                    "Expected full clip for " + variant + ": " + rectangle + "; emitted: " + string.Join("; ", Regex.Matches(content, @"[^\r\n]+ re W n").Select(match => match.Value)));
+                using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(cell));
+                TestAssert.True(!json.RootElement.TryGetProperty("ContentClip", out var clip) || clip.ValueKind == System.Text.Json.JsonValueKind.Null,
+                    "Unsupported cell geometry must retain its complete cell clip: " + variant);
+            }
+        }
+    }
+
+    private static DocxRenderer MarginClipRenderer() => new(new TestFaceFontResolver(),
+        OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+    private static DocxDocument ReadMarginClipFixture(string alignment) => DocxTests.ReadDocx(
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "table-aligned-margin-minimum-line-spacing-" + alignment + ".docx")), OoxPdfDocxMarkupMode.AllMarkup);
+
     public static void DocxTableMarginMinimumPlacementMatchesIndependentWordSlots()
     {
         var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
