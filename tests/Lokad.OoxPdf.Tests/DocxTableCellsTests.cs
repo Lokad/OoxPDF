@@ -12,6 +12,91 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableMixedMinimumPlacementUsesEachPlainParagraphSlot()
+    {
+        var measurer = new ParagraphMinimumTextMeasurer();
+        foreach (var fonts in new (string Family, double Size, bool Bold, bool Italic)[][]
+        {
+            [("LoAsc", 12d, false, false), ("HiAsc", 12d, false, false), ("LoAsc", 12d, false, false)],
+            [("LoAsc", 10d, false, false), ("LoAsc", 16d, false, false), ("LoAsc", 12d, false, false)],
+            [("HiAsc", 16d, false, false), ("LoAsc", 10d, false, false), ("HiAsc", 12d, false, false)],
+            [("LoAsc", 12d, false, false), ("LoAsc", 12d, true, true), ("LoAsc", 12d, false, false)]
+        })
+        foreach (string pattern in new[] { "min,auto", "min-single,auto", "auto,min,auto", "auto,min-single,auto", "auto-wrap,min", "auto-wrap,min-single", "min,min,min" })
+        {
+            DocxTableCellLayout legacy = CreateParagraphMinimumLayout(pattern, measurer, "header", paragraphFonts: fonts)
+                .Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            DocxTableCellLayout actual = CreateParagraphMinimumLayout(pattern, measurer, paragraphFonts: fonts)
+                .Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            TestAssert.Equal(legacy.TextLines.Count, actual.TextLines.Count);
+            for (int i = 0; i < actual.TextLines.Count; i++)
+            {
+                DocxTextLineLayout line = actual.TextLines[i];
+                DocxTextRun run = line.SourceParagraph!.Runs[0];
+                double naturalHeight = run.FontFamily == "HiAsc" ? run.FontSize * 1.5d : run.FontSize * 1.2d;
+                double expectedShift = line.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing ? Math.Max(0d, 24d - naturalHeight) : 0d;
+                TestAssert.True(Math.Abs(legacy.TextLines[i].BaselineY - line.BaselineY - expectedShift) < .000001d,
+                    "Independent Word controls put each paragraph's excess minimum height above its baseline, across family, size and style changes between paragraphs.");
+            }
+        }
+    }
+
+    public static void DocxTableMixedMinimumPlacementPreservesRowsAndOrdinaryNeighbors()
+    {
+        var measurer = new ParagraphMinimumTextMeasurer();
+        (string Family, double Size, bool Bold, bool Italic)[] fonts = [("LoAsc", 10d, false, false), ("HiAsc", 16d, true, false), ("LoAsc", 12d, false, true)];
+        foreach (string? rule in new string?[] { null, "exact", "atLeast", "auto" })
+        {
+            DocxLayout legacy = CreateParagraphMinimumLayout("auto,min,auto", measurer, "header", 320d, rule, fonts);
+            DocxLayout actual = CreateParagraphMinimumLayout("auto,min,auto", measurer, rowHeight: 320d, rowRule: rule, paragraphFonts: fonts);
+            DocxTableRowLayout before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            DocxTableRowLayout after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(legacy.Pages.Count, actual.Pages.Count);
+            TestAssert.Equal(before.Y, after.Y);
+            TestAssert.Equal(before.Height, after.Height);
+            DocxTextLineLayout[] ordinaryBefore = before.Cells.Single().TextLines.Where(l => l.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing).ToArray();
+            DocxTextLineLayout[] ordinaryAfter = after.Cells.Single().TextLines.Where(l => l.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing).ToArray();
+            TestAssert.Equal(ordinaryBefore.Length, ordinaryAfter.Length);
+            for (int i = 0; i < ordinaryBefore.Length; i++)
+            {
+                TestAssert.Equal(ordinaryBefore[i].BaselineY, ordinaryAfter[i].BaselineY);
+                TestAssert.Equal(ordinaryBefore[i].X, ordinaryAfter[i].X);
+                TestAssert.Equal(ordinaryBefore[i].FontSize, ordinaryAfter[i].FontSize);
+                TestAssert.Equal(ordinaryBefore[i].LineHeight, ordinaryAfter[i].LineHeight);
+                TestAssert.Equal(ordinaryBefore[i].Text, ordinaryAfter[i].Text);
+            }
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableMixedMinimumPlacementRetainsRichRunsAndComplexCells()
+    {
+        var measurer = new ParagraphMinimumTextMeasurer();
+        (string Family, double Size, bool Bold, bool Italic)[] fonts = [("LoAsc", 10d, false, false), ("HiAsc", 16d, false, false), ("LoAsc", 12d, false, false)];
+        foreach (string variant in new[] { "mixed", "header", "center", "rich" })
+        {
+            DocxLayout layout = CreateParagraphMinimumLayout("min,min,min", measurer, variant, paragraphFonts: fonts);
+            TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
+                .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
+                "Mixed runs inside a paragraph and complex cells retain their qualified fallback.");
+        }
+    }
+
+    private sealed class ParagraphMinimumTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
+        IDocxStaticTextMetricsProvider, IDocxHheaDescenderProvider, IDocxHheaLineGapProvider
+    {
+        private readonly CellBoxTextMeasurer metrics = new(new DocxTests.FamilyWidthTextMeasurer());
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => metrics.MeasureText(run, text, fontSize);
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => run?.FontFamily == "HiAsc" ? fontSize * 1.5d : fontSize * 1.2d;
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => MeasureSingleLineHeight(run, fontSize);
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => metrics.MeasureHheaAscender(run, fontSize);
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => metrics.MeasureHheaDescender(run, fontSize);
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => metrics.MeasureHheaLineGap(run, fontSize);
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => metrics.MeasureWindowsAscender(run, fontSize);
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => metrics.MeasureWindowsDescender(run, fontSize);
+    }
+
     public static void DocxTableDeclaredMinimumPlacementMatchesIndependentWordSlots()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
@@ -136,7 +221,8 @@ internal static class DocxTableCellsTests
     }
 
     private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "",
-        double? rowHeight = null, string? rowRule = null)
+        double? rowHeight = null, string? rowRule = null,
+        IReadOnlyList<(string Family, double Size, bool Bold, bool Italic)>? paragraphFonts = null)
     {
         DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
         {
@@ -148,11 +234,16 @@ internal static class DocxTableCellsTests
                 SpacingBeforePoints = index == 0 ? 0d : 6d, SpacingAfterPoints = 6d,
                 Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, rule == "auto" ? "240" : "480", rule, null)
             };
-            return paragraph with { Runs = paragraph.Runs.Select(r => r with
+            var fonts = paragraphFonts?[index];
+            paragraph = paragraph with { Runs = paragraph.Runs.Select(r => r with
             {
-                FontFamily = variant == "mixed" && index == 1 ? "HiAsc" : "LoAsc",
+                FontFamily = fonts?.Family ?? (variant == "mixed" && index == 1 ? "HiAsc" : "LoAsc"),
+                FontSize = fonts?.Size ?? 12d, Bold = fonts?.Bold ?? false, Italic = fonts?.Italic ?? false,
                 Text = r.Text + (variant == "rich" ? "\n" : string.Empty)
             }).ToArray() };
+            if (variant == "mixed" && index == 1)
+                paragraph = paragraph with { Runs = [.. paragraph.Runs, paragraph.Runs[0] with { FontFamily = "LoAsc", Text = " Mixed run" }] };
+            return paragraph;
         }).ToArray();
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
             { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
@@ -290,6 +381,8 @@ internal static class DocxTableCellsTests
         if (variant == "rich") current = current with { Runs = current.Runs.Select(r => r with { Text = r.Text + "\n" }).ToArray() };
         DocxParagraph previous = DocxTests.CreateDocxLayoutParagraph("Before", 12d, 14d) with { LineSpacingPoints = null, SpacingAfterPoints = 0d };
         previous = previous with { Runs = previous.Runs.Select(r => r with { FontFamily = variant == "mixed" ? "HiAsc" : "LoAsc" }).ToArray() };
+        if (variant == "mixed")
+            previous = previous with { Runs = [.. previous.Runs, previous.Runs[0] with { FontFamily = "LoAsc", Text = " Mixed run" }] };
         DocxParagraph[] paragraphs = predecessor ? [previous, current] : [current];
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
         { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };

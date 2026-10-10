@@ -24,16 +24,17 @@ internal sealed partial class DocxLayoutEngine
             cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
             cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
             cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p)) ||
-            !DocxLineMetrics.TableCellFontSizesUniform(cell.Paragraphs) ||
             measurer is not IDocxLineMetricsProvider metrics ||
             measurer is not IDocxStaticTextMetricsProvider ||
             measurer is not IDocxHheaDescenderProvider || measurer is not IDocxHheaLineGapProvider)
             return lines;
-        DocxTextRun? firstRun = cell.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault();
-        if (firstRun is null || cell.Paragraphs.SelectMany(p => p.Runs).Any(r =>
-            !string.Equals(r.EffectiveProperties.FontFamily, firstRun.EffectiveProperties.FontFamily, StringComparison.OrdinalIgnoreCase) ||
-            r.EffectiveProperties.Bold != firstRun.EffectiveProperties.Bold ||
-            r.EffectiveProperties.Italic != firstRun.EffectiveProperties.Italic))
+        // Font changes between plain paragraphs have independent line metrics.
+        // Rich runs within one paragraph retain the earlier placement model.
+        if (cell.Paragraphs.Any(p => p.Runs.Count > 0 && p.Runs.Skip(1).Any(r =>
+            !string.Equals(r.EffectiveProperties.FontFamily, p.Runs[0].EffectiveProperties.FontFamily, StringComparison.OrdinalIgnoreCase) ||
+            r.EffectiveProperties.FontSize != p.Runs[0].EffectiveProperties.FontSize ||
+            r.EffectiveProperties.Bold != p.Runs[0].EffectiveProperties.Bold ||
+            r.EffectiveProperties.Italic != p.Runs[0].EffectiveProperties.Italic)))
             return lines;
         var byParagraph = new Dictionary<DocxParagraph, List<DocxTextLineLayout>>(ReferenceEqualityComparer.Instance);
         foreach (DocxTextLineLayout line in lines)
@@ -53,7 +54,8 @@ internal sealed partial class DocxLayoutEngine
             double slotHeight = paragraphLines[0].LineHeight ?? 0d;
             if (!(natural > 0d) || !double.IsFinite(natural) || !(slotHeight > 0d) || !double.IsFinite(slotHeight)) continue;
             double excess = Math.Max(0d, slotHeight - natural);
-            double inset = DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], measurer) + excess;
+            double inset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(
+                paragraphLines[0].FontSize, slotHeight, false, cell.Paragraphs, paragraph, measurer) + excess;
             adjustments.Add(paragraph, (excess, inset));
         }
         if (adjustments.Count == 0) return lines;
