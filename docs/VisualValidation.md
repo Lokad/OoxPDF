@@ -1581,3 +1581,39 @@ The separate cleanup commit archives 425 root-level agent scratch files with
 verified hashes and ignores local validation snapshots. Keep 0.1.5; release
 preparation remains deferred. Cached markup and broader composed-layout gaps
 remain partial.
+
+## RV06-L144: minimum table spacing across plain paragraph font changes
+
+Runtime **7c000558** corrects minimum-height paragraph placement when font family,
+size or bold/italic state changes between plain paragraphs in eligible body
+table cells. Each paragraph places its own excess minimum-height slot above
+its baselines. Rich runs within a paragraph, repeated headers, complex/scaled/
+fragmented cells and unsupported stories retain fallback. The existing
+automatic/exact baseline model, wrapping, glyph advances, font resources, row
+height, following content and graphics stay unchanged.
+
+The qualification covers 70 independent Word 16 controls, two public generator
+cases, five repeated prior controls and three repeated complex guards. All 73
+changed image comparisons improve both MAE and SSIM; seven guards retain exact
+PDF/PNG bytes. All text multisets and page counts match Word. The 82 improved
+first baselines have at most 0.271pt absolute error; mixed-size transitions
+retain their existing automatic baseline residuals.
+
+Eight note rectangles in six independent and two historical controls improve
+their bounded first-line before-gap coverage to exact 30pt heights, with at
+most 0.043pt vertical error. Horizontal bounds, annotation counts, destinations
+and following paragraphs stay unchanged. Broader table note ownership and
+after-spacing remain partial. Supplemental source mapping resolves all 83 cell
+clips within 1.093pt; raw graphics gates are unchanged and absolute geometry
+parity remains unproven.
+
+The frozen runtime passes 2,397 registered Windows checks (2,396 pass, one
+optional private skip) and 220 Linux checks (six existing Arial skips).
+Windows Release builds have zero warnings/errors; Linux retains two archive
+SourceLink warnings. All 2,911 inherited DOCX and 251 broader PDFs retain bytes
+and page counts. Of 1,011 prior visual PDFs, 1,006 retain bytes and five are
+freshly requalified; all 1,091 visual outputs reproduce their compared bytes.
+The generator reproduces nine current payloads, with 26 earlier note payloads
+transferred through unchanged source/helper/fixture Git blobs. The local
+0.1.5 package smoke passes against the exact frozen runtime. Release
+preparation is deferred.
