@@ -713,3 +713,28 @@ Fresh conversions retain60 SVG PDFs, five related typography-control PDFs,
 The34 cached DOCX cases and508 failed gates transfer through fresh PDF identity;
 no new reference-cache gate is claimed. The0.1.5 package smoke succeeds. Dependencies,
 public API and version are unchanged; release preparation remains deferred.
+
+## RV08-T5: generator-proven accent fixture repairs (2026-10-10)
+
+Dense-column and whitespace-controls each contained one text node with UTF-8
+accent bytes decoded as Windows-1252. Their existing typography generator authors
+the intended French accents. Those two nodes now match that text. The whitespace
+probe retains its intact nonbreaking and narrow spaces. All other ZIP entries and
+layout/style settings are unchanged; generator and runtime source are unchanged.
+Regenerating only those two probes reproduces every ZIP payload after XML line-ending
+normalization. Raw payload identities differ only in platform line endings.
+
+Two fresh Office references are pinned along with independently imported inputs.
+Original and imported corrected candidate PDFs are identical per case. The dense
+probe retains nine text operations, MAE1.570659 and SSIM.558875; whitespace-controls
+retains thirteen, MAE.419306 and SSIM.953478. Their decoded accents are correct, but
+spacing and baseline differences remain. The new Office targets supersede malformed
+fixture references; these metrics are no claim of a renderer improvement across
+different inputs. Existing approximate gates/classifications are unchanged.
+
+The167 typography checks pass against the corrected working fixtures using the
+previously qualified runtime/test assemblies. Windows and Linux validate346 public
+cases across ten families. RV08-T4's full runtime/Linux/package qualification
+remains applicable through unchanged source and assembly identities. No full suite
+or package rerun is needed for these two text-only fixture changes. Version0.1.5
+and deferred release preparation are retained.
