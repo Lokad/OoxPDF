@@ -37,6 +37,7 @@ internal sealed partial class DocxRenderer
         DocxLayoutPage page, int pageNumber, int pageCount, DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), PdfLinkDestination> destinations,
+        IReadOnlySet<DocxParagraph> singleLineSpacingParagraphs,
         CancellationToken cancellationToken)
     {
         if (destinations.Count == 0) yield break;
@@ -89,6 +90,13 @@ internal sealed partial class DocxRenderer
                         DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], fontResources.TextMeasurer);
                     double top = line.BaselineY - yOffset + inset;
                     double height = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? line.FontSize * 1.2d;
+                    if (singleLineSpacingParagraphs.Contains(paragraph) && line.ParagraphAfterSpacing is { } after &&
+                        top - height - after >= page.MarginBottom)
+                    {
+                        // Word extends a one-line paragraph's note hit area through
+                        // after-spacing; multiline marks keep their line slot.
+                        height += after;
+                    }
                     if (width > 0d && height > 0d)
                     {
                         // Word's note links cover the paragraph slot, including a superscript mark.

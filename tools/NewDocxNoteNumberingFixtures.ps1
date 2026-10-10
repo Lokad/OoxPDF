@@ -1,8 +1,8 @@
 # Generates public two-section footnote/endnote numbering probes.
-param([string] $OutputDirectory, [switch] $PaginationProbes, [switch] $CustomMarkProbes)
+param([string] $OutputDirectory, [switch] $PaginationProbes, [switch] $CustomMarkProbes, [switch] $HitAreaSpacingProbes)
 
 $ErrorActionPreference = 'Stop'
-if ($PaginationProbes -and $CustomMarkProbes) { throw 'Select one probe family.' }
+if (($PaginationProbes -and ($CustomMarkProbes -or $HitAreaSpacingProbes)) -or ($CustomMarkProbes -and $HitAreaSpacingProbes)) { throw 'Select one probe family.' }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $cases = Join-Path $repoRoot 'tests/Lokad.OoxPdf.Tests/Cases'
 if (!$OutputDirectory) { $OutputDirectory = $cases }
@@ -85,7 +85,7 @@ foreach ($kind in $kinds) {
         }
     }
     $entries['word/settings.xml'] = "<w:settings xmlns:w='$word'><w:${kind}Pr><w:numFmt w:val='decimal'/><w:numStart w:val='105'/></w:${kind}Pr></w:settings>"
-    if ($CustomMarkProbes) {
+    if ($CustomMarkProbes -or ($HitAreaSpacingProbes -and $kind -eq 'footnote')) {
         [xml] $customDocument = $entries['word/document.xml']
         $customNs = [Xml.XmlNamespaceManager]::new($customDocument.NameTable)
         $customNs.AddNamespace('w', $word)
@@ -104,7 +104,17 @@ foreach ($kind in $kinds) {
         $entries['word/document.xml'] = $customDocument.OuterXml
         $entries["word/${kind}s.xml"] = $customNotes.OuterXml
     }
-    $name = if ($CustomMarkProbes) { "note-custom-mark-$kind.docx" } elseif ($PaginationProbes) { 'note-continuous-footnote.docx' } else { "note-sections-$kind.docx" }
+    if ($HitAreaSpacingProbes) {
+        [xml] $spacingDocument = $entries['word/document.xml']
+        $spacingNs = [Xml.XmlNamespaceManager]::new($spacingDocument.NameTable)
+        $spacingNs.AddNamespace('w', $word)
+        $paragraphProperties = $spacingDocument.SelectSingleNode('/w:document/w:body/w:p/w:pPr', $spacingNs)
+        $spacing = $paragraphProperties.SelectSingleNode('w:spacing', $spacingNs)
+        if (!$spacing) { $spacing = $spacingDocument.CreateElement('w', 'spacing', $word); [void] $paragraphProperties.AppendChild($spacing) }
+        [void] $spacing.SetAttribute('after', $word, '480')
+        $entries['word/document.xml'] = $spacingDocument.OuterXml
+    }
+    $name = if ($HitAreaSpacingProbes) { "note-hit-area-$kind.docx" } elseif ($CustomMarkProbes) { "note-custom-mark-$kind.docx" } elseif ($PaginationProbes) { 'note-continuous-footnote.docx' } else { "note-sections-$kind.docx" }
     New-ZipPackage -Path (Join-Path $OutputDirectory $name) -Entries $entries
     if ($PaginationProbes) {
         [xml] $boundaryDocument = $entries['word/document.xml']

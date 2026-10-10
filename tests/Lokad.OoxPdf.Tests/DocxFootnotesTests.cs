@@ -295,6 +295,108 @@ internal static class DocxFootnotesTests
             CheckNoteLabels(ReadSectionNumberingFixture(kind, modify), ["105", "106", "107", "108"]);
     }
 
+    public static void DocxNoteHitAreaSpacingExtendsSingleLineParagraphs()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            double baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 0), geometry)[0].Height;
+            foreach (int after in new[] { 6, 12, 24, 36 })
+            {
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, after), geometry);
+                TestAssert.Equal(4, links.Length);
+                TestAssert.True(Math.Abs(links[0].Height - baseline - after) < .000001d, "One-line note hit areas include paragraph after-spacing.");
+            }
+        }
+    }
+
+    public static void DocxNoteHitAreaSpacingKeepsMultilineSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (bool before in new[] { false, true })
+        {
+            Action<XDocument> wrap = xml =>
+            {
+                XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+                XElement text = before ? paragraph.Descendants(NoteWord + "t").First() : paragraph.Descendants(NoteWord + "t").Last();
+                text.Value = string.Join(' ', Enumerable.Repeat("Public wrapped paragraph text", 35));
+            };
+            double baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 0, wrap))[0].Height;
+            double spaced = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 24, wrap))[0].Height;
+            TestAssert.True(Math.Abs(spaced - baseline) < .000001d, "Marks on any multiline paragraph retain a line-only slot.");
+        }
+    }
+
+    public static void DocxNoteHitAreaSpacingIncludesExactLineSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        {
+            Action<XDocument> exact = xml =>
+            {
+                XElement spacing = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First().Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!;
+                spacing.SetAttributeValue(NoteWord + "line", "480"); spacing.SetAttributeValue(NoteWord + "lineRule", "exact");
+            };
+            foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+                { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+            {
+                double baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 0, exact), geometry)[0].Height;
+                double spaced = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, custom, 24, exact), geometry)[0].Height;
+                TestAssert.True(Math.Abs(spaced - baseline - 24d) < .000001d, "Exact single-line slots also include after-spacing.");
+            }
+        }
+    }
+
+    public static void DocxNoteHitAreaSpacingRetainsExcludedParagraphs()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (int variant in Enumerable.Range(0, 6))
+        {
+            Action<XDocument> exclude = xml =>
+            {
+                XElement body = xml.Root!.Element(NoteWord + "body")!;
+                XElement paragraph = body.Elements(NoteWord + "p").First();
+                XElement props = paragraph.Element(NoteWord + "pPr")!;
+                XElement spacing = props.Element(NoteWord + "spacing")!;
+                if (variant == 0) spacing.SetAttributeValue(NoteWord + "before", "240");
+                if (variant == 1) props.Add(new XElement(NoteWord + "contextualSpacing"));
+                if (variant == 2) spacing.SetAttributeValue(NoteWord + "afterAutospacing", "1");
+                if (variant == 3) spacing.SetAttributeValue(NoteWord + "afterLines", "100");
+                if (variant == 4)
+                    foreach (XElement section in xml.Descendants(NoteWord + "sectPr"))
+                    { section.Element(NoteWord + "cols")?.Remove(); section.Add(new XElement(NoteWord + "cols", new XAttribute(NoteWord + "num", "2"))); }
+                if (variant == 5)
+                    paragraph.Add(new XElement(NoteWord + "r", new XElement(NoteWord + "br", new XAttribute(NoteWord + "type", "page"))));
+            };
+            double baseline = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, false, 0, exclude))[0].Height;
+            double spaced = RenderCustomNoteLinks(ReadNoteHitAreaFixture(kind, false, 24, exclude))[0].Height;
+            TestAssert.True(Math.Abs(spaced - baseline) < .000001d, "Excluded spacing/flow settings retain the prior hit-area height; variant " + variant);
+        }
+    }
+
+    private static DocxDocument ReadNoteHitAreaFixture(string kind, bool custom, int after, Action<XDocument>? modify = null) =>
+        ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+        {
+            XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+            XElement props = paragraph.Element(NoteWord + "pPr")!;
+            XElement? spacing = props.Element(NoteWord + "spacing");
+            if (spacing is null) { spacing = new XElement(NoteWord + "spacing"); props.Add(spacing); }
+            spacing.SetAttributeValue(NoteWord + "after", (after * 20).ToString(CultureInfo.InvariantCulture));
+            if (custom)
+            {
+                XElement reference = paragraph.Descendants(NoteWord + kind + "Reference").Single();
+                reference.SetAttributeValue(NoteWord + "customMarkFollows", "1"); reference.AddAfterSelf(new XElement(NoteWord + "t", "*"));
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                XElement marker = notes.Root!.Elements(NoteWord + kind).Single(n => (string?)n.Attribute(NoteWord + "id") == "37")
+                    .Descendants(NoteWord + kind + "Ref").Single(); marker.Name = NoteWord + "t"; marker.Value = "*";
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+            }
+            modify?.Invoke(xml);
+        });
+
     public static void DocxCustomNoteMarksHonorExplicitFalseFlags()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

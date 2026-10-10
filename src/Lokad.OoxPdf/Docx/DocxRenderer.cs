@@ -967,6 +967,9 @@ internal sealed partial class DocxRenderer
         IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations();
         IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), PdfLinkDestination> noteDestinations =
             CreateNoteDestinations(layout, markupContext, cancellationToken);
+        IReadOnlySet<DocxParagraph> singleLineNoteSpacingParagraphs =
+            noteDestinations.Count == 0 ? new HashSet<DocxParagraph>() :
+                CreateSingleLineNoteSpacingParagraphs(document, layout, markupContext, cancellationToken);
         int imageIndex = 1;
         var imageCache = new Dictionary<string, PdfImageXObject?>();
 
@@ -1329,7 +1332,7 @@ internal sealed partial class DocxRenderer
             }
 
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
-                markupContext, noteDestinations, cancellationToken));
+                markupContext, noteDestinations, singleLineNoteSpacingParagraphs, cancellationToken));
             return annotations;
 
         void EmitLineLinkRects(

@@ -1,0 +1,32 @@
+{
+  "id": "docx-ladder-04-note-hit-area-endnote",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-hit-area-endnote.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "notes",
+    "navigation",
+    "spacing",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_ENDNOTE"
+    ],
+    "maxMeanAbsoluteError": 0.95,
+    "minStructuralSimilarity": 0.6,
+    "minForegroundRecall": 0.56,
+    "maxChangedPixelRatioAtThreshold16": 0.01
+  },
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_ENDNOTE"
+  ]
+}
