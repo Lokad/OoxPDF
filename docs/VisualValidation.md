@@ -660,3 +660,56 @@ Fresh frozen PDF identities transfer the seven Office/public deck comparisons wh
 preserving their original source/library/Office/raster provenance. Inventory:
 346 public manifests across ten families, validated on Windows and Linux.
 Evidence: `artifacts/plan-revision-20261005/rv07-e10/`. Keep 0.1.5; release deferred.
+
+## RV08-T4: PowerPoint numbering and label clearance (2026-10-10)
+
+Wide numbering labels previously overlapped the paragraph body, and each explicit
+start value restarted independently. Bounded known-format lists now continue when
+the effective format/start settings match, keep per-level sequences, and reset on
+changed settings or plain paragraphs. Advancing a parent clears deeper sequences.
+Empty numbered paragraphs update settings without emitting or advancing a label;
+space-only paragraphs retain numbering. The same resolved model drives XML and scene
+text. Qualified first fragments use the body font and nominal label advances,
+including authored trailing character spacing. Continuation lines keep their margin.
+
+Numbering admission covers the eleven existing Arabic/alphabetic/Roman format
+spellings, levels0..8 and valid starts1..32767, default text-sized/font-following
+labels outside tables. Explicit bullet-size/font overrides and unsupported settings
+retain fallback. Label-clearance admission additionally requires left alignment,
+horizontal single-column non-table text, no tabs or normal autofit, no rotation or
+flip, nonpositive hanging indent and a label that fits the frame. Other frames keep
+their label-placement approximation even when their supported sequence is corrected.
+
+Seventy-five independent public Office controls, covering36 primary,31 held-out and
+eight empty/space variants, are pinned in both original and imported syntax. Each
+syntax yields72 paired MAE/SSIM improvements, two override raster identities and
+one mixed-metric residual. The extreme50pt frame corrects numbering and lowers MAE
+1.1824 to1.1538, while SSIM declines.317261 to.315023; its width remains excluded
+from the new clearance rule. This result establishes no general wrapping parity.
+Positive indents, manual-break pitch, Calibri metrics, overrides and other constrained
+layout remain partial. Rotated Office text is judged through rasters because the
+page-level inspector does not traverse its Form text.
+
+Across96 current public typography cases,92 PDFs retain exact bytes. All four
+changed cases improve both raster metrics. Arabic numbering improves MAE.9575 to
+.0422 and SSIM.484789 to.992995; alphabetic and Roman lists reach.996440 and.996562.
+Those three existing approximate gates are strengthened to MAE<=.1 and SSIM>=.99,
+without changing fixtures or classifications. The fourth change is a small
+improvement in the synthetic-bold numbered probe.
+
+Six portable synthetic-font methods cover sequence/settings, nested and inherited
+lists, empty paragraphs, nominal label advances and spacing, continuation indent,
+XML/scene agreement and fallback. Five unchanged methods fail the exact parent;
+the fallback method passes. Initial kerned-label and pre-boundary prototypes retain
+their exact source and binaries; no failing model is admitted incidentally.
+
+Frozen Windows qualification passes2307 methods, zero failures and one optional
+private-document skip, from2308 registered methods. It includes91 PDF,130 SVG,
+151 image,167 typography and959 DOCX checks. Linux passes85 PDF plus39 targeted
+checks, with six existing Windows-Arial skips and two expected archive SourceLink
+warnings. Windows/Linux inventories validate346 cases across ten families.
+Fresh conversions retain60 SVG PDFs, five related typography-control PDFs,
+2911 inherited DOCX PDFs and80 DOCX comparison PDFs, with no inherited page changes.
+The34 cached DOCX cases and508 failed gates transfer through fresh PDF identity;
+no new reference-cache gate is claimed. The0.1.5 package smoke succeeds. Dependencies,
+public API and version are unchanged; release preparation remains deferred.
