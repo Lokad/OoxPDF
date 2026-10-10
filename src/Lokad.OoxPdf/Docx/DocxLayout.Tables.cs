@@ -449,11 +449,14 @@ internal sealed partial class DocxLayoutEngine
                 rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale,
                     isLastRow: rowIndex == table.Rows.Count - 1, rowIndex: rowIndex);
         }
+        bool completeBodyFrame = adjustAlignedMinimumMargins &&
+            alignedMinimumAvailableHeight is { } available && rowHeights.Sum() <= available;
         tableContext = tableContext with {
             AlignedMinimumRowBottomMargins = rowBottomMargins,
-            AutomaticMinimumRowPlacement = adjustAlignedMinimumMargins &&
-                alignedMinimumAvailableHeight is { } available && rowHeights.Sum() <= available &&
-                IsEligibleAutomaticMinimumTable(table, textMeasurer, paragraphSpacingScale, allowAutomaticMinimumGridPlacement)
+            AutomaticMinimumRowPlacement = completeBodyFrame &&
+                IsEligibleAutomaticMinimumTable(table, textMeasurer, paragraphSpacingScale, allowAutomaticMinimumGridPlacement),
+            AutomaticTopRowContentClip = completeBodyFrame && allowAutomaticMinimumGridPlacement &&
+                IsEligibleAutomaticTopContentTable(table, textMeasurer, paragraphSpacingScale)
         };
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);

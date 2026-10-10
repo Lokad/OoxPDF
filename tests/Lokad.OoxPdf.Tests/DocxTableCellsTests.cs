@@ -12,6 +12,72 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableTopAutoClipMatchesIndependentWordInsets()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach ((int rows, int columns) in new[] { (1, 1), (1, 2), (2, 1), (2, 2) })
+        foreach (string? rule in new string?[] { null, "auto" })
+        foreach (double minimum in new[] { 12d, 14d, 24d })
+        {
+            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
+            var layout = CreateParagraphMinimumLayout("min-single", full, rowHeight: rule is null ? null : 320d,
+                rowRule: rule, verticalAlignment: "top", cellMargins: margins, rowCount: rows,
+                columnCount: columns, minimumSpacing: minimum, borderSize: "8");
+            foreach (var row in layout.Pages[0].Items.OfType<DocxTableRowLayout>())
+            foreach (var cell in row.Cells)
+            {
+                var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                double bottom = 12d + (row.RowIndex == rows - 1 ? .96d : 0d);
+                TestAssert.True(clip.Admitted, "Qualified top-aligned automatic rows expose their inner content masks.");
+                TestAssert.True(Math.Abs(clip.X - cell.X - .48d) < .000001d &&
+                    Math.Abs(clip.Y - cell.Y - bottom) < .000001d &&
+                    Math.Abs(clip.Width - cell.Width + .96d) < .000001d &&
+                    Math.Abs(clip.Height - cell.Height + 6.96d + bottom) < .000001d,
+                    "Top masks use the independently measured single band, margins and terminal bottom border.");
+                TestAssert.True(!row.Table.AutomaticMinimumRowPlacement,
+                    "Content-mask admission does not enable centered/bottom minimum-slot alignment in top rows.");
+            }
+        }
+    }
+
+    public static void DocxTableTopAutoClipRetainsFrameAndComplexFallbacks()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "header", "rich", "frame", "three-rows", "three-columns", "metrics" })
+        {
+            IDocxTextMeasurer measurer = variant == "metrics" ? new MinimumMetricsFallback(full) : full;
+            var layout = CreateParagraphMinimumLayout("min,min,min", measurer,
+                variant is "header" or "rich" ? variant : "", verticalAlignment: "top",
+                rowCount: variant == "three-rows" ? 3 : 2, columnCount: variant == "three-columns" ? 3 : 2,
+                pageHeight: variant == "frame" ? 160d : 2400d);
+            foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
+            foreach (var cell in row.Cells)
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Unqualified top-mask shapes, metrics and complex/frame-boundary paths retain full-cell fallback: " + variant);
+        }
+        var admitted = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top")
+            .Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        foreach (var row in new[] { admitted with { FragmentCount = 2 }, admitted with { ReviewBorderPrintScale = .95d } })
+        foreach (var cell in row.Cells)
+            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                "Fragmented/scaled top rows retain the full-cell mask.");
+    }
+
+    public static void DocxTableTopAutoClipRetainsMixedAndDeclaredFallbacks()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string? rule in new string?[] { null, "exact", "atLeast" })
+        {
+            var heights = new (double? Height, string? Rule)[] { (180d, rule), (null, null) };
+            var layout = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
+                rowCount: 2, columnCount: 2, rowHeightRules: heights);
+            foreach (var row in layout.Pages[0].Items.OfType<DocxTableRowLayout>())
+            foreach (var cell in row.Cells)
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Declared and mixed-height top rows retain their separately unqualified masks.");
+        }
+    }
+
     public static void DocxTableMixedHeightGridAutomaticSlotsMatchIndependentWord()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
