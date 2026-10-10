@@ -1215,3 +1215,42 @@ inherited DOCX and 251 broader PDFs retain bytes and page counts. The 34 cached
 markup cases /508 failed gates transfer only through fresh exact unchanged PDF
 identity. Local 0.1.5 package smoke passes. API/dependencies/version remain
 unchanged; release preparation is deferred.
+
+
+## RV06-L134: contextual paragraph contributions (2026-10-10)
+
+Word collapses adjacent numeric spacing before removing the same-style contextual
+contributions. The predecessor owns its after-spacing; the current paragraph owns
+only max(0,before-pendingAfter). Suppression does not recompute that collapse.
+Plain finite numeric body/table spacing and keep estimates share the resolver;
+authored snapshots remain unchanged. Single-line note rectangles use the resolved
+gap and omit current contextual after-spacing before a plain same-style successor.
+Headers/footers and note-story text retain their previous branch: attempted
+extensions worsened independent raster comparisons, despite improved relative
+spacing. The rejected binaries/comparisons are retained. Table end-of-cell after
+spacing and existing multiline contextual note hit areas remain partial.
+
+32 primary +12 held-out +4 additional +2 public controls cover46 independent
+geometries. Two primary controls repeat L132 inputs and public fixtures duplicate
+primary geometry. Twelve PDFs and16 rasters retain bytes;34 rasters improve in
+aggregate MAE/SSIM. All50 decoded-word multisets and page counts match Word.
+Sixty-two rectangles change. In44 ordinary controls all176 links match Word
+vertically within.005pt; table/header controls retain existing annotation residuals.
+Five portable methods pass;three fail exact L133 andtwo guards pass both. Fourteen
+generator ZIP payloads reproduce. The public footnote gates are MAE<=.50,
+SSIM>=.80,recall>=.80,changed<=.0065; endnotes use.95/.60/.56/.010. Both require
+matching pages/dimensions and only the corresponding approximation warning.
+Existing gates and inputs are unchanged.
+
+Frozen runtime **f4da5e20** passes clean Windows Release:2360 registered,2359 passed,
+zero failed,one optional private-document skip (91 PDF,130 SVG,151 images,
+184 typography,994 methods containing Docx). Linux passes85 PDF +98 targeted,
+with six existing Arial skips andtwo archive SourceLink warnings. Both inventories
+validate362 cases across ten families. Fresh334 visual conversions reproduce50
+current comparisons and276 unchanged prior PDFs; eight older contextual controls
+are independently requalified against pinned Word references and all improve.
+They add14 changed rectangles;two multiline cases retain a6pt rectangle residual.
+All2911 inherited DOCX and251 broader PDFs retain bytes and page counts. The34
+cached markup cases/508 failed gates transfer only through fresh unchanged PDF
+identities. Local0.1.5 package smoke passes. API/dependencies/version remain
+unchanged; release preparation is deferred.
