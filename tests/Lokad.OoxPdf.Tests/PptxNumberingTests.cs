@@ -14,7 +14,7 @@ internal static class PptxNumberingTests
         AssertLabels(["9.", "1.", "2."], Paragraph(9) + Paragraph() + Paragraph());
         AssertLabels(["1.", "2.", "10.", "1."], Paragraph(1) + Paragraph() + Paragraph(10) + Paragraph());
         AssertLabels(["1.", "a.", "1."], Paragraph() + Paragraph(kind: "alphaLcPeriod") + Paragraph());
-        AssertLabels(["aa.", "ab.", "ac."], Paragraph(27, "alphaLcPeriod") + Paragraph(27, "alphaLcPeriod") + Paragraph(27, "alphaLcPeriod"));
+        AssertLabels(["aa.", "bb.", "cc."], Paragraph(27, "alphaLcPeriod") + Paragraph(27, "alphaLcPeriod") + Paragraph(27, "alphaLcPeriod"));
         AssertLabels(["iv.", "v.", "vi."], Paragraph(4, "romanLcPeriod") + Paragraph(4, "romanLcPeriod") + Paragraph(4, "romanLcPeriod"));
         AssertLabels(["(9)", "(1)", "(2)"], Paragraph(9, "arabicParenBoth") + Paragraph(kind: "arabicParenBoth") + Paragraph(kind: "arabicParenBoth"));
     }
@@ -42,13 +42,13 @@ internal static class PptxNumberingTests
 
     public static void PptxNumberingLabelUsesBodyFontAndNominalAdvances()
     {
-        var spans = Read(Paragraph(28, "alphaUcPeriod"));
-        var label = spans.Single(s => s.Run.Text == "AB.");
+        var spans = Read(Paragraph(27, "alphaUcPeriod"));
+        var label = spans.Single(s => s.Run.Text == "AA.");
         var body = spans.Single(s => s.Run.Text == "PublicItem");
         TestAssert.Equal("TestFont", label.Run.FontFamily);
         TestAssert.True(!label.Run.KerningEnabled, "Automatic labels must use nominal glyph advances.");
-        // Synthetic AB has a -50-unit pair; nominal 600+620+500 at 24pt is 41.28pt.
-        TestAssert.True(Math.Abs(body.Run.X - (90d + 41.28d)) < 0.001d, "First body fragment must start after the complete unkerned label.");
+        // Synthetic AA plus the period advances 600+600+500 units, or 40.8pt at 24pt.
+        TestAssert.True(Math.Abs(body.Run.X - (90d + 40.8d)) < 0.001d, "First body fragment must start after the complete unkerned label.");
         foreach (double spacing in new[] { 1.5d, -0.5d })
         {
             spans = Read(Paragraph(100, spacing: spacing));
@@ -73,7 +73,7 @@ internal static class PptxNumberingTests
     {
         foreach (string marker in new[] { "<a:buSzPct val=\"150000\"/>", "<a:buFont typeface=\"TestFont\"/>" })
         {
-            AssertLabels(["9.", "10.", "11."], Paragraph(9, marker: marker) + Paragraph(marker: marker) + Paragraph(marker: marker));
+            AssertLabels(["9.", "1.", "2."], Paragraph(9, marker: marker) + Paragraph(marker: marker) + Paragraph(marker: marker));
             TestAssert.Equal(108d, Read(Paragraph(100, marker: marker)).Single(s => s.Run.Text == "PublicItem").Run.X);
         }
         AssertLabels(["9.", "10.", "11."], Paragraph(9, "arabicPlain") + Paragraph(kind: "arabicPlain") + Paragraph(kind: "arabicPlain"));
@@ -82,6 +82,70 @@ internal static class PptxNumberingTests
         TestAssert.Equal(108d, Read(Paragraph(100), autofit: "<a:normAutofit/>").Single(s => s.Run.Text == "PublicItem").Run.X);
         TestAssert.Equal(108d, Read(Paragraph(100), shape: "flipH=\"1\"").Single(s => s.Run.Text == "PublicItem").Run.X);
         TestAssert.Equal(108d, Read(Paragraph(100), shape: "flipV=\"1\"").Single(s => s.Run.Text == "PublicItem").Run.X);
+    }
+
+    public static void PptxNumberingOverrideKeepsSettingsAndNestedSequences()
+    {
+        foreach (string marker in new[] { "<a:buFont typeface=\"LabelFont\"/>", "<a:buSzPct val=\"150000\"/>", "<a:buSzPts val=\"1200\"/>" })
+        {
+            AssertLabels(["9.", "10.", "11."], Paragraph(9, marker: marker) + Paragraph(9, marker: marker) + Paragraph(9, marker: marker));
+            AssertLabels(["9.", "1.", "2."], Paragraph(9, marker: marker) + Paragraph(marker: marker) + Paragraph(marker: marker));
+            AssertLabels(["1.", "1.", "2.", "2.", "1."], Paragraph(marker: marker) + Paragraph(level: 1, marker: marker) + Paragraph(level: 1, marker: marker) + Paragraph(marker: marker) + Paragraph(level: 1, marker: marker));
+            AssertLabels(["aa.", "bb."], Paragraph(27, "alphaLcPeriod", marker: marker) + Paragraph(27, "alphaLcPeriod", marker: marker));
+        }
+    }
+
+    public static void PptxNumberingOverrideHonorsInheritanceTransitionsAndEmptyParagraphs()
+    {
+        string font = "<a:buFont typeface=\"LabelFont\"/>";
+        string size = "<a:buSzPct val=\"150000\"/>";
+        string inherited = "<a:lvl1pPr><a:buSzPts val=\"1800\"/><a:buFont typeface=\"LabelFont\"/><a:buAutoNum type=\"arabicPeriod\" startAt=\"9\"/></a:lvl1pPr>";
+        AssertLabels(["9.", "10.", "11."], Paragraph(numbering: false) + Paragraph(numbering: false) + Paragraph(numbering: false), listStyle: inherited);
+        AssertLabels(["1.", "2.", "3."], Paragraph() + Paragraph(marker: font) + Paragraph(marker: size));
+        AssertLabels(["9.", "10."], Paragraph(9, marker: font) + Paragraph(9, marker: font, text: "") + Paragraph(9, marker: font));
+        AssertLabels(["1.", "1."], Paragraph(marker: size) + Paragraph(numbering: false, marker: "<a:buNone/>") + Paragraph(marker: size));
+        string emptyPlain = "<a:p><a:pPr><a:buNone/></a:pPr><a:endParaRPr sz=\"2400\"/></a:p>";
+        AssertLabels(["1.", "1."], Paragraph(marker: size) + emptyPlain + Paragraph(marker: size));
+        AssertLabels(["1.", "1."], Paragraph() + emptyPlain + Paragraph());
+    }
+
+    public static void PptxNumberingOverridePreservesAuthoredLabelStyleAndPlacement()
+    {
+        foreach ((string marker, string family, double size) in new[]
+        {
+            ("<a:buFont typeface=\"LabelFont\"/>", "LabelFont", 24d),
+            ("<a:buSzPct val=\"150000\"/>", "TestFont", 36d),
+            ("<a:buSzPts val=\"1200\"/>", "TestFont", 12d),
+            ("<a:buSzPct val=\"150000\"/><a:buFont typeface=\"LabelFont\"/>", "LabelFont", 36d)
+        })
+        {
+            var spans = Read(Paragraph(100, marker: marker));
+            var label = spans.Single(s => s.Run.Text == "100.");
+            TestAssert.Equal(family, label.Run.FontFamily);
+            TestAssert.Equal(size, label.Run.FontSize);
+            TestAssert.True(label.Run.KerningEnabled, "Override labels must retain their existing kerning rule.");
+            TestAssert.Equal(108d, spans.Single(s => s.Run.Text == "PublicItem").Run.X);
+        }
+    }
+
+    public static void PptxNumberingOverrideMatchesOfficeAlphabeticRolloverAndCycle()
+    {
+        AssertLabels(["z.", "aa.", "bb."], Paragraph(26, "alphaLcPeriod") + Paragraph(26, "alphaLcPeriod") + Paragraph(26, "alphaLcPeriod"));
+        AssertLabels(["ZZ.", "AAA.", "BBB."], Paragraph(52, "alphaUcPeriod") + Paragraph(52, "alphaUcPeriod") + Paragraph(52, "alphaUcPeriod"));
+        AssertLabels(["zz)", "aaa)", "bbb)"], Paragraph(52, "alphaLcParenR") + Paragraph(52, "alphaLcParenR") + Paragraph(52, "alphaLcParenR"));
+        AssertLabels(["ZZ)", "AAA)", "BBB)"], Paragraph(52, "alphaUcParenR") + Paragraph(52, "alphaUcParenR") + Paragraph(52, "alphaUcParenR"));
+        AssertLabels([new string('Y', 30) + ".", new string('Z', 30) + ".", "A."], Paragraph(779, "alphaUcPeriod") + Paragraph(779, "alphaUcPeriod") + Paragraph(779, "alphaUcPeriod"));
+        AssertLabels(["G.", "H.", "I."], Paragraph(32767, "alphaUcPeriod") + Paragraph(32767, "alphaUcPeriod") + Paragraph(32767, "alphaUcPeriod"));
+    }
+
+    public static void PptxNumberingOverrideKeepsParagraphPitchAtBodyFontSize()
+    {
+        double[] normal = Read(Paragraph() + Paragraph()).Where(s => s.Run.Text == "PublicItem").Select(s => s.Run.Y).ToArray();
+        foreach (string marker in new[] { "<a:buSzPct val=\"150000\"/>", "<a:buSzPts val=\"3600\"/>", "<a:buSzPct val=\"125000\"/><a:buFont typeface=\"LabelFont\"/>" })
+        {
+            double[] styled = Read(Paragraph(marker: marker) + Paragraph(marker: marker)).Where(s => s.Run.Text == "PublicItem").Select(s => s.Run.Y).ToArray();
+            TestAssert.True(normal.SequenceEqual(styled), "A larger automatic-number label must preserve the body-font paragraph pitch.");
+        }
     }
 
     private static string Paragraph(int? start = null, string kind = "arabicPeriod", int level = 0,

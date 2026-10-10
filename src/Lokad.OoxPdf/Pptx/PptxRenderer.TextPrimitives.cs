@@ -414,7 +414,6 @@ internal sealed partial class PptxRenderer
     private static bool UsesOfficeAutoNumberSequence(PptxParagraphBulletModel bullet, int level)
     {
         return bullet.Kind == PptxParagraphBulletKind.AutoNumber &&
-            bullet.SizeKind == PptxParagraphBulletSizeKind.Text && bullet.FontTypeface is null &&
             level is >= 0 and <= 8 && (bullet.AutoNumberStartAt ?? 1) is >= 1 and <= 32767 &&
             (bullet.AutoNumberStartAtValue is null || bullet.AutoNumberStartAt.HasValue) &&
             (bullet.AutoNumberType ?? "arabicPeriod") is "arabicPeriod" or "arabicParenBoth" or "arabicParenR" or
@@ -471,10 +470,10 @@ internal sealed partial class PptxRenderer
             {
                 "arabicParenBoth" => $"({value})",
                 "arabicParenR" => $"{value})",
-                "alphaLcPeriod" => $"{FormatAlphaNumber(value, upper: false)}.",
-                "alphaUcPeriod" => $"{FormatAlphaNumber(value, upper: true)}.",
-                "alphaLcParenR" => $"{FormatAlphaNumber(value, upper: false)})",
-                "alphaUcParenR" => $"{FormatAlphaNumber(value, upper: true)})",
+                "alphaLcPeriod" => $"{FormatAlphaNumber(value, upper: false, useSequence)}.",
+                "alphaUcPeriod" => $"{FormatAlphaNumber(value, upper: true, useSequence)}.",
+                "alphaLcParenR" => $"{FormatAlphaNumber(value, upper: false, useSequence)})",
+                "alphaUcParenR" => $"{FormatAlphaNumber(value, upper: true, useSequence)})",
                 "romanLcPeriod" => $"{FormatRomanNumber(value, upper: false)}.",
                 "romanUcPeriod" => $"{FormatRomanNumber(value, upper: true)}.",
                 "romanLcParenR" => $"{FormatRomanNumber(value, upper: false)})",
@@ -506,14 +505,21 @@ internal sealed partial class PptxRenderer
         return new string(mapped);
     }
 
-    private static string FormatAlphaNumber(int value, bool upper)
+    private static string FormatAlphaNumber(int value, bool upper, bool useOfficeSequence)
     {
         if (value <= 0)
         {
             return string.Empty;
         }
 
-        return OoxNumbering.ToAlphabetic(value, upper);
+        if (!useOfficeSequence)
+        {
+            return OoxNumbering.ToAlphabetic(value, upper);
+        }
+
+        // Office uses a..z, aa..zz, aaa..zzz, cycling after thirty repeated letters.
+        int index = value - 1;
+        return new string((char)((upper ? 'A' : 'a') + index % 26), index / 26 % 30 + 1);
     }
 
     private static string FormatRomanNumber(int value, bool upper)

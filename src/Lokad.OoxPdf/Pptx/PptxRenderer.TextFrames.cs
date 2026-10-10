@@ -184,6 +184,10 @@ internal sealed partial class PptxRenderer
             {
                 ReadBulletText(paragraph.Bullet, paragraph.Level, ref autoNumberValue, autoNumberSequences, useNumberSequence, advanceSequence: false);
             }
+            if (!paragraph.HasVisibleContent && paragraph.Bullet.Kind != PptxParagraphBulletKind.AutoNumber)
+            {
+                autoNumberSequences.Clear();
+            }
             if (!paragraph.HasVisibleContent || emptyNumber)
             {
                 if (paragraph.HasLayoutContent)
@@ -284,9 +288,13 @@ internal sealed partial class PptxRenderer
                 if (bulletPending && bulletText is not null)
                 {
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
-                    maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
+                    if (!useNumberSequence)
+                    {
+                        maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
+                    }
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
                     bool useNumberingLabelLayout = useNumberSequence &&
+                        paragraph.Bullet.SizeKind == PptxParagraphBulletSizeKind.Text && paragraph.Bullet.FontTypeface is null &&
                         paragraphStyle.Indent.Hanging <= PptxTextMetricRules.CoordinateTolerance &&
                         paragraphStyle.Alignment == TextAlignment.Left &&
                         paragraphStyle.TabStops.Count == 0 &&
