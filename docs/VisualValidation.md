@@ -1450,3 +1450,38 @@ All 2911 inherited DOCX and 251 broader PDFs retain bytes and page counts. The
 34 cached markup cases /508 failed gates transfer only through fresh unchanged
 PDF identity. Local 0.1.5 package smoke passes. API/dependencies/version stay
 unchanged; release preparation remains deferred.
+
+## RV06-L140: minimum-height placement in bounded body tables
+
+Runtime `7df5677d` corrects the excess minimum-height space above the first
+baseline of a wrapped paragraph in an unsplit, top-aligned one-row/one-cell
+body table. One or two plain numeric paragraphs with uniform font state and
+full vertical metrics qualify; a predecessor must render as one line. Cursor
+advances, row height, following flow, wrapping, glyph advances and graphics
+remain unchanged. Related/static/nested, rich, merged, scaled, fragmented and
+multiple-row paths retain fallback.
+
+The actual slot/inset follows the corrected lines so first-line note links
+retain minimum height and receive their remaining numeric before contribution.
+After-spacing stays outside these multiline links. Automatic/exact slots keep
+their previous PDF bytes.
+
+Seventy-four independent Word controls, two historical repetitions and two
+public duplicates cover three 12pt faces, five minima, first/following positions,
+10pt/16pt extensions, custom marks and complex guards. All 78 retain Word word
+multisets and page counts. Forty-six changed raster comparisons improve both
+MAE and SSIM; 32 retain PNG identities. Twenty guards retain PDF bytes and
+44 first-line rectangles gain the remaining gap. Qualified note vertical error
+is at most 0.085pt, height error 0.002pt and first-baseline error 0.132pt.
+Natural-height rounding can move a floor case by 0.002pt while retaining PNGs;
+unsupported controls keep their inherited residuals. This is bounded admission.
+
+Four semantic checks give two failures on the exact preceding DLL and two
+preservation passes. Frozen validation: 2384 Windows methods, 2383 passes,
+one optional private skip; Linux 85 PDF and 122 targeted passes with six existing
+Arial skips. Fresh 2911 inherited and 251 broader outputs retain PDF/page
+identities. Among 674 prior visual outputs, 672 retain bytes; the two original
+minimum-height probes are freshly requalified against their exact Word
+references. All 752 compared outputs reproduce in the integrated checkout.
+The two public cases remain approximate. The local 0.1.5 package smoke passes;
+release preparation remains deferred.
