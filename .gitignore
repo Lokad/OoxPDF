@@ -2,6 +2,8 @@ bin/
 obj/
 .vs/
 .idea/
+# Local validation snapshots and tool caches.
+/.cache/
 artifacts/**
 !artifacts/.gitkeep
 private-cases/**
