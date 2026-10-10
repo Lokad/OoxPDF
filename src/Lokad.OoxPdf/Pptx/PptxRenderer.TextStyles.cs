@@ -66,7 +66,8 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         double fontScale,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
+        PptxSceneTableCellTextStyle tableStyleTextStyle,
+        bool disableZeroKerning = false)
     {
         return ResolveRunTextStyle(
             cascade.DirectProperties,
@@ -75,7 +76,8 @@ internal sealed partial class PptxRenderer
             theme,
             colorMap,
             fontScale,
-            tableStyleTextStyle);
+            tableStyleTextStyle,
+            disableZeroKerning);
     }
 
     private static ResolvedRunTextStyle ResolveRunTextStyle(
@@ -85,7 +87,8 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         double fontScale,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
+        PptxSceneTableCellTextStyle tableStyleTextStyle,
+        bool disableZeroKerning = false)
     {
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
@@ -189,6 +192,11 @@ internal sealed partial class PptxRenderer
             }
 
             double minimumFontSize = int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;
+            if (disableZeroKerning && minimumFontSize == 0d)
+            {
+                return false;
+            }
+
             return minimumFontSize <= 0d || fontSize >= minimumFontSize;
         }
     }

@@ -1,0 +1,26 @@
+{
+  "id": "pptx-ladder-04-typography-no-wrap-zero-kerning-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-no-wrap-zero-kerning-probe.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "typography",
+    "kerning",
+    "no-wrap",
+    "font-metrics",
+    "probe",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.8,
+    "minStructuralSimilarity": 0.9,
+    "minForegroundRecall": 0.88
+  },
+  "allowedUnsupportedFeatures": []
+}

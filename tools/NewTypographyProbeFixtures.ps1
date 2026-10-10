@@ -380,4 +380,13 @@ New-TypographyProbe `
           <a:p><a:pPr algn="l"/><a:r><a:rPr lang="en-US" sz="1800" kern="1200"><a:latin typeface="Arial"/></a:rPr><a:t>7</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-no-wrap-zero-kerning-probe" `
+    -BodyPr '<a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="1200"/></a:spcAft></a:pPr><a:r><a:rPr sz="2400" kern="0"><a:latin typeface="Arial"/></a:rPr><a:t>To AV WA TA To AV WA TA To AV WA TA</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="1200"/></a:spcAft></a:pPr><a:r><a:rPr sz="2400" kern="1"><a:latin typeface="Arial"/></a:rPr><a:t>To AV WA TA To AV WA TA To AV WA TA</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="1200"/></a:spcAft></a:pPr><a:r><a:rPr sz="2400" kern="10000"><a:latin typeface="Arial"/></a:rPr><a:t>To AV WA TA To AV WA TA To AV WA TA</a:t></a:r></a:p>
+'@
+
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

@@ -2235,4 +2235,100 @@ internal static class PptxTextLayoutTests
         TestAssert.Equal(8, PptxTests.CountOccurrences(pdf, " TJ"));
         TestAssert.Contains(" 24 Tf", pdf);
     }
+
+    public static void PptxNoWrapZeroKerningKeepsNominalGlyphAdvances()
+    {
+        byte[] zero = RenderNoWrapKerningPdf(NoWrapKerningParagraph("0"));
+        byte[] disabled = RenderNoWrapKerningPdf(NoWrapKerningParagraph("10000"));
+        byte[] absent = RenderNoWrapKerningPdf(NoWrapKerningParagraph(null));
+        byte[] active = RenderNoWrapKerningPdf(NoWrapKerningParagraph("1"));
+        TestAssert.True(zero.SequenceEqual(disabled) && zero.SequenceEqual(absent),
+            "Admitted zero must retain nominal advances and match absent/disabled kerning exactly.");
+        TestAssert.True(!zero.SequenceEqual(active), "Positive active kerning must remain distinct.");
+        string zeroArray = Regex.Matches(Encoding.ASCII.GetString(zero), @"\[[^\]\r\n]*\] TJ").Single().Value;
+        string activeArray = Regex.Matches(Encoding.ASCII.GetString(active), @"\[[^\]\r\n]*\] TJ").Single().Value;
+        TestAssert.True(!Regex.IsMatch(zeroArray, @">\s+[-0-9.]"), "Nominal glyphs must emit without pair adjustments.");
+        TestAssert.Contains(" 50 ", activeArray); // Synthetic AB GPOS is -50 units at 1000 units/em.
+    }
+
+    public static void PptxNoWrapZeroKerningHonorsCascadeAndParagraphAdmission()
+    {
+        byte[] zero = RenderNoWrapKerningPdf(NoWrapKerningParagraph("0"));
+        byte[] active = RenderNoWrapKerningPdf(NoWrapKerningParagraph("1"));
+        TestAssert.True(zero.SequenceEqual(RenderNoWrapKerningPdf(NoWrapKerningParagraph(null, "0"))),
+            "Inherited paragraph zero must use the same admission as direct zero.");
+        TestAssert.True(active.SequenceEqual(RenderNoWrapKerningPdf(NoWrapKerningParagraph("1", "0"))),
+            "Direct positive threshold must override inherited zero.");
+        TestAssert.True(zero.SequenceEqual(RenderNoWrapKerningPdf(NoWrapKerningParagraph("0", "1"))),
+            "Direct zero must override an inherited active threshold.");
+        byte[] mixedZero = RenderNoWrapKerningPdf(NoWrapKerningParagraph("0", alignment: "ctr") + NoWrapKerningParagraph("0"));
+        byte[] mixedExpected = RenderNoWrapKerningPdf(NoWrapKerningParagraph("1", alignment: "ctr") + NoWrapKerningParagraph("10000"));
+        TestAssert.True(mixedZero.SequenceEqual(mixedExpected),
+            "A centered paragraph must retain active fallback while the following left paragraph admits zero independently.");
+    }
+
+    public static void PptxNoWrapZeroKerningRetainsExcludedFrameFallbacks()
+    {
+        foreach ((string body, string autofit, string shape, string alignment, string bullet) in new[]
+        {
+            ("wrap=\"square\"", "<a:noAutofit/>", "", "l", ""),
+            ("wrap=\"other\"", "<a:noAutofit/>", "", "l", ""),
+            ("", "<a:noAutofit/>", "", "l", ""),
+            ("wrap=\"none\"", "", "", "l", ""),
+            ("wrap=\"none\"", "<a:spAutoFit/>", "", "l", ""),
+            ("wrap=\"none\"", "<a:normAutofit fontScale=\"80000\"/>", "", "l", ""),
+            ("wrap=\"none\" numCol=\"2\"", "<a:noAutofit/>", "", "l", ""),
+            ("wrap=\"none\" vert=\"vert270\"", "<a:noAutofit/>", "", "l", ""),
+            ("wrap=\"none\"", "<a:noAutofit/>", "rot=\"900000\"", "l", ""),
+            ("wrap=\"none\"", "<a:noAutofit/>", "", "ctr", ""),
+            ("wrap=\"none\"", "<a:noAutofit/>", "", "r", ""),
+            ("wrap=\"none\"", "<a:noAutofit/>", "", "just", ""),
+            ("wrap=\"none\"", "<a:noAutofit/>", "", "l", "<a:buChar char=\"•\"/>")
+        })
+        {
+            byte[] zero = RenderNoWrapKerningPdf(NoWrapKerningParagraph("0", alignment: alignment, bullet: bullet), body, autofit, shape);
+            byte[] active = RenderNoWrapKerningPdf(NoWrapKerningParagraph("1", alignment: alignment, bullet: bullet), body, autofit, shape);
+            TestAssert.True(zero.SequenceEqual(active), $"Excluded frame must preserve active zero fallback: {body}/{autofit}/{shape}/{alignment}/{bullet}.");
+        }
+    }
+
+    private static string NoWrapKerningParagraph(string? direct, string? inherited = null, string alignment = "l", string bullet = "")
+    {
+        string kern = direct is null ? "" : $" kern=\"{direct}\"";
+        string defaults = inherited is null ? "" : $"<a:defRPr kern=\"{inherited}\"/>";
+        return $"<a:p><a:pPr algn=\"{alignment}\">{bullet}{defaults}</a:pPr><a:r><a:rPr sz=\"2400\"{kern}><a:latin typeface=\"TestFont\"/></a:rPr><a:t>ABAB</a:t></a:r></a:p>";
+    }
+
+    private static byte[] RenderNoWrapKerningPdf(string paragraphs, string body = "wrap=\"none\"", string autofit = "<a:noAutofit/>", string shape = "")
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm {{shape}}><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr {{body}} lIns="0" rIns="0" tIns="0" bIns="0">{{autofit}}</a:bodyPr><a:lstStyle/>{{paragraphs}}</p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");
+        try
+        {
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new NoWrapKerningFontResolver() });
+            return File.ReadAllBytes(output);
+        }
+        finally { File.Delete(input); File.Delete(output); }
+    }
+
+    private sealed class NoWrapKerningFontResolver : IFontResolver
+    {
+        private readonly MemoryFontProgramSource source = new("nowrap-kern-test", TestFontBuilder.CreateTestFont());
+        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "TestFont",
+            new FontStyleKey(false, false, 400, 0, false), source, IsFallback: false);
+    }
 }

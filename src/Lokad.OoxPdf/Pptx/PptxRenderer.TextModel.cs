@@ -349,7 +349,8 @@ internal sealed partial class PptxRenderer
             lineSpacingScale,
             compatibleLineSpacing,
             compatibleDefaultLineSpacingFactor,
-            shapeFontColor, default);
+            shapeFontColor, default,
+            disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees));
         // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
         // uses the wrong axis and advance); other orientations keep estimated offsets.
         TextVerticalAnchor anchorForEstimate = orientation == PptxTextOrientation.Vertical ? TextVerticalAnchor.Top : bodyProperties.VerticalAnchor;
@@ -586,6 +587,18 @@ internal sealed partial class PptxRenderer
             paragraphs);
     }
 
+    private static bool UsesNoWrapZeroKerning(PptxTextBodyProperties bodyProperties, double textRotationDegrees)
+    {
+        // Office's zero threshold disables pair kerning in these controls.
+        // Wrapped and aligned frames still need their existing advance policy:
+        // changing it can alter line breaks or worsen alignment.
+        return bodyProperties.WrapMode == PptxTextWrapMode.None &&
+            bodyProperties.AutofitMode == PptxTextAutofitMode.None &&
+            bodyProperties.Orientation == PptxTextOrientation.Horizontal &&
+            bodyProperties.ColumnCount == 1 &&
+            Math.Abs(textRotationDegrees) < PptxTextMetricRules.CoordinateTolerance;
+    }
+
     private static bool TextFrameUsesOfficeBaselineFloor(XElement shape)
     {
         // Office applies the baseline floor regardless of preset geometry (rect proven by the anchor ladder, ellipse proven by small-label-origin at 0.04pt).
@@ -614,7 +627,8 @@ internal sealed partial class PptxRenderer
         bool compatibleLineSpacing,
         double compatibleDefaultLineSpacingFactor,
         RgbColor? shapeFontColor,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
+        PptxSceneTableCellTextStyle tableStyleTextStyle,
+        bool disableZeroKerning = false)
     {
         var paragraphs = new List<PptxTextParagraphModel>();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
@@ -629,7 +643,8 @@ internal sealed partial class PptxRenderer
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade);
+            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade,
+                disableZeroKerning && paragraphStyle.Alignment == TextAlignment.Left && bullet.Kind == PptxParagraphBulletKind.None);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
             paragraphs.Add(new PptxTextParagraphModel(
@@ -697,7 +712,7 @@ internal sealed partial class PptxRenderer
         }
 
 
-        IReadOnlyList<PptxTextRunModel> BuildRunModels(XElement paragraph, ResolvedParagraphTextStyle paragraphStyle, PptxParagraphStyleCascade resolvedParagraphStyleCascade)
+        IReadOnlyList<PptxTextRunModel> BuildRunModels(XElement paragraph, ResolvedParagraphTextStyle paragraphStyle, PptxParagraphStyleCascade resolvedParagraphStyleCascade, bool disableParagraphZeroKerning)
         {
             var runs = new List<PptxTextRunModel>();
             foreach (XElement child in paragraph.Elements())
@@ -713,7 +728,7 @@ internal sealed partial class PptxRenderer
                         breakProperties,
                         breakCascade,
                         "\n",
-                        ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
+                        ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle, disableParagraphZeroKerning)));
                     continue;
                 }
 
@@ -731,7 +746,7 @@ internal sealed partial class PptxRenderer
                     runProperties,
                     textRunCascade,
                     ReadTextElementText(child, slideNumber),
-                    ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
+                    ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle, disableParagraphZeroKerning)));
             }
 
             return runs;
@@ -771,7 +786,9 @@ internal sealed partial class PptxRenderer
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, frameModel.FontScale, frameModel.LineSpacingScale, frameModel.BodyProperties.CompatibleLineSpacing, ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties));
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
-            IReadOnlyList<PptxTextRunModel> runs = BuildSceneFedRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle);
+            IReadOnlyList<PptxTextRunModel> runs = BuildSceneFedRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle,
+                disableZeroKerning: frameModel.TableRowIndex is null && paragraphStyle.Alignment == TextAlignment.Left &&
+                    bullet.Kind == PptxParagraphBulletKind.None && UsesNoWrapZeroKerning(frameModel.BodyProperties, frameModel.TextRotationDegrees));
             XElement? endParagraphProperties = sceneParagraph.EndParagraphProperties;
             ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, frameModel.FontScale);
             paragraphs.Add(new PptxTextParagraphModel(
@@ -806,7 +823,8 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         double fontScale,
         int slideNumber,
-        PptxSceneTableCellTextStyle tableStyleTextStyle)
+        PptxSceneTableCellTextStyle tableStyleTextStyle,
+        bool disableZeroKerning = false)
     {
         var runs = new List<PptxTextRunModel>();
         foreach (XElement child in paragraph.Elements())
@@ -822,7 +840,7 @@ internal sealed partial class PptxRenderer
                     breakProperties,
                     breakCascade,
                     "\n",
-                    ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
+                    ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle, disableZeroKerning)));
                 continue;
             }
 
@@ -840,7 +858,7 @@ internal sealed partial class PptxRenderer
                 runProperties,
                 textRunCascade,
                 ReadTextElementText(child, slideNumber),
-                ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
+                ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle, disableZeroKerning)));
         }
 
         return runs;
