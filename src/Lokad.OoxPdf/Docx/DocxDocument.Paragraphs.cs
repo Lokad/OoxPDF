@@ -21,6 +21,9 @@ internal sealed record DocxParagraph(
     public bool? WordWrap { get; init; }
     public string? WordWrapValue { get; init; }
     public DocxParagraphStyleResolution StyleResolution { get; init; } = DocxParagraphStyleResolution.Empty;
+    // Only contextual spacing uses the declared default identity. Keep the
+    // authored StyleId and the existing property inheritance intact.
+    public string? ContextualSpacingDefaultStyleId { get; init; }
     public IReadOnlyList<DocxInlineReference> InlineReferences { get; init; } = [];
     public IReadOnlyList<DocxCommentRange> CommentRanges { get; init; } = [];
     public IReadOnlyList<DocxRevisionRange> RevisionRanges { get; init; } = [];

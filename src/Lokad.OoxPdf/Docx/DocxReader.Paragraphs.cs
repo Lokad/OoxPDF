@@ -291,6 +291,8 @@ internal sealed partial class DocxReader
             WordWrap = resolvedParagraph.WordWrap,
             WordWrapValue = resolvedParagraph.WordWrapValue,
             StyleResolution = styleResolution,
+            ContextualSpacingDefaultStyleId = paragraphProperties?.Element(WordprocessingNamespace + "pStyle") is null
+                ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,

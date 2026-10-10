@@ -322,9 +322,15 @@ internal sealed partial class DocxLayoutEngine
         return string.IsNullOrWhiteSpace(styleId) ? string.Empty : styleId;
     }
 
-    internal static bool HasSameContextualSpacingStyle(DocxParagraph? previous, DocxParagraph current) =>
-        previous is not null && string.Equals(NormalizeContextualSpacingStyleId(previous.StyleId),
-            NormalizeContextualSpacingStyleId(current.StyleId), StringComparison.Ordinal);
+    internal static bool HasSameContextualSpacingStyle(DocxParagraph? previous, DocxParagraph current,
+        bool resolveDefaultStyle = true) =>
+        previous is not null &&
+        (string.Equals(NormalizeContextualSpacingStyleId(previous.StyleId),
+            NormalizeContextualSpacingStyleId(current.StyleId), StringComparison.Ordinal) ||
+         resolveDefaultStyle && string.Equals(
+            NormalizeContextualSpacingStyleId(previous.StyleId ?? previous.ContextualSpacingDefaultStyleId),
+            NormalizeContextualSpacingStyleId(current.StyleId ?? current.ContextualSpacingDefaultStyleId),
+            StringComparison.Ordinal));
 
     internal static bool IsPlainContextualSpacingParagraph(DocxParagraph paragraph) =>
         double.IsFinite(paragraph.SpacingBeforePoints) && double.IsFinite(paragraph.SpacingAfterPoints) &&
@@ -344,11 +350,12 @@ internal sealed partial class DocxLayoutEngine
         bool resolveContextualContributions = true)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-        bool sameStyle = HasSameContextualSpacingStyle(previousParagraph, paragraph);
+        bool plainBoundary = resolveContextualContributions && previousParagraph is not null &&
+            IsPlainContextualSpacingParagraph(previousParagraph) && IsPlainContextualSpacingParagraph(paragraph);
+        bool sameStyle = HasSameContextualSpacingStyle(previousParagraph, paragraph, resolveDefaultStyle: plainBoundary);
         bool suppressBefore = sameStyle && effective.Spacing.ContextualSpacing == true;
         bool suppressAfter = sameStyle && previousParagraph!.Spacing.ContextualSpacing == true;
-        bool admitted = resolveContextualContributions && sameStyle && IsPlainContextualSpacingParagraph(previousParagraph!) &&
-            IsPlainContextualSpacingParagraph(paragraph);
+        bool admitted = plainBoundary && sameStyle;
         double spacingBefore = effective.SpacingBeforePoints * spacingScale;
         double spacingAfter = effective.SpacingAfterPoints * spacingScale;
         // Word collapses the ordinary gap before suppressing each paragraph's

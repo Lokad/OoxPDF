@@ -722,6 +722,136 @@ internal static class DocxFootnotesTests
         };
     }
 
+    public static void DocxDefaultContextualStyleMatchesWordGapMatrix()
+    {
+        foreach (string defaultId in new[] { "Normal", "PublicBase" })
+        foreach (bool explicitPrevious in new[] { true, false })
+        foreach ((bool previousFlag, bool currentFlag, double largerBefore, double largerAfter) in new[]
+        { (false, false, 12d, 12d), (false, true, 6d, 12d), (true, false, 6d, 0d), (true, true, 0d, 0d) })
+        foreach (bool beforeLarger in new[] { true, false })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", defaultId, explicitPrevious, previousFlag, currentFlag);
+            DocxParagraph previous = source.Paragraphs[0] with
+            { Runs = [new DocxTextRun("Previous", 10d, null, false, false, false, null, null)],
+              SpacingAfterPoints = beforeLarger ? 6d : 12d, LineSpacingPoints = 10d, InlineReferences = [] };
+            DocxParagraph current = source.Paragraphs[1] with
+            { Runs = [new DocxTextRun("Current", 10d, null, false, false, false, null, null)],
+              SpacingBeforePoints = beforeLarger ? 12d : 6d, SpacingAfterPoints = 0d, LineSpacingPoints = 10d, InlineReferences = [] };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(previous), new DocxParagraphElement(current)], []);
+            DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+            double expected = beforeLarger ? largerBefore : largerAfter;
+            TestAssert.True(Math.Abs(lines[0].BaselineY - lines[1].BaselineY - 10d - expected) < .000001d,
+                "Declared default styles follow Word's ownership matrix in either direction.");
+            TestAssert.Equal(beforeLarger ? 6d : 12d, lines[1].PendingAfterSpacing ?? -1d);
+            TestAssert.Equal(beforeLarger ? 12d : 6d, lines[1].ParagraphBeforeSpacing ?? -1d);
+        }
+    }
+
+    public static void DocxDefaultContextualStylePreservesAuthoredIdentity()
+    {
+        foreach (string defaultId in new[] { "Normal", "PublicBase" })
+        foreach (bool explicitPrevious in new[] { true, false })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", defaultId, explicitPrevious, true, true);
+            DocxParagraph omitted = source.Paragraphs[explicitPrevious ? 1 : 0];
+            DocxParagraph explicitStyle = source.Paragraphs[explicitPrevious ? 0 : 1];
+            TestAssert.True(omitted.StyleId is null && omitted.StyleResolution.StyleId is null && !omitted.StyleResolution.StyleFound,
+                "The authored missing style and its existing cascade provenance remain intact.");
+            TestAssert.Equal(defaultId, explicitStyle.StyleId!);
+            TestAssert.True(explicitStyle.StyleResolution.StyleFound, "Explicit style provenance remains resolved.");
+            TestAssert.Equal(12d, source.Paragraphs[1].SpacingBeforePoints);
+            TestAssert.Equal(24d, source.Paragraphs[1].SpacingAfterPoints);
+            TestAssert.True(source.Paragraphs[1].Runs.All(r => r.FontSize <= 12d),
+                "Identity resolution does not introduce the default style's paragraph or run overrides.");
+        }
+    }
+
+    public static void DocxDefaultContextualStyleAlignsNoteBoundsWithOmittedControls()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string defaultId in new[] { "Normal", "PublicBase" })
+        foreach (bool explicitPrevious in new[] { true, false })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture(kind, defaultId, explicitPrevious, true, true);
+            DocxDocument omitted = ReadDefaultContextualStyleFixture(kind, defaultId, explicitPrevious, true, true, "allomitted");
+            PdfLinkAnnotation[] expected = RenderCustomNoteLinks(omitted, geometry);
+            PdfLinkAnnotation[] actual = RenderCustomNoteLinks(source, geometry);
+            TestAssert.Equal(expected.Length, actual.Length);
+            for (int i = 0; i < actual.Length; i++)
+            {
+                TestAssert.True(Math.Abs(expected[i].Height - actual[i].Height) < .000001d,
+                    "Default-style aliases own the same note hit-area gap as omitted-style controls.");
+                TestAssert.True(Math.Abs(expected[i].Y - actual[i].Y) < .000001d,
+                    "Default-style aliases keep note hit areas on the same painted line.");
+            }
+        }
+    }
+
+    public static void DocxDefaultContextualStyleRetainsAmbiguousAndRichFallbacks()
+    {
+        foreach (string variant in new[] { "undeclared", "off", "multiple", "malformed", "nondefault", "rich" })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, variant);
+            DocxBodyElement[] elements = source.BodyElements.Select(e => e is DocxParagraphElement p
+                ? new DocxParagraphElement(p.Paragraph with { StyleId = p.Paragraph.StyleId ?? "PublicFallback" }) : e).ToArray();
+            PdfLinkAnnotation[] expected = RenderCustomNoteLinks(source with { BodyElements = elements });
+            PdfLinkAnnotation[] actual = RenderCustomNoteLinks(source);
+            TestAssert.Equal(expected.Length, actual.Length);
+            for (int i = 0; i < actual.Length; i++)
+            {
+                TestAssert.Equal(expected[i].Height, actual[i].Height);
+                TestAssert.Equal(expected[i].Y, actual[i].Y);
+            }
+        }
+    }
+
+    private static DocxDocument ReadDefaultContextualStyleFixture(string kind, string defaultId,
+        bool explicitPrevious, bool previousFlag, bool currentFlag, string variant = "ordinary") =>
+        ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+        {
+            XDocument styles = XDocument.Parse(parts["word/styles.xml"]);
+            XElement? normal = styles.Root!.Elements(NoteWord + "style").SingleOrDefault(s => (string?)s.Attribute(NoteWord + "styleId") == "Normal");
+            if (normal is null)
+            {
+                normal = new XElement(NoteWord + "style", new XAttribute(NoteWord + "type", "paragraph"),
+                    new XAttribute(NoteWord + "styleId", "Normal"));
+                styles.Root.Add(normal);
+            }
+            foreach (XElement style in styles.Root.Elements(NoteWord + "style")) style.SetAttributeValue(NoteWord + "default", "0");
+            XElement declared = new(normal); declared.SetAttributeValue(NoteWord + "styleId", defaultId);
+            declared.SetAttributeValue(NoteWord + "default", variant == "off" ? "off" : "true");
+            if (defaultId == "Normal") normal.ReplaceWith(declared); else styles.Root.Add(declared);
+            if (variant == "undeclared") declared.Attribute(NoteWord + "default")!.Remove();
+            if (variant is "multiple" or "nondefault")
+            {
+                XElement other = new(declared); other.SetAttributeValue(NoteWord + "styleId", "PublicOther");
+                other.SetAttributeValue(NoteWord + "default", variant == "multiple" ? "1" : "0"); styles.Root.Add(other);
+            }
+            XElement body = xml.Root!.Element(NoteWord + "body")!;
+            XElement current = body.Elements(NoteWord + "p").First();
+            XElement props = current.Element(NoteWord + "pPr")!;
+            props.Element(NoteWord + "spacing")?.Remove();
+            props.Add(new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "240"), new XAttribute(NoteWord + "after", "480")));
+            props.Element(NoteWord + "contextualSpacing")?.Remove();
+            if (currentFlag) props.Add(new XElement(NoteWord + "contextualSpacing"));
+            current.Descendants(NoteWord + "t").Last().Value += " and following text " + string.Concat(Enumerable.Repeat("after note ", 35));
+            XElement previousProps = new(NoteWord + "pPr", new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", "120")));
+            if (previousFlag) previousProps.Add(new XElement(NoteWord + "contextualSpacing"));
+            XElement previous = new(NoteWord + "p", previousProps, new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph.")));
+            XElement explicitProps = explicitPrevious ? previousProps : props;
+            explicitProps.AddFirst(new XElement(NoteWord + "pStyle", new XAttribute(NoteWord + "val", variant == "nondefault" ? "PublicOther" : defaultId)));
+            if (variant == "allomitted") explicitProps.Element(NoteWord + "pStyle")!.Remove();
+            if (variant == "malformed") props.AddFirst(new XElement(NoteWord + "pStyle"));
+            if (variant == "rich") previous.Element(NoteWord + "r")!.Add(new XElement(NoteWord + "br"));
+            current.AddBeforeSelf(previous);
+            parts["word/styles.xml"] = styles.ToString();
+        });
+
     public static void DocxCurrentContextualMultilineNoteBeforeSpacingOwnsSectionFirstGaps()
     {
         CheckCurrentContextualMultilineNoteGaps("none");

@@ -41,6 +41,7 @@ internal sealed partial class DocxReader
         var characterStyles = new Dictionary<string, DocxStyle>(StringComparer.Ordinal);
         var tableStyles = new Dictionary<string, DocxTableStyle>(StringComparer.Ordinal);
         string? defaultTableStyleId = null;
+        var defaultParagraphStyleIds = new List<string>();
         foreach (XElement style in stylesXml.Root?.Elements(WordprocessingNamespace + "style") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -58,6 +59,10 @@ internal sealed partial class DocxReader
             if (type == "paragraph")
             {
                 paragraphStyles[styleId] = parsed;
+                if (OoxBoolean.ParseAttribute(style, WordprocessingNamespace + "default", false))
+                {
+                    defaultParagraphStyleIds.Add(styleId);
+                }
             }
             else if (type == "character")
             {
@@ -77,7 +82,10 @@ internal sealed partial class DocxReader
         DocxTableStyle? defaultTableStyle = defaultTableStyleId is not null && resolvedTableStyles.TryGetValue(defaultTableStyleId, out DocxTableStyle? resolvedDefault)
             ? resolvedDefault
             : null;
-        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyleId, defaultTableStyle);
+        return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyleId, defaultTableStyle)
+        {
+            ContextualSpacingDefaultStyleId = defaultParagraphStyleIds.Count == 1 ? defaultParagraphStyleIds[0] : null
+        };
     }
 
     private static DocxStyleCatalog ToStyleCatalog(DocxStyleSet styles)
@@ -530,6 +538,7 @@ internal sealed partial class DocxReader
         string? DefaultTableStyleId,
         DocxTableStyle? DefaultTableStyle)
     {
+        public string? ContextualSpacingDefaultStyleId { get; init; }
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null),
