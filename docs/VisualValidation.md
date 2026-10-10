@@ -870,3 +870,52 @@ validate347cases/10families. Fresh2911inheritedDOCX and80comparison PDFs retain
 bytes, with no inherited page changes. The34cachedDOCXcases/508failed gates transfer
 only through fresh PDF identity; no new cache gate is claimed. Packed0.1.5smoke
 passes. API/dependencies/version stay unchanged; release preparation is deferred.
+
+## RV08-T9: bounded automatic-number word wrapping (2026-10-10)
+
+The general bullet allowance lets words exceed the authored line width by 20% of
+font size. In a 190pt numbered textbox this joins “compare stock” where Office
+breaks after “compare”, omitting a 28.8pt line and moving later paragraphs upward.
+Already-admitted automatic labels now use coordinate word-fit tolerance for
+wrapping with explicit noAutofit and printable ASCII text runs without fields or
+manual breaks. The first drawable body fragment must fit after its actual origin.
+Existing frame, indentation, font/size, label-clearance and counter rules remain.
+Character bullets retain the general allowance. Non-ASCII, fields/manual breaks,
+insufficient first-word space and excluded frame/autofit modes retain fallback.
+
+64 new controls comprise 42 width/font/format/split/guard cases, 16 heldout font-
+size/first-fragment boundaries and six additional first-word edges. Together with
+133 prior controls, there are 197 independent controls per syntax; a repeated
+singleton boundary is counted once. Original and Office-imported syntax each
+give 16 paired MAE/SSIM improvements and 181 raster identities, with no metric
+tradeoffs. Every changed word-line sequence matches Office; 194 inspectable full
+text sequences match. Three rotated references lack page-level operations and
+retain rasters. The initial strict rule regresses five first-word edges per syntax
+by adding an empty body line; exact source/DLL/PDB/reports retain that failed model.
+The first-fragment fit bound removes those regressions. Four new portable methods
+cover line boundaries, split words/scene agreement, counters/body pitch and
+character/excluded/oversized-first-word fallback. Three unchanged methods fail
+exact T8 parent; the fallback guard passes.
+
+All 97 prior public typography PDFs retain bytes. A new approximate public probe
+duplicates one primary geometry and is not counted as another independent control.
+Original/imported comparisons both improve MAE 0.6935→0.0923 and SSIM
+0.746999→0.985514, with foreground recall 0.970963. Its gates are MAE≤0.12,
+SSIM≥0.98 and recall≥0.96. Only this fixture is generated; existing inputs and
+gates are unchanged. The three-paragraph control improves MAE 2.7255→0.2125 and
+SSIM 0.539201→0.984790; general shaping and manual-break baseline parity remain
+outside this rule.
+
+Frozen clean Windows Release and one full catalogue invocation pass 2325 registered
+/2324 passed /0 failed /1 optional private-document skip, including 91 PDF, 130 SVG,
+151 images, 184 typography and 959 DOCX methods. Linux passes 85 PDF +56 targeted
+=141 checks, with six existing Windows-Arial skips and two archive SourceLink
+warnings. Both inventories validate 348 cases across ten families. After freeze,
+20 control decks plus two public variants reproduce their compared PDFs; 60 SVG
+and 98 current typography PDFs reproduce qualified bytes. Fifteen of 17 older
+guard decks retain PDFs; two numbering decks improve on two pages, with 70 other
+raster identities. Fresh 2911 inherited DOCX and 80 comparison PDFs retain bytes,
+with no inherited page changes. The 34 cached DOCX cases and 508 failed gates
+transfer only through fresh PDF identity; no new cache gate is claimed. Packed
+0.1.5 smoke passes. API, dependencies and version stay unchanged; release
+preparation is deferred.
