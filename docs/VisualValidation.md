@@ -974,3 +974,57 @@ All 2911 inherited DOCX PDFs and 251 transfer PDFs retain bytes: 80 DOCX compari
 no inherited page changes. The 34 cached cases/508 failed gates transfer solely
 through fresh PDF identity; no new cache gate is claimed. Packed 0.1.5 smoke passes.
 API, dependencies and version remain unchanged; release preparation is deferred.
+
+
+## RV06-L129: simple DOCX section page boundaries (2026-10-10)
+
+Word 16 controls establish that a section's type describes how that section
+started: the following section owns the boundary after a closing sectPr.
+Omitted types mean nextPage. In simple, equal-geometry, one-column paragraph
+sequences, nextPage/continuous boundaries use that following type without
+rewriting the authored model. Current-page markers for unplaced, fitting
+page-bottom/default footnotes complete the page at a continuous boundary.
+Beneath-text notes and endnotes do not force that completion; notes already
+placed on an earlier page cannot add another page.
+
+Admission excludes tables, static stories, floats, rich/revision content,
+lists, fields, comments, images, geometry changes, multiple columns, nondefault
+spacing scales, terminal section elements, parity/column breaks and split or
+overflowing notes. Each-page numbering and other note limitations remain.
+The general continuous-section and footnote approximation diagnostics remain.
+
+44 authored controls cover 43 independent geometries, including one repeated
+L128 geometry counted once. All 40 admitted controls match Word's page count;
+14 change page counts, of which 13 are independent. Thirty PDFs retain bytes,
+including four table/column/margin/terminal guards with the previous one versus
+two Word pages. All 44 decoded word multisets match with explicit page/baseline
+separators. Missing/extra baseline pages cannot establish a paired case-average
+MAE/SSIM improvement; page recovery/removal and matched-page metrics are recorded.
+
+Five new portable methods pass; three fail the exact previous runtime and two
+guard/earlier-page methods pass both. The initial two-column fallback expectation
+was corrected from one page to the exact parent's two, without a runtime change.
+109 candidate note links resolve across 47 authored controls. The 43 supported
+annotation controls, including two public duplicates and the prior recovery,
+match all 95 Office source/destination pages; four excluded guards remain partial.
+
+Two public fixtures duplicate primary geometry and have fresh printer-restored
+Word references. The continuous-footnote gate requires the existing footnote
+and continuous-section warnings, MAE <=.42/SSIM >=.80/recall >=.80 and changed
+ratio <=.0055. The boundary-only gate requires no diagnostics, MAE <=.60/
+SSIM >=.74/recall >=.76 and changed ratio <=.007. Both require matching page
+counts/dimensions. Default and pagination generation reproduces all ZIP entry
+payloads; container order/timestamps are excluded.
+
+Frozen runtime **4c5e097f** passes clean Windows Release and one full catalogue:
+2338 registered/2337 passed/0 failed/1 optional private-document skip, including
+91 PDF, 130 SVG, 151 images, 184 typography and 972 methods containing Docx.
+Linux passes 85 PDF +76 targeted checks, with six existing Windows-Arial skips
+and two source-archive SourceLink warnings. Both inventories validate 352 cases
+in ten families. Fresh PDF identities transfer 44 new comparisons, two public
+gates and 51 prior note controls. The remaining prior note control recovers
+Word's two-page layout and repeats primary geometry; it adds no independent case.
+All 2911 inherited DOCX PDFs and 251 broader transfers retain bytes with no
+inherited page changes. The 34 cached cases/508 failed gates transfer solely
+through fresh identity; no new cache gate is claimed. Packed 0.1.5 smoke passes.
+API, dependencies and version remain unchanged; release preparation is deferred.
