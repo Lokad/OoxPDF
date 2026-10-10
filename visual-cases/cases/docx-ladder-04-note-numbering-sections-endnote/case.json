@@ -17,11 +17,16 @@
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true,
+    "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 0.95,
     "minStructuralSimilarity": 0.6,
     "minForegroundRecall": 0.56,
-    "maxChangedPixelRatioAtThreshold16": 0.01
+    "maxChangedPixelRatioAtThreshold16": 0.01,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_ENDNOTE"
+    ]
   },
-  "allowedUnsupportedFeatures": []
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_ENDNOTE"
+  ]
 }

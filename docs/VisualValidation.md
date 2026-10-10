@@ -959,7 +959,9 @@ are not claimed for those two controls.
 Two new approximate public probes duplicate primary geometry and are not extra
 independent controls. They have fresh Office references and pass per-page numeric
 gates: footnotes MAE <=.42/SSIM >=.80/recall >=.80; endnotes MAE <=.95/SSIM >=.60/
-recall >=.56, plus page/dimension/diagnostic and changed-pixel checks. Regenerating
+recall >=.56, plus page/dimension and changed-pixel checks. Each gate requires
+only its existing DOCX_APPROXIMATED_FOOTNOTE/ENDNOTE warning; approximation
+warnings remain enabled because note layout is partial. Regenerating
 the fixtures reproduces every ZIP entry payload; ZIP timestamps/order are excluded.
 
 Frozen runtime **e90bac15** passes clean Windows Release and one full catalogue:
