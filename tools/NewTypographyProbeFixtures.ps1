@@ -166,8 +166,8 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-accent-spacing-probe" -TextBo
 New-TypographyProbe -Id "pptx-ladder-04-typography-boundary-invariance-probe" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>The scale and growth</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>The </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>scale </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>and </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>growth</a:t></a:r></a:p>
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Large </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>Global </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Supply</a:t></a:r></a:p>
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Dépendance </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>élevée</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Large </a:t></a:r><a:r><a:rPr sz="2800"><a:highlight><a:srgbClr val="FFF200"/></a:highlight><a:latin typeface="Arial"/></a:rPr><a:t>Global </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Supply</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Dépendance </a:t></a:r><a:r><a:rPr sz="2800"><a:highlight><a:srgbClr val="FFF200"/></a:highlight><a:latin typeface="Arial"/></a:rPr><a:t>élevée</a:t></a:r></a:p>
 '@
 
 New-TypographyProbe -Id "pptx-ladder-04-typography-whitespace-controls-probe" -TextBody @'
@@ -221,7 +221,7 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-tab-space" -TextBody @'
 
 New-TypographyProbe -Id "pptx-ladder-04-typography-inventory-opti-probe" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory Optimization</a:t></a:r></a:p>
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory </a:t></a:r><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>Optimization</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory </a:t></a:r><a:r><a:rPr sz="3000" kern="1200"><a:highlight><a:srgbClr val="FFF200"/></a:highlight><a:latin typeface="Calibri Light"/></a:rPr><a:t>Optimization</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2200" kern="1200"><a:latin typeface="Calibri"/></a:rPr><a:t>In v e n t o r y Op t i should never appear from run splitting</a:t></a:r></a:p>
 '@
 
@@ -268,7 +268,7 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-alignment-values-probe" -Text
 '@
 
 New-TypographyProbe -Id "pptx-ladder-04-typography-cambria-math-run-boundaries-probe" -TextBody @'
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The scale and growth of </a:t></a:r><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>XXXXXX</a:t></a:r><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t> supply network induces inefficiencies that compound over time.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The scale and growth of </a:t></a:r><a:r><a:rPr sz="1800"><a:highlight><a:srgbClr val="FFF200"/></a:highlight><a:latin typeface="Cambria Math"/></a:rPr><a:t>XXXXXX</a:t></a:r><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t> supply network induces inefficiencies that compound over time.</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1400" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Large Global Supply Network implies structural inefficiencies and external volatility</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Client operates production facilities across countries, producing units annually. The sheer scale of this activity leads to inefficiencies that compound over time.</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The key to reducing internal inefficiencies is in optimizing decisions despite external uncertainties.</a:t></a:r></a:p>

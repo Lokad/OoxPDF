@@ -25,6 +25,56 @@ function Read-JsonFile([string] $path) {
     }
 }
 
+function Test-PptxHighlightOrder([string] $path, [string] $caseId, [System.Collections.Generic.List[string]] $issues) {
+    # A targeted fixture check, not a complete OOXML schema validator. DrawingML
+    # puts highlight before these children; PowerPoint drops late probe highlights.
+    $laterChildren = @("uLnTx", "uLn", "uFillTx", "uFill", "latin", "ea", "cs", "sym", "hlinkClick", "hlinkMouseOver", "rtl", "extLst")
+    $archive = $null
+    try {
+        $archive = [System.IO.Compression.ZipFile]::OpenRead($path)
+        foreach ($entry in $archive.Entries) {
+            if ($entry.FullName -notmatch '^ppt/.+\.xml$') { continue }
+            $stream = $null
+            $reader = $null
+            try {
+                $stream = $entry.Open()
+                $settings = [System.Xml.XmlReaderSettings]::new()
+                $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+                $settings.XmlResolver = $null
+                $reader = [System.Xml.XmlReader]::Create($stream, $settings)
+                $document = [System.Xml.XmlDocument]::new()
+                $document.XmlResolver = $null
+                $document.Load($reader)
+                $namespaces = [System.Xml.XmlNamespaceManager]::new($document.NameTable)
+                $namespaces.AddNamespace("a", "http://schemas.openxmlformats.org/drawingml/2006/main")
+                foreach ($properties in $document.SelectNodes("//a:rPr[a:highlight] | //a:defRPr[a:highlight] | //a:endParaRPr[a:highlight]", $namespaces)) {
+                    $preceding = @()
+                    foreach ($child in $properties.ChildNodes) {
+                        if ($child.NamespaceURI -ne "http://schemas.openxmlformats.org/drawingml/2006/main") { continue }
+                        if ($child.LocalName -eq "highlight") {
+                            $outOfOrder = @($preceding | Where-Object { $_ -in $laterChildren })
+                            if ($outOfOrder.Count -gt 0) {
+                                Add-Issue $issues "Case '$caseId' has an out-of-order DrawingML highlight in '$($entry.FullName)': highlight must precede $($outOfOrder -join ', ')."
+                            }
+                        }
+                        $preceding += $child.LocalName
+                    }
+                }
+            }
+            finally {
+                if ($null -ne $reader) { $reader.Dispose() }
+                if ($null -ne $stream) { $stream.Dispose() }
+            }
+        }
+    }
+    catch {
+        Add-Issue $issues "Case '$caseId' PPTX fixture inspection failed: $($_.Exception.Message)"
+    }
+    finally {
+        if ($null -ne $archive) { $archive.Dispose() }
+    }
+}
+
 function Get-NormalizedDocxMarkupMode([string] $value) {
     $normalized = $value.Trim().ToLowerInvariant()
     if ($normalized -eq "simple-markup") {
@@ -109,6 +159,9 @@ foreach ($caseDirectory in $caseDirectories) {
         $inputPath = Join-Path $caseDirectory.FullName $manifest.input
         if (-not (Test-Path -LiteralPath $inputPath)) {
             Add-Issue $issues "Case '$($manifest.id)' input does not exist: $($manifest.input)."
+        }
+        elseif ($manifest.kind -eq "pptx") {
+            Test-PptxHighlightOrder $inputPath ([string]$manifest.id) $issues
         }
     }
 

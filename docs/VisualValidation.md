@@ -65,6 +65,21 @@ Pixel metrics are advisory. Office and PDFium can differ in antialiasing, font h
 
 Do not commit generated visual artifacts unless they are intentionally small fixtures.
 
+`tools/ValidateVisualCases.ps1` also checks public PPTX character-property
+highlight ordering. DrawingML puts `highlight` before font and underline children;
+this targeted check is not a complete OOXML schema validator. The
+[Open XML SDK content model](https://github.com/dotnet/Open-XML-SDK/blob/main/data/schemas/schemas_openxmlformats_org_drawingml_2006_main.json)
+records the sequence. PowerPoint 16 discarded five late highlights in four public
+typography probes, both in PDF and PNG preview; corrected ordering survives import.
+Those fixtures and their generator definitions are corrected, including garbled
+accents in the boundary-invariance fixture. The renderer is unchanged. That case's
+strict text-operation/line-start gates remain partial: Office now splits highlighted
+text into seven operations while the candidate coalesces it into four. All text is
+present and line origins differ by at most 0.02pt; its gates remain unchanged.
+Original inputs, eight original/ordered Office controls, the corrected accent
+reference and failed strict comparisons are retained under ignored
+`artifacts/plan-revision-20261005/rv08-t3/`. Windows and Linux validate all 345 cases.
+
 ## Family Parity Targets (Q07 triage, 2026-09-22)
 
 Each family has an explicit target classification so needs-review triage has a
