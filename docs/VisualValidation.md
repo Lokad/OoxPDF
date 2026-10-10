@@ -367,3 +367,41 @@ the new general Forms is not claimed. Input/reference/report hashes, rejected
 assertion/filter attempts and the strong-map negative proof remain under
 `artifacts/plan-revision-20261005/rv07-e6/`. The public inventory retains 344
 manifests across ten families. Version remains 0.1.5; release preparation is deferred.
+
+## RV07-E7: SVG picture viewport clipping (2026-10-10)
+
+The SVG picture viewport now clips after its picture transform. Previously the
+clip stayed in page coordinates while the picture rotated, losing valid content
+outside its original rectangle. The same viewport rectangle, crop, paint, alpha
+and PDF resources remain. This follows the established raster-picture clipping
+order. It resolves the rotated-picture residual measured during E6 qualification.
+
+Twenty independent Office controls produce **thirteen paired MAE/SSIM improvements
+and seven guard raster identities**. E6's 30° control improves MAE **2.591→0.016**,
+SSIM **0.851956→0.999887**; its 90° control improves MAE **4.771→0.021**, SSIM
+**0.676703→0.999630**. Additional opaque/isolated rotations, portrait pictures,
+combined crop/flip/rotation and PowerPoint groups improve. Half-turn, plain
+flip/crop/stretch and backdrop/gradient guards retain their rasters. The selected
+reference remains smooth Office PNG preview, with trusted input/reference hashes.
+
+Two portable regressions independently interpret the emitted device-space clip,
+checking the quarter-turn footprint and oblique centre/projected extent for
+opaque and isolated paint. Both unchanged frozen regressions fail against exact
+accepted E6; the unqualified-alpha guard passes. Frozen runtime **f5e3efa1** passes
+one unfiltered complete catalogue invocation: **2272 registered /2271 passed
+/0 failed /1 optional private-document skip**, including **79 PDF /115 SVG
+/136 images /158 typography /959 DOCX** methods. Linux passes 73 PDF methods
+and fifteen targeted methods; six existing PDF checks require Windows Arial files.
+Windows builds are clean; the git-free Linux archive has two expected SourceLink
+warnings. Exact local **0.1.5** package smoke: `f91e1cf331d44f418bec4e5e2afaf6ab`.
+
+Across 44 prior SVG decks, 43 retain accepted PDF bytes. The earlier eight-slide
+E6 picture-control deck improves on its two rotated pages; the other six rasters
+retain identity. Those pages are counted once in the twenty-control summary.
+All 95 typography, 2911 inherited DOCX and 80 DOCX comparison PDFs freshly retain
+accepted bytes; inherited page counts do not change and cached markup failures
+remain 508 across 34 cases. Fresh frozen Office PDFs match independently compared
+prototype bytes, pinning the original comparison DLL and raster provenance.
+The public inventory remains 344 manifests across ten families. Evidence:
+`artifacts/plan-revision-20261005/rv07-e7/`. Other SVG alpha/composition/stroke
+limits remain documented. Version0.1.5 and deferred release preparation remain.
