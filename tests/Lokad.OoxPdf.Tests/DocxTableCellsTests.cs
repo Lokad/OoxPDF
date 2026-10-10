@@ -12,6 +12,52 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableAutomaticGridRetainsFractionalSingleCellPlacement()
+    {
+        var full = new FractionalCellBoxTextMeasurer();
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach (string? rule in new string?[] { null, "auto" })
+        foreach (double minimum in new[] { 12d, 14d, 24d })
+        foreach (string pattern in new[] { "min", "exact-wrap,min" })
+        {
+            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
+            var legacy = CreateParagraphMinimumLayout(pattern, full, "header", rowRule: rule,
+                verticalAlignment: alignment, cellMargins: margins, minimumSpacing: minimum, exactSpacing: 4d, borderSize: "32");
+            var actual = CreateParagraphMinimumLayout(pattern, full, rowRule: rule,
+                verticalAlignment: alignment, cellMargins: margins, minimumSpacing: minimum, exactSpacing: 4d, borderSize: "32");
+            var before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            var after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(before.Y, after.Y);
+            TestAssert.Equal(before.Height, after.Height);
+            var previous = before.Cells.Single().TextLines;
+            var current = after.Cells.Single().TextLines;
+            TestAssert.Equal(previous.Count, current.Count);
+            for (int i = 0; i < current.Count; i++)
+            {
+                double excess = current[i].LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
+                    minimum > 14.6484375d ? (current[i].LineHeight ?? 0d) - 14.6484375d : 0d;
+                TestAssert.True(Math.Abs(previous[i].BaselineY - current[i].BaselineY - excess) < .000001d,
+                    "Automatic single-cell tables retain their accepted alignment with fractional metrics and exact/minimum overflow.");
+            }
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    private sealed class FractionalCellBoxTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
+        IDocxStaticTextMetricsProvider, IDocxHheaDescenderProvider, IDocxHheaLineGapProvider
+    {
+        private readonly CellBoxTextMeasurer inner = new(new DocxTests.FamilyWidthTextMeasurer());
+        public double MeasureText(DocxTextRun? run, string text, double size) => inner.MeasureText(run, text, size);
+        public double MeasureSingleLineHeight(DocxTextRun? run, double size) => 14.6484375d;
+        public double MeasureHheaLineHeight(DocxTextRun? run, double size) => 14.6484375d;
+        public double MeasureHheaAscender(DocxTextRun? run, double size) => inner.MeasureHheaAscender(run, size);
+        public double MeasureHheaDescender(DocxTextRun? run, double size) => inner.MeasureHheaDescender(run, size);
+        public double MeasureHheaLineGap(DocxTextRun? run, double size) => inner.MeasureHheaLineGap(run, size);
+        public double MeasureWindowsAscender(DocxTextRun? run, double size) => inner.MeasureWindowsAscender(run, size);
+        public double MeasureWindowsDescender(DocxTextRun? run, double size) => inner.MeasureWindowsDescender(run, size);
+    }
+
     public static void DocxTableAutomaticGridMinimumSlotsMatchIndependentWord()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
@@ -858,13 +904,13 @@ internal static class DocxTableCellsTests
         double? rowHeight = null, string? rowRule = null,
         IReadOnlyList<(string Family, double Size, bool Bold, bool Italic)>? paragraphFonts = null,
         string? verticalAlignment = null, DocxTableCellMargins? cellMargins = null, double pageHeight = 700d, int rowCount = 1, int columnCount = 1, double minimumSpacing = 24d,
-        double? shortNeighborMinimum = null, DocxTableCellMargins? shortNeighborMargins = null)
+        double? shortNeighborMinimum = null, DocxTableCellMargins? shortNeighborMargins = null, double exactSpacing = 24d, string? borderSize = null)
     {
         DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
         {
             bool wrapped = token == "min" || token.EndsWith("-wrap", StringComparison.Ordinal);
             string rule = token.StartsWith("min", StringComparison.Ordinal) ? "atLeast" : token.StartsWith("exact", StringComparison.Ordinal) ? "exact" : "auto";
-            double slot = rule == "atLeast" ? minimumSpacing : 24d;
+            double slot = rule == "atLeast" ? minimumSpacing : rule == "exact" ? exactSpacing : 24d;
             DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph(wrapped ? "Wrapped word Wrapped word Wrapped word Wrapped word" : "Short", 12d, 24d) with
             {
                 LineSpacingPoints = rule == "auto" ? null : slot,
@@ -885,6 +931,8 @@ internal static class DocxTableCellsTests
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, verticalAlignment ?? (variant is "center" or "center-rich" ? "center" : null), [],
             cellMargins ?? (variant == "margins" ? DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d } : DocxTableCellMargins.Empty))
             { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
+        if (borderSize is not null) cell = cell with { Borders = new[] { "top", "left", "bottom", "right" }
+            .Select(edge => new DocxTableCellBorder(edge, "single", "000000", borderSize)).ToArray() };
         var cells = Enumerable.Repeat(cell, columnCount).ToArray();
         if (shortNeighborMinimum is { } shortMinimum && columnCount > 1)
         {

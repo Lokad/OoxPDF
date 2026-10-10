@@ -12,7 +12,12 @@ internal sealed partial class DocxLayoutEngine
         if (!IsEligibleTableMinimumCell(table, row, cell, measurer)) return lines;
         var metrics = (IDocxLineMetricsProvider)measurer!;
         double alignmentShift = 0d;
-        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top)
+        // Single-cell automatic tables already have qualified placement. Grid
+        // alignment must not move their existing exact/minimum overflow slots.
+        bool alignAutomaticGrid = automaticMinimumPlacement &&
+            (table.Rows.Count > 1 || row.Cells.Count > 1);
+        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top &&
+            (!automaticMinimumPlacement || alignAutomaticGrid))
         {
             // Word aligns the paragraph slot extent. The terminal bottom border
             // hangs below it; the first-baseline inset is already applied.
