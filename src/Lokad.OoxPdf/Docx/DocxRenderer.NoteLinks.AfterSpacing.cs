@@ -14,13 +14,16 @@ internal sealed partial class DocxRenderer
             document.HeaderBodyElementsByType.Count != 0 || document.FooterBodyElementsByType.Count != 0 ||
             document.HeaderFloatingDrawingsByType.Count != 0 || document.FooterFloatingDrawingsByType.Count != 0 ||
             document.Settings.MirrorMargins == true ||
-            document.BodyElements.Any(e => e.Revisions.Count != 0 ||
-                e is not (DocxParagraphElement or DocxSectionBreakElement)) ||
+            document.BodyElements.Any(e => e.Revisions.Count != 0) ||
             layout.Pages.Any(p => p.ColumnFrames.Count != 1 || p.StaticTextLines.Count != 0 ||
                 p.StaticInlineImages.Count != 0 || p.StaticTableRows.Count != 0 || p.StaticInlineTextBoxes.Count != 0))
         {
             return candidates;
         }
+
+        AddTableNoteBeforeSpacing(document, layout, candidates, cancellationToken);
+        if (document.BodyElements.Any(e => e is not (DocxParagraphElement or DocxSectionBreakElement)))
+            return candidates;
 
         var counts = new Dictionary<DocxParagraph, int>(ReferenceEqualityComparer.Instance);
         var firstLines = new Dictionary<DocxParagraph, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);

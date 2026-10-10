@@ -722,6 +722,118 @@ internal static class DocxFootnotesTests
         };
     }
 
+    public static void DocxTableNoteBeforeSpacingMatchesIndependentWordOwnership()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool previousFlag in new[] { false, true })
+        foreach (bool currentFlag in new[] { false, true })
+        foreach (bool different in new[] { false, true })
+        foreach (int before in new[] { 6, 12, 24 })
+        {
+            double slot = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 0, 24, previousFlag, currentFlag, different))[0].Height;
+            DocxDocument document = ReadTableNoteSpacingFixture(kind, before, 24, previousFlag, currentFlag, different);
+            double expected = currentFlag && !different ? 0d : Math.Max(0d, before - 6d);
+            TestAssert.True(Math.Abs(RenderCustomNoteLinks(document)[0].Height - slot - expected) < .000001d,
+                "Word assigns the remaining collapsed before-gap to the first-line table note mark.");
+        }
+    }
+
+    public static void DocxTableNoteBeforeSpacingIncludesCustomAndExactSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool exact in new[] { false, true })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            string variant = exact ? "custom-exact" : "custom-auto";
+            PdfLinkAnnotation[] baseline = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 0, 24, variant: variant), geometry);
+            PdfLinkAnnotation[] actual = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 12, 24, variant: variant), geometry);
+            TestAssert.Equal(4, actual.Length);
+            TestAssert.True(Math.Abs(actual[0].Height - baseline[0].Height - 6d) < .000001d,
+                "Custom first-character marks and exact line slots own the same 6pt before contribution.");
+            TestAssert.Equal(baseline[0].Width, actual[0].Width);
+            TestAssert.Equal(baseline[0].Destination!.Value.PageIndex, actual[0].Destination!.Value.PageIndex);
+        }
+    }
+
+    public static void DocxTableNoteBeforeSpacingPreservesFinalAfterAndAuthoredProperties()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            DocxDocument emptyAfter = ReadTableNoteSpacingFixture(kind, 12, 0);
+            DocxDocument finalAfter = ReadTableNoteSpacingFixture(kind, 12, 24);
+            PdfLinkAnnotation emptyLink = RenderCustomNoteLinks(emptyAfter)[0];
+            PdfLinkAnnotation finalLink = RenderCustomNoteLinks(finalAfter)[0];
+            TestAssert.Equal(emptyLink.Height, finalLink.Height);
+            TestAssert.Equal(emptyLink.Y, finalLink.Y);
+            DocxTable table = finalAfter.BodyElements.OfType<DocxTableElement>().Single().Table;
+            TestAssert.Equal(12d, table.Rows[0].Cells[0].Paragraphs[1].SpacingBeforePoints);
+            TestAssert.Equal(24d, table.Rows[0].Cells[0].Paragraphs[1].SpacingAfterPoints);
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxLayout zero = engine.Create(emptyAfter, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxLayout spaced = engine.Create(finalAfter, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            double zeroHeight = zero.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Height;
+            double spacedHeight = spaced.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Height;
+            TestAssert.True(Math.Abs(spacedHeight - zeroHeight - 24d) < .000001d,
+                "Word retains the final paragraph after-space inside the row rather than the multiline note link.");
+        }
+    }
+
+    public static void DocxTableNoteBeforeSpacingRetainsLaterLineAndComplexFallbacks()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string variant in new[] { "later", "rich-previous", "before-auto", "before-lines", "atleast", "center", "two-rows" })
+        {
+            double slot = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 0, 24, variant: variant))[0].Height;
+            double actual = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 12, 24, variant: variant))[0].Height;
+            TestAssert.True(Math.Abs(actual - slot) < .000001d,
+                "Later-line marks and unsupported paragraph/cell/row models keep the existing line-only hit area.");
+        }
+    }
+
+    private static DocxDocument ReadTableNoteSpacingFixture(string kind, int before, int after,
+        bool previousFlag = true, bool currentFlag = false, bool different = false, string variant = "") =>
+        ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+        {
+            XElement body = xml.Root!.Element(NoteWord + "body")!;
+            XElement current = body.Elements(NoteWord + "p").First();
+            XElement props = current.Element(NoteWord + "pPr")!;
+            props.Element(NoteWord + "spacing")?.Remove();
+            XElement spacing = new(NoteWord + "spacing", new XAttribute(NoteWord + "before", before * 20),
+                new XAttribute(NoteWord + "after", after * 20), new XAttribute(NoteWord + "line", variant.Contains("exact") || variant == "atleast" ? "480" : "240"),
+                new XAttribute(NoteWord + "lineRule", variant == "atleast" ? "atLeast" : variant.Contains("exact") ? "exact" : "auto"));
+            props.Add(spacing);
+            if (currentFlag) props.Add(new XElement(NoteWord + "contextualSpacing"));
+            if (different) props.AddFirst(new XElement(NoteWord + "pStyle", new XAttribute(NoteWord + "val", "PublicOther")));
+            if (variant == "before-auto") spacing.SetAttributeValue(NoteWord + "beforeAutospacing", "1");
+            if (variant == "before-lines") spacing.SetAttributeValue(NoteWord + "beforeLines", "100");
+            current.Descendants(NoteWord + "t").Last().Value += " " + string.Concat(Enumerable.Repeat("after note ", 35));
+            if (variant == "later") current.Descendants(NoteWord + "t").First().Value += string.Concat(Enumerable.Repeat("before note ", 45));
+            XElement previousProps = new(NoteWord + "pPr", new XElement(NoteWord + "spacing",
+                new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", "120")));
+            if (previousFlag) previousProps.Add(new XElement(NoteWord + "contextualSpacing"));
+            XElement run = new(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."));
+            if (variant == "rich-previous") run.Add(new XElement(NoteWord + "br"));
+            XElement previous = new(NoteWord + "p", previousProps, run);
+            XElement cell = new(NoteWord + "tc", new XElement(NoteWord + "tcPr",
+                new XElement(NoteWord + "tcW", new XAttribute(NoteWord + "w", "9360"), new XAttribute(NoteWord + "type", "dxa"))), previous);
+            if (variant == "center") cell.Element(NoteWord + "tcPr")!.Add(new XElement(NoteWord + "vAlign", new XAttribute(NoteWord + "val", "center")));
+            XElement table = new(NoteWord + "tbl", new XElement(NoteWord + "tblPr",
+                new XElement(NoteWord + "tblW", new XAttribute(NoteWord + "w", "9360"), new XAttribute(NoteWord + "type", "dxa"))),
+                new XElement(NoteWord + "tblGrid", new XElement(NoteWord + "gridCol", new XAttribute(NoteWord + "w", "9360"))), new XElement(NoteWord + "tr", cell));
+            current.AddBeforeSelf(table); current.Remove(); cell.Add(current);
+            if (variant == "two-rows") table.Add(new XElement(NoteWord + "tr", new XElement(NoteWord + "tc", new XElement(NoteWord + "p", new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Guard row."))))));
+            if (variant.StartsWith("custom", StringComparison.Ordinal))
+            {
+                XElement reference = current.Descendants(NoteWord + kind + "Reference").Single();
+                reference.SetAttributeValue(NoteWord + "customMarkFollows", "1"); reference.AddAfterSelf(new XElement(NoteWord + "t", "*"));
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                XElement note = notes.Root!.Elements(NoteWord + kind).Single(n => (string?)n.Attribute(NoteWord + "id") == (string?)reference.Attribute(NoteWord + "id"));
+                XElement marker = note.Descendants(NoteWord + kind + "Ref").Single(); marker.Name = NoteWord + "t"; marker.Value = "*";
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+            }
+        });
+
     public static void DocxImplicitContextualStyleMatchesIndependentWordFlags()
     {
         foreach (string mode in new[] { "no-paragraph-styles", "off" })
