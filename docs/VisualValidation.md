@@ -1254,3 +1254,41 @@ All2911 inherited DOCX and251 broader PDFs retain bytes and page counts. The34
 cached markup cases/508 failed gates transfer only through fresh unchanged PDF
 identities. Local0.1.5 package smoke passes. API/dependencies/version remain
 unchanged; release preparation is deferred.
+
+
+## RV06-L135: multiline note bounds after contextual predecessors (2026-10-10)
+
+Resolve the predecessor's spacing contribution before filtering multiline note
+paragraphs. A first-line mark owns a positive unconsumed before-gap after a plain,
+nonempty contextual predecessor rendered on one line. Different styles retain
+ordinary collapse ownership. Later-line marks and multiline after-spacing retain
+line-only behavior. Empty/wrapped/rich/auto/line-unit predecessors, current-contextual
+multiline paragraphs and existing layout exclusions retain fallback. Painting,
+horizontal bounds and actual note destinations remain unchanged.
+
+48 primary +12 held-out +2 public controls cover 56 independent geometries. Two
+primary controls reuse exact historical inputs/references; two manual-page guards
+also repeat prior inputs, and public cases duplicate supported geometry. Sixteen
+independent and four repeated controls correct 20 rectangles. All 80 links in the
+supported controls match Word vertically within 0.005pt. Forty-two guards retain
+PDF bytes; all 62 retain rasters, decoded-word multisets and page counts. Four
+portable methods pass; two fail exact L134 and two guards pass both. All 16 generator
+ZIP payloads reproduce. Qualified prototype source/DLL/PDB remain archived.
+
+Public multiline painting remains approximate: first-page MAE/SSIM are 2.254/.595424
+for footnotes and 2.175/.552240 for endnotes. The new gates use MAE<=2.30,
+SSIM>=.57/.53, recall>=.65/.56 and changed<=.024, matching pages/dimensions and only
+the corresponding approximation warning. Separate annotation audits qualify bounds.
+Existing inputs and gates are unchanged.
+
+Frozen runtime **c5f412da** passes clean Windows Release: 2364 registered /2363
+passed /0 failed /1 optional private-document skip, including 91 PDF, 130 SVG,
+151 images, 184 typography and 998 methods containing Docx. Linux passes 85 PDF
++102 targeted methods with six existing Arial skips and two archive SourceLink
+warnings. Both inventories validate 364 cases across ten families. Fresh visual
+proof reproduces 62 current and 332 unchanged prior PDFs, plus two historical
+identical inputs requalified by current Word controls, through 396 conversions.
+Those two historical 6pt rectangle residuals are resolved. All 2911 inherited
+DOCX and 251 broader PDFs retain bytes and page counts. The 34 cached markup cases
+/508 failed gates transfer only through fresh unchanged PDF identity. Local 0.1.5
+package smoke passes. API/dependencies/version stay unchanged; release deferred.
