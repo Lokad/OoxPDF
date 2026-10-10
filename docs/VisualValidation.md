@@ -466,3 +466,61 @@ not claimed. Public inventory remains 344 manifests across ten families.
 
 Evidence: `artifacts/plan-revision-20261005/rv07-e8/`. Keep0.1.5; release preparation
 remains deferred. Other documented renderer gaps remain.
+
+## RV07-E9: bounded varying SVG linear alpha (2026-10-10)
+
+Admitted numeric varying linear-pad fills use native axial color and a vector
+luminosity mask. Uniform/opaque gradients retain prior sampled/scalar bytes.
+The existing E8 Form validation, depth, admission, spill, chunked output, rollback
+and weak ownership remain unchanged; no PDF writer/public API/dependency changes.
+Both color and equal-channel eight-bit alpha use the same native [0,1] axis.
+Fill/node alpha multiplies the mask; state restores before stroke/later paint.
+
+Object-box gradients project in normalized box units; user-space gradients retain
+source units. Their vector and perpendicular axis map through the viewport,
+including anisotropic scale and Y inversion. Admission uses actual serialized
+three-decimal matrix/corner values and bounds inverse-projection error at all
+four path-bounds corners to **0.001**. That error is affine, so corner checks bound
+the rectangle. Reject nonfinite/collapsed/imprecise matrices. Admit2..256usable
+stops with representable distinct intervals/endpoints, forward vector components,
+identity gradient transforms, identity user-space or positive axis box path
+transforms, and total Form/mask depth32. Reverse vectors, rotated/sheared/reflected
+box paths, nonidentity user-space paths, repeat/reflect, near/duplicate stops,
+excess count/depth and unqualified syntax retain prior diagnostic behavior.
+
+Thirty-seven Office PNG-preview controls produce **24 paired MAE/SSIM improvements
+and thirteen guard raster identities**. Horizontal alpha improves MAE
+**8.610→0.120**, SSIM **0.876283→0.999984**; diagonal alpha improves MAE
+**9.228→0.117**, SSIM **0.884345→0.999982**. Stretched diagonals, user units,
+transparent/interior/padded stops, black/color/internal backdrops, positive box
+scales, clipped paths, picture crop/flip/rotation, nested overlap, strokes and
+later paint are covered. Near-zero alpha matches the Office raster exactly.
+Original syntax repeats those37controls with24improvements/thirteen guards;
+34rasters match imported syntax. Three source-geometry variants retain their own
+comparisons. These are the same controls, not37additional admissions.
+
+The first source-space projection prototype leaves diagonal MAE2.322/SSIM.985199
+and is excluded. Its source patch, comparison-library hashes and PDF/raster
+outputs remain archived; the original prototype DLL was replaced by a corrected
+build. The reversed-gradient Office preview is flat; native SVG reversal differs.
+That case retains prior sampling pending a separately qualified Office rule.
+
+Five portable methods cover native shading/mask/product, serialized box/user-unit
+projection under stretch, state restoration, syntax/transform/precision fallbacks,
+stop/depth boundaries and mixed uses. Three unchanged frozen semantic regressions
+fail exact accepted E8; the geometry fallback guard passes on both.
+
+Frozen runtime **769ce13f** passes one unfiltered complete
+catalogue invocation: **2287 registered /2286 passed /0 failed /1 optional
+private-document skip**, including **85 PDF /124 SVG /145 images /158 typography
+/959 DOCX** methods. Linux passes **79 PDF +24 targeted methods**, with six existing
+Windows-Arial skips and two expected git-free SourceLink warnings. Windows builds
+are clean. Exact local **0.1.5** package smoke: `ccdfb1a98e71464ca3c4b8e105d4a9c2`.
+
+All49priorSVG/95typography/2911inheritedDOCX/80DOCXcomparison PDFs freshly retain
+accepted bytes. Inherited page counts remain;34cached markup cases retain508failed
+gates. Frozen Office PDF identities preserve original prototype/library/Office
+PNG/raster provenance. General Form graphics-inspector traversal is not claimed.
+Public inventory remains344manifests/ten families. Evidence:
+`artifacts/plan-revision-20261005/rv07-e9/`. Keep0.1.5;release preparation deferred.
+Other mapped geometry, stroke/path-level composition and renderer gaps remain.
