@@ -12,6 +12,99 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableDoubleBorderUsesIndependentWordBandWidths()
+    {
+        foreach ((string? size, double nominal, double printed) in new (string?, double, double)[] {
+            ("4", 1.5d, 1.44d), ("8", 3d, 2.88d), ("24", 9d, 8.64d) })
+        {
+            var document = ReadDoubleBandFixture(size);
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document,
+                new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+            var borders = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().Cell.Borders;
+            foreach (var border in borders)
+            {
+                TestAssert.Equal(nominal, DocxTableBorderGeometry.ResolveNominalWidth(border));
+                TestAssert.True(Math.Abs(printed - DocxTableBorderGeometry.ResolveVisibleWidth(border)) < .000001d,
+                    "Word double bands have two authored-width strokes and one equal gap.");
+            }
+        }
+        foreach (string style in new[] { "single", "triple", "thinThickSmallGap", "dotted" })
+            TestAssert.Equal(.96d, DocxTableBorderGeometry.ResolveVisibleWidth(new DocxTableCellBorder("top", style, "000000", "8")));
+        foreach (string style in new[] { "nil", "none" })
+            TestAssert.Equal(0d, DocxTableBorderGeometry.ResolveVisibleWidth(new DocxTableCellBorder("top", style, "000000", "8")));
+    }
+
+    public static void DocxTableDoubleBorderClipMatchesIndependentWordBounds()
+    {
+        DocxDocument document = ReadDoubleBandFixture("8");
+        var renderer = MarginClipRenderer();
+        TestAssert.Contains("73.44 540 465.12 171.12 re W n",
+            renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content);
+        using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(renderer.InspectLayout(document)));
+        var clip = json.RootElement.GetProperty("Pages")[0].GetProperty("TableRows")[0].GetProperty("Cells")[0].GetProperty("ContentClip");
+        TestAssert.True(clip.ValueKind == System.Text.Json.JsonValueKind.Object && clip.GetProperty("Admitted").GetBoolean(),
+            "Qualified double-border body masks must expose the same effective snapshot bounds.");
+    }
+
+    public static void DocxTableDoubleBorderRetainsMixedAndRawWidths()
+    {
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(ReadDoubleBandFixture("8", mixed: true),
+            new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+        var row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        var cell = row.Cells.Single();
+        TestAssert.Equal(1d, DocxTableBorderGeometry.ResolveNominalWidth(cell.Cell.Borders.Single(border => border.Edge == "top")));
+        TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+            "Mixed double/single styles must retain the prior band widths and complete cell mask.");
+        // Unprojected borders also retain their raw widths in static/related stories.
+        TestAssert.Equal(.96d, DocxTableBorderGeometry.ResolveVisibleWidth(new DocxTableCellBorder("top", "double", "000000", "8")));
+        foreach (string? size in new string?[] { null, "invalid", "0" })
+        {
+            var fallback = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(ReadDoubleBandFixture(size),
+                new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
+            var fallbackRow = fallback.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            var fallbackCell = fallbackRow.Cells.Single();
+            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(fallbackRow, fallbackCell).Admitted,
+                "Omitted/invalid/nonpositive authored widths must retain the prior mask.");
+            TestAssert.Equal(size == "0" ? .25d : .75d, DocxTableBorderGeometry.ResolveNominalWidth(fallbackCell.Cell.Borders[0]));
+        }
+    }
+
+    private static DocxDocument ReadDoubleBandFixture(string? size, bool mixed = false)
+    {
+        DocxDocument source = ReadMarginClipFixture("center");
+        DocxTable original = source.BodyElements.OfType<DocxTableElement>().Single().Table;
+        DocxTable table = original with { Rows = original.Rows.Select(row => row with { Cells = row.Cells.Select(cell =>
+            cell with { Borders = cell.Borders.Select(border => border with {
+                Value = mixed && border.Edge != "top" ? "single" : "double", SizeValue = size
+            }).ToArray() }).ToArray() }).ToArray() };
+        return source with {
+            BodyElements = source.BodyElements.Select(e => e is DocxTableElement ? (DocxBodyElement)new DocxTableElement(table) : e).ToArray(),
+            FallbackTables = [table] };
+    }
+
+    public static void DocxTableDoubleBorderRetainsComplexAndFrameClipFallbacks()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "header", "rich", "mixed" })
+        {
+            var row = CreateParagraphMinimumLayout("min,min,min", full, variant, verticalAlignment: "center")
+                .Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            var cell = row.Cells.Single() with { Cell = row.Cells.Single().Cell with {
+                Borders = [new DocxTableCellBorder("top", "double", "000000", "8")] } };
+            row = row with { Cells = [cell] };
+            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                "Double width correction must not broaden the body/frame admission.");
+        }
+        var automatic = CreateParagraphMinimumLayout("min", full, verticalAlignment: "center")
+            .Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        var automaticCell = automatic.Cells.Single() with { Cell = automatic.Cells.Single().Cell with {
+            Borders = [new DocxTableCellBorder("bottom", "double", "000000", "8")] } };
+        foreach (var row in new[] { automatic with { Cells = [automaticCell], FragmentCount = 2 },
+            automatic with { Cells = [automaticCell], ReviewBorderPrintScale = .95d } })
+            TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, automaticCell).Admitted,
+                "Fragmented and scaled masks retain fallback after the double width fix.");
+    }
+
     public static void DocxTableAutoClipMatchesIndependentWordInsets()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
@@ -83,7 +176,7 @@ internal static class DocxTableCellsTests
             var cell = admitted.Cells.Single();
             var row = admitted;
             if (variant == "compound") cell = cell with { Cell = cell.Cell with {
-                Borders = [new DocxTableCellBorder("bottom", "double", "000000", "8")] } };
+                Borders = [new DocxTableCellBorder("bottom", "triple", "000000", "8")] } };
             if (variant == "fragment") row = row with { FragmentCount = 2 };
             if (variant == "scaled") row = row with { ReviewBorderPrintScale = .95d };
             if (variant == "width") cell = cell with { Width = 0d };
@@ -228,7 +321,7 @@ internal static class DocxTableCellsTests
             if (variant is "top" or "rich" or "auto-rich" or "compound") row = row with { Cells = row.Cells.Select(cell =>
             {
                 if (variant == "top") return cell with { VerticalAlignmentValue = "top" };
-                if (variant == "compound") return cell with { Borders = cell.Borders.Select(border => border with { Value = "double" }).ToArray() };
+                if (variant == "compound") return cell with { Borders = cell.Borders.Select(border => border with { Value = "triple" }).ToArray() };
                 DocxParagraph[] paragraphs = cell.Paragraphs.Select(paragraph => paragraph with {
                     Runs = paragraph.Runs.Select(run => run with { Text = run.Text + "\n" }).ToArray() }).ToArray();
                 return cell with { Paragraphs = paragraphs,

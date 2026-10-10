@@ -212,7 +212,10 @@ internal sealed record DocxTableCellConditionalFormat(
         LastRowLastColumn is not null;
 }
 
-internal sealed record DocxTableCellBorder(string Edge, string? Value, string? Color, string? SizeValue);
+internal sealed record DocxTableCellBorder(string Edge, string? Value, string? Color, string? SizeValue)
+{
+    public bool UseDoubleBandWidth { get; init; }
+}
 
 internal sealed record DocxTableCellMargins(
     double? TopPoints,

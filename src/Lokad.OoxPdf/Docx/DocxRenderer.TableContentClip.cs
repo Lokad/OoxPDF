@@ -13,7 +13,8 @@ internal sealed partial class DocxRenderer
             !(declaredMarginClip || automaticClip) ||
             row.Cells.Any(c => c.VisualCell.Borders.Any(b =>
                 DocxTableBorderGeometry.ResolveVisibleWidth(b) > 0d &&
-                !string.Equals(b.Value, "single", StringComparison.OrdinalIgnoreCase))))
+                !string.Equals(b.Value, "single", StringComparison.OrdinalIgnoreCase) &&
+                !(b.UseDoubleBandWidth && string.Equals(b.Value, "double", StringComparison.OrdinalIgnoreCase)))))
             return fallback;
 
         double Width(string edge) => DocxTableBorderGeometry.ResolveVisibleWidth(

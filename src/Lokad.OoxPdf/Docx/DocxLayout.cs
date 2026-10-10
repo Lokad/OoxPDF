@@ -1103,6 +1103,9 @@ internal sealed partial class DocxLayoutEngine
 
             if (element is DocxTableElement tableElement)
             {
+                DocxTable bodyTable = page.ColumnFrames.Count <= 1
+                    ? DocxTableBorderGeometry.ResolveUniformDoubleBodyTable(tableElement.Table, paragraphSpacingScale, width)
+                    : tableElement.Table;
                 double? precedingBodyBaselineInset = firstBodyLineBaselineOffset;
                 int completedPagesBeforeTable = pages.Count;
                 EnsureFootnoteReserveForSourceBlock(elementIndex);
@@ -1122,7 +1125,7 @@ internal sealed partial class DocxLayoutEngine
                     page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
                     page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
                     document.RelatedStories.All(story => story.Kind == DocxRelatedStoryKind.Comment) &&
-                    CanUseReviewTablePageCapacity(tableElement.Table) ? paragraphSpacingScale : 1d;
+                    CanUseReviewTablePageCapacity(bodyTable) ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
                     tableActiveFrameHasContent = true;
@@ -1150,7 +1153,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableLayoutFrame ResolveCurrentTableFrame()
                 {
                     return CreateTableLayoutFrame(
-                        tableElement.Table,
+                        bodyTable,
                         currentTableIndex,
                         elementIndex,
                         x,
@@ -1167,7 +1170,7 @@ internal sealed partial class DocxLayoutEngine
                         alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom());
                 }
 
-                LayoutTable(tableElement.Table, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
+                LayoutTable(bodyTable, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
                     reviewPaginationScale: reviewPaginationScale);
                 if (scaleBaselineOffsetTransitions &&
                     (completedPagesBeforeTable == pages.Count || reviewPaginationScale < 1d) && textMeasurer is not null)
