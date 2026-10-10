@@ -405,3 +405,64 @@ prototype bytes, pinning the original comparison DLL and raster provenance.
 The public inventory remains 344 manifests across ten families. Evidence:
 `artifacts/plan-revision-20261005/rv07-e7/`. Other SVG alpha/composition/stroke
 limits remain documented. Version0.1.5 and deferred release preparation remain.
+
+## RV07-E8: bounded varying SVG radial alpha (2026-10-10)
+
+Numeric varying stop-opacity on admitted radial pad fills uses one vector
+luminosity mask. Equal RGB components interpolate eight-bit alpha; fill/node
+alpha multiplies that mask. Its local Form binding shares existing validation,
+depth32, content admission, resident spill window, chunked output and rollback.
+Graphics-state descriptors retain local names; weak staging identities release
+earlier source payload owners. No public API or dependency changes.
+
+Admission covers 2..256 usable stops with representable native radii/intervals,
+identity gradient transforms, no off-center focus and identity user-space path
+transforms. The mask inherits the picture/group transform when its state is
+established, before color-shading transforms. It restores before independent
+strokes and later paint. At container depth32, retain the existing container
+composition and diagnose the omitted mask. Transformed/focal, linear, sampled,
+repeated/reflected, malformed/CSS/percentage and other excluded alpha retain
+fallback. Existing mapped color geometry and path-level composition remain partial.
+
+Thirty-one Office controls produce **22 paired MAE/SSIM improvements and nine
+guard raster identities**. Basic alpha improves MAE **4.528→0.141**, SSIM
+**0.957268→0.999988**; transparent edges improve MAE **16.938→0.149**, SSIM
+**0.426412→0.999882**. Backdrops, interior stops, padded endpoints, user-space,
+crop/flip/rotation, stretched pictures, path clipping, nested overlap, strokes
+and later paint are covered. The selected reference remains smooth Office PNG
+preview. Original syntax repeats these controls with the same 22 improvements
+and nine guards; 29 rasters match imported syntax. Two source-geometry variants
+retain their own comparisons. These are the same controls, not 31 more admissions.
+
+The broader transformed-gradient prototype worsens MAE/SSIM and is rejected.
+Initial black/color controls inherited a white master background; corrected
+references disable FollowMasterBackground and verify their corner pixels. Both
+failed attempts remain archived. Varying focal alpha produces an off-center
+Office preview; the chosen centered policy and that alpha fallback are retained.
+
+Six new portable infrastructure methods cover independent namespaces, missing or
+ambiguous mask bindings, exact content/output limits, rollback, large spills,
+streaming owner release and cancellation cleanup. Four SVG methods cover mask
+stops/products, state restoration, fallbacks and stop/depth boundaries, including
+mixed admitted/excluded uses. Two unchanged frozen semantic regressions fail
+against exact accepted E7; the geometry fallback guard passes on both.
+
+Frozen runtime **d2c7f1cc** passes one unfiltered complete
+catalogue invocation: **2282 registered /2281 passed /0 failed /1 optional
+private-document skip**, including **85 PDF /119 SVG /140 images /158 typography
+/959 DOCX** methods. Linux passes **79 PDF +19 targeted methods** with six existing
+Windows-Arial skips and two expected git-free SourceLink warnings. Windows builds
+are clean. Exact local **0.1.5** package smoke: `d1bd15b06b624e2ea7b3df9a6054c686`.
+
+Across 45 prior SVG decks, 44 retain PDF bytes. One earlier 15-page deck improves
+on two numeric-alpha pages and retains thirteen guard rasters. Its basic varying
+control repeats the new set and is counted once there; another Office-normalized
+numeric-alpha page also improves. Direct CSS/percentage syntax stays excluded.
+All 95 typography, 2911 inherited DOCX and 80 DOCX comparison PDFs freshly retain
+accepted bytes; page counts stay unchanged and the 34 cached markup cases retain
+508 failed gates. Fresh frozen Office PDF identities pin the original prototype
+DLL/Office-preview/raster evidence. General Form graphics-inspector traversal is
+not claimed. Public inventory remains 344 manifests across ten families.
+
+Evidence: `artifacts/plan-revision-20261005/rv07-e8/`. Keep0.1.5; release preparation
+remains deferred. Other documented renderer gaps remain.
