@@ -1028,3 +1028,57 @@ All 2911 inherited DOCX PDFs and 251 broader transfers retain bytes with no
 inherited page changes. The 34 cached cases/508 failed gates transfer solely
 through fresh identity; no new cache gate is claimed. Packed 0.1.5 smoke passes.
 API, dependencies and version remain unchanged; release preparation is deferred.
+
+
+## RV06-L130: bounded custom-mark note navigation (2026-10-10)
+
+Explicit `0`/`false`/`off` custom-mark flags restore automatic labels and counters;
+raw flags remain inspectable and unknown values retain the previous fallback.
+True custom marks retain their complete authored text and do not count toward
+automatic labels. A source run with exactly one reference derives its marker
+from the first non-whitespace BMP character in the immediately following w:t.
+Annotations require exact emitted source run/offset ownership, measurable glyph
+advance and a rendered note destination. A prefix in the same run is supported;
+the hit area covers the first character even when more authored characters follow.
+Tables and wrapped markers use the same actual emission mapping. Automatic
+annotations keep their existing behavior.
+
+Empty/whitespace/surrogate, separate-run, before-reference, multiple-reference
+and revision/field/comment marks retain the old annotation fallback. Word emits
+only one custom link for two references in one XML run. The initial prototype's
+four links versus three Word links are retained as rejected evidence; the
+qualified guard keeps two candidate links versus three Word links. Other note
+flow, each-page numbering and after-spacing hit-area limits remain approximate.
+
+30 primary, 14 held-out and two public controls cover 42 independent controls:
+two automatic baselines repeat previous geometry and the public cases duplicate
+primary geometry. Thirty independent supported controls plus four duplicates
+match all 136 actual Office source/destination pages. Six explicit-false variants
+improve case-average MAE/SSIM. Twenty-six annotation-only outputs retain raster
+bytes; twelve guards and two automatic baselines retain complete PDFs. All
+candidate/parent/Office page counts agree. Forty-four decoded word multisets
+match with page/baseline separators; two revision guards retain L128's document
+starts (105/106/107) versus Word's section labels (iv/09/10).
+
+Five portable methods pass; four fail exact L129 and one fallback guard passes
+both. Two public probes have fresh printer-restored Word references and pass
+numeric/page/dimension gates requiring only the corresponding approximation
+diagnostic. Footnote gates are MAE <=.42/SSIM >=.80/recall >=.80/changed <=.0055;
+endnotes use .95/.60/.56/.010. Their four links also match actual Word source/
+destination pages in the direct PDF annotation audit. Default, pagination and
+custom generation reproduce every ZIP entry payload; container order/timestamps
+are excluded.
+
+Frozen runtime **b64c1fe5** passes clean Windows Release and one full catalogue:
+2343 registered/2342 passed/0 failed/1 optional private-document skip, including
+91 PDF,130 SVG,151 images,184 typography and977 methods containing Docx.
+Linux passes85PDF+81targeted checks, six existing Windows-Arial skips and two
+archive SourceLink warnings. Both inventories validate354cases/10families.
+Fresh identities transfer46new comparisons and96prior note outputs. Two prior
+custom-mark controls gain their fourth link with exact raster identities. Across
+48authored annotation controls,178candidate links resolve;36supported controls
+including duplicates match all144Office source/destination pages.
+All2911inheritedDOCX and251broader transfer PDFs retain bytes with no inherited
+page changes.34cached cases/508failed gates transfer only through fresh identity;
+no new cache gate is claimed. Packed0.1.5smoke passes. API/dependencies/version
+remain unchanged; release preparation is deferred.
