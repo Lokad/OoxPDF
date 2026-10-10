@@ -1173,3 +1173,45 @@ inherited DOCX and 251 broader comparison PDFs retain bytes and page counts.
 The 34 cached markup cases /508 failed gates transfer only through fresh exact
 unchanged PDF identity. Local 0.1.5 package smoke passes. API/dependencies/version
 remain unchanged; release preparation is deferred.
+
+
+## RV06-L133: first-line note hit areas in multiline paragraphs (2026-10-10)
+
+In ordinary unscaled, one-column multiline paragraphs, Word assigns a positive
+unconsumed before-gap to a note mark on the first rendered line. Marks on later
+lines retain their line-only rectangles. No multiline mark includes after-spacing.
+The resolved paragraph spacing map retains before/after values for single lines
+and only the positive before-gap for multiple lines. Automatic/exact line boxes,
+predecessor admission and existing contextual/auto/line-unit/scaled/static/table/
+column/manual-break exclusions remain. Glyphs, horizontal bounds and actual note
+destinations are unchanged.
+
+24 primary +8 held-out +2 public controls cover 30 independent geometries. Two
+primary cases reuse exact L132 multiline inputs and Office references; public
+cases duplicate primary geometry. Sixteen independent controls and four repeats
+correct 20 rectangles. All 80 links in those supported controls match Word's
+vertical bounds within 0.005pt, including unchanged links. Fourteen guards retain
+PDF bytes; all 34 retain parent rasters, decoded-word multisets and page counts.
+Four portable methods pass; two fail exact L132 and two guards pass both. The
+identical test source and qualified prototype source/DLL/PDB are retained. All
+twelve generator ZIP payloads reproduce.
+
+The two new public cases remain approximate for text painting. Their unchanged
+first-page MAE/SSIM are 2.170/.587753 for footnotes and 2.091/.540705 for endnotes.
+They use MAE<=2.30, SSIM>=.57/.53, recall>=.65/.56 and changed<=.024, matching
+pages/dimensions and only the corresponding note approximation warning. Separate
+annotation audits establish navigation geometry. An initial new-case endnote
+SSIM floor .57 rejected the measured .5407; its scaffold/reason are retained.
+Existing public inputs and gates stay unchanged.
+
+Frozen runtime **144b818b** passes clean Windows Release and one full catalogue:
+2355 registered /2354 passed /0 failed /1 optional private-document skip, including
+91 PDF, 130 SVG, 151 images, 184 typography and 989 methods containing Docx. Linux
+passes 85 PDF +93 targeted methods, with six existing Arial skips and two archive
+SourceLink warnings. Both inventories validate 360 cases across ten families.
+Fresh identity transfers 34 current comparisons, 248 unchanged prior outputs and
+two requalified identical multiline inputs through 284 conversions. All 2911
+inherited DOCX and 251 broader PDFs retain bytes and page counts. The 34 cached
+markup cases /508 failed gates transfer only through fresh exact unchanged PDF
+identity. Local 0.1.5 package smoke passes. API/dependencies/version remain
+unchanged; release preparation is deferred.
