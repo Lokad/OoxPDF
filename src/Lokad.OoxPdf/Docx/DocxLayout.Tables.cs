@@ -416,6 +416,9 @@ internal sealed partial class DocxLayoutEngine
             table.Revisions);
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
+        bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
+            IsEligibleDeclaredTopContentTable(table, textMeasurer, paragraphSpacingScale);
+        bool[] declaredTopContentClips = allowDeclaredTopMargins ? new bool[table.Rows.Count] : [];
         double MeasureTableRowHeight(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, bool isLastRow, int rowIndex)
         {
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
@@ -426,8 +429,13 @@ internal sealed partial class DocxLayoutEngine
                     .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
                     .DefaultIfEmpty(0d)
                     .Max();
+            bool eligibleTopRow = adjustAlignedMinimumMargins && allowDeclaredTopMargins &&
+                (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
+                    contentHeight <= row.HeightPoints!.Value + rowTopPadding);
+            if (allowDeclaredTopMargins) declaredTopContentClips[rowIndex] = eligibleTopRow;
             double bottomMargin = adjustAlignedMinimumMargins
-                ? ResolveAlignedMinimumRowBottomMargin(table, row, textMeasurer, paragraphSpacingScale, contentHeight) : 0d;
+                ? ResolveAlignedMinimumRowBottomMargin(table, row, textMeasurer, paragraphSpacingScale, contentHeight,
+                    allowTopRow: eligibleTopRow) : 0d;
             rowBottomMargins[rowIndex] = bottomMargin;
             return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
         }
@@ -456,7 +464,8 @@ internal sealed partial class DocxLayoutEngine
             AutomaticMinimumRowPlacement = completeBodyFrame &&
                 IsEligibleAutomaticMinimumTable(table, textMeasurer, paragraphSpacingScale, allowAutomaticMinimumGridPlacement),
             AutomaticTopRowContentClip = completeBodyFrame && allowAutomaticMinimumGridPlacement &&
-                IsEligibleAutomaticTopContentTable(table, textMeasurer, paragraphSpacingScale)
+                IsEligibleAutomaticTopContentTable(table, textMeasurer, paragraphSpacingScale),
+            DeclaredTopRowContentClips = completeBodyFrame ? declaredTopContentClips : []
         };
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);

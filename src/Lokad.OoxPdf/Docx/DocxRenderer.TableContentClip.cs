@@ -10,8 +10,10 @@ internal sealed partial class DocxRenderer
             row.Table.AlignedMinimumRowBottomMargins[row.RowIndex] is > 0d;
         bool automaticClip = (row.Table.AutomaticMinimumRowPlacement || row.Table.AutomaticTopRowContentClip) && row.Cells.Count > 0 &&
             DocxLayoutEngine.HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue);
+        bool declaredTopClip = row.RowIndex >= 0 && row.RowIndex < row.Table.DeclaredTopRowContentClips.Count &&
+            row.Table.DeclaredTopRowContentClips[row.RowIndex];
         if (row.FragmentCount != 1 || row.ReviewBorderPrintScale != 1d || row.RowIndex < 0 ||
-            !(declaredMarginClip || automaticClip) ||
+            !(declaredMarginClip || automaticClip || declaredTopClip) ||
             row.Cells.Any(c => c.VisualCell.Borders.Any(b =>
                 DocxTableBorderGeometry.ResolveVisibleWidth(b) > 0d &&
                 !string.Equals(b.Value, "single", StringComparison.OrdinalIgnoreCase) &&

@@ -12,6 +12,79 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableDeclaredTopMarginAdvanceAndMasksMatchWord()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach ((int rows, int columns) in new[] { (1, 1), (1, 2), (2, 1), (2, 2) })
+        foreach (string rule in new[] { "exact", "atLeast" })
+        foreach (double minimum in new[] { 12d, 14d, 24d })
+        {
+            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
+            var layout = CreateParagraphMinimumLayout("min-single", full, rowHeight: 180d,
+                rowRule: rule, verticalAlignment: "top", cellMargins: margins, rowCount: rows,
+                columnCount: columns, minimumSpacing: minimum, borderSize: "8");
+            foreach (var row in layout.Pages[0].Items.OfType<DocxTableRowLayout>())
+            {
+                double terminalBand = row.RowIndex == rows - 1 ? .96d : 0d;
+                double expectedAdvance = 180d + 12d + terminalBand + (rule == "atLeast" ? 6.96d : 0d);
+                TestAssert.True(Math.Abs(row.Height - expectedAdvance) < .000001d,
+                    "Word advances declared top rows by the bottom margin outside the paragraph slot.");
+                foreach (var cell in row.Cells)
+                {
+                    var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                    TestAssert.True(clip.Admitted &&
+                        Math.Abs(clip.X - cell.X - .48d) < .000001d &&
+                        Math.Abs(clip.Y - cell.Y - 12d - terminalBand) < .000001d &&
+                        Math.Abs(clip.Width - cell.Width + .96d) < .000001d &&
+                        Math.Abs(clip.Height - cell.Height + 6.96d + 12d + terminalBand) < .000001d,
+                        "The inner mask excludes the new margin advance, top inset and terminal border.");
+                    TestAssert.True(!row.Table.AutomaticMinimumRowPlacement,
+                        "Declared top rows retain their paragraph-slot placement.");
+                }
+            }
+        }
+    }
+
+    public static void DocxTableDeclaredTopRetainsHeightFrameAndComplexFallbacks()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "mixed-auto", "default-rule", "header", "rich", "frame", "metrics", "three-rows", "three-columns", "content-dominated" })
+        {
+            IDocxTextMeasurer measurer = variant == "metrics" ? new MinimumMetricsFallback(full) : full;
+            var heights = variant == "mixed-auto" ? new (double? Height, string? Rule)[] { (180d, "exact"), (320d, "auto") } : null;
+            var layout = CreateParagraphMinimumLayout(variant == "content-dominated" ? "min,min,min" : "min-single", measurer,
+                variant is "header" or "rich" ? variant : "", rowHeight: variant == "content-dominated" ? 10d : 180d,
+                rowRule: variant == "default-rule" ? null : variant == "content-dominated" ? "atLeast" : "exact",
+                verticalAlignment: "top", rowCount: variant == "three-rows" ? 3 : 2,
+                columnCount: variant == "three-columns" ? 3 : 2, rowHeightRules: heights,
+                pageHeight: variant == "frame" ? 160d : 2400d);
+            foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
+            foreach (var cell in row.Cells)
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Unqualified declared top rows retain their content masks: " + variant);
+        }
+    }
+
+    public static void DocxTableDeclaredTopCompoundBorderRetainsOriginalMaskExtent()
+    {
+        DocxDocument source = ReadMarginClipFixture("center");
+        DocxTable table = source.BodyElements.OfType<DocxTableElement>().Single().Table;
+        table = table with { Rows = table.Rows.Select(row => row with {
+            Cells = row.Cells.Select(cell => cell with {
+                VerticalAlignmentValue = "top",
+                Borders = cell.Borders.Select(border => border with { Value = "triple" }).ToArray()
+            }).ToArray()
+        }).ToArray() };
+        DocxDocument document = source with {
+            BodyElements = source.BodyElements.Select(e => e is DocxTableElement ? (DocxBodyElement)new DocxTableElement(table) : e).ToArray(),
+            FallbackTables = [table]
+        };
+        var renderer = MarginClipRenderer();
+        var snapshot = renderer.InspectLayout(document);
+        TestAssert.True(Math.Abs(snapshot.Pages[0].TableRows.Single().Height - 180.96d) < .001d,
+            "Unqualified compound borders must retain the original full-cell extent, without an added margin that could expose clipped glyphs.");
+    }
+
     public static void DocxTableTopAutoClipMatchesIndependentWordInsets()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
@@ -688,15 +761,15 @@ internal static class DocxTableCellsTests
     {
         DocxDocument source = ReadMarginClipFixture("center");
         DocxTable original = source.BodyElements.OfType<DocxTableElement>().Single().Table;
-        foreach (string variant in new[] { "auto-rich", "header", "top", "rich", "compound", "frame" })
+        foreach (string variant in new[] { "auto-rich", "header", "unknown-top", "rich", "compound", "frame" })
         {
             DocxTableRow row = original.Rows.Single();
             if (variant == "auto-rich") row = row with { HeightRuleValue = "auto" };
             if (variant == "header") row = row with { IsHeader = true };
             if (variant == "frame") row = row with { HeightPoints = 720d };
-            if (variant is "top" or "rich" or "auto-rich" or "compound") row = row with { Cells = row.Cells.Select(cell =>
+            if (variant is "unknown-top" or "rich" or "auto-rich" or "compound") row = row with { Cells = row.Cells.Select(cell =>
             {
-                if (variant == "top") return cell with { VerticalAlignmentValue = "top" };
+                if (variant == "unknown-top") return cell with { VerticalAlignmentValue = "unrecognized" };
                 if (variant == "compound") return cell with { Borders = cell.Borders.Select(border => border with { Value = "triple" }).ToArray() };
                 DocxParagraph[] paragraphs = cell.Paragraphs.Select(paragraph => paragraph with {
                     Runs = paragraph.Runs.Select(run => run with { Text = run.Text + "\n" }).ToArray() }).ToArray();

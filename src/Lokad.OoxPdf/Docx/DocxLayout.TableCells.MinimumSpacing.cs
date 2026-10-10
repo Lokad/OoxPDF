@@ -111,12 +111,12 @@ internal sealed partial class DocxLayoutEngine
 
     private static double ResolveAlignedMinimumRowBottomMargin(
         DocxTable table, DocxTableRow row, IDocxTextMeasurer? measurer,
-        double fixedScale, double? measuredContentHeight = null)
+        double fixedScale, double? measuredContentHeight = null, bool allowTopRow = false)
     {
         if (fixedScale != 1d || row.HeightPoints is not > 0d ||
             string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) ||
             row.Cells.Count == 0 || row.Cells.Any(cell =>
-                cell.VerticalAlignment == DocxTableCellVerticalAlignment.Top ||
+                (cell.VerticalAlignment == DocxTableCellVerticalAlignment.Top && !allowTopRow) ||
                 !IsEligibleTableMinimumCell(table, row, cell, measurer) ||
                 cell.Paragraphs.Any(p => p.Runs.Count == 0) ||
                 !cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
