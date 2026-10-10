@@ -12,6 +12,89 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableAutoClipMatchesIndependentWordInsets()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach ((double? height, string? rule) in new (double?, string?)[] { (null, null), (320d, "auto") })
+        foreach ((string style, string size, double x, double y, double width, double clipHeight) in new[] {
+            ("single", "8", 72.48d, 659.04d, 467.04d, 54d),
+            ("nil", "8", 72d, 658.08d, 468d, 55.92d),
+            ("single", "32", 73.92d, 661.92d, 464.16d, 48.24d) })
+        {
+            DocxTableRowLayout row = CreateParagraphMinimumLayout("min", full, rowHeight: height,
+                rowRule: rule, verticalAlignment: alignment).Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            // Independent Word controls establish the margin and border insets.
+            // Keep the existing 0.96 border quantization and a fixed source frame.
+            DocxTableCellLayout cell = row.Cells.Single() with {
+                X = 72d, Y = 646.08d, Width = 468d, Height = 73.92d,
+                ContentPaddingTop = 6d, ContentPaddingBottom = 12d,
+                Cell = row.Cells.Single().Cell with { Borders = new[] { "top", "left", "bottom", "right" }
+                    .Select(edge => new DocxTableCellBorder(edge, style, "000000", size)).ToArray() } };
+            row = row with { Cells = [cell] };
+            var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+            TestAssert.True(clip.Admitted, "Eligible automatic cells must use the independent Word content bounds.");
+            TestAssert.True(Math.Abs(clip.X - x) < .000001d && Math.Abs(clip.Y - y) < .000001d &&
+                Math.Abs(clip.Width - width) < .000001d && Math.Abs(clip.Height - clipHeight) < .000001d,
+                "Automatic masks must exclude margins and full vertical/half horizontal border widths.");
+        }
+    }
+
+    public static void DocxTableAutoClipSnapshotMatchesEmittedMask()
+    {
+        foreach (string alignment in new[] { "center", "bottom" })
+        {
+            DocxDocument document = DocxTests.ReadDocx(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+                "..", "..", "..", "Cases", "table-automatic-margin-minimum-line-spacing-" + alignment + ".docx")),
+                OoxPdfDocxMarkupMode.AllMarkup);
+            var renderer = MarginClipRenderer();
+            var snapshot = renderer.InspectLayout(document);
+            TestAssert.Equal(1, snapshot.Pages[0].TableRows.Count);
+            using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(snapshot));
+            var cell = json.RootElement.GetProperty("Pages")[0].GetProperty("TableRows")[0].GetProperty("Cells")[0];
+            TestAssert.True(cell.TryGetProperty("ContentClip", out var clip) && clip.ValueKind == System.Text.Json.JsonValueKind.Object,
+                "The source snapshot must expose the admitted automatic content mask.");
+            string rectangle = string.Join(" ", new[] { "X", "Y", "Width", "Height" }
+                .Select(name => PdfDocumentWriter.FormatNumber(clip.GetProperty(name).GetDouble())));
+            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content;
+            TestAssert.Contains(rectangle + " re W n", content);
+            TestAssert.True(clip.GetProperty("Admitted").GetBoolean(), "Snapshot must record automatic mask admission.");
+        }
+    }
+
+    public static void DocxTableAutoClipRetainsUnsupportedAndCollapsedBounds()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach ((string variant, int rows, int columns, double pageHeight) in new[] {
+            ("header", 1, 1, 700d), ("rich", 1, 1, 700d), ("mixed", 1, 1, 700d),
+            ("", 2, 1, 700d), ("", 1, 2, 700d), ("", 1, 1, 160d) })
+        {
+            var layout = CreateParagraphMinimumLayout("min,min,min", full, variant, verticalAlignment: "center",
+                pageHeight: pageHeight, rowCount: rows, columnCount: columns);
+            foreach (var row in layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()))
+            foreach (var cell in row.Cells)
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Complex and frame-boundary automatic cells must retain the full mask.");
+        }
+        DocxTableRowLayout admitted = CreateParagraphMinimumLayout("min", full, verticalAlignment: "center")
+            .Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        foreach (string variant in new[] { "compound", "fragment", "scaled", "width", "height" })
+        {
+            var cell = admitted.Cells.Single();
+            var row = admitted;
+            if (variant == "compound") cell = cell with { Cell = cell.Cell with {
+                Borders = [new DocxTableCellBorder("bottom", "double", "000000", "8")] } };
+            if (variant == "fragment") row = row with { FragmentCount = 2 };
+            if (variant == "scaled") row = row with { ReviewBorderPrintScale = .95d };
+            if (variant == "width") cell = cell with { Width = 0d };
+            if (variant == "height") cell = cell with { Height = 1d, ContentPaddingTop = 6d, ContentPaddingBottom = 12d };
+            row = row with { Cells = [cell] };
+            var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+            TestAssert.True(!clip.Admitted && clip.X == cell.X && clip.Y == cell.Y && clip.Width == cell.Width && clip.Height == cell.Height,
+                "Unsupported or collapsed masks retain their exact full-cell bounds: " + variant);
+        }
+    }
+
     public static void DocxTableAutoMinimumPlacementMatchesIndependentWordSlots()
     {
         var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
@@ -136,13 +219,13 @@ internal static class DocxTableCellsTests
     {
         DocxDocument source = ReadMarginClipFixture("center");
         DocxTable original = source.BodyElements.OfType<DocxTableElement>().Single().Table;
-        foreach (string variant in new[] { "auto", "header", "top", "rich", "compound", "frame" })
+        foreach (string variant in new[] { "auto-rich", "header", "top", "rich", "compound", "frame" })
         {
             DocxTableRow row = original.Rows.Single();
-            if (variant == "auto") row = row with { HeightRuleValue = "auto" };
+            if (variant == "auto-rich") row = row with { HeightRuleValue = "auto" };
             if (variant == "header") row = row with { IsHeader = true };
             if (variant == "frame") row = row with { HeightPoints = 720d };
-            if (variant is "top" or "rich" or "compound") row = row with { Cells = row.Cells.Select(cell =>
+            if (variant is "top" or "rich" or "auto-rich" or "compound") row = row with { Cells = row.Cells.Select(cell =>
             {
                 if (variant == "top") return cell with { VerticalAlignmentValue = "top" };
                 if (variant == "compound") return cell with { Borders = cell.Borders.Select(border => border with { Value = "double" }).ToArray() };
