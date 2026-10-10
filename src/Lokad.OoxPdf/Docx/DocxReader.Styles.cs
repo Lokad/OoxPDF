@@ -84,7 +84,14 @@ internal sealed partial class DocxReader
             : null;
         return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyleId, defaultTableStyle)
         {
-            ContextualSpacingDefaultStyleId = defaultParagraphStyleIds.Count == 1 ? defaultParagraphStyleIds[0] : null
+            // Word supplies Normal when no paragraph default is declared.
+            // This identity is separate from property inheritance.
+            ContextualSpacingDefaultStyleId = defaultParagraphStyleIds.Count switch
+            {
+                0 => "Normal",
+                1 => defaultParagraphStyleIds[0],
+                _ => null
+            }
         };
     }
 

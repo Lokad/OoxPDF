@@ -722,6 +722,88 @@ internal static class DocxFootnotesTests
         };
     }
 
+    public static void DocxImplicitContextualStyleMatchesIndependentWordFlags()
+    {
+        foreach (string mode in new[] { "no-paragraph-styles", "off" })
+        foreach (bool explicitPrevious in new[] { true, false })
+        foreach ((bool previousFlag, bool currentFlag, double gap) in new[]
+            { (false, false, 12d), (false, true, 6d), (true, false, 6d), (true, true, 0d) })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "Normal", explicitPrevious, previousFlag, currentFlag, mode);
+            DocxParagraph previous = source.Paragraphs[0] with
+            { Runs = [new DocxTextRun("Previous", 10d, null, false, false, false, null, null)], LineSpacingPoints = 10d, InlineReferences = [] };
+            DocxParagraph current = source.Paragraphs[1] with
+            { Runs = [new DocxTextRun("Current", 10d, null, false, false, false, null, null)],
+              SpacingAfterPoints = 0d, LineSpacingPoints = 10d, InlineReferences = [] };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(previous), new DocxParagraphElement(current)], []);
+            DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+                .Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+            TestAssert.True(Math.Abs(lines[0].BaselineY - lines[1].BaselineY - 10d - gap) < .000001d,
+                "Office's implicit Normal identity follows the independent flag matrix in either direction.");
+        }
+    }
+
+    public static void DocxImplicitContextualStyleAlignsAutomaticAndExactNoteBounds()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string mode in new[] { "no-paragraph-styles", "off" })
+        foreach (bool explicitPrevious in new[] { true, false })
+        foreach (bool exact in new[] { true, false })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture(kind, "Normal", explicitPrevious, true, true, mode);
+            DocxDocument baseline = ReadDefaultContextualStyleFixture(kind, "Normal", explicitPrevious, true, true, "allomitted");
+            if (exact)
+            {
+                DocxDocument SetExact(DocxDocument document) => document with
+                { BodyElements = document.BodyElements.Select(e => e is DocxParagraphElement p && p.Paragraph.InlineReferences.Count > 0
+                    ? new DocxParagraphElement(p.Paragraph with { LineSpacingPoints = 24d,
+                        Spacing = p.Paragraph.Spacing with { LineRuleValue = "exact", LineValue = "480" } }) : e).ToArray() };
+                source = SetExact(source); baseline = SetExact(baseline);
+            }
+            PdfLinkAnnotation[] actual = RenderCustomNoteLinks(source), expected = RenderCustomNoteLinks(baseline);
+            TestAssert.Equal(expected.Length, actual.Length);
+            for (int i = 0; i < actual.Length; i++)
+            {
+                TestAssert.True(Math.Abs(actual[i].Height - expected[i].Height) < .000001d,
+                    "Implicit Normal owns the same first-line note gap as the same-style control.");
+                TestAssert.True(Math.Abs(actual[i].Y - expected[i].Y) < .000001d,
+                    "Implicit Normal keeps each note link on its painted automatic/exact slot.");
+            }
+        }
+    }
+
+    public static void DocxImplicitContextualStylePreservesAuthoredProperties()
+    {
+        foreach (string mode in new[] { "no-paragraph-styles", "off" })
+        {
+            DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, mode);
+            TestAssert.Equal("Normal", source.Paragraphs[0].StyleId!);
+            TestAssert.True(source.Paragraphs[1].StyleId is null && source.Paragraphs[1].StyleResolution.StyleId is null,
+                "Application-default identity does not invent an authored style.");
+            TestAssert.Equal(12d, source.Paragraphs[1].SpacingBeforePoints);
+            TestAssert.Equal(24d, source.Paragraphs[1].SpacingAfterPoints);
+            TestAssert.Equal(mode == "off", source.Paragraphs[0].StyleResolution.StyleFound);
+            TestAssert.Equal(mode == "off" ? 1 : 0, source.StyleCatalog.ParagraphStyles.Count);
+        }
+    }
+
+    public static void DocxImplicitContextualStyleRetainsDeclaredAndAmbiguousPrecedence()
+    {
+        DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "PublicBase", true, true, true);
+        DocxParagraph previous = source.Paragraphs[0] with { StyleId = "Normal" };
+        DocxParagraph current = source.Paragraphs[1];
+        TestAssert.True(!DocxLayoutEngine.HasSameContextualSpacingStyle(previous, current),
+            "An explicit named default takes precedence over the implicit Normal identity.");
+        DocxDocument ambiguous = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, "multiple");
+        TestAssert.True(!DocxLayoutEngine.HasSameContextualSpacingStyle(ambiguous.Paragraphs[0], ambiguous.Paragraphs[1]),
+            "Multiple declarations keep the prior raw-identifier fallback.");
+        DocxDocument nondefault = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, "nondefault");
+        TestAssert.True(!DocxLayoutEngine.HasSameContextualSpacingStyle(nondefault.Paragraphs[0], nondefault.Paragraphs[1]),
+            "The implicit fallback does not equate another explicit style with Normal.");
+    }
+
+
     public static void DocxDefaultContextualStyleMatchesWordGapMatrix()
     {
         foreach (string defaultId in new[] { "Normal", "PublicBase" })
@@ -794,7 +876,7 @@ internal static class DocxFootnotesTests
 
     public static void DocxDefaultContextualStyleRetainsAmbiguousAndRichFallbacks()
     {
-        foreach (string variant in new[] { "undeclared", "off", "multiple", "malformed", "nondefault", "rich" })
+        foreach (string variant in new[] { "multiple", "malformed", "nondefault", "rich" })
         {
             DocxDocument source = ReadDefaultContextualStyleFixture("footnote", "Normal", true, true, true, variant);
             DocxBodyElement[] elements = source.BodyElements.Select(e => e is DocxParagraphElement p
@@ -849,6 +931,8 @@ internal static class DocxFootnotesTests
             if (variant == "malformed") props.AddFirst(new XElement(NoteWord + "pStyle"));
             if (variant == "rich") previous.Element(NoteWord + "r")!.Add(new XElement(NoteWord + "br"));
             current.AddBeforeSelf(previous);
+            if (variant == "no-paragraph-styles")
+                styles.Root.Elements(NoteWord + "style").Where(s => (string?)s.Attribute(NoteWord + "type") == "paragraph").Remove();
             parts["word/styles.xml"] = styles.ToString();
         });
 
