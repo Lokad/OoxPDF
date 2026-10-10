@@ -5,13 +5,14 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<DocxTextLineLayout> AdjustTableMinimumLinePlacement(
         DocxTable table, DocxTableRow row, DocxTableCell cell,
         IReadOnlyList<DocxTextLineLayout> lines, IDocxTextMeasurer? measurer,
-        double cellHeight, double rowTopPadding, double usedHeight, bool isLastRow, double marginAdvance)
+        double cellHeight, double rowTopPadding, double usedHeight, bool isLastRow, double marginAdvance,
+        bool automaticMinimumPlacement)
     {
         if (!lines.Any(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing)) return lines;
         if (!IsEligibleTableMinimumCell(table, row, cell, measurer)) return lines;
         var metrics = (IDocxLineMetricsProvider)measurer!;
         double alignmentShift = 0d;
-        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top)
+        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top && !automaticMinimumPlacement)
         {
             // Word aligns the paragraph slot extent. The terminal bottom border
             // hangs below it; the first-baseline inset is already applied.
@@ -48,6 +49,9 @@ internal sealed partial class DocxLayoutEngine
             double natural = metrics.MeasureSingleLineHeight(paragraph.Runs[0], paragraphLines[0].FontSize);
             double slotHeight = paragraphLines[0].LineHeight ?? 0d;
             if (!(natural > 0d) || !double.IsFinite(natural) || !(slotHeight > 0d) || !double.IsFinite(slotHeight)) continue;
+            // A natural-height floor has no excess and keeps its existing emission inset.
+            if (automaticMinimumPlacement && !(paragraph.EffectiveProperties.LineSpacingPoints is { } minimum && minimum > natural))
+                continue;
             double excess = Math.Max(0d, slotHeight - natural);
             double inset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(
                 paragraphLines[0].FontSize, slotHeight, false, cell.Paragraphs, paragraph, measurer) + excess;
@@ -115,6 +119,23 @@ internal sealed partial class DocxLayoutEngine
             measuredContentHeight is { } content && content > row.HeightPoints.Value + ResolveTableRowTopPadding(row, fixedScale))
             return 0d;
         return row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, fixedScale)).Max();
+    }
+
+    private static bool IsEligibleAutomaticMinimumRow(
+        DocxTable table, IDocxTextMeasurer? measurer, double fixedScale)
+    {
+        if (fixedScale != 1d || table.Rows.Count != 1 || table.Rows[0].Cells.Count != 1)
+            return false;
+        DocxTableRow row = table.Rows[0];
+        if (!(row.HeightPoints is null && row.HeightRuleValue is null) &&
+            !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
+            return false;
+        DocxTableCell cell = row.Cells[0];
+        return cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top &&
+            IsEligibleTableMinimumCell(table, row, cell, measurer) &&
+            cell.Paragraphs.All(p => p.Runs.Count != 0) &&
+            cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
+                string.Equals(p.EffectiveProperties.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase));
     }
 
 }

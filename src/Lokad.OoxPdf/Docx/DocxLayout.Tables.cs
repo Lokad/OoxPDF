@@ -448,7 +448,12 @@ internal sealed partial class DocxLayoutEngine
                 rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale,
                     isLastRow: rowIndex == table.Rows.Count - 1, rowIndex: rowIndex);
         }
-        tableContext = tableContext with { AlignedMinimumRowBottomMargins = rowBottomMargins };
+        tableContext = tableContext with {
+            AlignedMinimumRowBottomMargins = rowBottomMargins,
+            AutomaticMinimumRowPlacement = adjustAlignedMinimumMargins &&
+                alignedMinimumAvailableHeight is { } available && rowHeights.Sum() <= available &&
+                IsEligibleAutomaticMinimumRow(table, textMeasurer, paragraphSpacingScale)
+        };
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
@@ -1608,7 +1613,8 @@ internal sealed partial class DocxLayoutEngine
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer,
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
-                    rowIndex < tableContext.AlignedMinimumRowBottomMargins.Count ? tableContext.AlignedMinimumRowBottomMargins[rowIndex] : 0d);
+                    rowIndex < tableContext.AlignedMinimumRowBottomMargins.Count ? tableContext.AlignedMinimumRowBottomMargins[rowIndex] : 0d,
+                    tableContext.AutomaticMinimumRowPlacement);
             // Membership uses the same printed inset as the later geometry
             // projection. Testing nominal baselines can discard a final line
             // whose nominal font inset exceeds the already printed line pitch.

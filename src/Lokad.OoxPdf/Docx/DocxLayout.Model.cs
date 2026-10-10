@@ -188,6 +188,7 @@ internal sealed record DocxTableLayoutContext(
     IReadOnlyList<DocxRevisionInfo>? Revisions)
 {
     public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
+    public bool AutomaticMinimumRowPlacement { get; init; }
 }
 
 internal sealed record DocxTableCellLayout(
