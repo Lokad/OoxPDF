@@ -1651,3 +1651,37 @@ reproduce their compared bytes. The generator reproduces 11 current payloads,
 with 26 earlier note payloads transferred through unchanged Git blobs.
 The local 0.1.5 package smoke passes against the exact frozen runtime. Release
 preparation is deferred.
+
+## RV06-L146: declared-row margins and aligned minimum slots
+
+Runtime **0c98e859** includes the maximum bottom margin in eligible positive
+exact/minimum body-row advancement, outside the paragraph-slot extent used for
+centered/bottom alignment. An omitted minimum rule is included. Plain cells
+require minimum-height paragraphs, uniform font state within each paragraph and
+full vertical metrics. Complete tables must fit the current body frame.
+Measurement, keep estimates and recorded cell admission share the rule;
+content-dominated minimum rows retain fallback even when final heights coincide.
+Automatic/invalid rows, headers, rich cells and complex/scaled/fragmented paths
+retain their separate fallback. Static/related/nested frame paths retain theirs.
+
+40 independent Word 16 controls, two historical repeats and two public cases
+qualify 36 paired MAE/SSIM improvements and eight exact PDF/PNG guards. All 44
+text multisets and page counts match Word. The 147 improved in-cell first
+baselines are within 0.187pt; 34 following-body baselines improve within 0.310pt.
+Both public cases pass their unchanged numeric image gates. Horizontal text and
+graphics geometry, glyph/font resources and actual destinations stay unchanged.
+Admitted rows, vertical graphics and following flow include the bottom margin.
+
+Supplemental mapping resolves eight of 59 source clips and leaves 51 positive
+margin content clips unresolved. Clip parity remains unproven. The rejected
+alignment-only model and its failing public image gates remain archived.
+
+The frozen runtime passes 2,404 registered Windows checks (2,403 pass, one
+optional private skip) and 227 Linux checks (six existing Arial skips). Windows
+Release builds have zero warnings/errors; Linux retains two archive SourceLink
+warnings. All 2,911 inherited DOCX and 251 broader PDFs retain bytes and pages.
+Of 1,167 prior visual PDFs, 1,165 retain bytes and two historical margin controls
+are freshly requalified; all 1,211 qualified outputs reproduce their compared
+bytes. The generator reproduces 13 payloads, with 26 earlier note payloads
+transferred through unchanged Git blobs. The exact local 0.1.5 package smoke
+passes. Release preparation is deferred.
