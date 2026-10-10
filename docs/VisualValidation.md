@@ -1672,8 +1672,9 @@ Both public cases pass their unchanged numeric image gates. Horizontal text and
 graphics geometry, glyph/font resources and actual destinations stay unchanged.
 Admitted rows, vertical graphics and following flow include the bottom margin.
 
-Supplemental mapping resolves eight of 59 source clips and leaves 51 positive
-margin content clips unresolved. Clip parity remains unproven. The rejected
+Supplemental mapping resolves eight of 59 source clips and leaves 51 unresolved:
+49 admitted margin clips and two automatic-height guards. Clip parity remained
+unproven at L146; L147 qualifies the admitted bounds below. The rejected
 alignment-only model and its failing public image gates remain archived.
 
 The frozen runtime passes 2,404 registered Windows checks (2,403 pass, one
@@ -1685,3 +1686,34 @@ are freshly requalified; all 1,211 qualified outputs reproduce their compared
 bytes. The generator reproduces 13 payloads, with 26 earlier note payloads
 transferred through unchanged Git blobs. The exact local 0.1.5 package smoke
 passes. Release preparation is deferred.
+
+## RV06-L147: bounded clipping inside positive-margin cells
+
+Runtime **50576e78** clips admitted body-cell content inside row-maximum
+top/bottom margins, full top/terminal-bottom borders and half side borders.
+Single and absent borders are included; compound borders, nonpositive content
+rectangles and all unqualified L146 layouts retain their full-cell mask.
+The same helper supplies effective bounds to layout snapshots. Supplemental
+mapping consumes those bounds with unchanged 0.01pt/8pt search tolerances.
+
+24 independent Word 16 controls, 44 trusted repeats and two new public overflow
+cases qualify 18 paired MAE/SSIM improvements and 52 exact preview identities.
+All 70 text multisets and page counts match Word. All text operations,
+non-clip graphics operations and actual link rectangles/destinations stay
+unchanged. 73 admitted clips map to Word within 0.190pt. Across 85 source cells,
+81 map; four unresolved clips belong to automatic-height/compound-border
+guards outside admission. Mapped fallback clips retain up to 6.99pt residual.
+Both public cases pass the inherited numeric image gates with empty diagnostics.
+
+Windows passes 2,407 registered checks (2,406 pass, one optional private skip)
+with zero Release warnings/errors. Linux passes 230 checks, retaining six
+existing Arial skips and two source-archive SourceLink warnings. Exact-parent
+regressions fail twice and retain the fallback pass; the prototype passes
+35 related checks. 2,911 inherited DOCX and 251 broader PDFs retain bytes/pages.
+Of 1,211 earlier visual PDFs, 1,175 retain bytes and 36 changed masks are freshly
+requalified through exact preview/text/non-clip-graphics identities. The frozen
+runtime reproduces all 4,443 qualified outputs, including 1,281 visual PDFs.
+The local dependency-free 0.1.5 package smoke passes; release preparation remains
+deferred. The generator reproduces 15 payloads and transfers 26 earlier note
+payloads through unchanged Git blobs. Malformed preliminary generator trials
+are retained locally and excluded from qualification.
