@@ -1,0 +1,31 @@
+{
+  "id": "docx-ladder-04-custom-mark-footnote",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-custom-mark-footnote.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "notes",
+    "navigation",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_FOOTNOTE"
+    ],
+    "maxMeanAbsoluteError": 0.42,
+    "minStructuralSimilarity": 0.8,
+    "minForegroundRecall": 0.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0055
+  },
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_FOOTNOTE"
+  ]
+}

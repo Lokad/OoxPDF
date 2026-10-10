@@ -295,6 +295,158 @@ internal static class DocxFootnotesTests
             CheckNoteLabels(ReadSectionNumberingFixture(kind, modify), ["105", "106", "107", "108"]);
     }
 
+    public static void DocxCustomNoteMarksHonorExplicitFalseFlags()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string flag in new[] { "0", "false", "off", "FALSE", "OFF" })
+        {
+            DocxDocument document = ReadSectionNumberingFixture(kind, (xml, _, _) =>
+                xml.Descendants(NoteWord + kind + "Reference").First().SetAttributeValue(NoteWord + "customMarkFollows", flag));
+            CheckNoteLabels(document, ["iv", "v", "09", "10"]);
+            TestAssert.Equal(flag, document.Paragraphs[0].InlineReferences[0].CustomMarkFollowsValue!);
+            TestAssert.Equal(4, RenderCustomNoteLinks(document).Length);
+        }
+    }
+
+    public static void DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            double? starWidth = null;
+            foreach (string mark in new[] { "*", "**", "*tail", "AB", "\u2020" })
+            {
+                DocxDocument document = ReadCustomMarkFixture(kind, mark);
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(document, geometry);
+                TestAssert.Equal(4, links.Length);
+                TestAssert.Equal(4, links.Select(l => l.Destination).Distinct().Count());
+                TestAssert.True(links.All(l => l.Width > 0 && l.Height > 0 && l.IsDestination), "Custom marks require actual measurable destinations.");
+                TestAssert.True(document.Paragraphs[0].InlineReferences[0].DisplayText is null, "Custom marks keep authored text without an automatic label.");
+                TestAssert.Equal("iv", document.Paragraphs[1].InlineReferences[0].DisplayText!);
+                TestAssert.True(document.Paragraphs[0].Runs.Any(r => r.Text == mark), "The complete custom-mark text remains visible.");
+                if (mark == "*") starWidth = links[0].Width;
+                if (mark is "**" or "*tail") TestAssert.True(Math.Abs(starWidth!.Value - links[0].Width) < .000001d, "The link covers only the first character.");
+            }
+        }
+    }
+
+    public static void DocxCustomNoteMarksRequireOwnedVisibleSourceAndTarget()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            foreach (string mark in new[] { "", " ", "\ud83d\ude00" })
+                TestAssert.Equal(3, RenderCustomNoteLinks(ReadCustomMarkFixture(kind, mark)).Length);
+            DocxDocument source = ReadCustomMarkFixture(kind, "*");
+            TestAssert.Equal(3, RenderCustomNoteLinks(source with
+                { RelatedStories = source.RelatedStories.Where(s => s.Id != "37").ToArray() }).Length);
+            DocxParagraph paragraph = source.Paragraphs[0];
+            int sourceRun = paragraph.InlineReferences[0].SourceRunIndex;
+            foreach (DocxParagraph hidden in new[]
+                { paragraph with { Runs = paragraph.Runs.Where(r => r.SourceRunIndex != sourceRun).ToArray() },
+                  paragraph with { Runs = paragraph.Runs.Select(r => r.SourceRunIndex == sourceRun ? r with { SourceRunIndex = 1000 } : r).ToArray() } })
+            {
+                DocxBodyElement[] elements = source.BodyElements.Select(e => e is DocxParagraphElement p && ReferenceEquals(p.Paragraph, paragraph)
+                    ? (DocxBodyElement)new DocxParagraphElement(hidden) : e).ToArray();
+                TestAssert.Equal(3, RenderCustomNoteLinks(source with { BodyElements = elements }).Length);
+            }
+            foreach (string flag in new[] { "unknown", "2" })
+            {
+                DocxDocument malformed = ReadSectionNumberingFixture(kind, (xml, _, _) =>
+                    xml.Descendants(NoteWord + kind + "Reference").First().SetAttributeValue(NoteWord + "customMarkFollows", flag));
+                TestAssert.True(malformed.Paragraphs[0].InlineReferences[0].DisplayText is null, "Malformed flags retain the prior fallback.");
+                TestAssert.Equal(3, RenderCustomNoteLinks(malformed).Length);
+            }
+        }
+    }
+
+    public static void DocxCustomNoteMarksKeepRepeatedMarksAndDestinationsDistinct()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            DocxDocument document = ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+            {
+                foreach (XElement reference in xml.Descendants(NoteWord + kind + "Reference"))
+                {
+                    reference.SetAttributeValue(NoteWord + "customMarkFollows", "on");
+                    reference.AddAfterSelf(new XElement(NoteWord + "t", "*"));
+                }
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                foreach (XElement marker in notes.Descendants(NoteWord + kind + "Ref")) { marker.Name = NoteWord + "t"; marker.Value = "*"; }
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+            });
+            PdfLinkAnnotation[] links = RenderCustomNoteLinks(document);
+            TestAssert.Equal(4, links.Length);
+            TestAssert.Equal(4, links.Select(l => l.Destination).Distinct().Count());
+            for (int i = 0; i < links.Length; i++) TestAssert.Equal(kind == "endnote" ? 1 : i / 2, links[i].Destination!.Value.PageIndex);
+        }
+    }
+
+    public static void DocxCustomNoteMarksOwnOffsetsWithinSharedSourceRuns()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            DocxDocument document = ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+            {
+                XElement[] references = xml.Descendants(NoteWord + kind + "Reference").Take(2).ToArray();
+                XElement run = references[0].Parent!;
+                references[0].SetAttributeValue(NoteWord + "customMarkFollows", "1");
+                references[0].AddBeforeSelf(new XElement(NoteWord + "t", "pre "));
+                references[0].AddAfterSelf(new XElement(NoteWord + "t", "*"));
+                XElement second = new(references[1]);
+                references[1].Parent!.Remove();
+                second.SetAttributeValue(NoteWord + "customMarkFollows", "1");
+                run.Add(new XElement(NoteWord + "t", " "), second, new XElement(NoteWord + "t", "#"));
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                foreach (string id in new[] { "37", "4" })
+                {
+                    XElement marker = notes.Root!.Elements(NoteWord + kind).Single(n => (string?)n.Attribute(NoteWord + "id") == id)
+                        .Descendants(NoteWord + kind + "Ref").Single();
+                    marker.Name = NoteWord + "t"; marker.Value = id == "37" ? "*" : "#";
+                }
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+            });
+            foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+                { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+            {
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(document, geometry);
+                TestAssert.Equal(2, links.Length);
+                TestAssert.Equal(2, links.Select(l => l.Destination).Distinct().Count());
+            }
+            DocxDocument prefixed = ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+            {
+                XElement reference = xml.Descendants(NoteWord + kind + "Reference").First();
+                reference.SetAttributeValue(NoteWord + "customMarkFollows", "1");
+                reference.AddBeforeSelf(new XElement(NoteWord + "t", "pre "));
+                reference.AddAfterSelf(new XElement(NoteWord + "t", "*"));
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                XElement marker = notes.Root!.Elements(NoteWord + kind).Single(n => (string?)n.Attribute(NoteWord + "id") == "37")
+                    .Descendants(NoteWord + kind + "Ref").Single();
+                marker.Name = NoteWord + "t"; marker.Value = "*";
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+            });
+            TestAssert.Equal(4, RenderCustomNoteLinks(prefixed).Length);
+        }
+    }
+
+    private static PdfLinkAnnotation[] RenderCustomNoteLinks(DocxDocument document,
+        OoxPdfDocxMarkupGeometryMode geometry = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout) =>
+        new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
+            .RenderBlankPages(document, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+
+    private static DocxDocument ReadCustomMarkFixture(string kind, string mark) =>
+        ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+        {
+            XElement reference = xml.Descendants(NoteWord + kind + "Reference").First();
+            reference.SetAttributeValue(NoteWord + "customMarkFollows", "1");
+            reference.AddAfterSelf(new XElement(NoteWord + "t", mark));
+            XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+            XElement marker = notes.Root!.Elements(NoteWord + kind).Single(n => (string?)n.Attribute(NoteWord + "id") == "37")
+                .Descendants(NoteWord + kind + "Ref").Single();
+            marker.Name = NoteWord + "t"; marker.Value = mark;
+            parts["word/" + kind + "s.xml"] = notes.ToString();
+        });
+
     public static void DocxSectionNoteNumbersDoNotCountCustomMarks()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

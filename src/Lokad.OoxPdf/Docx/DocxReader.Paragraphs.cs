@@ -1170,6 +1170,7 @@ internal sealed partial class DocxReader
             childIndex,
             textOffset)
         {
+            CustomMarkText = ResolveCustomMarkText(),
             Revision = revision,
             Revisions = revisions
         });
@@ -1226,7 +1227,8 @@ internal sealed partial class DocxReader
 
         string? ResolveInlineReferenceDisplayText(DocxRelatedStoryKind kind, string? customMarkFollows)
         {
-            if (!string.IsNullOrEmpty(customMarkFollows) || (kind != DocxRelatedStoryKind.Footnote && kind != DocxRelatedStoryKind.Endnote))
+            if ((!string.IsNullOrEmpty(customMarkFollows) && !OoxBoolean.IsOff(customMarkFollows)) ||
+                (kind != DocxRelatedStoryKind.Footnote && kind != DocxRelatedStoryKind.Endnote))
             {
                 return null;
             }
@@ -1245,6 +1247,20 @@ internal sealed partial class DocxReader
             string? numberFormat = settings.NumberFormatValue
                 ?? (kind == DocxRelatedStoryKind.Endnote ? "lowerRoman" : "decimal");
             return FormatNoteReferenceNumber(next, numberFormat);
+        }
+
+        string? ResolveCustomMarkText()
+        {
+            // Office anchors the first character immediately following the
+            // reference in the same source run. Never guess from another run.
+            XElement? following = child.ElementsAfterSelf().FirstOrDefault();
+            if (!OoxBoolean.IsTrue(customMarkFollows) || following?.Name != WordprocessingNamespace + "t" ||
+                child.Parent?.Elements().Count(e => ResolveInlineReferenceKind(e) is not null) != 1 ||
+                following.Value.Length == 0 || char.IsWhiteSpace(following.Value[0]) || char.IsSurrogate(following.Value[0]))
+            {
+                return null;
+            }
+            return following.Value[..1];
         }
 
         void AddInlineReferenceDisplayRun(

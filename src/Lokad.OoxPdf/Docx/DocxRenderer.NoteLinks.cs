@@ -51,7 +51,9 @@ internal sealed partial class DocxRenderer
             if (line.SourceParagraph is not { } paragraph || paragraph.InlineReferences.Count == 0) continue;
             var references = paragraph.InlineReferences.Where(reference =>
                 reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                reference.Id is not null && !string.IsNullOrEmpty(reference.DisplayText)).ToArray();
+                reference.Id is not null && (!string.IsNullOrEmpty(reference.DisplayText) ||
+                    reference.CustomMarkText is not null && paragraph.Revisions.Count == 0 &&
+                    paragraph.RevisionRanges.Count == 0 && paragraph.FieldReferences.Count == 0 && paragraph.CommentRanges.Count == 0)).ToArray();
             if (references.Length == 0) continue;
             IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources,
                 pageNumber, pageCount, scale, yOffset, xOffset,
@@ -61,14 +63,28 @@ internal sealed partial class DocxRenderer
                 if (!destinations.TryGetValue((reference.Kind, reference.Id!), out PdfLinkDestination destination)) continue;
                 foreach (DocxTextEmissionSegment segment in segments)
                 {
-                    // Use the emitted automatic marker, never a nearby run as a fallback.
+                    // Match actual source ownership; a custom mark covers its
+                    // first character, while an automatic label covers all digits.
                     if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex != reference.SourceRunIndex ||
-                        segment.SourceTextOffsetInRun != reference.TextOffsetInRun || segment.Text != reference.DisplayText ||
+                        segment.SourceTextOffsetInRun != reference.TextOffsetInRun ||
                         segment.Width <= 0d || segment.Resource is null && segment.FallbackFace is null)
                     {
                         continue;
                     }
-                    double width = ResolveHyperlinkAnnotationWidth(segment, wordProfile);
+                    DocxTextEmissionSegment marker = segment;
+                    if (reference.DisplayText is { } automatic)
+                    {
+                        if (segment.Text != automatic) continue;
+                    }
+                    else if (reference.CustomMarkText is { } custom && segment.Text.StartsWith(custom, StringComparison.Ordinal) &&
+                        fontResources.TextMeasurer is { } measurer)
+                    {
+                        double markWidth = measurer.MeasureText(segment.StyleRun, custom, segment.FontSize);
+                        if (markWidth <= 0d) continue;
+                        marker = segment with { Text = custom, Width = markWidth };
+                    }
+                    else continue;
+                    double width = ResolveHyperlinkAnnotationWidth(marker, wordProfile);
                     double inset = line.BodyLineBoxBaselineInsetPoints ??
                         DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], fontResources.TextMeasurer);
                     double top = line.BaselineY - yOffset + inset;

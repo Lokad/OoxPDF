@@ -1,7 +1,8 @@
 # Generates public two-section footnote/endnote numbering probes.
-param([string] $OutputDirectory, [switch] $PaginationProbes)
+param([string] $OutputDirectory, [switch] $PaginationProbes, [switch] $CustomMarkProbes)
 
 $ErrorActionPreference = 'Stop'
+if ($PaginationProbes -and $CustomMarkProbes) { throw 'Select one probe family.' }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $cases = Join-Path $repoRoot 'tests/Lokad.OoxPdf.Tests/Cases'
 if (!$OutputDirectory) { $OutputDirectory = $cases }
@@ -84,7 +85,26 @@ foreach ($kind in $kinds) {
         }
     }
     $entries['word/settings.xml'] = "<w:settings xmlns:w='$word'><w:${kind}Pr><w:numFmt w:val='decimal'/><w:numStart w:val='105'/></w:${kind}Pr></w:settings>"
-    $name = if ($PaginationProbes) { 'note-continuous-footnote.docx' } else { "note-sections-$kind.docx" }
+    if ($CustomMarkProbes) {
+        [xml] $customDocument = $entries['word/document.xml']
+        $customNs = [Xml.XmlNamespaceManager]::new($customDocument.NameTable)
+        $customNs.AddNamespace('w', $word)
+        $reference = $customDocument.SelectSingleNode("//w:${kind}Reference", $customNs)
+        [void] $reference.SetAttribute('customMarkFollows', $word, '1')
+        $mark = $customDocument.CreateElement('w', 't', $word)
+        $mark.InnerText = '*'
+        [void] $reference.ParentNode.InsertAfter($mark, $reference)
+        [xml] $customNotes = $entries["word/${kind}s.xml"]
+        $customNoteNs = [Xml.XmlNamespaceManager]::new($customNotes.NameTable)
+        $customNoteNs.AddNamespace('w', $word)
+        $noteMark = $customNotes.SelectSingleNode("//w:$kind[@w:id='37']//w:${kind}Ref", $customNoteNs)
+        $noteText = $customNotes.CreateElement('w', 't', $word)
+        $noteText.InnerText = '*'
+        [void] $noteMark.ParentNode.ReplaceChild($noteText, $noteMark)
+        $entries['word/document.xml'] = $customDocument.OuterXml
+        $entries["word/${kind}s.xml"] = $customNotes.OuterXml
+    }
+    $name = if ($CustomMarkProbes) { "note-custom-mark-$kind.docx" } elseif ($PaginationProbes) { 'note-continuous-footnote.docx' } else { "note-sections-$kind.docx" }
     New-ZipPackage -Path (Join-Path $OutputDirectory $name) -Entries $entries
     if ($PaginationProbes) {
         [xml] $boundaryDocument = $entries['word/document.xml']

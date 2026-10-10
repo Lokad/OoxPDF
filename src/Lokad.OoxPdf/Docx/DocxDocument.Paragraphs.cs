@@ -110,6 +110,7 @@ internal sealed record DocxInlineReference(
     int RunChildIndex,
     int TextOffsetInRun)
 {
+    public string? CustomMarkText { get; init; }
     public DocxRevisionInfo? Revision { get; init; }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }
