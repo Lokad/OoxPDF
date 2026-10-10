@@ -168,6 +168,7 @@ internal sealed partial class PptxRenderer
         bool strictClip = ClipsTextVerticalOverflow(frame.BodyProperties.VerticalOverflow);
         bool cullOutOfFrameLines = frame.BodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
         int autoNumberValue = 1;
+        var autoNumberSequences = new Dictionary<int, (string Type, int Start, int Next)>();
         bool hasPlacedParagraph = false;
         var paragraphLayouts = new List<PptxTextParagraphLayout>();
 
@@ -176,7 +177,13 @@ internal sealed partial class PptxRenderer
             PptxTextParagraphModel paragraph = flowParagraph.Model;
             var lineLayouts = new List<PptxTextLineLayout>();
             ResolvedParagraphTextStyle paragraphStyle = flowParagraph.Style;
-            if (!paragraph.HasVisibleContent)
+            bool useNumberSequence = !frame.TableRowIndex.HasValue && UsesOfficeAutoNumberSequence(paragraph.Bullet, paragraph.Level);
+            bool emptyNumber = useNumberSequence && !paragraph.Runs.Any(run => run.Kind == PptxTextRunKind.Break || run.Text.Length > 0);
+            if (emptyNumber)
+            {
+                ReadBulletText(paragraph.Bullet, paragraph.Level, ref autoNumberValue, autoNumberSequences, useNumberSequence, advanceSequence: false);
+            }
+            if (!paragraph.HasVisibleContent || emptyNumber)
             {
                 if (paragraph.HasLayoutContent)
                 {
@@ -192,9 +199,10 @@ internal sealed partial class PptxRenderer
             if (paragraph.Bullet.Kind != PptxParagraphBulletKind.AutoNumber)
             {
                 autoNumberValue = 1;
+                autoNumberSequences.Clear();
             }
 
-            string? bulletText = ReadBulletText(paragraph.Bullet, ref autoNumberValue);
+            string? bulletText = ReadBulletText(paragraph.Bullet, paragraph.Level, ref autoNumberValue, autoNumberSequences, useNumberSequence, advanceSequence: true);
             bool bulletPending = bulletText is not null;
             double effectiveTextWidth = columnWrapWidth;
             double bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
@@ -277,9 +285,32 @@ internal sealed partial class PptxRenderer
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
-                    double bulletEndX = bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
-                    TextRun bulletRun = new(bulletText, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: false, Outline: null, StrictClip: strictClip);
+                    bool useNumberingLabelLayout = useNumberSequence &&
+                        paragraphStyle.Indent.Hanging <= PptxTextMetricRules.CoordinateTolerance &&
+                        paragraphStyle.Alignment == TextAlignment.Left &&
+                        paragraphStyle.TabStops.Count == 0 &&
+                        frame.Orientation == PptxTextOrientation.Horizontal &&
+                        !frame.TextFlipHorizontal && !frame.TextFlipVertical &&
+                        Math.Abs(frame.TextRotationDegrees) <= PptxTextMetricRules.CoordinateTolerance &&
+                        frame.ColumnCount == 1 && !frame.TableRowIndex.HasValue &&
+                        frame.BodyProperties.AutofitMode != PptxTextAutofitMode.Normal;
+                    double numberingEndX = useNumberingLabelLayout
+                        ? bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, false) + runStyle.CharacterSpacing
+                        : 0d;
+                    useNumberingLabelLayout &= numberingEndX <= columnStartX + effectiveTextWidth;
+                    if (useNumberingLabelLayout)
+                    {
+                        bulletStyle = bulletStyle with { Typeface = runStyle.Typeface };
+                    }
+                    double bulletEndX = useNumberingLabelLayout ? numberingEndX : bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
+                    TextRun bulletRun = new(bulletText, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, useNumberingLabelLayout ? false : runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: false, Outline: null, StrictClip: strictClip);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator, 0d));
+                    if (useNumberingLabelLayout)
+                    {
+                        // Office keeps the continuation indent, but the first body
+                        // fragment cannot start inside a wide numbering label.
+                        cursorX = Math.Max(cursorX, bulletEndX);
+                    }
                     bulletPending = false;
                 }
 

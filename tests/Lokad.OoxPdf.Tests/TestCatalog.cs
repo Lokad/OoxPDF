@@ -73,6 +73,7 @@ internal static class TestCatalog
         .. FromType("pptx-typography", typeof(PptxTypographyTests)),
         .. FromType("pptx-typography", typeof(PptxTextSpacingTests)),
         .. FromType("pptx-typography", typeof(PptxTextLayoutTests)),
+        .. FromType("pptx-typography", typeof(PptxNumberingTests)),
         .. FromType("pptx-typography", typeof(PptxFontCacheTests)),
         .. FromType("imaging", typeof(ImagingTests)),
         .. FromType("fonts", typeof(FontFormatTests)),

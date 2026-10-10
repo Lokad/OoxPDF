@@ -411,7 +411,19 @@ internal sealed partial class PptxRenderer
         return defaultFontSize;
     }
 
-    private static string? ReadBulletText(PptxParagraphBulletModel bullet, ref int autoNumberValue)
+    private static bool UsesOfficeAutoNumberSequence(PptxParagraphBulletModel bullet, int level)
+    {
+        return bullet.Kind == PptxParagraphBulletKind.AutoNumber &&
+            bullet.SizeKind == PptxParagraphBulletSizeKind.Text && bullet.FontTypeface is null &&
+            level is >= 0 and <= 8 && (bullet.AutoNumberStartAt ?? 1) is >= 1 and <= 32767 &&
+            (bullet.AutoNumberStartAtValue is null || bullet.AutoNumberStartAt.HasValue) &&
+            (bullet.AutoNumberType ?? "arabicPeriod") is "arabicPeriod" or "arabicParenBoth" or "arabicParenR" or
+                "alphaLcPeriod" or "alphaUcPeriod" or "alphaLcParenR" or "alphaUcParenR" or
+                "romanLcPeriod" or "romanUcPeriod" or "romanLcParenR" or "romanUcParenR";
+    }
+
+    private static string? ReadBulletText(PptxParagraphBulletModel bullet, int level, ref int autoNumberValue,
+        Dictionary<int, (string Type, int Start, int Next)> sequences, bool useSequence, bool advanceSequence)
     {
         if (bullet.Kind == PptxParagraphBulletKind.None || bullet.Kind == PptxParagraphBulletKind.Blip)
         {
@@ -433,9 +445,25 @@ internal sealed partial class PptxRenderer
             autoNumberValue = start;
         }
 
-        string result = FormatAutoNumber(autoNumberValue, bullet.AutoNumberType);
+        int number = autoNumberValue;
         autoNumberValue++;
-        return result;
+        int effectiveStart = bullet.AutoNumberStartAt ?? 1;
+        string type = bullet.AutoNumberType ?? "arabicPeriod";
+        if (useSequence)
+        {
+            foreach (int deeper in sequences.Keys.Where(key => key > level).ToArray())
+            {
+                sequences.Remove(deeper);
+            }
+            number = sequences.TryGetValue(level, out var previous) && previous.Type == type && previous.Start == effectiveStart
+                ? previous.Next : effectiveStart;
+            sequences[level] = (type, effectiveStart, number + (advanceSequence ? 1 : 0));
+        }
+        else
+        {
+            sequences.Clear();
+        }
+        return FormatAutoNumber(number, bullet.AutoNumberType);
 
         string FormatAutoNumber(int value, string? type)
         {
