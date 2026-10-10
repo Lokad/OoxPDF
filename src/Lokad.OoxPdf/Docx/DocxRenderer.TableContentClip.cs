@@ -8,7 +8,7 @@ internal sealed partial class DocxRenderer
         var fallback = new DocxTableCellClipSnapshot(false, cell.X, cell.Y, cell.Width, cell.Height);
         bool declaredMarginClip = row.RowIndex >= 0 && row.RowIndex < row.Table.AlignedMinimumRowBottomMargins.Count &&
             row.Table.AlignedMinimumRowBottomMargins[row.RowIndex] is > 0d;
-        bool automaticClip = row.Table.AutomaticMinimumRowPlacement && row.RowIndex == 0 && row.Cells.Count == 1;
+        bool automaticClip = row.Table.AutomaticMinimumRowPlacement && row.Cells.Count > 0;
         if (row.FragmentCount != 1 || row.ReviewBorderPrintScale != 1d || row.RowIndex < 0 ||
             !(declaredMarginClip || automaticClip) ||
             row.Cells.Any(c => c.VisualCell.Borders.Any(b =>
@@ -22,7 +22,7 @@ internal sealed partial class DocxRenderer
         double left = Width("left") / 2d;
         double right = Width("right") / 2d;
         double top = cell.ContentPaddingTop + Width("top");
-        double bottom = (automaticClip ? cell.ContentPaddingBottom : row.Table.AlignedMinimumRowBottomMargins[row.RowIndex]) +
+        double bottom = (automaticClip ? row.Cells.Max(c => c.ContentPaddingBottom) : row.Table.AlignedMinimumRowBottomMargins[row.RowIndex]) +
             (row.RowIndex == row.Table.RowCount - 1 ? Width("bottom") : 0d);
         double width = cell.Width - left - right;
         double height = cell.Height - top - bottom;

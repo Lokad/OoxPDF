@@ -393,7 +393,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         IReadOnlyDictionary<string, string>? commentMarkerLabels = null,
         bool adjustAlignedMinimumMargins = false,
-        double? alignedMinimumAvailableHeight = null)
+        double? alignedMinimumAvailableHeight = null,
+        bool allowAutomaticMinimumGridPlacement = false)
     {
         DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels);
         var tableContext = new DocxTableLayoutContext(
@@ -452,7 +453,7 @@ internal sealed partial class DocxLayoutEngine
             AlignedMinimumRowBottomMargins = rowBottomMargins,
             AutomaticMinimumRowPlacement = adjustAlignedMinimumMargins &&
                 alignedMinimumAvailableHeight is { } available && rowHeights.Sum() <= available &&
-                IsEligibleAutomaticMinimumRow(table, textMeasurer, paragraphSpacingScale)
+                IsEligibleAutomaticMinimumRow(table, textMeasurer, paragraphSpacingScale, allowAutomaticMinimumGridPlacement)
         };
 
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);

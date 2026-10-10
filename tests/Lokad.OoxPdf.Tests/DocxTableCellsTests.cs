@@ -12,6 +12,155 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableAutomaticGridMinimumSlotsMatchIndependentWord()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach ((int rows, int columns) in new[] { (1, 2), (2, 1), (2, 2) })
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach ((double? height, string? rule) in new (double?, string?)[] { (null, null), (320d, "auto") })
+        foreach (string pattern in new[] { "min-single", "min", "auto,min-single,auto" })
+        {
+            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
+            var legacy = CreateParagraphMinimumLayout(pattern, full, "header", height, rule,
+                verticalAlignment: alignment, cellMargins: margins, rowCount: rows, columnCount: columns);
+            var actual = CreateParagraphMinimumLayout(pattern, full, rowHeight: height, rowRule: rule,
+                verticalAlignment: alignment, cellMargins: margins, rowCount: rows, columnCount: columns);
+            var before = legacy.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells).SelectMany(c => c.TextLines).ToArray();
+            var after = actual.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells).SelectMany(c => c.TextLines).ToArray();
+            TestAssert.Equal(before.Length, after.Length);
+            for (int i = 0; i < after.Length; i++)
+                TestAssert.True(Math.Abs(before[i].BaselineY - after[i].BaselineY -
+                    (after[i].LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing ? 10d : 0d)) < .000001d,
+                    "Word moves only the minimum-height paragraph slot in each plain automatic grid cell.");
+        }
+    }
+
+    public static void DocxTableAutomaticGridAlignsUnequalAndNaturalHeightSlots()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach (double shortMinimum in new[] { 12d, 14d, 24d })
+        {
+            var legacy = CreateParagraphMinimumLayout("min", full, "header", verticalAlignment: alignment,
+                rowCount: 2, columnCount: 2, shortNeighborMinimum: shortMinimum);
+            var actual = CreateParagraphMinimumLayout("min", full, verticalAlignment: alignment,
+                rowCount: 2, columnCount: 2, shortNeighborMinimum: shortMinimum);
+            var before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            var after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            for (int r = 0; r < 2; r++)
+            {
+                // The synthetic face has a 10.44pt first-baseline inset. Word
+                // centers/bottom-aligns the slot without subtracting that inset.
+                double expected = (shortMinimum > 14d ? 10d : 0d) + (alignment == "center" ? 5.22d : 10.44d);
+                TestAssert.True(Math.Abs(before[r].Cells[1].TextLines[0].BaselineY -
+                    after[r].Cells[1].TextLines[0].BaselineY - expected) < .000001d,
+                    "Unequal minimum/natural-height cells align their full paragraph slot beside taller cells.");
+                TestAssert.Equal(before[r].Height, after[r].Height);
+            }
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+        foreach (string alignment in new[] { "center", "bottom" })
+        {
+            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
+            var neighborMargins = DocxTableCellMargins.Empty with { TopPoints = 12d, BottomPoints = 6d };
+            var legacy = CreateParagraphMinimumLayout("min-single", full, "header", verticalAlignment: alignment,
+                cellMargins: margins, columnCount: 2, shortNeighborMinimum: 24d, shortNeighborMargins: neighborMargins);
+            var actual = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: alignment,
+                cellMargins: margins, columnCount: 2, shortNeighborMinimum: 24d, shortNeighborMargins: neighborMargins);
+            var before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells[1].TextLines[0];
+            var after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells[1].TextLines[0];
+            TestAssert.True(Math.Abs(before.BaselineY - after.BaselineY - 10d) < .000001d,
+                "Unequal margins align against the row's maximum bottom margin without adding unused cell padding.");
+        }
+    }
+
+    public static void DocxTableAutomaticGridRetainsNaturalFloorsAndFollowingFlow()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach ((int rows, int columns) in new[] { (1, 2), (2, 1), (2, 2) })
+        foreach (double minimum in new[] { 12d, 14d, 24d })
+        {
+            var legacy = CreateParagraphMinimumLayout("auto,min-single,auto", full, "header", rowRule: "auto",
+                verticalAlignment: "center", rowCount: rows, columnCount: columns, minimumSpacing: minimum);
+            var actual = CreateParagraphMinimumLayout("auto,min-single,auto", full, rowRule: "auto",
+                verticalAlignment: "center", rowCount: rows, columnCount: columns, minimumSpacing: minimum);
+            var before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            var after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            TestAssert.Equal(before.Length, after.Length);
+            for (int r = 0; r < after.Length; r++)
+            {
+                TestAssert.Equal(before[r].Y, after[r].Y); TestAssert.Equal(before[r].Height, after[r].Height);
+                for (int c = 0; c < columns; c++)
+                {
+                    TestAssert.Equal(before[r].Cells[c].X, after[r].Cells[c].X);
+                    TestAssert.Equal(before[r].Cells[c].Width, after[r].Cells[c].Width);
+                    if (minimum > 14d) continue;
+                    for (int i = 0; i < after[r].Cells[c].TextLines.Count; i++)
+                        TestAssert.Equal(before[r].Cells[c].TextLines[i].BaselineY, after[r].Cells[c].TextLines[i].BaselineY);
+                }
+            }
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableAutomaticGridClipsUseIndependentWordInsets()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        var rows = CreateParagraphMinimumLayout("min-single", full, rowRule: "auto", verticalAlignment: "center",
+            rowCount: 2, columnCount: 2).Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+        for (int ri = 0; ri < 2; ri++)
+        {
+            double y = ri == 0 ? 597.12d : 471.36d;
+            double height = ri == 0 ? 122.88d : 125.76d;
+            var cells = rows[ri].Cells.Select((cell, ci) => cell with {
+                X = 72d + ci * 234d, Y = y, Width = 234d, Height = height,
+                ContentPaddingTop = 6d, ContentPaddingBottom = 12d,
+                Cell = cell.Cell with { Borders = new[] { "top", "left", "bottom", "right" }
+                    .Select(edge => new DocxTableCellBorder(edge, "double", "000000", "8")).ToArray() }
+            }).ToArray();
+            // Read the qualified layout's border projection, rather than setting its marker in the test.
+            DocxTable source = new(null, [234d, 234d], [new(cells.Select(c => c.Cell).ToArray(), null)]);
+            DocxTable projected = DocxTableBorderGeometry.ResolveUniformDoubleBodyTable(source, 1d, 468d);
+            cells = cells.Select((cell, ci) => cell with { Cell = projected.Rows[0].Cells[ci] }).ToArray();
+            var row = rows[ri] with { Cells = cells };
+            for (int ci = 0; ci < 2; ci++)
+            {
+                var clip = DocxRenderer.ResolveTableCellContentClip(row, cells[ci]);
+                TestAssert.True(clip.Admitted, "Every qualified automatic grid row must expose its content mask.");
+                TestAssert.True(Math.Abs(clip.X - (73.44d + ci * 234d)) < .000001d &&
+                    Math.Abs(clip.Y - (ri == 0 ? 609.12d : 486.24d)) < .000001d &&
+                    Math.Abs(clip.Width - 231.12d) < .000001d && Math.Abs(clip.Height - 102d) < .000001d,
+                    "Grid masks use each row's margins and only the terminal row's bottom border advance.");
+            }
+        }
+    }
+
+    public static void DocxTableAutomaticGridRetainsComplexAndFragmentFallbacks()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "header", "rich", "mixed", "frame" })
+        {
+            var layout = CreateParagraphMinimumLayout("min,min,min", full, variant == "frame" ? "" : variant,
+                verticalAlignment: "center", rowCount: 2, columnCount: 2, pageHeight: variant == "frame" ? 260d : 700d);
+            foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
+            foreach (var cell in row.Cells)
+            {
+                TestAssert.True(cell.TextLines.All(line => line.BodyLineBoxBaselineInsetPoints is null),
+                    "Complex grids and tables that do not fit their complete current frame retain placement fallback.");
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Unqualified automatic grid masks retain full-cell clipping.");
+            }
+        }
+        var admitted = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "bottom", rowCount: 2, columnCount: 2)
+            .Pages[0].Items.OfType<DocxTableRowLayout>().First();
+        foreach (var row in new[] { admitted with { FragmentCount = 2 }, admitted with { ReviewBorderPrintScale = .95d } })
+            foreach (var cell in row.Cells)
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Fragmented and scaled automatic grid masks retain fallback.");
+    }
+
     public static void DocxTableDoubleBorderUsesIndependentWordBandWidths()
     {
         foreach ((string? size, double nominal, double printed) in new (string?, double, double)[] {
@@ -160,7 +309,7 @@ internal static class DocxTableCellsTests
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
         foreach ((string variant, int rows, int columns, double pageHeight) in new[] {
             ("header", 1, 1, 700d), ("rich", 1, 1, 700d), ("mixed", 1, 1, 700d),
-            ("", 2, 1, 700d), ("", 1, 2, 700d), ("", 1, 1, 160d) })
+            ("header", 2, 1, 700d), ("header", 1, 2, 700d), ("", 1, 1, 160d) })
         {
             var layout = CreateParagraphMinimumLayout("min,min,min", full, variant, verticalAlignment: "center",
                 pageHeight: pageHeight, rowCount: rows, columnCount: columns);
@@ -262,14 +411,14 @@ internal static class DocxTableCellsTests
         foreach (string alignment in new[] { "center", "bottom" })
         foreach ((string variant, int rows, int columns, double pageHeight, double? height, string? rule) in new (string, int, int, double, double?, string?)[] {
             ("header", 1, 1, 700d, null, null), ("rich", 1, 1, 700d, null, null), ("mixed", 1, 1, 700d, 320d, "auto"),
-            ("", 2, 1, 700d, null, null), ("", 1, 2, 700d, null, null), ("", 1, 1, 160d, null, null),
+            ("header", 2, 1, 700d, null, null), ("header", 1, 2, 700d, null, null), ("", 1, 1, 160d, null, null),
             ("", 1, 1, 700d, 80d, "atLeast"), ("", 1, 1, 700d, 320d, "unknown") })
         {
             DocxLayout layout = CreateParagraphMinimumLayout("min,min,min", full, variant, height, rule,
                 verticalAlignment: alignment, cellMargins: margins, pageHeight: pageHeight, rowCount: rows, columnCount: columns);
             TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
                 .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
-                "Automatic-row placement requires an eligible one-cell body table that fits its current frame.");
+                "Automatic-row placement requires an eligible plain body table that fits its complete current frame.");
         }
         DocxLayout fallback = CreateParagraphMinimumLayout("auto,min,auto", new MinimumMetricsFallback(full), rowRule: "auto",
             verticalAlignment: "center", cellMargins: margins);
@@ -708,7 +857,8 @@ internal static class DocxTableCellsTests
     private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "",
         double? rowHeight = null, string? rowRule = null,
         IReadOnlyList<(string Family, double Size, bool Bold, bool Italic)>? paragraphFonts = null,
-        string? verticalAlignment = null, DocxTableCellMargins? cellMargins = null, double pageHeight = 700d, int rowCount = 1, int columnCount = 1, double minimumSpacing = 24d)
+        string? verticalAlignment = null, DocxTableCellMargins? cellMargins = null, double pageHeight = 700d, int rowCount = 1, int columnCount = 1, double minimumSpacing = 24d,
+        double? shortNeighborMinimum = null, DocxTableCellMargins? shortNeighborMargins = null)
     {
         DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
         {
@@ -735,7 +885,16 @@ internal static class DocxTableCellsTests
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, verticalAlignment ?? (variant is "center" or "center-rich" ? "center" : null), [],
             cellMargins ?? (variant == "margins" ? DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d } : DocxTableCellMargins.Empty))
             { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
-        DocxTableRow row = new(Enumerable.Repeat(cell, columnCount).ToArray(), rowHeight) { HeightRuleValue = rowRule };
+        var cells = Enumerable.Repeat(cell, columnCount).ToArray();
+        if (shortNeighborMinimum is { } shortMinimum && columnCount > 1)
+        {
+            var shortParagraph = paragraphs[0] with { LineSpacingPoints = shortMinimum,
+                Spacing = paragraphs[0].Spacing with { LineValue = ((int)(shortMinimum * 20d)).ToString(CultureInfo.InvariantCulture) },
+                Runs = paragraphs[0].Runs.Select(run => run with { Text = "Short" }).ToArray() };
+            cells[1] = cell with { Paragraphs = [shortParagraph], BodyElements = [new DocxParagraphElement(shortParagraph)],
+                Margins = shortNeighborMargins ?? cell.Margins };
+        }
+        DocxTableRow row = new(cells, rowHeight) { HeightRuleValue = rowRule };
         if (variant is "header" or "legacy-header") row = row with { IsHeader = true };
         DocxTable table = new(null, Enumerable.Repeat(120d / columnCount, columnCount).ToArray(), Enumerable.Repeat(row, rowCount).ToArray());
         DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 12d, 14d) with { LineSpacingPoints = null };
@@ -795,7 +954,7 @@ internal static class DocxTableCellsTests
     public static void DocxTableGridMinimumLinePlacementRetainsComplexAndUnrecognizedRows()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string variant in new[] { "center", "rich", "mixed", "unknown-height", "header" })
+        foreach (string variant in new[] { "center-rich", "rich", "mixed", "unknown-height", "header" })
         {
             DocxLayout layout = CreateMinimumTableLayout(24d, true, full, variant, rowCount: 2, columnCount: 2);
             TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)

@@ -1167,7 +1167,8 @@ internal sealed partial class DocxLayoutEngine
                         paragraphSpacingScale: paragraphSpacingScale,
                         commentMarkerLabels: commentMarkerLabels,
                         adjustAlignedMinimumMargins: true,
-                        alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom());
+                        alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom(),
+                        allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1);
                 }
 
                 LayoutTable(bodyTable, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),

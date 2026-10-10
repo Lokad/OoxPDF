@@ -48,8 +48,11 @@ foreach ($page in @($cells | Group-Object Page)) {
         foreach ($clip in $pageClips) {
             if ([Math]::Abs($cell.Width-$clip.Width) -le $CandidateMappingTolerance -and
                 [Math]::Abs($cell.Height-$clip.Height) -le $CandidateMappingTolerance) {
+                # Canonicalize signed zero so PDF rounding cannot split one translation.
+                $offsetKeyX = if ([Math]::Round($clip.X-$cell.X, 1) -eq 0d) { '0.0' } else { '{0:F1}' -f ($clip.X-$cell.X) }
+                $offsetKeyY = if ([Math]::Round($clip.Y-$cell.Y, 1) -eq 0d) { '0.0' } else { '{0:F1}' -f ($clip.Y-$cell.Y) }
                 [pscustomobject]@{ X=$clip.X-$cell.X; Y=$clip.Y-$cell.Y;
-                    Key=('{0:F1}|{1:F1}' -f ($clip.X-$cell.X),($clip.Y-$cell.Y)) }
+                    Key=($offsetKeyX+'|'+$offsetKeyY) }
             }
         }
     })

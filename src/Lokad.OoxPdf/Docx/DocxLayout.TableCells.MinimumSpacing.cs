@@ -12,24 +12,27 @@ internal sealed partial class DocxLayoutEngine
         if (!IsEligibleTableMinimumCell(table, row, cell, measurer)) return lines;
         var metrics = (IDocxLineMetricsProvider)measurer!;
         double alignmentShift = 0d;
-        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top && !automaticMinimumPlacement)
+        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top)
         {
             // Word aligns the paragraph slot extent. The terminal bottom border
             // hangs below it; the first-baseline inset is already applied.
-            if (row.HeightPoints is not > 0d ||
+            if (!automaticMinimumPlacement && (row.HeightPoints is not > 0d ||
                 string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) ||
-                cell.Paragraphs.Any(p => p.Runs.Count == 0)) return lines;
+                cell.Paragraphs.Any(p => p.Runs.Count == 0))) return lines;
             double topPadding = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, 1d);
             double bottomPadding = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, 1d);
             double baselineInset = ResolveTableCellFirstBaselineInset(cell.Paragraphs, measurer);
             double borderAdvance = isLastRow ? row.Cells
                 .Select(c => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(c.Borders, "bottom")))
                 .DefaultIfEmpty(0d).Max() : 0d;
-            if (bottomPadding > 0d && marginAdvance == 0d) return lines;
+            if (!automaticMinimumPlacement && bottomPadding > 0d && marginAdvance == 0d) return lines;
             double oldExtra = Math.Max(0d, cellHeight - topPadding - bottomPadding - baselineInset - usedHeight);
-            // Declared rows include their bottom margin in their advance, outside
-            // the paragraph-slot extent used for vertical alignment.
-            double newExtra = Math.Max(0d, cellHeight - topPadding - marginAdvance - borderAdvance - usedHeight);
+            // Align the complete slot extent using the row's maximum bottom
+            // margin. A shorter cell's own padding does not enlarge that extent.
+            double alignmentBottom = automaticMinimumPlacement
+                ? row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, 1d)).Max()
+                : marginAdvance;
+            double newExtra = Math.Max(0d, cellHeight - topPadding - alignmentBottom - borderAdvance - usedHeight);
             alignmentShift = ResolveVerticalContentOffset(cell, newExtra) - ResolveVerticalContentOffset(cell, oldExtra);
         }
         var byParagraph = new Dictionary<DocxParagraph, List<DocxTextLineLayout>>(ReferenceEqualityComparer.Instance);
@@ -57,7 +60,7 @@ internal sealed partial class DocxLayoutEngine
                 paragraphLines[0].FontSize, slotHeight, false, cell.Paragraphs, paragraph, measurer) + excess;
             adjustments.Add(paragraph, (excess, inset));
         }
-        if (adjustments.Count == 0) return lines;
+        if (adjustments.Count == 0 && alignmentShift == 0d) return lines;
         // Word puts the excess minimum-height slot above the first baseline.
         // Cursor advances and row measurement already include this space.
         return lines.Select(l => l.SourceParagraph is { } p && adjustments.TryGetValue(p, out var adjustment) ? l with
@@ -122,20 +125,19 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool IsEligibleAutomaticMinimumRow(
-        DocxTable table, IDocxTextMeasurer? measurer, double fixedScale)
+        DocxTable table, IDocxTextMeasurer? measurer, double fixedScale, bool allowGrid)
     {
-        if (fixedScale != 1d || table.Rows.Count != 1 || table.Rows[0].Cells.Count != 1)
+        if (fixedScale != 1d || table.Rows.Count == 0 ||
+            (!allowGrid && (table.Rows.Count != 1 || table.Rows[0].Cells.Count != 1)))
             return false;
-        DocxTableRow row = table.Rows[0];
-        if (!(row.HeightPoints is null && row.HeightRuleValue is null) &&
-            !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
-            return false;
-        DocxTableCell cell = row.Cells[0];
-        return cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top &&
-            IsEligibleTableMinimumCell(table, row, cell, measurer) &&
-            cell.Paragraphs.All(p => p.Runs.Count != 0) &&
-            cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
-                string.Equals(p.EffectiveProperties.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase));
+        return table.Rows.All(row => row.Cells.Count > 0 &&
+            ((row.HeightPoints is null && row.HeightRuleValue is null) ||
+                string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)) &&
+            row.Cells.All(cell => cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top &&
+                IsEligibleTableMinimumCell(table, row, cell, measurer) &&
+                cell.Paragraphs.All(p => p.Runs.Count != 0) &&
+                cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
+                    string.Equals(p.EffectiveProperties.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))));
     }
 
 }
