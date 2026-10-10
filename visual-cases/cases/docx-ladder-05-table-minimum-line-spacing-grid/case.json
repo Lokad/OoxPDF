@@ -1,0 +1,26 @@
+{
+  "id": "docx-ladder-05-table-minimum-line-spacing-grid",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/table-minimum-line-spacing-grid.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "tables",
+    "line-spacing",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.0,
+    "minStructuralSimilarity": 0.84,
+    "minForegroundRecall": 0.83,
+    "maxChangedPixelRatioAtThreshold16": 0.04
+  },
+  "allowedUnsupportedFeatures": []
+}
