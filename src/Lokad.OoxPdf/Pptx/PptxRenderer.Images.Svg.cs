@@ -187,7 +187,22 @@ internal sealed partial class PptxRenderer
                     unpaintablePaths++;
                 }
             }
-            SvgStroke stroke = ReadSvgStroke(element, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke);
+            bool allowStrokePattern = Math.Abs(bounds.RotationDegrees) <= 0.001d && !bounds.FlipHorizontal && !bounds.FlipVertical;
+            SvgStroke stroke = ReadSvgStroke(element, out SvgStrokeFailure strokeFailure, out bool invalidStrokePresentation, out bool hasVectorEffect, out bool nonScalingStroke, gradients, allowStrokePattern, hasFill);
+            PdfShadingPattern? strokePattern = null;
+            if (stroke.Gradient is { } strokeGradient)
+            {
+                strokePattern = TryReadSvgStrokePattern(data, strokeGradient, transform, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY);
+                if (strokePattern is null)
+                {
+                    stroke = default;
+                    strokeFailure = SvgStrokeFailure.UnresolvedGradient;
+                }
+                else if (stroke.GradientId is { } strokeGradientId)
+                {
+                    usedGradientIds?.Add(strokeGradientId);
+                }
+            }
             if (strokeFailure == SvgStrokeFailure.UnresolvedGradient)
             {
                 gradientStrokes++;
@@ -225,7 +240,9 @@ internal sealed partial class PptxRenderer
                 // footprint. PDF caps extend each segment by a full width.
                 // Retain the approximation when a dash is no longer than that
                 // width: zero/negative segments do not match Office's paint.
-                bool compensateSquareCaps = stroke.LineCap == 2;
+                // Gradient strokes follow Office's cap extension into the gaps;
+                // keep the earlier compensation specific to solid stroke paint.
+                bool compensateSquareCaps = stroke.LineCap == 2 && stroke.Gradient is null;
                 for (int dashIndex = 0; compensateSquareCaps && dashIndex < dashPoints.Length; dashIndex += 2)
                 {
                     compensateSquareCaps = dashPoints[dashIndex] > strokeWidthPoints;
@@ -251,6 +268,7 @@ internal sealed partial class PptxRenderer
                     || (dashPoints is not null && !dashPoints.All(double.IsFinite))))
             {
                 stroke = default;
+                strokePattern = null;
                 unpaintableStrokes++;
             }
             if (radial is { } radialGradient)
@@ -395,6 +413,14 @@ internal sealed partial class PptxRenderer
                     unreadablePaths++;
                 }
             }
+            if (strokePattern is not null && stroke.Gradient is not null)
+            {
+                if (!TryPaintSvgStrokePath(graphics, data, transform, default, strokeWidthPoints, stroke.Opacity, stroke.LineCap, stroke.LineJoin, dashPoints, dashPhasePoints, stroke.MiterLimit, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, strokePattern)
+                    && badCommand is null)
+                {
+                    unreadablePaths++;
+                }
+            }
         }
         while (isolation.Count > 0) { CloseGroup(); }
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
@@ -489,6 +515,34 @@ internal sealed partial class PptxRenderer
         }
         return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
             double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
+    }
+
+    private static bool HasQualifiedSvgStrokeContainers(XElement element)
+    {
+        int depth = 0;
+        foreach (XElement ancestor in element.Ancestors())
+        {
+            if (ancestor.Name.LocalName is not ("svg" or "g")) { continue; }
+            if (ancestor.Name.LocalName == "svg" && ancestor.Parent is not null) { return false; }
+            bool hasOpacity = ancestor.Attribute("opacity") is not null
+                || (ancestor.Attribute("style") is not null && ReadSvgStyleDeclarations(ancestor).ContainsKey("opacity"));
+            if (!hasOpacity) { continue; }
+            double? opacity = ReadNumericSvgContainerOpacity(ancestor);
+            if (opacity is null) { return false; }
+            if (opacity is > 0d and < 1d && ++depth > PdfTransparencyGroup.MaxDepth) { return false; }
+        }
+        return true;
+    }
+
+    private static bool HasNumericSvgStrokeOpacity(XElement element, IReadOnlyDictionary<string, string> style)
+    {
+        foreach (string name in new[] { "opacity", "stroke-opacity" })
+        {
+            string? text = ReadSvgPresentationAttribute(element, style, name);
+            if (!string.IsNullOrWhiteSpace(text) && (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+                || !double.IsFinite(value) || value < 0d || value > 1d)) { return false; }
+        }
+        return true;
     }
 
     private static bool IsFullyTransparentSvgContainer(XElement element)
@@ -816,9 +870,9 @@ internal sealed partial class PptxRenderer
 
     private static SvgTransform? ReadSvgLinearAlphaTransform(SvgGradient gradient, SvgTransform pathTransform,
         SvgGradient effective, SvgPathBounds bounds, double minX, double minY, double imageX, double imageY,
-        double imageHeight, double scaleX, double scaleY)
+        double imageHeight, double scaleX, double scaleY, bool requireVaryingAlpha = true)
     {
-        if (gradient.UniformStopOpacity is not null || !gradient.HasNumericStopOpacity ||
+        if ((requireVaryingAlpha && gradient.UniformStopOpacity is not null) || !gradient.HasNumericStopOpacity ||
             !gradient.HasIdentityGradientTransform || gradient.Spread != SvgGradientSpread.Pad ||
             (gradient.IsUserSpace && !pathTransform.IsIdentity) || gradient.Stops.Count is < 2 or > 256 ||
             (!gradient.IsUserSpace && (pathTransform.M11 <= 0d || pathTransform.M22 <= 0d || pathTransform.M12 != 0d || pathTransform.M21 != 0d)) ||
@@ -869,6 +923,23 @@ internal sealed partial class PptxRenderer
             && double.IsFinite((bounds.MaxX - bounds.MinX) * scaleX) && double.IsFinite((bounds.MaxY - bounds.MinY) * scaleY)
             && double.IsFinite(imageX + (bounds.MinX - minX) * scaleX) && double.IsFinite(imageX + (bounds.MaxX - minX) * scaleX)
             && double.IsFinite(imageY + imageHeight - (bounds.MinY - minY) * scaleY) && double.IsFinite(imageY + imageHeight - (bounds.MaxY - minY) * scaleY);
+    }
+
+    private static PdfShadingPattern? TryReadSvgStrokePattern(string data, SvgGradient gradient, SvgTransform transform,
+        double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    {
+        if (!TryReadSvgPathBounds(data, transform, out SvgPathBounds bounds)
+            || !AreSvgGradientBoundsMappable(bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY)) { return null; }
+        (double x1, double y1) = gradient.IsUserSpace ? transform.Apply(gradient.X1, gradient.Y1)
+            : (bounds.MinX + gradient.X1 * (bounds.MaxX - bounds.MinX), bounds.MinY + gradient.Y1 * (bounds.MaxY - bounds.MinY));
+        (double x2, double y2) = gradient.IsUserSpace ? transform.Apply(gradient.X2, gradient.Y2)
+            : (bounds.MinX + gradient.X2 * (bounds.MaxX - bounds.MinX), bounds.MinY + gradient.Y2 * (bounds.MaxY - bounds.MinY));
+        var effective = new SvgGradient(x1, y1, x2, y2, gradient.Stops, gradient.IsUserSpace, gradient.Spread);
+        SvgTransform? projection = ReadSvgLinearAlphaTransform(gradient, transform, effective, bounds, minX, minY, imageX, imageY, imageHeight, scaleX, scaleY, requireVaryingAlpha: false);
+        if (projection is not { } matrix) { return null; }
+        var shading = new PdfAxialShading(0d, 0d, 1d, 0d, gradient.Stops.Select(stop =>
+            new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
+        return new PdfShadingPattern(shading, new PdfPatternMatrix(matrix.M11, matrix.M12, matrix.M21, matrix.M22, matrix.OffsetX, matrix.OffsetY));
     }
 
     private static bool TryReadSvgViewBox(XElement? root, out double minX, out double minY, out double width, out double height)
@@ -1122,9 +1193,9 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset, double MiterLimit)
+    private readonly record struct SvgStroke(RgbColor? Color, double Width, double Opacity, int LineCap, int LineJoin, double[]? DashPattern, double DashOffset, double MiterLimit, SvgGradient? Gradient = null, string? GradientId = null)
     {
-        public bool HasPaint => Color is not null;
+        public bool HasPaint => Color is not null || Gradient is not null;
     }
     private enum SvgStrokeFailure
     {
@@ -1139,7 +1210,7 @@ internal sealed partial class PptxRenderer
     // a uniform stroke width; the viewport separately stretches its normal.
     // vector-effect=non-scaling-stroke skips the element-transform factor;
     // any other effect value stays diagnosed with the scaled stroke.
-    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke)
+    private static SvgStroke ReadSvgStroke(XElement path, out SvgStrokeFailure failure, out bool invalidPresentation, out bool hasVectorEffect, out bool nonScalingStroke, IReadOnlyDictionary<string, SvgGradient>? gradients = null, bool allowGradientStroke = false, bool hasFill = false)
     {
         failure = SvgStrokeFailure.None;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
@@ -1155,19 +1226,35 @@ internal sealed partial class PptxRenderer
         double opacity = ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "stroke-opacity"))
             * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
         Match gradient = Regex.Match(strokePaint, @"url\(#(?<id>[^)]+)\)");
+        SvgGradient? strokeGradient = null;
+        string? gradientId = null;
+        RgbColor? color = null;
         if (gradient.Success)
         {
-            failure = SvgStrokeFailure.UnresolvedGradient;
-            return default;
+            gradientId = gradient.Groups["id"].Value;
+            if (!allowGradientStroke || !HasQualifiedSvgStrokeContainers(path) || !HasNumericSvgStrokeOpacity(path, style)
+                || (hasFill && ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity")) < 1d)
+                || gradients is null || !gradients.TryGetValue(gradientId, out strokeGradient)
+                || strokeGradient.UniformStopOpacity is null || !strokeGradient.HasNumericStopOpacity
+                || !strokeGradient.HasIdentityGradientTransform || strokeGradient.Spread != SvgGradientSpread.Pad)
+            {
+                failure = SvgStrokeFailure.UnresolvedGradient;
+                return default;
+            }
+            opacity *= strokeGradient.UniformStopOpacity.Value;
         }
-        if (!RgbColor.TryParseCssColor(strokePaint, out RgbColor color))
+        else if (RgbColor.TryParseCssColor(strokePaint, out RgbColor parsedColor))
+        {
+            color = parsedColor;
+        }
+        else
         {
             failure = SvgStrokeFailure.UnparsableColor;
             return default;
         }
         if (!TryReadSvgStrokeWidth(style, path, out double width))
         {
-            failure = SvgStrokeFailure.UnparsableWidth;
+            failure = gradient.Success ? SvgStrokeFailure.UnresolvedGradient : SvgStrokeFailure.UnparsableWidth;
             return default;
         }
         int lineCap = ReadSvgLineCap(ReadSvgPresentationAttribute(path, style, "stroke-linecap"), out bool capInvalid);
@@ -1186,7 +1273,7 @@ internal sealed partial class PptxRenderer
             invalidPresentation = true;
             miterLimit = 4d;
         }
-        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit);
+        return new SvgStroke(color, width, opacity, lineCap, lineJoin, dash, offset, miterLimit, strokeGradient, gradientId);
     }
     private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path, out double width)
     {
@@ -1374,7 +1461,7 @@ internal sealed partial class PptxRenderer
         double second = Math.Sqrt((a - d) * (a - d) + (b + c) * (b + c));
         return largest * ((first + second) / 2d);
     }
-    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY)
+    private static bool TryPaintSvgStrokePath(PdfGraphicsBuilder graphics, string data, SvgTransform transform, RgbColor color, double widthPoints, double opacity, int lineCap, int lineJoin, double[]? dashPoints, double dashPhasePoints, double miterLimit, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, PdfShadingPattern? shadingPattern = null)
     {
         graphics.SaveState();
         SvgTransform? strokeViewport = ApplySvgStrokeViewport(graphics, imageX, imageY, imageHeight, scaleX, scaleY);
@@ -1386,7 +1473,8 @@ internal sealed partial class PptxRenderer
         {
             graphics.SetAlpha(1d, opacity);
         }
-        graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+        if (shadingPattern is null) { graphics.SetStrokeRgb(color.Red, color.Green, color.Blue); }
+        else { graphics.SetStrokeShadingPattern(shadingPattern); }
         graphics.SetLineWidth(widthPoints);
         if (roundDashCaps is not null)
         {
@@ -1414,7 +1502,8 @@ internal sealed partial class PptxRenderer
             graphics.StrokeCurrentPath();
             if (roundDashCaps is not null)
             {
-                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                if (shadingPattern is null) { graphics.SetFillRgb(color.Red, color.Green, color.Blue); }
+                else { graphics.SetFillShadingPattern(shadingPattern); }
                 foreach (SvgRoundDashCap cap in roundDashCaps)
                 {
                     PaintSvgRoundDashCap(graphics, cap, widthPoints / 2d);

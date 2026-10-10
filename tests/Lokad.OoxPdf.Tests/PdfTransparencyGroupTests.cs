@@ -374,6 +374,198 @@ internal static class PdfTransparencyGroupTests
             "Cancelled mask staging must remove its owned spill file.");
     }
 
+    public static void ShadingPatternsBindLocallyAndShareShadingValues()
+    {
+        var page = new PdfGraphicsBuilder();
+        page.SetStrokeShadingPattern(StrokePattern());
+        var first = new PdfGraphicsBuilder();
+        first.SetFillShadingPattern(StrokePattern());
+        first.FillRectangle(0, 0, 100, 100);
+        first.PaintAxialShading(0, 0, 1, 0, 255, 0, 0, 0, 0, 255);
+        var second = new PdfGraphicsBuilder();
+        second.SetStrokeShadingPattern(StrokePattern(50));
+        page.DrawTransparencyGroup(first, Bounds, .5);
+        page.DrawTransparencyGroup(second, Bounds, .75);
+        string pdf = Encoding.ASCII.GetString(Write([Page(page)]));
+        TestAssert.Equal(2, Count(pdf, "/PatternType 2"));
+        TestAssert.Equal(1, Count(pdf, "/ShadingType 2"));
+        TestAssert.Equal(2, Count(pdf, "/Subtype /Form"));
+        TestAssert.Contains("/Pattern CS /Ps1 SCN", pdf);
+        TestAssert.Contains("/Pattern cs /Ps1 scn", pdf);
+        TestAssert.Contains("/Matrix [100 0 0 100 0 0]", pdf);
+        TestAssert.Contains("/Matrix [50 0 0 50 0 0]", pdf);
+        var bindings = System.Text.RegularExpressions.Regex.Matches(pdf, @"/Pattern << /Ps1 (\d+) 0 R >>");
+        TestAssert.Equal(3, bindings.Count);
+        TestAssert.Equal(2, bindings.Select(match => match.Groups[1].Value).Distinct().Count());
+    }
+
+    public static void ShadingPatternsSnapshotAndRollbackWithFormResources()
+    {
+        var child = new PdfGraphicsBuilder();
+        child.SetStrokeShadingPattern(StrokePattern());
+        var parent = new PdfGraphicsBuilder();
+        parent.SetStrokeShadingPattern(StrokePattern());
+        parent.DrawTransparencyGroup(child, Bounds, .5);
+        child.SetStrokeShadingPattern(StrokePattern(50));
+        TestAssert.Equal(1, parent.Groups[0].Group.ShadingPatterns.Count);
+        var resources = new List<PdfShadingPatternResource> { new("Ps1", StrokePattern()) };
+        var snapshot = new PdfTransparencyGroup(Bounds, "/Pattern CS /Ps1 SCN\n", [], [], [], resources);
+        resources.Clear();
+        TestAssert.Equal(1, snapshot.ShadingPatterns.Count);
+        string before = parent.ToString();
+        var mark = parent.MarkContent();
+        parent.SetFillShadingPattern(StrokePattern(50));
+        parent.DrawTransparencyGroup(child, Bounds, .25);
+        parent.TruncateContent(mark);
+        TestAssert.Equal(before, parent.ToString());
+        TestAssert.Equal(1, parent.Groups.Count);
+        TestAssert.Equal(1, parent.ShadingPatterns.Count);
+        parent.SetFillShadingPattern(StrokePattern(25));
+        parent.SetStrokeShadingPattern(StrokePattern());
+        TestAssert.Equal("Ps2", parent.ShadingPatterns[1].ResourceName);
+        TestAssert.Equal(2, parent.ShadingPatterns.Count);
+        string pdf = Encoding.ASCII.GetString(Write([Page(parent), GroupPage(snapshot)]));
+        TestAssert.DoesNotContain("/Matrix [50 0 0 50", pdf);
+        TestAssert.Contains("/Matrix [25 0 0 25", pdf);
+    }
+
+    public static void ShadingPatternsRejectMissingAndAmbiguousLocalBindings()
+    {
+        var pattern = StrokePattern();
+        PdfPage[] rejected =
+        [
+            new(100, 100, "/Pattern CS /Missing SCN\n"),
+            new(100, 100, "/Pattern cs /Missing scn\n"),
+            new(100, 100, "/Ps1 SCN\n", [], [], [], [], [], [], shadingPatterns: [new("Ps1", pattern), new("Ps1", pattern)]),
+            new(100, 100, "/Ps1 SCN\n", [], [], [], [], [new("Ps1", new PdfTilingPattern(10, 10, "0 g\n"))], [], shadingPatterns: [new("Ps1", pattern)]),
+            new(100, 100, "/Tr1 Do\n", [], [], [], [], [], [], groups: [new("Tr1", new PdfTransparencyGroup(Bounds, "/Ps1 SCN\n", [], [], []))], shadingPatterns: [new("Ps1", pattern)]),
+            GroupPage(new PdfTransparencyGroup(Bounds, "/Ps1 SCN\n", [], [], [], [new("Ps1", pattern), new("Ps1", pattern)]))
+        ];
+        foreach (PdfPage page in rejected)
+        {
+            using var output = new MemoryStream();
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.Equal(0, output.Length);
+        }
+    }
+
+    public static void ShadingPatternsRejectNonFiniteAndCollapsedPrintedGeometry()
+    {
+        var shading = new PdfAxialShading(0, 0, 1, 0, 255, 0, 0, 0, 0, 255);
+        foreach (PdfPatternMatrix matrix in new PdfPatternMatrix[]
+        {
+            new(double.NaN, 0, 0, 1, 0, 0), new(1, 0, 0, 1, double.PositiveInfinity, 0),
+            new(1, 2, 2, 4, 0, 0), new(.00000001, 0, 0, 1, 0, 0),
+            new(double.MaxValue, 0, 0, double.MaxValue, 0, 0)
+        })
+        {
+            TestAssert.Throws<InvalidDataException>(() => new PdfShadingPattern(shading, matrix));
+        }
+        foreach (PdfShading invalid in new PdfShading[]
+        {
+            new PdfAxialShading(0, 0, 0, 0, 255, 0, 0, 0, 0, 255),
+            new PdfAxialShading(0, 0, .00000001, 0, 255, 0, 0, 0, 0, 255),
+            new PdfAxialShading(0, 0, double.NaN, 0, 255, 0, 0, 0, 0, 255),
+            new PdfAxialShading(0, 0, double.MaxValue, 0, 255, 0, 0, 0, 0, 255),
+            new PdfRadialShading([new(double.NaN, 255, 0, 0), new(1, 0, 0, 255)])
+        })
+        {
+            TestAssert.Throws<InvalidDataException>(() => new PdfShadingPattern(invalid, new(1, 0, 0, 1, 0, 0)));
+        }
+    }
+
+    public static void ShadingPatternsRetainSpillAndExactAdmissionAndCancellation()
+    {
+        PdfPage page = PatternPage(30_000);
+        byte[] expected = Write([page]);
+        using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages([page],
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None))
+        {
+            TestAssert.True(staged.Staging.SpilledBytes > 0, "Pattern Forms must share the page spill store.");
+            TestAssert.True(staged.GroupEntries.Keys.All(group => group.Content.Length == 0 && group.ShadingPatterns.Count == 1),
+                "Blank staged Forms must retain local pattern metadata.");
+            using var output = new MemoryStream();
+            PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+            TestAssert.True(expected.AsSpan().SequenceEqual(output.ToArray()), "Resident and spilled pattern documents must have identical bytes.");
+        }
+        long contentLength = page.Content.Length + page.Groups[0].Group.Content.Length;
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxPdfContentBytesPerConversion = contentLength, MaxOutputBytesPerConversion = expected.Length }))
+        {
+            PdfPage admitted = PatternPage(30_000);
+            scope.Budget.ChargePdfContentBytes(admitted.Content.Length);
+            TestAssert.True(expected.AsSpan().SequenceEqual(Write([admitted])), "Exact content/output budgets must admit the pattern once.");
+            TestAssert.Equal(contentLength, scope.Budget.PdfContentBytes);
+            TestAssert.Equal(expected.Length, scope.Budget.PdfOutputBytes);
+        }
+        foreach (long maximum in new long[] { 0, contentLength - 1 })
+        {
+            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxPdfContentBytesPerConversion = maximum });
+            using var output = new MemoryStream();
+            TestAssert.Throws<OoxPdfLimitExceededException>(() =>
+            {
+                PdfPage admitted = PatternPage(30_000);
+                scope.Budget.ChargePdfContentBytes(admitted.Content.Length);
+                PdfDocumentWriter.WriteBlank(output, [admitted], CancellationToken.None);
+            });
+            TestAssert.Equal(0, output.Length);
+        }
+        foreach (long maximum in new long[] { 0, expected.Length - 1 })
+        {
+            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = maximum });
+            using var output = new MemoryStream();
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.True(output.Length <= maximum, "Pattern objects must respect output admission.");
+        }
+        string[] before = Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp");
+        using var cancellation = new CancellationTokenSource();
+        IEnumerable<PdfPage> Pages()
+        {
+            yield return page;
+            cancellation.Cancel();
+            yield return page;
+        }
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPages(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token));
+        TestAssert.True(before.Order(StringComparer.Ordinal).SequenceEqual(Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp").Order(StringComparer.Ordinal)),
+            "Cancelled pattern staging must remove its owned spill file.");
+    }
+
+    public static void ShadingPatternsReleaseEarlierFormPayloadOwners()
+    {
+        WeakReference? earlier = null;
+        IEnumerable<PdfPage> Pages()
+        {
+            yield return WeakPatternPage(out earlier);
+            yield return new PdfPage(100, 100, "0 g\n");
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            TestAssert.True(earlier is { IsAlive: false }, "Pattern metadata must not retain earlier source Forms.");
+            yield return new PdfPage(100, 100, "0 g\n");
+        }
+        using var staged = PdfDocumentWriter.ProduceStagedPages(Pages(), new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        TestAssert.Equal(1, Count(Encoding.ASCII.GetString(output.ToArray()), "/PatternType 2"));
+    }
+
+    private static PdfShadingPattern StrokePattern(double scale = 100) => new(
+        new PdfAxialShading(0, 0, 1, 0, 255, 0, 0, 0, 0, 255), new(scale, 0, 0, scale, 0, 0));
+    private static PdfPage PatternPage(int repetitions)
+    {
+        var child = new PdfGraphicsBuilder();
+        child.SetFillShadingPattern(StrokePattern());
+        for (int i = 0; i < repetitions; i++) { child.FillRectangle(0, 0, 100, 100); }
+        var parent = new PdfGraphicsBuilder();
+        parent.DrawTransparencyGroup(child, Bounds, .5);
+        return Page(parent);
+    }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static PdfPage WeakPatternPage(out WeakReference reference)
+    {
+        PdfPage page = PatternPage(40_000);
+        reference = new WeakReference(page.Groups[0].Group);
+        return page;
+    }
+
     private static PdfGraphicsBuilder Mask(int repetitions = 0)
     {
         var mask = new PdfGraphicsBuilder();
@@ -420,7 +612,7 @@ internal static class PdfTransparencyGroupTests
         root.DrawTransparencyGroup(middle, Bounds, .5);
         return root;
     }
-    private static PdfPage Page(PdfGraphicsBuilder graphics) => new(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, [], [], groups: graphics.Groups);
+    private static PdfPage Page(PdfGraphicsBuilder graphics) => new(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, [], [], groups: graphics.Groups, shadingPatterns: graphics.ShadingPatterns);
     private static PdfPage GroupPage(PdfTransparencyGroup group) => new(100, 100, "/Tr1 Do\n", [], [], [], [], [], [], groups: [new("Tr1", group)]);
     private static byte[] Write(IReadOnlyList<PdfPage> pages)
     {

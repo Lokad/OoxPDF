@@ -19,7 +19,7 @@ internal static class PdfContentValidator
         RequireUniqueNames(page.Images.Select(image => image.ResourceName).Concat(page.Groups.Select(group => group.ResourceName)), "XObject", pageIndex);
         RequireUniqueNames(page.ExtGStates.Select(state => state.ResourceName), "graphics-state", pageIndex);
         RequireUniqueNames(page.Shadings.Select(shading => shading.ResourceName), "shading", pageIndex);
-        RequireUniqueNames(page.Patterns.Select(pattern => pattern.ResourceName), "pattern", pageIndex);
+        RequireUniqueNames(page.Patterns.Select(pattern => pattern.ResourceName).Concat(page.ShadingPatterns.Select(pattern => pattern.ResourceName)), "pattern", pageIndex);
         ValidateMaskGroups(page.ExtGStates, page.Groups);
 
         ValidateContent(
@@ -29,7 +29,7 @@ internal static class PdfContentValidator
             new HashSet<string>(page.Images.Select(image => PdfEmbeddedFont.SanitizeName(image.ResourceName)).Concat(page.Groups.Select(group => PdfEmbeddedFont.SanitizeName(group.ResourceName))), StringComparer.Ordinal),
             new HashSet<string>(page.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(page.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(page.Patterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)), StringComparer.Ordinal),
+            new HashSet<string>(page.Patterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)).Concat(page.ShadingPatterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName))), StringComparer.Ordinal),
             cancellationToken);
 
         var active = new HashSet<PdfTransparencyGroup>();
@@ -63,13 +63,14 @@ internal static class PdfContentValidator
         RequireUniqueNames(group.Groups.Select(child => child.ResourceName), "group XObject", pageIndex);
         RequireUniqueNames(group.ExtGStates.Select(state => state.ResourceName), "group graphics-state", pageIndex);
         RequireUniqueNames(group.Shadings.Select(shading => shading.ResourceName), "group shading", pageIndex);
+        RequireUniqueNames(group.ShadingPatterns.Select(pattern => pattern.ResourceName), "group pattern", pageIndex);
         ValidateMaskGroups(group.ExtGStates, group.Groups);
         ValidateContent(group.Content, $"PDF page {pageIndex + 1} transparency group",
             new HashSet<string>(StringComparer.Ordinal),
             new HashSet<string>(group.Groups.Select(child => PdfEmbeddedFont.SanitizeName(child.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(group.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(group.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(StringComparer.Ordinal), cancellationToken);
+            new HashSet<string>(group.ShadingPatterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)), StringComparer.Ordinal), cancellationToken);
         foreach (PdfTransparencyGroupResource child in group.Groups)
         {
             ValidateGroup(child.Group, pageIndex, depth + 1, active, cancellationToken);
@@ -158,6 +159,7 @@ internal static class PdfContentValidator
             2 when content[start] == 'g' && content[start + 1] == 's' => ContentOperator.SetGraphicsState,
             2 when content[start] == 's' && content[start + 1] == 'h' => ContentOperator.FillShading,
             3 when content[start] == 's' && content[start + 1] == 'c' && content[start + 2] == 'n' => ContentOperator.SetPattern,
+            3 when content[start] == 'S' && content[start + 1] == 'C' && content[start + 2] == 'N' => ContentOperator.SetPattern,
             _ => ContentOperator.Unknown,
         };
     }

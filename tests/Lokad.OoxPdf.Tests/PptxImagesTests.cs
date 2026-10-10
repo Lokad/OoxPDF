@@ -2459,6 +2459,153 @@ internal static class PptxImagesTests
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\"><defs><radialGradient id=\"paint\" " + attrs + ">" + stops +
         "</radialGradient></defs><path d=\"M0 0H100V50H0Z\" fill=\"url(#paint)\" " + bodyAttrs + "/>" + after + "</svg>";
 
+    public static void PptxSvgLinearGradientStrokeUsesNativePatternAndMultipliesAlpha()
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(LinearStrokeSvg(
+            LinearStrokeStops.Replace("/>", " stop-opacity=\".5\"/>", StringComparison.Ordinal),
+            pathAttrs: "opacity=\".5\" stroke-opacity=\".5\""), diagnostics));
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/PatternType 2").Count);
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/ShadingType 2").Count);
+        TestAssert.Contains("/Pattern CS /Ps1 SCN", pdf);
+        TestAssert.Contains("/ca 1 /CA 0.125", pdf);
+        TestAssert.DoesNotContain("/SMask", pdf);
+        TestAssert.DoesNotContain("/Subtype /Image", pdf);
+        TestAssert.True(diagnostics.Count == 0, "Qualified numeric linear stroke alpha must render without fallback diagnostics.");
+    }
+
+    public static void PptxSvgLinearGradientStrokePreservesProjectionAcrossSourceUnits()
+    {
+        foreach (bool sourceUnits in new[] { false, true })
+        {
+            byte[]? expected = null;
+            foreach (double size in new[] { .1d, 100d, 1000d })
+            {
+                string gradient = sourceUnits
+                    ? FormattableString.Invariant($"gradientUnits=\"userSpaceOnUse\" x1=\"{size * .1}\" y1=\"{size * .1}\" x2=\"{size * .9}\" y2=\"{size * .9}\"")
+                    : "x2=\"1\" y2=\"1\"";
+                string svg = FormattableString.Invariant($"""
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}">
+                      <defs><linearGradient id="s" {gradient}>{LinearStrokeStops}</linearGradient></defs>
+                      <path d="M{size * .1} {size * .1}H{size * .9}V{size * .9}H{size * .1}Z" fill="none" stroke="url(#s)" stroke-width="{size * .04}"/>
+                    </svg>
+                    """);
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                byte[] actual = RenderSvgOpacityTest(svg, diagnostics);
+                TestAssert.Contains("/PatternType 2", Encoding.ASCII.GetString(actual));
+                TestAssert.True(diagnostics.Count == 0, "Stretched source-unit and box projections must remain supported.");
+                if (expected is null) { expected = actual; }
+                else { TestAssert.True(expected.AsSpan().SequenceEqual(actual), "Equivalent printed geometry must retain pattern matrices and PDF bytes across source units."); }
+            }
+        }
+    }
+
+    public static void PptxSvgLinearGradientStrokeBindsPatternsInsideNestedIsolation()
+    {
+        const string path = "<path d=\"M10 5H90V45H10Z\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\"/>";
+        string svg = LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\".5\"", body: "<g opacity=\".5\">" + path + "</g>");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
+        TestAssert.Equal(2, System.Text.RegularExpressions.Regex.Matches(pdf, "/Subtype /Form").Count);
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, "/PatternType 2").Count);
+        TestAssert.Contains("/Pattern << /Ps1 ", pdf);
+        TestAssert.Contains("/Pattern CS /Ps1 SCN", pdf);
+        TestAssert.DoesNotContain("/Subtype /Image", pdf);
+        TestAssert.True(diagnostics.Count == 0, "Nested numeric composition must retain local stroke-pattern bindings.");
+    }
+
+    public static void PptxSvgLinearGradientStrokeRestoresFillMaskAndLaterSolidPaint()
+    {
+        string svg = LinearStrokeSvg(LinearStrokeStops, body: """
+            <defs><linearGradient id="f"><stop offset="0" stop-color="#FFFF00" stop-opacity=".25"/><stop offset="1" stop-color="#00FFFF"/></linearGradient></defs>
+            <path d="M10 5H90V45H10Z" fill="url(#f)" stroke="url(#s)" stroke-width="4"/>
+            <path d="M20 10H80V40H20Z" fill="none" stroke="#00FF00" stroke-width="2"/>
+            """);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        string pdf = Encoding.ASCII.GetString(RenderSvgOpacityTest(svg, diagnostics));
+        int start = pdf.IndexOf("stream\n", StringComparison.Ordinal) + "stream\n".Length;
+        string page = pdf.Substring(start, pdf.IndexOf("endstream", start, StringComparison.Ordinal) - start);
+        var stack = new Stack<(bool Masked, bool Pattern)>();
+        bool masked = false, pattern = false; int gradient = 0, nativeStroke = 0, solidStroke = 0;
+        foreach (string raw in page.Split('\n'))
+        {
+            string line = raw.Trim();
+            if (line == "q") { stack.Push((masked, pattern)); }
+            else if (line == "Q") { (masked, pattern) = stack.Pop(); }
+            else if (line.StartsWith("/GSV", StringComparison.Ordinal) && line.EndsWith(" gs", StringComparison.Ordinal)) { masked = true; }
+            else if (line.Contains("/Pattern CS", StringComparison.Ordinal)) { pattern = true; }
+            else if (line.EndsWith(" RG", StringComparison.Ordinal)) { pattern = false; }
+            else if (line.EndsWith(" sh", StringComparison.Ordinal)) { TestAssert.True(masked, "The fill receives its varying mask."); gradient++; }
+            else if (line == "S")
+            {
+                TestAssert.True(!masked, "Fill masks must restore before either stroke.");
+                if (pattern) { nativeStroke++; } else { solidStroke++; }
+            }
+        }
+        TestAssert.Equal(1, gradient); TestAssert.Equal(1, nativeStroke); TestAssert.Equal(1, solidStroke); TestAssert.Equal(0, stack.Count);
+        TestAssert.True(diagnostics.Count == 0, "Supported fill masks, pattern strokes and later solid paint must compose without fallback.");
+    }
+
+    public static void PptxSvgLinearGradientStrokeKeepsOfficeSquareAndRoundDashPaint()
+    {
+        string square = Encoding.ASCII.GetString(RenderSvgOpacityTest(LinearStrokeSvg(LinearStrokeStops,
+            pathAttrs: "stroke-linecap=\"square\" stroke-dasharray=\"10 5\" stroke-dashoffset=\"2\"")));
+        TestAssert.Contains("2 J", square);
+        TestAssert.Contains("[14.4 7.2 ] 11.52 d", square);
+        TestAssert.Contains("/Pattern CS /Ps1 SCN", square);
+        string round = Encoding.ASCII.GetString(RenderSvgOpacityTest(LinearStrokeSvg(LinearStrokeStops,
+            body: "<path d=\"M10 5L90 45\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-dasharray=\"10 5\"/>")));
+        TestAssert.Contains("/Pattern cs /Ps1 scn", round);
+        TestAssert.Contains("/Pattern CS /Ps1 SCN", round);
+        TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(round, "/PatternType 2").Count);
+    }
+
+    public static void PptxSvgLinearGradientStrokeRetainsBoundedFallbackPaint()
+    {
+        const string varying = "<stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\".25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
+        const string sibling = "<rect x=\"40\" y=\"15\" width=\"20\" height=\"20\" fill=\"#00FF00\"/>";
+        var excluded = new List<string>
+        {
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "x1=\"1\" x2=\"0\""),
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientTransform=\"scale(.5)\""),
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "spreadMethod=\"repeat\" x2=\".2\""),
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "spreadMethod=\"reflect\" x2=\".2\""),
+            LinearStrokeSvg(varying),
+            LinearStrokeSvg(LinearStrokeStops.Replace("/>", " stop-opacity=\"50%\"/>", StringComparison.Ordinal)),
+            LinearStrokeSvg(LinearStrokeStops, rootAttrs: "style=\"opacity:.5\""),
+            LinearStrokeSvg(LinearStrokeStops, rootAttrs: "opacity=\"50%\""),
+            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "stroke-opacity=\"50%\""),
+            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\"garbage\""),
+            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "opacity=\".5\"", fill: "#EECC66"),
+            LinearStrokeSvg(LinearStrokeStops, pathAttrs: "transform=\"rotate(20 50 25)\""),
+            LinearStrokeSvg(LinearStrokeStops, gradientAttrs: "gradientUnits=\"userSpaceOnUse\"", pathAttrs: "transform=\"scale(.5)\""),
+            LinearStrokeSvg(LinearStrokeStops).Replace("linearGradient", "radialGradient", StringComparison.Ordinal),
+            LinearStrokeSvg("<stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\".00001\" stop-color=\"#00FF00\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>")
+        };
+        string path = "<path d=\"M10 5H90V45H10Z\" fill=\"none\" stroke=\"url(#s)\" stroke-width=\"4\"/>";
+        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: "<svg>" + path + "</svg>"));
+        excluded.Add(LinearStrokeSvg(LinearStrokeStops, body: string.Concat(Enumerable.Repeat("<g opacity=\".5\">", 33)) + path + string.Concat(Enumerable.Repeat("</g>", 33))));
+        string tooMany = string.Concat(Enumerable.Range(0, 257).Select(i => "<stop offset=\"" + ((double)i / 256).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\"/>"));
+        excluded.Add(LinearStrokeSvg(tooMany));
+        foreach (string svg in excluded)
+        {
+            string actualSvg = svg.Replace("</svg>", sibling + "</svg>", StringComparison.Ordinal);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            byte[] actual = RenderSvgOpacityTest(actualSvg, diagnostics);
+            byte[] expected = RenderSvgOpacityTest(actualSvg.Replace("stroke=\"url(#s)\"", "stroke=\"none\"", StringComparison.Ordinal));
+            TestAssert.True(actual.AsSpan().SequenceEqual(expected), "Unqualified gradient strokes must preserve the existing omitted-stroke fallback and sibling bytes.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Message.Contains("stroke", StringComparison.Ordinal)) && !diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"),
+                "Unqualified paint must diagnose and keep the picture.");
+        }
+        string boundaryStops = string.Concat(Enumerable.Range(0, 256).Select(i => "<stop offset=\"" + ((double)i / 255).ToString("R", CultureInfo.InvariantCulture) + "\" stop-color=\"#FF0000\"/>"));
+        TestAssert.Contains("/PatternType 2", Encoding.ASCII.GetString(RenderSvgOpacityTest(LinearStrokeSvg(boundaryStops))));
+    }
+
+    private const string LinearStrokeStops = "<stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\"1\" stop-color=\"#0000FF\"/>";
+    private static string LinearStrokeSvg(string stops, string gradientAttrs = "", string rootAttrs = "", string pathAttrs = "", string fill = "none", string? body = null) =>
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\" " + rootAttrs + "><defs><linearGradient id=\"s\" " + gradientAttrs + ">" + stops + "</linearGradient></defs>" +
+        (body ?? "<path d=\"M10 5H90V45H10Z\" fill=\"" + fill + "\" stroke=\"url(#s)\" stroke-width=\"4\" " + pathAttrs + "/>") + "</svg>";
+
     private static byte[] RenderSvgOpacityTest(string svg, List<OoxPdfDiagnostic>? diagnostics = null)
     {
         string input = WriteSvgGradientDeck(svg);

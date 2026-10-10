@@ -1,0 +1,30 @@
+{
+  "id": "pptx-ladder-07-svg-linear-gradient-stroke",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-svg-linear-gradient-stroke.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "images",
+    "svg-strokes",
+    "svg-linear",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "minStructuralSimilarity": 0.999,
+    "maxMeanAbsoluteError": 0.1,
+    "minForegroundColorHistogramCorrelation": 0.995,
+    "minForegroundRecall": 0.99
+  },
+  "allowedUnsupportedFeatures": [],
+  "support": {
+    "minStructuralSimilarity": 0.999,
+    "minForegroundColorHistogramCorrelation": 0.995,
+    "minForegroundRecall": 0.99
+  }
+}

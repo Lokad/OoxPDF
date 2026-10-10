@@ -1,6 +1,6 @@
 # Office-authored SVG stroke/radial probe, generated under the reference supervisor.
 param(
-    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls')]
+    [ValidateSet('stroke-radial', 'focal-controls', 'radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls', 'linear-stroke-controls')]
     [string] $ProbeSet = 'stroke-radial',
     [string] $OutputPath,
     [string] $OutputDirectory,
@@ -244,6 +244,9 @@ $svgInputs = if ($ProbeSet -eq 'focal-controls') {
         }
     }
     $controls
+} elseif ($ProbeSet -eq 'linear-stroke-controls') {
+    # RV07-E10: reproducible public opaque gradient-stroke case.
+    [ordered]@{ 'linear-gradient-stroke' = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" ><defs><linearGradient id="stroke" ><stop offset="0" stop-color="#FF0000" stop-opacity="1"/><stop offset="0.45" stop-color="#00AA88" stop-opacity="1"/><stop offset="1" stop-color="#0000FF" stop-opacity="1"/></linearGradient></defs><path d="M15 10H85V40H15Z"  fill="none" stroke="url(#stroke)" stroke-width="5" /></svg>' }
 } elseif ($ProbeSet -eq 'radial-opacity-controls') {
     $controls = [ordered]@{}
     foreach ($spread in @('pad', 'repeat', 'reflect')) {
@@ -318,7 +321,7 @@ try {
     $presentation.PageSetup.SlideWidth = 960
     $presentation.PageSetup.SlideHeight = 540
     $slide = $null
-    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls')) {
+    if ($ProbeSet -notin @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls', 'linear-stroke-controls')) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = 16777215
     }
@@ -326,7 +329,7 @@ try {
     foreach ($item in $svgInputs.GetEnumerator()) {
         $svgPath = Join-Path $svgRoot ($item.Key + '.svg')
         Set-Content -LiteralPath $svgPath -Value $item.Value -Encoding utf8
-        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls')) {
+        if ($ProbeSet -in @('radial-paint-controls', 'radial-spread-controls', 'stroke-transform-controls', 'stroke-element-controls', 'stroke-filled-controls', 'stroke-dash-controls', 'stroke-dash-phase-controls', 'stroke-square-dash-controls', 'stroke-round-dash-controls', 'stroke-short-dash-controls', 'radial-opacity-controls', 'linear-stroke-controls')) {
             $slide = $presentation.Slides.Add($index + 1, 12)
             $slide.Background.Fill.ForeColor.RGB = 16777215
             $slide.Shapes.AddPicture($svgPath, $false, $true, 72, 72, 432, 216) | Out-Null
@@ -340,7 +343,7 @@ try {
     $stage = 'export'; Stage $stage
     $presentation.SaveAs((Join-Path $WorkDirectory 'fixture.pptx'), 24)
     $presentation.SaveAs((Join-Path $WorkDirectory 'reference.pdf'), 32)
-    if ($ProbeSet -eq 'radial-opacity-controls') {
+    if ($ProbeSet -in @('radial-opacity-controls', 'linear-stroke-controls')) {
         # Keep PNG preview exports separate from the PDF raster pages. The
         # two Office outputs disagree for some SVG opacity constructs.
         $previewRoot = Join-Path $WorkDirectory 'office-preview'

@@ -37,7 +37,7 @@ internal readonly record struct PdfPage
     {
     }
 
-    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfLinkAnnotation> annotations, IReadOnlyList<PdfFallbackFontResource>? fallbackFonts = null, IReadOnlyList<PdfTransparencyGroupResource>? groups = null)
+    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfLinkAnnotation> annotations, IReadOnlyList<PdfFallbackFontResource>? fallbackFonts = null, IReadOnlyList<PdfTransparencyGroupResource>? groups = null, IReadOnlyList<PdfShadingPatternResource>? shadingPatterns = null)
     {
         Width = width;
         Height = height;
@@ -50,6 +50,7 @@ internal readonly record struct PdfPage
         Annotations = annotations;
         FallbackFonts = fallbackFonts ?? [];
         Groups = groups ?? [];
+        ShadingPatterns = shadingPatterns ?? [];
     }
 
     public double Width { get; }
@@ -69,6 +70,8 @@ internal readonly record struct PdfPage
     public IReadOnlyList<PdfShadingResource> Shadings { get; }
 
     public IReadOnlyList<PdfTilingPatternResource> Patterns { get; }
+
+    public IReadOnlyList<PdfShadingPatternResource> ShadingPatterns { get; }
 
     public IReadOnlyList<PdfTransparencyGroupResource> Groups { get; init; }
 

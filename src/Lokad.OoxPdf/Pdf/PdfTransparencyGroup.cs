@@ -9,7 +9,8 @@ internal sealed class PdfTransparencyGroup(
     string content,
     IReadOnlyList<PdfExtGStateResource> extGStates,
     IReadOnlyList<PdfShadingResource> shadings,
-    IReadOnlyList<PdfTransparencyGroupResource> groups)
+    IReadOnlyList<PdfTransparencyGroupResource> groups,
+    IReadOnlyList<PdfShadingPatternResource>? shadingPatterns = null)
 {
     internal const int MaxDepth = 32;
 
@@ -18,4 +19,5 @@ internal sealed class PdfTransparencyGroup(
     public IReadOnlyList<PdfExtGStateResource> ExtGStates { get; } = extGStates.ToArray();
     public IReadOnlyList<PdfShadingResource> Shadings { get; } = shadings.ToArray();
     public IReadOnlyList<PdfTransparencyGroupResource> Groups { get; } = groups.ToArray();
+    public IReadOnlyList<PdfShadingPatternResource> ShadingPatterns { get; } = shadingPatterns?.ToArray() ?? [];
 }

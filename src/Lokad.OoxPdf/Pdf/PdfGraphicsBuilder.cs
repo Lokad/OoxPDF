@@ -11,6 +11,7 @@ internal sealed class PdfGraphicsBuilder
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
     private readonly List<PdfTilingPatternResource> patterns = [];
+    private readonly List<PdfShadingPatternResource> shadingPatterns = [];
     private readonly List<PdfTransparencyGroupResource> groups = [];
     private readonly HashSet<string> usedFontResourceNames = new(StringComparer.Ordinal);
     private readonly List<string> fontUseOrder = [];
@@ -21,6 +22,7 @@ internal sealed class PdfGraphicsBuilder
     private readonly Dictionary<string, List<int>> softMaskIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> shadingIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> patternIndex = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> shadingPatternIndex = new(StringComparer.Ordinal);
     private int stateDepth;
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
@@ -28,6 +30,8 @@ internal sealed class PdfGraphicsBuilder
     public IReadOnlyList<PdfShadingResource> Shadings => shadings;
 
     public IReadOnlyList<PdfTilingPatternResource> Patterns => patterns;
+
+    public IReadOnlyList<PdfShadingPatternResource> ShadingPatterns => shadingPatterns;
 
     public IReadOnlySet<string> UsedFontResourceNames => usedFontResourceNames;
 
@@ -63,7 +67,7 @@ internal sealed class PdfGraphicsBuilder
         // Admit once before creating the retained ASCII snapshot. The page
         // charge covers the invocation; nested payloads have their own admission.
         OoxConversionBudget.Current?.ChargePdfContentBytes(child.builder.Length);
-        var group = new PdfTransparencyGroup(bounds, child.builder.ToString(), child.extGStates, child.shadings, child.groups);
+        var group = new PdfTransparencyGroup(bounds, child.builder.ToString(), child.extGStates, child.shadings, child.groups, child.shadingPatterns);
         string name = "Tr" + (groups.Count + 1).ToString(CultureInfo.InvariantCulture);
         groups.Add(new PdfTransparencyGroupResource(name, group));
         return name;
@@ -262,6 +266,23 @@ internal sealed class PdfGraphicsBuilder
     public void PaintRadialShading(IReadOnlyList<PdfShadingStop> stops, int cycleCount = 1, bool reflect = false)
     {
         PaintShading(new PdfRadialShading(stops, cycleCount, reflect));
+    }
+
+    public void SetStrokeShadingPattern(PdfShadingPattern pattern) => SetShadingPattern(pattern, stroking: true);
+
+    public void SetFillShadingPattern(PdfShadingPattern pattern) => SetShadingPattern(pattern, stroking: false);
+
+    private void SetShadingPattern(PdfShadingPattern pattern, bool stroking)
+    {
+        ArgumentNullException.ThrowIfNull(pattern);
+        if (!shadingPatternIndex.TryGetValue(pattern.ResourceKey, out int index))
+        {
+            index = shadingPatterns.Count;
+            shadingPatterns.Add(new PdfShadingPatternResource("Ps" + (index + 1).ToString(CultureInfo.InvariantCulture), pattern));
+            shadingPatternIndex.Add(pattern.ResourceKey, index);
+        }
+        builder.Append(stroking ? "/Pattern CS /" : "/Pattern cs /");
+        builder.Append(PdfEmbeddedFont.SanitizeName(shadingPatterns[index].ResourceName)).AppendLine(stroking ? " SCN" : " scn");
     }
 
     private void PaintShading(PdfShading shading)
@@ -615,11 +636,11 @@ internal sealed class PdfGraphicsBuilder
     // so a failed node rewinds its paint without disturbing earlier nodes. Font/image caches are intentionally
     // outside the boundary: orphan entries are inert, while index rollback could
     // dangle references held by surviving content.
-    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount, int GroupCount);
+    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount, int GroupCount, int ShadingPatternCount);
 
     public ContentMark MarkContent()
     {
-        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count, groups.Count);
+        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count, groups.Count, shadingPatterns.Count);
     }
 
     public void TruncateContent(ContentMark mark)
@@ -655,6 +676,11 @@ internal sealed class PdfGraphicsBuilder
             groups.RemoveAt(groups.Count - 1);
         }
 
+        while (shadingPatterns.Count > mark.ShadingPatternCount)
+        {
+            shadingPatterns.RemoveAt(shadingPatterns.Count - 1);
+        }
+
         stateDepth = Math.Max(0, mark.StateDepth);
         RebuildResourceIndexes();
     }
@@ -670,6 +696,11 @@ internal sealed class PdfGraphicsBuilder
         softMaskIndex.Clear();
         shadingIndex.Clear();
         patternIndex.Clear();
+        shadingPatternIndex.Clear();
+        for (int i = 0; i < shadingPatterns.Count; i++)
+        {
+            shadingPatternIndex[shadingPatterns[i].Pattern.ResourceKey] = i;
+        }
         for (int i = 0; i < shadings.Count; i++)
         {
             shadingIndex[shadings[i].Shading.ResourceKey] = i;

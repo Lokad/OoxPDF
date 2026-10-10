@@ -96,7 +96,7 @@ internal sealed class PdfDocumentWriter
                 staging.BeginPage(cancellationToken);
                 AppendEncodedPageContent(staging, group.Content, cancellationToken);
                 staging.EndPage(cancellationToken);
-                var descriptor = new PdfTransparencyGroup(group.Bounds, string.Empty, group.ExtGStates, group.Shadings, children);
+                var descriptor = new PdfTransparencyGroup(group.Bounds, string.Empty, group.ExtGStates, group.Shadings, children, group.ShadingPatterns);
                 stagedGroups.Add(group, descriptor);
                 groupEntries.Add(descriptor, entry);
                 return descriptor;
@@ -249,12 +249,20 @@ internal sealed class PdfDocumentWriter
             WriteTilingPatternObject(writer, pattern, numbers.PatternObjects[pattern.ResourceKey], numbers.ImageObjects);
         }
 
+        foreach (PdfShadingPattern pattern in plan.ShadingPatterns)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            PdfPatternMatrix m = pattern.Matrix;
+            writer.WriteObject(numbers.ShadingPatternObjects[pattern.ResourceKey], FormattableString.Invariant(
+                $"<< /Type /Pattern /PatternType 2 /Shading {numbers.ShadingObjects[pattern.Shading.ResourceKey]} 0 R /Matrix [{FormatNumber(m.A)} {FormatNumber(m.B)} {FormatNumber(m.C)} {FormatNumber(m.D)} {FormatNumber(m.E)} {FormatNumber(m.F)}] >>\n"));
+        }
+
         foreach (PdfTransparencyGroup group in plan.Groups)
         {
             cancellationToken.ThrowIfCancellationRequested();
             int entry = groupEntries[group];
             PdfRectangle bounds = group.Bounds;
-            string resources = BuildResourceDictionary([], [], [], group.ExtGStates, group.Shadings, [], group.Groups);
+            string resources = BuildResourceDictionary([], [], [], group.ExtGStates, group.Shadings, [], group.Groups, group.ShadingPatterns);
             writer.WriteContentStreamHeader(numbers.GroupObjects[group], staging.GetPageLength(entry, cancellationToken),
                 $"/Type /XObject /Subtype /Form /BBox [{FormatNumber(bounds.X)} {FormatNumber(bounds.Y)} {FormatNumber(bounds.X + bounds.Width)} {FormatNumber(bounds.Y + bounds.Height)}] /Group << /S /Transparency /CS /DeviceRGB /I true /K false >> /Resources {resources}");
             CopyStagedContent(writer, staging, entry, staging.GetPageLength(entry, cancellationToken), cancellationToken);
@@ -339,13 +347,13 @@ internal sealed class PdfDocumentWriter
             return builder.ToString();
         }
 
-        string BuildResources(PdfPage page) => BuildResourceDictionary(page.Fonts, page.FallbackFonts, page.Images, page.ExtGStates, page.Shadings, page.Patterns, page.Groups);
+        string BuildResources(PdfPage page) => BuildResourceDictionary(page.Fonts, page.FallbackFonts, page.Images, page.ExtGStates, page.Shadings, page.Patterns, page.Groups, page.ShadingPatterns);
 
         string BuildResourceDictionary(IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfFallbackFontResource> fallbackFonts,
             IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> states, IReadOnlyList<PdfShadingResource> shadings,
-            IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfTransparencyGroupResource> groups)
+            IReadOnlyList<PdfTilingPatternResource> patterns, IReadOnlyList<PdfTransparencyGroupResource> groups, IReadOnlyList<PdfShadingPatternResource> shadingPatterns)
         {
-            if (fonts.Count == 0 && fallbackFonts.Count == 0 && images.Count == 0 && states.Count == 0 && shadings.Count == 0 && patterns.Count == 0 && groups.Count == 0)
+            if (fonts.Count == 0 && fallbackFonts.Count == 0 && images.Count == 0 && states.Count == 0 && shadings.Count == 0 && patterns.Count == 0 && groups.Count == 0 && shadingPatterns.Count == 0)
             {
                 return "<< >>";
             }
@@ -426,13 +434,19 @@ internal sealed class PdfDocumentWriter
                 builder.Append(" >>");
             }
 
-            if (patterns.Count != 0)
+            if (patterns.Count != 0 || shadingPatterns.Count != 0)
             {
                 builder.Append(" /Pattern <<");
                 foreach (PdfTilingPatternResource pattern in patterns)
                 {
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(pattern.ResourceName));
                     builder.Append(CultureInfo.InvariantCulture, $" {numbers.PatternObjects[pattern.Pattern.ResourceKey]} 0 R");
+                }
+
+                foreach (PdfShadingPatternResource pattern in shadingPatterns)
+                {
+                    builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(pattern.ResourceName));
+                    builder.Append(CultureInfo.InvariantCulture, $" {numbers.ShadingPatternObjects[pattern.Pattern.ResourceKey]} 0 R");
                 }
 
                 builder.Append(" >>");
@@ -771,6 +785,7 @@ internal sealed class PdfDocumentWriter
         IReadOnlyList<PdfShading> Shadings,
         IReadOnlyList<PdfLuminositySoftMask> SoftMasks,
         IReadOnlyList<PdfTilingPattern> Patterns,
+        IReadOnlyList<PdfShadingPattern> ShadingPatterns,
         IReadOnlyList<PdfTransparencyGroup> Groups);
 
     private sealed record PdfDocumentNumbers(
@@ -780,6 +795,7 @@ internal sealed class PdfDocumentWriter
         IReadOnlyDictionary<string, int> ShadingObjects,
         IReadOnlyDictionary<string, int> SoftMaskObjects,
         IReadOnlyDictionary<string, int> PatternObjects,
+        IReadOnlyDictionary<string, int> ShadingPatternObjects,
         IReadOnlyDictionary<PdfTransparencyGroup, int> GroupObjects,
         IReadOnlyList<int[]> AnnotationObjectsByPage,
         int ObjectCount,
@@ -823,12 +839,19 @@ internal sealed class PdfDocumentWriter
         List<PdfShading> shadings = pages
             .SelectMany(p => p.Shadings.Select(s => s.Shading))
             .Concat(groups.SelectMany(group => group.Shadings.Select(shading => shading.Shading)))
+            .Concat(pages.SelectMany(page => page.ShadingPatterns.Select(pattern => pattern.Pattern.Shading)))
+            .Concat(groups.SelectMany(group => group.ShadingPatterns.Select(pattern => pattern.Pattern.Shading)))
             .DistinctBy(s => s.ResourceKey)
             .ToList();
         cancellationToken.ThrowIfCancellationRequested();
         List<PdfTilingPattern> patterns = pages
             .SelectMany(p => p.Patterns.Select(s => s.Pattern))
             .DistinctBy(s => s.ResourceKey)
+            .ToList();
+        List<PdfShadingPattern> shadingPatterns = pages
+            .SelectMany(page => page.ShadingPatterns.Select(pattern => pattern.Pattern))
+            .Concat(groups.SelectMany(group => group.ShadingPatterns.Select(pattern => pattern.Pattern)))
+            .DistinctBy(pattern => pattern.ResourceKey, StringComparer.Ordinal)
             .ToList();
         List<PdfLuminositySoftMask> softMasks = pages
             .SelectMany(p => p.ExtGStates)
@@ -837,7 +860,7 @@ internal sealed class PdfDocumentWriter
             .DistinctBy(s => s.ResourceKey)
             .ToList();
 
-        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, softMasks, patterns, groups);
+        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, softMasks, patterns, shadingPatterns, groups);
     }
 
 
@@ -901,7 +924,14 @@ internal sealed class PdfDocumentWriter
             patternObjects[plan.Patterns[i].ResourceKey] = patternObjectBase + i;
         }
 
-        int groupObjectBase = patternObjectBase + plan.Patterns.Count;
+        int shadingPatternObjectBase = patternObjectBase + plan.Patterns.Count;
+        var shadingPatternObjects = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < plan.ShadingPatterns.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            shadingPatternObjects[plan.ShadingPatterns[i].ResourceKey] = shadingPatternObjectBase + i;
+        }
+        int groupObjectBase = shadingPatternObjectBase + plan.ShadingPatterns.Count;
         var groupObjects = new Dictionary<PdfTransparencyGroup, int>();
         for (int i = 0; i < plan.Groups.Count; i++)
         {
@@ -931,7 +961,7 @@ internal sealed class PdfDocumentWriter
             objectCount = nextAnnotationObject - 1;
         }
 
-        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, groupObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
+        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, shadingPatternObjects, groupObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
     }
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
 
