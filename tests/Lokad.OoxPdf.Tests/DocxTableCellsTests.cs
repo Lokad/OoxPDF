@@ -12,13 +12,67 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableDeclaredMinimumPlacementMatchesIndependentWordSlots()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string? rule in new string?[] { "exact", "atLeast", null, "auto" })
+        foreach (string pattern in new[] { "min,auto", "min-single,auto", "auto,min,auto", "auto,min-single,auto", "auto-wrap,min", "auto-wrap,min-single" })
+        {
+            DocxTableCellLayout legacy = CreateParagraphMinimumLayout(pattern, full, "header",
+                rowHeight: 320d, rowRule: rule).Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            DocxTableCellLayout actual = CreateParagraphMinimumLayout(pattern, full,
+                rowHeight: 320d, rowRule: rule).Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            TestAssert.Equal(legacy.TextLines.Count, actual.TextLines.Count);
+            for (int i = 0; i < actual.TextLines.Count; i++)
+            {
+                DocxTextLineLayout line = actual.TextLines[i];
+                TestAssert.True(Math.Abs(legacy.TextLines[i].BaselineY - line.BaselineY -
+                    (line.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing ? 10d : 0d)) < .000001d,
+                    "Word uses the same 24-minus-14pt excess above minimum paragraph baselines in declared exact/minimum/automatic rows.");
+            }
+        }
+    }
+
+    public static void DocxTableDeclaredMinimumPlacementPreservesRowsAndFollowingFlow()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string? rule in new string?[] { "exact", "atLeast", null, "auto" })
+        {
+            DocxLayout legacy = CreateParagraphMinimumLayout("auto,min,auto", full, "header", rowHeight: 320d, rowRule: rule);
+            DocxLayout actual = CreateParagraphMinimumLayout("auto,min,auto", full, rowHeight: 320d, rowRule: rule);
+            TestAssert.Equal(legacy.Pages.Count, actual.Pages.Count);
+            DocxTableRowLayout before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            DocxTableRowLayout after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(before.Y, after.Y);
+            TestAssert.Equal(before.Height, after.Height);
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableDeclaredMinimumPlacementRetainsInvalidAndComplexRows()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach ((string variant, double height, string? rule) in new (string, double, string?)[]
+        {
+            ("", 0d, "exact"), ("", 0d, "atLeast"), ("", -1d, "exact"), ("", 320d, "unknown"),
+            ("header", 320d, "exact"), ("center", 320d, "atLeast"), ("rich", 320d, null), ("mixed", 320d, "exact")
+        })
+        {
+            DocxLayout layout = CreateParagraphMinimumLayout("min,min,min", full, variant, rowHeight: height, rowRule: rule);
+            TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
+                .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
+                "Nonpositive exact/minimum rows, unrecognized height rules, headers and complex cells retain their earlier baseline model.");
+        }
+    }
+
     public static void DocxTableParagraphMinimumSingleLinesFollowIndependentWordSlots()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
         foreach (string pattern in new[] { "min-single", "min-single,auto", "auto,min-single", "auto-wrap,min-single", "min-single,exact", "auto,min-single,auto" })
         {
             DocxLayout actual = CreateParagraphMinimumLayout(pattern, full);
-            DocxLayout legacy = CreateParagraphMinimumLayout(pattern, full, "declared-auto");
+            DocxLayout legacy = CreateParagraphMinimumLayout(pattern, full, "legacy-header");
             DocxTableRowLayout expected = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
             DocxTableRowLayout corrected = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
             TestAssert.Equal(expected.Y, corrected.Y);
@@ -37,7 +91,7 @@ internal static class DocxTableCellsTests
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
         foreach (string pattern in new[] { "min,auto", "min,exact", "min,min", "auto-wrap,min", "auto,min,auto", "min,min,min", "min,exact-wrap,min", "min,auto-wrap,min" })
         {
-            DocxTableCellLayout legacy = CreateParagraphMinimumLayout(pattern, full, "declared-auto").Pages[0]
+            DocxTableCellLayout legacy = CreateParagraphMinimumLayout(pattern, full, "legacy-header").Pages[0]
                 .Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
             DocxTableCellLayout actual = CreateParagraphMinimumLayout(pattern, full).Pages[0]
                 .Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
@@ -59,7 +113,7 @@ internal static class DocxTableCellsTests
         foreach (string pattern in new[] { "min,auto", "min,exact", "min,min", "auto,min,auto", "min,exact-wrap,min" })
         {
             DocxLayout actual = CreateParagraphMinimumLayout(pattern, full);
-            DocxLayout legacy = CreateParagraphMinimumLayout(pattern, full, "declared-auto");
+            DocxLayout legacy = CreateParagraphMinimumLayout(pattern, full, "legacy-header");
             DocxTableRowLayout expectedRow = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
             DocxTableRowLayout actualRow = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
             TestAssert.Equal(expectedRow.Y, actualRow.Y);
@@ -72,16 +126,17 @@ internal static class DocxTableCellsTests
     public static void DocxTableParagraphMinimumPlacementRetainsExcludedCellsAndRows()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string variant in new[] { "declared-auto", "header", "center", "rich", "mixed" })
+        foreach (string variant in new[] { "header", "center", "rich", "mixed" })
         {
             DocxLayout actual = CreateParagraphMinimumLayout("min,min,min", full, variant);
             TestAssert.True(actual.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
                 .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
-                "The broader paragraph-position rule retains declared/header rows and complex cells.");
+                "The broader paragraph-position rule retains header rows and complex cells.");
         }
     }
 
-    private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "")
+    private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "",
+        double? rowHeight = null, string? rowRule = null)
     {
         DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
         {
@@ -101,9 +156,8 @@ internal static class DocxTableCellsTests
         }).ToArray();
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
             { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
-        DocxTableRow row = new([cell], variant == "declared-auto" ? 0d : null);
-        if (variant == "declared-auto") row = row with { HeightRuleValue = "auto" };
-        if (variant == "header") row = row with { IsHeader = true };
+        DocxTableRow row = new([cell], rowHeight) { HeightRuleValue = rowRule };
+        if (variant is "header" or "legacy-header") row = row with { IsHeader = true };
         DocxTable table = new(null, [120d], [row]);
         DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 12d, 14d) with { LineSpacingPoints = null };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(after)], [table]) with
@@ -159,15 +213,15 @@ internal static class DocxTableCellsTests
         }
     }
 
-    public static void DocxTableGridMinimumLinePlacementRetainsComplexAndDeclaredRows()
+    public static void DocxTableGridMinimumLinePlacementRetainsComplexAndUnrecognizedRows()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string variant in new[] { "center", "rich", "mixed", "declared-height", "header" })
+        foreach (string variant in new[] { "center", "rich", "mixed", "unknown-height", "header" })
         {
             DocxLayout layout = CreateMinimumTableLayout(24d, true, full, variant, rowCount: 2, columnCount: 2);
             TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
                 .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
-                "Complex cells, declared row heights and header rows retain their previous baseline model.");
+                "Complex cells, unrecognized row height rules and header rows retain their previous baseline model.");
         }
     }
 
@@ -239,7 +293,8 @@ internal static class DocxTableCellsTests
         DocxParagraph[] paragraphs = predecessor ? [previous, current] : [current];
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
         { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
-        DocxTableRow row = new(Enumerable.Repeat(cell, columnCount).ToArray(), variant == "declared-height" ? 200d : null);
+        DocxTableRow row = new(Enumerable.Repeat(cell, columnCount).ToArray(), variant == "unknown-height" ? 200d : null);
+        if (variant == "unknown-height") row = row with { HeightRuleValue = "unknown" };
         if (variant == "header") row = row with { IsHeader = true };
         DocxTable table = new(null, Enumerable.Repeat(120d, columnCount).ToArray(), Enumerable.Repeat(row, rowCount).ToArray());
         DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 12d, 14d) with { LineSpacingPoints = null };

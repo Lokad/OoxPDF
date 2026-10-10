@@ -1,6 +1,7 @@
 # Generates public plain table-grid minimum-height probes from the note-spacing seed.
-param([string] $OutputDirectory, [switch] $ParagraphPositionProbes)
+param([string] $OutputDirectory, [switch] $ParagraphPositionProbes, [switch] $DeclaredRowHeightProbes)
 $ErrorActionPreference = 'Stop'
+if ($ParagraphPositionProbes -and $DeclaredRowHeightProbes) { throw 'Choose one probe family' }
 $repo = Split-Path -Parent $PSScriptRoot
 $cases = Join-Path $repo 'tests/Lokad.OoxPdf.Tests/Cases'
 if (!$OutputDirectory) { $OutputDirectory = $cases }
@@ -16,7 +17,8 @@ try {
     }
 } finally { $archive.Dispose() }
 $word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
-$specs = if ($ParagraphPositionProbes) { @(@('first', 1, 1), @('middle', 2, 2), @('single', 2, 2)) } else { @(@('row', 1, 2), @('grid', 2, 2)) }
+$positionProbes = $ParagraphPositionProbes -or $DeclaredRowHeightProbes
+$specs = if ($DeclaredRowHeightProbes) { @(@('exact', 1, 1), @('minimum', 2, 2)) } elseif ($ParagraphPositionProbes) { @(@('first', 1, 1), @('middle', 2, 2), @('single', 2, 2)) } else { @(@('row', 1, 2), @('grid', 2, 2)) }
 foreach ($spec in $specs) {
     $entries = @{} + $source
     [xml] $document = $entries['word/document.xml']
@@ -47,14 +49,22 @@ foreach ($spec in $specs) {
     for ($ri = 1; $ri -le $spec[1]; $ri++) {
         $row = $document.CreateElement('w', 'tr', $word)
         [void] $table.AppendChild($row)
+        if ($DeclaredRowHeightProbes) {
+            $properties = $document.CreateElement('w', 'trPr', $word)
+            $height = $document.CreateElement('w', 'trHeight', $word)
+            [void] $height.SetAttribute('val', $word, '2880')
+            [void] $height.SetAttribute('hRule', $word, $(if ($spec[0] -eq 'exact') { 'exact' } else { 'atLeast' }))
+            [void] $properties.AppendChild($height)
+            [void] $row.AppendChild($properties)
+        }
         for ($ci = 1; $ci -le $spec[2]; $ci++) {
             $cell = $template.CloneNode($true)
             [void] $row.AppendChild($cell)
             [void] $cell.SelectSingleNode('w:tcPr/w:tcW', $ns).SetAttribute('w', $word, [string](9360 / $spec[2]))
             $paragraphs = @($cell.SelectNodes('w:p', $ns))
-            if ($ParagraphPositionProbes) {
+            if ($positionProbes) {
                 foreach ($paragraph in $paragraphs) { [void] $cell.RemoveChild($paragraph) }
-                $sequence = if ($spec[0] -eq 'first') { @(@('atLeast', $true), @('auto', $false)) } elseif ($spec[0] -eq 'single') { @(@('auto', $true), @('atLeast', $false), @('auto', $false)) } else { @(@('auto', $true), @('atLeast', $true), @('auto', $false)) }
+                $sequence = if ($spec[0] -in @('first', 'exact')) { @(@('atLeast', $true), @('auto', $false)) } elseif ($spec[0] -in @('single', 'minimum')) { @(@('auto', $true), @('atLeast', $false), @('auto', $false)) } else { @(@('auto', $true), @('atLeast', $true), @('auto', $false)) }
                 $paragraphs = @()
                 for ($index = 0; $index -lt $sequence.Count; $index++) {
                     $paragraph = $template.SelectSingleNode('w:p[last()]', $ns).CloneNode($true)
@@ -85,7 +95,7 @@ foreach ($spec in $specs) {
                 $run = $document.CreateElement('w', 'r', $word)
                 [void] $run.AppendChild($style)
                 $text = $document.CreateElement('w', 't', $word)
-                if ($ParagraphPositionProbes) {
+                if ($positionProbes) {
                     $prefix = "R${ri}C${ci}P$($index + 1)"
                     $text.InnerText = if ($sequence[$index][1]) { $prefix + ' public minimum paragraph ' + ('minimum line ' * $(if ($spec[2] -eq 1) { 9 } else { 3 })) } else { $prefix + ' short public paragraph.' }
                 } else {
@@ -97,6 +107,6 @@ foreach ($spec in $specs) {
         }
     }
     $entries['word/document.xml'] = $document.OuterXml
-    $name = if ($ParagraphPositionProbes) { 'table-paragraph-minimum-line-spacing-' + $spec[0] + '.docx' } else { 'table-minimum-line-spacing-' + $spec[0] + '.docx' }
+    $name = if ($DeclaredRowHeightProbes) { 'table-declared-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($ParagraphPositionProbes) { 'table-paragraph-minimum-line-spacing-' + $spec[0] + '.docx' } else { 'table-minimum-line-spacing-' + $spec[0] + '.docx' }
     New-ZipPackage -Path (Join-Path $OutputDirectory $name) -Entries $entries
 }

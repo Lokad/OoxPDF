@@ -7,7 +7,15 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextLineLayout> lines, IDocxTextMeasurer? measurer)
     {
         if (!lines.Any(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing)) return lines;
-        if (row.HeightPoints is not null || row.IsHeader ||
+        // Explicit automatic height ignores its authored value, as does row measurement.
+        if (row.HeightPoints is { } height &&
+            !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) &&
+            (!(height > 0d) || !double.IsFinite(height) ||
+            row.HeightRuleValue is not null &&
+            !string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)))
+            return lines;
+        if (row.IsHeader ||
             table.Revisions.Count != 0 || row.Revisions.Count != 0 || cell.Revisions.Count != 0 ||
             table.CellSpacingPoints is > 0d || table.UseLegacyTableGrid || cell.GridSpan != 1 ||
             cell.HasVerticalMerge || cell.NoWrap || cell.FitText ||
