@@ -291,6 +291,10 @@ internal sealed partial class DocxLayoutEngine
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
         double? bodyFirstBaselineMemo = null;
         bool bodyFirstBaselineComputed = false;
+        bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
+            (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
+             Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
+        int currentSectionStartIndex = 0;
 
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
@@ -950,6 +954,44 @@ internal sealed partial class DocxLayoutEngine
         bool HasPageContent() => currentItems.Count > 0;
         bool HasCurrentColumnContent() => activeColumnHasContent;
 
+        bool HasCurrentSectionFootnoteMarkers(int sectionEndIndex)
+        {
+            if (inFlightNotes.Count == 0 || FootnoteRemainderTotal() + FootnoteSeparatorGapPoints > cursorY - page.MarginBottom)
+            {
+                return false;
+            }
+            foreach ((int blockIndex, List<DocxInlineReferenceLocation> locations) in locationsByBlock)
+            {
+                if (blockIndex < currentSectionStartIndex || blockIndex >= sectionEndIndex) continue;
+                foreach (DocxInlineReferenceLocation location in locations)
+                {
+                    DocxInlineReference reference = location.Reference;
+                    if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null ||
+                        !inFlightNotes.TryGetValue((reference.Kind, reference.Id), out InFlightRelatedStory? note) ||
+                        note.PlacedLineCount != 0 || note.RemainingLineCount <= 0)
+                    {
+                        continue;
+                    }
+                    foreach (DocxLayoutItem item in currentItems)
+                    foreach (DocxPageTextLineOwner owner in EnumerateTextLineOwners(item, null))
+                    {
+                        if (owner.SourceBlockIndex != blockIndex ||
+                            (owner.Line.SourceParagraph is not null && !ReferenceEquals(owner.Line.SourceParagraph, location.SourceParagraph))) continue;
+                        foreach (DocxTextSegmentLayout segment in owner.Line.Segments)
+                        {
+                            int start = Math.Max(0, segment.SourceTextOffsetInRun);
+                            if (segment.SourceTextRunIndex == reference.SourceRunIndex &&
+                                start <= reference.TextOffsetInRun && reference.TextOffsetInRun < start + segment.Text.Length)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1011,18 +1053,43 @@ internal sealed partial class DocxLayoutEngine
 
             if (element is DocxSectionBreakElement sectionBreak)
             {
-                bool startsNewPage = ShouldStartNewPageForSectionBreak(sectionBreak);
+                DocxSectionBreakElement boundary = sectionBreak;
+                bool admitBoundary = false;
+                if (useSimpleSectionPagination && page.ColumnFrames.Count == 1 &&
+                    (sectionBreak.TypeValue is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
+                    document.BodyElements.Skip(elementIndex + 1).Any(e => e is not DocxSectionBreakElement))
+                {
+                    DocxEffectiveSectionSettings following = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
+                    DocxSectionBreakType? followingType = DocxSectionBreakTypeExtensions.FromValue(following.SectionProperties.BreakTypeValue);
+                    DocxPageGeometry nextGeometry = ResolveSectionGeometry(document, following, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
+                    admitBoundary = (followingType is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
+                        nextGeometry.ColumnFrames.Count == 1 && !HasStaticSectionContent(sectionBreak.PageSettings) &&
+                        !HasStaticSectionContent(following.PageSettings) &&
+                        Math.Abs(nextGeometry.Width - page.Width) < 0.001d && Math.Abs(nextGeometry.Height - page.Height) < 0.001d &&
+                        Math.Abs(nextGeometry.MarginLeft - page.MarginLeft) < 0.001d && Math.Abs(nextGeometry.MarginRight - page.MarginRight) < 0.001d &&
+                        Math.Abs(nextGeometry.MarginTop - page.MarginTop) < 0.001d && Math.Abs(nextGeometry.MarginBottom - page.MarginBottom) < 0.001d;
+                    if (admitBoundary)
+                    {
+                        // sectPr closes the preceding section; its type describes how
+                        // that section started. The following section owns this boundary.
+                        boundary = sectionBreak with { TypeValue = followingType };
+                    }
+                }
+                bool startsNewPage = ShouldStartNewPageForSectionBreak(boundary) ||
+                    (admitBoundary && IsContinuousSectionBreak(boundary) &&
+                     (sectionBreak.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom") &&
+                     HasCurrentSectionFootnoteMarkers(elementIndex));
                 if (startsNewPage && HasPageContent())
                 {
                     FinishPage();
                 }
 
-                if (ShouldInsertParityBlankPage(sectionBreak, pages.Count + 1))
+                if (ShouldInsertParityBlankPage(boundary, pages.Count + 1))
                 {
                     FinishPage();
                 }
 
-                if (startsNewPage || (IsContinuousSectionBreak(sectionBreak) && !HasPageContent()))
+                if (startsNewPage || (IsContinuousSectionBreak(boundary) && !HasPageContent()))
                 {
                     ApplySectionAfterBreak(elementIndex);
                 }
@@ -1030,6 +1097,7 @@ internal sealed partial class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 firstBodyLineBaselineOffset = null;
+                currentSectionStartIndex = elementIndex + 1;
                 continue;
             }
 

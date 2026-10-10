@@ -1,0 +1,27 @@
+{
+  "id": "docx-ladder-04-section-following-start-type",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/section-following-start-type.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "sections",
+    "pagination",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "requiredDiagnostics": [],
+    "maxMeanAbsoluteError": 0.6,
+    "minStructuralSimilarity": 0.74,
+    "minForegroundRecall": 0.76,
+    "maxChangedPixelRatioAtThreshold16": 0.007
+  },
+  "allowedUnsupportedFeatures": []
+}

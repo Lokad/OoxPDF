@@ -14,6 +14,169 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFootnotesTests
 {
+    public static void DocxSimpleSectionPaginationUsesFollowingStartType()
+    {
+        foreach ((string? preceding, string? following, int expected) in new[]
+        {
+            ((string?)"nextPage", (string?)"continuous", 1),
+            ((string?)"continuous", (string?)"nextPage", 2),
+            ((string?)null, (string?)"continuous", 1),
+            ((string?)"continuous", (string?)null, 2)
+        })
+        {
+            DocxDocument document = ReadSectionNumberingFixture("footnote", (xml, _, parts) =>
+            {
+                SetSectionTypes(xml, preceding, following);
+                SetNotePresence(xml, parts, "footnote", false, false);
+            });
+            TestAssert.Equal(expected, RenderSectionPages(document).Length);
+            TestAssert.Equal(preceding, document.BodyElements.OfType<DocxSectionBreakElement>().Single().TypeValue?.ToValueString());
+            TestAssert.Equal(following, document.FinalSectionBreak!.TypeValue?.ToValueString());
+        }
+    }
+
+    public static void DocxSimpleSectionPaginationSeparatesPageBottomFootnotes()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach ((bool first, bool second) in new[] { (true, true), (true, false), (false, true), (false, false) })
+        foreach (string? position in kind == "footnote" ? new string?[] { "pageBottom", "beneathText", null } : ["docEnd"])
+        {
+            DocxDocument document = ReadSectionNumberingFixture(kind, (xml, _, parts) =>
+            {
+                SetSectionTypes(xml, "continuous", "continuous");
+                SetNotePresence(xml, parts, kind, first, second);
+                foreach (XElement section in xml.Descendants(NoteWord + "sectPr"))
+                {
+                    XElement props = section.Element(NoteWord + kind + "Pr")!;
+                    props.Elements(NoteWord + "pos").Remove();
+                    if (position is not null) props.AddFirst(new XElement(NoteWord + "pos", new XAttribute(NoteWord + "val", position)));
+                }
+            });
+            PdfPage[] pages = RenderSectionPages(document);
+            bool splits = kind == "footnote" && first && position != "beneathText";
+            TestAssert.Equal(splits ? 2 : 1, pages.Length);
+            PdfLinkAnnotation[] links = pages.SelectMany(p => p.Annotations).ToArray();
+            TestAssert.Equal((first ? 2 : 0) + (second ? 2 : 0), links.Length);
+            TestAssert.True(links.All(l => l.IsDestination && l.Width > 0 && l.Height > 0), "Visible note markers remain linked.");
+            if (splits && second)
+            {
+                TestAssert.Equal(2, pages[0].Annotations.Count);
+                TestAssert.Equal(2, pages[1].Annotations.Count);
+                TestAssert.True(pages[0].Annotations.All(l => l.Destination!.Value.PageIndex == 0) &&
+                    pages[1].Annotations.All(l => l.Destination!.Value.PageIndex == 1), "Notes follow the section's source page.");
+            }
+        }
+    }
+
+    public static void DocxSimpleSectionPaginationIgnoresNotesAlreadyPlacedOnEarlierPages()
+    {
+        DocxDocument document = ReadSectionNumberingFixture("footnote", (xml, _, parts) =>
+        {
+            SetSectionTypes(xml, "continuous", "continuous");
+            XElement[] paragraphs = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").ToArray();
+            paragraphs[0].Add(new XElement(NoteWord + "r", new XElement(NoteWord + "br", new XAttribute(NoteWord + "type", "page"))));
+            paragraphs[1].Descendants(NoteWord + "footnoteReference").Single().Parent!.Remove();
+            XDocument notes = XDocument.Parse(parts["word/footnotes.xml"]);
+            notes.Root!.Elements(NoteWord + "footnote").Single(n => (string?)n.Attribute(NoteWord + "id") == "4").Remove();
+            parts["word/footnotes.xml"] = notes.ToString();
+        });
+        PdfPage[] pages = RenderSectionPages(document);
+        TestAssert.Equal(2, pages.Length);
+        TestAssert.Equal(1, pages[0].Annotations.Count);
+        TestAssert.Equal(2, pages[1].Annotations.Count);
+        TestAssert.True(pages[1].Annotations.All(l => l.Destination!.Value.PageIndex == 1), "An earlier note must not insert a third page.");
+    }
+
+    public static void DocxSimpleSectionPaginationRetainsExcludedFlow()
+    {
+        int variant = 0;
+        foreach (Action<XDocument, XDocument, Dictionary<string, string>> modify in new Action<XDocument, XDocument, Dictionary<string, string>>[]
+        {
+            (xml, _, _) =>
+            {
+                XElement body = xml.Root!.Element(NoteWord + "body")!;
+                XElement paragraph = body.Elements(NoteWord + "p").First();
+                paragraph.Remove();
+                body.AddFirst(new XElement(NoteWord + "tbl", new XElement(NoteWord + "tr", new XElement(NoteWord + "tc", paragraph))));
+            },
+            (xml, _, _) =>
+            {
+                foreach (XElement section in xml.Descendants(NoteWord + "sectPr"))
+                    section.Add(new XElement(NoteWord + "cols", new XAttribute(NoteWord + "num", "2"), new XAttribute(NoteWord + "space", "720")));
+            },
+            (xml, _, _) => xml.Descendants(NoteWord + "sectPr").Last().Element(NoteWord + "pgMar")!.SetAttributeValue(NoteWord + "left", "1800"),
+            (xml, _, _) => xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").Skip(2).Remove(),
+            (xml, _, _) => xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First().Add(
+                new XElement(NoteWord + "ins", new XElement(NoteWord + "r", new XElement(NoteWord + "t", "tracked"))))
+        })
+        {
+            DocxDocument document = ReadSectionNumberingFixture("footnote", (xml, settings, parts) =>
+            {
+                SetSectionTypes(xml, "continuous", "continuous");
+                modify(xml, settings, parts);
+            });
+            int pages = RenderSectionPages(document).Length;
+            // The synthetic face already needs two pages in the two-column case.
+            int expected = variant == 1 ? 2 : 1;
+            TestAssert.True(pages == expected, $"Excluded variant {variant} must retain {expected} pages; got {pages}.");
+            variant++;
+        }
+        DocxDocument ordinary = ReadSectionNumberingFixture("footnote", (xml, _, _) => SetSectionTypes(xml, "continuous", "continuous"));
+        var scaled = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: 0.5d);
+        TestAssert.Equal(1, scaled.Create(ordinary, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None).Pages.Count);
+    }
+
+    public static void DocxSimpleSectionPaginationPreservesLabelsAndRepeatedDestinations()
+    {
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            DocxDocument document = ReadSectionNumberingFixture("footnote", (xml, _, _) =>
+            {
+                SetSectionTypes(xml, "continuous", "continuous");
+                SetNoteSection(xml.Descendants(NoteWord + "sectPr").Last(), "footnote", "lowerRoman", "4", "eachSect");
+            });
+            CheckNoteLabels(document, ["iv", "v", "iv", "v"]);
+            PdfPage[] pages = RenderSectionPages(document, geometry);
+            PdfLinkAnnotation[] links = pages.SelectMany(p => p.Annotations).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Equal(4, links.Length);
+            TestAssert.Equal(4, links.Select(l => l.Destination).Distinct().Count());
+            TestAssert.Equal(105, document.Settings.FootnoteReferenceSettings.NumberStart!.Value);
+            TestAssert.Equal(DocxSectionBreakType.Continuous, document.BodyElements.OfType<DocxSectionBreakElement>().Single().TypeValue!.Value);
+        }
+    }
+
+    private static PdfPage[] RenderSectionPages(DocxDocument document,
+        OoxPdfDocxMarkupGeometryMode geometry = OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) =>
+        new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
+            .RenderBlankPages(document, null, CancellationToken.None).ToArray();
+
+    private static void SetSectionTypes(XDocument xml, string? preceding, string? following)
+    {
+        XElement[] sections = xml.Descendants(NoteWord + "sectPr").ToArray();
+        for (int i = 0; i < sections.Length; i++)
+        {
+            sections[i].Elements(NoteWord + "type").Remove();
+            string? value = i == 0 ? preceding : following;
+            if (value is not null) sections[i].Add(new XElement(NoteWord + "type", new XAttribute(NoteWord + "val", value)));
+        }
+    }
+
+    private static void SetNotePresence(XDocument xml, Dictionary<string, string> parts, string kind, bool first, bool second)
+    {
+        XElement[] references = xml.Descendants(NoteWord + kind + "Reference").ToArray();
+        XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+        for (int i = 0; i < references.Length; i++)
+        {
+            if (i < 2 ? first : second) continue;
+            string id = (string)references[i].Attribute(NoteWord + "id")!;
+            references[i].Parent!.Remove();
+            notes.Root!.Elements(NoteWord + kind).Single(n => (string?)n.Attribute(NoteWord + "id") == id).Remove();
+        }
+        parts["word/" + kind + "s.xml"] = notes.ToString();
+    }
+
     public static void DocxSectionNoteNumbersUseClosingSectionPropertiesAndRestart()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

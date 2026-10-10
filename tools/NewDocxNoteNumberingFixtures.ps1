@@ -1,5 +1,5 @@
 # Generates public two-section footnote/endnote numbering probes.
-param([string] $OutputDirectory)
+param([string] $OutputDirectory, [switch] $PaginationProbes)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -21,7 +21,8 @@ try {
 finally { $archive.Dispose() }
 
 $word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
-foreach ($kind in @('footnote', 'endnote')) {
+$kinds = if ($PaginationProbes) { @('footnote') } else { @('footnote', 'endnote') }
+foreach ($kind in $kinds) {
     $entries = @{} + $source
     [xml] $document = $entries['word/document.xml']
     $ns = [Xml.XmlNamespaceManager]::new($document.NameTable)
@@ -51,7 +52,8 @@ foreach ($kind in @('footnote', 'endnote')) {
         $properties.InnerXml = "<w:pos xmlns:w='$word' w:val='$position'/><w:numFmt xmlns:w='$word' w:val='$format'/><w:numStart xmlns:w='$word' w:val='$start'/><w:numRestart xmlns:w='$word' w:val='eachSect'/>"
         [void] $section.PrependChild($properties)
         $type = $document.CreateElement('w', 'type', $word)
-        [void] $type.SetAttribute('val', $word, 'nextPage')
+        $breakType = if ($PaginationProbes) { 'continuous' } else { 'nextPage' }
+        [void] $type.SetAttribute('val', $word, $breakType)
         [void] $section.AppendChild($type)
         foreach ($within in 0..1) {
             $index = 2 * $sectionIndex + $within
@@ -82,5 +84,25 @@ foreach ($kind in @('footnote', 'endnote')) {
         }
     }
     $entries['word/settings.xml'] = "<w:settings xmlns:w='$word'><w:${kind}Pr><w:numFmt w:val='decimal'/><w:numStart w:val='105'/></w:${kind}Pr></w:settings>"
-    New-ZipPackage -Path (Join-Path $OutputDirectory "note-sections-$kind.docx") -Entries $entries
+    $name = if ($PaginationProbes) { 'note-continuous-footnote.docx' } else { "note-sections-$kind.docx" }
+    New-ZipPackage -Path (Join-Path $OutputDirectory $name) -Entries $entries
+    if ($PaginationProbes) {
+        [xml] $boundaryDocument = $entries['word/document.xml']
+        $boundaryNs = [Xml.XmlNamespaceManager]::new($boundaryDocument.NameTable)
+        $boundaryNs.AddNamespace('w', $word)
+        foreach ($reference in @($boundaryDocument.SelectNodes('//w:footnoteReference', $boundaryNs))) {
+            [void] $reference.ParentNode.ParentNode.RemoveChild($reference.ParentNode)
+        }
+        $boundaries = @($boundaryDocument.SelectNodes('//w:sectPr', $boundaryNs))
+        [void] $boundaries[0].SelectSingleNode('w:type', $boundaryNs).SetAttribute('val', $word, 'nextPage')
+        [xml] $emptyNotes = $entries['word/footnotes.xml']
+        $emptyNs = [Xml.XmlNamespaceManager]::new($emptyNotes.NameTable)
+        $emptyNs.AddNamespace('w', $word)
+        foreach ($note in @($emptyNotes.SelectNodes('/w:footnotes/w:footnote[not(@w:type)]', $emptyNs))) {
+            [void] $emptyNotes.DocumentElement.RemoveChild($note)
+        }
+        $entries['word/document.xml'] = $boundaryDocument.OuterXml
+        $entries['word/footnotes.xml'] = $emptyNotes.OuterXml
+        New-ZipPackage -Path (Join-Path $OutputDirectory 'section-following-start-type.docx') -Entries $entries
+    }
 }
