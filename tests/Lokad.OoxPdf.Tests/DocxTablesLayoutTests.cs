@@ -1320,8 +1320,8 @@ internal static class DocxTablesLayoutTests
                 $"Exact-{lineHeight}pt first baseline should sit {expectedInset}pt below the content top. baselineY={baselineY}.");
         }
 
-        // Characterization lock: atLeast keeps the auto-rule inset (no Office
-        // evidence for a distinct atLeast first baseline).
+        // Partial metric providers retain the characterized auto-rule inset.
+        // The Office-qualified minimum placement requires the full metric quartet.
         DocxParagraph atLeast = DocxTests.CreateDocxLayoutParagraph("Probe", 12d, 48d) with
         {
             Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, null, "atLeast", null)

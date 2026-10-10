@@ -12,6 +12,90 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableMinimumLinePlacementMatchesIndependentWordExcess()
+    {
+        foreach (bool predecessor in new[] { false, true })
+        foreach (double minimum in new[] { 12d, 14d, 18d, 24d, 36d })
+        {
+            var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+            DocxLayout automatic = CreateMinimumTableLayout(null, predecessor, measurer);
+            DocxLayout actual = CreateMinimumTableLayout(minimum, predecessor, measurer);
+            DocxTextLineLayout[] baseline = automatic.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines
+                .Where(l => l.Text.StartsWith("Current", StringComparison.Ordinal)).ToArray();
+            DocxTextLineLayout[] lines = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines
+                .Where(l => l.SourceParagraph?.LineSpacingPoints == minimum).ToArray();
+            TestAssert.True(lines.Length > 1, "The independent Word admission covers wrapped paragraphs.");
+            TestAssert.True(Math.Abs(baseline[0].BaselineY - lines[0].BaselineY - Math.Max(0d, minimum - 14d)) < .000001d,
+                "Word places excess minimum-height space above the first baseline, in first and following cell paragraphs.");
+            for (int i = 1; i < lines.Length; i++)
+                TestAssert.True(Math.Abs(lines[i - 1].BaselineY - lines[i].BaselineY - Math.Max(minimum, 14d)) < .001d,
+                    "Later advances retain the effective minimum or natural line height.");
+        }
+    }
+
+    public static void DocxTableMinimumLinePlacementPreservesRowHeightAndFollowingFlow()
+    {
+        foreach (double minimum in new[] { 18d, 24d, 36d })
+        {
+            var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+            DocxLayout corrected = CreateMinimumTableLayout(minimum, true, full);
+            DocxLayout fallback = CreateMinimumTableLayout(minimum, true, new MinimumMetricsFallback(full));
+            TestAssert.Equal(fallback.Pages.Count, corrected.Pages.Count);
+            TestAssert.Equal(fallback.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Height,
+                corrected.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Height);
+            TestAssert.Equal(fallback.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                corrected.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableMinimumLinePlacementRetainsUnsupportedCellsAndMetrics()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "center", "rich", "mixed", "two-rows" })
+        {
+            DocxLayout layout = CreateMinimumTableLayout(24d, true, full, variant);
+            TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
+                .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
+                "Unsupported alignment, rich/mixed text and multiple rows retain the original cell baseline model.");
+        }
+        DocxLayout providerless = CreateMinimumTableLayout(24d, true, new MinimumMetricsFallback(full));
+        TestAssert.True(providerless.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines
+            .All(l => l.BodyLineBoxBaselineInsetPoints is null), "Partial metric providers keep the legacy characterization.");
+    }
+
+    private static DocxLayout CreateMinimumTableLayout(double? minimum, bool predecessor,
+        IDocxTextMeasurer measurer, string variant = "")
+    {
+        DocxParagraph current = DocxTests.CreateDocxLayoutParagraph("Current word Current word Current word Current word", 12d, minimum ?? 14d) with
+        {
+            LineSpacingPoints = minimum,
+            SpacingBeforePoints = 6d, SpacingAfterPoints = 24d,
+            Spacing = new DocxParagraphSpacing(null, null, null, null, null, null, minimum is null ? "240" : ((int)(minimum * 20d)).ToString(CultureInfo.InvariantCulture),
+                minimum is null ? "auto" : "atLeast", null)
+        };
+        current = current with { Runs = current.Runs.Select(r => r with { FontFamily = "LoAsc" }).ToArray() };
+        if (variant == "rich") current = current with { Runs = current.Runs.Select(r => r with { Text = r.Text + "\n" }).ToArray() };
+        DocxParagraph previous = DocxTests.CreateDocxLayoutParagraph("Before", 12d, 14d) with { LineSpacingPoints = null, SpacingAfterPoints = 0d };
+        previous = previous with { Runs = previous.Runs.Select(r => r with { FontFamily = variant == "mixed" ? "HiAsc" : "LoAsc" }).ToArray() };
+        DocxParagraph[] paragraphs = predecessor ? [previous, current] : [current];
+        var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
+        { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
+        DocxTableRow row = new([cell], null);
+        DocxTable table = new(null, [120d], variant == "two-rows" ? [row, row] : [row]);
+        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("After", 12d, 14d) with { LineSpacingPoints = null };
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(after)], [table]) with
+            { PageWidthPoints = 220d, PageHeightPoints = 700d };
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
+    }
+
+    private sealed class MinimumMetricsFallback(CellBoxTextMeasurer inner) : IDocxTextMeasurer, IDocxLineMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double size) => inner.MeasureText(run, text, size);
+        public double MeasureSingleLineHeight(DocxTextRun? run, double size) => inner.MeasureSingleLineHeight(run, size);
+        public double MeasureHheaLineHeight(DocxTextRun? run, double size) => inner.MeasureHheaLineHeight(run, size);
+        public double MeasureHheaAscender(DocxTextRun? run, double size) => inner.MeasureHheaAscender(run, size);
+    }
+
     public static void DocxSyntheticThreeDTableBorderStylesRenderWithoutDiagnostic()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

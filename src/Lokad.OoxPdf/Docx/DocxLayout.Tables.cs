@@ -1057,7 +1057,8 @@ internal sealed partial class DocxLayoutEngine
             Story: null,
             pageCount: null,
             paragraphSpacingScale: paragraphSpacingScale,
-            cellMemo: cellMemo));
+            cellMemo: cellMemo,
+            adjustAtLeastBodySpacing: true));
         cursorY -= rowHeight;
     }
 
@@ -1157,7 +1158,8 @@ internal sealed partial class DocxLayoutEngine
                 pageCount: null,
                 paragraphSpacingScale: paragraphSpacingScale,
                 cellMemo: cellMemo,
-                reviewFragmentBaselineScale: reviewPaginationScale));
+                reviewFragmentBaselineScale: reviewPaginationScale,
+                adjustAtLeastBodySpacing: true));
             cursorY -= fragmentHeight;
             consumedHeight += fragmentHeight;
 
@@ -1485,7 +1487,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewFragmentBaselineScale = 1d)
+        double reviewFragmentBaselineScale = 1d,
+        bool adjustAtLeastBodySpacing = false)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
         double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
@@ -1583,6 +1586,8 @@ internal sealed partial class DocxLayoutEngine
             (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>())
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex);
+            if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
+                cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer);
             // Membership uses the same printed inset as the later geometry
             // projection. Testing nominal baselines can discard a final line
             // whose nominal font inset exceeds the already printed line pitch.

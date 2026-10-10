@@ -42,7 +42,8 @@ internal sealed partial class DocxRenderer
             if (previousLines.Length != 1 || currentLines.Length <= 1) continue;
             DocxTextLineLayout first = currentLines[0];
             if (first.IsFirstParagraphLine != true || first.LineHeight is not > 0d ||
-                first.LineHeightSource is not (DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.ExactLineSpacing) ||
+                (first.LineHeightSource is not (DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.ExactLineSpacing) &&
+                 !(first.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing && first.BodyLineBoxBaselineInsetPoints is not null)) ||
                 first.AppliedBeforeSpacing is not { } applied || first.PendingAfterSpacing is not { } pending)
                 continue;
             bool suppressPreviousAfter = previous.Spacing.ContextualSpacing == true &&
