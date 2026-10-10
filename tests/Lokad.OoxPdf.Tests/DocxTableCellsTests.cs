@@ -12,6 +12,62 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableAlignedMinimumPlacementMatchesIndependentWordSlots()
+    {
+        var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach (string pattern in new[] { "min,auto", "min-single,auto", "auto,min,auto", "auto,min-single,auto", "auto-wrap,min", "auto-wrap,min-single" })
+        {
+            DocxTableCellLayout legacy = CreateParagraphMinimumLayout(pattern, measurer, "header", 320d, "exact", verticalAlignment: alignment)
+                .Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            DocxTableCellLayout actual = CreateParagraphMinimumLayout(pattern, measurer, rowHeight: 320d, rowRule: "exact", verticalAlignment: alignment)
+                .Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            TestAssert.Equal(legacy.TextLines.Count, actual.TextLines.Count);
+            double sharedShift = alignment == "center" ? 5.22d : 10.44d;
+            for (int i = 0; i < actual.TextLines.Count; i++)
+            {
+                double expected = sharedShift + (actual.TextLines[i].LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing ? 10d : 0d);
+                TestAssert.True(Math.Abs(legacy.TextLines[i].BaselineY - actual.TextLines[i].BaselineY - expected) < .000001d,
+                    "Word aligns the full paragraph slot extent and puts excess minimum height above its baselines; ordinary in-cell paragraphs share only the alignment correction.");
+            }
+        }
+    }
+
+    public static void DocxTableAlignedMinimumPlacementPreservesRowsAndFollowingFlow()
+    {
+        var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach (string? rule in new string?[] { "exact", "atLeast", null })
+        {
+            DocxLayout legacy = CreateParagraphMinimumLayout("auto,min,auto", measurer, "header", 320d, rule, verticalAlignment: alignment);
+            DocxLayout actual = CreateParagraphMinimumLayout("auto,min,auto", measurer, rowHeight: 320d, rowRule: rule, verticalAlignment: alignment);
+            DocxTableRowLayout before = legacy.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            DocxTableRowLayout after = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(legacy.Pages.Count, actual.Pages.Count);
+            TestAssert.Equal(before.Y, after.Y);
+            TestAssert.Equal(before.Height, after.Height);
+            TestAssert.Equal(legacy.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableAlignedMinimumPlacementRetainsUnqualifiedAndComplexCells()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string alignment in new[] { "center", "bottom" })
+        foreach ((string variant, double? height, string? rule) in new (string, double?, string?)[]
+        {
+            ("", null, null), ("", 320d, "auto"), ("", 0d, "exact"), ("", 320d, "unknown"),
+            ("rich", 320d, "exact"), ("mixed", 320d, "atLeast"), ("header", 320d, "exact"), ("margins", 320d, "exact")
+        })
+        {
+            DocxLayout layout = CreateParagraphMinimumLayout("min,min,min", full, variant, height, rule, verticalAlignment: alignment);
+            TestAssert.True(layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()).SelectMany(r => r.Cells)
+                .SelectMany(c => c.TextLines).All(l => l.BodyLineBoxBaselineInsetPoints is null),
+                "Automatic heights, invalid rules, rich cells and repeated headers retain their earlier aligned placement.");
+        }
+    }
+
     public static void DocxTableMixedMinimumPlacementUsesEachPlainParagraphSlot()
     {
         var measurer = new ParagraphMinimumTextMeasurer();
@@ -141,7 +197,7 @@ internal static class DocxTableCellsTests
         foreach ((string variant, double height, string? rule) in new (string, double, string?)[]
         {
             ("", 0d, "exact"), ("", 0d, "atLeast"), ("", -1d, "exact"), ("", 320d, "unknown"),
-            ("header", 320d, "exact"), ("center", 320d, "atLeast"), ("rich", 320d, null), ("mixed", 320d, "exact")
+            ("header", 320d, "exact"), ("center-rich", 320d, "atLeast"), ("rich", 320d, null), ("mixed", 320d, "exact")
         })
         {
             DocxLayout layout = CreateParagraphMinimumLayout("min,min,min", full, variant, rowHeight: height, rowRule: rule);
@@ -222,7 +278,8 @@ internal static class DocxTableCellsTests
 
     private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "",
         double? rowHeight = null, string? rowRule = null,
-        IReadOnlyList<(string Family, double Size, bool Bold, bool Italic)>? paragraphFonts = null)
+        IReadOnlyList<(string Family, double Size, bool Bold, bool Italic)>? paragraphFonts = null,
+        string? verticalAlignment = null)
     {
         DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
         {
@@ -239,13 +296,14 @@ internal static class DocxTableCellsTests
             {
                 FontFamily = fonts?.Family ?? (variant == "mixed" && index == 1 ? "HiAsc" : "LoAsc"),
                 FontSize = fonts?.Size ?? 12d, Bold = fonts?.Bold ?? false, Italic = fonts?.Italic ?? false,
-                Text = r.Text + (variant == "rich" ? "\n" : string.Empty)
+                Text = r.Text + (variant is "rich" or "center-rich" ? "\n" : string.Empty)
             }).ToArray() };
             if (variant == "mixed" && index == 1)
                 paragraph = paragraph with { Runs = [.. paragraph.Runs, paragraph.Runs[0] with { FontFamily = "LoAsc", Text = " Mixed run" }] };
             return paragraph;
         }).ToArray();
-        var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, variant == "center" ? "center" : null, [], DocxTableCellMargins.Empty)
+        var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, verticalAlignment ?? (variant is "center" or "center-rich" ? "center" : null), [],
+            variant == "margins" ? DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d } : DocxTableCellMargins.Empty)
             { BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
         DocxTableRow row = new([cell], rowHeight) { HeightRuleValue = rowRule };
         if (variant is "header" or "legacy-header") row = row with { IsHeader = true };

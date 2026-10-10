@@ -1583,11 +1583,12 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingTop = rowTopPadding;
             double contentPaddingRight = ResolveTableCellHorizontalEdgeInset(contentCell, "right", contentCell.Margins.RightPoints, paragraphSpacingScale);
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
-            (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
-                ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>())
+            (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages, double cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
+                ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d)
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
-                cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer);
+                cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer,
+                    contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1);
             // Membership uses the same printed inset as the later geometry
             // projection. Testing nominal baselines can discard a final line
             // whose nominal font inset exceeds the already printed line pitch.

@@ -239,7 +239,7 @@ internal sealed partial class DocxLayoutEngine
         return frame.RowHeights.Sum();
     }
 
-    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages) LayoutTableCellTextLines(
+    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight) LayoutTableCellTextLines(
         DocxTableCell cell,
         double cellX,
         double cellY,
@@ -256,7 +256,7 @@ internal sealed partial class DocxLayoutEngine
     {
         if (textMeasurer is null)
         {
-            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>());
+            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d);
         }
 
         var context = new DocxTableCellLayoutContext(
@@ -270,7 +270,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         if (paragraphs.Count == 0)
         {
-            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>());
+            return (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d);
         }
 
         double paddingLeft = ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, paragraphSpacingScale);
@@ -284,14 +284,14 @@ internal sealed partial class DocxLayoutEngine
         (List<DocxTextLineLayout> lines, double usedHeight, List<DocxInlineImageLayout> placedImages) = ComputeTableCellTextLines(cell, cellX, cellWidth, context, bodyElements, paddingLeft, textWidth, startBaselineY, rowTopPadding, cellX, cellY + cellHeight, pageStatic, pageIndex);
         if (lines.Count == 0)
         {
-            return (lines, placedImages);
+            return (lines, placedImages, usedHeight);
         }
         double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
         double extra = Math.Max(0d, availableHeight - usedHeight);
         double verticalOffset = ResolveVerticalContentOffset(cell, extra);
         return verticalOffset == 0d
-            ? (lines, placedImages)
-            : (ShiftTextLines(lines, -verticalOffset, 0d), ShiftInlineImages(placedImages, -verticalOffset, 0d));
+            ? (lines, placedImages, usedHeight)
+            : (ShiftTextLines(lines, -verticalOffset, 0d), ShiftInlineImages(placedImages, -verticalOffset, 0d), usedHeight);
     }
 
     private static (List<DocxTextLineLayout> Lines, double UsedHeight, List<DocxInlineImageLayout> PlacedImages) ComputeTableCellTextLines(
