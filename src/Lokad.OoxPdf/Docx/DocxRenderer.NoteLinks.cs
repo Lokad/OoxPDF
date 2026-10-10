@@ -37,7 +37,7 @@ internal sealed partial class DocxRenderer
         DocxLayoutPage page, int pageNumber, int pageCount, DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), PdfLinkDestination> destinations,
-        IReadOnlySet<DocxParagraph> singleLineSpacingParagraphs,
+        IReadOnlyDictionary<DocxParagraph, NoteReferenceSpacing> noteSpacingParagraphs,
         CancellationToken cancellationToken)
     {
         if (destinations.Count == 0) yield break;
@@ -90,12 +90,12 @@ internal sealed partial class DocxRenderer
                         DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], fontResources.TextMeasurer);
                     double top = line.BaselineY - yOffset + inset;
                     double height = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? line.FontSize * 1.2d;
-                    if (singleLineSpacingParagraphs.Contains(paragraph))
+                    if (noteSpacingParagraphs.TryGetValue(paragraph, out NoteReferenceSpacing spacing))
                     {
                         // The predecessor owns its after-spacing. Word assigns only
                         // the remaining collapsed before-gap to this paragraph.
-                        double before = Math.Max(0d, (line.AppliedBeforeSpacing ?? 0d) - (line.PendingAfterSpacing ?? 0d));
-                        double after = line.ParagraphAfterSpacing ?? 0d;
+                        double before = line.IsFirstParagraphLine == true ? spacing.Before : 0d;
+                        double after = spacing.After;
                         if ((before == 0d || top + before <= page.Height - page.MarginTop + .000001d) &&
                             top - height - after >= page.MarginBottom)
                         {

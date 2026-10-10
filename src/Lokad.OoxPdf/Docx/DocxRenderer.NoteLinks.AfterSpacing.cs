@@ -2,10 +2,12 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static IReadOnlySet<DocxParagraph> CreateSingleLineNoteSpacingParagraphs(
+    private readonly record struct NoteReferenceSpacing(double Before, double After);
+
+    private static IReadOnlyDictionary<DocxParagraph, NoteReferenceSpacing> CreateNoteSpacingParagraphs(
         DocxDocument document, DocxLayout layout, DocxMarkupContext context, CancellationToken cancellationToken)
     {
-        var candidates = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        var candidates = new Dictionary<DocxParagraph, NoteReferenceSpacing>(ReferenceEqualityComparer.Instance);
         if (Math.Abs(ResolveTextEmissionFontScale(context) - 1d) > .000001d ||
             document.FloatingDrawings.Count != 0 || document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0 ||
             document.HeaderParagraphsByType.Count != 0 || document.FooterParagraphsByType.Count != 0 ||
@@ -39,10 +41,17 @@ internal sealed partial class DocxRenderer
                 paragraph.ListLabel is null && paragraph.Hyperlinks.Count == 0 &&
                 paragraph.Runs.All(r => !r.Text.Contains('\n') && !r.Text.Contains('\r') && !r.Text.Contains('\t')))
             {
-                candidates.Add(paragraph);
+                candidates[paragraph] = new NoteReferenceSpacing(
+                    Math.Max(0d, (line.AppliedBeforeSpacing ?? 0d) - (line.PendingAfterSpacing ?? 0d)),
+                    line.ParagraphAfterSpacing ?? 0d);
             }
         }
-        candidates.RemoveWhere(p => counts[p] != 1);
+        foreach ((DocxParagraph paragraph, NoteReferenceSpacing spacing) in candidates.ToArray())
+        {
+            if (counts[paragraph] == 1) continue;
+            if (spacing.Before <= 0d) candidates.Remove(paragraph);
+            else candidates[paragraph] = spacing with { After = 0d };
+        }
 
         DocxParagraph? previous = null;
         foreach (DocxBodyElement element in document.BodyElements)

@@ -518,6 +518,104 @@ internal static class DocxFootnotesTests
                     new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
         });
 
+    public static void DocxMultilineNoteBeforeSpacingExtendsOnlyFirstLineMarks()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
+            { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            PdfLinkAnnotation baseline = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, custom, 0, 0, true), geometry)[0];
+            foreach (int before in new[] { 6, 12, 24 })
+            foreach (int after in new[] { 0, 24 })
+            {
+                PdfLinkAnnotation[] links = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, custom, before, after, true), geometry);
+                TestAssert.Equal(4, links.Length);
+                TestAssert.True(Math.Abs(links[0].Height - baseline.Height - before) < .000001d,
+                    "A first-line note mark owns before-spacing and keeps line-only after-spacing when the paragraph wraps.");
+                TestAssert.True(Math.Abs(links[0].Y + links[0].Height - baseline.Y - baseline.Height) < .000001d,
+                    "The first-line rectangle stays anchored to the before-gap's top.");
+                TestAssert.True(Math.Abs(links[0].Width - baseline.Width) < .000001d, "Wrapping does not change marker width ownership.");
+            }
+        }
+    }
+
+    public static void DocxMultilineNoteBeforeSpacingKeepsLaterLineSlots()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        {
+            double baseline = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, custom, 0, 0, false))[0].Height;
+            foreach (int before in new[] { 6, 12, 24 })
+            foreach (int after in new[] { 0, 24 })
+                TestAssert.True(Math.Abs(RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, custom, before, after, false))[0].Height - baseline) < .000001d,
+                    "A note mark on a later rendered line owns neither the paragraph's before-gap nor after-spacing.");
+        }
+    }
+
+    public static void DocxMultilineNoteBeforeSpacingIncludesExactAndCollapsedGaps()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool custom in new[] { false, true })
+        foreach (bool exact in new[] { false, true })
+        {
+            Action<XDocument> modify = xml =>
+            {
+                XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+                if (exact)
+                {
+                    XElement spacing = paragraph.Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!;
+                    spacing.SetAttributeValue(NoteWord + "line", "480"); spacing.SetAttributeValue(NoteWord + "lineRule", "exact");
+                }
+                else paragraph.AddBeforeSelf(new XElement(NoteWord + "p", new XElement(NoteWord + "pPr", new XElement(NoteWord + "spacing",
+                    new XAttribute(NoteWord + "before", "0"), new XAttribute(NoteWord + "after", "120"),
+                    new XAttribute(NoteWord + "line", "240"), new XAttribute(NoteWord + "lineRule", "auto"))),
+                    new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
+            };
+            PdfLinkAnnotation baseline = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, custom, 0, 24, true, modify))[0];
+            PdfLinkAnnotation changed = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, custom, 12, 24, true, modify))[0];
+            TestAssert.True(Math.Abs(changed.Height - baseline.Height - (exact ? 12d : 6d)) < .000001d,
+                "Exact first-line slots and unconsumed adjacent gaps follow the same first-line ownership rule.");
+        }
+    }
+
+    public static void DocxMultilineNoteBeforeSpacingRetainsExcludedLayouts()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (int variant in Enumerable.Range(0, 6))
+        {
+            Action<XDocument> guard = xml =>
+            {
+                XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+                XElement props = paragraph.Element(NoteWord + "pPr")!, spacing = props.Element(NoteWord + "spacing")!;
+                if (variant == 0) props.Add(new XElement(NoteWord + "contextualSpacing"));
+                if (variant == 1) spacing.SetAttributeValue(NoteWord + "beforeAutospacing", "1");
+                if (variant == 2) spacing.SetAttributeValue(NoteWord + "beforeLines", "100");
+                if (variant == 3) paragraph.Add(new XElement(NoteWord + "r", new XElement(NoteWord + "br", new XAttribute(NoteWord + "type", "page"))));
+                if (variant == 4)
+                    foreach (XElement section in xml.Descendants(NoteWord + "sectPr"))
+                    { section.Element(NoteWord + "cols")?.Remove(); section.Add(new XElement(NoteWord + "cols", new XAttribute(NoteWord + "num", "2"))); }
+                if (variant == 5) paragraph.AddBeforeSelf(new XElement(NoteWord + "p", new XElement(NoteWord + "pPr",
+                    new XElement(NoteWord + "contextualSpacing"), new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "after", "120"))),
+                    new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Public preceding paragraph."))));
+            };
+            double baseline = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, false, 0, 24, true, guard))[0].Height;
+            double changed = RenderCustomNoteLinks(ReadMultilineNoteSpacingFixture(kind, false, 12, 24, true, guard))[0].Height;
+            TestAssert.True(Math.Abs(changed - baseline) < .000001d, "Unqualified multiline gap settings retain the prior slot; variant " + variant);
+        }
+    }
+
+    private static DocxDocument ReadMultilineNoteSpacingFixture(string kind, bool custom, int before, int after, bool first,
+        Action<XDocument>? modify = null) => ReadNoteHitAreaFixture(kind, custom, after, xml =>
+        {
+            XElement paragraph = xml.Root!.Element(NoteWord + "body")!.Elements(NoteWord + "p").First();
+            paragraph.Element(NoteWord + "pPr")!.Element(NoteWord + "spacing")!
+                .SetAttributeValue(NoteWord + "before", (before * 20).ToString(CultureInfo.InvariantCulture));
+            XElement text = first ? paragraph.Descendants(NoteWord + "t").Last() : paragraph.Descendants(NoteWord + "t").First();
+            text.Value = string.Join(' ', Enumerable.Repeat("Public wrapped paragraph text", 35));
+            modify?.Invoke(xml);
+        });
+
     public static void DocxCustomNoteMarksHonorExplicitFalseFlags()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
