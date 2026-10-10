@@ -1341,7 +1341,8 @@ word multisets and page counts. Seventy changed ordinary-control rectangles are
 qualified; all 152 links in 38 ordinary supported controls match Word vertically
 within 0.005pt, including two supported PDF identities. Four table controls correct
 their first boundary and improve visually, changing eight rectangles while
-retaining a 24.007pt trailing-cell residual. Two historical undeclared-default
+retaining at most 0.008pt vertical bounds error in the final qualified controls.
+The earlier 24.007pt trailing-cell claim was corrected during L139. Two historical undeclared-default
 aliases retain exact PDFs and their 6pt residual. Partial cases add no full
 annotation admission. Horizontal bounds and actual destinations remain unchanged.
 
@@ -1384,7 +1385,8 @@ Word vertically within 0.004pt. Horizontal bounds and actual destinations remain
 unchanged. Four exact-slot controls and two named-default precedence guards
 supplement the direction/flag/definition matrix. Six exact historical inputs and
 references resolve four 12pt and two 6pt residual controls; these add no independent
-admission. Earlier table trailing-cell 24.007pt residuals remain partial.
+admission. The four earlier final table controls retain at most 0.008pt vertical
+bounds error; L139 corrects the stale 24.007pt assessment.
 
 Four new portable methods pass; two fail exact L137 and two preservation/precedence
 guards pass both. Earlier declared-default and contribution methods also pass.
@@ -1405,5 +1407,46 @@ proof reproduces 50 current and 518 unchanged prior PDFs, plus eight prior entri
 sharing six exact historical inputs requalified by current Word controls, through
 576 conversions. All 2911 inherited DOCX and 251 broader PDFs retain bytes/pages.
 The 34 cached markup cases /508 failed gates transfer only through fresh unchanged
+PDF identity. Local 0.1.5 package smoke passes. API/dependencies/version stay
+unchanged; release preparation remains deferred.
+
+## RV06-L139: first-line table note before-spacing (2026-10-10)
+
+Unsplit, top-aligned one-row/one-cell tables with two plain numeric paragraphs
+now give a multiline first-line note marker its remaining collapsed before-space
+after a nonempty, single-line predecessor. Automatic and exact slots and custom
+first-character marks share the existing resolved contextual/style contributions.
+Later-line markers remain line-only. Final-cell after-spacing stays in row height
+and does not enlarge these multiline note links. Ordinary body paragraphs in table
+documents retain their previous fallback. Rich/auto/line-unit/at-least spacing,
+static/scaled/merged/nested/multiple-row and fragmented content remain partial.
+
+96 independent Word controls plus two public geometry duplicates qualify
+50 corrected rectangles. Changed rectangle heights match Word exactly; the
+existing absolute vertical residual remains at most 0.042pt. This qualifies spacing
+ownership, not general table typography. Forty-eight guards retain exact PDFs.
+All 98 retain raster, inspected text and graphics identities against the parent;
+Word word multisets and page counts match. Horizontal bounds and actual note
+destinations remain unchanged. Unsupported guard residuals remain explicit.
+
+The prior L137/L138 notes carried a stale 24.007pt trailing-cell claim. L137's
+final frozen annotation proof and fresh L138 conversions instead establish a
+maximum 0.008pt for those four corrected table controls. Their exact PDFs also
+reproduce in this batch. Earlier artifacts are retained; the current assessment
+is corrected. No row-height change was needed for that claim.
+
+Four portable methods pass; two unchanged semantic checks fail against the exact
+accepted L138 DLL and two preservation/fallback checks pass both. All 24 generator
+ZIP payloads reproduce. The two new public cases remain approximate with the
+existing MAE<=2.30, SSIM>=.57/.53, recall>=.65/.56 and changed<=.024 gates.
+
+Frozen runtime **f7ae9380** passes clean Windows Release: 2380 registered /2379
+passed /0 failed /1 optional private-document skip, including 91 PDF, 130 SVG,
+151 images, 184 typography and 1014 methods containing Docx. Linux passes 85 PDF
++118 targeted methods, with six existing Arial skips and two archive SourceLink
+warnings. Both inventories validate 372 cases across ten families. Fresh visual
+proof reproduces 98 current and 576 unchanged prior PDFs through 674 conversions.
+All 2911 inherited DOCX and 251 broader PDFs retain bytes and page counts. The
+34 cached markup cases /508 failed gates transfer only through fresh unchanged
 PDF identity. Local 0.1.5 package smoke passes. API/dependencies/version stay
 unchanged; release preparation remains deferred.
