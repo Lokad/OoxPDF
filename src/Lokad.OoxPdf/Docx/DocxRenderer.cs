@@ -209,17 +209,20 @@ internal sealed partial class DocxRenderer
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None, effectiveMarkupContext.CommentMarkerLabels is not null);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, effectiveGeometryMode, CancellationToken.None);
+        var prepared = PreparePageNumberedLayout(document, fontResolver, effectiveMarkupContext, effectiveGeometryMode, null, CancellationToken.None);
+        document = prepared.Document;
+        DocxLayout layout = prepared.Layout;
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
     }
 
     internal IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> InspectMarkupBalloons(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None, effectiveMarkupContext.CommentMarkerLabels is not null);
-        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
+        var prepared = PreparePageNumberedLayout(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None);
+        document = prepared.Document;
+        DocxFontResources fontResources = prepared.FontResources;
+        DocxLayout layout = prepared.Layout;
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
         {
@@ -251,6 +254,12 @@ internal sealed partial class DocxRenderer
 
     internal DocxFontPlanSnapshot InspectFontPlan(DocxDocument document)
     {
+        if (DocxPageFootnoteNumbering.IsEligibleDocument(document))
+        {
+            var context = ResolveEffectiveMarkupContext(document);
+            var prepared = PreparePageNumberedLayout(document, fontResolver, context, ResolveEffectiveMarkupGeometryMode(context), null, CancellationToken.None);
+            return DocxFontPlanSnapshot.FromPlan(prepared.FontResources.Plan);
+        }
         return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None,
             ResolveEffectiveMarkupContext(document).CommentMarkerLabels is not null));
     }
@@ -258,8 +267,10 @@ internal sealed partial class DocxRenderer
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink: null, CancellationToken.None, effectiveMarkupContext.CommentMarkerLabels is not null);
-        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), CancellationToken.None);
+        var prepared = PreparePageNumberedLayout(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None);
+        document = prepared.Document;
+        DocxFontResources fontResources = prepared.FontResources;
+        DocxLayout layout = prepared.Layout;
         effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
@@ -366,6 +377,24 @@ internal sealed partial class DocxRenderer
     internal DocxStructureSnapshot InspectStructure(DocxDocument document)
     {
         return DocxStructureSnapshot.FromDocument(document);
+    }
+
+    private static (DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout) PreparePageNumberedLayout(
+        DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
+        Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)
+    {
+        var fonts = PrepareFontResources(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
+        var first = CreateHeaderDisplacedLayout(document, fonts, context, geometry, cancellationToken);
+        if (fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
+            !DocxPageFootnoteNumbering.TryCreateDocument(document, first, out var numbered, out var pages))
+            return (document, fonts, first);
+        // Corrected labels need their own glyph subset and measured advances.
+        // One bounded retry is accepted only when body and complete note pages
+        // remain stable; otherwise the original resources/layout retain fallback.
+        var numberedFonts = PrepareFontResources(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
+        var final = CreateHeaderDisplacedLayout(numbered, numberedFonts, context, geometry, cancellationToken);
+        return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStablePages(numbered, final, pages)
+            ? (numbered, numberedFonts, final) : (document, fonts, first);
     }
 
     private static DocxLayout CreateHeaderDisplacedLayout(
@@ -938,9 +967,10 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        DocxFontResources fontResources = PrepareFontResources(document, fontResolver, diagnosticSink, cancellationToken, markupContext.CommentMarkerLabels is not null);
-
-        DocxLayout layout = CreateHeaderDisplacedLayout(document, fontResources, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), cancellationToken);
+        var prepared = PreparePageNumberedLayout(document, fontResolver, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), diagnosticSink, cancellationToken);
+        document = prepared.Document;
+        DocxFontResources fontResources = prepared.FontResources;
+        DocxLayout layout = prepared.Layout;
         // RV06: comment balloons and range washes wear first-seen author colors;
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.
