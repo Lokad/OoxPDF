@@ -88,7 +88,8 @@ internal static class DocxMinimumBeforeLeadingTests
             xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "before", "-80"),
             xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeLines", "100"),
             xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeAutospacing", "1"),
-            xml => Body(xml)[1].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing")),
+            xml => Body(xml)[1].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
+                new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
             xml => Body(xml)[1].Element(Word + "pPr")!.Add(new XElement(Word + "keepLines")),
             xml => Body(xml)[1].Descendants(Word + "rPr").First().Add(new XElement(Word + "b")),
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")))
@@ -98,7 +99,7 @@ internal static class DocxMinimumBeforeLeadingTests
             var source = Read(4, 4, (xml, _) => modify(xml));
             var original = Layout(source);
             TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback),
-                "Larger/negative/line/automatic/contextual spacing, rich/kept text and columns retain fallback.");
+                "Larger/negative/line/automatic/unresolved contextual spacing, rich/kept text and columns retain fallback.");
             TestAssert.True(ReferenceEquals(original, fallback), "An exclusion preserves the complete original layout.");
         }
     }

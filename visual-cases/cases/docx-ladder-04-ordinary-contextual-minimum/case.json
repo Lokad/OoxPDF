@@ -1,0 +1,25 @@
+{
+  "id": "docx-ladder-04-ordinary-contextual-minimum",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/ordinary-contextual-minimum.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "minimum-leading",
+    "contextual-spacing",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.42,
+    "minStructuralSimilarity": 0.8,
+    "minForegroundRecall": 0.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0055
+  }
+}
