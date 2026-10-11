@@ -406,7 +406,9 @@ internal sealed partial class DocxRenderer
         }
         if (fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.TryCreateDocument(document, first, out var numbered, out var pages,
-                allowWrappedBody: context.WordCompatiblePrintScale == 1d))
+                allowWrappedBody: context.WordCompatiblePrintScale == 1d,
+                allowMetWrappedCalibri: context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+                    context.WordCompatiblePrintScale == 1d))
             return (document, fonts, first);
         // Corrected labels need their own glyph subset and measured advances.
         // One bounded retry is accepted only when body and complete note pages
@@ -414,7 +416,9 @@ internal sealed partial class DocxRenderer
         var numberedFonts = PrepareFontResources(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
         var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken);
         return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStablePages(numbered, final, pages,
-            allowWrappedBody: context.WordCompatiblePrintScale == 1d)
+            allowWrappedBody: context.WordCompatiblePrintScale == 1d,
+            allowMetWrappedCalibri: context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+                context.WordCompatiblePrintScale == 1d)
             ? (numbered, numberedFonts, final) : (document, fonts, first);
     }
 
