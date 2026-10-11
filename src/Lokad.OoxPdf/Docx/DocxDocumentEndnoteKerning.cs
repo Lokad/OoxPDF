@@ -113,7 +113,7 @@ internal static class DocxDocumentEndnoteKerning
         return marks;
     }
 
-    internal static bool HasStableFirstPages(DocxLayout layout, IReadOnlyDictionary<string, PageRange> expected, CancellationToken cancellationToken)
+    internal static bool HasStableOwners(DocxLayout layout, IReadOnlyDictionary<string, PageRange> expected, CancellationToken cancellationToken)
     {
         if (!TryResolvePages(layout, out var owners, cancellationToken)) return false;
         var actual = new Dictionary<string, PageRange>(StringComparer.Ordinal);
@@ -122,11 +122,11 @@ internal static class DocxDocumentEndnoteKerning
             cancellationToken.ThrowIfCancellationRequested();
             if (owner.Key.Id is null || !actual.TryAdd(owner.Key.Id, owner.Value)) return false;
         }
-        // Continuation ranges may change when corrected advances change wrapping.
-        // Source ownership and first placements remain stable before the caller
-        // admits its single retry; qualified note-only page counts may change.
+        // Corrected advances may change first placements and continuation ranges.
+        // Qualified slices still require the same complete, unique source owners;
+        // authored body references and numbering are unchanged by the retry.
         return actual.Count == expected.Count && actual.All(p => expected.TryGetValue(p.Key, out PageRange? range) &&
-            range.First == p.Value.First && range.Last >= range.First && range.Slices > 0 &&
+            range.First >= 0 && range.Last >= range.First && range.Slices > 0 &&
             range.Slices <= (long)range.Last - range.First + 1);
     }
 

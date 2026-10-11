@@ -402,11 +402,11 @@ internal sealed partial class DocxRenderer
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
             // Qualified document-end flow has no body fields or static stories.
-            // Corrected note wrapping may add note-only pages while preserving
-            // source owners and first placements. Other retry paths keep their
+            // Corrected note wrapping may change first placements and note-only
+            // pages while preserving source owners. Other retry paths keep their
             // original total-page guard.
             if ((plainEndnotes || adjustedLayout.Pages.Count == first.Pages.Count) &&
-                (plainEndnotes ? DocxDocumentEndnoteKerning.HasStableFirstPages(adjustedLayout, endnotePages, cancellationToken) :
+                (plainEndnotes ? DocxDocumentEndnoteKerning.HasStableOwners(adjustedLayout, endnotePages, cancellationToken) :
                 (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
                 (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
                     allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds))))
