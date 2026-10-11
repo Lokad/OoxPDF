@@ -99,7 +99,7 @@ internal static class DocxWrappedFootnoteNumberingTests
     }
 
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-    private static DocxDocument Read(bool later = false, bool runBreak = true, string format = "decimal",
+    internal static DocxDocument Read(bool later = false, bool runBreak = true, string format = "decimal",
         Action<XDocument, XDocument, XDocument>? modify = null, string family = "Arial") => DocxPageFootnoteNumberingTests.ReadFixture(runBreak, format, 9, (xml, settings, notes) =>
         {
             foreach (var p in xml.Root!.Element(W + "body")!.Elements(W + "p").Where(p => p.Descendants(W + "footnoteReference").Any()))

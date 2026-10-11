@@ -387,12 +387,17 @@ internal sealed partial class DocxRenderer
         var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken);
         if (context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
-            DocxPlainFootnoteKerning.TryCreateDocument(document, first, out var adjusted, out var originalPages))
+            (DocxPlainFootnoteKerning.TryCreateDocument(document, first, out var adjusted, out var originalPages) ||
+                DocxWrappedCalibriKerning.TryCreateDocument(document, first, out adjusted, out originalPages)))
         {
             var adjustedFonts = PrepareFontResources(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
-            if (adjustedLayout.Pages.Count == first.Pages.Count && DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) &&
-                (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages)))
+            bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
+                DocxPageFootnoteNumbering.IsNominalWrappedCalibriBody(adjusted);
+            if (adjustedLayout.Pages.Count == first.Pages.Count &&
+                (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
+                (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
+                    allowWrappedBody: wrappedCalibri)))
             {
                 document = adjusted;
                 fonts = adjustedFonts;

@@ -140,7 +140,7 @@ internal static class DocxPageFootnoteNumberingTests
     internal static DocxLayout CreateLayout(DocxDocument document) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
         .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
-    private static string DecodeText(PdfPage page)
+    internal static string DecodeText(PdfPage page)
     {
         var text = new StringBuilder();
         foreach (Match region in Regex.Matches(page.Content, @"BT(.*?)ET", RegexOptions.Singleline))

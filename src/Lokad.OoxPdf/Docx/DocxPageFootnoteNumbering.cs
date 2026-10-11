@@ -80,7 +80,7 @@ internal static class DocxPageFootnoteNumbering
         HasStablePages(document, after, pages);
 
     private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages,
-        bool allowWrappedBody = false)
+        bool allowWrappedBody = false, bool allowNominalCalibri = false)
     {
         pages = new(StringComparer.Ordinal);
         var linesByParagraph = new Dictionary<DocxParagraph, List<(int Page, DocxTextLineLayout Line)>>(ReferenceEqualityComparer.Instance);
@@ -113,7 +113,7 @@ internal static class DocxPageFootnoteNumbering
         {
             if (p.InlineReferences.Count != 1 || !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
             bool wrapped = lines.Count != 1;
-            if (wrapped && (!allowWrappedBody || (wrappedBodyEligible ??= IsQualifiedWrappedBody(document)) != true ||
+            if (wrapped && (!allowWrappedBody || (wrappedBodyEligible ??= IsQualifiedWrappedBody(document, allowNominalCalibri)) != true ||
                 lines.Any(l => l.Page != lines[0].Page))) return false;
             var r = p.InlineReferences[0];
             if (r.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(r.Id) || string.IsNullOrEmpty(r.DisplayText) ||
@@ -136,12 +136,37 @@ internal static class DocxPageFootnoteNumbering
             pages.Count == document.RelatedStories.Count(s => s.IsNormalStoryType);
     }
 
-    private static bool IsQualifiedWrappedBody(DocxDocument document)
+    internal static bool TryGetNominalWrappedCalibriPages(DocxDocument document, DocxLayout layout,
+        out IReadOnlyDictionary<string, int> pages)
+    {
+        pages = new Dictionary<string, int>();
+        if (!IsEligibleDocument(document) || DocxPlainFootnoteKerning.HasSingleLineBody(layout) ||
+            !IsNominalWrappedCalibriBody(document) || !TryMapReferencePages(document, layout, out var mapped,
+                allowWrappedBody: true, allowNominalCalibri: true)) return false;
+        pages = mapped;
+        return true;
+    }
+
+    internal static bool IsNominalWrappedCalibriBody(DocxDocument document) =>
+        string.Equals(document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily,
+            "Calibri", StringComparison.OrdinalIgnoreCase) && HasNominalBodyThresholds(document) &&
+        IsQualifiedWrappedBody(document, allowNominalCalibri: true);
+
+    private static bool HasNominalBodyThresholds(DocxDocument document) => document.Paragraphs.SelectMany(p => p.Runs)
+        .Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline).All(r =>
+            r.KerningMinimumHalfPointsValue is null ||
+            ushort.TryParse(r.KerningMinimumHalfPointsValue, NumberStyles.None, CultureInfo.InvariantCulture, out ushort minimum) &&
+            minimum <= 32767 && (minimum == 0 || minimum > 24));
+
+    private static bool IsQualifiedWrappedBody(DocxDocument document, bool allowNominalCalibri = false)
     {
         string? family = document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily;
-        // Calibri controls retain horizontal wrapping errors; only the two
-        // independently qualified faces admit wrapped numbering here.
-        return new[] { "Arial", "Times New Roman" }.Contains(family, StringComparer.OrdinalIgnoreCase) && document.Paragraphs.All(p =>
+        // Calibri numbering follows a separately qualified nominal-advance
+        // retry. Raw source frames still retain their original fallback.
+        bool nominalCalibri = string.Equals(family, "Calibri", StringComparison.OrdinalIgnoreCase) &&
+            HasNominalBodyThresholds(document) && (allowNominalCalibri || document.Paragraphs.SelectMany(p => p.Runs)
+                .Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline).All(r => !r.PairKerningEnabled));
+        return (new[] { "Arial", "Times New Roman" }.Contains(family, StringComparer.OrdinalIgnoreCase) || nominalCalibri) && document.Paragraphs.All(p =>
             p.SpacingBeforePoints == 0d && p.SpacingAfterPoints == 0d && p.LineSpacingPoints is null &&
             p.LineSpacingFactor == 1d && DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(p) &&
             p.KeepRules.KeepNext != true && p.KeepRules.KeepLines != true &&
