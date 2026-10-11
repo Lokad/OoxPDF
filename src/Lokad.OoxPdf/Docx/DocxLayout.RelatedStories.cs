@@ -337,11 +337,13 @@ internal sealed partial class DocxLayoutEngine
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
                 double completeEndnoteHeight = 0d;
-                bool plainEndnoteFlow = DocxPlainBodyFrame.IsEligible(document) &&
+                bool plainEndnoteFrame = DocxPlainBodyFrame.IsEligible(document) &&
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
-                bool collapseEndnoteBoundaries = plainEndnoteFlow &&
+                bool plainEndnoteFlow = plainEndnoteFrame && !document.RelatedStories.Any(story =>
+                    story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
+                bool collapseEndnoteBoundaries = plainEndnoteFrame &&
                     cursorTop - completeEndnoteHeight >= Math.Max(activePage.MarginBottom,
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
@@ -349,8 +351,18 @@ internal sealed partial class DocxLayoutEngine
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    double boundaryOverlap = collapseEndnoteBoundaries && previousEndnote is not null
+                    double boundaryOverlap = (collapseEndnoteBoundaries || plainEndnoteFlow) && previousEndnote is not null
                         ? ResolveDocumentEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
+                    // A shared paragraph boundary belongs on this page only when
+                    // the next paragraph's head fits. A page turn retains its
+                    // existing placement and destination policy.
+                    if (!collapseEndnoteBoundaries && plainEndnoteFlow &&
+                        cursorTop + boundaryOverlap - ResolveStoryTextLineBoxHeight(endnoteStoryLayout.TextLines[0],
+                            endnoteStoryLayout.TextLines.Count == 1
+                                ? endnoteStoryLayout.TextLines[0].ParagraphAfterSpacing ?? 0d : 0d) < activePage.MarginBottom)
+                    {
+                        boundaryOverlap = 0d;
+                    }
                     cursorTop += boundaryOverlap;
                     PlaceRelatedStorySlices(
                         documentEndPages,
@@ -365,20 +377,23 @@ internal sealed partial class DocxLayoutEngine
                         separatorMeasurer,
                         printScale,
                         headerKeepOut,
-                        plainDocumentEndnoteTypography: plainEndnoteFlow);
+                        plainDocumentEndnoteTypography: plainEndnoteFlow,
+                        noteDestinationTopOffset: boundaryOverlap);
                     if (collapseEndnoteBoundaries)
                     {
                         activePlacedStories[^1] = activePlacedStories[^1] with
                         {
-                            NoteDestinationTopOffset = boundaryOverlap,
                             UsesCompleteDocumentEndnoteFlow = true,
                         };
                         documentEndPages[activePageIndex] = activePage with
                         {
                             PlacedRelatedStories = activePlacedStories.ToArray(),
                         };
-                        // The generic slicer retains its separator gap for legacy
-                        // notes. A complete document-end block flows as paragraphs.
+                    }
+                    if (collapseEndnoteBoundaries || plainEndnoteFlow)
+                    {
+                        // Qualified document-end paragraphs share their boundary;
+                        // the generic note separator gap belongs to legacy flow.
                         cursorTop += FootnoteSeparatorGapPoints;
                     }
                     previousEndnote = endnoteStoryLayout;
@@ -439,21 +454,26 @@ internal sealed partial class DocxLayoutEngine
     // contextually suppressed before-spacing excluded); a slice takes the longest
     // whole-line prefix that fits, at least one line, so degenerate capacities
     // terminate instead of looping. Stories without text lines keep legacy slicing.
-    private static double[] GetStoryTextLineBoxHeights(DocxRelatedStoryLayout storyLayout)
+    private static double[] GetStoryTextLineBoxHeights(DocxRelatedStoryLayout storyLayout,
+        IReadOnlyList<double>? ownedAfterSpacings = null)
     {
         double[] heights = new double[storyLayout.TextLines.Count];
         for (int lineIndex = 0; lineIndex < heights.Length; lineIndex++)
         {
             DocxTextLineLayout line = storyLayout.TextLines[lineIndex];
-            double boxHeight = line.LineHeight ?? line.SingleLineHeight ?? line.FontSize;
-            double afterSpacing = line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
-            double beforeSpacing = line.IsFirstParagraphLine == true && line.ContextualSpacingSuppressed != true
-                ? line.ParagraphBeforeSpacing ?? line.AppliedBeforeSpacing ?? 0d
-                : 0d;
-            heights[lineIndex] = Math.Max(0d, boxHeight) + Math.Max(0d, afterSpacing) + Math.Max(0d, beforeSpacing);
+            double afterSpacing = ownedAfterSpacings?[lineIndex] ?? line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
+            heights[lineIndex] = ResolveStoryTextLineBoxHeight(line, afterSpacing);
         }
 
         return heights;
+    }
+
+    private static double ResolveStoryTextLineBoxHeight(DocxTextLineLayout line, double afterSpacing)
+    {
+        double boxHeight = line.LineHeight ?? line.SingleLineHeight ?? line.FontSize;
+        double beforeSpacing = line.IsFirstParagraphLine == true && line.ContextualSpacingSuppressed != true
+            ? line.ParagraphBeforeSpacing ?? line.AppliedBeforeSpacing ?? 0d : 0d;
+        return Math.Max(0d, boxHeight) + Math.Max(0d, afterSpacing) + Math.Max(0d, beforeSpacing);
     }
 
     private static double[] GetStoryLineAfterSpacings(DocxRelatedStoryLayout storyLayout)
@@ -594,7 +614,8 @@ internal sealed partial class DocxLayoutEngine
         bool stopAfterCurrentPage = false,
         InFlightRelatedStory? inFlight = null,
         double headContentPushdownPoints = 0d,
-        bool plainDocumentEndnoteTypography = false)
+        bool plainDocumentEndnoteTypography = false,
+        double noteDestinationTopOffset = 0d)
     {
         if (storyLayout.TextLines.Count == 0)
         {
@@ -602,8 +623,18 @@ internal sealed partial class DocxLayoutEngine
             return;
         }
 
-        double[] lineBoxes = GetStoryTextLineBoxHeights(storyLayout);
         double[] lineAfters = GetStoryLineAfterSpacings(storyLayout);
+        if (plainDocumentEndnoteTypography)
+        {
+            // Plain document-end flow owns one source paragraph. Its after-space
+            // metadata lives on the first line, but the charge belongs at the end.
+            // Deferring it keeps partial takes and continuation offsets consistent.
+            double paragraphAfter = lineAfters[0];
+            lineAfters[0] = 0d;
+            lineAfters[^1] = paragraphAfter;
+        }
+        double[] lineBoxes = GetStoryTextLineBoxHeights(storyLayout,
+            plainDocumentEndnoteTypography ? lineAfters : null);
         int lineIndex = 0;
         double consumedHeight = 0d;
         while (lineIndex < storyLayout.TextLines.Count)
@@ -651,6 +682,7 @@ internal sealed partial class DocxLayoutEngine
                 separatorY: null) with
             {
                 UsesPlainDocumentEndnoteTypography = plainDocumentEndnoteTypography,
+                NoteDestinationTopOffset = lineIndex == 0 ? noteDestinationTopOffset : 0d,
             });
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             lineIndex += takeCount;

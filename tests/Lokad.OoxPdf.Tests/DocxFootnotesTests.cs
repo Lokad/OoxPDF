@@ -1857,7 +1857,7 @@ internal static class DocxFootnotesTests
         }
     }
 
-    public static void DocxDocumentEndnoteWrappedBoundariesRetainContinuationTargets()
+    public static void DocxDocumentEndnoteWrappedBoundariesOwnFirstSliceDestinations()
     {
         DocxDocument document = ReadWrappedDocumentEndnoteFlowFixture(8, 4, 200);
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
@@ -1874,8 +1874,8 @@ internal static class DocxFootnotesTests
         for (int i = 0; i < links.Length; i++)
         {
             TestAssert.Equal(firstPlacements[i].Page, links[i].Destination!.Value.PageIndex);
-            TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - firstPlacements[i].Note.TopY) < .000001d,
-                "Continued notes navigate to their established first placement without a complete-block offset.");
+            TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - firstPlacements[i].Note.TopY + (i == 0 ? 0d : 4d)) < .000001d,
+                "Continued notes navigate to the first source-owned slice below its shared paragraph boundary.");
         }
     }
 
@@ -2211,6 +2211,70 @@ internal static class DocxFootnotesTests
         TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(kept, engine.Create(kept, measurer, default),
             out unchanged, out _, default) && ReferenceEquals(kept, unchanged),
             "Continuation does not bypass the established semantic keep-rule fallback.");
+    }
+
+    public static void DocxContinuedEndnoteParagraphAfterSpacingBelongsToTheFinalSourceLine()
+    {
+        DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(8, 4, 200);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+        DocxRelatedStoryLayout story = layout.RelatedStories.First(s => s.Story.IsNormalStoryType);
+        DocxPlacedRelatedStoryLayout[] slices = layout.Pages.SelectMany(p => p.PlacedRelatedStories)
+            .Where(p => ReferenceEquals(p.StoryLayout.Story, story.Story)).ToArray();
+        TestAssert.True(slices.Length > 1 && slices.All(s => s.UsesPlainDocumentEndnoteTypography),
+            "The regression exercises qualified continued paragraph slices.");
+        TestAssert.Equal(4d, story.TextLines[0].ParagraphAfterSpacing!.Value);
+        TestAssert.True(story.TextLines[^1].ParagraphAfterSpacing is null,
+            "Source layout metadata remains on the first line; slice ownership does not rewrite it.");
+        double consumed = 0d;
+        for (int i = 0; i < slices.Length; i++)
+        {
+            DocxPlacedRelatedStoryLayout slice = slices[i];
+            double expected = slice.StoryLayout.TextLines.Sum(line => line.LineHeight ?? line.SingleLineHeight ?? line.FontSize);
+            if (i == 0) expected += 8d;
+            if (i == slices.Length - 1) expected += 4d;
+            TestAssert.True(Math.Abs(slice.Height - expected) < .000001d,
+                "Only the final source-owned slice consumes the paragraph's after-space.");
+            TestAssert.True(Math.Abs(slice.ContentTopOffset - consumed) < .000001d,
+                "Continuation offsets are cumulative actual slice charges.");
+            consumed += slice.Height;
+        }
+        TestAssert.True(Math.Abs(consumed - story.ContentHeight) < .000001d,
+            "Deferring ownership preserves the full paragraph charge exactly once.");
+        TestAssert.Equal(4d, source.RelatedStories.First(s => s.IsNormalStoryType).Paragraphs[0].SpacingAfterPoints);
+    }
+
+    public static void DocxContinuedEndnoteParagraphBoundariesShareNumericSpacingAndRetainKeepFallbacks()
+    {
+        foreach ((int before, int after) in new[] { (0, 0), (0, 4), (8, 0), (8, 4), (3, 7), (7, 3) })
+        {
+            DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(before, after, 200);
+            DocxRelatedStory first = source.RelatedStories.First(s => s.IsNormalStoryType);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType && !ReferenceEquals(s, first)
+                ? s with { BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { Runs = [p.Runs[0], p.Runs[1] with { Text = "Public short following note." }] })).ToArray() } : s).ToArray() };
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var measurer = new DocxTests.FamilyWidthTextMeasurer();
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var placements = layout.Pages.SelectMany((p, page) => p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType)
+                .Select(s => (Story: s, Page: page))).ToArray();
+            var previous = placements.Last(s => ReferenceEquals(s.Story.StoryLayout.Story, first));
+            var current = placements.First(s => !ReferenceEquals(s.Story.StoryLayout.Story, first));
+            TestAssert.True(placements.Count(s => ReferenceEquals(s.Story.StoryLayout.Story, first)) > 1,
+                "The preceding source paragraph actually crosses pages.");
+            TestAssert.Equal(previous.Page, current.Page);
+            TestAssert.True(Math.Abs(previous.Story.TopY - current.Story.TopY - previous.Story.Height + Math.Min(before, after)) < .000001d,
+                "The final slice and following paragraph share the same numeric boundary rule as fitting notes.");
+            TestAssert.Equal((double)Math.Min(before, after), current.Story.NoteDestinationTopOffset);
+            TestAssert.True(placements.Where(s => s.Story.ContentTopOffset > 0d).All(s => s.Story.NoteDestinationTopOffset == 0d),
+                "Continued slices do not acquire a second first-placement navigation offset.");
+            DocxDocument kept = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType
+                ? s with { BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { KeepRules = p.KeepRules with { KeepLines = true } })).ToArray() } : s).ToArray() };
+            TestAssert.True(engine.Create(kept, measurer, default).Pages.SelectMany(p => p.PlacedRelatedStories)
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType).All(s => !s.UsesPlainDocumentEndnoteTypography && s.NoteDestinationTopOffset == 0d),
+                "Kept continued paragraphs retain their explicit layout and destination fallback.");
+        }
     }
 
     private static DocxDocument ReadWrappedDocumentEndnoteFlowFixture(int before, int after, int repeats)
