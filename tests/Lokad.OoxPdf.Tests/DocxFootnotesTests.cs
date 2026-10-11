@@ -1879,6 +1879,97 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxCompleteEndnoteKerningProtectsOwnedCustomBaselinePrefixes()
+    {
+        foreach (string mark in new[] { "*", "**", "*tail" })
+        {
+            DocxDocument source = ReadCustomDocumentEndnoteFlowFixture(mark);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.True(DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
+                "A unique typed reference protects the custom prefix through the shared complete-note correction.");
+            TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
+                "Custom note typography preserves body run/reference owners.");
+            foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
+            {
+                DocxTextRun original = pair.First.Paragraphs[0].Runs[0];
+                DocxTextRun[] runs = pair.Second.Paragraphs[0].Runs.ToArray();
+                TestAssert.Equal(original with { Text = "*" }, runs[0]);
+                TestAssert.True(!runs[0].IsAutomaticNoteStoryMarker, "A custom prefix does not acquire an automatic XML role.");
+                if (mark.Length == 1) TestAssert.True(ReferenceEquals(original, runs[0]), "A complete one-character owner stays exact.");
+                else
+                {
+                    TestAssert.Equal(mark[1..], runs[1].Text);
+                    TestAssert.Equal(original.SourceRunIndex, runs[1].SourceRunIndex);
+                    TestAssert.Equal(original.SourceTextOffsetInRun + 1, runs[1].SourceTextOffsetInRun);
+                    TestAssert.True(!runs[1].PairKerningEnabled && runs[1].UseLogicalSizeForPdfAdvances,
+                        "Adjacent source text resolves its own threshold without consuming the protected marker.");
+                }
+                TestAssert.True(!runs[^1].PairKerningEnabled && runs[^1].UseLogicalSizeForPdfAdvances,
+                    "Regular note text uses the shared disabled-threshold rule.");
+                TestAssert.Equal(mark, original.Text);
+            }
+            DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.True(DocxCompleteEndnoteKerning.HasStablePages(final, pages, default), "Owned custom markers keep the complete note-page map.");
+        }
+    }
+
+    public static void DocxCompleteEndnoteKerningRejectsAmbiguousCustomSourceOwners()
+    {
+        DocxDocument plain = ReadCustomDocumentEndnoteFlowFixture("*");
+        DocxParagraph body = plain.Paragraphs[0];
+        DocxInlineReference reference = body.InlineReferences.Single();
+        DocxRelatedStory first = plain.RelatedStories.First(s => s.IsNormalStoryType);
+        DocxDocument ReplaceBody(DocxParagraph p) => plain with { BodyElements = plain.BodyElements.Select(e =>
+            e is DocxParagraphElement pe && ReferenceEquals(pe.Paragraph, body) ? pe with { Paragraph = p } : e).ToArray() };
+        foreach (DocxDocument source in new[]
+        {
+            ReplaceBody(body with { InlineReferences = [reference with { CustomMarkText = null }] }),
+            ReplaceBody(body with { InlineReferences = [reference, reference] }),
+            ReplaceBody(body with { InlineReferences = [reference with { SourceRunIndex = reference.SourceRunIndex + 100 }] }),
+            ReplaceBody(body with { InlineReferences = [reference with { TextOffsetInRun = reference.TextOffsetInRun + 1 }] }),
+            ReplaceBody(body with { Runs = body.Runs.Concat(body.Runs.Where(r => r.SourceRunIndex == reference.SourceRunIndex)).ToArray() }),
+            plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
+            {
+                BodyElements = [new DocxParagraphElement(first.Paragraphs[0] with
+                { Runs = [first.Paragraphs[0].Runs[0] with { Text = "?" }, first.Paragraphs[0].Runs[1]] })],
+            } : s).ToArray() },
+        })
+        {
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.True(!DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
+                "Missing, repeated, overlapping and mismatched source owners keep the exact fallback.");
+        }
+    }
+
+    private static DocxDocument ReadCustomDocumentEndnoteFlowFixture(string mark)
+    {
+        DocxDocument source = ReadDocumentEndnoteFlowFixture(0, 0);
+        return source with
+        {
+            BodyElements = source.BodyElements.Select(e => e is DocxParagraphElement pe && pe.Paragraph.InlineReferences.Count > 0
+                ? pe with { Paragraph = pe.Paragraph with
+                {
+                    Runs = pe.Paragraph.Runs.Select(r => pe.Paragraph.InlineReferences.Any(reference =>
+                        r.SourceRunIndex == reference.SourceRunIndex && r.SourceTextOffsetInRun == reference.TextOffsetInRun)
+                        ? r with { Text = mark } : r).ToArray(),
+                    InlineReferences = pe.Paragraph.InlineReferences.Select(r => r with
+                    { DisplayText = null, CustomMarkFollowsValue = "1", CustomMarkText = "*" }).ToArray(),
+                } } : e).ToArray(),
+            RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Runs = [p.Runs[0] with { Text = mark, VerticalAlignmentValue = "baseline", IsAutomaticNoteStoryMarker = false,
+                        KerningMinimumHalfPointsValue = "0", PairKerningEnabled = true },
+                        p.Runs[1] with { KerningMinimumHalfPointsValue = "0", PairKerningEnabled = true }],
+                })).ToArray(),
+            } : s).ToArray(),
+        };
+    }
+
     public static void DocxAutomaticNoteStoryMarkerRetainsExactXmlOwnership()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
