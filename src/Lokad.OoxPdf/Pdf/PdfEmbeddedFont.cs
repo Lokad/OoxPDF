@@ -395,7 +395,8 @@ internal sealed class PdfEmbeddedFont
                 short kerning = kerningEnabled ? Font.GetKerning(glyphs[i - 1].OriginalGlyph, glyphs[i].OriginalGlyph) : (short)0;
                 if (kerning != 0)
                 {
-                    adjustment += -kerning * 1000d / Font.UnitsPerEm;
+                    double pairScale = nominalAdvanceFontSize is { } pairSize && fontSize > 0d ? pairSize / fontSize : 1d;
+                    adjustment += -kerning * 1000d / Font.UnitsPerEm * pairScale;
                 }
 
                 if (Math.Abs(adjustment) > 0.001d)

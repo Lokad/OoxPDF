@@ -46,7 +46,8 @@ internal static class DocxNominalGlyphAdvanceTests
             var word = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectTextEmission(source);
             var body = word.Lines.Where(l => l.StoryKind == "Body").SelectMany(l => l.Segments).Where(s => !s.IsTerminalLineSpace && s.PdfFontSize == 11.04).ToArray();
             TestAssert.True(body.Length > 0, "The actual body emits its physical 11.04pt font.");
-            if (threshold == "20") TestAssert.True(body.All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Met thresholds retain accepted pair advances.");
+            if (threshold == "20" && !notes) TestAssert.True(body.All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Excluded ordinary Calibri met frames retain accepted advances.");
+            else if (threshold == "20") TestAssert.True(body.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0 && s.AdvanceProfile.PairAdvanceAdjustmentTotal > 0), "Qualified met note frames combine logical glyph advances with the authored pair policy.");
             else TestAssert.True(body.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0), "Only qualified nominal body emission applies logical advances.");
             TestAssert.True(word.Lines.Where(l => l.StoryKind != "Body").SelectMany(l => l.Segments).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Related note stories retain their accepted advance policy.");
             TestAssert.True(word.Lines.SelectMany(l => l.Segments).Where(s => s.PdfFontSize == 6.96).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Source-owned body marks keep their superscript policy.");
@@ -82,7 +83,7 @@ internal static class DocxNominalGlyphAdvanceTests
                 r.Element(Word + "rPr")!.Add(new XElement(Word + "kern", new XAttribute(Word + "val", "20")));
         });
         TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(metSource, Layout(metSource), out var metAdjusted, out _), "The accepted met-body-threshold frame still qualifies its legacy policy.");
-        TestAssert.True(metAdjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.VerticalAlignment == DocxRunVerticalAlignment.Superscript).All(r => r.PairKerningEnabled), "Met body thresholds retain their accepted marker fallback.");
+        TestAssert.True(metAdjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.VerticalAlignment == DocxRunVerticalAlignment.Superscript).All(r => !r.PairKerningEnabled), "The diagnostic coupled met body model uses measured automatic-marker pairs.");
         foreach (string? threshold in new string?[] { null, "0", "12", "14", "16", "20", "28" })
         {
             var source = Read(true, (xml, _) =>
@@ -138,13 +139,13 @@ internal static class DocxNominalGlyphAdvanceTests
         if (isDefault) style.SetAttributeValue(Word + "default", "1");
         styles.Root!.Add(style);
     }
-    private static DocxLayout Layout(DocxDocument document)
+    internal static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
         var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
-    private static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)
+    internal static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)
     {
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", notes ? "note-marked-minimum-line-20.docx" : "ordinary-minimum-line-20.docx"));
         var parts = new Dictionary<string, string>();

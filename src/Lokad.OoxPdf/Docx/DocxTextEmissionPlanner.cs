@@ -64,6 +64,7 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
     double? PlannedEmittedResidualPerGap)
 {
     public double NominalAdvanceAdjustmentTotal { get; init; }
+    public double PairAdvanceAdjustmentTotal { get; init; }
 }
 
 internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
@@ -121,7 +122,7 @@ internal static class DocxTextEmissionPlanner
             resolvedSource)
         {
             PairKerningEnabled = style.PairKerningEnabled,
-            NominalAdvanceFontSize = style.UseLogicalSizeForPdfAdvances && !style.PairKerningEnabled && layoutFontSize == 11d
+            NominalAdvanceFontSize = style.UseLogicalSizeForPdfAdvances && layoutFontSize == 11d
                 ? layoutFontSize : null
         };
     }
@@ -316,10 +317,13 @@ internal static class DocxTextEmissionPlanner
         double textStateCharacterSpacingGapTotal = plan.PdfCharacterSpacing * glyphGapCount;
         double nominalAdjustment = plan.NominalAdvanceFontSize is { } nominalSize
             ? embedded.MeasureNominalAdvanceAdjustmentPoints(text, plan.PdfFontSize, nominalSize) : 0d;
+        double pairAdjustment = plan.NominalAdvanceFontSize is { } pairSize && plan.PairKerningEnabled
+            ? embedded.MeasureTextPoints(text, pairSize, kerningEnabled: true) -
+                embedded.MeasureTextPoints(text, pairSize, kerningEnabled: false) - kerningAdjustmentTotal : 0d;
         double plannedEmittedAdvance = roundedPdfWidth +
             kerningAdjustmentTotal +
             positioningCharacterSpacingGapTotal +
-            textStateCharacterSpacingGapTotal + nominalAdjustment;
+            textStateCharacterSpacingGapTotal + nominalAdjustment + pairAdjustment;
         double naturalResidual = layoutWidth - naturalPdfWidth;
         double roundedResidual = layoutWidth - roundedPdfWidth;
         double plannedEmittedResidual = layoutWidth - plannedEmittedAdvance;
@@ -344,7 +348,8 @@ internal static class DocxTextEmissionPlanner
             roundedResidualPerGap,
             plannedEmittedResidualPerGap)
         {
-            NominalAdvanceAdjustmentTotal = nominalAdjustment
+            NominalAdvanceAdjustmentTotal = nominalAdjustment,
+            PairAdvanceAdjustmentTotal = pairAdjustment
         };
     }
 
