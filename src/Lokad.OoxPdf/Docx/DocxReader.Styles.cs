@@ -625,13 +625,16 @@ internal sealed partial class DocxReader
         {
             bool hasOtherBeforeSide = DocxParagraphSpacing.HasBeforeSpacingSide(other.Spacing);
             bool hasOtherAfterSide = DocxParagraphSpacing.HasAfterSpacingSide(other.Spacing);
+            bool hasOtherLineValue = other.Spacing.LineValue is not null;
             return new DocxResolvedParagraphProperties(
                 other.Alignment ?? Alignment,
                 other.AlignmentValue ?? AlignmentValue,
                 hasOtherBeforeSide ? other.SpacingBeforePoints : other.SpacingBeforePoints ?? SpacingBeforePoints,
                 hasOtherAfterSide ? other.SpacingAfterPoints : other.SpacingAfterPoints ?? SpacingAfterPoints,
-                other.LineSpacingFactor ?? LineSpacingFactor,
-                other.LineSpacingPoints ?? LineSpacingPoints,
+                // A local line value replaces both derived units together.
+                // Automatic spacing must not retain an inherited point height.
+                hasOtherLineValue ? other.LineSpacingFactor : LineSpacingFactor,
+                hasOtherLineValue ? other.LineSpacingPoints : LineSpacingPoints,
                 Spacing.Merge(other.Spacing),
                 KeepRules.Merge(other.KeepRules),
                 Indent.Merge(other.Indent),

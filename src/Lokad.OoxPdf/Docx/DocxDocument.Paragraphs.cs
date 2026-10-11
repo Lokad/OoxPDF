@@ -202,7 +202,9 @@ internal sealed record DocxParagraphSpacing(
             hasOtherBeforeSide ? other.BeforeAutoSpacingValue : BeforeAutoSpacingValue,
             hasOtherAfterSide ? other.AfterAutoSpacingValue : AfterAutoSpacingValue,
             other.LineValue ?? LineValue,
-            other.LineRuleValue ?? LineRuleValue,
+            // A local numeric line value with no rule uses automatic spacing.
+            // Standalone rule tokens retain their established metadata/geometry.
+            other.LineValue is not null ? other.LineRuleValue : other.LineRuleValue ?? LineRuleValue,
             other.ContextualSpacing ?? ContextualSpacing);
     }
 

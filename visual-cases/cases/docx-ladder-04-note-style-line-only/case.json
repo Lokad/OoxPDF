@@ -1,0 +1,31 @@
+{
+  "id": "docx-ladder-04-note-style-line-only",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-style-line-only.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "notes",
+    "line-spacing-inheritance",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 0.42,
+    "minStructuralSimilarity": 0.8,
+    "minForegroundRecall": 0.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0055,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_FOOTNOTE"
+    ]
+  },
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_FOOTNOTE"
+  ]
+}
