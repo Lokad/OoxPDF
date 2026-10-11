@@ -1055,7 +1055,7 @@ internal sealed partial class DocxRenderer
             CreateNoteDestinations(layout, markupContext, cancellationToken);
         IReadOnlyDictionary<DocxParagraph, NoteReferenceSpacing> noteSpacingParagraphs =
             noteDestinations.Count == 0 ? new Dictionary<DocxParagraph, NoteReferenceSpacing>() :
-                CreateNoteSpacingParagraphs(document, layout, markupContext, cancellationToken);
+                CreateNoteSpacingParagraphs(document, layout, markupContext, fontResources, cancellationToken);
         int imageIndex = 1;
         var imageCache = new Dictionary<string, PdfImageXObject?>();
 

@@ -2,9 +2,39 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private readonly record struct NoteReferenceSpacing(double Before, double After);
+    private readonly record struct NoteReferenceSpacing(double Before, double After,
+        DocxTextLineLayout? AfterOwner = null);
 
     private static IReadOnlyDictionary<DocxParagraph, NoteReferenceSpacing> CreateNoteSpacingParagraphs(
+        DocxDocument document, DocxLayout layout, DocxMarkupContext context, DocxFontResources fonts,
+        CancellationToken cancellationToken)
+    {
+        var candidates = CreateLegacyNoteSpacingParagraphs(document, layout, context, cancellationToken);
+        if (context.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
+            context.WordCompatiblePrintScale != 1d || fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
+            !DocxPageFootnoteNumbering.HasCompleteWrappedNoteOwners(document, layout)) return candidates;
+
+        // A complete source-owned wrapped frame assigns its after-gap to the
+        // final visible line. Break-spill rows do not own visible note markers.
+        var finalLines = new Dictionary<DocxParagraph, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
+        foreach (var page in layout.Pages)
+        foreach (var line in page.Items.OfType<DocxTextLineLayout>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (line.SourceParagraph is { } paragraph && line.Segments.Any(s => s.Role == DocxTextSegmentRole.Text))
+                finalLines[paragraph] = line;
+        }
+        foreach (var (paragraph, line) in finalLines)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (paragraph.InlineReferences.Count == 1 && paragraph.SpacingAfterPoints > 0d &&
+                line.BodyLineBoxHeightPoints is > 0d && line.BodyLineBoxBaselineInsetPoints is not null)
+                candidates[paragraph] = new NoteReferenceSpacing(0d, paragraph.SpacingAfterPoints, line);
+        }
+        return candidates;
+    }
+
+    private static Dictionary<DocxParagraph, NoteReferenceSpacing> CreateLegacyNoteSpacingParagraphs(
         DocxDocument document, DocxLayout layout, DocxMarkupContext context, CancellationToken cancellationToken)
     {
         var candidates = new Dictionary<DocxParagraph, NoteReferenceSpacing>(ReferenceEqualityComparer.Instance);

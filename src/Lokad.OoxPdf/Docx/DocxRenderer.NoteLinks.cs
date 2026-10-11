@@ -95,7 +95,7 @@ internal sealed partial class DocxRenderer
                         // The predecessor owns its after-spacing. Word assigns only
                         // the remaining collapsed before-gap to this paragraph.
                         double before = line.IsFirstParagraphLine == true ? spacing.Before : 0d;
-                        double after = spacing.After;
+                        double after = spacing.AfterOwner is null || ReferenceEquals(spacing.AfterOwner, line) ? spacing.After : 0d;
                         if ((before == 0d || top + before <= page.Height - page.MarginTop + .000001d) &&
                             top - height - after >= page.MarginBottom)
                         {

@@ -66,7 +66,9 @@ internal static class DocxWrappedFootnoteFrame
             };
         }
         return admitted && document.Paragraphs.All(p =>
-            p.SpacingBeforePoints == 0d && p.SpacingAfterPoints == 0d && p.LineSpacingPoints is null &&
+            p.SpacingBeforePoints == 0d &&
+            (p.SpacingAfterPoints == 0d || purpose is DocxWrappedCalibriPolicy.SourceThresholds or
+                DocxWrappedCalibriPolicy.NormalizedThresholds) && p.LineSpacingPoints is null &&
             p.LineSpacingFactor == 1d && DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(p) &&
             p.KeepRules.KeepNext != true && p.KeepRules.KeepLines != true &&
             p.Runs.Where(r => r.Text.Length != 0).All(r => DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(p, r) &&

@@ -78,6 +78,12 @@ internal static class DocxPageFootnoteNumbering
     internal static bool HasCompleteNoteOwners(DocxDocument document, DocxLayout layout) =>
         TryMapReferencePages(document, layout, out _);
 
+    internal static bool HasCompleteWrappedNoteOwners(DocxDocument document, DocxLayout layout) =>
+        IsEligibleDocument(document) &&
+        DocxWrappedFootnoteFrame.IsEligible(document, DocxWrappedCalibriPolicy.NormalizedThresholds) &&
+        TryMapReferencePages(document, layout, out _, allowWrappedBody: true,
+            calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds);
+
     internal static bool HasStableCompleteNoteOwners(DocxDocument document, DocxLayout before, DocxLayout after) =>
         before.Pages.Count == after.Pages.Count && TryMapReferencePages(document, before, out var pages) &&
         HasStablePages(document, after, pages);

@@ -51,7 +51,7 @@ internal static class DocxMixedWrappedFootnoteTests
         Action<XDocument, XDocument, XDocument>[] exclusions = [
             (xml, _, _) => { foreach (var size in xml.Descendants(W + "sz")) size.SetAttributeValue(W + "val", "28"); },
             (xml, _, _) => xml.Descendants(W + "rPr").First().Add(new XElement(W + "b")),
-            (xml, _, _) => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "after", "20"),
+            (xml, _, _) => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "after", "180"),
             (xml, _, _) => xml.Descendants(W + "pPr").First().Add(new XElement(W + "keepNext")),
             (xml, _, _) => xml.Descendants(W + "footnoteReference").First().SetAttributeValue(W + "customMarkFollows", "1"),
             (_, _, notes) => notes.Root!.Elements(W + "footnote").First(n => n.Attribute(W + "type") is null).Add(new XElement(W + "p", new XElement(W + "r", new XElement(W + "t", "separate note paragraph"))))
