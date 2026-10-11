@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxMinimumBodyLineLeading
@@ -18,12 +20,15 @@ internal static class DocxMinimumBodyLineLeading
         {
             if (line.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
                 string.IsNullOrWhiteSpace(line.Text)) continue;
-            if (line.SourceParagraph is not { } paragraph || paragraph.InlineReferences.Count != 0 ||
-                paragraph.SpacingBeforePoints != 0d || paragraph.SpacingAfterPoints != 0d ||
+            if (line.SourceParagraph is not { } paragraph) return false;
+            bool marked = paragraph.InlineReferences.Count != 0;
+            bool extended = marked || paragraph.SpacingAfterPoints != 0d;
+            if (paragraph.SpacingBeforePoints != 0d ||
+                extended && (ordinaryBody || line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph)) ||
                 line.LineHeight is not (>= 14d and <= 24d) ||
                 line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
                 line.FirstLineInsetPoints is not > 0d ||
-                paragraph.Runs.Any(r => !IsQualifiedRun(r) ||
+                paragraph.Runs.Any(r => !IsQualifiedParagraphRun(paragraph, r) ||
                     !string.Equals(r.FontFamily, line.StyleRun.FontFamily, StringComparison.OrdinalIgnoreCase)) ||
                 string.Equals(line.StyleRun.FontFamily, "Times New Roman", StringComparison.OrdinalIgnoreCase) &&
                     line.LineHeight < 16d) return false;
@@ -34,7 +39,11 @@ internal static class DocxMinimumBodyLineLeading
             if (excess == 0d) continue;
             replacements.Add(line, line with {
                 BaselineY = line.BaselineY - excess,
-                FirstLineInsetPoints = line.FirstLineInsetPoints + excess
+                FirstLineInsetPoints = line.FirstLineInsetPoints + excess,
+                // A generated marker still owns the authored paragraph slot;
+                // moving its text baseline must preserve the link's slot top.
+                BodyLineBoxBaselineInsetPoints = marked ? line.FirstLineInsetPoints + excess : line.BodyLineBoxBaselineInsetPoints,
+                BodyLineBoxHeightPoints = marked ? line.LineHeight : line.BodyLineBoxHeightPoints
             });
         }
         if (replacements.Count == 0) return false;
@@ -47,10 +56,29 @@ internal static class DocxMinimumBodyLineLeading
         return true;
     }
 
-    private static bool IsQualifiedRun(DocxTextRun run) =>
+    private static bool IsQualifiedParagraphRun(DocxParagraph paragraph, DocxTextRun run)
+    {
+        if (paragraph.InlineReferences.Count > 1) return false;
+        var reference = paragraph.InlineReferences.FirstOrDefault();
+        bool marker = reference is not null && run.SourceRunIndex == reference.SourceRunIndex;
+        if (marker && (run.SourceTextOffsetInRun != reference!.TextOffsetInRun ||
+            run.Text != reference.DisplayText || run.Text.Length == 0 || !run.Text.All(char.IsAsciiDigit))) return false;
+        return IsQualifiedRun(run, marker);
+    }
+
+    private static bool IsQualifiedExpansionSpacing(DocxParagraph paragraph) =>
+        paragraph.SpacingAfterPoints is >= 0d and <= 8d && paragraph.Spacing.ContextualSpacing != true &&
+        paragraph.Spacing.BeforeLinesValue is null && paragraph.Spacing.AfterLinesValue is null &&
+        paragraph.Spacing.BeforeAutoSpacingValue is null && paragraph.Spacing.AfterAutoSpacingValue is null &&
+        IsTwipsToken(paragraph.Spacing.BeforeValue, 0) && IsTwipsToken(paragraph.Spacing.AfterValue, 160);
+
+    private static bool IsTwipsToken(string? value, int maximum) => value is null ||
+        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0 && twips <= maximum;
+
+    private static bool IsQualifiedRun(DocxTextRun run, bool marker) =>
         run.FontSize == 12d && !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
         !run.AllCaps && !run.SmallCaps && !run.Hidden && run.CharacterSpacingPoints == 0d &&
         run.HighlightValue is null && run.ShadingFillHex is null &&
-        run.VerticalAlignment == DocxRunVerticalAlignment.Baseline &&
+        run.VerticalAlignment == (marker ? DocxRunVerticalAlignment.Superscript : DocxRunVerticalAlignment.Baseline) &&
         new[] { "Calibri", "Arial", "Times New Roman" }.Contains(run.FontFamily, StringComparer.OrdinalIgnoreCase);
 }

@@ -33,7 +33,8 @@ internal sealed partial class DocxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             if (line.SourceParagraph is not { } paragraph) continue;
             counts[paragraph] = counts.GetValueOrDefault(paragraph) + 1;
-            if ((line.LineHeightSource is DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.ExactLineSpacing) &&
+            if ((line.LineHeightSource is DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.ExactLineSpacing ||
+                line.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing && paragraph.InlineReferences.Count == 1) &&
                 line.BodyLineBoxHeightPoints is > 0d && line.BodyLineBoxBaselineInsetPoints is not null &&
                 (line.ParagraphAfterSpacing is > 0d || line.ParagraphBeforeSpacing is > 0d) &&
                 paragraph.SpacingBeforePoints >= 0d && paragraph.SpacingAfterPoints >= 0d &&

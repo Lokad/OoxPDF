@@ -25,7 +25,7 @@ internal static class DocxMinimumBodyLineLeadingTests
         TestAssert.True(ReferenceEquals(a.Segments, z.Segments), "Horizontal positioning and glyph plans remain the same.");
     }
 
-    public static void DocxMinimumBodyLineLeadingKeepsRuleMarkerAndInheritedGuards()
+    public static void DocxMinimumBodyLineLeadingKeepsRuleMarkerAndSlotGuards()
     {
         Action<XDocument, XDocument>[] guards = [
             (xml, _) => Target(xml).Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "lineRule", "exact"),
@@ -42,12 +42,12 @@ internal static class DocxMinimumBodyLineLeadingTests
             (xml, _) => Target(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40)),
             (xml, _) => { var p = xml.Descendants(Word + "p").First(p => p.Descendants(Word + "footnoteReference").Any());
                 var spacing = p.Element(Word + "pPr")!.Element(Word + "spacing")!;
-                spacing.SetAttributeValue(Word + "line", "400"); spacing.SetAttributeValue(Word + "lineRule", "atLeast"); },
+                spacing.SetAttributeValue(Word + "line", "280"); spacing.SetAttributeValue(Word + "lineRule", "atLeast"); },
         ];
         foreach (var modify in guards)
         {
             var document = ReadFixture(modify); var before = Layout(document);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var fallback), "Exact/auto, unqualified slots/styles, wrapped, marked, keep and inherited-default paths retain fallback.");
+            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var fallback), "Exact/auto, unqualified slots/styles, wrapped text, marked slots below 16pt and keep rules retain fallback.");
             TestAssert.True(ReferenceEquals(before, fallback), "An exclusion keeps the entire original layout.");
         }
     }
