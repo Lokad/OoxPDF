@@ -16,6 +16,7 @@ internal static class DocxMinimumBodyLineLeading
             (!ordinaryBody && !DocxPageFootnoteNumbering.TryCreateDocument(document, source, out _, out _))) return false;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
+        double bodyFontSize = DocxPlainElevenPointBody.IsEligible(document, source) ? 11d : 12d;
         bool? ordinaryExpansionQualified = null;
         bool contextualBody = document.Paragraphs.Any(p => p.Spacing.ContextualSpacing == true);
         bool? contextualExpansionQualified = null;
@@ -30,21 +31,21 @@ internal static class DocxMinimumBodyLineLeading
             {
                 // New contextual admissions resolve every boundary from trusted
                 // styles and qualify the complete visible frame once.
-                contextualExpansionQualified ??= IsQualifiedContextualExpansion(document, line.StyleRun.FontFamily);
+                contextualExpansionQualified ??= IsQualifiedContextualExpansion(document, line.StyleRun.FontFamily, bodyFontSize);
                 if (contextualExpansionQualified != true) return false;
             }
             if (ordinaryBody && extended)
             {
                 // New spaced ordinary admissions qualify the complete visible
                 // frame once; legacy zero-spacing paragraphs keep their gates.
-                ordinaryExpansionQualified ??= IsQualifiedOrdinaryExpansion(document, line.StyleRun.FontFamily, contextualBody);
+                ordinaryExpansionQualified ??= IsQualifiedOrdinaryExpansion(document, line.StyleRun.FontFamily, contextualBody, bodyFontSize);
                 if (ordinaryExpansionQualified != true) return false;
             }
             if (extended && (line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph, contextualBody)) ||
                 line.LineHeight is not (>= 14d and <= 24d) ||
                 line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
                 line.FirstLineInsetPoints is not > 0d ||
-                paragraph.Runs.Any(r => !IsQualifiedParagraphRun(paragraph, r) ||
+                paragraph.Runs.Any(r => !IsQualifiedParagraphRun(paragraph, r, bodyFontSize) ||
                     !string.Equals(r.FontFamily, line.StyleRun.FontFamily, StringComparison.OrdinalIgnoreCase)) ||
                 string.Equals(line.StyleRun.FontFamily, "Times New Roman", StringComparison.OrdinalIgnoreCase) &&
                     line.LineHeight < 16d) return false;
@@ -72,27 +73,27 @@ internal static class DocxMinimumBodyLineLeading
         return true;
     }
 
-    private static bool IsQualifiedParagraphRun(DocxParagraph paragraph, DocxTextRun run)
+    internal static bool IsQualifiedParagraphRun(DocxParagraph paragraph, DocxTextRun run, double fontSize = 12d)
     {
         if (paragraph.InlineReferences.Count > 1) return false;
         var reference = paragraph.InlineReferences.FirstOrDefault();
         bool marker = reference is not null && run.SourceRunIndex == reference.SourceRunIndex;
         if (marker && (run.SourceTextOffsetInRun != reference!.TextOffsetInRun ||
             run.Text != reference.DisplayText || run.Text.Length == 0 || !run.Text.All(char.IsAsciiDigit))) return false;
-        return IsQualifiedRun(run, marker);
+        return IsQualifiedRun(run, marker, fontSize);
     }
 
-    private static bool IsQualifiedOrdinaryExpansion(DocxDocument document, string? family, bool contextual) =>
+    private static bool IsQualifiedOrdinaryExpansion(DocxDocument document, string? family, bool contextual, double fontSize) =>
         document.Paragraphs.All(p => IsQualifiedExpansionSpacing(p, contextual) && p.Runs.Where(r => r.Text.Length != 0).All(r =>
-            IsQualifiedRun(r, marker: false) && string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));
+            IsQualifiedRun(r, marker: false, fontSize) && string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));
 
-    private static bool IsQualifiedContextualExpansion(DocxDocument document, string? family) =>
+    private static bool IsQualifiedContextualExpansion(DocxDocument document, string? family, double fontSize) =>
         document.Paragraphs.All(p => IsQualifiedExpansionSpacing(p, allowContextual: true) &&
             (p.StyleId is not null ? p.StyleResolution.StyleFound : !string.IsNullOrWhiteSpace(p.ContextualSpacingDefaultStyleId)) &&
-            p.Runs.Where(r => r.Text.Length != 0).All(r => IsQualifiedParagraphRun(p, r) &&
+            p.Runs.Where(r => r.Text.Length != 0).All(r => IsQualifiedParagraphRun(p, r, fontSize) &&
                 string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));
 
-    private static bool IsQualifiedExpansionSpacing(DocxParagraph paragraph, bool allowContextual = false) =>
+    internal static bool IsQualifiedExpansionSpacing(DocxParagraph paragraph, bool allowContextual = false) =>
         paragraph.SpacingBeforePoints is >= 0d and <= 8d &&
         paragraph.SpacingAfterPoints is >= 0d and <= 8d && (allowContextual || paragraph.Spacing.ContextualSpacing != true) &&
         paragraph.Spacing.BeforeLinesValue is null && paragraph.Spacing.AfterLinesValue is null &&
@@ -102,8 +103,8 @@ internal static class DocxMinimumBodyLineLeading
     private static bool IsTwipsToken(string? value, int maximum) => value is null ||
         int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0 && twips <= maximum;
 
-    private static bool IsQualifiedRun(DocxTextRun run, bool marker) =>
-        run.FontSize == 12d && !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
+    private static bool IsQualifiedRun(DocxTextRun run, bool marker, double fontSize) =>
+        run.FontSize == fontSize && !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
         !run.AllCaps && !run.SmallCaps && !run.Hidden && run.CharacterSpacingPoints == 0d &&
         run.HighlightValue is null && run.ShadingFillHex is null &&
         run.VerticalAlignment == (marker ? DocxRunVerticalAlignment.Superscript : DocxRunVerticalAlignment.Baseline) &&

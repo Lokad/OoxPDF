@@ -14,6 +14,9 @@ internal static class DocxPlainFootnoteKerning
             !HasSingleLineBody(layout)) return false;
         if (ordinary && (source.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) ||
             layout.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0))) return false;
+        bool elevenPointBody = DocxPlainElevenPointBody.IsEligible(source, layout);
+        var elevenPointParagraphs = elevenPointBody
+            ? new HashSet<DocxParagraph>(source.Paragraphs, ReferenceEqualityComparer.Instance) : null;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraph p in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {
@@ -26,9 +29,10 @@ internal static class DocxPlainFootnoteKerning
                 if (run.KerningMinimumHalfPointsValue is { } value &&
                     (!ushort.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out minimum) || minimum > 32767)) return false;
                 if (!run.Text.Any(char.IsLetter)) continue;
-                // Word controls qualify nominal advances at 12pt in these regular
-                // faces. Other sizes retain independent export-grid residuals.
-                if (run.FontSize != 12d || run.Bold || run.Italic || run.Underline || run.Strike || run.DoubleStrike ||
+                // Independently qualified 11pt body frames retain 12pt note
+                // stories. Other sizes keep their existing fallback policy.
+                if (run.FontSize != 12d && !(run.FontSize == 11d && elevenPointParagraphs?.Contains(p) == true) ||
+                    run.Bold || run.Italic || run.Underline || run.Strike || run.DoubleStrike ||
                     run.AllCaps || run.SmallCaps || run.CharacterSpacingPoints != 0d ||
                     run.VerticalAlignment != DocxRunVerticalAlignment.Baseline ||
                     ordinary && (run.Hidden || run.HighlightValue is not null || run.ShadingFillHex is not null) ||
