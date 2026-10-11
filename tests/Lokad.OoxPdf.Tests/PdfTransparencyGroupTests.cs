@@ -200,6 +200,48 @@ internal static class PdfTransparencyGroupTests
         TestAssert.Equal(1, Count(Encoding.ASCII.GetString(output.ToArray()), "/Subtype /Form"));
     }
 
+    public static void SharedTransparencyGroupsRetainFullInvocationDepthLimit()
+    {
+        var leaf = new PdfTransparencyGroup(Bounds, "0 g\n", [], [], []);
+        var shared = new PdfTransparencyGroup(Bounds, "/Child Do\n", [], [], [new("Child", leaf)]);
+        var chain = shared;
+        for (int i = 0; i < PdfTransparencyGroup.MaxDepth - 2; i++)
+        {
+            chain = new PdfTransparencyGroup(Bounds, "/Child Do\n", [], [], [new("Child", chain)]);
+        }
+        PdfPage PageWith(PdfTransparencyGroup root) => new(100, 100, "/Short Do /Deep Do\n", [], [], [], [], [], [],
+            groups: [new("Short", shared), new("Deep", root)]);
+        Write([PageWith(chain)]);
+        var tooDeep = new PdfTransparencyGroup(Bounds, "/Child Do\n", [], [], [new("Child", chain)]);
+        using var output = new MemoryStream();
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [PageWith(tooDeep)], default));
+        TestAssert.Equal(0L, output.Length);
+    }
+
+    public static void SharedValidationDoesNotMergeSeparateResourceNamespaces()
+    {
+        var valid = new PdfTransparencyGroup(Bounds, "/Gs1 gs\n", [new("Gs1", .5, .5, null)], [], []);
+        var invalid = new PdfTransparencyGroup(Bounds, "/Gs1 gs\n", [], [], []);
+        var page = new PdfPage(100, 100, "/Valid Do /Invalid Do\n", [], [], [], [], [], [],
+            groups: [new("Valid", valid), new("Invalid", invalid)]);
+        using var output = new MemoryStream();
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [page], default));
+        TestAssert.Equal(0L, output.Length);
+    }
+
+    public static void GraphicsBuilderRejectsStrayRestoreBeforeChangingContent()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.FillRectangle(0, 0, 10, 10);
+        string before = graphics.ToString();
+        TestAssert.Throws<InvalidDataException>(graphics.RestoreState);
+        TestAssert.Equal(before, graphics.ToString());
+        TestAssert.Equal(0, graphics.StateDepth);
+        graphics.SaveState();
+        graphics.RestoreState();
+        PdfContentValidator.ValidatePage(Page(graphics), 0, default);
+    }
+
     public static void TransparencyGroupsStreamingStagingReleasesEarlierPayloadOwners()
     {
         WeakReference? earlier = null;

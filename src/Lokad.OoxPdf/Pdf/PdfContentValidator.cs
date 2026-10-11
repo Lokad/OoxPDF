@@ -32,10 +32,14 @@ internal static class PdfContentValidator
             new HashSet<string>(page.Patterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)).Concat(page.ShadingPatterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName))), StringComparer.Ordinal),
             cancellationToken);
 
-        var active = new HashSet<PdfTransparencyGroup>();
-        foreach (PdfTransparencyGroupResource group in page.Groups)
+        if (page.Groups.Count != 0)
         {
-            ValidateGroup(group.Group, pageIndex, 1, active, cancellationToken);
+            var active = new HashSet<PdfTransparencyGroup>();
+            var validatedHeights = new Dictionary<PdfTransparencyGroup, int>();
+            foreach (PdfTransparencyGroupResource group in page.Groups)
+            {
+                ValidateGroup(group.Group, pageIndex, 1, active, validatedHeights, cancellationToken);
+            }
         }
 
         foreach (PdfTilingPatternResource pattern in page.Patterns)
@@ -45,9 +49,21 @@ internal static class PdfContentValidator
         }
     }
 
-    private static void ValidateGroup(PdfTransparencyGroup group, int pageIndex, int depth, HashSet<PdfTransparencyGroup> active, CancellationToken cancellationToken)
+    private static int ValidateGroup(PdfTransparencyGroup group, int pageIndex, int depth,
+        HashSet<PdfTransparencyGroup> active, Dictionary<PdfTransparencyGroup, int> validatedHeights,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        // A shared immutable Form has one local resource namespace. Validate it
+        // once per page, but still check every invocation's full nesting depth.
+        if (validatedHeights.TryGetValue(group, out int height))
+        {
+            if (depth + height - 1 > PdfTransparencyGroup.MaxDepth)
+            {
+                throw new InvalidDataException("PDF transparency group nesting exceeds its supported depth.");
+            }
+            return height;
+        }
         if (depth > PdfTransparencyGroup.MaxDepth || !active.Add(group))
         {
             throw new InvalidDataException("PDF transparency group nesting is cyclic or exceeds its supported depth.");
@@ -71,11 +87,14 @@ internal static class PdfContentValidator
             new HashSet<string>(group.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(group.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
             new HashSet<string>(group.ShadingPatterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)), StringComparer.Ordinal), cancellationToken);
+        height = 1;
         foreach (PdfTransparencyGroupResource child in group.Groups)
         {
-            ValidateGroup(child.Group, pageIndex, depth + 1, active, cancellationToken);
+            height = Math.Max(height, 1 + ValidateGroup(child.Group, pageIndex, depth + 1, active, validatedHeights, cancellationToken));
         }
         active.Remove(group);
+        validatedHeights.Add(group, height);
+        return height;
     }
 
     private static void ValidateMaskGroups(IReadOnlyList<PdfExtGStateResource> states, IReadOnlyList<PdfTransparencyGroupResource> groups)

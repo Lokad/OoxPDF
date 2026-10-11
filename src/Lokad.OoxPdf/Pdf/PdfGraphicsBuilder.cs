@@ -154,11 +154,12 @@ internal sealed class PdfGraphicsBuilder
 
     public void RestoreState()
     {
-        builder.AppendLine("Q");
-        if (stateDepth > 0)
+        if (stateDepth == 0)
         {
-            stateDepth--;
+            throw new InvalidDataException("PDF graphics state cannot be restored without a matching save.");
         }
+        builder.AppendLine("Q");
+        stateDepth--;
     }
 
     public void RestoreToStateDepth(int targetDepth)
