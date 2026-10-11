@@ -286,7 +286,9 @@ internal sealed partial class DocxReader
                 foreach (XElement mark in storyElement.Descendants(WordprocessingNamespace + (storyElementName + "Ref")).ToArray())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    mark.ReplaceWith(new XElement(WordprocessingNamespace + "t", label));
+                    var text = new XElement(WordprocessingNamespace + "t", label);
+                    text.AddAnnotation(AutomaticNoteStoryMarker.Instance);
+                    mark.ReplaceWith(text);
                 }
             }
             DocxRelatedStory story = ReadRelatedStory(kind, part.Name, storyElement, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
@@ -322,6 +324,11 @@ internal sealed partial class DocxReader
         }
 
         return stories;
+    }
+
+    private sealed class AutomaticNoteStoryMarker
+    {
+        internal static readonly AutomaticNoteStoryMarker Instance = new();
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.

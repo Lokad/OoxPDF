@@ -27,10 +27,11 @@ internal static class DocxCompleteEndnoteKerning
             if (story.Id is null || story.Paragraphs.Count != 1 || !owners.TryGetValue(story, out int page) ||
                 !pageById.TryAdd(story.Id, page)) return false;
             DocxParagraph paragraph = story.Paragraphs[0];
-            // Automatic marks lose their XML element identity during reading. The
-            // qualified superscript frame keeps their runs unchanged; baseline
-            // marks retain the original policy until separately proven.
+            // Explicit reader ownership admits baseline automatic marks without
+            // inferring a marker from its font, text or size. Keep the previously
+            // qualified superscript frame and its existing custom-mark fallback.
             if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || paragraph.Runs.Count == 0 ||
+                !paragraph.Runs[0].IsAutomaticNoteStoryMarker &&
                 paragraph.Runs[0].VerticalAlignment != DocxRunVerticalAlignment.Superscript) return false;
             var runs = paragraph.Runs.ToArray();
             bool changed = false;
@@ -38,7 +39,7 @@ internal static class DocxCompleteEndnoteKerning
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxTextRun run = runs[i];
-                if (run.VerticalAlignment != DocxRunVerticalAlignment.Baseline || run.Text.Length == 0) continue;
+                if (run.IsAutomaticNoteStoryMarker || run.VerticalAlignment != DocxRunVerticalAlignment.Baseline || run.Text.Length == 0) continue;
                 if (!DocxKerningThreshold.TryResolve(run, out bool enabled)) return false;
                 bool nominalAdvances = !enabled || OfficePdfTextEmissionProfile.FontSize(run.FontSize) != run.FontSize;
                 if (enabled == run.PairKerningEnabled && nominalAdvances == run.UseLogicalSizeForPdfAdvances) continue;

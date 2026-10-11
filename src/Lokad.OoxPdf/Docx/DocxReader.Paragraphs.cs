@@ -466,7 +466,7 @@ internal sealed partial class DocxReader
 
             if (placeholder is null &&
                 fieldInstruction is null &&
-                run.Elements().Any(IsInlineReferenceElement))
+                run.Elements().Any(child => IsInlineReferenceElement(child) || child.Annotation<AutomaticNoteStoryMarker>() is not null))
             {
                 AddOrderedRunTextAndReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions);
             }
@@ -570,6 +570,7 @@ internal sealed partial class DocxReader
                     string childText = ReadRunTextChild(child);
                     if (childText.Length != 0)
                     {
+                        int markerRunsBefore = runs.Count;
                         AddComplexFieldText(
                             childText,
                             currentSourceRunIndex,
@@ -579,6 +580,7 @@ internal sealed partial class DocxReader
                             revision,
                             revisions,
                             ref currentPageInstructionSeen);
+                        RetainAutomaticNoteStoryMarker(child, markerRunsBefore);
                     }
                 }
 
@@ -861,6 +863,7 @@ internal sealed partial class DocxReader
                             textOffset,
                             revision,
                             revisions);
+                        RetainAutomaticNoteStoryMarker(child, runsBefore);
                         int addedRuns = runs.Count - runsBefore;
                         foreach (DocxComplexFieldState field in resultFields)
                         {
@@ -874,6 +877,13 @@ internal sealed partial class DocxReader
 
                 childIndex++;
             }
+        }
+
+        void RetainAutomaticNoteStoryMarker(XElement child, int runsBefore)
+        {
+            if (child.Annotation<AutomaticNoteStoryMarker>() is null) return;
+            for (int i = runsBefore; i < runs.Count; i++)
+                runs[i] = runs[i] with { IsAutomaticNoteStoryMarker = true };
         }
 
         void AddInlineReferences(

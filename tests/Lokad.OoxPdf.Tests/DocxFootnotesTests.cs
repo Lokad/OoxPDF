@@ -1879,6 +1879,79 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxAutomaticNoteStoryMarkerRetainsExactXmlOwnership()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool field in new[] { false, true })
+        {
+            DocxDocument source = ReadSectionNumberingFixture(kind, (_, _, parts) =>
+            {
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                XElement mark = notes.Descendants(NoteWord + kind + "Ref").First();
+                XElement run = mark.Parent!;
+                XElement props = run.Element(NoteWord + "rPr")!;
+                props.Element(NoteWord + "vertAlign")?.Remove();
+                props.Add(new XElement(NoteWord + "vertAlign", new XAttribute(NoteWord + "val", "baseline")));
+                mark.AddBeforeSelf(new XElement(NoteWord + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), "pre "));
+                mark.AddAfterSelf(new XElement(NoteWord + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " tail 105"));
+                if (field)
+                {
+                    props.AddAfterSelf(new XElement(NoteWord + "fldChar", new XAttribute(NoteWord + "fldCharType", "begin")),
+                        new XElement(NoteWord + "instrText", " REF markerRole "),
+                        new XElement(NoteWord + "fldChar", new XAttribute(NoteWord + "fldCharType", "separate")));
+                    run.Add(new XElement(NoteWord + "fldChar", new XAttribute(NoteWord + "fldCharType", "end")));
+                }
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+            });
+            DocxRelatedStory story = source.RelatedStories.First(s => s.IsNormalStoryType);
+            DocxTextRun marker = story.Paragraphs[0].Runs.Single(r => r.IsAutomaticNoteStoryMarker);
+            string label = source.Paragraphs.SelectMany(p => p.InlineReferences).Single(r => r.Id == story.Id).DisplayText!;
+            TestAssert.Equal(label, marker.Text);
+            TestAssert.Equal(4, marker.SourceTextOffsetInRun);
+            TestAssert.Equal(DocxRunVerticalAlignment.Baseline, marker.VerticalAlignment);
+            DocxTextRun[] neighbors = story.Paragraphs[0].Runs.Where(r => r.SourceRunIndex == marker.SourceRunIndex && !r.IsAutomaticNoteStoryMarker).ToArray();
+            TestAssert.Equal("pre  tail 105", string.Concat(neighbors.Select(r => r.Text)));
+            TestAssert.True(neighbors.All(r => r.SourceTextOffsetInRun == 0 || r.SourceTextOffsetInRun == 4 + label.Length),
+                "Only the explicit automatic element owns a marker role; adjacent text retains exact source offsets.");
+            TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).All(r => !r.IsAutomaticNoteStoryMarker),
+                "Related-story marker metadata does not change body-reference ownership.");
+        }
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            DocxDocument custom = ReadCustomMarkFixture(kind, "*");
+            DocxRelatedStory story = custom.RelatedStories.Single(s => s.IsNormalStoryType && s.Id == "37");
+            TestAssert.True(story.Paragraphs.SelectMany(p => p.Runs).All(r => !r.IsAutomaticNoteStoryMarker),
+                "Authored custom text never inherits an automatic marker role from its style or value.");
+        }
+    }
+
+    public static void DocxCompleteEndnoteKerningPreservesBaselineAutomaticMarkerOwners()
+    {
+        DocxDocument source = ReadDocumentEndnoteFlowFixture(0, 0);
+        source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                Runs = [p.Runs[0] with { VerticalAlignmentValue = "baseline", KerningMinimumHalfPointsValue = "broken" },
+                    p.Runs[1] with { KerningMinimumHalfPointsValue = "0", PairKerningEnabled = true }],
+            })).ToArray(),
+        } : s).ToArray() };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+        TestAssert.True(DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
+            "Explicit automatic marker ownership admits the complete baseline frame through the shared rule.");
+        foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
+        {
+            TestAssert.True(ReferenceEquals(pair.First.Paragraphs[0].Runs[0], pair.Second.Paragraphs[0].Runs[0]),
+                "Baseline automatic markers preserve exact run ownership, raw threshold and advance policy.");
+            TestAssert.True(!pair.Second.Paragraphs[0].Runs[1].PairKerningEnabled && pair.Second.Paragraphs[0].Runs[1].UseLogicalSizeForPdfAdvances,
+                "Only the regular note text receives the shared resolved threshold and nominal advances.");
+        }
+        DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
+        TestAssert.True(DocxCompleteEndnoteKerning.HasStablePages(final, pages, default), "The owned retry preserves complete note pages.");
+    }
+
     public static void DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners()
     {
         foreach ((double size, string? minimum, bool enabled, bool nominalAdvances) in new (double, string?, bool, bool)[]
@@ -1962,7 +2035,7 @@ internal static class DocxFootnotesTests
             {
                 BodyElements = [new DocxParagraphElement(paragraph with
                 {
-                    Runs = [paragraph.Runs[0] with { VerticalAlignmentValue = "baseline" }, paragraph.Runs[1]],
+                    Runs = [paragraph.Runs[0] with { VerticalAlignmentValue = "baseline", IsAutomaticNoteStoryMarker = false }, paragraph.Runs[1]],
                 })],
             } : s).ToArray() },
             plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with

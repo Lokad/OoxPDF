@@ -366,6 +366,9 @@ internal sealed record DocxTextRun(
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
     public string? KerningMinimumHalfPointsValue { get; init; }
     public bool PairKerningEnabled { get; init; } = true;
+    // Retained from an explicit footnoteRef/endnoteRef in the related story;
+    // ordinary text and custom marks never acquire this role from their value/style.
+    public bool IsAutomaticNoteStoryMarker { get; init; }
     // Set only on a qualified Word-compatible body clone; source metadata stays unchanged.
     public bool UseLogicalSizeForPdfAdvances { get; init; }
 
