@@ -473,7 +473,8 @@ internal sealed partial class DocxRenderer
         // R06.2 repagination control: at most two full layouts per conversion (first pass
         // plus one conditional displaced pass; no loop), and page/content charges apply
         // once per emitted final page in RenderParagraphs, never per pass.
-        DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels, useCompleteFootnoteReserve);
+        DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels,
+            useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
         DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer);
         // Maps stay dense: explicitly unconstrained pages record zero so the

@@ -49,7 +49,7 @@ internal static class DocxSpacedWrappedFootnoteTests
     public static void DocxSpacedWrappedAfterRetainsUnqualifiedSpacingFallbacks()
     {
         Action<XDocument>[] exclusions = [
-            xml => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "before", "80"),
+            xml => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "before", "180"),
             xml => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "after", "180"),
             xml => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "afterLines", "100"),
             xml => xml.Descendants(W + "spacing").First().SetAttributeValue(W + "afterAutospacing", "1"),

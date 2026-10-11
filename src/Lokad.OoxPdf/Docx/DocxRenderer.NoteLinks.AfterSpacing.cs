@@ -14,22 +14,31 @@ internal sealed partial class DocxRenderer
             context.WordCompatiblePrintScale != 1d || fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.HasCompleteWrappedNoteOwners(document, layout)) return candidates;
 
-        // A complete source-owned wrapped frame assigns its after-gap to the
-        // final visible line. Break-spill rows do not own visible note markers.
+        // Complete source owners assign the consumed before-gap to the first
+        // visible line and after-gap to the last. Break-spill rows own neither.
+        var firstLines = new Dictionary<DocxParagraph, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
         var finalLines = new Dictionary<DocxParagraph, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
         foreach (var page in layout.Pages)
         foreach (var line in page.Items.OfType<DocxTextLineLayout>())
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (line.SourceParagraph is { } paragraph && line.Segments.Any(s => s.Role == DocxTextSegmentRole.Text))
+            {
+                firstLines.TryAdd(paragraph, line);
                 finalLines[paragraph] = line;
+            }
         }
         foreach (var (paragraph, line) in finalLines)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (paragraph.InlineReferences.Count == 1 && paragraph.SpacingAfterPoints > 0d &&
+            if (paragraph.InlineReferences.Count == 1 &&
+                (paragraph.SpacingBeforePoints > 0d || paragraph.SpacingAfterPoints > 0d) &&
                 line.BodyLineBoxHeightPoints is > 0d && line.BodyLineBoxBaselineInsetPoints is not null)
-                candidates[paragraph] = new NoteReferenceSpacing(0d, paragraph.SpacingAfterPoints, line);
+            {
+                var first = firstLines[paragraph];
+                double before = Math.Max(0d, (first.AppliedBeforeSpacing ?? 0d) - (first.PendingAfterSpacing ?? 0d));
+                candidates[paragraph] = new NoteReferenceSpacing(before, paragraph.SpacingAfterPoints, line);
+            }
         }
         return candidates;
     }

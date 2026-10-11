@@ -215,6 +215,7 @@ internal sealed partial class DocxLayoutEngine
             effective.Spacing.LineRuleValue is null &&
             effective.LineSpacingPoints is null;
     }
+    private readonly OoxPdfDocxMarkupGeometryMode requestedGeometryMode;
     private readonly bool reserveMarkupMargin;
     private readonly double paragraphSpacingScale;
     private readonly bool scaleBaselineOffsetTransitions;
@@ -259,8 +260,9 @@ internal sealed partial class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> ResolvedColumnWidths);
 
-    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, bool useCompleteFootnoteReserve = false)
+    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, bool useCompleteFootnoteReserve = false, OoxPdfDocxMarkupGeometryMode? requestedGeometryMode = null)
     {
+        this.requestedGeometryMode = requestedGeometryMode ?? markupGeometryMode;
         reserveMarkupMargin = markupGeometryMode is OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin or OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         paragraphSpacingScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
             ? wordCompatiblePrintScale
@@ -312,6 +314,8 @@ internal sealed partial class DocxLayoutEngine
         bool activeColumnHasContent = false;
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
+        bool plainPageStartFrame = requestedGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && reservePrintScale == 1d &&
+            DocxPlainBodyFrame.IsEligible(document);
         bool hasSimpleScaledBodyFrame =
             scaleBaselineOffsetTransitions && paragraphSpacingScale < 1d &&
             document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0 &&
@@ -1247,6 +1251,18 @@ internal sealed partial class DocxLayoutEngine
             DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
             RegisterInFlightFootnotesForSourceBlock(elementIndex);
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
+            if (plainPageStartFrame && pages.Count != 0 &&
+                !HasCurrentColumnContent() && elementIndex > 0 &&
+                document.BodyElements[elementIndex - 1] is DocxPageBreakElement explicitBreak &&
+                DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(paragraph) &&
+                paragraph.KeepRules.KeepNext != true && paragraph.KeepRules.KeepLines != true)
+            {
+                DocxParagraph? predecessor = elementIndex > 1 &&
+                    document.BodyElements[elementIndex - 2] is DocxParagraphElement preceding ? preceding.Paragraph : null;
+                if (predecessor is null || DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(predecessor))
+                    spacingProfile = ResolveExplicitPageStartSpacing(spacingProfile, explicitBreak.SourceKind,
+                        predecessor?.SpacingAfterPoints ?? 0d);
+            }
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
             double paragraphFontSize = GetParagraphFontSize(paragraph);

@@ -342,6 +342,24 @@ internal sealed partial class DocxLayoutEngine
         paragraph.ListLabel is null && paragraph.Hyperlinks.Count == 0 &&
         paragraph.Runs.All(r => !r.Text.Contains('\n') && !r.Text.Contains('\r') && !r.Text.Contains('\t'));
 
+    private static DocxParagraphSpacingProfile ResolveExplicitPageStartSpacing(
+        DocxParagraphSpacingProfile spacing, DocxBreakSourceKind breakKind, double precedingAfter)
+    {
+        // Word consumes the whole before-gap after a run page break. A paragraph
+        // page break retains only its contribution beyond the preceding after-gap.
+        // Keep authored before/after metadata; only consumed advance changes.
+        return breakKind switch
+        {
+            DocxBreakSourceKind.RunBreak => spacing with { AppliedBeforeSpacing = 0d, PendingAfterSpacing = 0d },
+            DocxBreakSourceKind.PageBreakBefore => spacing with
+            {
+                AppliedBeforeSpacing = Math.Max(0d, spacing.ParagraphBeforeSpacing - precedingAfter),
+                PendingAfterSpacing = 0d
+            },
+            _ => spacing
+        };
+    }
+
     private static DocxParagraphSpacingProfile ResolveParagraphSpacingProfile(
         DocxParagraph? previousParagraph,
         DocxParagraph paragraph,

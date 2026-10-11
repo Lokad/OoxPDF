@@ -9,6 +9,7 @@ internal static class TestCatalog
     public static IReadOnlyList<TestCase> All { get; } =
     [
         .. FromType("api", typeof(PublicApiTests)),
+        .. FromType("docx-page", typeof(DocxExplicitPageStartSpacingTests)),
         .. FromType("docx-page", typeof(DocxSpacedWrappedFootnoteTests)),
         .. FromType("docx-page", typeof(DocxMixedWrappedFootnoteTests)),
         .. FromType("fonts", typeof(FontProgramCacheTests)),

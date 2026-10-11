@@ -1,0 +1,38 @@
+{
+  "id": "docx-ladder-04-note-wrapped-calibri-before-four-early",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-wrapped-calibri-before-four-early.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "footnote",
+    "numbering",
+    "each-page",
+    "wrapped-body",
+    "calibri",
+    "kerning",
+    "mixed-thresholds",
+    "page-start",
+    "before-spacing",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 0.42,
+    "minStructuralSimilarity": 0.8,
+    "minForegroundRecall": 0.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0055,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_FOOTNOTE"
+    ]
+  },
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_FOOTNOTE"
+  ]
+}
