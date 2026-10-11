@@ -392,7 +392,7 @@ internal sealed partial class DocxRenderer
             var adjustedFonts = PrepareFontResources(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
             if (adjustedLayout.Pages.Count == first.Pages.Count && DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) &&
-                DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages))
+                (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages)))
             {
                 document = adjusted;
                 fonts = adjustedFonts;

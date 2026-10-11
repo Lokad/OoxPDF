@@ -9,7 +9,11 @@ internal static class DocxPlainFootnoteKerning
     {
         adjusted = source;
         pages = new Dictionary<string, int>();
-        if (!DocxPageFootnoteNumbering.IsEligibleDocument(source) || !HasSingleLineBody(layout)) return false;
+        bool ordinary = source.RelatedStories.Count == 0 && source.Paragraphs.All(p => p.InlineReferences.Count == 0);
+        if (!(ordinary ? DocxPlainBodyFrame.IsEligible(source) : DocxPageFootnoteNumbering.IsEligibleDocument(source)) ||
+            !HasSingleLineBody(layout)) return false;
+        if (ordinary && (source.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) ||
+            layout.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0))) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraph p in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {
@@ -27,6 +31,7 @@ internal static class DocxPlainFootnoteKerning
                 if (run.FontSize != 12d || run.Bold || run.Italic || run.Underline || run.Strike || run.DoubleStrike ||
                     run.AllCaps || run.SmallCaps || run.CharacterSpacingPoints != 0d ||
                     run.VerticalAlignment != DocxRunVerticalAlignment.Baseline ||
+                    ordinary && (run.Hidden || run.HighlightValue is not null || run.ShadingFillHex is not null) ||
                     !new[] { "Calibri", "Arial", "Times New Roman" }.Contains(run.FontFamily, StringComparer.OrdinalIgnoreCase)) return false;
                 // Measured Word output treats absent/zero as disabled and a
                 // positive threshold as enabled only when the nominal size meets it.
@@ -38,7 +43,7 @@ internal static class DocxPlainFootnoteKerning
             if (changed) replacements.Add(p, p with { Runs = runs });
         }
         if (replacements.Count == 0 ||
-            !DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out _, out pages)) return false;
+            !ordinary && !DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out _, out pages)) return false;
         DocxParagraph Replace(DocxParagraph p) => replacements.GetValueOrDefault(p, p);
         IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements) =>
             elements.Select(e => e is DocxParagraphElement p ? p with { Paragraph = Replace(p.Paragraph) } : e).ToArray();

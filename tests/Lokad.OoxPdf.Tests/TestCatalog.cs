@@ -36,6 +36,7 @@ internal static class TestCatalog
         .. FromType("docx-page", typeof(DocxPageFootnoteNumberingTests)),
         .. FromType("docx-page", typeof(DocxCompleteFootnoteReserveTests)),
         .. FromType("docx-text", typeof(DocxPlainFootnoteKerningTests)),
+        .. FromType("docx-text", typeof(DocxOrdinaryKerningTests)),
         .. FromType("docx-text", typeof(DocxMinimumBodyLineLeadingTests)),
         .. FromType("docx-text", typeof(DocxMinimumBodyFlowTests)),
         .. FromType("docx-text", typeof(DocxLineSpacingInheritanceTests)),
