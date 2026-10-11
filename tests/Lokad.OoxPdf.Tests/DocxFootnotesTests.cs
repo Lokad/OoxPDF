@@ -1724,8 +1724,6 @@ internal static class DocxFootnotesTests
                 Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "atLeast" } })],
             p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { LineRuleValue = "broken" } })],
             p => [new DocxParagraphElement(p), new DocxParagraphElement(p)],
-            p => [new DocxParagraphElement(p with { Runs = [p.Runs[0], p.Runs[1] with
-                { Text = string.Join(' ', Enumerable.Repeat("Wrapped endnote content", 30)) }] })],
         })
         {
             DocxDocument document = ReadDocumentEndnoteFlowFixture(0, 0);
@@ -1833,6 +1831,64 @@ internal static class DocxFootnotesTests
                 TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - notes[i].TopY) < .000001d,
                     "An unqualified frame keeps the established destination and visible placement.");
         }
+    }
+
+    public static void DocxDocumentEndnoteWrappedBoundariesUseCompleteParagraphFlow()
+    {
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        foreach ((int before, int after) in new[] { (0, 0), (0, 4), (4, 0), (8, 8), (8, 4), (4, 8) })
+        {
+            DocxDocument document = ReadWrappedDocumentEndnoteFlowFixture(before, after, 8);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
+                .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+            TestAssert.Equal(2, notes.Length);
+            TestAssert.True(notes.All(n => n.TextLineCount > 1 && n.ContentTopOffset == 0d),
+                "The shared flow owns complete wrapped paragraphs rather than partial story slices.");
+            double overlap = Math.Min(before, after);
+            TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height + overlap) < .000001d,
+                "Wrapped notes use the final paragraph after-gap and next paragraph before-gap.");
+            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            TestAssert.Equal(2, links.Length);
+            TestAssert.True(Math.Abs(links[0].Destination!.Value.Top!.Value - notes[0].TopY) < .000001d,
+                "The first wrapped note retains its source-owned destination top.");
+            TestAssert.True(Math.Abs(links[1].Destination!.Value.Top!.Value - notes[1].TopY + overlap) < .000001d,
+                "Wrapped note destinations consume the same source-owned collapsed boundary.");
+        }
+    }
+
+    public static void DocxDocumentEndnoteWrappedBoundariesRetainContinuationTargets()
+    {
+        DocxDocument document = ReadWrappedDocumentEndnoteFlowFixture(8, 4, 200);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxLayoutSnapshot snapshot = renderer.InspectLayout(document);
+        var notes = snapshot.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+            .Where(s => s.Kind == "Endnote" && s.Type is null).Select(s => (Note: s, Page: index))).ToArray();
+        TestAssert.True(notes.Any(n => n.Note.ContentTopOffset > 0d),
+            "The oversized complete block must retain continued story slices.");
+        var firstPlacements = notes.GroupBy(n => n.Note.Id).Select(g => g.First()).ToArray();
+        var links = renderer.RenderBlankPages(document, null, default).SelectMany(p => p.Annotations).ToArray();
+        TestAssert.Equal(2, firstPlacements.Length);
+        TestAssert.Equal(2, links.Length);
+        for (int i = 0; i < links.Length; i++)
+        {
+            TestAssert.Equal(firstPlacements[i].Page, links[i].Destination!.Value.PageIndex);
+            TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - firstPlacements[i].Note.TopY) < .000001d,
+                "Continued notes navigate to their established first placement without a complete-block offset.");
+        }
+    }
+
+    private static DocxDocument ReadWrappedDocumentEndnoteFlowFixture(int before, int after, int repeats)
+    {
+        DocxDocument source = ReadDocumentEndnoteFlowFixture(before, after);
+        return source with { RelatedStories = source.RelatedStories.Select(s => s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                Runs = [p.Runs[0], p.Runs[1] with { Text = string.Join(' ', Enumerable.Repeat("Public wrapped endnote content.", repeats)) }],
+            })).ToArray(),
+        } : s).ToArray() };
     }
 
     private static DocxDocument ReadDocumentEndnoteFlowFixture(int before, int after)

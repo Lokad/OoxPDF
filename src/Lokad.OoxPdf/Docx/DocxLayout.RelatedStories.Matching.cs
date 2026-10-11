@@ -248,9 +248,9 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxRelatedStoryLayout story in stories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (story.Story.BodyElements.Count != 1 || story.TextLines.Count != 1 ||
+            if (story.Story.BodyElements.Count != 1 || story.TextLines.Count == 0 ||
                 story.Story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !ReferenceEquals(story.TextLines[0].SourceParagraph, paragraph) ||
+                story.TextLines.Any(line => !ReferenceEquals(line.SourceParagraph, paragraph)) ||
                 !IsPlainContextualSpacingParagraph(paragraph) || paragraph.Spacing.ContextualSpacing == true ||
                 paragraph.LineSpacingPoints is not null || paragraph.Spacing.LineRuleValue is not (null or "auto") ||
                 paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true ||
@@ -269,7 +269,7 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveDocumentEndnoteBoundaryOverlap(
         DocxRelatedStoryLayout previous, DocxRelatedStoryLayout current)
     {
-        DocxTextLineLayout previousLine = previous.TextLines[0], currentLine = current.TextLines[0];
+        DocxTextLineLayout previousLine = previous.TextLines[^1], currentLine = current.TextLines[0];
         double after = previousLine.ParagraphAfterSpacing ?? previousLine.SourceParagraph!.SpacingAfterPoints;
         DocxParagraphSpacingProfile combined = ResolveParagraphSpacingProfile(previousLine.SourceParagraph,
             currentLine.SourceParagraph!, after, 1d, resolveContextualContributions: false);
