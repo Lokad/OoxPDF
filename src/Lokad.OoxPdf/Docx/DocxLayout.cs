@@ -1174,7 +1174,8 @@ internal sealed partial class DocxLayoutEngine
                     // An admitted complete three-row table fits at its original
                     // origin. Later rows must not recheck its full height against
                     // the remaining space after preceding rows have advanced.
-                    if (bodyTable.Rows.Count == 3 && frame.Context.AutomaticTopRowContentClip)
+                    if (bodyTable.Rows.Count == 3 && (frame.Context.AutomaticTopRowContentClip ||
+                        frame.Context.DeclaredTopRowContentClips.Any(admitted => admitted)))
                         qualifiedThreeRowTopFrame = frame;
                     return frame;
                 }

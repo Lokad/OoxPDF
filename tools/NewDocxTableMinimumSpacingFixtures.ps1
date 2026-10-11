@@ -1,7 +1,8 @@
 # Generates public plain table-grid minimum-height probes from the note-spacing seed.
-param([string] $OutputDirectory, [switch] $ParagraphPositionProbes, [switch] $DeclaredRowHeightProbes, [switch] $MixedParagraphFontProbes, [switch] $AlignedCellSpacingProbes, [switch] $AlignedCellMarginProbes, [switch] $CellContentClipProbes, [switch] $AutomaticCellSpacingProbes, [switch] $AutomaticContentClipProbes, [switch] $DoubleCellBorderProbes, [switch] $AutomaticGridProbes, [switch] $MixedHeightGridProbes, [switch] $TopCellContentClipProbes, [switch] $DeclaredTopRowProbes, [switch] $MixedTopRowProbes, [switch] $OneColumnMixedTopRowProbes, [switch] $ThreeRowMixedTopProbes)
+param([string] $OutputDirectory, [switch] $ParagraphPositionProbes, [switch] $DeclaredRowHeightProbes, [switch] $MixedParagraphFontProbes, [switch] $AlignedCellSpacingProbes, [switch] $AlignedCellMarginProbes, [switch] $CellContentClipProbes, [switch] $AutomaticCellSpacingProbes, [switch] $AutomaticContentClipProbes, [switch] $DoubleCellBorderProbes, [switch] $AutomaticGridProbes, [switch] $MixedHeightGridProbes, [switch] $TopCellContentClipProbes, [switch] $DeclaredTopRowProbes, [switch] $MixedTopRowProbes, [switch] $OneColumnMixedTopRowProbes, [switch] $ThreeRowMixedTopProbes, [switch] $UniformThreeRowTopProbes)
 $ErrorActionPreference = 'Stop'
-if (@($ParagraphPositionProbes, $DeclaredRowHeightProbes, $MixedParagraphFontProbes, $AlignedCellSpacingProbes, $AlignedCellMarginProbes, $CellContentClipProbes, $AutomaticCellSpacingProbes, $AutomaticContentClipProbes, $DoubleCellBorderProbes, $AutomaticGridProbes, $MixedHeightGridProbes, $TopCellContentClipProbes, $DeclaredTopRowProbes, $MixedTopRowProbes, $OneColumnMixedTopRowProbes, $ThreeRowMixedTopProbes | Where-Object { $_ }).Count -gt 1) { throw 'Choose one probe family' }
+if (@($ParagraphPositionProbes, $DeclaredRowHeightProbes, $MixedParagraphFontProbes, $AlignedCellSpacingProbes, $AlignedCellMarginProbes, $CellContentClipProbes, $AutomaticCellSpacingProbes, $AutomaticContentClipProbes, $DoubleCellBorderProbes, $AutomaticGridProbes, $MixedHeightGridProbes, $TopCellContentClipProbes, $DeclaredTopRowProbes, $MixedTopRowProbes, $OneColumnMixedTopRowProbes, $ThreeRowMixedTopProbes, $UniformThreeRowTopProbes | Where-Object { $_ }).Count -gt 1) { throw 'Choose one probe family' }
+if ($UniformThreeRowTopProbes) { $TopCellContentClipProbes = $true }
 if ($ThreeRowMixedTopProbes) { $MixedTopRowProbes = $true }
 if ($OneColumnMixedTopRowProbes) { $MixedTopRowProbes = $true }
 if ($MixedTopRowProbes) { $AutomaticContentClipProbes = $true }
@@ -28,7 +29,7 @@ $word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 $marginProbes = $AlignedCellMarginProbes -or $CellContentClipProbes -or $AutomaticCellSpacingProbes -or $AutomaticContentClipProbes
 $alignedProbes = $AlignedCellSpacingProbes -or $marginProbes
 $positionProbes = $ParagraphPositionProbes -or $DeclaredRowHeightProbes -or $MixedParagraphFontProbes -or $alignedProbes
-$specs = if ($ThreeRowMixedTopProbes) { @(@('declared-middle', 3, 1), @('automatic-middle', 3, 2)) } elseif ($OneColumnMixedTopRowProbes) { @(@('auto-first', 2, 1), @('declared-first', 2, 1)) } elseif ($MixedTopRowProbes) { @(@('auto-first', 2, 2), @('declared-first', 2, 2)) } elseif ($DeclaredTopRowProbes) { @(@('row', 1, 1), @('grid', 2, 2)) } elseif ($TopCellContentClipProbes) { @(@('row', 1, 1), @('grid', 2, 2)) } elseif ($AutomaticGridProbes) { @(@('center', 2, 2), @('bottom', 2, 2)) } elseif ($CellContentClipProbes -or $AutomaticCellSpacingProbes -or $AutomaticContentClipProbes) { @(@('center', 1, 1), @('bottom', 1, 1)) } elseif ($alignedProbes) { @(@('center', 1, 1), @('bottom', 2, 2)) } elseif ($MixedParagraphFontProbes) { @(@('family', 2, 2), @('size', 1, 1)) } elseif ($DeclaredRowHeightProbes) { @(@('exact', 1, 1), @('minimum', 2, 2)) } elseif ($ParagraphPositionProbes) { @(@('first', 1, 1), @('middle', 2, 2), @('single', 2, 2)) } else { @(@('row', 1, 2), @('grid', 2, 2)) }
+$specs = if ($UniformThreeRowTopProbes) { @(@('automatic', 3, 1), @('declared', 3, 2)) } elseif ($ThreeRowMixedTopProbes) { @(@('declared-middle', 3, 1), @('automatic-middle', 3, 2)) } elseif ($OneColumnMixedTopRowProbes) { @(@('auto-first', 2, 1), @('declared-first', 2, 1)) } elseif ($MixedTopRowProbes) { @(@('auto-first', 2, 2), @('declared-first', 2, 2)) } elseif ($DeclaredTopRowProbes) { @(@('row', 1, 1), @('grid', 2, 2)) } elseif ($TopCellContentClipProbes) { @(@('row', 1, 1), @('grid', 2, 2)) } elseif ($AutomaticGridProbes) { @(@('center', 2, 2), @('bottom', 2, 2)) } elseif ($CellContentClipProbes -or $AutomaticCellSpacingProbes -or $AutomaticContentClipProbes) { @(@('center', 1, 1), @('bottom', 1, 1)) } elseif ($alignedProbes) { @(@('center', 1, 1), @('bottom', 2, 2)) } elseif ($MixedParagraphFontProbes) { @(@('family', 2, 2), @('size', 1, 1)) } elseif ($DeclaredRowHeightProbes) { @(@('exact', 1, 1), @('minimum', 2, 2)) } elseif ($ParagraphPositionProbes) { @(@('first', 1, 1), @('middle', 2, 2), @('single', 2, 2)) } else { @(@('row', 1, 2), @('grid', 2, 2)) }
 foreach ($spec in $specs) {
     $entries = @{} + $source
     [xml] $document = $entries['word/document.xml']
@@ -59,7 +60,14 @@ foreach ($spec in $specs) {
     for ($ri = 1; $ri -le $spec[1]; $ri++) {
         $row = $document.CreateElement('w', 'tr', $word)
         [void] $table.AppendChild($row)
-        if ($ThreeRowMixedTopProbes) {
+        if ($UniformThreeRowTopProbes) {
+            $properties = $document.CreateElement('w', 'trPr', $word)
+            $height = $document.CreateElement('w', 'trHeight', $word)
+            [void] $height.SetAttribute('val', $word, $(if ($spec[0] -eq 'automatic') { '6400' } else { '3000' }))
+            [void] $height.SetAttribute('hRule', $word, $(if ($spec[0] -eq 'automatic') { 'auto' } else { 'atLeast' }))
+            [void] $properties.AppendChild($height)
+            [void] $row.AppendChild($properties)
+        } elseif ($ThreeRowMixedTopProbes) {
             $rule = if ($spec[0] -eq 'declared-middle') { if ($ri -eq 1) { 'auto' } elseif ($ri -eq 2) { 'exact' } else { $null } } else { if ($ri -eq 1) { 'exact' } elseif ($ri -eq 2) { 'auto' } else { 'atLeast' } }
             if ($rule) {
                 $properties = $document.CreateElement('w', 'trPr', $word)
@@ -173,7 +181,7 @@ foreach ($spec in $specs) {
                     $text.InnerText = if ($index -eq 0) { "R${ri}C${ci} public preceding." } else { "R${ri}C${ci} public grid minimum paragraph followed by public words " + ('minimum line ' * 15) }
                 }
                 if ($AutomaticContentClipProbes) {
-                    $repeatCount = if ($ThreeRowMixedTopProbes) { if ($index -eq 1) { 4 } else { 2 } } elseif ($AutomaticGridProbes -or $TopCellContentClipProbes -or $DeclaredTopRowProbes -or $MixedTopRowProbes) { if ($index -eq 1) { 8 } else { 4 } } else { if ($index -eq 1) { 14 } else { 6 } }
+                    $repeatCount = if ($UniformThreeRowTopProbes -or $ThreeRowMixedTopProbes) { if ($index -eq 1) { 4 } else { 2 } } elseif ($AutomaticGridProbes -or $TopCellContentClipProbes -or $DeclaredTopRowProbes -or $MixedTopRowProbes) { if ($index -eq 1) { 8 } else { 4 } } else { if ($index -eq 1) { 14 } else { 6 } }
                     $text.InnerText = $prefix + ' ' + ('gypsy glyph overflow ' * $repeatCount)
                 }
                 [void] $run.AppendChild($text)
@@ -196,7 +204,7 @@ foreach ($spec in $specs) {
             }
         }
     }
-    if ($ThreeRowMixedTopProbes) {
+    if ($UniformThreeRowTopProbes -or $ThreeRowMixedTopProbes) {
         foreach ($paragraph in @($document.SelectNodes('/w:document/w:body/w:p', $ns))) {
             $bodyText = -join @($paragraph.SelectNodes('.//w:t', $ns) | ForEach-Object { $_.InnerText })
             if ($bodyText -match '^(Charlie|Delta)\b') { [void] $paragraph.ParentNode.RemoveChild($paragraph) }
@@ -206,6 +214,6 @@ foreach ($spec in $specs) {
         }
     }
     $entries['word/document.xml'] = $document.OuterXml
-    $name = if ($ThreeRowMixedTopProbes) { 'table-three-row-mixed-top-content-clip-' + $spec[0] + '.docx' } elseif ($OneColumnMixedTopRowProbes) { 'table-one-column-mixed-top-margin-content-clip-' + $spec[0] + '.docx' } elseif ($MixedTopRowProbes) { 'table-mixed-top-margin-content-clip-' + $spec[0] + '.docx' } elseif ($DeclaredTopRowProbes) { 'table-declared-top-margin-content-clip-' + $spec[0] + '.docx' } elseif ($TopCellContentClipProbes) { 'table-top-automatic-content-clip-' + $spec[0] + '.docx' } elseif ($MixedHeightGridProbes) { 'table-mixed-height-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticGridProbes) { 'table-automatic-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DoubleCellBorderProbes) { 'table-double-border-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticContentClipProbes) { 'table-automatic-content-clip-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticCellSpacingProbes) { 'table-automatic-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($CellContentClipProbes) { 'table-margin-content-clip-' + $spec[0] + '.docx' } elseif ($AlignedCellMarginProbes) { 'table-aligned-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($alignedProbes) { 'table-aligned-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($MixedParagraphFontProbes) { 'table-mixed-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DeclaredRowHeightProbes) { 'table-declared-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($ParagraphPositionProbes) { 'table-paragraph-minimum-line-spacing-' + $spec[0] + '.docx' } else { 'table-minimum-line-spacing-' + $spec[0] + '.docx' }
+    $name = if ($UniformThreeRowTopProbes) { 'table-uniform-three-row-top-content-clip-' + $spec[0] + '.docx' } elseif ($ThreeRowMixedTopProbes) { 'table-three-row-mixed-top-content-clip-' + $spec[0] + '.docx' } elseif ($OneColumnMixedTopRowProbes) { 'table-one-column-mixed-top-margin-content-clip-' + $spec[0] + '.docx' } elseif ($MixedTopRowProbes) { 'table-mixed-top-margin-content-clip-' + $spec[0] + '.docx' } elseif ($DeclaredTopRowProbes) { 'table-declared-top-margin-content-clip-' + $spec[0] + '.docx' } elseif ($TopCellContentClipProbes) { 'table-top-automatic-content-clip-' + $spec[0] + '.docx' } elseif ($MixedHeightGridProbes) { 'table-mixed-height-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticGridProbes) { 'table-automatic-grid-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DoubleCellBorderProbes) { 'table-double-border-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticContentClipProbes) { 'table-automatic-content-clip-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($AutomaticCellSpacingProbes) { 'table-automatic-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($CellContentClipProbes) { 'table-margin-content-clip-' + $spec[0] + '.docx' } elseif ($AlignedCellMarginProbes) { 'table-aligned-margin-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($alignedProbes) { 'table-aligned-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($MixedParagraphFontProbes) { 'table-mixed-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($DeclaredRowHeightProbes) { 'table-declared-minimum-line-spacing-' + $spec[0] + '.docx' } elseif ($ParagraphPositionProbes) { 'table-paragraph-minimum-line-spacing-' + $spec[0] + '.docx' } else { 'table-minimum-line-spacing-' + $spec[0] + '.docx' }
     New-ZipPackage -Path (Join-Path $OutputDirectory $name) -Entries $entries
 }

@@ -15,7 +15,7 @@ internal sealed partial class DocxLayoutEngine
             table.Rows.Any(row => row.HeightPoints is > 0d &&
                 (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(row.HeightRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase)));
-        return (table.Rows.Count <= 2 || mixedRows) && table.Rows.All(row =>
+        return table.Rows.All(row =>
             row.Cells.Count == table.ColumnWidthsPoints.Count &&
             (mixedRows && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) ||
             row.HeightPoints is > 0d && double.IsFinite(row.HeightPoints.Value) &&
@@ -24,13 +24,7 @@ internal sealed partial class DocxLayoutEngine
             row.Cells.All(cell => cell.VerticalAlignment == DocxTableCellVerticalAlignment.Top &&
                 (cell.VerticalAlignmentValue is null ||
                     string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) &&
-                // Wider border bands accumulate unqualified error across
-                // three rows and retain their earlier fallback.
-                cell.Borders.All(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) <= 0d ||
-                    (table.Rows.Count <= 2 || DocxTableBorderGeometry.ResolveVisibleWidth(border) <=
-                        (border.UseDoubleBandWidth ? 2.88d : .96d)) &&
-                    (string.Equals(border.Value, "single", StringComparison.OrdinalIgnoreCase) ||
-                    border.UseDoubleBandWidth && string.Equals(border.Value, "double", StringComparison.OrdinalIgnoreCase))) &&
+                IsEligibleTopContentCellBorders(cell, limitWidth: table.Rows.Count == 3) &&
                 IsEligibleTableMinimumCell(table, row, cell, measurer) &&
                 cell.Paragraphs.All(p => p.Runs.Count != 0) &&
                 cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
@@ -46,7 +40,6 @@ internal sealed partial class DocxLayoutEngine
         if (table.Rows.Any(row => HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) &&
             IsEligibleDeclaredTopContentTable(table, measurer, fixedScale))
             return true;
-        if (table.Rows.Count > 2) return false;
         // Top masks have independent admission. They never enable the
         // centered/bottom paragraph-slot alignment calculation.
         return table.Rows.All(row =>
@@ -55,9 +48,19 @@ internal sealed partial class DocxLayoutEngine
             row.Cells.All(cell => cell.VerticalAlignment == DocxTableCellVerticalAlignment.Top &&
                 (cell.VerticalAlignmentValue is null ||
                     string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) &&
+                (table.Rows.Count <= 2 || IsEligibleTopContentCellBorders(cell, limitWidth: true)) &&
                 IsEligibleTableMinimumCell(table, row, cell, measurer) &&
                 cell.Paragraphs.All(p => p.Runs.Count != 0) &&
                 cell.Paragraphs.Any(p => p.EffectiveProperties.LineSpacingPoints is > 0d &&
                     string.Equals(p.EffectiveProperties.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))));
     }
+
+    private static bool IsEligibleTopContentCellBorders(DocxTableCell cell, bool limitWidth) =>
+        cell.Borders.All(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) <= 0d ||
+            // Wider bands accumulate unqualified error over three rows.
+            (!limitWidth || DocxTableBorderGeometry.ResolveVisibleWidth(border) <=
+                (border.UseDoubleBandWidth ? 2.88d : .96d)) &&
+            (string.Equals(border.Value, "single", StringComparison.OrdinalIgnoreCase) ||
+                border.UseDoubleBandWidth && string.Equals(border.Value, "double", StringComparison.OrdinalIgnoreCase)));
+
 }
