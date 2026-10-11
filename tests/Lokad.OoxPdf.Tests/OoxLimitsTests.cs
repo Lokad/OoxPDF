@@ -1275,12 +1275,9 @@ internal static class OoxLimitsTests
             File.WriteAllBytes(pathA, TestFontBuilder.CreateTestFont());
             File.WriteAllBytes(pathB, TestFontBuilder.CreateCffKindFont("OtherFamily"));
             long cap = Math.Max(new FileInfo(pathA).Length, new FileInfo(pathB).Length);
-            var sources = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
-            var retention = new WindowsFontResolver.RetainedFileTracker(cap, sources);
+            var retention = new FontProgramCache(cap, StringComparer.OrdinalIgnoreCase);
             var sourceA = new FileFontProgramSource(pathA, retention);
             var sourceB = new FileFontProgramSource(pathB, retention);
-            sources[pathA] = sourceA;
-            sources[pathB] = sourceB;
 
             byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
             sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
@@ -1325,14 +1322,10 @@ internal static class OoxLimitsTests
             File.WriteAllBytes(pathB, bySize[1]);
             File.WriteAllBytes(pathC, bySize[2]);
             long cap = (long)bySize[0].Length + bySize[1].Length;
-            var sources = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
-            var retention = new WindowsFontResolver.RetainedFileTracker(cap, sources);
+            var retention = new FontProgramCache(cap, StringComparer.OrdinalIgnoreCase);
             var sourceA = new FileFontProgramSource(pathA, retention);
             var sourceB = new FileFontProgramSource(pathB, retention);
             var sourceC = new FileFontProgramSource(pathC, retention);
-            sources[pathA] = sourceA;
-            sources[pathB] = sourceB;
-            sources[pathC] = sourceC;
 
             byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
             sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();

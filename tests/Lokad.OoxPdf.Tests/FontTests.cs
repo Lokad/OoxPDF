@@ -1593,13 +1593,20 @@ internal static class FontTests
         try
         {
             var source = new FileFontProgramSource(path);
+            using var start = new ManualResetEventSlim();
             Task<ReadOnlyMemory<byte>>[] reads = Enumerable.Range(0, 16)
-                .Select(_ => source.GetBytesAsync(CancellationToken.None).AsTask())
+                .Select(_ => Task.Run(() =>
+                {
+                    start.Wait();
+                    return source.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult();
+                }))
                 .ToArray();
+            start.Set();
             Task.WaitAll(reads);
             foreach (Task<ReadOnlyMemory<byte>> read in reads)
             {
                 TestAssert.True(read.Result.Span.SequenceEqual(bytes), "Concurrent first-reads must all observe the same bytes.");
+                TestAssert.True(read.Result.Equals(reads[0].Result), "Concurrent first-reads must share the loaded array.");
             }
         }
         finally

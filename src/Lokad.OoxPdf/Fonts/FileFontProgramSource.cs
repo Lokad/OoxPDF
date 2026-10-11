@@ -10,23 +10,19 @@ public sealed class FileFontProgramSource : IFontProgramSource
     internal const long MaxLocalFontBytes = 64L * 1024L * 1024L;
 
     private readonly string path;
-    private readonly WindowsFontResolver.RetainedFileTracker? retention;
+    private readonly FontProgramCache cache;
     private readonly object sync = new();
-    private ReadOnlyMemory<byte>? cachedBytes;
 
     public FileFontProgramSource(string path)
-        : this(path, retention: null)
+        : this(path, new FontProgramCache(MaxLocalFontBytes, StringComparer.OrdinalIgnoreCase))
     {
     }
 
-    // R13: snapshot-tracked sources report loads and accesses so the shared
-    // snapshot can cap aggregate retained bytes with LRU eviction. Untracked
-    // sources (including all direct public uses) behave exactly as before.
-    internal FileFontProgramSource(string path, WindowsFontResolver.RetainedFileTracker? retention)
+    internal FileFontProgramSource(string path, FontProgramCache cache)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         this.path = System.IO.Path.GetFullPath(path);
-        this.retention = retention;
+        this.cache = cache;
     }
 
     internal static void CheckLocalFontSize(long byteCount, string path)
@@ -43,37 +39,24 @@ public sealed class FileFontProgramSource : IFontProgramSource
 
     public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
     {
-        if (cachedBytes is ReadOnlyMemory<byte> bytes)
+        if (cache.TryGet(path, out ReadOnlyMemory<byte> bytes))
         {
-            retention?.NoteAccessed(path);
             return ValueTask.FromResult(bytes);
         }
 
         ct.ThrowIfCancellationRequested();
         lock (sync)
         {
-            if (cachedBytes is ReadOnlyMemory<byte> cached)
+            if (cache.TryGet(path, out ReadOnlyMemory<byte> cached))
             {
-                retention?.NoteAccessed(path);
                 return ValueTask.FromResult(cached);
             }
 
             ct.ThrowIfCancellationRequested();
             CheckLocalFontSize(new FileInfo(path).Length, path);
             byte[] loaded = File.ReadAllBytes(path);
-            cachedBytes = loaded;
-            retention?.NoteLoaded(path, loaded.LongLength);
+            cache.Store(path, loaded);
             return ValueTask.FromResult((ReadOnlyMemory<byte>)loaded);
         }
-    }
-
-    // R13: clears retained bytes so the owning snapshot stays bounded. Arrays
-    // already handed out stay alive (and valid: files are immutable program
-    // sources) via GC; the next access simply re-reads through the per-source
-    // lock. Takes no lock itself so snapshot eviction under its own lock cannot
-    // deadlock against in-progress loads.
-    internal void EvictCachedBytes()
-    {
-        cachedBytes = null;
     }
 }

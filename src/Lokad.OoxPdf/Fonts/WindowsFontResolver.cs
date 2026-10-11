@@ -35,73 +35,6 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     // evicted files from local disk on demand.
     internal const long MaxSnapshotRetainedBytes = 512L * 1024L * 1024L;
 
-    // R13: snapshot-owned LRU over per-file program sources. Mirrors the pack
-    // eviction contract: retained entries move to the back on every access,
-    // overflow evicts from the front, evicted bytes re-read on demand, and arrays
-    // already handed out stay alive via GC. Eviction takes no source locks, so it
-    // cannot deadlock against in-progress loads.
-    internal sealed class RetainedFileTracker
-    {
-        private readonly long maxTotalBytes;
-        private readonly IReadOnlyDictionary<string, FileFontProgramSource> sourcesByPath;
-        private readonly object sync = new();
-        private readonly Dictionary<string, long> retainedSizes = new(StringComparer.OrdinalIgnoreCase);
-        private readonly LinkedList<string> retainedOrder = new();
-        private long retainedBytes;
-
-        internal RetainedFileTracker(long maxTotalBytes, IReadOnlyDictionary<string, FileFontProgramSource> sourcesByPath)
-        {
-            this.maxTotalBytes = maxTotalBytes;
-            this.sourcesByPath = sourcesByPath;
-        }
-
-        internal void NoteLoaded(string path, long byteCount)
-        {
-            lock (sync)
-            {
-                if (retainedSizes.TryGetValue(path, out long previous))
-                {
-                    retainedBytes -= previous;
-                    retainedOrder.Remove(path);
-                }
-
-                retainedSizes[path] = byteCount;
-                retainedOrder.AddLast(path);
-                retainedBytes += byteCount;
-
-                while (retainedBytes > maxTotalBytes && retainedOrder.Count > 0)
-                {
-                    string eldest = retainedOrder.First!.Value;
-                    if (retainedOrder.Count == 1)
-                    {
-                        // Only the just-loaded source is left; a single file always
-                        // fits by the per-file cap, so this is unreachable in practice.
-                        break;
-                    }
-
-                    retainedOrder.RemoveFirst();
-                    retainedBytes -= retainedSizes.GetValueOrDefault(eldest);
-                    retainedSizes.Remove(eldest);
-                    if (sourcesByPath.TryGetValue(eldest, out FileFontProgramSource? source))
-                    {
-                        source.EvictCachedBytes();
-                    }
-                }
-            }
-        }
-
-        internal void NoteAccessed(string path)
-        {
-            lock (sync)
-            {
-                if (retainedSizes.ContainsKey(path))
-                {
-                    retainedOrder.Remove(path);
-                    retainedOrder.AddLast(path);
-                }
-            }
-        }
-    }
     private readonly Dictionary<FontRequest, FontFaceResolution> requestCache = new(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
 
     private sealed record DiscoverySnapshot(
@@ -145,7 +78,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             {
                 var fonts = new List<FontFaceResolution>();
                 var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
-                var retention = new RetainedFileTracker(MaxSnapshotRetainedBytes, sourcesByPath);
+                var retention = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
                 foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)

@@ -568,12 +568,9 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         private readonly string packId;
         private readonly Uri packRootUri;
         private readonly HttpClient httpClient;
-        private readonly long maxTotalBytes;
+        private readonly FontProgramCache cache;
         private readonly object sync = new();
         private readonly Dictionary<string, IFontProgramSource> sources = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, long> retainedSizes = new(StringComparer.Ordinal);
-        private readonly LinkedList<string> retainedOrder = new();
-        private long retainedBytes;
 
         internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient)
             : this(packId, packRootUri, httpClient, MaxTotalFontPackBytes)
@@ -585,7 +582,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             this.packId = packId;
             this.packRootUri = packRootUri;
             this.httpClient = httpClient;
-            this.maxTotalBytes = maxTotalBytes;
+            cache = new FontProgramCache(maxTotalBytes, StringComparer.Ordinal);
         }
 
         public IFontProgramSource Create(FontPackFile file)
@@ -602,56 +599,11 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             }
         }
 
-        // R13: cache hits refresh recency so the order evicts least-recently-used
-        // files instead of least-recently-downloaded ones. Entries missing from
-        // the retained set (never downloaded or already evicted) are ignored.
-        internal void NoteAccessed(string relativePath)
-        {
-            lock (sync)
-            {
-                if (retainedSizes.ContainsKey(relativePath))
-                {
-                    retainedOrder.Remove(relativePath);
-                    retainedOrder.AddLast(relativePath);
-                }
-            }
-        }
+        internal long RetainedBytes => cache.RetainedBytes;
 
-        internal void NoteDownloaded(string relativePath, long byteCount)
-        {
-            lock (sync)
-            {
-                if (retainedSizes.TryGetValue(relativePath, out long previous))
-                {
-                    retainedBytes -= previous;
-                    retainedOrder.Remove(relativePath);
-                }
+        internal bool TryGet(string relativePath, out ReadOnlyMemory<byte> bytes) => cache.TryGet(relativePath, out bytes);
 
-                retainedSizes[relativePath] = byteCount;
-                retainedOrder.AddLast(relativePath);
-                retainedBytes += byteCount;
-
-                while (retainedBytes > maxTotalBytes && retainedOrder.Count > 0)
-                {
-                    string eldest = retainedOrder.First!.Value;
-                    if (retainedOrder.Count == 1)
-                    {
-                        // Only the just-downloaded source is left; a single font always
-                        // fits by the per-font cap, so this is unreachable in practice.
-                        break;
-                    }
-
-                    retainedOrder.RemoveFirst();
-                    retainedBytes -= retainedSizes.GetValueOrDefault(eldest);
-                    retainedSizes.Remove(eldest);
-                    if (sources.TryGetValue(eldest, out IFontProgramSource? source) &&
-                        source is OoxPdfFontPackProgramSource programSource)
-                    {
-                        programSource.EvictCachedBytes();
-                    }
-                }
-            }
-        }
+        internal void Store(string relativePath, byte[] bytes) => cache.Store(relativePath, bytes);
     }
 
     private sealed class OoxPdfFontPackProgramSource(
@@ -662,24 +614,21 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         FontPackFileSource owner) : IFontProgramSource
     {
         private readonly SemaphoreSlim gate = new(1, 1);
-        private ReadOnlyMemory<byte>? cachedBytes;
 
         public string StableId => "ooxpdf-font-pack:" + packId + ":" + file.Sha256;
 
         public async ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
         {
-            if (cachedBytes is ReadOnlyMemory<byte> cached)
+            if (owner.TryGet(file.RelativePath, out ReadOnlyMemory<byte> cached))
             {
-                owner.NoteAccessed(file.RelativePath);
                 return cached;
             }
 
             await gate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                if (cachedBytes is ReadOnlyMemory<byte> rechecked)
+                if (owner.TryGet(file.RelativePath, out ReadOnlyMemory<byte> rechecked))
                 {
-                    owner.NoteAccessed(file.RelativePath);
                     return rechecked;
                 }
 
@@ -691,22 +640,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
                     ct).ConfigureAwait(false);
 
                 ValidateFontBytes(file, bytes);
-                cachedBytes = bytes;
-                owner.NoteDownloaded(file.RelativePath, bytes.LongLength);
+                owner.Store(file.RelativePath, bytes);
                 return bytes;
             }
             finally
             {
                 gate.Release();
             }
-        }
-
-        // Clears retained bytes so the owner aggregate stays bounded. Arrays already
-        // handed out stay alive (and valid: every download is hash-verified) via GC;
-        // the next access simply downloads again through the per-source gate.
-        internal void EvictCachedBytes()
-        {
-            cachedBytes = null;
         }
 
         private static void ValidateFontBytes(FontPackFile file, byte[] bytes)
