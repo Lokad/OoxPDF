@@ -122,7 +122,7 @@ internal static class DocxTextEmissionPlanner
             resolvedSource)
         {
             PairKerningEnabled = style.PairKerningEnabled,
-            NominalAdvanceFontSize = style.UseLogicalSizeForPdfAdvances && layoutFontSize == 11d
+            NominalAdvanceFontSize = style.UseLogicalSizeForPdfAdvances
                 ? layoutFontSize : null
         };
     }

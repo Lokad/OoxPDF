@@ -46,6 +46,7 @@ internal sealed record DocxPlacedRelatedStoryLayout(
     // A collapsed boundary belongs to both paragraphs' flow, but the note's
     // navigation target starts below the shared overlap. Layout owns admission.
     internal double NoteDestinationTopOffset { get; init; }
+    internal bool UsesCompleteDocumentEndnoteFlow { get; init; }
 }
 
 internal sealed record DocxFloatingDrawingLayout(

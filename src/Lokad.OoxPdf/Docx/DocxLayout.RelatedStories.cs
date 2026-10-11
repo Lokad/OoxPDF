@@ -368,6 +368,7 @@ internal sealed partial class DocxLayoutEngine
                         activePlacedStories[^1] = activePlacedStories[^1] with
                         {
                             NoteDestinationTopOffset = boundaryOverlap,
+                            UsesCompleteDocumentEndnoteFlow = true,
                         };
                         documentEndPages[activePageIndex] = activePage with
                         {

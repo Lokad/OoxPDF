@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Lokad.OoxPdf.Docx;
 
 // These purposes preserve the existing source/derived policy distinction. The
@@ -20,11 +18,7 @@ internal static class DocxWrappedFootnoteFrame
     internal readonly record struct KerningPolicy(DocxBodyKerningKind Kind, bool PairsMatchThresholds, bool PairsDisabled);
 
     internal static bool TryGetMinimum(DocxTextRun run, out ushort minimum)
-    {
-        minimum = 0;
-        return run.KerningMinimumHalfPointsValue is not { } token ||
-            ushort.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out minimum) && minimum <= 32767;
-    }
+        => DocxKerningThreshold.TryGetMinimum(run, out minimum);
 
     internal static KerningPolicy ClassifyKerning(DocxDocument document)
     {

@@ -1879,6 +1879,112 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners()
+    {
+        foreach ((double size, string? minimum, bool enabled, bool nominalAdvances) in new (double, string?, bool, bool)[]
+        {
+            (10d, null, false, true), (12d, "0", false, true), (14d, "0", false, true),
+            (10d, "20", true, true), (12d, "24", true, false), (14d, "28", true, true),
+            (10d, "21", false, true), (12d, "25", false, true), (14d, "29", false, true),
+        })
+        {
+            DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(8, 4, 8);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Runs = p.Runs.Select(r => r.VerticalAlignment == DocxRunVerticalAlignment.Baseline ? r with
+                    {
+                        FontSize = size, KerningMinimumHalfPointsValue = minimum, PairKerningEnabled = !enabled,
+                    } : r).ToArray(),
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout first = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.True(DocxCompleteEndnoteKerning.TryCreateDocument(source, first, out DocxDocument adjusted, out var pages, default),
+                "An admitted complete paragraph resolves authored kerning against its nominal size.");
+            TestAssert.Equal(2, pages.Count);
+            TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
+                "Endnote correction preserves exact body owners and marker positions.");
+            foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
+            {
+                TestAssert.True(ReferenceEquals(pair.First.Paragraphs[0].Runs[0], pair.Second.Paragraphs[0].Runs[0]),
+                    "Automatic superscript marker runs preserve their source ownership and policy.");
+                DocxTextRun oldRun = pair.First.Paragraphs[0].Runs[1], newRun = pair.Second.Paragraphs[0].Runs[1];
+                TestAssert.Equal(minimum!, newRun.KerningMinimumHalfPointsValue!);
+                TestAssert.Equal(enabled, newRun.PairKerningEnabled);
+                TestAssert.Equal(oldRun with { PairKerningEnabled = enabled, UseLogicalSizeForPdfAdvances = nominalAdvances }, newRun);
+                TestAssert.Equal(!enabled, oldRun.PairKerningEnabled);
+            }
+            DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.True(DocxCompleteEndnoteKerning.HasStablePages(final, pages, default),
+                "The bounded retry retains the exact complete note-page mapping.");
+            TestAssert.True(!DocxCompleteEndnoteKerning.HasStablePages(final, new Dictionary<string, int>(), default),
+                "A changed ownership map cannot qualify the retry.");
+        }
+    }
+
+    public static void DocxCompleteEndnoteKerningUsesNominalAdvancesAcrossExportGrid()
+    {
+        var font = OpenTypeFont.Load(TestFontBuilder.CreateTestFont());
+        var embedded = PdfEmbeddedFont.Create(font, "AB".EnumerateRunes().Select(r => r.Value), default);
+        DocxTextRun source = ReadDocumentEndnoteFlowFixture(0, 0).RelatedStories.First(s => s.IsNormalStoryType).Paragraphs[0].Runs[1];
+        foreach ((double nominal, double physical) in new[] { (10d, 9.96d), (12d, 12d), (14d, 14.04d) })
+        foreach (bool pairs in new[] { false, true })
+        {
+            var style = source with { Text = "AB", FontSize = nominal, PairKerningEnabled = pairs,
+                UseLogicalSizeForPdfAdvances = true, CharacterSpacingPoints = 0d };
+            var plan = DocxTextEmissionPlanner.Create(style, nominal, 0d, false, DocxTextStateCharacterSpacingSource.None);
+            TestAssert.Equal(physical, plan.PdfFontSize);
+            TestAssert.Equal(nominal, plan.NominalAdvanceFontSize!.Value);
+            string payload = embedded.EncodeGlyphPositioningArray("AB", 0d, plan.PdfFontSize, true, pairs, plan.NominalAdvanceFontSize)!;
+            double adjustment = System.Text.RegularExpressions.Regex.Matches(payload, @"(?<= )-?(?:\d+(?:\.\d*)?|\.\d+)(?= )")
+                .Sum(m => double.Parse(m.Value, CultureInfo.InvariantCulture));
+            double expected = .600d * nominal - (pairs ? .050d * nominal : 0d) + .620d * physical;
+            double actual = 1.220d * physical - adjustment * physical / 1000d;
+            TestAssert.True(Math.Abs(actual - expected) < .00001d,
+                "Actual TJ keeps nominal preceding/pair advances and the final glyph's physical width on both sides of the export grid.");
+            var profile = DocxTextEmissionPlanner.MeasureAdvanceProfile("AB", embedded, 1.220d * nominal - (pairs ? .050d * nominal : 0d), plan);
+            TestAssert.True(Math.Abs(profile.PlannedEmittedAdvance - actual) < .00001d,
+                "Emission inspection predicts the real stream rather than only the layout estimate.");
+        }
+    }
+
+    public static void DocxCompleteEndnoteKerningRetainsMalformedAndUnqualifiedFallbacks()
+    {
+        DocxDocument plain = ReadWrappedDocumentEndnoteFlowFixture(8, 4, 8);
+        DocxRelatedStory first = plain.RelatedStories.First(s => s.IsNormalStoryType);
+        DocxParagraph paragraph = first.Paragraphs.Single();
+        foreach (DocxDocument source in new[]
+        {
+            plain with { HeaderParagraphs = [plain.Paragraphs[0]] },
+            ReadWrappedDocumentEndnoteFlowFixture(8, 4, 200),
+            plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
+            {
+                BodyElements = [new DocxParagraphElement(paragraph with
+                {
+                    Runs = [paragraph.Runs[0] with { VerticalAlignmentValue = "baseline" }, paragraph.Runs[1]],
+                })],
+            } : s).ToArray() },
+            plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
+            {
+                BodyElements = [new DocxParagraphElement(paragraph with
+                {
+                    Runs = [paragraph.Runs[0], paragraph.Runs[1] with { KerningMinimumHalfPointsValue = "broken" }],
+                })],
+            } : s).ToArray() },
+        })
+        {
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.True(!DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
+                "Unsupported ownership or thresholds retain the original document and layout policy.");
+        }
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxCompleteEndnoteKerning.TryCreateDocument(plain,
+            new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(plain, new DocxTests.FamilyWidthTextMeasurer(), default),
+            out _, out _, cancelled.Token));
+    }
+
     private static DocxDocument ReadWrappedDocumentEndnoteFlowFixture(int before, int after, int repeats)
     {
         DocxDocument source = ReadDocumentEndnoteFlowFixture(before, after);
