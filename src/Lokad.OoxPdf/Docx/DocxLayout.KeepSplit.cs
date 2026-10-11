@@ -304,7 +304,7 @@ internal sealed partial class DocxLayoutEngine
         double marginBottom,
         bool hasPageContent)
     {
-        if (paragraph.EffectiveProperties.KeepRules.WidowControl == false ||
+        if (!DocxParagraphFragmentPolicy.HasWidowControl(paragraph) ||
             lineCount <= 1 ||
             !hasPageContent)
         {
@@ -312,9 +312,8 @@ internal sealed partial class DocxLayoutEngine
         }
 
         int fittingLineCount = (int)Math.Floor(Math.Max(0d, cursorY - marginBottom) / lineHeight);
-        return fittingLineCount > 0 &&
-            fittingLineCount < lineCount &&
-            (fittingLineCount == 1 || lineCount - fittingLineCount == 1);
+        return DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lineCount, fittingLineCount) ||
+            DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lineCount, fittingLineCount);
     }
 
     private static string NormalizeContextualSpacingStyleId(string? styleId)

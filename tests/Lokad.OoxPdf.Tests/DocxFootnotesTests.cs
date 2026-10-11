@@ -2277,6 +2277,89 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxContinuedEndnoteWidowHeadsHonorDefaultOnAndOffWithoutChangingOwners()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        DocxDocument? control = null;
+        DocxPlacedRelatedStoryLayout? oldHead = null;
+        int oldPage = -1;
+        string? targetId = null;
+        for (int repeats = 120; repeats <= 340 && control is null; repeats++)
+        {
+            DocxDocument candidate = WithEndnoteWidowControl(ReadWrappedDocumentEndnoteFlowFixture(8, 4, repeats), false);
+            DocxLayout layout = engine.Create(candidate, measurer, default);
+            for (int page = 0; page < layout.Pages.Count && control is null; page++)
+            foreach (DocxPlacedRelatedStoryLayout placed in layout.Pages[page].PlacedRelatedStories)
+            {
+                if (!placed.StoryLayout.Story.IsNormalStoryType || placed.ContentTopOffset != 0d || placed.TextLines.Count != 1 ||
+                    layout.RelatedStories.Single(s => ReferenceEquals(s.Story, placed.StoryLayout.Story)).TextLines.Count <= 1) continue;
+                control = candidate; oldHead = placed; oldPage = page; targetId = placed.StoryLayout.Story.Id;
+                break;
+            }
+        }
+        TestAssert.True(control is not null && oldHead is not null && targetId is not null,
+            "The capacity scan finds a genuine one-line note head with authored widow control disabled.");
+        foreach (bool? widow in new bool?[] { null, true })
+        {
+            DocxDocument source = WithEndnoteWidowControl(control!, widow);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var first = layout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.Id == targetId && s.StoryLayout.Story.IsNormalStoryType)
+                .Select(s => (Story: s, Page: index))).First();
+            TestAssert.Equal(oldPage + 1, first.Page);
+            TestAssert.True(first.Story.TextLines.Count > 1 && first.Story.ContentTopOffset == 0d,
+                "Default and explicit-on widow rules move the complete head onto an empty continuation frame.");
+            TestAssert.Equal(oldHead!.NoteDestinationTopOffset, first.Story.NoteDestinationTopOffset);
+            TestAssert.True(source.BodyElements.Zip(control!.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
+                "Page-turn policy preserves source body and inline-reference owners.");
+            TestAssert.True(source.RelatedStories.Where(s => s.IsNormalStoryType).All(s => s.Paragraphs[0].KeepRules.WidowControl == widow),
+                "Layout never rewrites authored widow metadata.");
+        }
+    }
+
+    public static void DocxContinuedEndnoteWidowHeadsMakeProgressOnOneLineContinuationFrames()
+    {
+        DocxDocument source = WithEndnoteWidowControl(ReadWrappedDocumentEndnoteFlowFixture(0, 0, 20), true);
+        DocxPageSettings settings = source.PageSettings with { HeightValue = "1200", MarginTopValue = "200", MarginBottomValue = "200" };
+        source = source with { PageHeightPoints = 60d, MarginTopPoints = 10d, MarginBottomPoints = 10d,
+            PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
+            BodyElements = source.BodyElements.OfType<DocxParagraphElement>().Where(p => p.Paragraph.InlineReferences.Count != 0)
+                .Select(p => (DocxBodyElement)(p with { Paragraph = p.Paragraph with
+                {
+                    Runs = p.Paragraph.Runs.Select(r => r.VerticalAlignment == DocxRunVerticalAlignment.Baseline ? r with { Text = "body" } : r).ToArray(),
+                    SpacingBeforePoints = 0d, SpacingAfterPoints = 0d, LineSpacingPoints = 8d,
+                    Spacing = p.Paragraph.Spacing with { BeforeValue = "0", AfterValue = "0", LineRuleValue = "exact", LineValue = "160" },
+                } })).ToArray() };
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+        var stories = layout.RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+        var placements = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+        TestAssert.True(placements.Any(s => s.UsesPlainDocumentEndnoteTypography && s.TextLines.Count == 1),
+            "The deliberately short empty continuation frame exercises mandatory one-line progress.");
+        foreach (DocxRelatedStoryLayout story in stories)
+        {
+            var owned = placements.Where(p => ReferenceEquals(p.StoryLayout.Story, story.Story)).ToArray();
+            TestAssert.Equal(story.TextLines.Count, owned.Sum(p => p.TextLines.Count));
+            TestAssert.Equal(1, owned.Count(p => p.ContentTopOffset == 0d));
+            TestAssert.True(owned.All(p => p.Height >= 0d && double.IsFinite(p.TopY)),
+                "Every source line is staged once with finite bounded placement.");
+        }
+        TestAssert.True(layout.Pages.Count <= stories.Sum(s => s.TextLines.Count) + source.Paragraphs.Count + 2,
+            "A fresh frame cannot be skipped repeatedly for its inability to hold two lines.");
+    }
+
+    private static DocxDocument WithEndnoteWidowControl(DocxDocument source, bool? widow) => source with
+    {
+        RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                KeepRules = p.KeepRules with { WidowControl = widow, WidowControlValue = widow is null ? null : widow.Value ? "1" : "0" },
+            })).ToArray(),
+        } : s).ToArray(),
+    };
+
     private static DocxDocument ReadWrappedDocumentEndnoteFlowFixture(int before, int after, int repeats)
     {
         DocxDocument source = ReadDocumentEndnoteFlowFixture(before, after);

@@ -656,6 +656,22 @@ internal sealed partial class DocxLayoutEngine
             int remainingLines = storyLayout.TextLines.Count - lineIndex;
             double[]? fitAfters = printScale >= 1d ? lineAfters : null;
             (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
+            if (plainDocumentEndnoteTypography && lineIndex == 0 &&
+                DocxParagraphFragmentPolicy.HasOneLineHead(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount) &&
+                (activePage.Items.Count != 0 || activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType)))
+            {
+                if (stopAfterCurrentPage) return;
+                // The note head follows the body's default/on/off widow rule.
+                // An empty continuation page always makes progress, even when
+                // its frame can hold only one line. Preserve the source boundary
+                // contribution after the turn resets the page cursor.
+                MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories,
+                    ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
+                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage,
+                    ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes,
+                    continuationSeparatorLayout, separatorMeasurer, printScale) + noteDestinationTopOffset;
+                continue;
+            }
             if (lineIndex + takeCount >= storyLayout.TextLines.Count)
             {
                 takeHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight - consumedHeight), availableHeight);
