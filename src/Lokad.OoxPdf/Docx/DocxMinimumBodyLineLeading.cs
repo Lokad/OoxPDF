@@ -16,6 +16,7 @@ internal static class DocxMinimumBodyLineLeading
             (!ordinaryBody && !DocxPageFootnoteNumbering.TryCreateDocument(document, source, out _, out _))) return false;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
+        bool? ordinaryExpansionQualified = null;
         foreach (var line in source.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>())
         {
             if (line.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
@@ -23,7 +24,14 @@ internal static class DocxMinimumBodyLineLeading
             if (line.SourceParagraph is not { } paragraph) return false;
             bool marked = paragraph.InlineReferences.Count != 0;
             bool extended = marked || paragraph.SpacingBeforePoints != 0d || paragraph.SpacingAfterPoints != 0d;
-            if (extended && (ordinaryBody || line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph)) ||
+            if (ordinaryBody && extended)
+            {
+                // New spaced ordinary admissions qualify the complete visible
+                // frame once; legacy zero-spacing paragraphs keep their gates.
+                ordinaryExpansionQualified ??= IsQualifiedOrdinaryExpansion(document, line.StyleRun.FontFamily);
+                if (ordinaryExpansionQualified != true) return false;
+            }
+            if (extended && (line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph)) ||
                 line.LineHeight is not (>= 14d and <= 24d) ||
                 line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
                 line.FirstLineInsetPoints is not > 0d ||
@@ -64,6 +72,10 @@ internal static class DocxMinimumBodyLineLeading
             run.Text != reference.DisplayText || run.Text.Length == 0 || !run.Text.All(char.IsAsciiDigit))) return false;
         return IsQualifiedRun(run, marker);
     }
+
+    private static bool IsQualifiedOrdinaryExpansion(DocxDocument document, string family) =>
+        document.Paragraphs.All(p => IsQualifiedExpansionSpacing(p) && p.Runs.Where(r => r.Text.Length != 0).All(r =>
+            IsQualifiedRun(r, marker: false) && string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));
 
     private static bool IsQualifiedExpansionSpacing(DocxParagraph paragraph) =>
         paragraph.SpacingBeforePoints is >= 0d and <= 8d &&

@@ -1,0 +1,38 @@
+# Public ordinary minimum leading controls with direct and inherited gaps.
+param([string]$OutputDirectory)
+$ErrorActionPreference='Stop'
+$repo=Split-Path -Parent $PSScriptRoot
+$cases=Join-Path $repo tests/Lokad.OoxPdf.Tests/Cases
+if(!$OutputDirectory){$OutputDirectory=$cases}
+New-Item -ItemType Directory -Force $OutputDirectory|Out-Null
+. (Join-Path $PSScriptRoot ZipPackage.ps1)
+$word='http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+foreach($spec in @(@('ordinary-minimum-before-after-4',4,$false),@('ordinary-minimum-inherited-before-8',8,$true))){
+ $entries=@{}
+ $archive=[IO.Compression.ZipFile]::OpenRead((Join-Path $cases ordinary-minimum-line-20.docx))
+ try{foreach($entry in $archive.Entries){$reader=[IO.StreamReader]::new($entry.Open());try{$entries[$entry.FullName]=$reader.ReadToEnd()}finally{$reader.Dispose()}}}finally{$archive.Dispose()}
+ [xml]$document=$entries['word/document.xml']
+ $ns=[Xml.XmlNamespaceManager]::new($document.NameTable);$ns.AddNamespace('w',$word)
+ $paragraphs=@($document.SelectNodes('/w:document/w:body/w:p',$ns))
+ foreach($p in $paragraphs){
+  $spacing=$p.SelectSingleNode('w:pPr/w:spacing',$ns)
+  [void]$spacing.SetAttribute('before',$word,([int]$spec[1]*20).ToString([Globalization.CultureInfo]::InvariantCulture))
+  [void]$spacing.SetAttribute('after',$word,'80')
+ }
+ if($spec[2]){
+  foreach($p in $paragraphs){$sp=$p.SelectSingleNode('w:pPr/w:spacing',$ns);$sp.RemoveAttribute('before',$word);$sp.RemoveAttribute('after',$word)}
+  [xml]$styles=$entries['word/styles.xml']
+  $sn=[Xml.XmlNamespaceManager]::new($styles.NameTable);$sn.AddNamespace('w',$word)
+  $defaults=$styles.SelectSingleNode('/w:styles/w:docDefaults',$sn)
+  $pd=$defaults.SelectSingleNode('w:pPrDefault',$sn)
+  if(!$pd){$pd=$styles.CreateElement('w','pPrDefault',$word);[void]$defaults.AppendChild($pd)}
+  $pp=$pd.SelectSingleNode('w:pPr',$sn)
+  if(!$pp){$pp=$styles.CreateElement('w','pPr',$word);[void]$pd.AppendChild($pp)}
+  $sp=$pp.SelectSingleNode('w:spacing',$sn)
+  if(!$sp){$sp=$styles.CreateElement('w','spacing',$word);[void]$pp.AppendChild($sp)}
+  [void]$sp.SetAttribute('before',$word,'160');[void]$sp.SetAttribute('after',$word,'80')
+  $entries['word/styles.xml']=$styles.OuterXml
+ }
+ $entries['word/document.xml']=$document.OuterXml
+ New-ZipPackage -Path (Join-Path $OutputDirectory ($spec[0]+'.docx')) -Entries $entries
+}
