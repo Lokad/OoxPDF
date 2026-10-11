@@ -38,6 +38,7 @@ internal sealed partial class DocxReader
         string? HiddenValue,
         string? UnderlineColorHex)
     {
+        public string? KerningMinimumHalfPointsValue { get; init; }
         public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
@@ -68,7 +69,10 @@ internal sealed partial class DocxReader
                 other.SmallCapsValue ?? SmallCapsValue,
                 other.Hidden ?? Hidden,
                 other.HiddenValue ?? HiddenValue,
-                other.UnderlineColorHex ?? UnderlineColorHex);
+                other.UnderlineColorHex ?? UnderlineColorHex)
+            {
+                KerningMinimumHalfPointsValue = other.KerningMinimumHalfPointsValue ?? KerningMinimumHalfPointsValue
+            };
         }
     }
 

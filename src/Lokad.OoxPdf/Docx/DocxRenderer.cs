@@ -385,6 +385,20 @@ internal sealed partial class DocxRenderer
     {
         var fonts = PrepareFontResources(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
         var first = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken);
+        if (context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
+            fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
+            DocxPlainFootnoteKerning.TryCreateDocument(document, first, out var adjusted, out var originalPages))
+        {
+            var adjustedFonts = PrepareFontResources(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
+            var adjustedLayout = CreateCompleteNoteReservedLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
+            if (adjustedLayout.Pages.Count == first.Pages.Count && DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) &&
+                DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages))
+            {
+                document = adjusted;
+                fonts = adjustedFonts;
+                first = adjustedLayout;
+            }
+        }
         if (fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.TryCreateDocument(document, first, out var numbered, out var pages))
             return (document, fonts, first);

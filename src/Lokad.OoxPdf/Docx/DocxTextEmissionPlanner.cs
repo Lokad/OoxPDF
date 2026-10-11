@@ -9,7 +9,10 @@ internal readonly record struct DocxTextEmissionPlan(
     double PdfCharacterSpacing,
     double PositioningCharacterSpacing,
     bool CompensatePdfCharacterSpacing,
-    DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource);
+    DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource)
+{
+    public bool PairKerningEnabled { get; init; } = true;
+}
 
 internal enum DocxTextStateCharacterSpacingSource
 {
@@ -111,7 +114,10 @@ internal static class DocxTextEmissionPlanner
             pdfCharacterSpacing,
             positioningCharacterSpacing,
             compensatePdfCharacterSpacing,
-            resolvedSource);
+            resolvedSource)
+        {
+            PairKerningEnabled = style.PairKerningEnabled
+        };
     }
 
     public static DocxTextEmissionPlan CreateTerminalLineSpace(DocxTextRun style, double layoutFontSize, double fontScale = 1d)
@@ -296,7 +302,7 @@ internal static class DocxTextEmissionPlanner
     {
         int glyphCount = CountMappedGlyphs(text, embedded);
         int glyphGapCount = Math.Max(0, glyphCount - 1);
-        double naturalPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: true);
+        double naturalPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: plan.PairKerningEnabled);
         double unkernedPdfWidth = embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: false);
         double roundedPdfWidth = MeasureRoundedPdfWidth(text, embedded, plan.PdfFontSize);
         double kerningAdjustmentTotal = naturalPdfWidth - unkernedPdfWidth;
@@ -331,7 +337,7 @@ internal static class DocxTextEmissionPlanner
             plannedEmittedResidualPerGap);
     }
 
-    public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded)
+    public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded, bool pairKerningEnabled = true)
     {
         const ulong fnvOffset = 14695981039346656037UL;
         const ulong fnvPrime = 1099511628211UL;
@@ -363,7 +369,7 @@ internal static class DocxTextEmissionPlanner
             }
 
             ushort advance = embedded.Font.GetAdvanceWidth(glyph);
-            short kerning = previousGlyph == 0 ? (short)0 : embedded.Font.GetKerning(previousGlyph, glyph);
+            short kerning = previousGlyph == 0 || !pairKerningEnabled ? (short)0 : embedded.Font.GetKerning(previousGlyph, glyph);
             if (previousGlyph != 0)
             {
                 glyphPairCount++;
@@ -479,11 +485,11 @@ internal static class DocxTextEmissionPlanner
     public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(
         string text,
         PdfEmbeddedFont? embedded,
-        PdfFallbackFont? fallback)
+        PdfFallbackFont? fallback, bool pairKerningEnabled = true)
     {
         if (embedded is not null)
         {
-            return CreateGlyphAdvanceSignature(text, embedded);
+            return CreateGlyphAdvanceSignature(text, embedded, pairKerningEnabled);
         }
 
         const ulong fnvOffset = 14695981039346656037UL;

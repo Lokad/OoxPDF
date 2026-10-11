@@ -362,6 +362,8 @@ internal sealed record DocxTextRun(
     {
     }
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
+    public string? KerningMinimumHalfPointsValue { get; init; }
+    public bool PairKerningEnabled { get; init; } = true;
 
     // Typed field identity for PAGE/NUMPAGES placeholders. Null for ordinary text, including
     // literal {PAGE}/{NUMPAGES} content, so downstream substitution touches only actual fields.
@@ -404,7 +406,11 @@ internal sealed record DocxTextRun(
         Hidden,
         HiddenValue,
         UnderlineColorHex,
-        StyleResolution);
+        StyleResolution)
+    {
+        KerningMinimumHalfPointsValue = KerningMinimumHalfPointsValue,
+        PairKerningEnabled = PairKerningEnabled
+    };
 
     public DocxRunVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
 
@@ -451,6 +457,8 @@ internal sealed record DocxEffectiveRunProperties(
     string? UnderlineColorHex,
     DocxRunStyleResolution StyleResolution)
 {
+    public string? KerningMinimumHalfPointsValue { get; init; }
+    public bool PairKerningEnabled { get; init; } = true;
     public DocxRunVerticalAlignment VerticalAlignment => DocxTextRun.ParseVerticalAlignment(VerticalAlignmentValue);
 }
 
@@ -528,6 +536,7 @@ internal sealed record DocxTextRunStyle(
     string? HiddenValue,
     string? UnderlineColorHex)
 {
+    public string? KerningMinimumHalfPointsValue { get; init; }
 
     public DocxTextRunStyle(
         double? FontSize,
@@ -573,6 +582,8 @@ internal sealed record DocxTextRunStyle(
             UnderlineColorHex ?? source.UnderlineColorHex)
         {
             Fonts = source.Fonts.Merge(Fonts),
+            KerningMinimumHalfPointsValue = KerningMinimumHalfPointsValue ?? source.KerningMinimumHalfPointsValue,
+            PairKerningEnabled = source.PairKerningEnabled,
             StyleResolution = source.StyleResolution,
             SourceRunIndex = source.SourceRunIndex,
             SourceTextOffsetInRun = source.SourceTextOffsetInRun,

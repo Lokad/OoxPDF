@@ -1363,6 +1363,7 @@ internal sealed partial class DocxReader
             resolvedRun.UnderlineColorHex)
         {
             Fonts = resolvedRun.Fonts,
+            KerningMinimumHalfPointsValue = resolvedRun.KerningMinimumHalfPointsValue,
             FieldKind = fieldKind,
             ScriptBaseFontSize = isScriptShiftedRun && resolvedRun.FontSize is null ? DocxDefaults.FontSizePoints : null,
             StyleResolution = styleResolution,

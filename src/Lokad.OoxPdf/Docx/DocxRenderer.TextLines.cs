@@ -554,7 +554,7 @@ internal sealed partial class DocxRenderer
             plan.CompensatePdfCharacterSpacing,
             DocxTextEmissionPlanner.ClassifyText(segment.Text),
             DocxTextEmissionPlanner.MeasureAdvanceProfile(segment.Text, segment.Resource?.Embedded, segment.FallbackFace?.Font, segment.Width, plan),
-            DocxTextEmissionPlanner.CreateGlyphAdvanceSignature(segment.Text, segment.Resource?.Embedded, segment.FallbackFace?.Font),
+            DocxTextEmissionPlanner.CreateGlyphAdvanceSignature(segment.Text, segment.Resource?.Embedded, segment.FallbackFace?.Font, plan.PairKerningEnabled),
             segment.IsTerminalLineSpace,
             segment.Resource?.Name ?? segment.FallbackFace?.ResourceName ?? string.Empty,
             segment.SyntheticBold,

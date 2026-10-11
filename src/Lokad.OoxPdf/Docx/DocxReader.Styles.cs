@@ -413,7 +413,11 @@ internal sealed partial class DocxReader
         bool? underline = underlineElement is not null
             ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor, smallCaps, smallCapsValue, hidden, hiddenValue, underlineColor);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, complexScriptBold, complexScriptItalic, underline, underlineValue, ReadRunFonts(properties), characterSpacingPoints, allCaps, verticalAlignmentValue, strike, strikeValue, doubleStrike, doubleStrikeValue, highlightValue, shadingFill, shadingValue, shadingColor, smallCaps, smallCapsValue, hidden, hiddenValue, underlineColor)
+        {
+            KerningMinimumHalfPointsValue = properties?.Element(WordprocessingNamespace + "kern") is { } kern
+                ? (string?)kern.Attribute(WordprocessingNamespace + "val") ?? string.Empty : null
+        };
     }
 
     private static DocxRunFonts ReadRunFonts(XElement? properties)
@@ -591,7 +595,10 @@ internal sealed partial class DocxReader
             run.SmallCapsValue,
             run.Hidden,
             run.HiddenValue,
-            run.UnderlineColorHex);
+            run.UnderlineColorHex)
+        {
+            KerningMinimumHalfPointsValue = run.KerningMinimumHalfPointsValue
+        };
     }
 
     private readonly record struct DocxResolvedParagraphProperties(

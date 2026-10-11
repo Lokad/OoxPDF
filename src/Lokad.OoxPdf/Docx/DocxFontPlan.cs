@@ -277,7 +277,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
                 continue;
             }
 
-            widthPoints += MeasureSingleFontRawText(text.Substring(span.Start, span.Length), fontSize, spanFont);
+            widthPoints += MeasureSingleFontRawText(text.Substring(span.Start, span.Length), fontSize, spanFont, run?.PairKerningEnabled ?? true);
         }
 
         return DocxTextSpacing.AddCharacterSpacing(widthPoints, run, text);
@@ -291,7 +291,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         {
             cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(rune.Value);
-            if (previousGlyph != 0 && glyph != 0)
+            if ((run?.PairKerningEnabled ?? true) && previousGlyph != 0 && glyph != 0)
             {
                 units += font.GetKerning(previousGlyph, glyph);
             }
@@ -303,7 +303,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         return DocxTextSpacing.AddCharacterSpacing(units * fontSize / font.UnitsPerEm, run, text);
     }
 
-    private double MeasureSingleFontRawText(string text, double fontSize, OpenTypeFont font)
+    private double MeasureSingleFontRawText(string text, double fontSize, OpenTypeFont font, bool pairKerningEnabled)
     {
         double units = 0d;
         ushort previousGlyph = 0;
@@ -311,7 +311,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         {
             cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(rune.Value);
-            if (previousGlyph != 0 && glyph != 0)
+            if (pairKerningEnabled && previousGlyph != 0 && glyph != 0)
             {
                 units += font.GetKerning(previousGlyph, glyph);
             }

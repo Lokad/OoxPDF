@@ -24,7 +24,7 @@ internal sealed partial class DocxRenderer
         bool syntheticItalic)
     {
         string emissionText = SubstituteUncoveredGlyphs(resource.Embedded, text);
-        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(emissionText, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: true);
+        string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(emissionText, plan.PositioningCharacterSpacing, plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: plan.PairKerningEnabled);
         if (positioningArray is not null)
         {
             graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
@@ -568,7 +568,7 @@ internal sealed partial class DocxRenderer
         }
 
         int glyphGapCount = Math.Max(0, CountMappedGlyphs(text, embedded) - 1);
-        return embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: true) +
+        return embedded.MeasureTextPoints(text, plan.PdfFontSize, kerningEnabled: plan.PairKerningEnabled) +
             (plan.PositioningCharacterSpacing + plan.PdfCharacterSpacing) * glyphGapCount;
     }
 
