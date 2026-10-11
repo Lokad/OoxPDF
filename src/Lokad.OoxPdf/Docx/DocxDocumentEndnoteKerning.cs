@@ -123,8 +123,8 @@ internal static class DocxDocumentEndnoteKerning
             if (owner.Key.Id is null || !actual.TryAdd(owner.Key.Id, owner.Value)) return false;
         }
         // Continuation ranges may change when corrected advances change wrapping.
-        // Source ownership and first placements remain stable; the caller also
-        // retains the document page count before admitting its single retry.
+        // Source ownership and first placements remain stable before the caller
+        // admits its single retry; qualified note-only page counts may change.
         return actual.Count == expected.Count && actual.All(p => expected.TryGetValue(p.Key, out PageRange? range) &&
             range.First == p.Value.First && range.Last >= range.First && range.Slices > 0 &&
             range.Slices <= (long)range.Last - range.First + 1);
