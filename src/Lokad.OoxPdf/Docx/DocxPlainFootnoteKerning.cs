@@ -17,6 +17,11 @@ internal static class DocxPlainFootnoteKerning
         bool elevenPointBody = DocxPlainElevenPointBody.IsEligible(source, layout);
         var elevenPointParagraphs = elevenPointBody
             ? new HashSet<DocxParagraph>(source.Paragraphs, ReferenceEqualityComparer.Instance) : null;
+        bool nominalElevenPointFrame = elevenPointBody && source.Paragraphs.SelectMany(p => p.Runs)
+            .Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline)
+            .All(r => r.KerningMinimumHalfPointsValue is null ||
+                ushort.TryParse(r.KerningMinimumHalfPointsValue, NumberStyles.None, CultureInfo.InvariantCulture, out ushort minimum) &&
+                (minimum == 0 || minimum > 22));
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraph p in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {
@@ -28,7 +33,23 @@ internal static class DocxPlainFootnoteKerning
                 ushort minimum = 0;
                 if (run.KerningMinimumHalfPointsValue is { } value &&
                     (!ushort.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out minimum) || minimum > 32767)) return false;
-                if (!run.Text.Any(char.IsLetter)) continue;
+                // Independent Word controls keep automatic superscript note
+                // numbers unkerned, including positive marker thresholds.
+                if (nominalElevenPointFrame && run.FontSize == 11d && elevenPointParagraphs?.Contains(p) == true &&
+                    run.VerticalAlignment == DocxRunVerticalAlignment.Superscript &&
+                    p.InlineReferences.Any(r => r.SourceRunIndex == run.SourceRunIndex &&
+                        r.TextOffsetInRun == run.SourceTextOffsetInRun && r.DisplayText == run.Text))
+                {
+                    if (run.PairKerningEnabled)
+                    {
+                        runs[i] = run with { PairKerningEnabled = false };
+                        changed = true;
+                    }
+                    continue;
+                }
+                bool nominalBody = run.FontSize == 11d && elevenPointParagraphs?.Contains(p) == true &&
+                    run.VerticalAlignment == DocxRunVerticalAlignment.Baseline;
+                if (!run.Text.Any(char.IsLetter) && !nominalBody) continue;
                 // Independently qualified 11pt body frames retain 12pt note
                 // stories. Other sizes keep their existing fallback policy.
                 if (run.FontSize != 12d && !(run.FontSize == 11d && elevenPointParagraphs?.Contains(p) == true) ||
@@ -40,8 +61,9 @@ internal static class DocxPlainFootnoteKerning
                 // Measured Word output treats absent/zero as disabled and a
                 // positive threshold as enabled only when the nominal size meets it.
                 bool enabled = minimum > 0 && run.FontSize * 2d >= minimum;
-                if (enabled == run.PairKerningEnabled) continue;
-                runs[i] = run with { PairKerningEnabled = enabled };
+                bool logicalAdvances = nominalBody && !enabled;
+                if (enabled == run.PairKerningEnabled && logicalAdvances == run.UseLogicalSizeForPdfAdvances) continue;
+                runs[i] = run with { PairKerningEnabled = enabled, UseLogicalSizeForPdfAdvances = logicalAdvances };
                 changed = true;
             }
             if (changed) replacements.Add(p, p with { Runs = runs });

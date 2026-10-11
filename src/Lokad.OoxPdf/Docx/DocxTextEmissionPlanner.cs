@@ -12,6 +12,7 @@ internal readonly record struct DocxTextEmissionPlan(
     DocxTextStateCharacterSpacingSource PdfCharacterSpacingSource)
 {
     public bool PairKerningEnabled { get; init; } = true;
+    public double? NominalAdvanceFontSize { get; init; }
 }
 
 internal enum DocxTextStateCharacterSpacingSource
@@ -60,7 +61,10 @@ internal readonly record struct DocxTextEmissionAdvanceProfile(
     double PlannedEmittedToLayoutResidual,
     double? UniformResidualPerGap,
     double? RoundedResidualPerGap,
-    double? PlannedEmittedResidualPerGap);
+    double? PlannedEmittedResidualPerGap)
+{
+    public double NominalAdvanceAdjustmentTotal { get; init; }
+}
 
 internal readonly record struct DocxTextEmissionGlyphAdvanceSignature(
     int GlyphCount,
@@ -116,7 +120,9 @@ internal static class DocxTextEmissionPlanner
             compensatePdfCharacterSpacing,
             resolvedSource)
         {
-            PairKerningEnabled = style.PairKerningEnabled
+            PairKerningEnabled = style.PairKerningEnabled,
+            NominalAdvanceFontSize = style.UseLogicalSizeForPdfAdvances && !style.PairKerningEnabled && layoutFontSize == 11d
+                ? layoutFontSize : null
         };
     }
 
@@ -308,10 +314,12 @@ internal static class DocxTextEmissionPlanner
         double kerningAdjustmentTotal = naturalPdfWidth - unkernedPdfWidth;
         double positioningCharacterSpacingGapTotal = plan.PositioningCharacterSpacing * glyphGapCount;
         double textStateCharacterSpacingGapTotal = plan.PdfCharacterSpacing * glyphGapCount;
+        double nominalAdjustment = plan.NominalAdvanceFontSize is { } nominalSize
+            ? embedded.MeasureNominalAdvanceAdjustmentPoints(text, plan.PdfFontSize, nominalSize) : 0d;
         double plannedEmittedAdvance = roundedPdfWidth +
             kerningAdjustmentTotal +
             positioningCharacterSpacingGapTotal +
-            textStateCharacterSpacingGapTotal;
+            textStateCharacterSpacingGapTotal + nominalAdjustment;
         double naturalResidual = layoutWidth - naturalPdfWidth;
         double roundedResidual = layoutWidth - roundedPdfWidth;
         double plannedEmittedResidual = layoutWidth - plannedEmittedAdvance;
@@ -334,7 +342,10 @@ internal static class DocxTextEmissionPlanner
             plannedEmittedResidual,
             naturalResidualPerGap,
             roundedResidualPerGap,
-            plannedEmittedResidualPerGap);
+            plannedEmittedResidualPerGap)
+        {
+            NominalAdvanceAdjustmentTotal = nominalAdjustment
+        };
     }
 
     public static DocxTextEmissionGlyphAdvanceSignature CreateGlyphAdvanceSignature(string text, PdfEmbeddedFont embedded, bool pairKerningEnabled = true)

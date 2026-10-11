@@ -357,7 +357,7 @@ internal sealed class PdfEmbeddedFont
         return TryGetCid(originalGlyph, out cid);
     }
 
-    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray, bool kerningEnabled)
+    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray, bool kerningEnabled, double? nominalAdvanceFontSize = null)
     {
         var glyphs = new List<EncodedGlyph>();
         foreach (Rune rune in text.EnumerateRunes())
@@ -385,6 +385,13 @@ internal sealed class PdfEmbeddedFont
             if (i > 0)
             {
                 double adjustment = trackingAdjustment;
+                if (nominalAdvanceFontSize is { } nominalSize && fontSize > 0d)
+                {
+                    double advanceEm = Font.GetAdvanceWidth(glyphs[i - 1].OriginalGlyph) / (double)Font.UnitsPerEm;
+                    // Keep the physical glyph size; adjust only its advance before
+                    // the following glyph. The final natural glyph width stays intact.
+                    adjustment += Math.Round(advanceEm * 1000d) - advanceEm * nominalSize * 1000d / fontSize;
+                }
                 short kerning = kerningEnabled ? Font.GetKerning(glyphs[i - 1].OriginalGlyph, glyphs[i].OriginalGlyph) : (short)0;
                 if (kerning != 0)
                 {
@@ -453,6 +460,24 @@ internal sealed class PdfEmbeddedFont
 
         cid = originalGlyph;
         return true;
+    }
+
+    public double MeasureNominalAdvanceAdjustmentPoints(string text, double fontSize, double nominalFontSize)
+    {
+        double adjustment = 0d;
+        ushort previous = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = Font.MapCodePoint(rune.Value);
+            if (glyph == 0 || !TryGetCid(glyph, out _)) continue;
+            if (previous != 0)
+            {
+                double advanceEm = Font.GetAdvanceWidth(previous) / (double)Font.UnitsPerEm;
+                adjustment += advanceEm * nominalFontSize - Math.Round(advanceEm * 1000d) * fontSize / 1000d;
+            }
+            previous = glyph;
+        }
+        return adjustment;
     }
 
     public double MeasureTextPoints(string text, double fontSize)

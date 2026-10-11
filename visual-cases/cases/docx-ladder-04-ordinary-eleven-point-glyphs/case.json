@@ -1,0 +1,26 @@
+{
+  "id": "docx-ladder-04-ordinary-eleven-point-glyphs",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-glyphs.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "eleven-point",
+    "glyph-advances",
+    "kerning",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.42,
+    "minStructuralSimilarity": 0.8,
+    "minForegroundRecall": 0.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0055
+  }
+}

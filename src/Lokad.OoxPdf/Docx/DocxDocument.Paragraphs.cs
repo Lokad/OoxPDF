@@ -366,6 +366,8 @@ internal sealed record DocxTextRun(
     public DocxRunFonts Fonts { get; init; } = DocxRunFonts.Empty;
     public string? KerningMinimumHalfPointsValue { get; init; }
     public bool PairKerningEnabled { get; init; } = true;
+    // Set only on a qualified Word-compatible body clone; source metadata stays unchanged.
+    public bool UseLogicalSizeForPdfAdvances { get; init; }
 
     // Typed field identity for PAGE/NUMPAGES placeholders. Null for ordinary text, including
     // literal {PAGE}/{NUMPAGES} content, so downstream substitution touches only actual fields.
@@ -586,6 +588,7 @@ internal sealed record DocxTextRunStyle(
             Fonts = source.Fonts.Merge(Fonts),
             KerningMinimumHalfPointsValue = KerningMinimumHalfPointsValue ?? source.KerningMinimumHalfPointsValue,
             PairKerningEnabled = source.PairKerningEnabled,
+            UseLogicalSizeForPdfAdvances = source.UseLogicalSizeForPdfAdvances,
             StyleResolution = source.StyleResolution,
             SourceRunIndex = source.SourceRunIndex,
             SourceTextOffsetInRun = source.SourceTextOffsetInRun,
