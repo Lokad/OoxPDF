@@ -2397,6 +2397,61 @@ internal static class DocxFootnotesTests
             "Kept paragraphs retain their independently qualified fallback.");
     }
 
+    public static void DocxDocumentEndnoteCapacityMovesUnfittingLinesBeforeWidowRules()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        DocxDocument? control = null;
+        string? targetId = null;
+        int occupiedPage = -1;
+        for (int repeats = 20; repeats <= 340 && control is null; repeats++)
+        {
+            DocxDocument candidate = WithEndnoteWidowControl(ReadWrappedDocumentEndnoteFlowFixture(0, 0, repeats), false);
+            DocxRelatedStory[] stories = candidate.RelatedStories.Where(s => s.IsNormalStoryType).ToArray();
+            string? firstId = stories[0].Id;
+            string? nextId = stories[1].Id;
+            candidate = WithEndnoteText(candidate, nextId, "Short note.");
+            DocxLayout layout = engine.Create(candidate, measurer, default);
+            var first = layout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Id == firstId)
+                .Select(s => (Story: s, Page: index))).ToArray();
+            if (first.Length != 1 || !first[0].Story.UsesPlainDocumentEndnoteTypography) continue;
+            double remaining = first[0].Story.TopY - first[0].Story.Height - layout.Pages[first[0].Page].MarginBottom;
+            double nextHeight = layout.RelatedStories.Single(s => s.Story.Id == nextId && s.Story.IsNormalStoryType).ContentHeight;
+            if (remaining <= .001d || remaining >= nextHeight - .001d) continue;
+            control = candidate; targetId = nextId; occupiedPage = first[0].Page;
+        }
+        TestAssert.True(control is not null, "A bounded scan finds positive occupied-frame space smaller than one source line.");
+        foreach (bool? widow in new bool?[] { null, true, false })
+        foreach (string text in new[] { "Short note.", string.Join(' ', Enumerable.Repeat("Short plain note content.", 6)) })
+        {
+            DocxDocument source = WithEndnoteWidowControl(WithEndnoteText(control!, targetId, text), widow);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxRelatedStoryLayout story = layout.RelatedStories.Single(s => s.Story.Id == targetId && s.Story.IsNormalStoryType);
+            var placed = layout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                .Where(s => ReferenceEquals(s.StoryLayout.Story, story.Story)).Select(s => (Story: s, Page: index))).ToArray();
+            TestAssert.Equal(occupiedPage + 1, placed[0].Page);
+            TestAssert.True(placed.All(p => p.Story.UsesPlainDocumentEndnoteTypography), "The regression exercises qualified plain note flow.");
+            TestAssert.Equal(story.TextLines.Count, placed.Sum(p => p.Story.TextLines.Count));
+            TestAssert.True(Math.Abs(story.ContentHeight - placed.Sum(p => p.Story.Height)) < .000001d,
+                "An unfitting line moves intact instead of being clamped into an occupied page's residual clip.");
+            TestAssert.Equal(0d, placed[0].Story.ContentTopOffset);
+            TestAssert.True(source.BodyElements.Zip(control!.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
+                "Capacity admission preserves body and inline-reference source ownership.");
+            TestAssert.True(source.RelatedStories.Where(s => s.IsNormalStoryType).All(s => s.Paragraphs[0].KeepRules.WidowControl == widow),
+                "Physical capacity does not rewrite authored widow rules.");
+        }
+    }
+
+    private static DocxDocument WithEndnoteText(DocxDocument source, string? id, string text) => source with
+    {
+        RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType && s.Id == id ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                { Runs = [p.Runs[0], p.Runs[1] with { Text = text }] })).ToArray(),
+        } : s).ToArray(),
+    };
+
     private static DocxDocument WithEndnoteWidowControl(DocxDocument source, bool? widow) => source with
     {
         RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with

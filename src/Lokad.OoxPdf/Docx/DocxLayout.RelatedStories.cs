@@ -655,7 +655,10 @@ internal sealed partial class DocxLayoutEngine
 
             int remainingLines = storyLayout.TextLines.Count - lineIndex;
             double[]? fitAfters = printScale >= 1d ? lineAfters : null;
-            (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
+            bool hasPageContent = activePage.Items.Count != 0 ||
+                activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType);
+            (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters,
+                forceProgress: !plainDocumentEndnoteTypography || !hasPageContent);
             if (plainDocumentEndnoteTypography && takeCount > 1 &&
                 DocxParagraphFragmentPolicy.HasOneLineTail(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount))
             {
@@ -666,12 +669,13 @@ internal sealed partial class DocxLayoutEngine
                 takeCount--;
                 takeHeight -= lineBoxes[lineIndex + takeCount];
             }
-            if (plainDocumentEndnoteTypography && lineIndex == 0 &&
-                DocxParagraphFragmentPolicy.HasOneLineHead(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount) &&
-                (activePage.Items.Count != 0 || activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType)))
+            if (plainDocumentEndnoteTypography && hasPageContent &&
+                (takeCount == 0 || lineIndex == 0 &&
+                 DocxParagraphFragmentPolicy.HasOneLineHead(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount)))
             {
                 if (stopAfterCurrentPage) return;
-                // The note head follows the body's default/on/off widow rule.
+                // An occupied frame must fit a source line before placing it;
+                // the note head also follows the body's default/on/off widow rule.
                 // An empty continuation page always makes progress, even when
                 // its frame can hold only one line. Preserve the source boundary
                 // contribution after the turn resets the page cursor.
@@ -679,7 +683,7 @@ internal sealed partial class DocxLayoutEngine
                     ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
                 cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage,
                     ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes,
-                    continuationSeparatorLayout, separatorMeasurer, printScale) + noteDestinationTopOffset;
+                    continuationSeparatorLayout, separatorMeasurer, printScale) + (lineIndex == 0 ? noteDestinationTopOffset : 0d);
                 continue;
             }
             if (lineIndex + takeCount >= storyLayout.TextLines.Count)
@@ -793,13 +797,14 @@ internal sealed partial class DocxLayoutEngine
     // starts fresh at the continuation page top, so the mark baseline lands one
     // first-line inset below the top with no extra ride; rule geometry follows the
     // shared strikeout path and content keeps the footnote gap below the rule.
-    // Longest whole-line prefix (at least one line) fitting the capacity.
+    // Longest fitting whole-line prefix. Qualified callers reserve mandatory
+    // one-line progress for empty frames; other callers retain their prior rule.
     // RV06 after-spacing sweep (Word 16.0, seven after values): take needs exclude the
     // take last-line trailing after-spacing while take heights keep full boxes for
     // placement, so final takes and null after-spacing callers resolve byte-identically.
     // The exclusion applies on unscaled takes only; word-compatible spacing-scale takes
     // stay legacy pending their own probe series, so callers pass null below scale 1.
-    private static (int TakeCount, double TakeHeight) TakeStoryLines(double[] lineBoxes, int startLineIndex, int remainingLineCount, double capacityHeight, double[]? lineAfterSpacings = null)
+    private static (int TakeCount, double TakeHeight) TakeStoryLines(double[] lineBoxes, int startLineIndex, int remainingLineCount, double capacityHeight, double[]? lineAfterSpacings = null, bool forceProgress = true)
     {
         int takeCount = 0;
         double takeHeight = 0d;
@@ -822,7 +827,7 @@ internal sealed partial class DocxLayoutEngine
             takeCount++;
         }
 
-        if (takeCount == 0)
+        if (takeCount == 0 && forceProgress)
         {
             takeCount = 1;
             takeHeight = lineBoxes[startLineIndex];
