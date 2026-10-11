@@ -12,6 +12,109 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableCellsTests
 {
+    public static void DocxTableThreeRowMixedTopReusesQualifiedSlotsMasksAndFlow()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (int columns in new[] { 1, 2 })
+        foreach (int automaticMask in Enumerable.Range(1, 6))
+        foreach (string? automaticRule in new string?[] { null, "auto" })
+        foreach (string declaredRule in new[] { "exact", "atLeast", "alternating" })
+        foreach (double minimum in new[] { 12d, 14d, 24d })
+        foreach ((double top, double bottom) in new[] { (0d, 0d), (6d, 12d), (12d, 6d) })
+        {
+            var margins = DocxTableCellMargins.Empty with { TopPoints = top, BottomPoints = bottom };
+            var heights = Enumerable.Range(0, 3).Select(i => (automaticMask & (1 << i)) != 0 ?
+                ((double?)(automaticRule is null ? null : 320d), automaticRule) :
+                ((double?)180d, declaredRule == "alternating" ? i % 2 == 0 ? "exact" : "atLeast" : declaredRule)).ToArray();
+            DocxLayout Profile(string? rule) => CreateParagraphMinimumLayout("min-single", full,
+                rowHeight: rule is null ? null : 180d, rowRule: rule, verticalAlignment: "top", cellMargins: margins,
+                rowCount: 2, columnCount: columns, minimumSpacing: minimum, borderSize: "8");
+            var automatic = Profile(null).Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            var exact = Profile("exact").Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            var atLeast = Profile("atLeast").Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            var mixed = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top", cellMargins: margins,
+                rowCount: 3, columnCount: columns, minimumSpacing: minimum, borderSize: "8",
+                rowHeightRules: heights);
+            var rows = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            TestAssert.Equal(3, rows.Length);
+            for (int i = 0; i < rows.Length; i++)
+            {
+                bool isAutomatic = (automaticMask & (1 << i)) != 0;
+                var expected = (isAutomatic ? automatic : heights[i].Item2 == "exact" ? exact : atLeast)[i == 2 ? 1 : 0];
+                var row = rows[i];
+                TestAssert.True(Math.Abs(row.Height - expected.Height) < .000001d,
+                    $"A third mixed row uses the independently qualified advance: columns={columns}, mask={automaticMask}, auto={automaticRule}, declared={declaredRule}, minimum={minimum}, margins={top}/{bottom}, row={i}, expected={expected.Height}, actual={row.Height}.");
+                TestAssert.True(!row.Table.AutomaticMinimumRowPlacement,
+                    "Top composition preserves its existing first-baseline slots.");
+                for (int ci = 0; ci < columns; ci++)
+                {
+                    var cell = row.Cells[ci]; var before = expected.Cells[ci];
+                    TestAssert.True(Math.Abs((cell.TextLines.Single().BaselineY - cell.Y - cell.Height) -
+                        (before.TextLines.Single().BaselineY - before.Y - before.Height)) < .000001d,
+                        "Each paragraph keeps its qualified baseline relative to the top of its slot.");
+                    var clip = DocxRenderer.ResolveTableCellContentClip(row, cell);
+                    double terminal = i == 2 ? .96d : 0d;
+                    TestAssert.True(clip.Admitted && Math.Abs(clip.Y - cell.Y - bottom - terminal) < .000001d &&
+                        Math.Abs(clip.Height - cell.Height + top + .96d + bottom + terminal) < .000001d,
+                        "Interior and terminal rows retain their source-measured masks.");
+                }
+            }
+            var allAutomatic = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top", cellMargins: margins,
+                rowCount: 3, columnCount: columns, minimumSpacing: minimum, borderSize: "8");
+            double rowDelta = rows.Sum(r => r.Height) - allAutomatic.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(r => r.Height);
+            double followingDelta = allAutomatic.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY -
+                mixed.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+            TestAssert.True(Math.Abs(rowDelta - followingDelta) < .000001d,
+                "Following body flow includes the composed advances exactly once.");
+        }
+    }
+
+    public static void DocxTableThreeRowMixedTopRetainsUniformAndExcludedFallbacks()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (int columns in new[] { 1, 2 })
+        foreach (string variant in new[] { "uniform-auto", "uniform-exact", "uniform-atLeast", "header", "rich", "four-rows", "three-columns", "wide-border", "frame", "metrics", "default-rule", "unknown-rule", "nonpositive" })
+        {
+            int count = variant == "four-rows" ? 4 : 3;
+            var heights = Enumerable.Range(0, count).Select(i => variant == "uniform-exact" ? ((double?)180d, (string?)"exact") :
+                variant == "uniform-atLeast" ? ((double?)180d, (string?)"atLeast") : i == 1 && variant != "uniform-auto" ?
+                ((double?)(variant == "nonpositive" ? 0d : 180d), variant == "default-rule" ? null : variant == "unknown-rule" ? "other" : "exact") :
+                ((double?)null, (string?)null)).ToArray();
+            var layout = CreateParagraphMinimumLayout("min-single", variant == "metrics" ? new MinimumMetricsFallback(full) : full,
+                variant is "header" or "rich" ? variant : "", verticalAlignment: "top", rowCount: count,
+                columnCount: variant == "three-columns" ? 3 : columns, pageHeight: variant == "frame" ? 160d : 2400d,
+                rowHeightRules: heights, borderSize: variant == "wide-border" ? "32" : null);
+            foreach (var row in layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>()))
+            foreach (var cell in row.Cells)
+                TestAssert.True(!DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted,
+                    "Uniform three-row tables and unqualified compositions retain fallback: " + variant);
+        }
+    }
+
+    public static void DocxTableThreeRowMixedTopContentDominanceRemainsPerRow()
+    {
+        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (int columns in new[] { 1, 2 })
+        foreach (int automaticIndex in Enumerable.Range(0, 3))
+        foreach (int exactIndex in Enumerable.Range(0, 3).Where(i => i != automaticIndex))
+        {
+            var heights = Enumerable.Range(0, 3).Select(i => i == automaticIndex ? ((double?)null, (string?)null) :
+                i == exactIndex ? ((double?)180d, (string?)"exact") : ((double?)10d, (string?)"atLeast")).ToArray();
+            var margins = DocxTableCellMargins.Empty with { TopPoints = 6d, BottomPoints = 12d };
+            var layout = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top", cellMargins: margins,
+                rowCount: 3, columnCount: columns, borderSize: "8", rowHeightRules: heights);
+            var rows = layout.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            foreach (var row in rows)
+            {
+                bool admitted = row.RowIndex == automaticIndex || row.RowIndex == exactIndex;
+                TestAssert.Equal(row.RowIndex == exactIndex ? 12d : 0d, row.Table.AlignedMinimumRowBottomMargins[row.RowIndex]);
+                foreach (var cell in row.Cells)
+                    TestAssert.True(DocxRenderer.ResolveTableCellContentClip(row, cell).Admitted == admitted,
+                        "A content-dominated minimum row cannot borrow another row's qualified mask or margin advance.");
+            }
+        }
+    }
+
     public static void DocxTableOneColumnMixedTopRowsReuseQualifiedGeometryAndFollowingFlow()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
@@ -65,9 +168,9 @@ internal static class DocxTableCellsTests
     public static void DocxTableOneColumnMixedTopRetainsExcludedShapesRulesAndFrames()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string variant in new[] { "header", "rich", "three-columns", "three-rows", "frame", "metrics", "default-rule", "unknown-rule", "nonpositive" })
+        foreach (string variant in new[] { "header", "rich", "three-columns", "four-rows", "frame", "metrics", "default-rule", "unknown-rule", "nonpositive" })
         {
-            int count = variant == "three-rows" ? 3 : 2;
+            int count = variant == "four-rows" ? 4 : 2;
             var heights = Enumerable.Range(0, count).Select(i => i == 1 ?
                 ((double?)(variant == "nonpositive" ? 0d : 180d), variant == "default-rule" ? null : variant == "unknown-rule" ? "other" : "exact") :
                 ((double?)null, (string?)null)).ToArray();
@@ -157,9 +260,9 @@ internal static class DocxTableCellsTests
     public static void DocxTableMixedTopRetainsExcludedShapesRulesAndFrames()
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string variant in new[] { "header", "rich", "four-columns", "three-columns", "three-rows", "frame", "metrics", "default-rule", "unknown-rule", "nonpositive" })
+        foreach (string variant in new[] { "header", "rich", "four-columns", "three-columns", "four-rows", "frame", "metrics", "default-rule", "unknown-rule", "nonpositive" })
         {
-            int count = variant == "three-rows" ? 3 : 2;
+            int count = variant == "four-rows" ? 4 : 2;
             var heights = Enumerable.Range(0, count).Select(i => i == 1 ?
                 ((double?)(variant == "nonpositive" ? 0d : 180d), variant == "default-rule" ? null : variant == "unknown-rule" ? "other" : "exact") :
                 ((double?)null, (string?)null)).ToArray();

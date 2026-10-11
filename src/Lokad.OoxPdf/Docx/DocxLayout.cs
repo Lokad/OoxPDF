@@ -1150,9 +1150,11 @@ internal sealed partial class DocxLayoutEngine
                 Func<bool> hasTableBoundaryContent = page.ColumnFrames.Count > 1
                     ? () => HasCurrentColumnContent() || tableActiveFrameHasContent
                     : HasPageContent;
+                DocxTableLayoutFrame? qualifiedThreeRowTopFrame = null;
                 DocxTableLayoutFrame ResolveCurrentTableFrame()
                 {
-                    return CreateTableLayoutFrame(
+                    if (qualifiedThreeRowTopFrame is not null) return qualifiedThreeRowTopFrame;
+                    var frame = CreateTableLayoutFrame(
                         bodyTable,
                         currentTableIndex,
                         elementIndex,
@@ -1169,6 +1171,12 @@ internal sealed partial class DocxLayoutEngine
                         adjustAlignedMinimumMargins: true,
                         alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom(),
                         allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1);
+                    // An admitted complete three-row table fits at its original
+                    // origin. Later rows must not recheck its full height against
+                    // the remaining space after preceding rows have advanced.
+                    if (bodyTable.Rows.Count == 3 && frame.Context.AutomaticTopRowContentClip)
+                        qualifiedThreeRowTopFrame = frame;
+                    return frame;
                 }
 
                 LayoutTable(bodyTable, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
