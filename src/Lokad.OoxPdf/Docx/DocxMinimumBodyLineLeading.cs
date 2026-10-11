@@ -5,11 +5,13 @@ internal static class DocxMinimumBodyLineLeading
     internal static bool TryCreateLayout(DocxDocument document, DocxLayout source, out DocxLayout adjusted)
     {
         adjusted = source;
-        if (!DocxPageFootnoteNumbering.IsEligibleDocument(document) ||
+        bool ordinaryBody = document.RelatedStories.Count == 0 &&
+            document.Paragraphs.All(p => p.InlineReferences.Count == 0);
+        if (!(ordinaryBody ? DocxPlainBodyFrame.IsEligible(document) : DocxPageFootnoteNumbering.IsEligibleDocument(document)) ||
             !DocxPlainFootnoteKerning.HasSingleLineBody(source) ||
-            document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true ||
-                p.EffectiveProperties.StyleResolution.HasDocumentDefaultParagraphProperties) ||
-            !DocxPageFootnoteNumbering.TryCreateDocument(document, source, out _, out _)) return false;
+            source.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0) ||
+            document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) ||
+            (!ordinaryBody && !DocxPageFootnoteNumbering.TryCreateDocument(document, source, out _, out _))) return false;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
         foreach (var line in source.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>())
@@ -48,6 +50,7 @@ internal static class DocxMinimumBodyLineLeading
     private static bool IsQualifiedRun(DocxTextRun run) =>
         run.FontSize == 12d && !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
         !run.AllCaps && !run.SmallCaps && !run.Hidden && run.CharacterSpacingPoints == 0d &&
+        run.HighlightValue is null && run.ShadingFillHex is null &&
         run.VerticalAlignment == DocxRunVerticalAlignment.Baseline &&
         new[] { "Calibri", "Arial", "Times New Roman" }.Contains(run.FontFamily, StringComparer.OrdinalIgnoreCase);
 }

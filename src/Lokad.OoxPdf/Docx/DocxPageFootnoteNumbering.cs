@@ -7,33 +7,17 @@ internal static class DocxPageFootnoteNumbering
 {
     internal static bool IsEligibleDocument(DocxDocument document, bool includeContinuousRestart = false)
     {
-        if (document.FinalSectionBreak is not { } section || section.Revisions.Count != 0 ||
-            document.Settings.FootnoteReferenceSettings.NumberRestartValue is not (null or "continuous") ||
-            document.Settings.MirrorMargins == true || document.FloatingDrawings.Count != 0 ||
-            document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0 ||
-            document.HeaderParagraphsByType.Count != 0 || document.FooterParagraphsByType.Count != 0 ||
-            document.HeaderBodyElementsByType.Count != 0 || document.FooterBodyElementsByType.Count != 0 ||
-            document.HeaderFloatingDrawingsByType.Count != 0 || document.FooterFloatingDrawingsByType.Count != 0 ||
-            document.BodyElements.Count == 0 || document.BodyElements.Any(e => e.Revisions.Count != 0 ||
-                e is not (DocxParagraphElement or DocxPageBreakElement)) ||
-            document.Paragraphs.Any(p => !IsPlainParagraph(p))) return false;
-        var settings = section.PageSettings.FootnoteReferenceSettings;
+        if (!DocxPlainBodyFrame.IsEligible(document) ||
+            document.Settings.FootnoteReferenceSettings.NumberRestartValue is not (null or "continuous")) return false;
+        var settings = document.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         return (settings.NumberRestartValue == "eachPage" || includeContinuousRestart &&
                 settings.NumberRestartValue is "continuous" or "eachSect") &&
             settings.NumberFormatValue is null or "decimal" or "decimalZero" &&
             (settings.NumberStartValue is null || settings.NumberStart is > 0 and <= 32767) &&
             settings.PositionValue is null or "pageBottom" &&
             document.RelatedStories.All(s => s.Kind == DocxRelatedStoryKind.Footnote &&
-                s.FloatingDrawings.Count == 0 && s.Tables.Count == 0 && s.Paragraphs.All(IsPlainParagraph));
+                s.FloatingDrawings.Count == 0 && s.Tables.Count == 0 && s.Paragraphs.All(DocxPlainBodyFrame.IsPlainParagraph));
     }
-
-    private static bool IsPlainParagraph(DocxParagraph p) =>
-        p.Alignment == DocxTextAlignment.Left && p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 &&
-        p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && p.Revisions.Count == 0 &&
-        p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
-        p.ListLabel is null && p.Hyperlinks.Count == 0 && p.BookmarkAnchors.Count == 0 &&
-        p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&
-            r.Text.All(ch => ch is >= ' ' and <= '~' or '\r' or '\n'));
 
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument numbered, out IReadOnlyDictionary<string, int> referencePages)

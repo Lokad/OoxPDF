@@ -43,9 +43,6 @@ internal static class DocxMinimumBodyLineLeadingTests
             (xml, _) => { var p = xml.Descendants(Word + "p").First(p => p.Descendants(Word + "footnoteReference").Any());
                 var spacing = p.Element(Word + "pPr")!.Element(Word + "spacing")!;
                 spacing.SetAttributeValue(Word + "line", "400"); spacing.SetAttributeValue(Word + "lineRule", "atLeast"); },
-            (_, styles) => { var defaults = styles.Root!.Element(Word + "docDefaults")!;
-                defaults.Add(new XElement(Word + "pPrDefault", new XElement(Word + "pPr", new XElement(Word + "spacing",
-                    new XAttribute(Word + "line", "320"), new XAttribute(Word + "lineRule", "atLeast"))))); }
         ];
         foreach (var modify in guards)
         {
