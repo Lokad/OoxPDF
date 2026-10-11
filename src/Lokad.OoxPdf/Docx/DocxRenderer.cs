@@ -402,7 +402,7 @@ internal sealed partial class DocxRenderer
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
             if (adjustedLayout.Pages.Count == first.Pages.Count &&
-                (plainEndnotes ? DocxDocumentEndnoteKerning.HasStablePages(adjustedLayout, endnotePages, cancellationToken) :
+                (plainEndnotes ? DocxDocumentEndnoteKerning.HasStableFirstPages(adjustedLayout, endnotePages, cancellationToken) :
                 (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
                 (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
                     allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds))))
