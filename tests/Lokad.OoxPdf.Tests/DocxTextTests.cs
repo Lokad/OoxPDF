@@ -329,7 +329,9 @@ internal static class DocxTextTests
         TestAssert.True(block.WordWrap == false, "Structure snapshots should expose paragraph wordWrap without document text.");
         TestAssert.Equal("0", block.WordWrapValue ?? string.Empty);
         TestAssert.Equal("480", paragraph.Spacing.LineValue ?? string.Empty);
-        TestAssert.Equal("exact", paragraph.Spacing.LineRuleValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, paragraph.Spacing.LineRuleValue ?? string.Empty);
+        TestAssert.Equal(2d, paragraph.LineSpacingFactor);
+        TestAssert.True(paragraph.LineSpacingPoints is null, "A direct line-only override uses automatic units instead of the inherited rule.");
         DocxStructureStyleUsageSnapshot styleUsage = DocxStructureSnapshot.FromDocument(document).StyleUsages.Single(usage => usage.Kind == "Paragraph");
         TestAssert.Equal(1, styleUsage.BeforeSpacingTokenParagraphCount);
         TestAssert.Equal(1, styleUsage.AfterSpacingTokenParagraphCount);
@@ -338,9 +340,9 @@ internal static class DocxTextTests
         TestAssert.Equal(0, styleUsage.BeforeLinesSpacingParagraphCount);
         TestAssert.Equal(0, styleUsage.AfterLinesSpacingParagraphCount);
         TestAssert.Equal(1, styleUsage.ContextualSpacingParagraphCount);
-        TestAssert.Equal(1, styleUsage.ExactLineSpacingParagraphCount);
+        TestAssert.Equal(0, styleUsage.ExactLineSpacingParagraphCount);
         TestAssert.Equal(0, styleUsage.AtLeastLineSpacingParagraphCount);
-        TestAssert.Equal(0, styleUsage.AutoLineSpacingParagraphCount);
+        TestAssert.Equal(1, styleUsage.AutoLineSpacingParagraphCount);
         TestAssert.Equal(48d, paragraph.Indent.LeftPoints ?? 0d);
         TestAssert.Equal(24d, paragraph.Indent.RightPoints ?? 0d);
         TestAssert.Equal(6d, paragraph.Indent.FirstLinePoints ?? 0d);
