@@ -656,6 +656,16 @@ internal sealed partial class DocxLayoutEngine
             int remainingLines = storyLayout.TextLines.Count - lineIndex;
             double[]? fitAfters = printScale >= 1d ? lineAfters : null;
             (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
+            if (plainDocumentEndnoteTypography && takeCount > 1 &&
+                DocxParagraphFragmentPolicy.HasOneLineTail(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount))
+            {
+                // Reserve two source lines for the final continuation, using
+                // the same default/on/off widow predicate as body paragraphs.
+                // A one-line frame keeps mandatory progress. The following
+                // head rule handles any newly reduced initial one-line take.
+                takeCount--;
+                takeHeight -= lineBoxes[lineIndex + takeCount];
+            }
             if (plainDocumentEndnoteTypography && lineIndex == 0 &&
                 DocxParagraphFragmentPolicy.HasOneLineHead(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount) &&
                 (activePage.Items.Count != 0 || activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType)))

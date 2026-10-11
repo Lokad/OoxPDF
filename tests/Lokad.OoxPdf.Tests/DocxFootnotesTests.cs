@@ -2349,6 +2349,54 @@ internal static class DocxFootnotesTests
             "A fresh frame cannot be skipped repeatedly for its inability to hold two lines.");
     }
 
+    public static void DocxContinuedEndnoteWidowTailsHonorDefaultOnAndOffWithSourceOwnedCharges()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        DocxDocument? control = null;
+        DocxPlacedRelatedStoryLayout[] oldSlices = [];
+        string? targetId = null;
+        for (int repeats = 20; repeats <= 340 && control is null; repeats++)
+        {
+            DocxDocument candidate = WithEndnoteWidowControl(ReadWrappedDocumentEndnoteFlowFixture(8, 4, repeats), false);
+            string? id = candidate.RelatedStories.First(s => s.IsNormalStoryType).Id;
+            DocxPlacedRelatedStoryLayout[] slices = engine.Create(candidate, measurer, default).Pages
+                .SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.Id == id && s.StoryLayout.Story.IsNormalStoryType).ToArray();
+            if (slices.Length != 2 || slices[0].TextLines.Count <= 2 || slices[^1].TextLines.Count != 1 ||
+                !slices.All(s => s.UsesPlainDocumentEndnoteTypography)) continue;
+            control = candidate; oldSlices = slices; targetId = id;
+        }
+        TestAssert.True(control is not null, "A bounded capacity scan finds a genuine one-line final continuation with widow control disabled.");
+        foreach (bool? widow in new bool?[] { null, true })
+        {
+            DocxDocument source = WithEndnoteWidowControl(control!, widow);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxPlacedRelatedStoryLayout[] slices = layout.Pages.SelectMany(p => p.PlacedRelatedStories)
+                .Where(s => s.StoryLayout.Story.Id == targetId && s.StoryLayout.Story.IsNormalStoryType).ToArray();
+            TestAssert.Equal(2, slices.Length);
+            TestAssert.Equal(oldSlices[0].TextLines.Count - 1, slices[0].TextLines.Count);
+            TestAssert.Equal(2, slices[^1].TextLines.Count);
+            TestAssert.Equal(oldSlices.Sum(s => s.TextLines.Count), slices.Sum(s => s.TextLines.Count));
+            TestAssert.True(Math.Abs(oldSlices.Sum(s => s.Height) - slices.Sum(s => s.Height)) < .000001d,
+                "Moving one source line preserves the exact cumulative paragraph charge, including final after-spacing.");
+            TestAssert.True(Math.Abs(slices[^1].ContentTopOffset - slices[0].Height) < .000001d,
+                "Continuation content offsets follow the source-owned slice charges.");
+            TestAssert.Equal(oldSlices[0].TopY, slices[0].TopY);
+            TestAssert.Equal(oldSlices[0].NoteDestinationTopOffset, slices[0].NoteDestinationTopOffset);
+            TestAssert.Equal(0d, slices[^1].NoteDestinationTopOffset);
+            TestAssert.True(source.BodyElements.Zip(control!.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
+                "The fragment rule preserves source body and inline-reference ownership.");
+            TestAssert.True(source.RelatedStories.Where(s => s.IsNormalStoryType).All(s => s.Paragraphs[0].KeepRules.WidowControl == widow),
+                "Layout preserves default and authored widow metadata.");
+        }
+        DocxDocument kept = control! with { RelatedStories = control!.RelatedStories.Select(s => s.IsNormalStoryType
+            ? s with { BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                { KeepRules = p.KeepRules with { KeepLines = true } })).ToArray() } : s).ToArray() };
+        TestAssert.True(engine.Create(kept, measurer, default).Pages.SelectMany(p => p.PlacedRelatedStories)
+            .Where(s => s.StoryLayout.Story.IsNormalStoryType).All(s => !s.UsesPlainDocumentEndnoteTypography),
+            "Kept paragraphs retain their independently qualified fallback.");
+    }
+
     private static DocxDocument WithEndnoteWidowControl(DocxDocument source, bool? widow) => source with
     {
         RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
