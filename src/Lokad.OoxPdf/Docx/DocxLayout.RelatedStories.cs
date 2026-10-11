@@ -454,6 +454,31 @@ internal sealed partial class DocxLayoutEngine
     }
 
     // RV06 interleaving: exact in-flight remainder for the drain-aware body reserve.
+    private static bool TryCompleteFootnoteReserve(IEnumerable<InFlightRelatedStory> notes, out double reserve)
+    {
+        reserve = 0d;
+        DocxRelatedStoryLayout? head = null;
+        foreach (InFlightRelatedStory note in notes)
+        {
+            if (note.PlacedLineCount != 0 || note.RemainingLineCount != 1 || note.SeparatorPlaced ||
+                note.StoryLayout.TextLines.Count != 1 || note.SeparatorLayout is not { } separator ||
+                separator.TextLines.Count != 1 || !separator.TextLines[0].Text.All(char.IsWhiteSpace)) return false;
+            if (head is not null && !ReferenceEquals(head, separator)) return false;
+            head = separator;
+            double[] boxes = GetStoryTextLineBoxHeights(note.StoryLayout);
+            if (boxes.Length != 1 || !double.IsFinite(boxes[0]) || boxes[0] <= 0d) return false;
+            reserve += boxes[0];
+        }
+        if (head is null) return true;
+        // Complete notes share one separator line. The current page does not
+        // reserve a continuation rule for each note or repeat the head's trailing
+        // paragraph spacing. Placement itself retains its existing geometry.
+        double? headLine = head.TextLines[0].LineHeight ?? head.TextLines[0].SingleLineHeight;
+        if (headLine is not > 0d || !double.IsFinite(headLine.Value)) return false;
+        reserve += headLine.Value;
+        return double.IsFinite(reserve);
+    }
+
     // Content remainder sums take boxes (the same boxes takes consume); the separator
     // counts only until placed on the head page; one continuation-rule overhead covers
     // the next shared slice page. Same quantities the slice path places with.

@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxPageFootnoteNumbering
 {
-    internal static bool IsEligibleDocument(DocxDocument document)
+    internal static bool IsEligibleDocument(DocxDocument document, bool includeContinuousRestart = false)
     {
         if (document.FinalSectionBreak is not { } section || section.Revisions.Count != 0 ||
             document.Settings.FootnoteReferenceSettings.NumberRestartValue is not (null or "continuous") ||
@@ -18,7 +18,8 @@ internal static class DocxPageFootnoteNumbering
                 e is not (DocxParagraphElement or DocxPageBreakElement)) ||
             document.Paragraphs.Any(p => !IsPlainParagraph(p))) return false;
         var settings = section.PageSettings.FootnoteReferenceSettings;
-        return settings.NumberRestartValue == "eachPage" &&
+        return (settings.NumberRestartValue == "eachPage" || includeContinuousRestart &&
+                settings.NumberRestartValue is "continuous" or "eachSect") &&
             settings.NumberFormatValue is null or "decimal" or "decimalZero" &&
             (settings.NumberStartValue is null || settings.NumberStart is > 0 and <= 32767) &&
             settings.PositionValue is null or "pageBottom" &&
@@ -86,6 +87,13 @@ internal static class DocxPageFootnoteNumbering
         IReadOnlyDictionary<string, int> originalPages) =>
         TryMapReferencePages(numbered, layout, out var actual) && actual.Count == originalPages.Count &&
         actual.All(p => originalPages.TryGetValue(p.Key, out int before) && before == p.Value);
+
+    internal static bool HasCompleteNoteOwners(DocxDocument document, DocxLayout layout) =>
+        TryMapReferencePages(document, layout, out _);
+
+    internal static bool HasStableCompleteNoteOwners(DocxDocument document, DocxLayout before, DocxLayout after) =>
+        before.Pages.Count == after.Pages.Count && TryMapReferencePages(document, before, out var pages) &&
+        HasStablePages(document, after, pages);
 
     private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages)
     {

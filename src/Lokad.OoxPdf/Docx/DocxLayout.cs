@@ -221,6 +221,7 @@ internal sealed partial class DocxLayoutEngine
     private readonly bool retuneReserveToPrintScale;
     private readonly double reservePrintScale;
     private readonly IReadOnlyDictionary<string, string>? commentMarkerLabels;
+    private readonly bool useCompleteFootnoteReserve;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -258,7 +259,7 @@ internal sealed partial class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> ResolvedColumnWidths);
 
-    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null)
+    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, bool useCompleteFootnoteReserve = false)
     {
         reserveMarkupMargin = markupGeometryMode is OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin or OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         paragraphSpacingScale = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
@@ -268,6 +269,7 @@ internal sealed partial class DocxLayoutEngine
         scaleBaselineOffsetTransitions = markupGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
         reservePrintScale = wordCompatiblePrintScale;
         this.commentMarkerLabels = commentMarkerLabels;
+        this.useCompleteFootnoteReserve = useCompleteFootnoteReserve;
     }
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken)
@@ -570,6 +572,10 @@ internal sealed partial class DocxLayoutEngine
 
         double FootnoteRemainderTotal()
         {
+            if (useCompleteFootnoteReserve && TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve))
+            {
+                return completeReserve;
+            }
             double total = 0d;
             foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
             {
@@ -639,7 +645,13 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, Math.Max(0d, FootnoteRemainderTotal() - registeringBlockRemainder));
+            double retainedReserve = FootnoteRemainderTotal() - registeringBlockRemainder;
+            if (useCompleteFootnoteReserve && HasCurrentColumnContent() &&
+                TryCompleteFootnoteReserve(inFlightNotes.Values.Where(n => n.SourceBlockIndex != sourceBlockIndex), out double completeRetainedReserve))
+            {
+                retainedReserve = completeRetainedReserve;
+            }
+            currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, Math.Max(0d, retainedReserve));
         }
 
         void PlaceInFlightFootnotesOnCompletingPage()
