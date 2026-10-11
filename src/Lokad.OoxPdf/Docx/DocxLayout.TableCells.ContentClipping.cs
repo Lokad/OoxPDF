@@ -9,8 +9,8 @@ internal sealed partial class DocxLayoutEngine
             table.ColumnWidthsPoints.Count is < 1 or > 2)
             return false;
         // Mixed top rows reuse the qualified declared and automatic geometry
-        // only in a complete two-by-two grid.
-        bool mixedRows = table.Rows.Count == 2 && table.ColumnWidthsPoints.Count == 2 &&
+        // only in a complete two-row grid with one or two columns.
+        bool mixedRows = table.Rows.Count == 2 && table.ColumnWidthsPoints.Count is 1 or 2 &&
             table.Rows.Any(row => HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) &&
             table.Rows.Any(row => row.HeightPoints is > 0d &&
                 (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||
