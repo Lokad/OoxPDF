@@ -347,10 +347,9 @@ internal sealed partial class DocxLayoutEngine
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (collapseEndnoteBoundaries && previousEndnote is not null)
-                    {
-                        cursorTop += ResolveDocumentEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout);
-                    }
+                    double boundaryOverlap = collapseEndnoteBoundaries && previousEndnote is not null
+                        ? ResolveDocumentEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
+                    cursorTop += boundaryOverlap;
                     PlaceRelatedStorySlices(
                         documentEndPages,
                         ref activePageIndex,
@@ -366,6 +365,14 @@ internal sealed partial class DocxLayoutEngine
                         headerKeepOut);
                     if (collapseEndnoteBoundaries)
                     {
+                        activePlacedStories[^1] = activePlacedStories[^1] with
+                        {
+                            NoteDestinationTopOffset = boundaryOverlap,
+                        };
+                        documentEndPages[activePageIndex] = activePage with
+                        {
+                            PlacedRelatedStories = activePlacedStories.ToArray(),
+                        };
                         // The generic slicer retains its separator gap for legacy
                         // notes. A complete document-end block flows as paragraphs.
                         cursorTop += FootnoteSeparatorGapPoints;

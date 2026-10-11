@@ -1770,9 +1770,68 @@ internal static class DocxFootnotesTests
             for (int i = 0; i < links.Length; i++)
             {
                 TestAssert.Equal(0, links[i].Destination!.Value.PageIndex);
-                TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - notes[i].TopY) < .000001d,
-                    "Emitted note links use the corrected source-owned destination top.");
+                double targetTop = notes[i].TopY - (i == 0 ? 0d : 4d);
+                TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - targetTop) < .000001d,
+                    "Emitted note links exclude the shared boundary overlap at their source-owned destination.");
             }
+        }
+    }
+
+    public static void DocxDocumentEndnoteDestinationsUseNeighborSpacingWithoutMovingContent()
+    {
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        foreach ((int previousAfter, int currentBefore) in new[] { (0, 8), (8, 0), (8, 4), (4, 8), (9, 2), (1, 7) })
+        {
+            DocxDocument document = ReadDocumentEndnoteFlowFixture(8, previousAfter);
+            DocxRelatedStory current = document.RelatedStories.Last(s => s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType);
+            DocxParagraph paragraph = current.Paragraphs.Single();
+            document = document with { RelatedStories = document.RelatedStories.Select(s => ReferenceEquals(s, current) ? s with
+            {
+                BodyElements = [new DocxParagraphElement(paragraph with
+                {
+                    SpacingBeforePoints = currentBefore,
+                    Spacing = paragraph.Spacing with { BeforeValue = (currentBefore * 20).ToString(CultureInfo.InvariantCulture) },
+                })],
+            } : s).ToArray() };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
+                .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            TestAssert.Equal(2, links.Length);
+            TestAssert.True(Math.Abs(links[0].Destination!.Value.Top!.Value - notes[0].TopY) < .000001d,
+                "The first note retains its target, including its own before spacing.");
+            TestAssert.True(Math.Abs(links[1].Destination!.Value.Top!.Value - notes[1].TopY + Math.Min(previousAfter, currentBefore)) < .000001d,
+                "Only the previous after-gap and current before-gap define the current destination overlap.");
+            TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height + Math.Min(previousAfter, currentBefore)) < .000001d,
+                "Destination ownership preserves the independently qualified visible placement.");
+            TestAssert.Equal(0, links[1].Destination!.Value.PageIndex);
+        }
+    }
+
+    public static void DocxDocumentEndnoteDestinationsRetainUnqualifiedFrameTargets()
+    {
+        DocxDocument source = ReadDocumentEndnoteFlowFixture(8, 4);
+        foreach (DocxDocument document in new[]
+        {
+            source with { HeaderParagraphs = [source.Paragraphs[0]] },
+            source with { RelatedStories = source.RelatedStories.Select(s => s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = 24d, Spacing = p.Spacing with { LineRuleValue = "exact", LineValue = "480" },
+                })).ToArray(),
+            } : s).ToArray() },
+        })
+        {
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
+                .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            TestAssert.Equal(2, links.Length);
+            for (int i = 0; i < notes.Length; i++)
+                TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - notes[i].TopY) < .000001d,
+                    "An unqualified frame keeps the established destination and visible placement.");
         }
     }
 

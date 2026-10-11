@@ -25,7 +25,8 @@ internal sealed partial class DocxRenderer
                 bool mapped = FloatingTextBoxEmissionMap.TryCreate(markupContext, page.Height, out var map);
                 double scale = mapped ? map.PrintScale : 1d;
                 double left = (mapped ? map.MapEmissionX(placed.X) : placed.X) - 3d * scale;
-                double top = mapped ? map.MapEmissionY(placed.TopY) : placed.TopY;
+                double destinationTop = placed.TopY - placed.NoteDestinationTopOffset;
+                double top = mapped ? map.MapEmissionY(destinationTop) : destinationTop;
                 // First placement wins when a note continues onto later pages.
                 destinations.TryAdd((story.Kind, story.Id), new PdfLinkDestination(pageIndex, left, top, Zoom: null));
             }
