@@ -17,7 +17,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
             TestAssert.Equal("105,106,107,108", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
             TestAssert.True(numbered.Paragraphs.SelectMany(p => p.Runs).All(r => r.PairKerningEnabled && r.KerningMinimumHalfPointsValue == threshold && !r.UseLogicalSizeForPdfAdvances), "Numbering retains raw source thresholds, pairs and physical advance policy.");
             var current = DocxPageFootnoteNumberingTests.CreateLayout(numbered);
-            TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(numbered, current, owners, allowWrappedBody: true, allowMetWrappedCalibri: true), "Every complete owner retains its original page.");
+            TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(numbered, current, owners, allowWrappedBody: true, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedUniformMet), "Every complete owner retains its original page.");
             TestAssert.True(!DocxPageFootnoteNumbering.HasCompleteNoteOwners(numbered, current), "Complete reserve callers retain the one-line gate.");
         }
     }
@@ -78,7 +78,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
     }
 
     private static bool Create(DocxDocument source, DocxLayout layout, out DocxDocument numbered, out IReadOnlyDictionary<string, int> owners) =>
-        DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out numbered, out owners, allowWrappedBody: true, allowMetWrappedCalibri: true);
+        DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out numbered, out owners, allowWrappedBody: true, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedUniformMet);
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static DocxDocument Read(string? threshold, Action<XDocument, XDocument, XDocument>? modify = null) =>
         DocxWrappedFootnoteNumberingTests.Read(later: true, format: "decimalZero", family: "Calibri", modify: (xml, settings, notes) =>
