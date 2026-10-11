@@ -137,7 +137,7 @@ internal static class DocxPageFootnoteNumberingTests
         }
     }
 
-    private static DocxLayout CreateLayout(DocxDocument document) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+    internal static DocxLayout CreateLayout(DocxDocument document) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
         .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
     private static string DecodeText(PdfPage page)
@@ -156,7 +156,7 @@ internal static class DocxPageFootnoteNumberingTests
 
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
-    private static DocxDocument ReadFixture(bool runBreak = false, string format = "decimal", int start = 4,
+    internal static DocxDocument ReadFixture(bool runBreak = false, string format = "decimal", int start = 4,
         Action<XDocument, XDocument, XDocument>? modify = null)
     {
         string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-nav-numbered-ids.docx"));

@@ -20,11 +20,11 @@ internal static class DocxPageFootnoteNumbering
     }
 
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
-        out DocxDocument numbered, out IReadOnlyDictionary<string, int> referencePages)
+        out DocxDocument numbered, out IReadOnlyDictionary<string, int> referencePages, bool allowWrappedBody = false)
     {
         numbered = source;
         referencePages = new Dictionary<string, int>();
-        if (!IsEligibleDocument(source) || !TryMapReferencePages(source, layout, out var pages)) return false;
+        if (!IsEligibleDocument(source) || !TryMapReferencePages(source, layout, out var pages, allowWrappedBody)) return false;
         var settings = source.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         var counts = new Dictionary<int, int>();
         var labels = new Dictionary<string, (string Before, string After)>(StringComparer.Ordinal);
@@ -68,8 +68,8 @@ internal static class DocxPageFootnoteNumbering
     }
 
     internal static bool HasStablePages(DocxDocument numbered, DocxLayout layout,
-        IReadOnlyDictionary<string, int> originalPages) =>
-        TryMapReferencePages(numbered, layout, out var actual) && actual.Count == originalPages.Count &&
+        IReadOnlyDictionary<string, int> originalPages, bool allowWrappedBody = false) =>
+        TryMapReferencePages(numbered, layout, out var actual, allowWrappedBody) && actual.Count == originalPages.Count &&
         actual.All(p => originalPages.TryGetValue(p.Key, out int before) && before == p.Value);
 
     internal static bool HasCompleteNoteOwners(DocxDocument document, DocxLayout layout) =>
@@ -79,7 +79,8 @@ internal static class DocxPageFootnoteNumbering
         before.Pages.Count == after.Pages.Count && TryMapReferencePages(document, before, out var pages) &&
         HasStablePages(document, after, pages);
 
-    private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages)
+    private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages,
+        bool allowWrappedBody = false)
     {
         pages = new(StringComparer.Ordinal);
         var linesByParagraph = new Dictionary<DocxParagraph, List<(int Page, DocxTextLineLayout Line)>>(ReferenceEqualityComparer.Instance);
@@ -107,20 +108,47 @@ internal static class DocxPageFootnoteNumbering
                 places.Add((i + 1, note));
             }
         }
+        bool? wrappedBodyEligible = null;
         foreach (var p in document.Paragraphs.Where(p => p.InlineReferences.Count != 0))
         {
-            if (p.InlineReferences.Count != 1 || !linesByParagraph.TryGetValue(p, out var lines) || lines.Count != 1) return false;
+            if (p.InlineReferences.Count != 1 || !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
+            bool wrapped = lines.Count != 1;
+            if (wrapped && (!allowWrappedBody || (wrappedBodyEligible ??= IsQualifiedWrappedBody(document)) != true ||
+                lines.Any(l => l.Page != lines[0].Page))) return false;
             var r = p.InlineReferences[0];
             if (r.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(r.Id) || string.IsNullOrEmpty(r.DisplayText) ||
                 r.CustomMarkText is not null || !string.IsNullOrEmpty(r.CustomMarkFollowsValue) && !OoxBoolean.IsOff(r.CustomMarkFollowsValue) ||
                 r.Revision is not null || r.Revisions.Count != 0 || !r.DisplayText.All(char.IsAsciiDigit)) return false;
             var marker = p.Runs.Where(run => run.SourceRunIndex == r.SourceRunIndex).ToArray();
+            var ownedLines = lines.Where(l => l.Line.Segments.Any(s => s.Role == DocxTextSegmentRole.Text &&
+                s.SourceTextRunIndex == r.SourceRunIndex && s.SourceTextOffsetInRun == r.TextOffsetInRun &&
+                s.Text == r.DisplayText)).ToArray();
+            if (wrapped && (ownedLines.Length != 1 || ownedLines[0].Line.Segments.Count(s => s.Role == DocxTextSegmentRole.Text &&
+                s.SourceTextRunIndex == r.SourceRunIndex && s.SourceTextOffsetInRun == r.TextOffsetInRun &&
+                s.Text == r.DisplayText) != 1)) return false;
+            int ownerPage = wrapped ? ownedLines[0].Page : lines[0].Page;
             if (marker.Length != 1 || marker[0].SourceTextOffsetInRun != r.TextOffsetInRun || marker[0].Text != r.DisplayText ||
-                !notes.TryGetValue(r.Id, out var places) || places.Count != 1 || places[0].Page != lines[0].Page ||
+                !notes.TryGetValue(r.Id, out var places) || places.Count != 1 || places[0].Page != ownerPage ||
                 places[0].Note.ContentTopOffset != 0d || places[0].Note.TextLines.Count != 1 ||
-                places[0].Note.StoryLayout.TextLines.Count != 1 || !pages.TryAdd(r.Id, lines[0].Page)) return false;
+                places[0].Note.StoryLayout.TextLines.Count != 1 || !pages.TryAdd(r.Id, ownerPage)) return false;
         }
         return pages.Count > 0 && pages.Count == notes.Count &&
             pages.Count == document.RelatedStories.Count(s => s.IsNormalStoryType);
+    }
+
+    private static bool IsQualifiedWrappedBody(DocxDocument document)
+    {
+        string? family = document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily;
+        // Calibri controls retain horizontal wrapping errors; only the two
+        // independently qualified faces admit wrapped numbering here.
+        return new[] { "Arial", "Times New Roman" }.Contains(family, StringComparer.OrdinalIgnoreCase) && document.Paragraphs.All(p =>
+            p.SpacingBeforePoints == 0d && p.SpacingAfterPoints == 0d && p.LineSpacingPoints is null &&
+            p.LineSpacingFactor == 1d && DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(p) &&
+            p.KeepRules.KeepNext != true && p.KeepRules.KeepLines != true &&
+            p.Runs.Where(r => r.Text.Length != 0).All(r => DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(p, r) &&
+                string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase))) &&
+            document.RelatedStories.SelectMany(s => s.Paragraphs).All(p => p.Runs.Where(r => r.Text.Any(char.IsLetter)).All(r =>
+                DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(p, r) &&
+                string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));
     }
 }
