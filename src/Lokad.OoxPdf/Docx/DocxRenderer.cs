@@ -384,13 +384,13 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)
     {
         var fonts = PrepareFontResources(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
-        var first = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken);
+        var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken);
         if (context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             DocxPlainFootnoteKerning.TryCreateDocument(document, first, out var adjusted, out var originalPages))
         {
             var adjustedFonts = PrepareFontResources(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
-            var adjustedLayout = CreateCompleteNoteReservedLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
+            var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
             if (adjustedLayout.Pages.Count == first.Pages.Count && DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) &&
                 DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages))
             {
@@ -406,9 +406,18 @@ internal sealed partial class DocxRenderer
         // One bounded retry is accepted only when body and complete note pages
         // remain stable; otherwise the original resources/layout retain fallback.
         var numberedFonts = PrepareFontResources(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
-        var final = CreateCompleteNoteReservedLayout(numbered, numberedFonts, context, geometry, cancellationToken);
+        var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken);
         return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStablePages(numbered, final, pages)
             ? (numbered, numberedFonts, final) : (document, fonts, first);
+    }
+
+    private static DocxLayout CreatePlainFootnoteTextLayout(DocxDocument document, DocxFontResources fonts,
+        DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken)
+    {
+        var layout = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken);
+        return context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
+            context.WordCompatiblePrintScale == 1d && fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
+            DocxMinimumBodyLineLeading.TryCreateLayout(document, layout, out var adjusted) ? adjusted : layout;
     }
 
     private static DocxLayout CreateCompleteNoteReservedLayout(DocxDocument document, DocxFontResources fonts,
