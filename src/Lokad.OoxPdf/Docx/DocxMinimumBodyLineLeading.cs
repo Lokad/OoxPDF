@@ -22,9 +22,8 @@ internal static class DocxMinimumBodyLineLeading
                 string.IsNullOrWhiteSpace(line.Text)) continue;
             if (line.SourceParagraph is not { } paragraph) return false;
             bool marked = paragraph.InlineReferences.Count != 0;
-            bool extended = marked || paragraph.SpacingAfterPoints != 0d;
-            if (paragraph.SpacingBeforePoints != 0d ||
-                extended && (ordinaryBody || line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph)) ||
+            bool extended = marked || paragraph.SpacingBeforePoints != 0d || paragraph.SpacingAfterPoints != 0d;
+            if (extended && (ordinaryBody || line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph)) ||
                 line.LineHeight is not (>= 14d and <= 24d) ||
                 line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
                 line.FirstLineInsetPoints is not > 0d ||
@@ -67,10 +66,11 @@ internal static class DocxMinimumBodyLineLeading
     }
 
     private static bool IsQualifiedExpansionSpacing(DocxParagraph paragraph) =>
+        paragraph.SpacingBeforePoints is >= 0d and <= 8d &&
         paragraph.SpacingAfterPoints is >= 0d and <= 8d && paragraph.Spacing.ContextualSpacing != true &&
         paragraph.Spacing.BeforeLinesValue is null && paragraph.Spacing.AfterLinesValue is null &&
         paragraph.Spacing.BeforeAutoSpacingValue is null && paragraph.Spacing.AfterAutoSpacingValue is null &&
-        IsTwipsToken(paragraph.Spacing.BeforeValue, 0) && IsTwipsToken(paragraph.Spacing.AfterValue, 160);
+        IsTwipsToken(paragraph.Spacing.BeforeValue, 160) && IsTwipsToken(paragraph.Spacing.AfterValue, 160);
 
     private static bool IsTwipsToken(string? value, int maximum) => value is null ||
         int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0 && twips <= maximum;

@@ -1,0 +1,31 @@
+{
+  "id": "docx-ladder-04-note-minimum-before-after-4",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/note-minimum-before-after-4.docx",
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "ladder",
+    "minimum-leading",
+    "before-spacing",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 0.42,
+    "minStructuralSimilarity": 0.8,
+    "minForegroundRecall": 0.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0055,
+    "requiredDiagnostics": [
+      "DOCX_APPROXIMATED_FOOTNOTE"
+    ]
+  },
+  "allowedUnsupportedFeatures": [
+    "DOCX_APPROXIMATED_FOOTNOTE"
+  ]
+}
