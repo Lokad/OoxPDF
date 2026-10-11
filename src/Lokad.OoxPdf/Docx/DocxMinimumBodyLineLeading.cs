@@ -73,7 +73,7 @@ internal static class DocxMinimumBodyLineLeading
         return IsQualifiedRun(run, marker);
     }
 
-    private static bool IsQualifiedOrdinaryExpansion(DocxDocument document, string family) =>
+    private static bool IsQualifiedOrdinaryExpansion(DocxDocument document, string? family) =>
         document.Paragraphs.All(p => IsQualifiedExpansionSpacing(p) && p.Runs.Where(r => r.Text.Length != 0).All(r =>
             IsQualifiedRun(r, marker: false) && string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));
 
