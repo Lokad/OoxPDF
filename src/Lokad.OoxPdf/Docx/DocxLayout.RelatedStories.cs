@@ -336,10 +336,12 @@ internal sealed partial class DocxLayoutEngine
 
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
-                bool collapseEndnoteBoundaries = DocxPlainBodyFrame.IsEligible(document) &&
-                    CanUseCompleteDocumentEndnoteFlow(activePage,
+                double completeEndnoteHeight = 0d;
+                bool plainEndnoteFlow = DocxPlainBodyFrame.IsEligible(document) &&
+                    CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
-                    out double completeEndnoteHeight) &&
+                    out completeEndnoteHeight);
+                bool collapseEndnoteBoundaries = plainEndnoteFlow &&
                     cursorTop - completeEndnoteHeight >= Math.Max(activePage.MarginBottom,
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
@@ -362,7 +364,8 @@ internal sealed partial class DocxLayoutEngine
                         documentEndContinuationLayout,
                         separatorMeasurer,
                         printScale,
-                        headerKeepOut);
+                        headerKeepOut,
+                        plainDocumentEndnoteTypography: plainEndnoteFlow);
                     if (collapseEndnoteBoundaries)
                     {
                         activePlacedStories[^1] = activePlacedStories[^1] with
@@ -590,7 +593,8 @@ internal sealed partial class DocxLayoutEngine
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
         bool stopAfterCurrentPage = false,
         InFlightRelatedStory? inFlight = null,
-        double headContentPushdownPoints = 0d)
+        double headContentPushdownPoints = 0d,
+        bool plainDocumentEndnoteTypography = false)
     {
         if (storyLayout.TextLines.Count == 0)
         {
@@ -644,7 +648,10 @@ internal sealed partial class DocxLayoutEngine
                 placementTop,
                 consumedHeight,
                 takeHeight,
-                separatorY: null));
+                separatorY: null) with
+            {
+                UsesPlainDocumentEndnoteTypography = plainDocumentEndnoteTypography,
+            });
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             lineIndex += takeCount;
             consumedHeight += takeHeight;

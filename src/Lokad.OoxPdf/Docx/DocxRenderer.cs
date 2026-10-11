@@ -387,9 +387,10 @@ internal sealed partial class DocxRenderer
         var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken);
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
-        bool completeEndnotes = fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
-            DocxCompleteEndnoteKerning.TryCreateDocument(document, first, out adjusted, out originalPages, cancellationToken);
-        if (completeEndnotes ||
+        IReadOnlyDictionary<string, DocxDocumentEndnoteKerning.PageRange> endnotePages = new Dictionary<string, DocxDocumentEndnoteKerning.PageRange>();
+        bool plainEndnotes = fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
+            DocxDocumentEndnoteKerning.TryCreateDocument(document, first, out adjusted, out endnotePages, cancellationToken);
+        if (plainEndnotes ||
             context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             (DocxPlainFootnoteKerning.TryCreateDocument(document, first, out adjusted, out originalPages) ||
@@ -401,7 +402,7 @@ internal sealed partial class DocxRenderer
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
             if (adjustedLayout.Pages.Count == first.Pages.Count &&
-                (completeEndnotes ? DocxCompleteEndnoteKerning.HasStablePages(adjustedLayout, originalPages, cancellationToken) :
+                (plainEndnotes ? DocxDocumentEndnoteKerning.HasStablePages(adjustedLayout, endnotePages, cancellationToken) :
                 (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
                 (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
                     allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds))))

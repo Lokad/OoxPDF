@@ -237,7 +237,7 @@ internal sealed partial class DocxLayoutEngine
         page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph }
             ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) : 0d;
 
-    private static bool CanUseCompleteDocumentEndnoteFlow(
+    private static bool CanUsePlainDocumentEndnoteFlow(
         DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale,
         IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken cancellationToken,
         out double contentHeight)

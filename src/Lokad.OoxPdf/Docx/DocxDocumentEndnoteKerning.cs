@@ -2,31 +2,27 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
 
-internal static class DocxCompleteEndnoteKerning
+internal static class DocxDocumentEndnoteKerning
 {
+    internal sealed record PageRange(int First, int Last, int Slices);
+
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
-        out DocxDocument adjusted, out IReadOnlyDictionary<string, int> pages, CancellationToken cancellationToken)
+        out DocxDocument adjusted, out IReadOnlyDictionary<string, PageRange> pages, CancellationToken cancellationToken)
     {
         adjusted = source;
-        var pageById = new Dictionary<string, int>(StringComparer.Ordinal);
+        var pageById = new Dictionary<string, PageRange>(StringComparer.Ordinal);
         pages = pageById;
         cancellationToken.ThrowIfCancellationRequested();
         if (!source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote)) return false;
         if (source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote)) return false;
-        var owners = new Dictionary<DocxRelatedStory, int>(ReferenceEqualityComparer.Instance);
-        for (int page = 0; page < layout.Pages.Count; page++)
-        foreach (DocxPlacedRelatedStoryLayout placed in layout.Pages[page].PlacedRelatedStories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (placed.UsesCompleteDocumentEndnoteFlow && !owners.TryAdd(placed.StoryLayout.Story, page)) return false;
-        }
+        if (!TryResolvePages(layout, out var owners, cancellationToken)) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         Dictionary<string, string?>? customMarks = null;
         foreach (DocxRelatedStory story in source.RelatedStories.Where(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (story.Id is null || story.Paragraphs.Count != 1 || !owners.TryGetValue(story, out int page) ||
-                !pageById.TryAdd(story.Id, page)) return false;
+            if (story.Id is null || story.Paragraphs.Count != 1 || !owners.TryGetValue(story, out PageRange? range) ||
+                !pageById.TryAdd(story.Id, range)) return false;
             DocxParagraph paragraph = story.Paragraphs[0];
             if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || paragraph.Runs.Count == 0) return false;
             DocxTextRun first = paragraph.Runs[0];
@@ -117,17 +113,40 @@ internal static class DocxCompleteEndnoteKerning
         return marks;
     }
 
-    internal static bool HasStablePages(DocxLayout layout, IReadOnlyDictionary<string, int> expected, CancellationToken cancellationToken)
+    internal static bool HasStablePages(DocxLayout layout, IReadOnlyDictionary<string, PageRange> expected, CancellationToken cancellationToken)
     {
-        var actual = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (!TryResolvePages(layout, out var owners, cancellationToken)) return false;
+        var actual = new Dictionary<string, PageRange>(StringComparer.Ordinal);
+        foreach (var owner in owners)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (owner.Key.Id is null || !actual.TryAdd(owner.Key.Id, owner.Value)) return false;
+        }
+        return actual.Count == expected.Count && actual.All(p => expected.TryGetValue(p.Key, out PageRange? range) && range == p.Value);
+    }
+
+    private static bool TryResolvePages(DocxLayout layout,
+        out Dictionary<DocxRelatedStory, PageRange> owners, CancellationToken cancellationToken)
+    {
+        owners = new(ReferenceEqualityComparer.Instance);
         for (int page = 0; page < layout.Pages.Count; page++)
         foreach (DocxPlacedRelatedStoryLayout placed in layout.Pages[page].PlacedRelatedStories)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxRelatedStory story = placed.StoryLayout.Story;
             if (story.Kind != DocxRelatedStoryKind.Endnote || !story.IsNormalStoryType) continue;
-            if (!placed.UsesCompleteDocumentEndnoteFlow || story.Id is null || !actual.TryAdd(story.Id, page)) return false;
+            if (!placed.UsesPlainDocumentEndnoteTypography) return false;
+            if (owners.TryGetValue(story, out PageRange? range))
+            {
+                if (page <= range.Last || placed.ContentTopOffset <= 0d) return false;
+                owners[story] = range with { Last = page, Slices = range.Slices + 1 };
+            }
+            else
+            {
+                if (placed.ContentTopOffset != 0d) return false;
+                owners.Add(story, new(page, page, 1));
+            }
         }
-        return actual.Count == expected.Count && actual.All(p => expected.TryGetValue(p.Key, out int page) && page == p.Value);
+        return owners.Count > 0;
     }
 }

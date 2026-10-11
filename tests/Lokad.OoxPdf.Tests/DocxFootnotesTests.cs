@@ -1886,7 +1886,7 @@ internal static class DocxFootnotesTests
             DocxDocument source = ReadCustomDocumentEndnoteFlowFixture(mark);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
+            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
                 "A unique typed reference protects the custom prefix through the shared complete-note correction.");
             TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
                 "Custom note typography preserves body run/reference owners.");
@@ -1911,7 +1911,7 @@ internal static class DocxFootnotesTests
             }
             DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxCompleteEndnoteKerning.HasStablePages(final, pages, default), "Owned custom markers keep the complete note-page map.");
+            TestAssert.True(DocxDocumentEndnoteKerning.HasStablePages(final, pages, default), "Owned custom markers keep the complete note-page map.");
         }
     }
 
@@ -1939,7 +1939,7 @@ internal static class DocxFootnotesTests
         {
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(!DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
+            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
                 "Missing, repeated, overlapping and mismatched source owners keep the exact fallback.");
         }
     }
@@ -2029,7 +2029,7 @@ internal static class DocxFootnotesTests
         } : s).ToArray() };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-        TestAssert.True(DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
+        TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
             "Explicit automatic marker ownership admits the complete baseline frame through the shared rule.");
         foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
         {
@@ -2040,7 +2040,7 @@ internal static class DocxFootnotesTests
         }
         DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-        TestAssert.True(DocxCompleteEndnoteKerning.HasStablePages(final, pages, default), "The owned retry preserves complete note pages.");
+        TestAssert.True(DocxDocumentEndnoteKerning.HasStablePages(final, pages, default), "The owned retry preserves complete note pages.");
     }
 
     public static void DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners()
@@ -2064,7 +2064,7 @@ internal static class DocxFootnotesTests
                 })).ToArray(),
             } : s).ToArray() };
             DocxLayout first = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxCompleteEndnoteKerning.TryCreateDocument(source, first, out DocxDocument adjusted, out var pages, default),
+            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out DocxDocument adjusted, out var pages, default),
                 "An admitted complete paragraph resolves authored kerning against its nominal size.");
             TestAssert.Equal(2, pages.Count);
             TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
@@ -2080,9 +2080,9 @@ internal static class DocxFootnotesTests
                 TestAssert.Equal(!enabled, oldRun.PairKerningEnabled);
             }
             DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxCompleteEndnoteKerning.HasStablePages(final, pages, default),
+            TestAssert.True(DocxDocumentEndnoteKerning.HasStablePages(final, pages, default),
                 "The bounded retry retains the exact complete note-page mapping.");
-            TestAssert.True(!DocxCompleteEndnoteKerning.HasStablePages(final, new Dictionary<string, int>(), default),
+            TestAssert.True(!DocxDocumentEndnoteKerning.HasStablePages(final, new Dictionary<string, DocxDocumentEndnoteKerning.PageRange>(), default),
                 "A changed ownership map cannot qualify the retry.");
         }
     }
@@ -2121,7 +2121,11 @@ internal static class DocxFootnotesTests
         foreach (DocxDocument source in new[]
         {
             plain with { HeaderParagraphs = [plain.Paragraphs[0]] },
-            ReadWrappedDocumentEndnoteFlowFixture(8, 4, 200),
+            plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
+            {
+                BodyElements = [new DocxParagraphElement(paragraph with { LineSpacingPoints = 14d,
+                    Spacing = paragraph.Spacing with { LineRuleValue = "exact" } })],
+            } : s).ToArray() },
             plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
             {
                 BodyElements = [new DocxParagraphElement(paragraph with
@@ -2139,14 +2143,74 @@ internal static class DocxFootnotesTests
         })
         {
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(!DocxCompleteEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
+            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
                 "Unsupported ownership or thresholds retain the original document and layout policy.");
         }
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxCompleteEndnoteKerning.TryCreateDocument(plain,
+        TestAssert.Throws<OperationCanceledException>(() => DocxDocumentEndnoteKerning.TryCreateDocument(plain,
             new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(plain, new DocxTests.FamilyWidthTextMeasurer(), default),
             out _, out _, cancelled.Token));
+    }
+
+    public static void DocxContinuedEndnoteKerningPreservesSourceMarkersAndPageRanges()
+    {
+        DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 200);
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        DocxLayout first = engine.Create(source, measurer, default);
+        TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default),
+            "Plain continued paragraphs share the authored threshold policy with fitting endnotes.");
+        TestAssert.True(pages.Values.Any(range => range.Slices > 1 && range.Last > range.First),
+            "The regression exercises an actual multi-page note rather than only a fitting block.");
+        TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
+            "Body reference ownership is unchanged by continued-note typography.");
+        foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
+        {
+            TestAssert.True(ReferenceEquals(pair.First.Paragraphs[0].Runs[0], pair.Second.Paragraphs[0].Runs[0]),
+                "Each source marker retains its exact owner and emission policy.");
+            TestAssert.True(pair.First.Paragraphs[0].Runs[1].PairKerningEnabled,
+                "Source run policy remains immutable.");
+            TestAssert.True(!pair.Second.Paragraphs[0].Runs[1].PairKerningEnabled &&
+                pair.Second.Paragraphs[0].Runs[1].UseLogicalSizeForPdfAdvances,
+                "Absent thresholds use nominal regular-text advances on every slice.");
+        }
+        DocxLayout final = engine.Create(adjusted, measurer, default);
+        TestAssert.True(DocxDocumentEndnoteKerning.HasStablePages(final, pages, default),
+            "A bounded typography retry preserves each note's first page, last page and slice count.");
+        var changed = pages.ToDictionary(p => p.Key, p => p.Value);
+        string id = changed.First(p => p.Value.Slices > 1).Key;
+        changed[id] = changed[id] with { Last = changed[id].Last + 1 };
+        TestAssert.True(!DocxDocumentEndnoteKerning.HasStablePages(final, changed, default),
+            "An unchanged first destination cannot hide a moved final slice.");
+        changed[id] = pages[id] with { Slices = pages[id].Slices + 1 };
+        TestAssert.True(!DocxDocumentEndnoteKerning.HasStablePages(final, changed, default),
+            "The stable-range check also requires the same number of slices.");
+    }
+
+    public static void DocxContinuedEndnoteKerningRejectsUnqualifiedSlicesAndKeptParagraphs()
+    {
+        DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 200);
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        DocxLayout layout = engine.Create(source, measurer, default);
+        TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out _, out var pages, default),
+            "The control has qualified multi-page typography ownership.");
+        DocxLayout unqualified = layout with { Pages = layout.Pages.Select(page => page with
+        {
+            PlacedRelatedStories = page.PlacedRelatedStories.Select(p => p.ContentTopOffset > 0d
+                ? p with { UsesPlainDocumentEndnoteTypography = false } : p).ToArray(),
+        }).ToArray() };
+        TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, unqualified, out var unchanged, out _, default) &&
+            ReferenceEquals(source, unchanged), "Every continued slice must retain layout-owned admission.");
+        TestAssert.True(!DocxDocumentEndnoteKerning.HasStablePages(unqualified, pages, default),
+            "Unqualified continuation pages cannot pass the post-retry check.");
+        DocxDocument kept = source with { RelatedStories = source.RelatedStories.Select(story => story.IsNormalStoryType
+            ? story with { BodyElements = story.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                { KeepRules = p.KeepRules with { KeepLines = true } })).ToArray() } : story).ToArray() };
+        TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(kept, engine.Create(kept, measurer, default),
+            out unchanged, out _, default) && ReferenceEquals(kept, unchanged),
+            "Continuation does not bypass the established semantic keep-rule fallback.");
     }
 
     private static DocxDocument ReadWrappedDocumentEndnoteFlowFixture(int before, int after, int repeats)
