@@ -336,8 +336,21 @@ internal sealed partial class DocxLayoutEngine
 
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
+                bool collapseEndnoteBoundaries = DocxPlainBodyFrame.IsEligible(document) &&
+                    CanUseCompleteDocumentEndnoteFlow(activePage,
+                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
+                    out double completeEndnoteHeight) &&
+                    cursorTop - completeEndnoteHeight >= Math.Max(activePage.MarginBottom,
+                        activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                            .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
+                DocxRelatedStoryLayout? previousEndnote = null;
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (collapseEndnoteBoundaries && previousEndnote is not null)
+                    {
+                        cursorTop += ResolveDocumentEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout);
+                    }
                     PlaceRelatedStorySlices(
                         documentEndPages,
                         ref activePageIndex,
@@ -351,6 +364,13 @@ internal sealed partial class DocxLayoutEngine
                         separatorMeasurer,
                         printScale,
                         headerKeepOut);
+                    if (collapseEndnoteBoundaries)
+                    {
+                        // The generic slicer retains its separator gap for legacy
+                        // notes. A complete document-end block flows as paragraphs.
+                        cursorTop += FootnoteSeparatorGapPoints;
+                    }
+                    previousEndnote = endnoteStoryLayout;
                 }
 
                 return documentEndPages;

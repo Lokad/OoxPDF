@@ -237,6 +237,45 @@ internal sealed partial class DocxLayoutEngine
         page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph }
             ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) : 0d;
 
+    private static bool CanUseCompleteDocumentEndnoteFlow(
+        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale,
+        IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken cancellationToken,
+        out double contentHeight)
+    {
+        contentHeight = 0d;
+        if (stories.Count == 0 || !CanUseNominalDocumentEndnoteFlow(page, separator, printScale, stories)) return false;
+        DocxRelatedStoryLayout? previous = null;
+        foreach (DocxRelatedStoryLayout story in stories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (story.Story.BodyElements.Count != 1 || story.TextLines.Count != 1 ||
+                story.Story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
+                !ReferenceEquals(story.TextLines[0].SourceParagraph, paragraph) ||
+                !IsPlainContextualSpacingParagraph(paragraph) || paragraph.Spacing.ContextualSpacing == true ||
+                paragraph.LineSpacingPoints is not null || paragraph.Spacing.LineRuleValue is not (null or "auto") ||
+                paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true ||
+                !IsNumericTwips(paragraph.Spacing.BeforeValue) || !IsNumericTwips(paragraph.Spacing.AfterValue) ||
+                !double.IsFinite(story.ContentHeight)) return false;
+            contentHeight += story.ContentHeight;
+            if (previous is not null) contentHeight -= ResolveDocumentEndnoteBoundaryOverlap(previous, story);
+            previous = story;
+        }
+        return true;
+
+        static bool IsNumericTwips(string? value) => value is null ||
+            int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0;
+    }
+
+    private static double ResolveDocumentEndnoteBoundaryOverlap(
+        DocxRelatedStoryLayout previous, DocxRelatedStoryLayout current)
+    {
+        DocxTextLineLayout previousLine = previous.TextLines[0], currentLine = current.TextLines[0];
+        double after = previousLine.ParagraphAfterSpacing ?? previousLine.SourceParagraph!.SpacingAfterPoints;
+        DocxParagraphSpacingProfile combined = ResolveParagraphSpacingProfile(previousLine.SourceParagraph,
+            currentLine.SourceParagraph!, after, 1d, resolveContextualContributions: false);
+        return after + (currentLine.AppliedBeforeSpacing ?? 0d) - combined.AppliedBeforeSpacing;
+    }
+
     private static double ResolveDocumentEndnoteSeparatorHeight(
         DocxRelatedStoryLayout separator, DocxLayoutPage page, IDocxTextMeasurer? measurer,
         IReadOnlyList<DocxRelatedStoryLayout> contentStories, double printScale)

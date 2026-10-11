@@ -1691,6 +1691,106 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxDocumentEndnoteBoundariesCollapseNumericParagraphSpacing()
+    {
+        foreach ((int before, int after) in new[] { (0, 0), (0, 4), (4, 0), (8, 8), (8, 4), (4, 8) })
+        {
+            DocxDocument document = ReadDocumentEndnoteFlowFixture(before, after);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
+                .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+            TestAssert.Equal(2, notes.Length);
+            double expected = notes[0].Height - Math.Min(before, after);
+            TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - expected) < .000001d,
+                "Independent endnotes flow as adjacent paragraphs without an extra separator gap.");
+            TestAssert.True(document.RelatedStories.Where(s => s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType)
+                .All(s => s.Paragraphs[0].SpacingBeforePoints == before && s.Paragraphs[0].SpacingAfterPoints == after),
+                "Collapsed placement retains each source paragraph's authored spacing.");
+        }
+    }
+
+    public static void DocxDocumentEndnoteBoundariesRetainUnqualifiedStoryFallbacks()
+    {
+        foreach (Func<DocxParagraph, IReadOnlyList<DocxBodyElement>> modify in new Func<DocxParagraph, IReadOnlyList<DocxBodyElement>>[]
+        {
+            p => [new DocxParagraphElement(p with { KeepRules = p.KeepRules with { KeepNext = true } })],
+            p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { ContextualSpacing = true } })],
+            p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { BeforeAutoSpacingValue = "1" } })],
+            p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { BeforeValue = "broken" } })],
+            p => [new DocxParagraphElement(p with { LineSpacingPoints = 24d,
+                Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "exact" } })],
+            p => [new DocxParagraphElement(p with { LineSpacingPoints = 24d,
+                Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "atLeast" } })],
+            p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { LineRuleValue = "broken" } })],
+            p => [new DocxParagraphElement(p), new DocxParagraphElement(p)],
+            p => [new DocxParagraphElement(p with { Runs = [p.Runs[0], p.Runs[1] with
+                { Text = string.Join(' ', Enumerable.Repeat("Wrapped endnote content", 30)) }] })],
+        })
+        {
+            DocxDocument document = ReadDocumentEndnoteFlowFixture(0, 0);
+            DocxRelatedStory first = document.RelatedStories.First(s => s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType);
+            document = document with { RelatedStories = document.RelatedStories.Select(s => ReferenceEquals(s, first)
+                ? s with { BodyElements = modify(s.Paragraphs[0]) } : s).ToArray() };
+            var notes = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document).Pages.Single()
+                .PlacedRelatedStories.Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+            TestAssert.Equal(2, notes.Length);
+            TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height - 3d) < .000001d,
+                "Unqualified notes retain the legacy spacing and slicing path.");
+        }
+        DocxDocument scaledDocument = ReadDocumentEndnoteFlowFixture(0, 0);
+        DocxLayout scaled = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .5d)
+            .Create(scaledDocument, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        var scaledNotes = scaled.Pages.Single().PlacedRelatedStories
+            .Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && s.StoryLayout.Story.IsNormalStoryType).ToArray();
+        TestAssert.True(Math.Abs(scaledNotes[0].TopY - scaledNotes[1].TopY - scaledNotes[0].Height - 3d) < .000001d,
+            "Scaled document endnotes retain their prior boundary geometry.");
+        DocxDocument headerDocument = ReadDocumentEndnoteFlowFixture(0, 0) with
+        {
+            HeaderParagraphs = [DocxTests.CreateDocxLayoutParagraph("Public header", 12d, 14d)]
+        };
+        var headerNotes = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(headerDocument).Pages.Single()
+            .PlacedRelatedStories.Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+        TestAssert.True(Math.Abs(headerNotes[0].TopY - headerNotes[1].TopY - headerNotes[0].Height - 3d) < .000001d,
+            "The shared plain-body policy preserves composed header flow.");
+    }
+
+    public static void DocxDocumentEndnoteBoundariesEmitActualDestinationTops()
+    {
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            DocxDocument document = ReadDocumentEndnoteFlowFixture(8, 4);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
+                .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
+            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            TestAssert.Equal(2, links.Length);
+            for (int i = 0; i < links.Length; i++)
+            {
+                TestAssert.Equal(0, links[i].Destination!.Value.PageIndex);
+                TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - notes[i].TopY) < .000001d,
+                    "Emitted note links use the corrected source-owned destination top.");
+            }
+        }
+    }
+
+    private static DocxDocument ReadDocumentEndnoteFlowFixture(int before, int after)
+    {
+        DocxDocument document = ReadNotePrecedenceFixture("endnote", "decimal", null, null, true);
+        return document with { RelatedStories = document.RelatedStories.Select(s =>
+            s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    SpacingBeforePoints = before, SpacingAfterPoints = after, LineSpacingFactor = 1d, LineSpacingPoints = null,
+                    Spacing = p.Spacing with { BeforeValue = (before * 20).ToString(CultureInfo.InvariantCulture),
+                        AfterValue = (after * 20).ToString(CultureInfo.InvariantCulture), LineValue = "240", LineRuleValue = "auto" },
+                })).ToArray()
+            } : s).ToArray() };
+    }
+
     private static DocxDocument ReadModifiedNoteNumberingFixture(string fixture, Action<XDocument> modify)
     {
         string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
