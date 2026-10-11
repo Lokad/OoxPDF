@@ -214,18 +214,19 @@ internal static class DocxFootnotesTests
     public static void DocxSectionNoteNumbersUseDefaultsDespiteDocumentRestartSettings()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string restart in new[] { "eachSect", "eachPage" })
         {
             DocxDocument document = ReadSectionNumberingFixture(kind, (xml, settings, _) =>
             {
                 foreach (XElement section in xml.Descendants(NoteWord + "sectPr"))
                     section.Element(NoteWord + kind + "Pr")!.Remove();
                 settings.Descendants(NoteWord + kind + "Pr").Single().Add(
-                    new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", "eachSect")));
+                    new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", restart)));
             });
             CheckNoteLabels(document, kind == "footnote" ? ["1", "2", "3", "4"] : ["i", "ii", "iii", "iv"]);
             DocxNoteReferenceSettings authored = kind == "footnote"
                 ? document.Settings.FootnoteReferenceSettings : document.Settings.EndnoteReferenceSettings;
-            TestAssert.Equal("eachSect", authored.NumberRestartValue!);
+            TestAssert.Equal(restart, authored.NumberRestartValue!);
             TestAssert.Equal(105, authored.NumberStart!.Value);
         }
     }
@@ -262,6 +263,53 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(8, document.RelatedStories.Count(s => s.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote && s.Id is not "-1" and not "0"));
     }
 
+    public static void DocxSectionNoteNumbersUseExplicitSectionsDespiteDocumentEachPage()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            DocxDocument document = ReadSectionNumberingFixture(kind, (xml, settings, _) =>
+            {
+                settings.Descendants(NoteWord + kind + "Pr").Single().Add(
+                    new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", "eachPage")));
+                SetNoteSection(xml.Descendants(NoteWord + "sectPr").Last(), kind, "decimalZero", "9", "continuous");
+            });
+            CheckNoteLabels(document, ["iv", "v", "11", "12"]);
+            DocxNoteReferenceSettings authored = kind == "footnote"
+                ? document.Settings.FootnoteReferenceSettings : document.Settings.EndnoteReferenceSettings;
+            TestAssert.Equal("eachPage", authored.NumberRestartValue!);
+            TestAssert.Equal(105, authored.NumberStart!.Value);
+        }
+    }
+
+    public static void DocxSingleSectionNoteNumbersUseDefaultsDespiteDocumentEachPage()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string format in new[] { "decimal", "decimalZero" })
+        foreach ((string? sectionFormat, int? sectionStart, bool properties) in new[]
+        {
+            ((string?)null, (int?)null, false),
+            ((string?)null, (int?)null, true),
+            ((string?)"decimalZero", (int?)null, true),
+            ((string?)null, (int?)9, true),
+            ((string?)"upperRoman", (int?)4, true),
+        })
+        {
+            DocxDocument document = ReadNotePrecedenceFixture(kind, format, sectionFormat, sectionStart, properties,
+                (_, settings) => settings.Descendants(NoteWord + kind + "Pr").Single().Add(
+                    new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", "eachPage"))));
+            string[] expected = sectionFormat == "upperRoman" ? ["IV", "V"] :
+                sectionFormat == "decimalZero" ? ["01", "02"] :
+                sectionStart == 9 ? kind == "endnote" ? ["ix", "x"] : ["9", "10"] :
+                kind == "endnote" ? ["i", "ii"] : ["1", "2"];
+            CheckNoteLabels(document, expected);
+            DocxNoteReferenceSettings authored = kind == "footnote"
+                ? document.Settings.FootnoteReferenceSettings : document.Settings.EndnoteReferenceSettings;
+            TestAssert.Equal(format, authored.NumberFormatValue!);
+            TestAssert.Equal(105, authored.NumberStart!.Value);
+            TestAssert.Equal("eachPage", authored.NumberRestartValue!);
+        }
+    }
+
     public static void DocxSectionNoteNumbersSurviveTablesRunBreaksAndEmptySections()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
@@ -290,7 +338,7 @@ internal static class DocxFootnotesTests
             (xml, _, _) => SetNoteSection(xml.Descendants(NoteWord + "sectPr").Last(), kind, "decimal", "broken", "eachSect"),
             (xml, _, _) => xml.Descendants(NoteWord + "sectPr").First().Add(new XElement(NoteWord + "sectPrChange", new XElement(NoteWord + "sectPr"))),
             (xml, _, _) => xml.Descendants(NoteWord + "body").Single().Elements(NoteWord + "p").First().Add(new XElement(NoteWord + "ins", new XElement(NoteWord + "r", new XElement(NoteWord + "t", "tracked")))),
-            (_, settings, _) => settings.Descendants(NoteWord + kind + "Pr").Single().Add(new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", "eachPage")))
+            (_, settings, _) => settings.Descendants(NoteWord + kind + "Pr").Single().Add(new XElement(NoteWord + "numRestart", new XAttribute(NoteWord + "val", "unrecognized")))
         })
             CheckNoteLabels(ReadSectionNumberingFixture(kind, modify), ["105", "106", "107", "108"]);
     }
@@ -1558,7 +1606,7 @@ internal static class DocxFootnotesTests
                 new XAttribute(word + "val", "eachPage")))), ["105", "106"]);
         CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", "decimalZero", null, true, (_, settings) =>
             settings.Descendants(word + "footnotePr").Single().Add(new XElement(word + "numRestart",
-                new XAttribute(word + "val", "eachPage")))), ["105", "106"]);
+                new XAttribute(word + "val", "unrecognized")))), ["105", "106"]);
         CheckNoteLabels(ReadNotePrecedenceFixture("footnote", "decimal", null, null, true, (xml, _) =>
             xml.Descendants(word + "body").Single().AddFirst(new XElement(word + "p", new XElement(word + "pPr",
                 new XElement(xml.Descendants(word + "sectPr").Single()))))), ["1", "2"]);
