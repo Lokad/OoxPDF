@@ -2463,3 +2463,22 @@ font skips, 7028 frozen PDFs/6956 prior exact/72 independently qualified changes
 396 root checks/3866 fresh PDFs/three source blobs. Full Windows remains L216;
 strict Release, permanent safe managed code and local 0.1.5 package smoke pass.
 Version stays 0.1.5; release preparation is deferred.
+
+RV06-L222 (**02c51486**, integrated **04ef342d**) is test-only qualification of
+mixed-note positive thresholds and authored suffixes. All library, CLI and tool
+source trees remain identical to L221. Twenty-four Word controls preserve 1976
+source lines/48 typed owners and exact line/page/font/size ownership, including
+204 threshold-dependent source-line changes. Mapping resolves 136 clips/68 rules,
+48 navigation pairs and 420 body/static operations on 48 pages. Twenty controls
+pass the unchanged .2pt baseline gate; four continued Calibri endnotes retain
+inherited .362pt error. Terminal advance residuals up to .611pt, threshold-delta
+residual .235pt and destination .8pt remain partial. No further runtime defect or
+guard change is admitted.
+
+One deterministic emission regression covers sixteen source compositions and
+checks met/unmet content thresholds, actual authored suffix size and intact source
+records. Fresh checks: 273 Windows note passes, 268 Linux note passes/five existing
+font skips, strict Release clean, 24 frozen/root PDF identities and five focused
+root methods. L221's wider corpus, PDF group, full-catalogue and package evidence
+remain inherited through identical shipped source trees; they were not rerun.
+Safe managed constraints and version 0.1.5/release deferral remain.
