@@ -65,6 +65,38 @@ internal sealed partial class DocxLayoutEngine
         return headerLayout;
     }
 
+    private static bool HasVisibleStaticContent(DocxStaticStoryLayoutResult layout)
+    {
+        return layout.TextLines.Count != 0 ||
+            layout.InlineImages.Count != 0 ||
+            layout.TableRows.Count != 0 ||
+            layout.InlineTextBoxes.Count != 0;
+    }
+
+    private static double ResolveStaticFooterContentTop(DocxStaticStoryLayoutResult footerLayout,
+        IDocxLineMetricsProvider? unscaledLineMetrics)
+    {
+        double footerContentTop = double.NegativeInfinity;
+        DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
+        if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
+        {
+            double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
+            // Static first baselines join the hhea-ascender opt-in (Word 16.0 header
+            // grid: Tahoma sits 0.56 low with hheaAsc 1.0005); providers without hhea
+            // metrics keep legacy.
+            double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
+            double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
+            if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
+            {
+                firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
+            }
+
+            footerContentTop = firstFooterLine.BaselineY + firstFooterOffset;
+        }
+
+        return footerContentTop;
+    }
+
     private static (IReadOnlyList<DocxLayoutPage> Pages, IReadOnlyDictionary<int, double> HeaderContentBottomByPage, IReadOnlyDictionary<int, double> FooterContentTopByPage) AddStaticContent(
         IReadOnlyList<DocxLayoutPage> pages,
         IDocxTextMeasurer? textMeasurer,
@@ -135,13 +167,6 @@ internal sealed partial class DocxLayoutEngine
             // headers on a 100pt page displaced body by 8).
             bool headerHasVisibleContent = HasVisibleStaticContent(headerLayout);
 
-            static bool HasVisibleStaticContent(DocxStaticStoryLayoutResult layout)
-            {
-                return layout.TextLines.Count != 0 ||
-                    layout.InlineImages.Count != 0 ||
-                    layout.TableRows.Count != 0 ||
-                    layout.InlineTextBoxes.Count != 0;
-            }
             headerBottomCursors[pageIndex] = headerHasVisibleContent
                 ? headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing
                 : double.PositiveInfinity;
@@ -149,23 +174,7 @@ internal sealed partial class DocxLayoutEngine
             // plus long body, Word-COM rendered: body breaks before footer content instead
             // of overlapping it). Text-only stories expose their first line top under the
             // body baseline rule; stories without text lines constrain nothing.
-            double footerContentTop = double.NegativeInfinity;
-            DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
-            if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
-            {
-                double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
-                // Static first baselines join the hhea-ascender opt-in (Word 16.0 header
-                // grid: Tahoma sits 0.56 low with hheaAsc 1.0005); providers without hhea
-                // metrics keep legacy.
-                double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
-                double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
-                if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
-                {
-                    firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
-                }
-
-                footerContentTop = firstFooterLine.BaselineY + firstFooterOffset;
-            }
+            double footerContentTop = ResolveStaticFooterContentTop(footerLayout, unscaledLineMetrics);
 
             footerTopEdges[pageIndex] = footerContentTop;
             pagesWithStaticText[pageIndex] = page with

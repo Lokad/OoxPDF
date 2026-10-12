@@ -337,7 +337,8 @@ internal sealed partial class DocxLayoutEngine
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
                 double completeEndnoteHeight = 0d;
-                bool plainEndnoteFrame = DocxPlainBodyFrame.IsEligible(document) &&
+                bool plainEndnoteFrame = CanUsePlainDocumentEndnoteFrame(document, activePage,
+                    activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) &&
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);

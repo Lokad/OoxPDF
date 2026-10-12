@@ -237,6 +237,62 @@ internal sealed partial class DocxLayoutEngine
         page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph }
             ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) : 0d;
 
+    private static bool IsPlainStaticParagraph(DocxParagraph paragraph) =>
+        DocxPlainBodyFrame.IsPlainParagraph(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
+        paragraph.InlineReferences.Count == 0 && paragraph.Runs.All(run => run.FieldKind is null);
+
+    private static bool CanUsePlainDocumentEndnoteFrame(DocxDocument document, DocxLayoutPage page,
+        int pageNumber, int pageCount, IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
+    {
+        if (DocxPlainBodyFrame.IsEligible(document)) return true;
+        if (!DocxPlainBodyFrame.HasPlainBody(document) || printScale != 1d ||
+            document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) ||
+            measurer is not IDocxStaticTextMetricsProvider staticMetrics) return false;
+        DocxPageSettings settings = page.PageSettings;
+        if (document.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
+            document.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
+            settings.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
+            settings.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0)) return false;
+        var paragraphs = document.HeaderParagraphs.Concat(document.FooterParagraphs)
+            .Concat(settings.HeaderParagraphsByType.Values.SelectMany(v => v))
+            .Concat(settings.FooterParagraphsByType.Values.SelectMany(v => v));
+        foreach (DocxParagraph paragraph in paragraphs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsPlainStaticParagraph(paragraph)) return false;
+        }
+        var elements = settings.HeaderBodyElementsByType.Values.SelectMany(v => v)
+            .Concat(settings.FooterBodyElementsByType.Values.SelectMany(v => v));
+        foreach (DocxBodyElement element in elements)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (element is not DocxParagraphElement { Revisions.Count: 0, Paragraph: var paragraph } ||
+                !IsPlainStaticParagraph(paragraph)) return false;
+        }
+        double width = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
+        double tabStop = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
+        var metrics = measurer as IDocxLineMetricsProvider;
+        DocxStaticStoryLayoutResult Layout(bool header, int number) => CreateStaticStoryLayout(
+            SelectStaticHeaderFooter(header ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType,
+                header ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType, settings, number),
+            page.MarginLeft, width, header ? page.Height - ResolveHeaderDistance(page) : ResolveFooterDistance(page),
+            header, number, pageCount, measurer, staticMetrics, tabStop, printScale, metrics, cancellationToken);
+        // Source fields are excluded, so first/even/default are the only page
+        // variants. Validate every reachable frame before admitting continuations.
+        int[] variants = settings.TitlePage == true || settings.EvenAndOddHeaders == true ? [1, 2, 3] : [pageNumber];
+        foreach (int number in variants)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var headerLayout = Layout(true, number);
+            var footerLayout = Layout(false, number);
+            // Reuse the same static flow edges that displace body layout.
+            if (HasVisibleStaticContent(headerLayout) &&
+                headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing < page.Height - page.MarginTop ||
+                ResolveStaticFooterContentTop(footerLayout, metrics) > page.MarginBottom) return false;
+        }
+        return true;
+    }
+
     private static bool CanUsePlainDocumentEndnoteFlow(
         DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale,
         IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken cancellationToken,
@@ -252,7 +308,7 @@ internal sealed partial class DocxLayoutEngine
                 story.Story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
                 story.TextLines.Any(line => !ReferenceEquals(line.SourceParagraph, paragraph)) ||
                 !IsPlainContextualSpacingParagraph(paragraph) || paragraph.Spacing.ContextualSpacing == true ||
-                paragraph.LineSpacingPoints is not null || paragraph.Spacing.LineRuleValue is not (null or "auto") ||
+                !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                 paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true ||
                 !IsNumericTwips(paragraph.Spacing.BeforeValue) || !IsNumericTwips(paragraph.Spacing.AfterValue) ||
                 !double.IsFinite(story.ContentHeight)) return false;

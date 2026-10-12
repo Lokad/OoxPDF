@@ -401,7 +401,8 @@ internal sealed partial class DocxRenderer
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
-            // Qualified document-end flow has no body fields or static stories.
+            // Qualified document-end flow has no body or static-story fields;
+            // any static stories fit outside its unchanged body frame.
             // Corrected note wrapping may change first placements and note-only
             // pages while preserving source owners. Other retry paths keep their
             // original total-page guard.
