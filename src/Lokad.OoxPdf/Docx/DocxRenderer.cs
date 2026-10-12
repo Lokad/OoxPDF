@@ -388,10 +388,20 @@ internal sealed partial class DocxRenderer
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
         IReadOnlyDictionary<string, DocxNoteKerning.PageRange> notePages = new Dictionary<string, DocxNoteKerning.PageRange>();
-        DocxRelatedStoryKind noteKind = document.RelatedStories.FirstOrDefault(s => s.IsNormalStoryType &&
-            s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote)?.Kind ?? DocxRelatedStoryKind.Endnote;
-        bool plainNotes = fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
-            DocxNoteKerning.TryCreateDocument(document, first, out adjusted, out notePages, cancellationToken, noteKind);
+        DocxRelatedStoryKind noteKind = DocxRelatedStoryKind.Endnote;
+        bool plainNotes = false;
+        if (fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0)
+        {
+            foreach (DocxRelatedStoryKind kind in document.RelatedStories.Where(s => s.IsNormalStoryType &&
+                s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote).Select(s => s.Kind).Distinct())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!DocxNoteKerning.TryCreateDocument(document, first, out adjusted, out notePages, cancellationToken, kind)) continue;
+                noteKind = kind;
+                plainNotes = true;
+                break;
+            }
+        }
         if (plainNotes ||
             context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&

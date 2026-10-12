@@ -3637,6 +3637,130 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxFittingMixedEndnoteRetryPreservesTypedOwnersAndComplementaryGeometry()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool custom in new[] { false, true })
+        {
+            DocxDocument source = ReadMixedNoteRetryFixture(custom, 32);
+            DocxLayout before = engine.Create(source, measurer, default);
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, before, out _, out _, default, DocxRelatedStoryKind.Footnote),
+                "The complementary footnote retains its established empty-static frame fallback.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, before, out var adjusted, out var owners, default),
+                "An admitted endnote frame uses the existing advance correction in a complete mixed document.");
+            TestAssert.Equal(1, owners.Count);
+            TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
+                "The correction preserves both typed body references, including their equal IDs.");
+            DocxRelatedStory foot = source.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote);
+            DocxRelatedStory end = source.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote);
+            TestAssert.Equal(foot.Id!, end.Id!);
+            DocxRelatedStory adjustedFoot = adjusted.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(ReferenceEquals(foot.Paragraphs[0], adjustedFoot.Paragraphs[0]),
+                "The complementary paragraph and every run remain the exact authored owners.");
+            DocxLayout after = engine.Create(adjusted, measurer, default);
+            TestAssert.True(DocxNoteKerning.HasStableOwners(after, owners, default), "Both kinds retain complete canonical slices after one retry.");
+            DocxLayout lostKind = after with
+            {
+                RelatedStories = after.RelatedStories.Where(s => s.Story.Kind != DocxRelatedStoryKind.Footnote).ToArray(),
+                Pages = after.Pages.Select(p => p with { PlacedRelatedStories = p.PlacedRelatedStories
+                    .Where(s => s.StoryLayout.Story.Kind != DocxRelatedStoryKind.Footnote).ToArray() }).ToArray(),
+            };
+            TestAssert.True(!DocxNoteKerning.HasStableOwners(lostKind, owners, default),
+                "The published owner map retains the original complementary sources even if an entire kind disappears.");
+            var previous = before.Pages.SelectMany((p, index) => p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote).Select(s => (Page: index, s.TopY, s.Height, s.ContentTopOffset))).ToArray();
+            var current = after.Pages.SelectMany((p, index) => p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote).Select(s => (Page: index, s.TopY, s.Height, s.ContentTopOffset))).ToArray();
+            TestAssert.True(previous.SequenceEqual(current), "Endnote advances preserve the complementary note's page and physical box.");
+            var endSlices = after.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote).ToArray();
+            var previousPurposes = before.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote).Select(s => s.UsesCompleteDocumentEndnoteFlow);
+            TestAssert.True(endSlices.All(s => s.UsesPlainDocumentEndnoteTypography) &&
+                previousPurposes.SequenceEqual(endSlices.Select(s => s.UsesCompleteDocumentEndnoteFlow)),
+                "Typography admission preserves the mixed document's existing pagination purposes.");
+        }
+    }
+
+    public static void DocxMixedEndnoteRetryRequiresCompleteUniquePlainComplementaryOwners()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxDocument source = ReadMixedNoteRetryFixture(true, 32);
+        DocxLayout layout = engine.Create(source, measurer, default);
+        var endPages = layout.Pages.SelectMany((p, page) => p.PlacedRelatedStories.Where(s =>
+            s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && s.StoryLayout.Story.IsNormalStoryType).Select(s => page)).ToArray();
+        TestAssert.True(endPages.Length > 0, "The fallback control has a real placed endnote owner.");
+        var owners = new Dictionary<string, DocxNoteKerning.PageRange> { ["37"] = new(endPages[0], endPages[^1], endPages.Length) };
+        var missing = layout with { Pages = layout.Pages.Select(p => p with
+        {
+            PlacedRelatedStories = p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.Kind != DocxRelatedStoryKind.Footnote ||
+                !s.StoryLayout.Story.IsNormalStoryType).ToArray(),
+        }).ToArray() };
+        TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, missing, out var unchanged, out _, default) &&
+            ReferenceEquals(source, unchanged) && !DocxNoteKerning.HasStableOwners(missing, owners, default),
+            "Missing complementary slices reject publication before and after the retry.");
+        DocxRelatedStory foot = source.RelatedStories.Single(s => s.Kind == DocxRelatedStoryKind.Footnote && s.IsNormalStoryType);
+        foreach (DocxDocument invalid in new[]
+        {
+            source with { RelatedStories = source.RelatedStories.Concat([foot with { }]).ToArray() },
+            source with { RelatedStories = source.RelatedStories.Select(s => ReferenceEquals(s, foot) ? s with
+                { BodyElements = [new DocxParagraphElement(foot.Paragraphs[0] with { Alignment = DocxTextAlignment.Center })] } : s).ToArray() },
+            source with { BodyElements = source.BodyElements.Skip(1).ToArray() },
+            ReadMixedNoteRetryFixture(true, 140),
+            ReadMixedNoteRetryFixture(false, 140),
+        })
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(invalid, engine.Create(invalid, measurer, default), out unchanged, out _, default) &&
+                ReferenceEquals(invalid, unchanged), "Duplicate targets, rich complementary paragraphs, missing references and unadmitted continuation frames retain the fallback.");
+    }
+
+    private static DocxDocument ReadMixedNoteRetryFixture(bool custom, int repeats)
+    {
+        return ReadSectionNumberingFixture("footnote", (document, settings, parts) =>
+        {
+            XElement section = new(document.Descendants(NoteWord + "sectPr").Last());
+            section.Elements().Where(e => e.Name.LocalName is "footnotePr" or "endnotePr" or "headerReference" or "footerReference").Remove();
+            section.Add(new XElement(NoteWord + "endnotePr", new XElement(NoteWord + "pos", new XAttribute(NoteWord + "val", "docEnd"))));
+            XElement body = document.Root!.Element(NoteWord + "body")!; body.RemoveNodes();
+            XElement Properties(int size, bool marker) => new(NoteWord + "rPr",
+                new XElement(NoteWord + "rFonts", new XAttribute(NoteWord + "ascii", "Calibri"), new XAttribute(NoteWord + "hAnsi", "Calibri")),
+                new XElement(NoteWord + "sz", new XAttribute(NoteWord + "val", size)),
+                marker ? new XElement(NoteWord + "vertAlign", new XAttribute(NoteWord + "val", custom ? "baseline" : "superscript")) :
+                    new XElement(NoteWord + "kern", new XAttribute(NoteWord + "val", "0")));
+            XElement Spacing() => new(NoteWord + "pPr", new XElement(NoteWord + "spacing", new XAttribute(NoteWord + "before", "0"),
+                new XAttribute(NoteWord + "after", "0"), new XAttribute(NoteWord + "line", "240"), new XAttribute(NoteWord + "lineRule", "auto")));
+            foreach (string kind in new[] { "footnote", "endnote" })
+            {
+                XElement reference = new(NoteWord + kind + "Reference", new XAttribute(NoteWord + "id", "37"));
+                if (custom) reference.Add(new XAttribute(NoteWord + "customMarkFollows", "1"));
+                body.Add(new XElement(NoteWord + "p", Spacing(), new XElement(NoteWord + "r", Properties(24, false),
+                    new XElement(NoteWord + "t", "Public " + kind + " body before ")),
+                    new XElement(NoteWord + "r", Properties(24, true), reference, custom ? new XElement(NoteWord + "t", "*tail") : null),
+                    new XElement(NoteWord + "r", Properties(24, false), new XElement(NoteWord + "t", " body after."))));
+                XElement Note(string? type, string id, object content) => new(NoteWord + kind, new XAttribute(NoteWord + "id", id),
+                    type is null ? null : new XAttribute(NoteWord + "type", type), new XElement(NoteWord + "p", Spacing(), content));
+                parts["word/" + kind + "s.xml"] = new XDocument(new XElement(NoteWord + kind + "s",
+                    Note("separator", "-1", new XElement(NoteWord + "r", new XElement(NoteWord + "separator"))),
+                    Note("continuationSeparator", "0", new XElement(NoteWord + "r", new XElement(NoteWord + "continuationSeparator"))),
+                    Note(null, "37", new[] { new XElement(NoteWord + "r", Properties(24, true), custom ?
+                        new XElement(NoteWord + "t", "*tail") : new XElement(NoteWord + kind + "Ref")),
+                        new XElement(NoteWord + "r", Properties(20, false), new XElement(NoteWord + "t", kind == "footnote" ?
+                            " Public short footnote content." : string.Join(' ', Enumerable.Repeat("Public mixed endnote content continues.", repeats)))) }))).ToString();
+            }
+            body.Add(section); settings.Root!.RemoveNodes();
+            XDocument relationships = XDocument.Parse(parts["word/_rels/document.xml.rels"]);
+            XNamespace rel = relationships.Root!.Name.Namespace;
+            relationships.Root.Add(new XElement(rel + "Relationship", new XAttribute("Id", "rIdMixedEndnotes"),
+                new XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes"), new XAttribute("Target", "endnotes.xml")));
+            parts["word/_rels/document.xml.rels"] = relationships.ToString();
+            XDocument types = XDocument.Parse(parts["[Content_Types].xml"]);
+            types.Root!.Add(new XElement(types.Root.Name.Namespace + "Override", new XAttribute("PartName", "/word/endnotes.xml"),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml")));
+            parts["[Content_Types].xml"] = types.ToString();
+        });
+    }
+
     public static void DocxCustomNoteSuffixMetricsFollowActualSourceSpans()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

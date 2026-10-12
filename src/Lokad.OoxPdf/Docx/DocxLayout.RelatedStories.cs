@@ -390,7 +390,9 @@ internal sealed partial class DocxLayoutEngine
                         printScale,
                         headerKeepOut,
                         plainDocumentEndnoteFlow: plainEndnoteFlow,
-                        plainDocumentEndnoteTypography: plainEndnoteFlow,
+                        // Typography uses the admitted frame even when a
+                        // complementary footnote retains legacy pagination.
+                        plainDocumentEndnoteTypography: plainEndnoteFrame,
                         noteDestinationTopOffset: boundaryOverlap,
                         frameBottom: endnoteFrameBottom);
                     if (collapseEndnoteBoundaries)

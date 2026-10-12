@@ -6,18 +6,22 @@ internal static class DocxNoteKerning
 {
     internal sealed record PageRange(int First, int Last, int Slices);
 
+    private sealed class OwnedPageRanges(IReadOnlyList<DocxRelatedStory> sourceStories) : Dictionary<string, PageRange>(StringComparer.Ordinal)
+    {
+        internal IReadOnlyList<DocxRelatedStory> SourceStories { get; } = sourceStories;
+    }
+
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument adjusted, out IReadOnlyDictionary<string, PageRange> pages, CancellationToken cancellationToken,
         DocxRelatedStoryKind kind = DocxRelatedStoryKind.Endnote)
     {
         adjusted = source;
-        var pageById = new Dictionary<string, PageRange>(StringComparer.Ordinal);
+        var pageById = new OwnedPageRanges(source.RelatedStories);
         pages = pageById;
         cancellationToken.ThrowIfCancellationRequested();
         if (kind is not (DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote) ||
-            !source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == kind) ||
-            source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind != kind &&
-                s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote)) return false;
+            !source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == kind)) return false;
+        if (!HasCompleteOtherNoteOwners(layout, kind, cancellationToken, source.RelatedStories)) return false;
         if (!TryResolvePages(layout, kind, out var owners, cancellationToken)) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customTargets = null;
@@ -83,7 +87,8 @@ internal static class DocxNoteKerning
     internal static bool HasStableOwners(DocxLayout layout, IReadOnlyDictionary<string, PageRange> expected, CancellationToken cancellationToken,
         DocxRelatedStoryKind kind = DocxRelatedStoryKind.Endnote)
     {
-        if (!TryResolvePages(layout, kind, out var owners, cancellationToken)) return false;
+        if (!HasCompleteOtherNoteOwners(layout, kind, cancellationToken, (expected as OwnedPageRanges)?.SourceStories) ||
+            !TryResolvePages(layout, kind, out var owners, cancellationToken)) return false;
         var actual = new Dictionary<string, PageRange>(StringComparer.Ordinal);
         foreach (var owner in owners)
         {
@@ -98,8 +103,43 @@ internal static class DocxNoteKerning
             range.Slices <= (long)range.Last - range.First + 1);
     }
 
+    private static DocxRelatedStoryKind OtherKind(DocxRelatedStoryKind kind) =>
+        kind == DocxRelatedStoryKind.Footnote ? DocxRelatedStoryKind.Endnote : DocxRelatedStoryKind.Footnote;
+
+    private static bool HasCompleteOtherNoteOwners(DocxLayout layout, DocxRelatedStoryKind kind,
+        CancellationToken cancellationToken, IReadOnlyList<DocxRelatedStory>? sourceStories = null)
+    {
+        DocxRelatedStoryKind other = OtherKind(kind);
+        Dictionary<string, DocxRelatedStory>? expected = null;
+        if (sourceStories is not null)
+        {
+            expected = new(StringComparer.Ordinal);
+            foreach (DocxRelatedStory story in sourceStories.Where(s => s.IsNormalStoryType && s.Kind == other))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (story.Id is null || !expected.TryAdd(story.Id, story) || story.Paragraphs.Count != 1) return false;
+            }
+        }
+        if (!layout.RelatedStories.Any(s => s.Story.IsNormalStoryType && s.Story.Kind == other)) return expected is null || expected.Count == 0;
+        // The complementary kind keeps its established placement/typography.
+        // It must still have complete, unique, plain source owners on every slice.
+        if (!TryResolvePages(layout, other, out var owners, cancellationToken, requireAdmission: false)) return false;
+        if (expected is not null && expected.Count != owners.Count) return false;
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (DocxRelatedStory story in owners.Keys)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (story.Id is null || !ids.Add(story.Id) || story.BodyElements.Count != 1 ||
+                story.Paragraphs.Count != 1 || !DocxPlainBodyFrame.IsPlainParagraph(story.Paragraphs[0]) ||
+                expected is not null && (!expected.TryGetValue(story.Id, out var original) ||
+                    !ReferenceEquals(original.Paragraphs[0], story.Paragraphs[0]))) return false;
+        }
+        return true;
+    }
+
     private static bool TryResolvePages(DocxLayout layout, DocxRelatedStoryKind kind,
-        out Dictionary<DocxRelatedStory, PageRange> owners, CancellationToken cancellationToken)
+        out Dictionary<DocxRelatedStory, PageRange> owners, CancellationToken cancellationToken,
+        bool requireAdmission = true)
     {
         owners = new(ReferenceEqualityComparer.Instance);
         var sourceLines = new Dictionary<DocxRelatedStory, IReadOnlyList<DocxTextLineLayout>>(ReferenceEqualityComparer.Instance);
@@ -119,7 +159,7 @@ internal static class DocxNoteKerning
             if (story.Kind != kind || !story.IsNormalStoryType) continue;
             bool admitted = kind == DocxRelatedStoryKind.Footnote
                 ? placed.UsesPlainFootnoteFrame : placed.UsesPlainDocumentEndnoteTypography;
-            if (!admitted || !sourceLines.TryGetValue(story, out var canonical) || placed.TextLines.Count == 0) return false;
+            if (requireAdmission && !admitted || !sourceLines.TryGetValue(story, out var canonical) || placed.TextLines.Count == 0) return false;
             int next = nextLines[story];
             foreach (DocxTextLineLayout line in placed.StoryLayout.TextLines)
             {
@@ -131,12 +171,12 @@ internal static class DocxNoteKerning
             nextLines[story] = next;
             if (owners.TryGetValue(story, out PageRange? range))
             {
-                if (page <= range.Last || kind == DocxRelatedStoryKind.Endnote && placed.ContentTopOffset <= 0d) return false;
+                if (page <= range.Last || requireAdmission && kind == DocxRelatedStoryKind.Endnote && placed.ContentTopOffset <= 0d) return false;
                 owners[story] = range with { Last = page, Slices = range.Slices + 1 };
             }
             else
             {
-                if (kind == DocxRelatedStoryKind.Endnote && placed.ContentTopOffset != 0d) return false;
+                if (requireAdmission && kind == DocxRelatedStoryKind.Endnote && placed.ContentTopOffset != 0d) return false;
                 owners.Add(story, new(page, page, 1));
             }
         }
