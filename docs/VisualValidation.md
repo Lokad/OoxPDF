@@ -2681,3 +2681,42 @@ prior outputs exact/four qualified retained changes/four new Word inputs. Root
 checks 3937 PDFs/three source blobs; packed 0.1.5 smoke passes. Full Windows remains
 L216 evidence. Mixed-note separator occupancy work continues as L230. Safe managed
 code and bounds/work/publication policies remain; release preparation is deferred.
+
+### RV06-L230: shared separator occupancy and partial-head origin
+
+Qualified mixed-note flow now retains the canonical blank separator line's
+measured ascent when excluding latent flow padding. Partial-head admission uses
+the same cursor-plus-gap origin as placement; it previously reserved 6pt more.
+Existing source admission, raw clips, visible rule clearance, widow policy,
+incomplete metrics, empty-frame progress and bounded retry remain. No font,
+size, threshold or marker-specific branch is introduced. Frozen **d04d1206**,
+root **33833095**.
+
+The ascender-only model is rejected. Although it improves the initial 34
+controls, the full retained audit exposes six new page-line gaps in three
+previously passing Arial automatic-marker/threshold cases. Its exact patch,
+immutable runtime and independent negative comparisons remain ignored.
+The paired correction retains those three accepted-parent PDFs exactly.
+Two fake-metric tests guard ownership and coupled admission; both pass against
+the accepted parent. The exact new test assembly fails admission against the
+rejected intermediate library. Independent Word comparisons establish the
+accepted-parent rendering defect.
+
+Thirty-seven Word controls qualify six improvements/31 byte-exact guards.
+All 3769 source lines/74 notes/238 clips/119 rules/74 navigation pairs and 789
+body/static operations retain ownership; canonical glyph/font/advance sequences
+stay exact. All seven page-line gaps disappear. Twelve raster pages improve/
+81 exact/no tradeoffs. Changed line positions pass .2pt (maximum .139pt),
+complementary physical footnotes/rules stay exact and the deferred fresh
+separator matches Word within .006pt. Unchanged Times .211pt and fitting
+mixed-font .694pt offsets remain partial. One destination page corrects;
+the coordinate maximum remains 1.039pt with no new coordinate tradeoffs.
+
+Strict Release is clean. Windows passes 285 note/94 PDF/one static-comment checks
+(379 unique methods). The complete frozen Windows catalogue passes 2615 tests/
+zero failures/one optional private-case skip. Linux passes 368 checks with eleven
+existing environmental skips/two archive SourceLink warnings. All 7107 frozen
+and 3945 root PDF byte/page identities pass: 7098 prior outputs exact/one qualified
+retained change/eight new Word inputs. Two source blobs and packed 0.1.5 smoke pass.
+Fitting-note separator origin/gap work continues as L231. Safe managed code and
+bounds/work/publication policies remain; release preparation is deferred.
