@@ -2420,3 +2420,14 @@ Runtime `17123bc2`, root `22e82932`, carries the qualified original mixed/static
 Thirty Word controls qualify two custom/automatic Calibri corrections/twenty-eight exact guards. All 66 inherited endnote break mismatches disappear; note line/page assignments match Word. Two raster pages improve/fifty-two exact/zero tradeoffs. Source mapping resolves 2210 lines/60 typed notes and navigation pairs/164 clips/82 rules and preserves 1116 protected operations. Destination maximum drops from 8.017pt to .869pt. Calibri deferred endnotes retain .362pt baseline error, alongside earlier .202/.209pt and long-footnote residuals. No threshold relaxation or full Office-parity claim.
 
 Fresh Windows qualification: 40 deduplicated affected tests pass, strict Release clean; the full catalogue remains L216 evidence. Linux: 350 PDF/note passes/zero failures/eleven font skips, new regressions pass and prior outcomes retained, two archive SourceLink warnings. The exact frozen positive fails accepted L217; fallback passes both. Frozen: 6986 PDF checks/6982 earlier exact/one qualified prior correction/three new comparisons. Root: 391 focused checks/3824 fresh PDFs/two source blobs; local 0.1.5 package smoke passes. Permanent safe managed code, all bounds, cancellation, cumulative work, bounded staging and atomic publication remain. Version stays 0.1.5; release preparation is deferred.
+
+RV06-L219 (**d28a6104**, integrated **217ada41**) shares the actual
+widow-aware paragraph take with admitted middle-footnote anchoring. Thirty-three
+Word controls qualify one correction/thirty-two exact guards; the middle-page
+baseline passes .2pt, one raster page improves/62 exact/no tradeoffs. Source mapping
+resolves 2593 lines/66 typed notes/186 clips/93 rules; 2277 protected operations
+remain exact. Three new explicit-off controls retain an inherited Arial page-line
+gap/11.63pt; Calibri .362/.202/.209pt and .869pt navigation remain partial.
+Fresh qualification: 41 affected Windows passes, 351 Linux passes/eleven font skips,
+6989 frozen PDF checks and 392 root checks/3827 PDFs. Prior full Windows is L216;
+strict Release, safe managed constraints and local 0.1.5 package smoke pass.
