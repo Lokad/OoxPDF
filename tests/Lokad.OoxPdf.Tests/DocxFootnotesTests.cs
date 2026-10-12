@@ -4222,6 +4222,99 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxContinuedPhysicalFootnoteGapUsesSharedAdmissionAndPreservesFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool matching in new[] { false, true })
+        foreach (int footerLines in new[] { 0, 1, 6 })
+        {
+            int occupiedContinuations = 0;
+            foreach (int footRepeats in new[] { 96, 100, 104, 120 })
+            {
+                var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d,
+                    matching ? 1.15d : 1.220703125d, useStrikeoutMetrics: true);
+                DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, footRepeats),
+                    false, footerLines != 0, Math.Max(1, footerLines));
+                DocxLayout layout = engine.Create(source, measurer, default);
+                DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                    s.Story.Kind == DocxRelatedStoryKind.Footnote);
+                var feet = layout.Pages.SelectMany((p, index) => p.PlacedRelatedStories.Where(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                    .Select(s => (Page: index, Story: s))).ToArray();
+                TestAssert.True(feet.SelectMany(s => s.Story.TextLines).Select(l => l.SourceLineIndex)
+                    .SequenceEqual(canonical.TextLines.Select(l => l.SourceLineIndex)),
+                    "Continuation gap correction retains every canonical source line and order.");
+                foreach (var foot in feet.Skip(1))
+                {
+                    DocxLayoutPage page = layout.Pages[foot.Page];
+                    if (page.Items.Count == 0) continue;
+                    occupiedContinuations++;
+                    DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                        s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                        s.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator);
+                    double gap = separator.SeparatorY!.Value - foot.Story.TextLines[0].BaselineY;
+                    // Golden distances for this controlled metric profile retain the
+                    // matching floor and unframed fallback. Independent Word PDF
+                    // comparisons qualify the real-font continuation geometry.
+                    double expected = matching ? 15.03d : footerLines == 0 ? 15.87d : 15.16d;
+                    TestAssert.True(Math.Abs(gap - expected) < .02d,
+                        $"Continued source gap and fallback: {gap}, custom={custom}, matching={matching}, footer={footerLines}.");
+                    TestAssert.True(foot.Story.TextLines.All(l => ReferenceEquals(l.SourceParagraph,
+                        canonical.Story.Paragraphs[0])), "Continuations retain the canonical source paragraph.");
+                }
+            }
+            TestAssert.True(occupiedContinuations > 0,
+                "Both marker and metric profiles exercise a continuation alongside an occupied body page.");
+        }
+    }
+
+    public static void DocxContinuedPhysicalFootnoteGapRetainsRichComplementarySourceFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d, 1.220703125d, useStrikeoutMetrics: true);
+        DocxDocument plain = ReadMixedNoteRetryFixture(true, 32, 120);
+        DocxRelatedStory end = plain.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote);
+        DocxParagraph paragraph = end.Paragraphs[0];
+        foreach (DocxParagraph invalid in new[]
+        {
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } },
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepLines = true } },
+            paragraph with { Spacing = paragraph.Spacing with { ContextualSpacing = true } },
+            paragraph with { Alignment = DocxTextAlignment.Center },
+        })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(plain with { RelatedStories = plain.RelatedStories.Select(s =>
+                ReferenceEquals(s, end) ? s with { BodyElements = [new DocxParagraphElement(invalid)] } : s).ToArray() },
+                false, true, 6);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var feet = layout.Pages.SelectMany((p, index) => p.PlacedRelatedStories.Where(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .Select(s => (Page: index, Story: s))).ToArray();
+            TestAssert.True(feet.Length > 1 && feet.All(s => !s.Story.UsesPlainFootnoteFrame),
+                "Rich original complementary sources retain the existing physical-frame fallback on every page.");
+            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                s.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(feet.SelectMany(s => s.Story.TextLines).Select(l => l.SourceLineIndex)
+                .SequenceEqual(canonical.TextLines.Select(l => l.SourceLineIndex)),
+                "Rich complementary fallbacks retain the complete typed footnote source.");
+            int occupiedContinuations = 0;
+            foreach (var foot in feet.Skip(1))
+            {
+                DocxLayoutPage page = layout.Pages[foot.Page];
+                if (page.Items.Count == 0) continue;
+                occupiedContinuations++;
+                DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                    s.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator);
+                double gap = separator.SeparatorY!.Value - foot.Story.TextLines[0].BaselineY;
+                TestAssert.True(Math.Abs(gap - 15.87d) < .02d,
+                    $"Unqualified complementary source keeps its existing continuation gap: {gap}.");
+            }
+            TestAssert.True(occupiedContinuations > 0, "Every rich-source guard exercises an occupied continuation.");
+        }
+    }
+
     public static void DocxDeferredMixedEndnoteKeepsOriginalPlainSourceAdmissionAndOwners()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

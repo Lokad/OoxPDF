@@ -1735,7 +1735,10 @@ internal sealed partial class DocxLayoutEngine
         (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
         double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapRun, gapFontSizePoints, separatorMeasurer);
-        if (footerKeepOut is not null && !continuesHead && CanUseNominalNoteSeparatorFlow(activePage,
+        // The physical frame checks the original document sources. An occupied
+        // continuation uses the same nominal separator gap as a fresh head;
+        // empty pages and unqualified sources retain their existing fallback.
+        if (footerKeepOut is not null && CanUseNominalNoteSeparatorFlow(activePage,
             separatorLayout, printScale, footnoteStories.Select(s => s.StoryLayout).ToArray()))
             footnoteContentGapPoints = ResolveSourceInsetNoteContentGap(footnoteContentGapPoints,
                 gapRun, gapFontSizePoints, separatorMeasurer);
