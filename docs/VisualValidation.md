@@ -2509,3 +2509,32 @@ Calibri's .362pt baseline and the new registered fitting control's .938pt
 destination error remain partial. The origin-only draft remains unaccepted;
 source-derived first-line placement continues as L224. Safe managed code, existing
 bounds/cancellation/work/staging/publication limits and release deferral remain.
+
+### RV06-L224: deferred endnote first-line origin
+
+Admitted mixed endnotes deferred to a fresh page used a fixed subsequent-line
+offset. Their head now follows the source baseline floor enlarged by the visible
+mark's measured ascent. Original frame/source admissions and unavailable-metric,
+rich/scaled fallbacks remain. No font/size condition is added. The new regression
+covers 192 compositions, witnesses all 24 marker/size/registration/ascent combinations
+and checks unavailable-metric fallbacks; it fails the intended assertion against
+the exact parent library. Frozen **dd94a880**, root **8e5a94ae**.
+
+All 119 Word controls retain 12195 source lines/238 notes, line/page assignments,
+764 clips/382 rules/238 navigation pairs and 9864 protected operations. Twenty-six
+heads improve/93 remain exact; 26 raster pages improve/263 exact/no tradeoffs.
+Corrected rule errors stay below .115pt and Calibri glyph errors below .184pt.
+Raw-inset and measured-ascent-only drafts fail the unchanged .2pt rule gate and
+remain rejected. Arial/Times New Roman default marks with Calibri note content
+improve from 1.066pt to .834pt glyph error and remain partial. Twenty-four note
+destinations have larger differences to Word's rounded coordinates, by at most
+.189pt; all targets follow their moved clips and maximum .938pt error is inherited.
+
+Strict Release has zero warnings/errors. Windows passes 275 note/94 PDF/one static
+comment checks (369 unique methods); Linux passes 358 checks with eleven existing
+environment skips and two archive SourceLink warnings. All 7075 frozen byte/page
+checks pass: 7048 retained identities exact, 19 independently qualified changes
+and eight new Word inputs. Root verifies 3913 PDFs and two source blobs; packed
+0.1.5 smoke passes. Full Windows remains L216 evidence. Shared note-gap diagnosis
+continues as L225; permanent safe managed code, existing bounds/work/publication
+limits and release deferral remain.
