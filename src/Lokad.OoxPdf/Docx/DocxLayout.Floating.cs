@@ -264,10 +264,20 @@ internal sealed partial class DocxLayoutEngine
         double storyBaselineOffset = ResolveRelatedStoryBaselineOffset(paragraph, fontSize, baseLineHeight, textMeasurer, story?.Kind);
         DocxLineHeightProfile? unmarkedProfile = null;
         double unmarkedBaselineOffset = storyBaselineOffset;
-        bool plainNoteMetrics = fixedScale == 1d && transitionScale == 1d &&
+        bool plainNoteParagraph = fixedScale == 1d && transitionScale == 1d &&
             story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote &&
-            DocxPlainBodyFrame.IsPlainParagraph(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) &&
+            DocxPlainBodyFrame.IsPlainParagraph(paragraph) &&
             paragraph.Runs.Count >= 2 && IsAutomaticSuperscriptNoteMarker(paragraph.Runs[0]);
+        bool plainNoteMetrics = plainNoteParagraph && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
+        if (plainNoteParagraph && HasPlainNoteParagraphShape(paragraph) && sourceStoryScale == 1d &&
+            lineHeightProfile.Source == DocxLineHeightSource.ExactLineSpacing &&
+            double.IsFinite(baseLineHeight) && baseLineHeight > 0d)
+        {
+            // Plain notes share the Office-qualified body/table fixed-line inset.
+            // Their fixed boxes retain clipping; they do not use unmarked natural metrics.
+            storyBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, baseLineHeight, hasExplicitLineSpacing: true);
+            unmarkedBaselineOffset = storyBaselineOffset;
+        }
         if (lines.Length > 1 && plainNoteMetrics &&
             ResolveUnmarkedNoteMetricParagraph(paragraph) is DocxParagraph metricParagraph)
         {

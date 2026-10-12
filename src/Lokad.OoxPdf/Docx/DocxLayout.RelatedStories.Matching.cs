@@ -322,7 +322,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxRelatedStoryLayout story in stories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!HasPlainContentNoteStory(story)) return false;
+            if (!HasPlainNoteFlowStory(story)) return false;
             contentHeight += story.ContentHeight;
             if (previous is not null) contentHeight -= ResolveDocumentEndnoteBoundaryOverlap(previous, story);
             previous = story;
@@ -330,14 +330,18 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static bool HasPlainContentNoteStory(DocxRelatedStoryLayout story) =>
+    private static bool HasPlainNoteFlowStory(DocxRelatedStoryLayout story) =>
         story.Story.BodyElements.Count == 1 && story.TextLines.Count != 0 &&
         story.Story.BodyElements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
         story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph)) &&
-        IsPlainContentNoteParagraph(paragraph) && double.IsFinite(story.ContentHeight);
+        IsPlainNoteFlowParagraph(paragraph) && double.IsFinite(story.ContentHeight);
 
-    private static bool IsPlainContentNoteParagraph(DocxParagraph paragraph) =>
-        HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
+    private static bool IsPlainNoteFlowParagraph(DocxParagraph paragraph) =>
+        HasPlainNoteParagraphShape(paragraph) &&
+        // Fixed boxes share paragraph ownership/flow, not content-driven metrics.
+        (DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
+            paragraph.LineSpacingPoints is { } fixedHeight && double.IsFinite(fixedHeight) && fixedHeight > 0d &&
+            string.Equals(paragraph.Spacing.LineRuleValue, "exact", StringComparison.OrdinalIgnoreCase));
 
     private static bool HasPlainNoteParagraphShape(DocxParagraph paragraph) =>
         IsPlainContextualSpacingParagraph(paragraph) && paragraph.Spacing.ContextualSpacing != true &&
@@ -361,7 +365,7 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             hasFootnotes = true;
             if (story.BodyElements.Count != 1 || story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !IsPlainContentNoteParagraph(paragraph)) return false;
+                !IsPlainNoteFlowParagraph(paragraph)) return false;
         }
         return hasFootnotes && HasUsablePlainStaticNoteFrame(document, page, 1, 1, measurer, printScale, cancellationToken);
     }

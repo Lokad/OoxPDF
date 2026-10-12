@@ -1718,7 +1718,7 @@ internal static class DocxFootnotesTests
             p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { ContextualSpacing = true } })],
             p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { BeforeAutoSpacingValue = "1" } })],
             p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { BeforeValue = "broken" } })],
-            p => [new DocxParagraphElement(p with { LineSpacingPoints = 24d,
+            p => [new DocxParagraphElement(p with { LineSpacingPoints = null,
                 Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "exact" } })],
             p => [new DocxParagraphElement(p with { LineSpacingPoints = null,
                 Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "atLeast" } })],
@@ -1816,7 +1816,7 @@ internal static class DocxFootnotesTests
             {
                 BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
                 {
-                    LineSpacingPoints = 24d, Spacing = p.Spacing with { LineRuleValue = "exact", LineValue = "480" },
+                    LineSpacingPoints = null, Spacing = p.Spacing with { LineRuleValue = "exact", LineValue = "480" },
                 })).ToArray(),
             } : s).ToArray() },
         })
@@ -2123,7 +2123,7 @@ internal static class DocxFootnotesTests
             plain with { HeaderParagraphs = [plain.Paragraphs[0]] },
             plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
             {
-                BodyElements = [new DocxParagraphElement(paragraph with { LineSpacingPoints = 14d,
+                BodyElements = [new DocxParagraphElement(paragraph with { LineSpacingPoints = null,
                     Spacing = paragraph.Spacing with { LineRuleValue = "exact" } })],
             } : s).ToArray() },
             plain with { RelatedStories = plain.RelatedStories.Select(s => ReferenceEquals(s, first) ? s with
@@ -3327,6 +3327,117 @@ internal static class DocxFootnotesTests
             TestAssert.True(natural.Zip(actual).All(pair => Math.Abs(pair.First.TextLines[0].BaselineY -
                 pair.Second.TextLines[0].BaselineY) < .000001d),
                 $"Authored superscripts, baseline markers, rich paragraphs and scaled stories retain their first-inset fallback ({footnote}, {scale}, {variant}).");
+        }
+    }
+
+    public static void DocxExactNoteBoxesShareFixedBaselineWithoutNaturalExpansion()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (int repeats in new[] { 1, 100 })
+        foreach (double contentSize in new[] { 10d, 12d, 14d })
+        foreach (double fixedHeight in new[] { 8d, 14d, 24d })
+        {
+            DocxDocument source = footnote ? ReadWrappedFootnoteFlowFixture(repeats) :
+                ReadWrappedDocumentEndnoteFlowFixture(0, 0, repeats);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = fixedHeight, Spacing = p.Spacing with { LineRuleValue = "exact",
+                        LineValue = (fixedHeight * 20d).ToString(CultureInfo.InvariantCulture) },
+                    Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = contentSize }],
+                })).ToArray(),
+            } : s).ToArray() };
+            foreach (var story in engine.Create(source, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                TestAssert.True(repeats == 1 ? story.TextLines.Count == 1 : story.TextLines.Count > 2,
+                    "The controls exercise marked single lines and unmarked wrapped content.");
+                TestAssert.True(Math.Abs(story.TextLines[0].BaselineY + fixedHeight * .8d) < .000001d,
+                    "Plain exact notes use the independently qualified fixed-line first baseline, including uniform runs.");
+                foreach (var line in story.TextLines)
+                {
+                    TestAssert.Equal(fixedHeight, line.LineHeight!.Value);
+                    TestAssert.True(line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing &&
+                        ReferenceEquals(line.SourceParagraph, story.Story.Paragraphs[0]),
+                        "Exact boxes retain fixed clipping and original source paragraphs without natural metric growth.");
+                }
+                TestAssert.True(story.TextLines.Zip(story.TextLines.Skip(1)).All(p =>
+                    Math.Abs(p.First.BaselineY - p.Second.BaselineY - fixedHeight) < .000001d),
+                    "Automatic markers and differing content sizes do not alter the fixed continuation pitch.");
+            }
+        }
+    }
+
+    public static void DocxExactNoteTypographyPreservesCompleteOwnersAndFixedSpacing()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (string threshold in new[] { "0", "20", "30" })
+        {
+            DocxDocument source = footnote ? WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(200)) :
+                ReadWrappedDocumentEndnoteFlowFixture(8, 4, 200);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = 14d, Spacing = p.Spacing with { LineRuleValue = "exact", LineValue = "280" },
+                    Runs = [p.Runs[0], p.Runs[1] with { FontSize = 10d, KerningMinimumHalfPointsValue = threshold,
+                        PairKerningEnabled = threshold != "20" }],
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout layout = engine.Create(source, measurer, default);
+            TestAssert.True(layout.Pages.Count > 1, "The fixed-box control includes real note continuations.");
+            var kind = footnote ? DocxRelatedStoryKind.Footnote : DocxRelatedStoryKind.Endnote;
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var owners, default, kind),
+                "Plain fixed-box notes share the source-owned absent, met and unmet threshold policy.");
+            TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body reference owners remain unchanged.");
+            foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(p => p.First.IsNormalStoryType))
+            {
+                var before = pair.First.Paragraphs[0]; var after = pair.Second.Paragraphs[0];
+                TestAssert.True(ReferenceEquals(before.Runs[0], after.Runs[0]), "The XML automatic marker remains immutable.");
+                TestAssert.Equal(before.Spacing, after.Spacing);
+                TestAssert.Equal(14d, after.LineSpacingPoints!.Value);
+                TestAssert.Equal(threshold == "20", after.Runs[1].PairKerningEnabled);
+            }
+            TestAssert.True(DocxNoteKerning.HasStableOwners(engine.Create(adjusted, measurer, default), owners, default, kind),
+                "Every canonical fixed-box line retains complete source ownership through the bounded typography retry.");
+        }
+    }
+
+    public static void DocxExactNoteMetricsRetainRichAuthoredAndScaledFallbacks()
+    {
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (double scale in new[] { 1d, .5d })
+        foreach (string variant in new[] { "automatic", "authored", "baseline", "rich", "contextual", "keep", "malformed" })
+        {
+            if (scale == 1d && variant == "automatic") continue;
+            DocxDocument source = footnote ? ReadWrappedFootnoteFlowFixture(1) : ReadWrappedDocumentEndnoteFlowFixture(0, 0, 1);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = 24d, Spacing = p.Spacing with { LineRuleValue = "exact", LineValue = "480",
+                        ContextualSpacing = variant == "contextual", BeforeValue = variant == "malformed" ? "broken" : "0" },
+                    KeepRules = p.KeepRules with { KeepNext = variant == "keep" },
+                    Alignment = variant == "rich" ? DocxTextAlignment.Center : p.Alignment,
+                    Runs = [p.Runs[0] with { IsAutomaticNoteStoryMarker = variant != "authored",
+                        VerticalAlignmentValue = variant == "baseline" ? "baseline" : "superscript" }, p.Runs[1]],
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxDocument authored = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { Runs = [p.Runs[0] with { IsAutomaticNoteStoryMarker = false }, p.Runs[1]] })).ToArray(),
+            } : s).ToArray() };
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale);
+            var before = engine.Create(authored, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+            var after = engine.Create(source, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+            TestAssert.True(before.Zip(after).All(p => p.First.TextLines[0].BaselineY == p.Second.TextLines[0].BaselineY),
+                "Rich/contextual/kept paragraphs, malformed spacing, authored markers and originally scaled notes retain the qualified inset fallback.");
         }
     }
 
