@@ -1657,7 +1657,12 @@ internal sealed partial class DocxLayoutEngine
         double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
         double storiesTop = cursorTop;
         double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, footnoteStories[0].StoryLayout, headerKeepOut);
-        storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorHeight);
+        // The admitted shared frame already reserves the separator's flow charge.
+        // Its physical clip can retain latent spacing without charging it again.
+        double separatorCharge = footerKeepOut is not null
+            ? ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer,
+                footnoteStories.Select(s => s.StoryLayout).ToArray(), printScale) : separatorHeight;
+        storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorCharge);
         if (sharedContentTop is not null)
         {
             storiesTop = Math.Min(storiesTop, sharedContentTop.Value);

@@ -2815,6 +2815,45 @@ internal static class DocxFootnotesTests
             "A complete fitting footnote batch retains its original placements with a fitting footer.");
     }
 
+    public static void DocxSharedFootnoteHeadFitRetainsPhysicalSeparatorSpacing()
+    {
+        DocxDocument source = WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(100));
+        source = source with
+        {
+            BodyElements = source.BodyElements.OfType<DocxParagraphElement>().Take(1).ToArray(),
+            RelatedStories = source.RelatedStories.Where(s => !s.IsNormalStoryType || s.Id == "37").Select(s =>
+                s.IsNormalStoryType ? s with
+                {
+                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    {
+                        Runs = [p.Runs[0], p.Runs[1] with { FontSize = 14d }],
+                    })).ToArray(),
+                } : s).ToArray(),
+        };
+        var settings = source.PageSettings with { HeightValue = "15760" };
+        source = source with { PageSettings = settings, PageHeightPoints = 788d,
+            FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings } };
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxLayout layout = engine.Create(source, measurer, default);
+        var slices = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+        TestAssert.True(slices.Select(s => s.TextLines.Count).SequenceEqual(new[] { 36, 22 }),
+            "The shared frame admits the full 36-line fresh head before the 22-line continuation.");
+        DocxDocument shortSource = WithEndnoteText(source, "37", "Short public footnote.");
+        DocxLayout shortLayout = engine.Create(shortSource, measurer, default);
+        var shortHead = shortLayout.Pages[0].PlacedRelatedStories.Single(s => s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+        var head = layout.Pages[0].PlacedRelatedStories.Single(s => s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+        double gap = shortHead.SeparatorY!.Value - shortLayout.Pages[0].PlacedRelatedStories.First(s => s.StoryLayout.Story.IsNormalStoryType).TextLines[0].BaselineY;
+        TestAssert.True(Math.Abs(head.SeparatorY!.Value - slices[0].TextLines[0].BaselineY - gap) < .000001d,
+            "A split fresh head keeps the complete fitting head's physical separator spacing.");
+        var canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType);
+        TestAssert.True(canonical.TextLines.Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).SequenceEqual(
+            slices.SelectMany(s => s.StoryLayout.TextLines).Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))),
+            "Every source line is placed exactly once through the continuation drain.");
+        TestAssert.True(layout.Pages.All(p => p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType)
+            .All(s => s.TopY - s.Height >= p.MarginBottom - .001d)), "All note clips clear the fitting footer frame.");
+    }
+
     public static void DocxDeferredFootnoteHeadsHonorDefaultOnAndOffWithSingleSourceOwnership()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
