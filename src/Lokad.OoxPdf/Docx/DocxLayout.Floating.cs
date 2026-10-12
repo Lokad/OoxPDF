@@ -283,7 +283,7 @@ internal sealed partial class DocxLayoutEngine
             ResolveUnmarkedNoteMetricParagraph(paragraph) is DocxParagraph metricParagraph)
         {
             double metricSize = GetParagraphFontSize(metricParagraph);
-            unmarkedProfile = ResolveLineHeightProfile(metricParagraph, metricSize, textMeasurer, selectMaxAcrossRuns: true);
+            unmarkedProfile = ResolveNoteContentLineHeightProfile(metricParagraph, metricSize, textMeasurer);
             unmarkedBaselineOffset = ResolveRelatedStoryBaselineOffset(metricParagraph, metricSize,
                 unmarkedProfile.LineHeight, textMeasurer, story?.Kind);
         }
@@ -312,8 +312,7 @@ internal sealed partial class DocxLayoutEngine
                     Runs = line.Spans.Select(span => span.StyleRun).DistinctBy(run => run, ReferenceEqualityComparer.Instance).ToArray(),
                 };
                 double metricSize = GetParagraphFontSize(presentMetricParagraph);
-                DocxLineHeightProfile presentProfile = ResolveLineHeightProfile(presentMetricParagraph, metricSize,
-                    textMeasurer, selectMaxAcrossRuns: true);
+                DocxLineHeightProfile presentProfile = ResolveNoteContentLineHeightProfile(presentMetricParagraph, metricSize, textMeasurer);
                 // Preserve the qualified mixed inset when the prefix did not
                 // enlarge the natural box. Only an absent dominating run needs
                 // a new metric view, including inside an authored minimum box.

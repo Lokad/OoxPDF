@@ -4222,6 +4222,79 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxMinimumNoteContentUsesSourceOwnedNaturalMetrics()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool typographic in new[] { false, true })
+        foreach (int minimum in new[] { 8, 12, 20 })
+        {
+            DocxDocument source = WithNoteLineRule(ReadMixedNoteRetryFixture(custom, 32, 120), minimum, exact: false);
+            var measurer = new NoteNaturalBoxMetricMeasurer(typographic);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            foreach (DocxRelatedStoryLayout story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                TestAssert.True(story.TextLines.Count > 2, "Both note kinds exercise source-owned content-only lines.");
+                DocxTextLineLayout first = story.TextLines[0];
+                TestAssert.True(Math.Abs(first.LineHeight!.Value - Math.Max(minimum, 13.8d)) < .000001d,
+                    "The source prefix retains its independently qualified first-line box.");
+                // Tahoma's resolved Windows/hhea content box is 2472/2048 at
+                // 10pt. Its independently observed Word pitches alternate on
+                // the .12pt grid around this box. Typographic requests retain
+                // the existing single-line floor under the minimum rule.
+                double natural = typographic ? 11.5d : 12.0703125d;
+                foreach (DocxTextLineLayout line in story.TextLines.Skip(2))
+                {
+                    TestAssert.True(line.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
+                        Math.Abs(line.SingleLineHeight!.Value - natural) < .000001d &&
+                        Math.Abs(line.LineHeight!.Value - Math.Max(minimum, natural)) < .000001d,
+                        $"Source-owned minimum note box: {line.LineHeight}, natural={line.SingleLineHeight}, custom={custom}, typo={typographic}.");
+                }
+                TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == story.Story.Kind)
+                    .SelectMany(s => s.TextLines).Select(l => l.SourceLineIndex)
+                    .SequenceEqual(story.TextLines.Select(l => l.SourceLineIndex)),
+                    "Natural boxes retain every canonical typed source line through pagination.");
+            }
+        }
+    }
+
+    public static void DocxMinimumNoteContentRetainsExactAndPartialMetricFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool exact in new[] { false, true })
+        foreach (int minimum in new[] { 8, 12, 20 })
+        {
+            DocxDocument source = WithNoteLineRule(ReadMixedNoteRetryFixture(custom, 32, 120), minimum, exact);
+            IDocxTextMeasurer measurer = exact ? new NoteNaturalBoxMetricMeasurer(false) :
+                new NoteContentMetricMeasurer(10.8d, 1.15d, 1.15d);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            foreach (DocxRelatedStoryLayout story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                TestAssert.True(story.TextLines.Count > 2, "Each fallback exercises wrapped content in both note kinds.");
+                foreach (DocxTextLineLayout line in story.TextLines.Skip(2))
+                    TestAssert.True(exact
+                        ? line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing && line.LineHeight == minimum
+                        : line.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
+                            line.SingleLineHeight == 11.5d && line.LineHeight == Math.Max(minimum, 11.5d),
+                        "Exact authored boxes and providers without resolved face semantics retain their prior treatment.");
+            }
+        }
+    }
+
+    private static DocxDocument WithNoteLineRule(DocxDocument source, int points, bool exact) => source with
+    {
+        RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                LineSpacingPoints = points,
+                Spacing = p.Spacing with { LineRuleValue = exact ? "exact" : "atLeast", LineValue = (points * 20).ToString(CultureInfo.InvariantCulture) },
+            })).ToArray(),
+        } : s).ToArray(),
+    };
+
     public static void DocxContinuedPhysicalFootnoteGapUsesSharedAdmissionAndPreservesFallbacks()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -4815,6 +4888,22 @@ internal static class DocxFootnotesTests
                     Text = string.Join(' ', Enumerable.Repeat("Public custom note source content continues.", 100)) }],
             })).ToArray(),
         } : s).ToArray() };
+    }
+
+    private sealed class NoteNaturalBoxMetricMeasurer(bool useTypographicMetrics) :
+        IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider,
+        IDocxHheaLineGapProvider, IDocxHheaDescenderProvider, IDocxTypographicMetricsProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.15d;
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize * 2472d / 2048d;
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize * 2049d / 2048d;
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize * 423d / 2048d;
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => 0d;
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => MeasureHheaAscender(run, fontSize);
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => MeasureHheaDescender(run, fontSize);
+        public bool UseTypographicMetrics(DocxTextRun? run) => useTypographicMetrics;
+        public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize) => fontSize;
     }
 
     private sealed class NoteContentMetricMeasurer(double? separatorWindowsAscender = null,

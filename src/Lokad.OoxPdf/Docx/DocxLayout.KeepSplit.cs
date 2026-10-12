@@ -110,6 +110,28 @@ internal sealed partial class DocxLayoutEngine
             DocxLineHeightSource.BodySingleLineAuto);
     }
 
+    // Source-owned note content keeps the same natural font box under a
+    // minimum line rule as under automatic flow. The source prefix's first
+    // line, exact boxes and providers lacking face metric semantics retain
+    // their qualified treatment.
+    private static DocxLineHeightProfile ResolveNoteContentLineHeightProfile(
+        DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer)
+    {
+        DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, selectMaxAcrossRuns: true);
+        if (profile.Source != DocxLineHeightSource.AtLeastLineSpacing ||
+            profile.SingleLineHeight is not { } singleLineHeight ||
+            textMeasurer is not IDocxLineMetricsProvider metrics ||
+            textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics ||
+            textMeasurer is not IDocxTypographicMetricsProvider)
+            return profile;
+        double hhea = ResolveProfileHheaLineHeight(paragraph, fontSize, metrics, paragraph.Runs.FirstOrDefault(),
+            singleLineHeight, selectMaxAcrossRuns: true);
+        (double box, double deficit) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hhea, metrics, staticMetrics);
+        double natural = Math.Max(singleLineHeight, box + deficit);
+        return double.IsFinite(natural) && natural > 0d
+            ? profile with { SingleLineHeight = natural, LineHeight = Math.Max(profile.LineHeight, natural) } : profile;
+    }
+
     private static double ResolveProfileSingleLineHeight(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? metricsProvider, DocxTextRun? bodyRun, bool selectMaxAcrossRuns)
     {
         if (metricsProvider is null)
