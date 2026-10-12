@@ -220,8 +220,11 @@ internal sealed partial class DocxLayoutEngine
         DocxRelatedStoryLayout first = endnotes[0];
         double[] afters = GetStoryLineAfterSpacings(first, deferParagraphAfter: true);
         double[] boxes = GetStoryTextLineBoxHeights(first, afters);
+        // Placement starts the separator at cursorTop + the shared gap.
+        // Admission must use that same origin; subtracting the gap here
+        // reserves it twice and can defer a two-line head that placement fits.
         (int take, _) = TakeParagraphStoryLines(first.TextLines[0].SourceParagraph!, boxes, 0, boxes.Length,
-            candidateTop - bottom - separatorCharge - FootnoteSeparatorGapPoints, afters,
+            candidateTop - bottom - separatorCharge + FootnoteSeparatorGapPoints, afters,
             hasPageContent: true, isFreshHead: true);
         partialHead = take > 0;
         return partialHead ? candidateTop : fallbackTop;
@@ -243,8 +246,19 @@ internal sealed partial class DocxLayoutEngine
                 // A qualified empty separator can carry latent paragraph-after
                 // space in its legacy clip. Use the nominal flow charge while
                 // preserving its clip and always clearing the visible rule.
-                occupiedTop -= Math.Max(0d, story.Height - ResolvePlainNoteSeparatorHeight(
+                double latentPadding = Math.Max(0d, story.Height - ResolvePlainNoteSeparatorHeight(
                     story.StoryLayout, page, measurer, content, printScale));
+                occupiedTop -= latentPadding;
+                if (latentPadding > 0d && measurer is IDocxStaticTextMetricsProvider metrics &&
+                    story.TextLines.Count > 0)
+                {
+                    // Removing latent flow padding cannot remove the canonical
+                    // separator line's measured ascent from its occupied edge.
+                    (DocxTextRun? mark, double size) = FindSeparatorMarkFont(story.TextLines);
+                    double ascent = metrics.MeasureWindowsAscender(mark, size);
+                    if (double.IsFinite(ascent) && ascent > 0d)
+                        occupiedTop = Math.Max(occupiedTop, story.TextLines[0].BaselineY + ascent);
+                }
                 if (story.SeparatorY is { } ruleY)
                     occupiedTop = Math.Max(occupiedTop, ruleY + story.SeparatorThickness);
             }

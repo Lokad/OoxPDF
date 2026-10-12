@@ -4222,6 +4222,93 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxMixedNoteHeadAdmissionUsesTheSameSeparatorOriginAsPlacement()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d, 1.15d, true);
+        int twoLineWitnesses = 0;
+        foreach (bool custom in new[] { false, true })
+        foreach (int repeats in Enumerable.Range(48, 20).Select(n => n * 2))
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, repeats), false, true, 6);
+            DocxDocument WithWidow(bool? widow) => source with
+            {
+                RelatedStories = source.RelatedStories.Select(s =>
+                    s.Kind == DocxRelatedStoryKind.Endnote && s.IsNormalStoryType ? s with
+                    {
+                        BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                        {
+                            KeepRules = p.KeepRules with { WidowControl = widow,
+                                WidowControlValue = widow is null ? null : widow.Value ? "1" : "0" },
+                        })).ToArray(),
+                    } : s).ToArray(),
+            };
+            DocxLayout off = engine.Create(WithWidow(false), measurer, default);
+            for (int pageIndex = 0; pageIndex < off.Pages.Count; pageIndex++)
+            {
+                DocxLayoutPage page = off.Pages[pageIndex];
+                if (!page.PlacedRelatedStories.Any(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                    s.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator)) continue;
+                DocxPlacedRelatedStoryLayout? head = page.PlacedRelatedStories.FirstOrDefault(s =>
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && s.StoryLayout.Story.IsNormalStoryType &&
+                    s.TextLines[0].SourceLineIndex == 0);
+                if (head is null || head.TextLines.Count < 2) continue;
+                if (head.TextLines.Count == 2) twoLineWitnesses++;
+                foreach (bool? widow in new bool?[] { null, true })
+                {
+                    DocxLayout guarded = engine.Create(WithWidow(widow), measurer, default);
+                    DocxPlacedRelatedStoryLayout? guardedHead = guarded.Pages[pageIndex].PlacedRelatedStories.FirstOrDefault(s =>
+                        s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && s.StoryLayout.Story.IsNormalStoryType &&
+                        s.TextLines[0].SourceLineIndex == 0);
+                    TestAssert.True(guardedHead is not null && guardedHead.TextLines.Count >= 2,
+                        $"Shared separator head origin: placement fits {head.TextLines.Count} lines, but admission deferred the source head; custom={custom}, widow={widow}, repeats={repeats}.");
+                }
+            }
+        }
+        TestAssert.True(twoLineWitnesses > 0, "Nearby source lengths witness the exact two-line admission boundary.");
+    }
+
+    public static void DocxMixedNoteHeadClearsCanonicalSeparatorAscentAfterRemovingLatentPadding()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d, 1.15d, true);
+        int occupiedWitnesses = 0;
+        foreach (bool custom in new[] { false, true })
+        foreach (bool? widow in new bool?[] { null, true, false })
+        foreach (int repeats in new[] { 118, 120, 122 })
+        {
+            DocxDocument source = WithEndnoteWidowControl(
+                WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, repeats), false, true, 6), widow);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            foreach (DocxLayoutPage page in layout.Pages)
+            {
+                DocxPlacedRelatedStoryLayout? separator = page.PlacedRelatedStories.FirstOrDefault(s =>
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                    s.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator);
+                if (separator is null) continue;
+                foreach (DocxPlacedRelatedStoryLayout endnote in page.PlacedRelatedStories.Where(s =>
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && s.StoryLayout.Story.IsNormalStoryType))
+                {
+                    occupiedWitnesses++;
+                    // Independent Word source-length and widow witnesses show
+                    // the separator's blank line still owns its font ascent.
+                    // Latent after-spacing can be removed from the flow charge,
+                    // but cannot make this canonical line's ascent available.
+                    double canonicalTop = separator.TextLines[0].BaselineY + 10.8d;
+                    TestAssert.True(endnote.TopY - endnote.Height >= canonicalTop - .001d,
+                        $"Canonical separator ascent: endnote bottom={endnote.TopY - endnote.Height}, occupied={canonicalTop}, custom={custom}, widow={widow}, repeats={repeats}.");
+                }
+            }
+            foreach (DocxRelatedStoryLayout story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+                TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == story.Story.Kind)
+                    .SelectMany(s => s.TextLines).Select(l => l.SourceLineIndex)
+                    .SequenceEqual(story.TextLines.Select(l => l.SourceLineIndex)),
+                    "The shared occupied boundary retains every original typed source line in order.");
+        }
+        TestAssert.True(occupiedWitnesses > 0, "Source-length neighbors exercise an endnote head above a continued physical footnote.");
+    }
+
     public static void DocxMinimumNoteFirstLineBoxAndBearingUseOneNaturalOwner()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
