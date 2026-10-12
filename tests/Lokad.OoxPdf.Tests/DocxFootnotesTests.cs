@@ -3158,6 +3158,92 @@ internal static class DocxFootnotesTests
         TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body reference owners are retained.");
     }
 
+    public static void DocxMinimumEndnoteTypographyRetainsLegacyParagraphFlow()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (double minimum in new[] { 8d, 18d })
+        foreach (string threshold in new[] { "0", "20", "30" })
+        {
+            DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 200);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = minimum, Spacing = p.Spacing with { LineRuleValue = "atLeast",
+                        LineValue = (minimum * 20d).ToString(CultureInfo.InvariantCulture) },
+                    Runs = [p.Runs[0], p.Runs[1] with { FontSize = 10d, KerningMinimumHalfPointsValue = threshold,
+                        PairKerningEnabled = threshold != "20" }],
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var slices = layout.Pages.SelectMany(p => p.PlacedRelatedStories)
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+            TestAssert.True(slices.Any(s => s.ContentTopOffset > 0d) && slices.All(s => s.UsesPlainDocumentEndnoteTypography),
+                "Minimum endnote continuations admit source-owned typography independently of automatic paragraph flow.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var owners, default),
+                "Minimum content shares the existing absent, met and unmet threshold policy.");
+            foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(p => p.First.IsNormalStoryType))
+            {
+                var before = pair.First.Paragraphs[0]; var after = pair.Second.Paragraphs[0];
+                TestAssert.True(ReferenceEquals(before.Runs[0], after.Runs[0]), "The source marker remains immutable.");
+                TestAssert.Equal(before.Spacing, after.Spacing);
+                TestAssert.Equal(before.LineSpacingPoints!.Value, after.LineSpacingPoints!.Value);
+                TestAssert.Equal(threshold == "20", after.Runs[1].PairKerningEnabled);
+            }
+            TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body owners remain unchanged.");
+            TestAssert.True(DocxNoteKerning.HasStableOwners(engine.Create(adjusted, measurer, default), owners, default),
+                "All canonical minimum lines retain complete continuation ownership after the content retry.");
+        }
+        DocxDocument fitting = ReadDocumentEndnoteFlowFixture(0, 0);
+        fitting = fitting with { RelatedStories = fitting.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                LineSpacingPoints = 18d, Spacing = p.Spacing with { LineRuleValue = "atLeast", LineValue = "360" },
+            })).ToArray(),
+        } : s).ToArray() };
+        var notes = engine.Create(fitting, measurer, default).Pages.Single().PlacedRelatedStories
+            .Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+        TestAssert.True(notes.All(s => s.UsesPlainDocumentEndnoteTypography), "Fitting minima share content admission.");
+        TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height - 3d) < .000001d,
+            "Minimum paragraphs retain the independently qualified legacy boundary spacing.");
+    }
+
+    public static void DocxEndnoteKerningRejectsIncompleteCanonicalLineOwners()
+    {
+        DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 200);
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxLayout layout = engine.Create(source, new NoteContentMetricMeasurer(), default);
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out _, out var owners, default),
+            "The automatic endnote control has complete canonical source owners.");
+        foreach (Func<IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxTextLineLayout>> modify in new
+            Func<IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxTextLineLayout>>[]
+        {
+            lines => lines.Skip(1).ToArray(),
+            lines => lines.Reverse().ToArray(),
+            lines => lines.Select((line, i) => i == 0 ? line with { SourceLineIndex = -1 } : line).ToArray(),
+            lines => lines.Select((line, i) => i == 0 ? line with { SourceParagraph = line.SourceParagraph! with { } } : line).ToArray(),
+        })
+        {
+            bool changed = false;
+            DocxLayout invalid = layout with { Pages = layout.Pages.Select(page => page with
+            {
+                PlacedRelatedStories = page.PlacedRelatedStories.Select(placed =>
+                {
+                    if (changed || !placed.StoryLayout.Story.IsNormalStoryType) return placed;
+                    changed = true;
+                    var lines = modify(placed.StoryLayout.TextLines);
+                    return placed with { StoryLayout = placed.StoryLayout with { TextLines = lines }, TextLines = lines };
+                }).ToArray(),
+            }).ToArray() };
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, invalid, out var unchanged, out _, default) &&
+                ReferenceEquals(source, unchanged), "Missing, reordered or substituted source lines retain the original document.");
+            TestAssert.True(!DocxNoteKerning.HasStableOwners(invalid, owners, default),
+                "Equal note IDs and page ranges cannot qualify incomplete canonical line ownership.");
+        }
+    }
+
     private sealed class NoteContentMetricMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
         IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
     {

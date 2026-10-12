@@ -137,12 +137,6 @@ internal static class DocxNoteKerning
     }
 
     private static bool TryResolvePages(DocxLayout layout, DocxRelatedStoryKind kind,
-        out Dictionary<DocxRelatedStory, PageRange> owners, CancellationToken cancellationToken) =>
-        kind == DocxRelatedStoryKind.Footnote
-            ? TryResolveFootnotePages(layout, out owners, cancellationToken)
-            : TryResolveEndnotePages(layout, out owners, cancellationToken);
-
-    private static bool TryResolveFootnotePages(DocxLayout layout,
         out Dictionary<DocxRelatedStory, PageRange> owners, CancellationToken cancellationToken)
     {
         owners = new(ReferenceEqualityComparer.Instance);
@@ -151,7 +145,7 @@ internal static class DocxNoteKerning
         foreach (DocxRelatedStoryLayout source in layout.RelatedStories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (source.Story.Kind != DocxRelatedStoryKind.Footnote || !source.Story.IsNormalStoryType) continue;
+            if (source.Story.Kind != kind || !source.Story.IsNormalStoryType) continue;
             if (source.TextLines.Count == 0 || !sourceLines.TryAdd(source.Story, source.TextLines)) return false;
             nextLines.Add(source.Story, 0);
         }
@@ -160,8 +154,10 @@ internal static class DocxNoteKerning
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxRelatedStory story = placed.StoryLayout.Story;
-            if (story.Kind != DocxRelatedStoryKind.Footnote || !story.IsNormalStoryType) continue;
-            if (!placed.UsesPlainFootnoteFrame || !sourceLines.TryGetValue(story, out var canonical) || placed.TextLines.Count == 0) return false;
+            if (story.Kind != kind || !story.IsNormalStoryType) continue;
+            bool admitted = kind == DocxRelatedStoryKind.Footnote
+                ? placed.UsesPlainFootnoteFrame : placed.UsesPlainDocumentEndnoteTypography;
+            if (!admitted || !sourceLines.TryGetValue(story, out var canonical) || placed.TextLines.Count == 0) return false;
             int next = nextLines[story];
             foreach (DocxTextLineLayout line in placed.StoryLayout.TextLines)
             {
@@ -173,37 +169,16 @@ internal static class DocxNoteKerning
             nextLines[story] = next;
             if (owners.TryGetValue(story, out PageRange? range))
             {
-                if (page <= range.Last) return false;
-                owners[story] = range with { Last = page, Slices = range.Slices + 1 };
-            }
-            else owners.Add(story, new(page, page, 1));
-        }
-        return owners.Count > 0 && owners.Count == sourceLines.Count &&
-            nextLines.All(p => p.Value == sourceLines[p.Key].Count);
-    }
-
-    private static bool TryResolveEndnotePages(DocxLayout layout,
-        out Dictionary<DocxRelatedStory, PageRange> owners, CancellationToken cancellationToken)
-    {
-        owners = new(ReferenceEqualityComparer.Instance);
-        for (int page = 0; page < layout.Pages.Count; page++)
-        foreach (DocxPlacedRelatedStoryLayout placed in layout.Pages[page].PlacedRelatedStories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxRelatedStory story = placed.StoryLayout.Story;
-            if (story.Kind != DocxRelatedStoryKind.Endnote || !story.IsNormalStoryType) continue;
-            if (!placed.UsesPlainDocumentEndnoteTypography) return false;
-            if (owners.TryGetValue(story, out PageRange? range))
-            {
-                if (page <= range.Last || placed.ContentTopOffset <= 0d) return false;
+                if (page <= range.Last || kind == DocxRelatedStoryKind.Endnote && placed.ContentTopOffset <= 0d) return false;
                 owners[story] = range with { Last = page, Slices = range.Slices + 1 };
             }
             else
             {
-                if (placed.ContentTopOffset != 0d) return false;
+                if (kind == DocxRelatedStoryKind.Endnote && placed.ContentTopOffset != 0d) return false;
                 owners.Add(story, new(page, page, 1));
             }
         }
-        return owners.Count > 0;
+        return owners.Count > 0 && owners.Count == sourceLines.Count &&
+            nextLines.All(p => p.Value == sourceLines[p.Key].Count);
     }
 }

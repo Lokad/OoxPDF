@@ -348,13 +348,21 @@ internal sealed partial class DocxLayoutEngine
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
                 double completeEndnoteHeight = 0d;
-                bool plainEndnoteFrame = CanUsePlainDocumentEndnoteFrame(document, activePage,
-                    activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) &&
+                bool usableEndnoteFrame = CanUsePlainDocumentEndnoteFrame(document, activePage,
+                    activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken);
+                bool plainEndnoteFrame = usableEndnoteFrame &&
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
                 bool plainEndnoteFlow = plainEndnoteFrame && !document.RelatedStories.Any(story =>
                     story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
+                // Content advances do not own paragraph spacing or slice policy.
+                // Minimum-spaced notes retain the layout fallback while sharing
+                // source-owned typography with automatic-spaced notes.
+                bool plainEndnoteTypography = plainEndnoteFlow || usableEndnoteFrame &&
+                    !document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) &&
+                    CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories) &&
+                    documentEndStories.All(HasPlainContentNoteStory);
                 bool collapseEndnoteBoundaries = plainEndnoteFrame &&
                     cursorTop - completeEndnoteHeight >= Math.Max(FrameBottom(),
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
@@ -389,7 +397,8 @@ internal sealed partial class DocxLayoutEngine
                         separatorMeasurer,
                         printScale,
                         headerKeepOut,
-                        plainDocumentEndnoteTypography: plainEndnoteFlow,
+                        plainDocumentEndnoteFlow: plainEndnoteFlow,
+                        plainDocumentEndnoteTypography: plainEndnoteTypography,
                         noteDestinationTopOffset: boundaryOverlap,
                         frameBottom: endnoteFrameBottom);
                     if (collapseEndnoteBoundaries)
@@ -661,6 +670,7 @@ internal sealed partial class DocxLayoutEngine
         bool stopAfterCurrentPage = false,
         InFlightRelatedStory? inFlight = null,
         double headContentPushdownPoints = 0d,
+        bool plainDocumentEndnoteFlow = false,
         bool plainDocumentEndnoteTypography = false,
         double noteDestinationTopOffset = 0d,
         Func<DocxLayoutPage, int, int, double>? frameBottom = null)
@@ -672,7 +682,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double[] lineAfters = GetStoryLineAfterSpacings(storyLayout);
-        if (plainDocumentEndnoteTypography)
+        if (plainDocumentEndnoteFlow)
         {
             // Plain document-end flow owns one source paragraph. Its after-space
             // metadata lives on the first line, but the charge belongs at the end.
@@ -682,10 +692,10 @@ internal sealed partial class DocxLayoutEngine
             lineAfters[^1] = paragraphAfter;
         }
         double[] lineBoxes = GetStoryTextLineBoxHeights(storyLayout,
-            plainDocumentEndnoteTypography ? lineAfters : null);
+            plainDocumentEndnoteFlow ? lineAfters : null);
         int lineIndex = 0;
         double consumedHeight = 0d;
-        bool plainParagraphFlow = plainDocumentEndnoteTypography ||
+        bool plainParagraphFlow = plainDocumentEndnoteFlow ||
             frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote;
         while (lineIndex < storyLayout.TextLines.Count)
         {

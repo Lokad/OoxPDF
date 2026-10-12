@@ -322,11 +322,8 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxRelatedStoryLayout story in stories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (story.Story.BodyElements.Count != 1 || story.TextLines.Count == 0 ||
-                story.Story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
-                story.TextLines.Any(line => !ReferenceEquals(line.SourceParagraph, paragraph)) ||
-                !IsPlainAutomaticNoteParagraph(paragraph) ||
-                !double.IsFinite(story.ContentHeight)) return false;
+            if (!HasPlainContentNoteStory(story) ||
+                !DocxPlainBodyFrame.HasAutomaticLineFlow(story.Story.Paragraphs[0])) return false;
             contentHeight += story.ContentHeight;
             if (previous is not null) contentHeight -= ResolveDocumentEndnoteBoundaryOverlap(previous, story);
             previous = story;
@@ -334,8 +331,11 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static bool IsPlainAutomaticNoteParagraph(DocxParagraph paragraph) =>
-        HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
+    private static bool HasPlainContentNoteStory(DocxRelatedStoryLayout story) =>
+        story.Story.BodyElements.Count == 1 && story.TextLines.Count != 0 &&
+        story.Story.BodyElements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
+        story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph)) &&
+        IsPlainContentNoteParagraph(paragraph) && double.IsFinite(story.ContentHeight);
 
     private static bool IsPlainContentNoteParagraph(DocxParagraph paragraph) =>
         HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
