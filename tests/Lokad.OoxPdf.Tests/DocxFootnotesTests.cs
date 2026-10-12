@@ -2729,6 +2729,77 @@ internal static class DocxFootnotesTests
             "Fitting static edges leave the original note placement exact.");
     }
 
+    public static void DocxContinuedFootnoteFooterFramesKeepHeadsSeparatorsAndTailClear()
+    {
+        DocxDocument plain = ReadNotePrecedenceFixture("footnote", "decimal", null, null, true);
+        plain = plain with { RelatedStories = plain.RelatedStories.Where(s => s.Kind == DocxRelatedStoryKind.Footnote).Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                SpacingBeforePoints = 0d, SpacingAfterPoints = 0d, LineSpacingPoints = null, LineSpacingFactor = 1d,
+                Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+                Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = 12d,
+                    Text = string.Join(' ', Enumerable.Repeat("Public continued footnote content.", 100)) }],
+            })).ToArray(),
+        } : s).ToArray() };
+        DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
+        {
+            LineSpacingPoints = null,
+            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+        };
+        DocxDocument Compose(int count, bool alternating)
+        {
+            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>
+            { ["default"] = Enumerable.Repeat(footer, count).ToArray() };
+            if (alternating) paragraphs["even"] = [footer];
+            var elements = paragraphs.ToDictionary(p => p.Key,
+                p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+            var settings = plain.PageSettings with { FooterDistancePoints = 36d, EvenAndOddHeaders = alternating,
+                FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            return plain with { PageSettings = settings, FinalSectionBreak = plain.FinalSectionBreak! with { PageSettings = settings },
+                FooterParagraphs = paragraphs["default"], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+        }
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new LogicalBoundaryTextMeasurer();
+        DocxLayout baseline = engine.Create(plain, measurer, default);
+        var expected = baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType)
+            .GroupBy(s => s.StoryLayout.Story.Id).ToDictionary(g => g.Key!, g => g.SelectMany(s => s.StoryLayout.TextLines)
+                .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).ToArray());
+        foreach (bool alternating in new[] { false, true })
+        {
+            DocxDocument source = Compose(10, alternating);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            TestAssert.True(ReferenceEquals(source.BodyElements, plain.BodyElements) && ReferenceEquals(source.RelatedStories, plain.RelatedStories),
+                "Footer frame placement preserves authored body and note ownership.");
+            var actual = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType)
+                .GroupBy(s => s.StoryLayout.Story.Id).ToArray();
+            TestAssert.Equal(expected.Count, actual.Length);
+            foreach (var group in actual)
+                TestAssert.True(expected[group.Key!].SequenceEqual(group.SelectMany(s => s.StoryLayout.TextLines)
+                    .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))), "Note lines remain source-owned, ordered and exactly once.");
+            TestAssert.True(actual.Any(g => g.Count() > 1), "The fixture exercises actual continuation and final drain.");
+            foreach (DocxLayoutPage page in layout.Pages)
+            {
+                double highestFooterBaseline = page.StaticTextLines.Max(l => l.BaselineY);
+                foreach (var story in page.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType))
+                foreach (var line in story.TextLines)
+                    TestAssert.True(line.BaselineY > highestFooterBaseline,
+                        $"Footnote glyphs clear selected footer text through the final drain: note={story.StoryLayout.Story.Id}, line={line.SourceLineIndex}, baseline={line.BaselineY}, footer={highestFooterBaseline}.");
+                TestAssert.True(page.PlacedRelatedStories.All(s => s.SeparatorY is null || s.SeparatorY > highestFooterBaseline),
+                    "Head and continuation rules also stay above selected footer text.");
+            }
+        }
+        DocxLayout consumed = engine.Create(Compose(100, true), measurer, default);
+        TestAssert.Equal(baseline.Pages.Count, consumed.Pages.Count);
+        TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
+            .SequenceEqual(consumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
+            "A static variant consuming the complete frame retains bounded legacy placement.");
+        DocxLayout fitting = engine.Create(Compose(1, false), measurer, default);
+        TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
+            .SequenceEqual(fitting.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
+            "A fitting footer leaves original footnote placements exact.");
+    }
+
     private sealed class LogicalBoundaryTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
     {
         private readonly DocxTests.FamilyWidthTextMeasurer inner = new();

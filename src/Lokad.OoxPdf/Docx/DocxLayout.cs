@@ -302,6 +302,7 @@ internal sealed partial class DocxLayoutEngine
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
         var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), double>();
+        var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int), DocxLayoutPage?>();
         double? bodyFirstBaselineMemo = null;
         bool bodyFirstBaselineComputed = false;
         bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
@@ -432,11 +433,33 @@ internal sealed partial class DocxLayoutEngine
 
         double CurrentFrameBottom()
         {
+            if (GetCurrentPlainFootnoteFooterFrame() is { } footerFrame)
+            {
+                // Footnote content is seated above this selected footer edge;
+                // its body reserve occupies the same frame, rather than overlapping it.
+                return ResolveFooterKeepOut(footerFrame, pages.Count + 1, pages.Count + 1) + currentPageFootnoteReserveHeight;
+            }
             // Office A/B (w48 multi-line footer plus long body, Word-COM rendered): body
             // breaks before footer content instead of overlapping it, so an overflowing
             // footer top raises the body frame just like a footnote reserve does; the
             // higher of the two keep-out zones binds.
             return page.MarginBottom + Math.Max(currentPageFootnoteReserveHeight, ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
+        }
+
+        DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()
+        {
+            var key = (page.PageSettings, page.Width, page.Height, page.MarginLeft, page.MarginRight,
+                page.MarginTop, page.MarginBottom, page.ColumnFrames.Count);
+            if (!plainFootnoteFooterFrames.TryGetValue(key, out DocxLayoutPage? frame))
+            {
+                var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
+                    page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
+                    page.SectionProperties, page.ColumnFrames, [], [], [], [], []);
+                frame = CanUsePlainFootnoteFooterFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
+                    paragraphSpacingScale, cancellationToken) ? candidate : null;
+                plainFootnoteFooterFrames[key] = frame;
+            }
+            return frame;
         }
 
         double ResolvePageStartCursor()
@@ -645,7 +668,18 @@ internal sealed partial class DocxLayoutEngine
             }
 
             double registeringBlockRemainder = 0d;
-            if (HasCurrentColumnContent())
+            // A newly referenced note may split beside an earlier continuation;
+            // its own complete height cannot evict that reference from a usable
+            // plain footer frame. Earlier note remainders still constrain it.
+            bool sharesFooterContinuation = false;
+            if (!HasCurrentColumnContent() && inFlightNotes.Values.Any(n => n.SourceBlockIndex < sourceBlockIndex &&
+                n.PlacedLineCount > 0 && n.RemainingLineCount > 0 &&
+                !document.BodyElements.Skip(n.SourceBlockIndex + 1).Take(sourceBlockIndex - n.SourceBlockIndex - 1)
+                    .Any(e => e is DocxPageBreakElement)))
+            {
+                sharesFooterContinuation = GetCurrentPlainFootnoteFooterFrame() is not null;
+            }
+            if (HasCurrentColumnContent() || sharesFooterContinuation)
             {
                 foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
                 {
@@ -664,7 +698,9 @@ internal sealed partial class DocxLayoutEngine
             {
                 retainedReserve = completeRetainedReserve;
             }
-            currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, Math.Max(0d, retainedReserve));
+            currentPageFootnoteReserveHeight = sharesFooterContinuation
+                ? Math.Max(0d, retainedReserve)
+                : Math.Max(currentPageFootnoteReserveHeight, Math.Max(0d, retainedReserve));
         }
 
         void PlaceInFlightFootnotesOnCompletingPage()
@@ -827,6 +863,9 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
             DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
+            Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
+                CanUsePlainFootnoteFooterFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
+                    ? (p, _, _) => ResolveFooterKeepOut(p, templatePageNumber, templatePageNumber) : null;
             if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0)
             {
                 DocxLayoutPage slicePage = headScratchPages[0];
@@ -838,8 +877,9 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken.ThrowIfCancellationRequested();
                     slicePage = headScratchPages[slicePageIndex];
                     InFlightRelatedStory? continuedFlight = continuedStory.Location.Reference.Id is not null && inFlightNotes.TryGetValue((continuedStory.Location.Reference.Kind, continuedStory.Location.Reference.Id), out InFlightRelatedStory? continuedTracked) ? continuedTracked : null;
-                    sliceCursorTop = PlaceContinuationSeparatorIfNeeded(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, sliceCursorTop, continuedStory.Location.SourceBlockIndex, continuedStory.StoryLayout, 0, GetStoryTextLineBoxHeights(continuedStory.StoryLayout), continuationLayout, separatorMeasurer, paragraphSpacingScale);
-                    PlaceRelatedStorySlices(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, ref sliceCursorTop, continuedStory.StoryLayout, continuedStory.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationLayout, separatorMeasurer, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: true, inFlight: continuedFlight);
+                    sliceCursorTop = PlaceContinuationSeparatorIfNeeded(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, sliceCursorTop, continuedStory.Location.SourceBlockIndex, continuedStory.StoryLayout, 0, GetStoryTextLineBoxHeights(continuedStory.StoryLayout), continuationLayout, separatorMeasurer, paragraphSpacingScale, frameBottom: footnoteFrameBottom);
+                    PlaceRelatedStorySlices(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, ref sliceCursorTop, continuedStory.StoryLayout, continuedStory.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationLayout, separatorMeasurer, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: true, inFlight: continuedFlight,
+                        frameBottom: footnoteFrameBottom);
                 }
             }
             else if (separatorLayout is null)
@@ -857,7 +897,7 @@ internal sealed partial class DocxLayoutEngine
                     inFlightNotes: inFlightNotes,
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
-                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter));
+                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom);
             }
             else
             {
@@ -875,7 +915,7 @@ internal sealed partial class DocxLayoutEngine
                     inFlightNotes: inFlightNotes,
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
-                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter));
+                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();
@@ -931,8 +971,11 @@ internal sealed partial class DocxLayoutEngine
 
                 DocxRelatedStoryLayout narrowedLayout = NarrowStoryTextLinesForOffset(inFlight.StoryLayout, inFlight.PlacedLineCount);
                 double[] narrowedLineBoxes = GetStoryTextLineBoxHeights(narrowedLayout);
-                tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale);
-                PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight);
+                Func<DocxLayoutPage, int, int, double>? tailFrameBottom =
+                    CanUsePlainFootnoteFooterFrame(document, tailPage, separatorMeasurerForNotes, paragraphSpacingScale, cancellationToken)
+                        ? ResolveFooterKeepOut : null;
+                tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, frameBottom: tailFrameBottom);
+                PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight, frameBottom: tailFrameBottom);
             }
         }
 

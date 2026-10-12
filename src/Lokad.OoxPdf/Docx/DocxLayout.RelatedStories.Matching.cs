@@ -207,7 +207,7 @@ internal sealed partial class DocxLayoutEngine
             (DocxTextRun? mark, double size) = FindSeparatorMarkFont(separator.TextLines);
             double gap = Math.Max(ResolveSeparatorGapPoints(mark, size, measurer),
                 endnotes.Max(story => ResolveFootnoteContentGapPoints(story.TextLines, mark, size, measurer)));
-            requiredHeight += ResolveDocumentEndnoteSeparatorHeight(separator, page, measurer, endnotes, printScale) + gap;
+            requiredHeight += ResolvePlainNoteSeparatorHeight(separator, page, measurer, endnotes, printScale) + gap;
         }
         return candidateTop - requiredHeight >= footnotes.Max(story => story.TopY) ? candidateTop : fallbackTop;
     }
@@ -241,11 +241,10 @@ internal sealed partial class DocxLayoutEngine
         DocxPlainBodyFrame.IsPlainParagraph(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
         paragraph.InlineReferences.Count == 0 && paragraph.Runs.All(run => run.FieldKind is null);
 
-    private static bool HasPlainDocumentEndnoteStaticStories(DocxDocument document, DocxLayoutPage page,
+    private static bool HasPlainStaticNoteStories(DocxDocument document, DocxLayoutPage page,
         [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (!DocxPlainBodyFrame.HasPlainBody(document) || printScale != 1d ||
-            document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) ||
             measurer is not IDocxStaticTextMetricsProvider) return false;
         DocxPageSettings settings = page.PageSettings;
         if (document.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
@@ -275,7 +274,14 @@ internal sealed partial class DocxLayoutEngine
         int pageNumber, int pageCount, IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (DocxPlainBodyFrame.IsEligible(document)) return true;
-        if (!HasPlainDocumentEndnoteStaticStories(document, page, measurer, printScale, cancellationToken)) return false;
+        if (document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) ||
+            !HasPlainStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;
+        return HasUsablePlainStaticNoteFrame(document, page, pageNumber, pageCount, measurer, printScale, cancellationToken);
+    }
+
+    private static bool HasUsablePlainStaticNoteFrame(DocxDocument document, DocxLayoutPage page,
+        int pageNumber, int pageCount, IDocxTextMeasurer measurer, double printScale, CancellationToken cancellationToken)
+    {
         var staticMetrics = (IDocxStaticTextMetricsProvider)measurer;
         DocxPageSettings settings = page.PageSettings;
         double width = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
@@ -319,19 +325,41 @@ internal sealed partial class DocxLayoutEngine
             if (story.Story.BodyElements.Count != 1 || story.TextLines.Count == 0 ||
                 story.Story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
                 story.TextLines.Any(line => !ReferenceEquals(line.SourceParagraph, paragraph)) ||
-                !IsPlainContextualSpacingParagraph(paragraph) || paragraph.Spacing.ContextualSpacing == true ||
-                !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
-                paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true ||
-                !IsNumericTwips(paragraph.Spacing.BeforeValue) || !IsNumericTwips(paragraph.Spacing.AfterValue) ||
+                !IsPlainAutomaticNoteParagraph(paragraph) ||
                 !double.IsFinite(story.ContentHeight)) return false;
             contentHeight += story.ContentHeight;
             if (previous is not null) contentHeight -= ResolveDocumentEndnoteBoundaryOverlap(previous, story);
             previous = story;
         }
         return true;
+    }
 
-        static bool IsNumericTwips(string? value) => value is null ||
-            int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0;
+    private static bool IsPlainAutomaticNoteParagraph(DocxParagraph paragraph) =>
+        IsPlainContextualSpacingParagraph(paragraph) && paragraph.Spacing.ContextualSpacing != true &&
+        DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
+        paragraph.KeepRules.KeepNext != true && paragraph.KeepRules.KeepLines != true &&
+        IsNumericNoteTwips(paragraph.Spacing.BeforeValue) && IsNumericNoteTwips(paragraph.Spacing.AfterValue);
+
+    private static bool IsNumericNoteTwips(string? value) => value is null ||
+        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0;
+
+    private static bool CanUsePlainFootnoteFooterFrame(DocxDocument document, DocxLayoutPage page,
+        IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
+    {
+        if (page.ColumnFrames.Count > 1 ||
+            !page.PageSettings.FooterParagraphsByType.Values.Any(v => v.Count != 0) &&
+            !page.PageSettings.FooterBodyElementsByType.Values.Any(v => v.Count != 0) ||
+            document.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote) ||
+            !HasPlainStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;
+        bool hasFootnotes = false;
+        foreach (DocxRelatedStory story in document.RelatedStories.Where(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            hasFootnotes = true;
+            if (story.BodyElements.Count != 1 || story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
+                !IsPlainAutomaticNoteParagraph(paragraph)) return false;
+        }
+        return hasFootnotes && HasUsablePlainStaticNoteFrame(document, page, 1, 1, measurer, printScale, cancellationToken);
     }
 
     private static double ResolveDocumentEndnoteBoundaryOverlap(
@@ -344,7 +372,7 @@ internal sealed partial class DocxLayoutEngine
         return after + (currentLine.AppliedBeforeSpacing ?? 0d) - combined.AppliedBeforeSpacing;
     }
 
-    private static double ResolveDocumentEndnoteSeparatorHeight(
+    private static double ResolvePlainNoteSeparatorHeight(
         DocxRelatedStoryLayout separator, DocxLayoutPage page, IDocxTextMeasurer? measurer,
         IReadOnlyList<DocxRelatedStoryLayout> contentStories, double printScale)
     {
