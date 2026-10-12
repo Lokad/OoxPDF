@@ -29,8 +29,10 @@ internal static class DocxNoteKerning
             DocxParagraph paragraph = story.Paragraphs[0];
             if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || paragraph.Runs.Count == 0) return false;
             DocxTextRun first = paragraph.Runs[0];
-            // Custom footnote marks retain their existing typography fallback.
-            if (kind == DocxRelatedStoryKind.Footnote && !first.IsAutomaticNoteStoryMarker) return false;
+            // Custom baseline marks share exact source ownership. Other custom
+            // footnote alignments retain their independently qualified fallback.
+            if (kind == DocxRelatedStoryKind.Footnote && !first.IsAutomaticNoteStoryMarker &&
+                first.VerticalAlignment != DocxRunVerticalAlignment.Baseline) return false;
             int protectedPrefix = 0;
             if (!first.IsAutomaticNoteStoryMarker && first.VerticalAlignment != DocxRunVerticalAlignment.Superscript)
             {
@@ -39,7 +41,7 @@ internal static class DocxNoteKerning
                 // Other alignments and ambiguous/missing owners retain the fallback.
                 if (first.VerticalAlignment != DocxRunVerticalAlignment.Baseline || first.SourceRunIndex < 0 ||
                     first.SourceTextOffsetInRun != 0) return false;
-                customMarks ??= ResolveCustomMarks(source, cancellationToken);
+                customMarks ??= ResolveCustomMarks(source, kind, cancellationToken);
                 if (!customMarks.TryGetValue(story.Id, out string? mark) || mark is null ||
                     !first.Text.StartsWith(mark, StringComparison.Ordinal)) return false;
                 protectedPrefix = mark.Length;
@@ -81,7 +83,8 @@ internal static class DocxNoteKerning
         return true;
     }
 
-    private static Dictionary<string, string?> ResolveCustomMarks(DocxDocument source, CancellationToken cancellationToken)
+    private static Dictionary<string, string?> ResolveCustomMarks(DocxDocument source,
+        DocxRelatedStoryKind kind, CancellationToken cancellationToken)
     {
         var marks = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(source))
@@ -93,7 +96,7 @@ internal static class DocxNoteKerning
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (reference.Kind != DocxRelatedStoryKind.Endnote || reference.Id is null) continue;
+                if (reference.Kind != kind || reference.Id is null) continue;
                 string? mark = null;
                 if (reference.CustomMarkText is { Length: 1 } custom && !char.IsWhiteSpace(custom[0]) &&
                     !char.IsSurrogate(custom[0]) && reference.Revision is null && reference.Revisions.Count == 0 &&
