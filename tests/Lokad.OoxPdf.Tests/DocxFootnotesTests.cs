@@ -2731,17 +2731,7 @@ internal static class DocxFootnotesTests
 
     public static void DocxContinuedFootnoteFooterFramesKeepHeadsSeparatorsAndTailClear()
     {
-        DocxDocument plain = ReadNotePrecedenceFixture("footnote", "decimal", null, null, true);
-        plain = plain with { RelatedStories = plain.RelatedStories.Where(s => s.Kind == DocxRelatedStoryKind.Footnote).Select(s => s.IsNormalStoryType ? s with
-        {
-            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
-            {
-                SpacingBeforePoints = 0d, SpacingAfterPoints = 0d, LineSpacingPoints = null, LineSpacingFactor = 1d,
-                Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
-                Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = 12d,
-                    Text = string.Join(' ', Enumerable.Repeat("Public continued footnote content.", 100)) }],
-            })).ToArray(),
-        } : s).ToArray() };
+        DocxDocument plain = ReadWrappedFootnoteFlowFixture(100);
         DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
         {
             LineSpacingPoints = null,
@@ -2765,9 +2755,9 @@ internal static class DocxFootnotesTests
         var expected = baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType)
             .GroupBy(s => s.StoryLayout.Story.Id).ToDictionary(g => g.Key!, g => g.SelectMany(s => s.StoryLayout.TextLines)
                 .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).ToArray());
-        foreach (bool alternating in new[] { false, true })
+        foreach ((int footerCount, bool alternating) in new[] { (10, false), (10, true), (1, false) })
         {
-            DocxDocument source = Compose(10, alternating);
+            DocxDocument source = Compose(footerCount, alternating);
             DocxLayout layout = engine.Create(source, measurer, default);
             TestAssert.True(ReferenceEquals(source.BodyElements, plain.BodyElements) && ReferenceEquals(source.RelatedStories, plain.RelatedStories),
                 "Footer frame placement preserves authored body and note ownership.");
@@ -2775,8 +2765,12 @@ internal static class DocxFootnotesTests
                 .GroupBy(s => s.StoryLayout.Story.Id).ToArray();
             TestAssert.Equal(expected.Count, actual.Length);
             foreach (var group in actual)
+            {
                 TestAssert.True(expected[group.Key!].SequenceEqual(group.SelectMany(s => s.StoryLayout.TextLines)
                     .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))), "Note lines remain source-owned, ordered and exactly once.");
+                TestAssert.True(group.First().StoryLayout.TextLines.Count >= 2,
+                    "An occupied footer frame defers a fresh note head that cannot fit its default widow pair.");
+            }
             TestAssert.True(actual.Any(g => g.Count() > 1), "The fixture exercises actual continuation and final drain.");
             foreach (DocxLayoutPage page in layout.Pages)
             {
@@ -2794,10 +2788,75 @@ internal static class DocxFootnotesTests
         TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(consumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
             "A static variant consuming the complete frame retains bounded legacy placement.");
-        DocxLayout fitting = engine.Create(Compose(1, false), measurer, default);
-        TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
+        // A fitting footer alone does not imply that the complete note batch fits.
+        // Use short notes here so this assertion protects whole-batch placement.
+        DocxDocument fittingPlain = WithEndnoteText(plain, "37", "Short public note.");
+        fittingPlain = WithEndnoteText(fittingPlain, "4", "Another short public note.");
+        DocxLayout fittingBaseline = engine.Create(fittingPlain, measurer, default);
+        DocxLayout fitting = engine.Create(Compose(1, false) with { RelatedStories = fittingPlain.RelatedStories }, measurer, default);
+        TestAssert.Equal(1, fittingBaseline.Pages.Count);
+        TestAssert.True(fittingBaseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(fitting.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
-            "A fitting footer leaves original footnote placements exact.");
+            "A complete fitting footnote batch retains its original placements with a fitting footer.");
+    }
+
+    public static void DocxDeferredFootnoteHeadsHonorDefaultOnAndOffWithSingleSourceOwnership()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new LogicalBoundaryTextMeasurer();
+        DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer", 12d, 14d) with
+        {
+            LineSpacingPoints = null,
+            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+        };
+        DocxDocument? control = null;
+        DocxPlacedRelatedStoryLayout[] offSlices = [];
+        int occupiedPage = -1;
+        for (int pageHeight = 220; pageHeight <= 792 && control is null; pageHeight++)
+        {
+            DocxDocument candidate = WithEndnoteWidowControl(ReadWrappedFootnoteFlowFixture(40), false);
+            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] };
+            var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(footer)] };
+            var settings = candidate.PageSettings with { FooterDistancePoints = 36d,
+                HeightValue = (pageHeight * 20).ToString(CultureInfo.InvariantCulture),
+                FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            candidate = candidate with { PageHeightPoints = pageHeight, PageSettings = settings,
+                FinalSectionBreak = candidate.FinalSectionBreak! with { PageSettings = settings },
+                FooterParagraphs = [footer], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            DocxLayout layout = engine.Create(candidate, measurer, default);
+            var placements = layout.Pages.SelectMany((p, i) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Id == "4").Select(s => (Story: s, Page: i))).ToArray();
+            if (placements.Length != 2 || placements[0].Story.TextLines.Count != 1) continue;
+            control = candidate; offSlices = placements.Select(p => p.Story).ToArray(); occupiedPage = placements[0].Page;
+        }
+        TestAssert.True(control is not null, "A bounded capacity scan finds a one-line fresh head with widow control disabled.");
+        foreach (bool? widow in new bool?[] { null, true })
+        {
+            DocxDocument source = WithEndnoteWidowControl(control!, widow);
+            var placements = engine.Create(source, measurer, default).Pages.SelectMany((p, i) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Id == "4").Select(s => (Story: s, Page: i))).ToArray();
+            TestAssert.True(placements[0].Page > occupiedPage && placements[0].Story.TextLines.Count >= 2,
+                "Default and explicit widow control defer the whole fresh head rather than publishing a one-line head.");
+            TestAssert.True(offSlices.SelectMany(s => s.StoryLayout.TextLines).Select(l => (l.Text, l.SourceLineIndex))
+                .SequenceEqual(placements.SelectMany(p => p.Story.StoryLayout.TextLines).Select(l => (l.Text, l.SourceLineIndex))),
+                "The deferred head reaches the final drain exactly once and in source order.");
+            TestAssert.True(ReferenceEquals(source.BodyElements, control!.BodyElements), "Deferral preserves the body reference owners.");
+        }
+    }
+
+    private static DocxDocument ReadWrappedFootnoteFlowFixture(int repeats)
+    {
+        DocxDocument source = ReadNotePrecedenceFixture("footnote", "decimal", null, null, true);
+        return source with { RelatedStories = source.RelatedStories.Where(s => s.Kind == DocxRelatedStoryKind.Footnote).Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                SpacingBeforePoints = 0d, SpacingAfterPoints = 0d, LineSpacingPoints = null, LineSpacingFactor = 1d,
+                Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+                Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = 12d,
+                    Text = string.Join(' ', Enumerable.Repeat("Public continued footnote content.", repeats)) }],
+            })).ToArray(),
+        } : s).ToArray() };
     }
 
     private sealed class LogicalBoundaryTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider

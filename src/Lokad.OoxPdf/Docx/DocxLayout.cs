@@ -608,6 +608,9 @@ internal sealed partial class DocxLayoutEngine
 
         double FootnoteRemainderTotal()
         {
+            if (GetCurrentPlainFootnoteFooterFrame() is { } frame &&
+                TrySharedFootnoteFrameReserve(inFlightNotes.Values, frame with { Items = currentItems.ToArray() },
+                    separatorMeasurerForNotes, cancellationToken, out double sharedReserve)) return sharedReserve;
             if (useCompleteFootnoteReserve && TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve))
             {
                 return completeReserve;
@@ -692,6 +695,14 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
+            if (GetCurrentPlainFootnoteFooterFrame() is { } frame &&
+                TrySharedFootnoteFrameReserve(inFlightNotes.Values.Where(n =>
+                    !HasCurrentColumnContent() && !sharesFooterContinuation || n.SourceBlockIndex != sourceBlockIndex),
+                    frame with { Items = currentItems.ToArray() }, separatorMeasurerForNotes, cancellationToken, out double sharedRetained))
+            {
+                currentPageFootnoteReserveHeight = sharedRetained;
+                return;
+            }
             double retainedReserve = FootnoteRemainderTotal() - registeringBlockRemainder;
             if (useCompleteFootnoteReserve && HasCurrentColumnContent() &&
                 TryCompleteFootnoteReserve(inFlightNotes.Values.Where(n => n.SourceBlockIndex != sourceBlockIndex), out double completeRetainedReserve))
@@ -929,6 +940,12 @@ internal sealed partial class DocxLayoutEngine
                 pages[^1] = templatePage with { PlacedRelatedStories = harvestedStories.ToArray() };
             }
 
+            if (footnoteFrameBottom is not null)
+            {
+                // The drain owns a rendered source reference even when its head
+                // cannot fit this page. The postpass must not insert a second owner.
+                foreach (var key in freshKeys) placedStoryKeys.Add(key);
+            }
             foreach (KeyValuePair<(DocxRelatedStoryKind Kind, string Id), int> placedBefore in sharedPlacedBefore)
             {
                 if (inFlightNotes.TryGetValue(placedBefore.Key, out InFlightRelatedStory? placedFlight) && placedFlight.PlacedLineCount > placedBefore.Value)

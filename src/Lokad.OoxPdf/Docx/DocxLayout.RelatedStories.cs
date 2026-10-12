@@ -543,6 +543,36 @@ internal sealed partial class DocxLayoutEngine
         return double.IsFinite(reserve);
     }
 
+    private static bool TrySharedFootnoteFrameReserve(IEnumerable<InFlightRelatedStory> notes,
+        DocxLayoutPage frame, IDocxTextMeasurer? measurer, CancellationToken cancellationToken, out double reserve)
+    {
+        reserve = 0d;
+        InFlightRelatedStory[] remaining = notes.Where(n => n.RemainingLineCount > 0).ToArray();
+        if (remaining.Length == 0) return true;
+        foreach (InFlightRelatedStory note in remaining)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            double height = note.RemainingContentHeight(GetStoryTextLineBoxHeights(note.StoryLayout));
+            if (!double.IsFinite(height) || height < 0d) return false;
+            reserve += height;
+        }
+        InFlightRelatedStory first = remaining[0];
+        if (first.SeparatorPlaced)
+        {
+            reserve += ContinuationRuleOverhead(first.ContinuationLayout, measurer);
+        }
+        else if (first.SeparatorLayout is { } separator)
+        {
+            (DocxTextRun? mark, double size) = FindSeparatorMarkFont(separator.TextLines);
+            double gap = Math.Max(ResolveSeparatorGapPoints(mark, size, measurer),
+                remaining.Max(n => ResolveFootnoteContentGapPoints(n.StoryLayout.TextLines, mark, size, measurer)));
+            reserve += ResolvePlainNoteSeparatorHeight(separator, frame, measurer,
+                remaining.Select(n => n.StoryLayout).ToArray(), 1d) + gap;
+        }
+        else reserve += ResolveSeparatorGapPoints(null, 0d, measurer);
+        return double.IsFinite(reserve);
+    }
+
     // Content remainder sums take boxes (the same boxes takes consume); the separator
     // counts only until placed on the head page; one continuation-rule overhead covers
     // the next shared slice page. Same quantities the slice path places with.
@@ -598,7 +628,8 @@ internal sealed partial class DocxLayoutEngine
     // overflow tolerance, floored at zero so mark-less separators keep legacy takes.
     private static double ContinuationTakeCharge(
         DocxRelatedStoryLayout? continuationLayout,
-        IDocxTextMeasurer? separatorMeasurer)
+        IDocxTextMeasurer? separatorMeasurer,
+        bool hasPrecedingFragment = true)
     {
         if (continuationLayout is null || continuationLayout.TextLines.Count == 0)
         {
@@ -608,7 +639,10 @@ internal sealed partial class DocxLayoutEngine
         (DocxTextRun? takeGapRun, double takeGapFontSizePoints) = FindSeparatorMarkFont(continuationLayout.TextLines);
         double takeGapPoints = ResolveSeparatorGapPoints(takeGapRun, takeGapFontSizePoints, separatorMeasurer);
         (double takeRuleBottomOffsetPoints, double takeRuleThicknessPoints) = ResolveSeparatorRuleGeometry(continuationLayout.Story.Kind, takeGapRun, takeGapFontSizePoints, separatorMeasurer);
-        return Math.Max(0d, takeGapPoints + takeRuleBottomOffsetPoints + takeRuleThicknessPoints - 2.1);
+        // The measured lap belongs to a continued tail. A deferred source head
+        // has no preceding fragment and must leave the complete rule ride clear.
+        return Math.Max(0d, takeGapPoints + takeRuleBottomOffsetPoints + takeRuleThicknessPoints -
+            (hasPrecedingFragment ? 2.1 : 0d));
     }
 
     private static void PlaceRelatedStorySlices(
@@ -651,6 +685,8 @@ internal sealed partial class DocxLayoutEngine
             plainDocumentEndnoteTypography ? lineAfters : null);
         int lineIndex = 0;
         double consumedHeight = 0d;
+        bool plainParagraphFlow = plainDocumentEndnoteTypography ||
+            frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote;
         while (lineIndex < storyLayout.TextLines.Count)
         {
             double FrameBottom(DocxLayoutPage page, int index) => frameBottom?.Invoke(page, index + 1, outputPages.Count) ?? page.MarginBottom;
@@ -672,21 +708,12 @@ internal sealed partial class DocxLayoutEngine
             double[]? fitAfters = printScale >= 1d ? lineAfters : null;
             bool hasPageContent = activePage.Items.Count != 0 ||
                 activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType);
-            (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters,
-                forceProgress: !plainDocumentEndnoteTypography || !hasPageContent);
-            if (plainDocumentEndnoteTypography && takeCount > 1 &&
-                DocxParagraphFragmentPolicy.HasOneLineTail(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount))
-            {
-                // Reserve two source lines for the final continuation, using
-                // the same default/on/off widow predicate as body paragraphs.
-                // A one-line frame keeps mandatory progress. The following
-                // head rule handles any newly reduced initial one-line take.
-                takeCount--;
-                takeHeight -= lineBoxes[lineIndex + takeCount];
-            }
-            if (plainDocumentEndnoteTypography && hasPageContent &&
-                (takeCount == 0 || lineIndex == 0 &&
-                 DocxParagraphFragmentPolicy.HasOneLineHead(storyLayout.TextLines[0].SourceParagraph!, remainingLines, takeCount)))
+            (int takeCount, double takeHeight) = plainParagraphFlow
+                ? TakeParagraphStoryLines(storyLayout.TextLines[0].SourceParagraph!, lineBoxes, lineIndex,
+                    remainingLines, availableHeight, fitAfters, hasPageContent,
+                    lineIndex == 0 && (inFlight is null || inFlight.PlacedLineCount == 0))
+                : TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
+            if (plainParagraphFlow && hasPageContent && takeCount == 0)
             {
                 if (stopAfterCurrentPage) return;
                 // An occupied frame must fit a source line before placing it;
@@ -851,6 +878,28 @@ internal sealed partial class DocxLayoutEngine
         return (takeCount, takeHeight);
     }
 
+    // Seating and emission must choose the same paragraph fragment. Otherwise a
+    // deferred head can reserve a line that the slicer never emits. Use the body's
+    // default/on/off widow rules and preserve progress on an empty frame.
+    private static (int TakeCount, double TakeHeight) TakeParagraphStoryLines(
+        DocxParagraph paragraph, double[] lineBoxes, int startLineIndex, int remainingLineCount,
+        double capacityHeight, double[]? lineAfterSpacings, bool hasPageContent, bool isFreshHead)
+    {
+        (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, startLineIndex, remainingLineCount,
+            capacityHeight, lineAfterSpacings, forceProgress: !hasPageContent);
+        if (takeCount > 1 && DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, remainingLineCount, takeCount))
+        {
+            takeCount--;
+            takeHeight -= lineBoxes[startLineIndex + takeCount];
+        }
+        if (hasPageContent && isFreshHead &&
+            DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, remainingLineCount, takeCount))
+        {
+            return (0, 0d);
+        }
+        return (takeCount, takeHeight);
+    }
+
     // RV06 continuation probes (Word 16.0, footlong/endlong): continued notes open
     // later pages with a full-width continuation rule plus end mark. Endnote
     // continuations start fresh at the page top (mark one first-line inset below the
@@ -895,7 +944,8 @@ internal sealed partial class DocxLayoutEngine
             // takes stay legacy pending the balloon lane, so scaled pages keep the shared
             // full-block charge with null needs exactly as today.
             double continuationOverhead = printScale >= 1d
-                ? ContinuationTakeCharge(continuationSeparatorLayout, separatorMeasurer)
+                ? ContinuationTakeCharge(continuationSeparatorLayout, separatorMeasurer,
+                    frameBottom is null || bodyLineIndex > 0 || bodyStoryLayout.TextLines[0].SourceLineIndex > 0)
                 : ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer);
             double reservedTopSpace = Math.Max(0d, activePage.Height - activePage.MarginTop - cursorTop);
             double netOverhead = Math.Max(0d, continuationOverhead - reservedTopSpace);
@@ -1617,14 +1667,22 @@ internal sealed partial class DocxLayoutEngine
         // same clamped capacity, so take counts are unchanged; fitting stories keep the
         // legacy whole placement bit-identically.
         double seatedHeight = 0d;
-        foreach (DocxReferencedRelatedStoryLayout head in plainSharedHead ? footnoteStories : footnoteStories.Take(1))
+        foreach (DocxReferencedRelatedStoryLayout head in footerKeepOut is not null ? footnoteStories : footnoteStories.Take(1))
         {
             DocxRelatedStoryLayout headLayout = head.StoryLayout;
             if (headLayout.TextLines.Count == 0) break;
             double[] headLineBoxes = GetStoryTextLineBoxHeights(headLayout);
             double[]? headFitAfters = printScale >= 1d ? GetStoryLineAfterSpacings(headLayout) : null;
-            (int headTakeCount, double headTakeHeight) = TakeStoryLines(headLineBoxes, 0, headLayout.TextLines.Count,
-                Math.Max(0d, storiesTop - frameBottom - seatedHeight), headFitAfters, forceProgress: seatedHeight == 0d);
+            double headCapacity = Math.Max(0d, storiesTop - frameBottom - seatedHeight);
+            bool freshHead = inFlightNotes is null || head.Location.Reference.Id is null ||
+                !inFlightNotes.TryGetValue((head.Location.Reference.Kind, head.Location.Reference.Id), out InFlightRelatedStory? headFlight) ||
+                headFlight.PlacedLineCount == 0;
+            (int headTakeCount, double headTakeHeight) = footerKeepOut is not null
+                ? TakeParagraphStoryLines(headLayout.TextLines[0].SourceParagraph!, headLineBoxes, 0,
+                    headLayout.TextLines.Count, headCapacity, headFitAfters,
+                    activePage.Items.Count != 0 || seatedHeight != 0d, freshHead)
+                : TakeStoryLines(headLineBoxes, 0, headLayout.TextLines.Count, headCapacity, headFitAfters,
+                    forceProgress: seatedHeight == 0d);
             if (headTakeCount < headLayout.TextLines.Count)
             {
                 // A continued tail and a fresh head share the same bottom-anchored
