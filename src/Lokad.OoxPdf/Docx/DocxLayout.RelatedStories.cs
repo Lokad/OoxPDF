@@ -327,8 +327,16 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
                 }
-                cursorTop = ResolveFittingDocumentEndnoteStartTop(activePage, activePlacedStories, cursorTop,
-                    documentEndStories, documentEndSeparatorLayout, separatorMeasurer, printScale);
+                bool allowMixedEndnoteHead = hasFootnotes && endnoteFrameBottom is not null &&
+                    CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
+                        documentEndStories, cancellationToken, out _);
+                cursorTop = ResolveDocumentEndnoteStartAboveFootnotes(activePage, activePlacedStories, cursorTop,
+                    documentEndStories, documentEndSeparatorLayout, separatorMeasurer, printScale,
+                    allowMixedEndnoteHead, out bool partialMixedEndnoteHead);
+                if (partialMixedEndnoteHead && footerKeepOut is { } mixedFooterBottom)
+                    endnoteFrameBottom = (p, number, count) => Math.Max(mixedFooterBottom(p, number, count),
+                        p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                            .Select(s => s.TopY).DefaultIfEmpty(p.MarginBottom).Max());
                 if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
                 {
                     // RV06 endnote probes: document-end endnotes draw the separator rule
@@ -364,8 +372,8 @@ internal sealed partial class DocxLayoutEngine
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
-                // Mixed static frames share typography without admitting new
-                // paragraph-boundary or pagination corrections.
+                // Mixed static frames share typography and qualified head space;
+                // their paragraph-boundary policy remains unchanged.
                 bool plainEndnoteFrame = plainEndnoteTypography &&
                     (!hasFootnotes || DocxPlainBodyFrame.IsEligible(document));
                 bool plainEndnoteFlow = plainEndnoteFrame && !hasFootnotes;
@@ -403,7 +411,7 @@ internal sealed partial class DocxLayoutEngine
                         separatorMeasurer,
                         printScale,
                         headerKeepOut,
-                        plainDocumentEndnoteFlow: plainEndnoteFlow,
+                        plainDocumentEndnoteFlow: plainEndnoteFlow || partialMixedEndnoteHead,
                         // Typography uses the admitted frame even when a
                         // complementary footnote retains legacy pagination.
                         plainDocumentEndnoteTypography: plainEndnoteTypography,
@@ -506,7 +514,7 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(0d, boxHeight) + Math.Max(0d, afterSpacing) + Math.Max(0d, beforeSpacing);
     }
 
-    private static double[] GetStoryLineAfterSpacings(DocxRelatedStoryLayout storyLayout)
+    private static double[] GetStoryLineAfterSpacings(DocxRelatedStoryLayout storyLayout, bool deferParagraphAfter = false)
     {
         double[] afters = new double[storyLayout.TextLines.Count];
         for (int lineIndex = 0; lineIndex < afters.Length; lineIndex++)
@@ -515,6 +523,15 @@ internal sealed partial class DocxLayoutEngine
             afters[lineIndex] = Math.Max(0d, line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d);
         }
 
+        if (deferParagraphAfter && afters.Length != 0)
+        {
+            // Qualified plain document-end flow owns one source paragraph. Its
+            // after-space metadata lives on the first line, but its charge belongs
+            // at the end, both when checking a head and placing its continuations.
+            double paragraphAfter = afters[0];
+            afters[0] = 0d;
+            afters[^1] = paragraphAfter;
+        }
         return afters;
     }
 
@@ -689,16 +706,7 @@ internal sealed partial class DocxLayoutEngine
             return;
         }
 
-        double[] lineAfters = GetStoryLineAfterSpacings(storyLayout);
-        if (plainDocumentEndnoteFlow)
-        {
-            // Plain document-end flow owns one source paragraph. Its after-space
-            // metadata lives on the first line, but the charge belongs at the end.
-            // Deferring it keeps partial takes and continuation offsets consistent.
-            double paragraphAfter = lineAfters[0];
-            lineAfters[0] = 0d;
-            lineAfters[^1] = paragraphAfter;
-        }
+        double[] lineAfters = GetStoryLineAfterSpacings(storyLayout, deferParagraphAfter: plainDocumentEndnoteFlow);
         double[] lineBoxes = GetStoryTextLineBoxHeights(storyLayout,
             plainDocumentEndnoteFlow ? lineAfters : null);
         int lineIndex = 0;

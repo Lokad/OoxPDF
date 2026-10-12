@@ -3788,10 +3788,9 @@ internal static class DocxFootnotesTests
             WithMixedNoteStaticFrame(plain, true, true, 1, staticParagraph with { LineSpacingPoints = 14d }),
             WithMixedNoteStaticFrame(plain, true, true, 1, staticParagraph with
                 { Runs = [staticParagraph.Runs[0] with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }] }),
-            WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(true, 140), true, true, 1),
         })
             TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, engine.Create(source, measurer, default), out _, out _, default),
-                "Consumed, fixed, dynamic and unadmitted continuation frames retain their fallback.");
+                "Consumed, fixed and dynamic frames retain their fallback.");
         DocxDocument scaled = WithMixedNoteStaticFrame(plain, true, true, 1);
         DocxLayout scaledLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .5d)
             .Create(scaled, measurer, default, measurer);
@@ -3835,11 +3834,14 @@ internal static class DocxFootnotesTests
             var continuedEnds = continuedLayout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
                 .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
                 .Select(s => (Index: index, Story: s))).ToArray();
-            TestAssert.True(continuedEnds.Length > 1 && continuedEnds[0].Index > foot.Index &&
-                continuedEnds.All(s => !s.Story.UsesPlainDocumentEndnoteTypography),
-                "An endnote head cannot use the footer band below its complementary footnote; empty continuations retain their fallback.");
-            TestAssert.True(!DocxNoteKerning.TryCreateDocument(continued, continuedLayout, out _, out _, default),
-                "Unadmitted continued mixed endnotes retain the established typography fallback.");
+            var continuedFoot = continuedLayout.Pages[foot.Index].PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(continuedEnds.Length > 1 && continuedEnds[0].Index == foot.Index &&
+                continuedEnds[0].Story.TopY - continuedEnds[0].Story.Height >= continuedFoot.TopY &&
+                continuedEnds.All(s => s.Story.UsesPlainDocumentEndnoteTypography),
+                "The continued head uses body space above the footnote and clears its occupied physical frame.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(continued, continuedLayout, out _, out _, default),
+                "An admitted partial head retains the existing endnote typography owner.");
         }
     }
 
@@ -3867,6 +3869,95 @@ internal static class DocxFootnotesTests
                 .All(s => !s.UsesPlainFootnoteFrame), $"The shared frame requires plain flow sources for both note kinds ({invalid.KeepRules.KeepNext}, {invalid.KeepRules.KeepLines}, {invalid.Spacing.ContextualSpacing}, {invalid.Spacing.AfterValue}, {invalid.Alignment}).");
             TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out _, out _, default, DocxRelatedStoryKind.Footnote),
                 "Rich complementary sources retain the original mixed footnote typography fallback.");
+        }
+    }
+
+    public static void DocxContinuedMixedEndnoteHeadClearsFootnoteAndPreservesTypedOwners()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool custom in new[] { false, true })
+        foreach (bool header in new[] { false, true })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 140), header, true, header ? 1 : 6);
+            DocxLayout before = engine.Create(source, measurer, default);
+            var foots = before.Pages.SelectMany((p, index) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .Select(s => (Page: index, Story: s))).ToArray();
+            var ends = before.Pages.SelectMany((p, index) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                .Select(s => (Page: index, Story: s))).ToArray();
+            TestAssert.Equal(1, foots.Length);
+            TestAssert.True(ends.Length > 1 && ends[0].Page == foots[0].Page &&
+                ends[0].Story.TopY - ends[0].Story.Height >= foots[0].Story.TopY,
+                "A real partial endnote head sits above the footnote on the occupied body page.");
+            DocxRelatedStoryLayout canonical = before.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                s.Story.Kind == DocxRelatedStoryKind.Endnote);
+            TestAssert.True(ends[0].Story.StoryLayout.TextLines.Count >= 2 &&
+                ends[0].Story.StoryLayout.TextLines.Count < canonical.TextLines.Count,
+                "The admitted slice is a multi-line head of a continued source, not a fitting complete block.");
+            TestAssert.Equal(string.Concat(canonical.TextLines.Select(l => l.Text)),
+                string.Concat(ends.SelectMany(s => s.Story.StoryLayout.TextLines).Select(l => l.Text)));
+            TestAssert.True(ends.All(s => !s.Story.UsesCompleteDocumentEndnoteFlow),
+                "Head capacity does not opt mixed paragraphs into the complete-flow boundary policy.");
+            TestAssert.Equal(foots[0].Story.StoryLayout.Story.Id!, canonical.Story.Id!);
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, before, out _, out _, default, DocxRelatedStoryKind.Footnote),
+                "Physical head capacity preserves the complementary footnote typography fallback.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, before, out var adjusted, out var owners, default),
+                "The existing endnote retry can resolve complete typed owners across the partial head and tail.");
+            DocxLayout after = engine.Create(adjusted, measurer, default);
+            TestAssert.True(DocxNoteKerning.HasStableOwners(after, owners, default),
+                "The rewrapped head and continuations retain both complete canonical owners.");
+            var currentFoot = after.Pages[foots[0].Page].PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(currentFoot.TopY == foots[0].Story.TopY && currentFoot.Height == foots[0].Story.Height &&
+                currentFoot.ContentTopOffset == foots[0].Story.ContentTopOffset &&
+                ReferenceEquals(currentFoot.StoryLayout.Story.Paragraphs[0], foots[0].Story.StoryLayout.Story.Paragraphs[0]),
+                "The endnote retry preserves the complementary physical box and original source paragraph.");
+            TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
+                "The head correction preserves both typed body references.");
+            foreach (DocxLayoutPage page in after.Pages)
+            {
+                var normalFoots = page.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType &&
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote).ToArray();
+                if (normalFoots.Length == 0) continue;
+                TestAssert.True(page.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType &&
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                    .All(s => s.TopY - s.Height >= normalFoots.Max(f => f.TopY)),
+                    "The rewrapped endnote head cannot enter the complementary footnote box.");
+            }
+        }
+    }
+
+    public static void DocxContinuedMixedEndnoteHeadRetainsUnqualifiedSourceFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxDocument plain = ReadMixedNoteRetryFixture(true, 140);
+        DocxRelatedStory end = plain.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote);
+        DocxParagraph paragraph = end.Paragraphs[0];
+        var sources = new List<DocxDocument> { plain };
+        foreach (DocxParagraph invalid in new[]
+        {
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } },
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepLines = true } },
+            paragraph with { Spacing = paragraph.Spacing with { ContextualSpacing = true } },
+            paragraph with { Alignment = DocxTextAlignment.Center },
+        })
+            sources.Add(WithMixedNoteStaticFrame(plain with { RelatedStories = plain.RelatedStories.Select(s =>
+                ReferenceEquals(s, end) ? s with { BodyElements = [new DocxParagraphElement(invalid)] } : s).ToArray() }, false, true, 6));
+        foreach (DocxDocument source in sources)
+        {
+            DocxLayout layout = engine.Create(source, measurer, default);
+            int footPage = layout.Pages.Select((p, index) => (p, index)).First(x => x.p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)).index;
+            var ends = layout.Pages.SelectMany((p, index) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                .Select(s => (Page: index, Story: s))).ToArray();
+            TestAssert.True(ends[0].Page > footPage && ends.All(s => !s.Story.UsesPlainDocumentEndnoteTypography),
+                "Absent static qualification and rich complementary flow retain the existing head deferral.");
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out _, out _, default),
+                "Unqualified continued heads do not enable the typography retry.");
         }
     }
 

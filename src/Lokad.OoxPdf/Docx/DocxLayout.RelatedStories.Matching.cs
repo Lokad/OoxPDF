@@ -180,14 +180,16 @@ internal sealed partial class DocxLayoutEngine
         return Math.Min(designBodyBottom, placedStoryBottom) - FootnoteSeparatorGapPoints;
     }
 
-    private static double ResolveFittingDocumentEndnoteStartTop(
+    private static double ResolveDocumentEndnoteStartAboveFootnotes(
         DocxLayoutPage page, IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories, double fallbackTop,
         IReadOnlyList<DocxRelatedStoryLayout> endnotes, DocxRelatedStoryLayout? separator,
-        IDocxTextMeasurer? measurer, double printScale)
+        IDocxTextMeasurer? measurer, double printScale, bool allowPartialHead, out bool partialHead)
     {
+        partialHead = false;
         // Bottom-anchored footnotes are not the end of the body flow. Admit the
-        // space above them only when the complete plain endnote block fits.
-        // Overflowing, scaled and complex stories retain the continuation path.
+        // space above them when the complete block fits, or an admitted plain
+        // paragraph head fits under the existing widow rule. Scaled and complex
+        // stories retain the continuation path.
         if (Math.Abs(printScale - 1d) > 0.000000001d || endnotes.Count == 0 ||
             endnotes.Any(story => story.TextLines.Count == 0 || story.TableRows.Count != 0 ||
                 story.InlineImages.Count != 0 || story.FloatingDrawings.Count != 0)) return fallbackTop;
@@ -202,14 +204,26 @@ internal sealed partial class DocxLayoutEngine
         }
         double requiredHeight = endnotes.Sum(story => Math.Max(0d, story.ContentHeight)) +
             endnotes.Count * FootnoteSeparatorGapPoints;
+        double separatorCharge = 0d;
         if (separator is not null)
         {
             (DocxTextRun? mark, double size) = FindSeparatorMarkFont(separator.TextLines);
             double gap = Math.Max(ResolveSeparatorGapPoints(mark, size, measurer),
                 endnotes.Max(story => ResolveFootnoteContentGapPoints(story.TextLines, mark, size, measurer)));
-            requiredHeight += ResolvePlainNoteSeparatorHeight(separator, page, measurer, endnotes, printScale) + gap;
+            separatorCharge = ResolvePlainNoteSeparatorHeight(separator, page, measurer, endnotes, printScale) + gap;
+            requiredHeight += separatorCharge;
         }
-        return candidateTop - requiredHeight >= footnotes.Max(story => story.TopY) ? candidateTop : fallbackTop;
+        double bottom = footnotes.Max(story => story.TopY);
+        if (candidateTop - requiredHeight >= bottom) return candidateTop;
+        if (!allowPartialHead) return fallbackTop;
+        DocxRelatedStoryLayout first = endnotes[0];
+        double[] afters = GetStoryLineAfterSpacings(first, deferParagraphAfter: true);
+        double[] boxes = GetStoryTextLineBoxHeights(first, afters);
+        (int take, _) = TakeParagraphStoryLines(first.TextLines[0].SourceParagraph!, boxes, 0, boxes.Length,
+            candidateTop - bottom - separatorCharge - FootnoteSeparatorGapPoints, afters,
+            hasPageContent: true, isFreshHead: true);
+        partialHead = take > 0;
+        return partialHead ? candidateTop : fallbackTop;
     }
 
     private static bool CanUseNominalDocumentEndnoteFlow(
