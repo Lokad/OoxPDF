@@ -4175,6 +4175,60 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxMixedNoteThresholdEmissionKeepsAuthoredSuffixAndContentPolicies()
+    {
+        foreach (bool custom in new[] { true, false })
+        foreach (string threshold in new[] { "20", "22" })
+        foreach (int footerLines in new[] { 1, 6 })
+        foreach (int footnoteRepeats in new[] { 0, 120 })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, footnoteRepeats),
+                false, true, footerLines);
+            source = source with
+            {
+                RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+                {
+                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    {
+                        Runs = p.Runs.Select((r, index) => r with
+                        {
+                            // AB has a real pair adjustment in the deterministic test face.
+                            Text = index == 0 ? custom ? "*AB" : r.Text : "AB " + r.Text,
+                            KerningMinimumHalfPointsValue = threshold,
+                        }).ToArray(),
+                    })).ToArray(),
+                } : s).ToArray(),
+            };
+            var authoredRuns = source.RelatedStories.Where(s => s.IsNormalStoryType)
+                .SelectMany(s => s.Paragraphs[0].Runs).ToArray();
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxTextEmissionSnapshot emitted = renderer.InspectTextEmission(source);
+            foreach (string kind in new[] { "Footnote", "Endnote" })
+            {
+                var segments = emitted.Lines.Where(l => l.StoryKind == kind && l.StoryVariantType is null)
+                    .SelectMany(l => l.Segments).Where(s => !s.IsTerminalLineSpace).ToArray();
+                var content = segments.Where(s => s.FontSize == 10d && s.TextLength > 1).ToArray();
+                TestAssert.True(content.Length != 0 && content.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal > 0d),
+                    "Rounded note content retains logical advances at either source threshold.");
+                TestAssert.True(threshold == "20"
+                    ? content.Any(s => s.AdvanceProfile.KerningAdjustmentTotal < 0d)
+                    : content.All(s => s.AdvanceProfile.KerningAdjustmentTotal == 0d),
+                    "Source logical size enables a met threshold and disables an unmet threshold in each note kind.");
+                if (!custom) continue;
+                var suffix = segments.Where(s => s.FontSize == 12d && s.TextLength == 2 &&
+                    s.CharacterProfile.LetterCount == 2).ToArray();
+                TestAssert.True(suffix.Length == 1 && suffix[0].PdfFontSize == 12d &&
+                    suffix[0].AdvanceProfile.KerningAdjustmentTotal < 0d &&
+                    suffix[0].AdvanceProfile.NominalAdvanceAdjustmentTotal == 0d,
+                    "Text following the custom marker keeps its authored size and its independently met threshold.");
+            }
+            TestAssert.True(source.RelatedStories.Where(s => s.IsNormalStoryType)
+                .SelectMany(s => s.Paragraphs[0].Runs).SequenceEqual(authoredRuns),
+                "Emission does not split or rewrite the authored source record.");
+        }
+    }
+
     public static void DocxContinuedFootnoteCapacityKeepsSeparatorInsetInsideAdmittedFrame()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
