@@ -191,7 +191,8 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null,
-        IReadOnlyList<DocxBodyElement>? mainBodyElements = null)
+        IReadOnlyList<DocxBodyElement>? mainBodyElements = null,
+        XDocument? settings = null)
     {
         var noteLabels = new Dictionary<(DocxRelatedStoryKind Kind, string Id), string>();
         foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(mainBodyElements ?? []))
@@ -207,8 +208,8 @@ internal sealed partial class DocxReader
             }
         }
         return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
             .ToArray();
     }
 
@@ -256,7 +257,8 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null,
-        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), string>? noteLabels = null)
+        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), string>? noteLabels = null,
+        XDocument? settings = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
@@ -272,6 +274,11 @@ internal sealed partial class DocxReader
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
         var stories = new List<DocxRelatedStory>();
+        HashSet<string> registeredSeparators = (settings?.Root?
+            .Element(WordprocessingNamespace + (storyElementName + "Pr"))?
+            .Elements(WordprocessingNamespace + storyElementName)
+            .Select(reference => (string?)reference.Attribute(WordprocessingNamespace + "id"))
+            .OfType<string>() ?? []).ToHashSet(StringComparer.Ordinal);
         foreach (XElement storyElement in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -291,7 +298,27 @@ internal sealed partial class DocxReader
                     mark.ReplaceWith(text);
                 }
             }
-            DocxRelatedStory story = ReadRelatedStory(kind, part.Name, storyElement, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
+            XElement effectiveStory = storyElement;
+            bool usesDefaultSeparator = kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+                (string?)storyElement.Attribute(WordprocessingNamespace + "type") is "separator" or "continuationSeparator" &&
+                (string?)storyElement.Attribute(WordprocessingNamespace + "id") is { } separatorId &&
+                !registeredSeparators.Contains(separatorId);
+            if (usesDefaultSeparator)
+            {
+                // Word uses a default separator unless settings register this
+                // typed special story. Unregistered formatting is not visible.
+                string type = (string)storyElement.Attribute(WordprocessingNamespace + "type")!;
+                effectiveStory = new XElement(storyElement.Name, storyElement.Attributes(),
+                    new XElement(WordprocessingNamespace + "p",
+                        new XElement(WordprocessingNamespace + "pPr",
+                            new XElement(WordprocessingNamespace + "spacing",
+                                new XAttribute(WordprocessingNamespace + "after", "0"),
+                                new XAttribute(WordprocessingNamespace + "line", "240"),
+                                new XAttribute(WordprocessingNamespace + "lineRule", "auto"))),
+                        new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + type))));
+            }
+            DocxRelatedStory story = ReadRelatedStory(kind, part.Name, effectiveStory, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
+            if (usesDefaultSeparator) story = story with { IsSynthetic = true };
             if (story.BodyElements.Count > 0)
             {
                 stories.Add(story);

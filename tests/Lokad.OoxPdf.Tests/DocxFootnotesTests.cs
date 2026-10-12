@@ -4006,6 +4006,72 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxNoteSeparatorsUseTypedSettingsRegistration()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string registration in new[] { "none", "normal", "continuation", "other-kind", "wrong-id" })
+        {
+            DocxDocument source = ReadSectionNumberingFixture(kind, (_, settings, parts) =>
+            {
+                XDocument notes = XDocument.Parse(parts["word/" + kind + "s.xml"]);
+                foreach (XElement special in notes.Root!.Elements(NoteWord + kind).Where(n =>
+                    (string?)n.Attribute(NoteWord + "type") is "separator" or "continuationSeparator"))
+                {
+                    bool normal = (string?)special.Attribute(NoteWord + "type") == "separator";
+                    special.ReplaceNodes(new XElement(NoteWord + "p",
+                        new XElement(NoteWord + "pPr", new XElement(NoteWord + "spacing",
+                            new XAttribute(NoteWord + "after", "0"), new XAttribute(NoteWord + "line", "240"),
+                            new XAttribute(NoteWord + "lineRule", "auto"))),
+                        new XElement(NoteWord + "r", new XElement(NoteWord + "rPr",
+                            new XElement(NoteWord + "rFonts", new XAttribute(NoteWord + "ascii", "Arial"),
+                                new XAttribute(NoteWord + "hAnsi", "Arial")),
+                            new XElement(NoteWord + "sz", new XAttribute(NoteWord + "val", normal ? "16" : "32"))),
+                            new XElement(NoteWord + "t", normal ? "Public normal separator" : "Public continuation separator"))));
+                }
+                parts["word/" + kind + "s.xml"] = notes.ToString();
+                XElement properties = settings.Root!.Element(NoteWord + (kind + "Pr")) ??
+                    new XElement(NoteWord + (kind + "Pr"));
+                if (properties.Parent is null) settings.Root.Add(properties);
+                properties.Elements(NoteWord + kind).Remove();
+                string selected = registration == "continuation" ? "continuationSeparator" : "separator";
+                string id = (string)notes.Root.Elements(NoteWord + kind).Single(n =>
+                    (string?)n.Attribute(NoteWord + "type") == selected).Attribute(NoteWord + "id")!;
+                if (registration == "wrong-id") id = "unrelated-id";
+                if (registration == "other-kind")
+                {
+                    string other = kind == "footnote" ? "endnote" : "footnote";
+                    XElement otherProperties = settings.Root.Element(NoteWord + (other + "Pr")) ??
+                        new XElement(NoteWord + (other + "Pr"));
+                    if (otherProperties.Parent is null) settings.Root.Add(otherProperties);
+                    otherProperties.Add(new XElement(NoteWord + other, new XAttribute(NoteWord + "id", id)));
+                }
+                else if (registration != "none")
+                    properties.Add(new XElement(NoteWord + kind, new XAttribute(NoteWord + "id", id)));
+            });
+            foreach (DocxRelatedStory special in source.RelatedStories.Where(s => !s.IsNormalStoryType))
+            {
+                bool normal = special.Type == DocxRelatedStoryType.Separator;
+                bool authored = normal ? registration == "normal" : registration == "continuation";
+                DocxParagraph paragraph = special.Paragraphs.Single();
+                TestAssert.True(special.IsSynthetic != authored,
+                    "Only a matching typed settings reference activates authored separator formatting.");
+                TestAssert.Equal(authored ? (normal ? "Public normal separator" : "Public continuation separator") : "",
+                    string.Concat(paragraph.Runs.Select(r => r.Text)));
+                if (authored)
+                {
+                    TestAssert.Equal(normal ? 8d : 16d, paragraph.Runs.Single().FontSize);
+                    TestAssert.Equal("Arial", paragraph.Runs.Single().FontFamily);
+                }
+                else
+                    TestAssert.True(paragraph.Runs.All(r => r.FontSize != 8d && r.FontSize != 16d),
+                        "Unregistered stories use the document cascade instead of ignored direct formatting.");
+            }
+            TestAssert.True(source.RelatedStories.Where(s => s.IsNormalStoryType).All(s =>
+                s.Paragraphs.SelectMany(p => p.Runs).Any(r => r.Text.Length != 0)),
+                "Separator registration preserves the normal note sources and their typed IDs.");
+        }
+    }
+
     public static void DocxDeferredMixedEndnoteKeepsOriginalPlainSourceAdmissionAndOwners()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -8558,6 +8624,8 @@ internal static class DocxFootnotesTests
         // 4.0pt uniform reserve against 54 under the 2.5pt reserve; the Office-anchored
         // take-fewer direction is pinned by the cal9-a0 47/13 probe takes with size-10
         // 43/17 and first-10 36/24 holding exact.
+        // This capacity regression exercises the authored separator paragraph.
+        // Its fixture registers both special stories in settings.
         int ninePtHeadTake = LayoutFootnoteUniformHeadTakeWithAfterAndSize(0, 0);
         TestAssert.Equal(53, ninePtHeadTake);
     }
@@ -8587,9 +8655,10 @@ internal static class DocxFootnotesTests
 
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
+            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>""",
             ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
+            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>""",
+            ["word/settings.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnotePr><w:footnote w:id="0"/><w:footnote w:id="1"/></w:footnotePr></w:settings>""",
             ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
             ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2">""" + footnoteParas.ToString() + """</w:footnote></w:footnotes>"""
         });
