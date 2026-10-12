@@ -348,21 +348,13 @@ internal sealed partial class DocxLayoutEngine
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
                 double completeEndnoteHeight = 0d;
-                bool usableEndnoteFrame = CanUsePlainDocumentEndnoteFrame(document, activePage,
-                    activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken);
-                bool plainEndnoteFrame = usableEndnoteFrame &&
+                bool plainEndnoteFrame = CanUsePlainDocumentEndnoteFrame(document, activePage,
+                    activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) &&
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
                 bool plainEndnoteFlow = plainEndnoteFrame && !document.RelatedStories.Any(story =>
                     story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
-                // Content advances do not own paragraph spacing or slice policy.
-                // Minimum-spaced notes retain the layout fallback while sharing
-                // source-owned typography with automatic-spaced notes.
-                bool plainEndnoteTypography = plainEndnoteFlow || usableEndnoteFrame &&
-                    !document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) &&
-                    CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories) &&
-                    documentEndStories.All(HasPlainContentNoteStory);
                 bool collapseEndnoteBoundaries = plainEndnoteFrame &&
                     cursorTop - completeEndnoteHeight >= Math.Max(FrameBottom(),
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
@@ -398,7 +390,7 @@ internal sealed partial class DocxLayoutEngine
                         printScale,
                         headerKeepOut,
                         plainDocumentEndnoteFlow: plainEndnoteFlow,
-                        plainDocumentEndnoteTypography: plainEndnoteTypography,
+                        plainDocumentEndnoteTypography: plainEndnoteFlow,
                         noteDestinationTopOffset: boundaryOverlap,
                         frameBottom: endnoteFrameBottom);
                     if (collapseEndnoteBoundaries)
@@ -2065,6 +2057,7 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
+        double sourceStoryScale = paragraphSpacingScale;
         // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Comments keep scaled
@@ -2199,7 +2192,8 @@ internal sealed partial class DocxLayoutEngine
                 pageNumber,
                 pageCount,
                 firstRelatedLineBaselineOffset,
-                paragraphSpacingScale);
+                paragraphSpacingScale,
+                sourceStoryScale);
             if (paragraphLines.Count != 0)
             {
                 firstRelatedLineBaselineOffset ??= paragraphBaselineOffset;

@@ -1720,7 +1720,7 @@ internal static class DocxFootnotesTests
             p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { BeforeValue = "broken" } })],
             p => [new DocxParagraphElement(p with { LineSpacingPoints = 24d,
                 Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "exact" } })],
-            p => [new DocxParagraphElement(p with { LineSpacingPoints = 24d,
+            p => [new DocxParagraphElement(p with { LineSpacingPoints = null,
                 Spacing = p.Spacing with { LineValue = "480", LineRuleValue = "atLeast" } })],
             p => [new DocxParagraphElement(p with { Spacing = p.Spacing with { LineRuleValue = "broken" } })],
             p => [new DocxParagraphElement(p), new DocxParagraphElement(p)],
@@ -3158,7 +3158,7 @@ internal static class DocxFootnotesTests
         TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body reference owners are retained.");
     }
 
-    public static void DocxMinimumEndnoteTypographyRetainsLegacyParagraphFlow()
+    public static void DocxMinimumEndnoteTypographySharesPlainParagraphFlow()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new NoteContentMetricMeasurer();
@@ -3206,8 +3206,8 @@ internal static class DocxFootnotesTests
         var notes = engine.Create(fitting, measurer, default).Pages.Single().PlacedRelatedStories
             .Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
         TestAssert.True(notes.All(s => s.UsesPlainDocumentEndnoteTypography), "Fitting minima share content admission.");
-        TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height - 3d) < .000001d,
-            "Minimum paragraphs retain the independently qualified legacy boundary spacing.");
+        TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height) < .000001d,
+            "Plain minimum paragraphs share the Office-qualified adjacent paragraph flow without an extra note gap.");
     }
 
     public static void DocxEndnoteKerningRejectsIncompleteCanonicalLineOwners()
@@ -3241,6 +3241,92 @@ internal static class DocxFootnotesTests
                 ReferenceEquals(source, unchanged), "Missing, reordered or substituted source lines retain the original document.");
             TestAssert.True(!DocxNoteKerning.HasStableOwners(invalid, owners, default),
                 "Equal note IDs and page ranges cannot qualify incomplete canonical line ownership.");
+        }
+    }
+
+    public static void DocxMinimumNoteBoxesPreserveSingleAndWrappedBottomBearings()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (int repeats in new[] { 1, 100 })
+        foreach (double contentSize in new[] { 10d, 12d, 14d })
+        foreach (double minimum in new[] { 8d, 18d, 24d })
+        {
+            DocxDocument source = footnote ? ReadWrappedFootnoteFlowFixture(repeats) :
+                ReadWrappedDocumentEndnoteFlowFixture(0, 0, repeats);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = contentSize }] })).ToArray(),
+            } : s).ToArray() };
+            DocxDocument bounded = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = minimum, Spacing = p.Spacing with { LineRuleValue = "atLeast",
+                        LineValue = (minimum * 20d).ToString(CultureInfo.InvariantCulture) },
+                })).ToArray(),
+            } : s).ToArray() };
+            var natural = engine.Create(source, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+            var actual = engine.Create(bounded, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+            TestAssert.Equal(natural.Length, actual.Length);
+            foreach (var pair in natural.Zip(actual))
+            {
+                TestAssert.True(repeats == 1 ? pair.First.TextLines.Count == 1 : pair.First.TextLines.Count > 2,
+                    "The controls exercise fitting marked lines and wrapped unmarked content.");
+                TestAssert.Equal(pair.First.TextLines.Count, pair.Second.TextLines.Count);
+                double naturalBottom = 0d, boundedBottom = 0d;
+                foreach (var line in pair.First.TextLines.Zip(pair.Second.TextLines))
+                {
+                    naturalBottom += line.First.LineHeight!.Value; boundedBottom += line.Second.LineHeight!.Value;
+                    TestAssert.True(line.Second.LineHeight!.Value >= minimum &&
+                        Math.Abs(line.First.BaselineY + naturalBottom - line.Second.BaselineY - boundedBottom) < .000001d,
+                        "Binding minimum boxes grow above the same source-owned bottom bearing, including a marked single line.");
+                    TestAssert.True(ReferenceEquals(line.Second.SourceParagraph, pair.Second.Story.Paragraphs[0]),
+                        "Minimum metric ownership retains the authored source paragraph.");
+                }
+                TestAssert.True(ReferenceEquals(pair.First.Story.Paragraphs[0].Runs[0], pair.Second.Story.Paragraphs[0].Runs[0]),
+                    "The XML automatic marker retains its original source run.");
+            }
+        }
+    }
+
+    public static void DocxMinimumNoteBearingsRetainAuthoredRichAndScaledFallbacks()
+    {
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (double scale in new[] { 1d, .5d })
+        foreach (string variant in new[] { "automatic", "authored", "baseline", "rich" })
+        {
+            if (scale == 1d && variant == "automatic") continue;
+            DocxDocument source = footnote ? ReadWrappedFootnoteFlowFixture(1) : ReadWrappedDocumentEndnoteFlowFixture(0, 0, 1);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Alignment = variant == "rich" ? DocxTextAlignment.Center : p.Alignment,
+                    Runs = [p.Runs[0] with { IsAutomaticNoteStoryMarker = variant != "authored",
+                        VerticalAlignmentValue = variant == "baseline" ? "baseline" : "superscript" }, p.Runs[1]],
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxDocument bounded = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { LineSpacingPoints = 24d, Spacing = p.Spacing with { LineRuleValue = "atLeast", LineValue = "480" } })).ToArray(),
+            } : s).ToArray() };
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale);
+            if (variant == "automatic") source = bounded with { RelatedStories = bounded.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { Runs = [p.Runs[0] with { IsAutomaticNoteStoryMarker = false }, p.Runs[1]] })).ToArray(),
+            } : s).ToArray() };
+            var natural = engine.Create(source, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+            var actual = engine.Create(bounded, measurer, default).RelatedStories.Where(s => s.Story.IsNormalStoryType).ToArray();
+            TestAssert.Equal(natural.Length, actual.Length);
+            TestAssert.True(natural.Zip(actual).All(pair => Math.Abs(pair.First.TextLines[0].BaselineY -
+                pair.Second.TextLines[0].BaselineY) < .000001d),
+                $"Authored superscripts, baseline markers, rich paragraphs and scaled stories retain their first-inset fallback ({footnote}, {scale}, {variant}).");
         }
     }
 

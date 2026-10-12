@@ -322,8 +322,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxRelatedStoryLayout story in stories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!HasPlainContentNoteStory(story) ||
-                !DocxPlainBodyFrame.HasAutomaticLineFlow(story.Story.Paragraphs[0])) return false;
+            if (!HasPlainContentNoteStory(story)) return false;
             contentHeight += story.ContentHeight;
             if (previous is not null) contentHeight -= ResolveDocumentEndnoteBoundaryOverlap(previous, story);
             previous = story;

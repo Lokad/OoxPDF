@@ -194,8 +194,6 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxParagraph? ResolveUnmarkedNoteMetricParagraph(DocxParagraph paragraph)
     {
-        if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || !DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
-            paragraph.Runs.Count < 2 || !IsAutomaticSuperscriptNoteMarker(paragraph.Runs[0])) return null;
         double contentSize = paragraph.Runs.Where(r => !IsAutomaticSuperscriptNoteMarker(r) &&
             !string.IsNullOrWhiteSpace(r.Text) && !r.EffectiveProperties.Hidden)
             .Select(r => r.EffectiveProperties.FontSize).DefaultIfEmpty(0d).Max();
@@ -234,7 +232,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double? firstStoryBaselineOffset = null,
-        double transitionScale = 1d)
+        double transitionScale = 1d,
+        double sourceStoryScale = 1d)
     {
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count == 0)
@@ -265,8 +264,11 @@ internal sealed partial class DocxLayoutEngine
         double storyBaselineOffset = ResolveRelatedStoryBaselineOffset(paragraph, fontSize, baseLineHeight, textMeasurer, story?.Kind);
         DocxLineHeightProfile? unmarkedProfile = null;
         double unmarkedBaselineOffset = storyBaselineOffset;
-        if (lines.Length > 1 && fixedScale == 1d && transitionScale == 1d &&
+        bool plainNoteMetrics = fixedScale == 1d && transitionScale == 1d &&
             story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote &&
+            DocxPlainBodyFrame.IsPlainParagraph(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) &&
+            paragraph.Runs.Count >= 2 && IsAutomaticSuperscriptNoteMarker(paragraph.Runs[0]);
+        if (lines.Length > 1 && plainNoteMetrics &&
             ResolveUnmarkedNoteMetricParagraph(paragraph) is DocxParagraph metricParagraph)
         {
             double metricSize = GetParagraphFontSize(metricParagraph);
@@ -303,7 +305,8 @@ internal sealed partial class DocxLayoutEngine
                 _ => paragraphX
             };
             double baselineOffset = unmarked ? unmarkedBaselineOffset : storyBaselineOffset;
-            if (unmarkedProfile is not null && activeProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
+            if ((unmarkedProfile is not null || plainNoteMetrics && sourceStoryScale == 1d) &&
+                activeProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
                 activeProfile.SingleLineHeight is { } naturalLineHeight)
             {
                 // A minimum line box grows above the same source-owned bottom bearing.

@@ -47,8 +47,7 @@ internal sealed record DocxPlacedRelatedStoryLayout(
     // navigation target starts below the shared overlap. Layout owns admission.
     internal double NoteDestinationTopOffset { get; init; }
     internal bool UsesCompleteDocumentEndnoteFlow { get; init; }
-    // Layout admits source-owned content typography independently of the
-    // automatic-only paragraph spacing and slice policy.
+    // Layout admits source-owned content typography separately from placement.
     internal bool UsesPlainDocumentEndnoteTypography { get; init; }
     // Layout owns admission; typography reuses that purpose instead of rebuilding
     // static-frame eligibility or coupling it to numbering mode.
