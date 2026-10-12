@@ -2594,3 +2594,32 @@ normalized contents, Git blobs and both raw hashes are retained. Packed 0.1.5 sm
 passes; full Windows remains L216 evidence. Continuation source-gap admission
 continues as L227. Safe managed code, existing bounds/work/publication limits and
 release deferral remain.
+
+### RV06-L227: shared gap admission for occupied footnote continuations
+
+The physical-frame guard already checks complete original document sources.
+Occupied continuations now use the same nominal separator gap as fresh heads,
+by removing one fresh-head-only exclusion. No additional admission state or
+font/size/threshold/document-shape branch is introduced. Empty-page, no-static,
+rich/scaled and incomplete-metric fallbacks retain their treatment; reserve/take
+capacity is unchanged. Two regressions cover 48 compositions and four rich-source
+guards. The exact frozen test assembly fails against the parent at its intended
+15.874pt gap assertion, after passing the no-static guard. Frozen **5b7b90b8**,
+root **379bf874**.
+
+All 22 retained Word controls preserve 2001 source lines/44 notes/124 clips/62 rules,
+44 navigation pairs and 1223 protected operations. Eight occupied continuations
+improve from .834pt to below .121pt glyph error/fourteen outputs remain exact.
+Eight raster pages improve/41 exact/no tradeoffs. Every first head, rule,
+destination and reserve/take capacity remains exact to the parent. Broader guards
+retain 22 page-line mismatches, paired deltas up to 102.532pt across mismatched
+flows and inherited 6.393pt destination error. These remain explicit partials.
+
+Strict Release is clean. Windows passes 279 note/94 PDF/one static-comment checks
+(373 unique methods); Linux passes 362 checks/eleven existing environmental skips
+and two archive SourceLink warnings. All 7095 frozen byte/page checks pass: 7087
+retained outputs exact/eight independently qualified changes/no new inputs.
+Root checks 3933 PDFs/two source blobs; packed 0.1.5 smoke passes. Full Windows
+remains L216 evidence. Source-owned minimum-line metric semantics continue as
+L228; permanent safe managed code and bounds/work/publication policies remain.
+Release preparation is deferred.
