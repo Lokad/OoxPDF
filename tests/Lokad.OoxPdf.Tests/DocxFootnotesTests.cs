@@ -2966,6 +2966,107 @@ internal static class DocxFootnotesTests
             FooterParagraphs = [footer], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
     }
 
+    public static void DocxAutomaticNoteMarkerSizeDoesNotInflateContentPitchOrInset()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (double contentSize in new[] { 10d, 12d, 14d })
+        {
+            DocxDocument source = footnote ? WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(100)) :
+                ReadWrappedDocumentEndnoteFlowFixture(0, 0, 100);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    { Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = contentSize }] })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout layout = engine.Create(source, measurer, default);
+            foreach (DocxRelatedStoryLayout story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                TestAssert.True(story.TextLines.Count > 2, "The control exercises repeated content line boxes.");
+                TestAssert.True(story.TextLines.Skip(1).All(l => Math.Abs(l.LineHeight!.Value - contentSize * 1.2d) < .000001d),
+                    "An automatic superscript marker does not set the nominal pitch of the content paragraph.");
+                TestAssert.True(Math.Abs(story.TextLines[0].LineHeight!.Value - Math.Max(12d, contentSize) * 1.2d) < .000001d,
+                    "The marked first line retains its original source metric box.");
+                if (contentSize == 10d)
+                    TestAssert.True(Math.Abs(story.TextLines[0].BaselineY + 12d * .94d) < .000001d &&
+                        Math.Abs(story.TextLines[0].BaselineY - story.TextLines[1].BaselineY - 13.12d) < .000001d,
+                        "The first-to-continuation advance accounts for both source-owned baseline insets.");
+                TestAssert.True(story.TextLines.All(l => ReferenceEquals(l.SourceParagraph, story.Story.Paragraphs[0])),
+                    "The metric correction retains the source paragraph and marker run.");
+                TestAssert.Equal(12d, story.Story.Paragraphs[0].Runs[0].FontSize);
+            }
+        }
+    }
+
+    public static void DocxSingleLineAutomaticNoteMarkersRetainQualifiedMetrics()
+    {
+        DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 1);
+        DocxDocument Compose(bool automatic) => source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                { Runs = [p.Runs[0] with { FontSize = 12d, IsAutomaticNoteStoryMarker = automatic }, p.Runs[1] with { FontSize = 10d }] })).ToArray(),
+        } : s).ToArray() };
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxLayout marked = engine.Create(Compose(true), measurer, default), authored = engine.Create(Compose(false), measurer, default);
+        TestAssert.True(marked.RelatedStories.Where(s => s.Story.IsNormalStoryType).All(s => s.TextLines.Count == 1),
+            "The control exercises fitting marked lines without a continuation.");
+        TestAssert.True(marked.RelatedStories.SelectMany(s => s.TextLines).Select(l => (l.BaselineY, l.LineHeight))
+            .SequenceEqual(authored.RelatedStories.SelectMany(s => s.TextLines).Select(l => (l.BaselineY, l.LineHeight))),
+            "A fitting single-line note retains its independently qualified marker and content box.");
+    }
+
+    public static void DocxSubordinateAutomaticNoteMarkersRetainQualifiedMixedInset()
+    {
+        DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 100);
+        DocxDocument Compose(bool automatic) => source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                { Runs = [p.Runs[0] with { FontSize = 12d, IsAutomaticNoteStoryMarker = automatic }, p.Runs[1] with { FontSize = 14d }] })).ToArray(),
+        } : s).ToArray() };
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxLayout marked = engine.Create(Compose(true), measurer, default), authored = engine.Create(Compose(false), measurer, default);
+        TestAssert.True(marked.RelatedStories.SelectMany(s => s.TextLines).Select(l => (l.BaselineY, l.LineHeight))
+            .SequenceEqual(authored.RelatedStories.SelectMany(s => s.TextLines).Select(l => (l.BaselineY, l.LineHeight))),
+            "A subordinate marker retains the independently qualified mixed-content inset and take geometry.");
+    }
+
+    public static void DocxAuthoredScriptAndBaselineNoteMarkersRetainMetricOwnership()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool baseline in new[] { false, true })
+        {
+            DocxDocument source = WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(100));
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Runs = [p.Runs[0] with { FontSize = 12d, IsAutomaticNoteStoryMarker = baseline,
+                        VerticalAlignmentValue = baseline ? "baseline" : "superscript" }, p.Runs[1] with { FontSize = 10d }],
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout layout = engine.Create(source, new NoteContentMetricMeasurer(), default);
+            TestAssert.True(layout.RelatedStories.Where(s => s.Story.IsNormalStoryType).SelectMany(s => s.TextLines)
+                .All(l => Math.Abs(l.LineHeight!.Value - 14.4d) < .000001d),
+                "Authored superscript text and baseline note markers retain their existing nominal metric contribution.");
+        }
+    }
+
+    private sealed class NoteContentMetricMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
+        IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.2d;
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.2d;
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize * .9d;
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize * .2d;
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => fontSize * .1d;
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * .9d;
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize * .2d;
+    }
+
     private static DocxDocument ReadWrappedFootnoteFlowFixture(int repeats)
     {
         DocxDocument source = ReadNotePrecedenceFixture("footnote", "decimal", null, null, true);

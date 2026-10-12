@@ -192,6 +192,34 @@ internal sealed partial class DocxLayoutEngine
         return lineMetrics.MeasureHheaAscender(insetRun, insetRunSize) + gapProvider.MeasureHheaLineGap(insetRun, insetRunSize);
     }
 
+    private static DocxParagraph? ResolveUnmarkedNoteMetricParagraph(DocxParagraph paragraph)
+    {
+        if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+            paragraph.Runs.Count < 2 || !IsAutomaticSuperscriptNoteMarker(paragraph.Runs[0])) return null;
+        double contentSize = paragraph.Runs.Where(r => !IsAutomaticSuperscriptNoteMarker(r) &&
+            !string.IsNullOrWhiteSpace(r.Text) && !r.EffectiveProperties.Hidden)
+            .Select(r => r.EffectiveProperties.FontSize).DefaultIfEmpty(0d).Max();
+        // Retain the independently qualified mixed inset when the source marker
+        // does not dominate the content's nominal metric box.
+        if (contentSize <= 0d || paragraph.Runs[0].EffectiveProperties.FontSize <= contentSize) return null;
+        return paragraph with { Runs = paragraph.Runs.Where(r => !IsAutomaticSuperscriptNoteMarker(r)).ToArray() };
+    }
+
+    private static bool IsAutomaticSuperscriptNoteMarker(DocxTextRun run) =>
+        run.IsAutomaticNoteStoryMarker && run.VerticalAlignment == DocxRunVerticalAlignment.Superscript;
+
+    private static double ResolveRelatedStoryBaselineOffset(DocxParagraph paragraph, double fontSize,
+        double lineHeight, IDocxTextMeasurer textMeasurer, DocxStoryKind? kind)
+    {
+        double? hheaAscender = kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
+            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false) : null;
+        return kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
+            textMeasurer is IDocxHheaLineGapProvider gapProvider &&
+            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider, kind is DocxStoryKind.TextBox) is double inset
+            ? inset : DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight,
+                IsExactLineSpacing(paragraph.EffectiveProperties), hheaAscender);
+    }
+
     private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight, double BaselineOffset) LayoutRelatedStoryParagraphTextLines(
         DocxParagraph paragraph,
         double fixedScale,
@@ -216,7 +244,7 @@ internal sealed partial class DocxLayoutEngine
 
         double fontSize = GetParagraphFontSize(paragraph);
         DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, selectMaxAcrossRuns: story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote);
-        double lineHeight = lineHeightProfile.LineHeight;
+        double baseLineHeight = lineHeightProfile.LineHeight;
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
         double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);
         double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, fixedScale);
@@ -228,23 +256,27 @@ internal sealed partial class DocxLayoutEngine
         DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
         // Auto insets take max(hheaAscender, 0.94em) for footnote/endnote stories
         // (Word 16.0 endnote grids); comment stories keep legacy (unprobed).
-        double? storyHheaAscender = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
-            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false)
-            : null;
         // RV06 shape probes (Word 16.0, eighteen families) plus take battery (a12
         // 21/21/18) plus floatinset probes (Tahoma slash Calibri slash Informal textboxes):
         // uniform-note first insets follow hhea box minus Windows descender with
         // no 0.94em floor, while mixed notes keep the legacy floor so take capacities
         // hold; gap-aware measurers resolve uniform notes directly and every other path
         // stays byte-identical.
-        double storyBaselineOffset = story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
-            textMeasurer is IDocxHheaLineGapProvider gapProvider &&
-            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider, story?.Kind is DocxStoryKind.TextBox) is double relatedFirstInset
-            ? relatedFirstInset
-            : DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(effective), storyHheaAscender);
+        double storyBaselineOffset = ResolveRelatedStoryBaselineOffset(paragraph, fontSize, baseLineHeight, textMeasurer, story?.Kind);
+        DocxLineHeightProfile? unmarkedProfile = null;
+        double unmarkedBaselineOffset = storyBaselineOffset;
+        if (lines.Length > 1 && fixedScale == 1d && transitionScale == 1d &&
+            story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote &&
+            ResolveUnmarkedNoteMetricParagraph(paragraph) is DocxParagraph metricParagraph)
+        {
+            double metricSize = GetParagraphFontSize(metricParagraph);
+            unmarkedProfile = ResolveLineHeightProfile(metricParagraph, metricSize, textMeasurer, selectMaxAcrossRuns: true);
+            unmarkedBaselineOffset = ResolveRelatedStoryBaselineOffset(metricParagraph, metricSize,
+                unmarkedProfile.LineHeight, textMeasurer, story?.Kind);
+        }
         // RV05: ordered inline atoms (related-story path). Affined images in
         // text-mixed paragraphs attach to wrapped lines at run position.
-        DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, lineHeight);
+        DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, baseLineHeight);
         var layouts = new List<DocxTextLineLayout>(lines.Length);
         var placedImages = new List<DocxInlineImageLayout>();
         double startCursorY = cursorY;
@@ -252,6 +284,9 @@ internal sealed partial class DocxLayoutEngine
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             DocxWrappedTextLine line = lines[lineIndex];
+            bool unmarked = unmarkedProfile is not null && !line.Spans.Any(s => IsAutomaticSuperscriptNoteMarker(s.StyleRun));
+            DocxLineHeightProfile activeProfile = unmarked ? unmarkedProfile! : lineHeightProfile;
+            double lineHeight = activeProfile.LineHeight;
             double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
             // RV05 calibration (Word 16.0): image top pins to the natural line top.
             double extraAbove = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (storyMidLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
@@ -267,7 +302,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                 _ => paragraphX
             };
-            double baselineOffset = storyBaselineOffset;
+            double baselineOffset = unmarked ? unmarkedBaselineOffset : storyBaselineOffset;
             if (firstStoryBaselineOffset is { } firstStoryOffset)
             {
                 // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a
@@ -320,13 +355,13 @@ internal sealed partial class DocxLayoutEngine
                 AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                 IsFirstParagraphLine: firstLine,
                 EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
-                SingleLineHeight: lineHeightProfile.SingleLineHeight,
-                ListLabelSingleLineHeight: lineHeightProfile.ListLabelSingleLineHeight,
-                BodyWindowsLineHeight: lineHeightProfile.BodyWindowsLineHeight,
-                ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
-                EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
-                LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
-                LineHeightSource: lineHeightProfile.Source,
+                SingleLineHeight: activeProfile.SingleLineHeight,
+                ListLabelSingleLineHeight: activeProfile.ListLabelSingleLineHeight,
+                BodyWindowsLineHeight: activeProfile.BodyWindowsLineHeight,
+                ListLabelWindowsLineHeight: activeProfile.ListLabelWindowsLineHeight,
+                EffectiveLineSpacingFactor: activeProfile.EffectiveLineSpacingFactor,
+                LineSpacingFactorFloorApplied: activeProfile.LineSpacingFactorFloorApplied,
+                LineHeightSource: activeProfile.Source,
                 PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
                 ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
