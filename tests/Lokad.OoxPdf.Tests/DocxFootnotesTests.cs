@@ -4185,6 +4185,69 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxFittingMixedEndnoteSharesOwnedSeparatorDeficit()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool matching in new[] { false, true })
+        foreach (int footerLines in new[] { 1, 6 })
+        foreach (int footRepeats in new[] { 0, 16 })
+        {
+            var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d,
+                matching ? 1.15d : 1.220703125d, useStrikeoutMetrics: true);
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, footRepeats),
+                false, true, footerLines);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayoutPage page = layout.Pages.Single(p => p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+            TestAssert.True(page.Items.Count > 0 && page.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote),
+                "The source witnesses a complete fitting mixed head on its occupied body/footnote page.");
+            DocxPlacedRelatedStoryLayout end = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote);
+            DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote &&
+                s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            // Independent Word controls put the 12pt Arial rule 16.44pt above
+            // Calibri content. Matching metrics preserve the 16.31pt mark-gap floor.
+            double expected = matching ? 16.31d : 16.44d;
+            double actual = separator.SeparatorY!.Value - end.TextLines[0].BaselineY;
+            TestAssert.True(Math.Abs(actual - expected) < .02d,
+                $"Fitting first-bearing ownership consumes the deficit once: {actual}, custom={custom}, matching={matching}.");
+            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s =>
+                s.Story.IsNormalStoryType && s.Story.Kind == DocxRelatedStoryKind.Endnote);
+            TestAssert.True(end.TextLines.Select(l => l.SourceLineIndex).SequenceEqual(
+                canonical.TextLines.Select(l => l.SourceLineIndex)),
+                "The fitting gap retains the complete canonical source owner and order.");
+        }
+    }
+
+    public static void DocxFittingMixedEndnoteKeepsUnownedBearingAndFrameFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (int footRepeats in new[] { 0, 16 })
+        foreach (double ascent in new[] { 0d, -1d, 12d, 10.8d })
+        {
+            bool footer = ascent != 10.8d;
+            var measurer = new NoteContentMetricMeasurer(ascent, 1.15d, 1.220703125d, true);
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, footRepeats),
+                false, footer, 6);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayoutPage page = layout.Pages.Single(p => p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+            TestAssert.True(page.Items.Count > 0, "The fallback witnesses a fitting occupied head.");
+            DocxPlacedRelatedStoryLayout end = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote);
+            DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote &&
+                s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            double actual = separator.SeparatorY!.Value - end.TextLines[0].BaselineY;
+            TestAssert.True(Math.Abs(actual - 17.15d) < .02d,
+                $"Unavailable/unowned first bearings and absent static frames retain the qualified gap: {actual}, ascent={ascent}, custom={custom}.");
+        }
+    }
+
     public static void DocxPhysicalFootnoteHeadUsesSharedSourceGapAndRetainsFallbacks()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

@@ -366,7 +366,7 @@ internal sealed partial class DocxLayoutEngine
                         : CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
                     double separatorTop = cursorTop + FootnoteSeparatorGapPoints;
-                    bool usesSourceFirstInset = false;
+                    bool ownsSeparatorFirstBearing = false;
                     if (deferredMixedEndnoteSource && separatorMeasurer is IDocxStaticTextMetricsProvider headMetrics)
                     {
                         // A fresh-page head keeps the source line's baseline floor,
@@ -377,7 +377,26 @@ internal sealed partial class DocxLayoutEngine
                         {
                             firstInset = Math.Max(firstInset, -documentEndSeparatorLayout.TextLines[0].BaselineY);
                             separatorTop = cursorTop + nominalSeparatorHeight!.Value - firstInset;
-                            usesSourceFirstInset = true;
+                            ownsSeparatorFirstBearing = true;
+                        }
+                    }
+                    if (!deferredMixedEndnoteSource && !partialMixedEndnoteHead && mixedEndnoteSourceFrame is not null &&
+                        separatorMeasurer is IDocxStaticTextMetricsProvider fittingMetrics &&
+                        separatorMeasurer is IDocxLineMetricsProvider)
+                    {
+                        double ascender = fittingMetrics.MeasureWindowsAscender(endnoteMarkRun, endnoteMarkSize);
+                        double covered = Math.Min(
+                            ResolveSeparatorHheaAscenderExcess(endnoteMarkRun, endnoteMarkSize, separatorMeasurer),
+                            ResolveContentHheaAscenderExcess(documentEndStories, separatorMeasurer));
+                        double sourceInset = -documentEndSeparatorLayout.TextLines[0].BaselineY;
+                        if (double.IsFinite(ascender) && ascender > 0d &&
+                            double.IsFinite(covered) && covered >= 0d && double.IsFinite(sourceInset) && sourceInset > 0d)
+                        {
+                            // The content gap shares the resolved deficit only
+                            // when this origin already owns the first bearing.
+                            // Uncovered bearings keep their qualified origin/gap.
+                            ownsSeparatorFirstBearing = Math.Max(ascender, sourceInset) <=
+                                DocxLineMetrics.WordAutoLineBaselineOffsetEm * endnoteMarkSize + covered;
                         }
                     }
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
@@ -389,7 +408,7 @@ internal sealed partial class DocxLayoutEngine
                         endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkRun, endnoteMarkSize, separatorMeasurer));
                     }
 
-                    cursorTop = separatorBottom - (usesSourceFirstInset
+                    cursorTop = separatorBottom - (ownsSeparatorFirstBearing
                         ? ResolveSourceInsetNoteContentGap(endnoteContentGapPoints, endnoteMarkRun, endnoteMarkSize, separatorMeasurer)
                         : Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints));
                 }
