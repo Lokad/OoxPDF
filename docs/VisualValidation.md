@@ -2720,3 +2720,37 @@ and 3945 root PDF byte/page identities pass: 7098 prior outputs exact/one qualif
 retained change/eight new Word inputs. Two source blobs and packed 0.1.5 smoke pass.
 Fitting-note separator origin/gap work continues as L231. Safe managed code and
 bounds/work/publication policies remain; release preparation is deferred.
+
+
+### RV06-L231: fitting-note first-bearing ownership and shared content gap
+
+Complete fitting mixed-note heads now share the existing separator content-gap
+deficit when their current origin already owns the resolved first bearing.
+Deferred heads keep their source-first origin. Uncovered bearings, partial heads,
+unavailable metrics and absent static frames retain explicit fallbacks. Existing
+mixed source admission and shared hhea coverage are reused; no font, size,
+threshold or marker-specific exception is introduced. Frozen **0258cb0d**,
+root **61c39b54**. Two origin-shift models are rejected by neighboring
+Word controls; exact patches, immutable runtimes and comparisons remain ignored.
+
+Thirty-seven retained/eighteen fresh Word controls qualify six fitting mixed
+improvements/49 byte-exact guards. All 4463 source lines/110 notes/310 clips/155
+rules/110 navigation pairs and 951 body/static operations retain ownership;
+canonical glyph/font/advance sequences stay exact. All line/page assignments,
+separator origins/rules and physical footnotes remain exact. Six raster pages
+improve/105 exact/no regressions. Prior passing .2pt glyph gates remain passing;
+mixed residuals up to .367pt remain partial. Three destination-coordinate errors
+increase by up to .713pt; targets still follow the correct typed note clips and
+pages. Coordinate maximum is 1.311pt. No full Office parity claim or relaxed gate.
+
+Two focused tests cover 32 fitting source combinations. The exact new test
+assembly fails against accepted L230 at the intended excess-gap assertion;
+unowned/unavailable bearing and absent-frame fallback coverage passes against
+both versions. Strict Release is clean. Windows passes 287 note/94 PDF/one
+static-comment checks (381 unique methods); Linux passes 370 checks with eleven
+existing environmental skips/two archive SourceLink warnings. All 7125 frozen
+and 3963 root PDF byte/page identities pass: 7105 prior outputs exact/two qualified
+retained changes/eighteen new Word inputs. Two source blobs and packed 0.1.5 smoke
+pass. Last full Windows catalogue remains L230 (2615 passes/one optional private
+skip). Fitting rule-bearing investigation continues as L232. Safe managed code,
+bounds/work/publication policies and release deferral remain.
