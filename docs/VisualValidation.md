@@ -2444,3 +2444,22 @@ Calibri .362/.202/.209pt and .869pt navigation remain partial. Fresh qualificati
 42 affected Windows passes, 352 Linux passes/eleven font skips, 7028 frozen PDFs and
 393 root checks/3866 PDFs. Full Windows remains L216; strict Release, permanent safe
 managed code and local 0.1.5 package smoke pass. No widow-metadata override.
+
+RV06-L221 (**1bec78a7**, integrated **68a1993b**) applies the shared source
+kerning-threshold and nominal-advance rules to jointly admitted mixed notes in
+one bounded typography retry. Both complete typed owners are required; custom
+prefixes, source offsets, partially normalized pairs and existing single-kind,
+rich/scaled/static fallbacks remain. The exact frozen emission regression fails
+the accepted parent at the intended advance assertion.
+
+All 72 retained Word controls preserve 7734 source lines/144 typed notes, line/page/
+baseline assignments, 498 clips/249 rules, 144 navigation pairs and 4974 protected
+body/static/complementary operations. All 4392 footnote terminal advances improve;
+155 paired raster pages improve/25 exact/zero tradeoffs. Inherited Calibri
+.362/.202/.209pt baseline and .869pt navigation residuals remain partial. No font/
+size exception, widow override, threshold relaxation or full Office-parity claim.
+Fresh qualification: 45 affected Windows passes, 355 Linux passes/eleven existing
+font skips, 7028 frozen PDFs/6956 prior exact/72 independently qualified changes,
+396 root checks/3866 fresh PDFs/three source blobs. Full Windows remains L216;
+strict Release, permanent safe managed code and local 0.1.5 package smoke pass.
+Version stays 0.1.5; release preparation is deferred.
