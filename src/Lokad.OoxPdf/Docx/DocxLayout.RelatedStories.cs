@@ -327,9 +327,17 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
                 }
+                double mixedSourceEndnoteHeight = 0d;
                 bool allowMixedEndnoteHead = hasFootnotes && endnoteFrameBottom is not null &&
                     CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
-                        documentEndStories, cancellationToken, out _);
+                        documentEndStories, cancellationToken, out mixedSourceEndnoteHeight);
+                DocxLayoutPage? mixedEndnoteSourceFrame = allowMixedEndnoteHead &&
+                    HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Footnote, cancellationToken,
+                        out _, requirePlainParagraph: true) &&
+                    CanUsePlainDocumentEndnoteFrame(document, activePage, activePageIndex + 1,
+                        documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) ? activePage : null;
+                int endnoteSourcePageIndex = activePageIndex;
+                bool deferredMixedEndnoteSource = false;
                 cursorTop = ResolveDocumentEndnoteStartAboveFootnotes(activePage, activePlacedStories, cursorTop,
                     documentEndStories, documentEndSeparatorLayout, separatorMeasurer, printScale,
                     allowMixedEndnoteHead, out bool partialMixedEndnoteHead);
@@ -352,8 +360,11 @@ internal sealed partial class DocxLayoutEngine
                     {
                         MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
-                    double? nominalSeparatorHeight = CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
-                        ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
+                    deferredMixedEndnoteSource = mixedEndnoteSourceFrame is not null && activePageIndex != endnoteSourcePageIndex;
+                    double? nominalSeparatorHeight = deferredMixedEndnoteSource
+                        ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, mixedEndnoteSourceFrame!, separatorMeasurer, documentEndStories, printScale)
+                        : CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
+                            ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
@@ -371,6 +382,13 @@ internal sealed partial class DocxLayoutEngine
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
+                if (deferredMixedEndnoteSource)
+                {
+                    // An empty continuation inherits the admitted original source
+                    // frame; a page turn does not change its paragraph ownership.
+                    plainEndnoteTypography = true;
+                    completeEndnoteHeight = mixedSourceEndnoteHeight;
+                }
                 // Mixed static frames share typography and qualified head space;
                 // their paragraph-boundary policy remains unchanged.
                 bool plainEndnoteFrame = plainEndnoteTypography &&
