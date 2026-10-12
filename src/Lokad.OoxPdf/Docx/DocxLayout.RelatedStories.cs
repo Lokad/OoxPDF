@@ -1711,7 +1711,9 @@ internal sealed partial class DocxLayoutEngine
         if (drawHeadSeparator)
         {
         double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
-        (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout, footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer);
+        (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout,
+            footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer,
+            placementHeightOverride: footerKeepOut is not null ? separatorHeight : null);
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
         }

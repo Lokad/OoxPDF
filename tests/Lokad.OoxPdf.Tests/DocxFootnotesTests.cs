@@ -2755,6 +2755,16 @@ internal static class DocxFootnotesTests
         var expected = baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType)
             .GroupBy(s => s.StoryLayout.Story.Id).ToDictionary(g => g.Key!, g => g.SelectMany(s => s.StoryLayout.TextLines)
                 .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).ToArray());
+        // A fitting footer alone does not imply that the complete note batch fits.
+        // Short notes also establish the physical head-rule gap for whole flow.
+        DocxDocument fittingPlain = WithEndnoteText(plain, "37", "Short public note.");
+        fittingPlain = WithEndnoteText(fittingPlain, "4", "Another short public note.");
+        DocxLayout fittingBaseline = engine.Create(fittingPlain, measurer, default);
+        DocxLayout fitting = engine.Create(Compose(1, false) with { RelatedStories = fittingPlain.RelatedStories }, measurer, default);
+        DocxPlacedRelatedStoryLayout fittingHead = fitting.Pages[0].PlacedRelatedStories.Single(s =>
+            s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+        double fittingHeadRuleGap = fittingHead.SeparatorY!.Value - fitting.Pages[0].PlacedRelatedStories
+            .First(s => s.StoryLayout.Story.IsNormalStoryType).TextLines[0].BaselineY;
         foreach ((int footerCount, bool alternating) in new[] { (10, false), (10, true), (1, false) })
         {
             DocxDocument source = Compose(footerCount, alternating);
@@ -2784,6 +2794,14 @@ internal static class DocxFootnotesTests
                 if (page.PlacedRelatedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType))
                     TestAssert.True(page.PlacedRelatedStories.Count(s => s.SeparatorY is not null) == 1,
                         "A shared footnote compartment emits one physical separator.");
+                DocxPlacedRelatedStoryLayout? head = page.PlacedRelatedStories.FirstOrDefault(s =>
+                    s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+                if (head is not null)
+                {
+                    DocxPlacedRelatedStoryLayout note = page.PlacedRelatedStories.First(s => s.StoryLayout.Story.IsNormalStoryType);
+                    TestAssert.True(Math.Abs(head.SeparatorY!.Value - note.TextLines[0].BaselineY - fittingHeadRuleGap) < .000001d,
+                        "Whole and split fresh heads retain the same physical separator gap above their first glyphs.");
+                }
             }
         }
         DocxLayout consumed = engine.Create(Compose(100, true), measurer, default);
@@ -2791,12 +2809,6 @@ internal static class DocxFootnotesTests
         TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(consumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
             "A static variant consuming the complete frame retains bounded legacy placement.");
-        // A fitting footer alone does not imply that the complete note batch fits.
-        // Use short notes here so this assertion protects whole-batch placement.
-        DocxDocument fittingPlain = WithEndnoteText(plain, "37", "Short public note.");
-        fittingPlain = WithEndnoteText(fittingPlain, "4", "Another short public note.");
-        DocxLayout fittingBaseline = engine.Create(fittingPlain, measurer, default);
-        DocxLayout fitting = engine.Create(Compose(1, false) with { RelatedStories = fittingPlain.RelatedStories }, measurer, default);
         TestAssert.Equal(1, fittingBaseline.Pages.Count);
         TestAssert.True(fittingBaseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(fitting.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
