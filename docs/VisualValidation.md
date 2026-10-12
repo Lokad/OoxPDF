@@ -2482,3 +2482,30 @@ font skips, strict Release clean, 24 frozen/root PDF identities and five focused
 root methods. L221's wider corpus, PDF group, full-catalogue and package evidence
 remain inherited through identical shipped source trees; they were not rerun.
 Safe managed constraints and version 0.1.5/release deferral remain.
+
+
+### RV06-L223: typed note separator registration
+
+Word ignores special note formatting unless settings register the matching typed
+separator ID. OoxPdf previously consumed that formatting, moving 8/16pt endnote
+content by about five points. The reader now resolves the shared footnote/endnote
+registration rule and supplies Word's default separator when needed. Registered
+sources, normal note owners and existing layout eligibility remain intact. One
+new regression and a corrected authored capacity-fixture declaration preserve
+the prior expected take. Frozen **544398c7**, root **6447d723**.
+
+Sixteen Word controls retain 1587 canonical lines/30 notes/86 clips/43 rules/30
+navigation pairs and 1443 protected operations: seven raster pages improve/33
+exact, with no tradeoffs or new navigation error. All 7067 frozen byte/page checks
+pass: 7051 retained PDFs exact, one latent separator clip change and 15 new Word
+inputs. The changed retained case preserves full text/rule/annotation emission
+and exact PNG identity. Root checks all 3905 qualified PDFs and three source blobs.
+Windows passes 274 note/94 PDF/one static-comment checks (368 unique methods),
+strict Release is clean, Linux passes 357 checks with eleven environmental skips
+and two archive SourceLink warnings, and the local packed 0.1.5 smoke passes.
+The new test fails the intended assertion against the exact parent library.
+
+Calibri's .362pt baseline and the new registered fitting control's .938pt
+destination error remain partial. The origin-only draft remains unaccepted;
+source-derived first-line placement continues as L224. Safe managed code, existing
+bounds/cancellation/work/staging/publication limits and release deferral remain.
