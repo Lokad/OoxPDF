@@ -458,7 +458,7 @@ internal sealed partial class DocxLayoutEngine
                 var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
                     page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
                     page.SectionProperties, page.ColumnFrames, [], [], [], [], []);
-                frame = CanUsePlainFootnoteFooterFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
+                frame = CanUsePlainFootnoteStaticFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
                     paragraphSpacingScale, cancellationToken) ? candidate : null;
                 plainFootnoteFooterFrames[key] = frame;
             }
@@ -878,7 +878,7 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
             Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
-                CanUsePlainFootnoteFooterFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
+                CanUsePlainFootnoteStaticFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
                     ? (p, _, _) => ResolveFooterKeepOut(p, templatePageNumber, templatePageNumber) : null;
             if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0)
             {
@@ -992,7 +992,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxRelatedStoryLayout narrowedLayout = NarrowStoryTextLinesForOffset(inFlight.StoryLayout, inFlight.PlacedLineCount);
                 double[] narrowedLineBoxes = GetStoryTextLineBoxHeights(narrowedLayout);
                 Func<DocxLayoutPage, int, int, double>? tailFrameBottom =
-                    CanUsePlainFootnoteFooterFrame(document, tailPage, separatorMeasurerForNotes, paragraphSpacingScale, cancellationToken)
+                    CanUsePlainFootnoteStaticFrame(document, tailPage, separatorMeasurerForNotes, paragraphSpacingScale, cancellationToken)
                         ? ResolveFooterKeepOut : null;
                 tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, frameBottom: tailFrameBottom);
                 PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight, frameBottom: tailFrameBottom);

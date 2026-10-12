@@ -2990,6 +2990,85 @@ internal static class DocxFootnotesTests
             cancelled.Token, DocxRelatedStoryKind.Footnote));
     }
 
+    public static void DocxHeaderFootnoteFramesPreserveCompleteCanonicalOwners()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (string rule in new[] { "auto", "atLeast", "exact" })
+        {
+            DocxDocument source = WithPlainFootnoteTestHeader(ReadWrappedFootnoteFlowFixture(200));
+            source = source with
+            {
+                BodyElements = source.BodyElements.OfType<DocxParagraphElement>().Take(1).ToArray(),
+                RelatedStories = source.RelatedStories.Where(s => !s.IsNormalStoryType || s.Id == "37").Select(s => s.IsNormalStoryType ? s with
+                {
+                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    {
+                        LineSpacingPoints = rule == "auto" ? null : 18d,
+                        Spacing = p.Spacing with { LineRuleValue = rule, LineValue = rule == "auto" ? "240" : "360" },
+                        Runs = [p.Runs[0], p.Runs[1] with { FontSize = 10d }],
+                    })).ToArray(),
+                } : s).ToArray(),
+            };
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var slices = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+            TestAssert.True(slices.Length > 1 && slices.All(s => s.UsesPlainFootnoteFrame),
+                "Plain header-only frames share bounded fitting and continuation ownership with footer frames.");
+            var canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType);
+            TestAssert.True(canonical.TextLines.Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).SequenceEqual(
+                slices.SelectMany(s => s.StoryLayout.TextLines).Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))),
+                "Every canonical line is placed once and in source order across header-only note continuations.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var owners, default,
+                DocxRelatedStoryKind.Footnote), "Plain header compositions share the source-owned content advance policy.");
+            TestAssert.True(DocxNoteKerning.HasStableOwners(engine.Create(adjusted, measurer, default), owners, default,
+                DocxRelatedStoryKind.Footnote), "The bounded content retry preserves complete header-frame owners.");
+            TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body source reference owners remain unchanged.");
+            TestAssert.True(ReferenceEquals(source.RelatedStories.Single(s => s.IsNormalStoryType).Paragraphs[0].Runs[0],
+                adjusted.RelatedStories.Single(s => s.IsNormalStoryType).Paragraphs[0].Runs[0]), "The XML automatic marker remains immutable.");
+        }
+    }
+
+    public static void DocxHeaderFootnoteFramesRetainRichKeepContextualAndScaledFallbacks()
+    {
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (string variant in new[] { "rich-header", "kept-note", "contextual-note", "scaled" })
+        {
+            DocxDocument source = ReadWrappedFootnoteFlowFixture(100);
+            source = WithPlainFootnoteTestHeader(source, variant == "rich-header");
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    KeepRules = p.KeepRules with { KeepNext = variant == "kept-note" },
+                    Spacing = p.Spacing with { ContextualSpacing = variant == "contextual-note" },
+                })).ToArray(),
+            } : s).ToArray() };
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, variant == "scaled" ? .5d : 1d);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType)
+                .All(s => !s.UsesPlainFootnoteFrame), "Rich headers, kept/contextual notes and scaled compositions retain static-frame fallback.");
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default,
+                DocxRelatedStoryKind.Footnote) && ReferenceEquals(source, adjusted),
+                "Unqualified header compositions retain the original source and typography policy.");
+        }
+    }
+
+    private static DocxDocument WithPlainFootnoteTestHeader(DocxDocument source, bool centered = false)
+    {
+        DocxParagraph header = DocxTests.CreateDocxLayoutParagraph("public plain header", 12d, 14d) with
+        {
+            Alignment = centered ? DocxTextAlignment.Center : DocxTextAlignment.Left,
+            LineSpacingPoints = null, LineSpacingFactor = 1d,
+            Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "auto", LineValue = "240" },
+        };
+        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [header] };
+        var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(header)] };
+        var settings = source.PageSettings with { HeaderDistancePoints = 36d,
+            HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
+        return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
+            HeaderParagraphs = [header], HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
+    }
+
     private static DocxDocument WithPlainFootnoteTestFooter(DocxDocument source)
     {
         DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with

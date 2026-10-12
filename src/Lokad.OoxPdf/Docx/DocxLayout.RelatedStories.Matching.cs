@@ -351,10 +351,12 @@ internal sealed partial class DocxLayoutEngine
     private static bool IsNumericNoteTwips(string? value) => value is null ||
         int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int twips) && twips >= 0;
 
-    private static bool CanUsePlainFootnoteFooterFrame(DocxDocument document, DocxLayoutPage page,
+    private static bool CanUsePlainFootnoteStaticFrame(DocxDocument document, DocxLayoutPage page,
         IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (page.ColumnFrames.Count > 1 ||
+            !page.PageSettings.HeaderParagraphsByType.Values.Any(v => v.Count != 0) &&
+            !page.PageSettings.HeaderBodyElementsByType.Values.Any(v => v.Count != 0) &&
             !page.PageSettings.FooterParagraphsByType.Values.Any(v => v.Count != 0) &&
             !page.PageSettings.FooterBodyElementsByType.Values.Any(v => v.Count != 0) ||
             document.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote) ||

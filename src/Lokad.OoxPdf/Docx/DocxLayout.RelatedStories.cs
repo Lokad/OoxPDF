@@ -192,7 +192,7 @@ internal sealed partial class DocxLayoutEngine
             int countBefore = outputPages.Count;
             DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(footnoteLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
             PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale, headerKeepOut,
-                footerKeepOut: CanUsePlainFootnoteFooterFrame(document, page, separatorMeasurer, printScale, cancellationToken) ? footerKeepOut : null);
+                footerKeepOut: CanUsePlainFootnoteStaticFrame(document, page, separatorMeasurer, printScale, cancellationToken) ? footerKeepOut : null);
             outputShift += outputPages.Count - countBefore;
         }
 
