@@ -2538,3 +2538,30 @@ and eight new Word inputs. Root verifies 3913 PDFs and two source blobs; packed
 0.1.5 smoke passes. Full Windows remains L216 evidence. Shared note-gap diagnosis
 continues as L225; permanent safe managed code, existing bounds/work/publication
 limits and release deferral remain.
+
+### RV06-L225: deferred-head separator-gap ownership
+
+Admitted source-first-inset heads consumed the separator-height deficit again in
+their content gap. Placement now reuses that existing term once and keeps the
+mark gap as a lower bound. Existing fitting/continuation, unavailable-metric and
+rich/scaled behavior remains. A Word-grounded regression covers 32 compositions
+and preserves canonical owners and matching metric floors; it fails the intended
+gap assertion against the exact parent. Frozen **bac866af**, root **113151ba**.
+
+Twenty-two Word controls map 2001 source lines/44 notes/124 clips/62 rules/44
+navigation pairs and 1672 protected operations. Eight endnote heads improve below
+.173pt glyph error; fourteen guards remain byte-identical. Rules are unchanged,
+eight raster pages improve/41 exact, and no raster or destination-coordinate
+tradeoff appears. The broader guards retain 22 inherited page-line mismatches;
+paired baseline deltas reach 102.532pt across mismatched flows and destination
+residuals 6.393pt. Complementary footnote errors up to .834pt remain partial.
+These results qualify the bounded correction, without claiming wider Office parity.
+
+Strict Release is clean. Windows passes 276 note/94 PDF/one static-comment checks
+(370 unique methods); Linux passes 359 checks/eleven existing environmental skips
+and two archive SourceLink warnings. All 7095 frozen byte/page checks pass: 7073
+retained outputs exact, two independently qualified changes and twenty new Word
+inputs. Root checks 3933 PDFs/two source blobs; packed 0.1.5 smoke passes. Full
+Windows remains L216 evidence. Shared physical-footnote gap ownership continues
+as L226. Safe managed code, existing bounds/work/publication limits and release
+deferral remain.
