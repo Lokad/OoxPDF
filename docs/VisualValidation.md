@@ -2431,3 +2431,16 @@ gap/11.63pt; Calibri .362/.202/.209pt and .869pt navigation remain partial.
 Fresh qualification: 41 affected Windows passes, 351 Linux passes/eleven font skips,
 6989 frozen PDF checks and 392 root checks/3827 PDFs. Prior full Windows is L216;
 strict Release, safe managed constraints and local 0.1.5 package smoke pass.
+
+RV06-L220 (**a949da98**, integrated **e335204a**) charges the complete
+separator inset in admitted continued footnote frames. Seventy-two Word controls
+qualify 29 source corrections/43 exact guards, removing 35 page-line mismatches;
+all note lines/pages match Word. Mapping resolves 7734 lines/144 typed notes/498
+clips/249 rules; 4974 protected operations and canonical glyph/font/advance emission
+remain exact. Forty-four raster pages improve/122 exact/fourteen new terminal pages
+retain small tradeoffs (maximum MAE increase .008153/pixel-change ratio .000487).
+All 33 retained controls have zero tradeoffs; no prior passing gate is relaxed.
+Calibri .362/.202/.209pt and .869pt navigation remain partial. Fresh qualification:
+42 affected Windows passes, 352 Linux passes/eleven font skips, 7028 frozen PDFs and
+393 root checks/3866 PDFs. Full Windows remains L216; strict Release, permanent safe
+managed code and local 0.1.5 package smoke pass. No widow-metadata override.
