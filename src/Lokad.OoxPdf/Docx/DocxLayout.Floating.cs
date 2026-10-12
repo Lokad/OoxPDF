@@ -233,7 +233,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         double? firstStoryBaselineOffset = null,
         double transitionScale = 1d,
-        double sourceStoryScale = 1d)
+        double sourceStoryScale = 1d,
+        DocxTextRun? customNoteMarker = null)
     {
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count == 0)
@@ -286,6 +287,9 @@ internal sealed partial class DocxLayoutEngine
             unmarkedBaselineOffset = ResolveRelatedStoryBaselineOffset(metricParagraph, metricSize,
                 unmarkedProfile.LineHeight, textMeasurer, story?.Kind);
         }
+        bool customNoteMetrics = customNoteMarker is not null && sourceStoryScale == 1d && fixedScale == 1d &&
+            transitionScale == 1d && DocxPlainBodyFrame.IsPlainParagraph(paragraph) &&
+            HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
         // RV05: ordered inline atoms (related-story path). Affined images in
         // text-mixed paragraphs attach to wrapped lines at run position.
         DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, baseLineHeight);
@@ -298,6 +302,29 @@ internal sealed partial class DocxLayoutEngine
             DocxWrappedTextLine line = lines[lineIndex];
             bool unmarked = unmarkedProfile is not null && !line.Spans.Any(s => IsAutomaticSuperscriptNoteMarker(s.StyleRun));
             DocxLineHeightProfile activeProfile = unmarked ? unmarkedProfile! : lineHeightProfile;
+            double customBaselineOffset = storyBaselineOffset;
+            if (customNoteMetrics && !line.Spans.Any(span => ReferenceEquals(span.StyleRun, customNoteMarker)))
+            {
+                // A wrapped line owns only the source runs actually present on it.
+                // An absent custom prefix does not inflate its natural metric box.
+                DocxParagraph presentMetricParagraph = paragraph with
+                {
+                    Runs = line.Spans.Select(span => span.StyleRun).DistinctBy(run => run, ReferenceEqualityComparer.Instance).ToArray(),
+                };
+                double metricSize = GetParagraphFontSize(presentMetricParagraph);
+                DocxLineHeightProfile presentProfile = ResolveLineHeightProfile(presentMetricParagraph, metricSize,
+                    textMeasurer, selectMaxAcrossRuns: true);
+                // Preserve the qualified mixed inset when the prefix did not
+                // enlarge the natural box. Only an absent dominating run needs
+                // a new metric view, including inside an authored minimum box.
+                if (presentProfile.SingleLineHeight is { } presentBox &&
+                    lineHeightProfile.SingleLineHeight is { } sourceBox && presentBox < sourceBox)
+                {
+                    activeProfile = presentProfile;
+                    customBaselineOffset = ResolveRelatedStoryBaselineOffset(presentMetricParagraph, metricSize,
+                        activeProfile.LineHeight, textMeasurer, story?.Kind);
+                }
+            }
             double lineHeight = activeProfile.LineHeight;
             double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber) + (storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
             // RV05 calibration (Word 16.0): image top pins to the natural line top.
@@ -314,8 +341,8 @@ internal sealed partial class DocxLayoutEngine
                 DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                 _ => paragraphX
             };
-            double baselineOffset = unmarked ? unmarkedBaselineOffset : storyBaselineOffset;
-            if ((unmarkedProfile is not null || plainNoteMetrics && sourceStoryScale == 1d) &&
+            double baselineOffset = customNoteMetrics ? customBaselineOffset : unmarked ? unmarkedBaselineOffset : storyBaselineOffset;
+            if ((unmarkedProfile is not null || customNoteMetrics || plainNoteMetrics && sourceStoryScale == 1d) &&
                 activeProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
                 activeProfile.SingleLineHeight is { } naturalLineHeight)
             {

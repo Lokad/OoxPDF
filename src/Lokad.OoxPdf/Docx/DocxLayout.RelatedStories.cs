@@ -2010,7 +2010,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        IDocxTextMeasurer? unscaledTextMeasurer = null,
+        IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (textMeasurer is null || stories.Count == 0)
@@ -2039,7 +2040,7 @@ internal sealed partial class DocxLayoutEngine
                 pageNumber: null,
                 pageCount: null,
                 cancellationToken: cancellationToken,
-                unscaledTextMeasurer: unscaledTextMeasurer);
+                unscaledTextMeasurer: unscaledTextMeasurer, customNoteMarker: customNoteTargets?.GetValueOrDefault(stories[index]));
         }
 
         return layouts;
@@ -2055,7 +2056,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        IDocxTextMeasurer? unscaledTextMeasurer = null,
+        DocxTextRun? customNoteMarker = null)
     {
         double sourceStoryScale = paragraphSpacingScale;
         // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
@@ -2193,7 +2195,8 @@ internal sealed partial class DocxLayoutEngine
                 pageCount,
                 firstRelatedLineBaselineOffset,
                 paragraphSpacingScale,
-                sourceStoryScale);
+                sourceStoryScale,
+                customNoteMarker);
             if (paragraphLines.Count != 0)
             {
                 firstRelatedLineBaselineOffset ??= paragraphBaselineOffset;

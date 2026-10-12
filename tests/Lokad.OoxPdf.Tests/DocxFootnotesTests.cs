@@ -3591,6 +3591,102 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxCustomNoteLineMetricsPreserveMinimumBottomBearingsAndSourceOwners()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (double contentSize in new[] { 10d, 12d, 14d })
+        foreach (double minimum in new[] { 8d, 18d })
+        {
+            DocxDocument source = ReadCustomNoteMetricFixture(footnote, contentSize);
+            DocxDocument bounded = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = minimum, Spacing = p.Spacing with { LineRuleValue = "atLeast",
+                        LineValue = (minimum * 20d).ToString(CultureInfo.InvariantCulture) },
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout natural = engine.Create(source, measurer, default), actual = engine.Create(bounded, measurer, default);
+            foreach (var pair in natural.RelatedStories.Where(s => s.Story.IsNormalStoryType)
+                .Zip(actual.RelatedStories.Where(s => s.Story.IsNormalStoryType)))
+            {
+                TestAssert.True(pair.First.TextLines.Count > 2, "The control exercises actual custom-mark continuations.");
+                TestAssert.Equal(pair.First.TextLines.Count, pair.Second.TextLines.Count);
+                double naturalBottom = 0d, boundedBottom = 0d;
+                foreach (var line in pair.First.TextLines.Zip(pair.Second.TextLines))
+                {
+                    naturalBottom += line.First.LineHeight!.Value; boundedBottom += line.Second.LineHeight!.Value;
+                    double expectedNatural = (line.First.IsFirstParagraphLine == true ? Math.Max(12d, contentSize) : contentSize) * 1.2d;
+                    TestAssert.True(Math.Abs(line.First.LineHeight.Value - expectedNatural) < .000001d,
+                        "Custom note lines use only the source runs present on that wrapped line.");
+                    TestAssert.True(Math.Abs(line.Second.LineHeight!.Value - Math.Max(minimum, expectedNatural)) < .000001d &&
+                        Math.Abs(line.First.BaselineY + naturalBottom - line.Second.BaselineY - boundedBottom) < .000001d,
+                        "Minimum boxes preserve the source-owned bottom bearing for marked and unmarked lines.");
+                    TestAssert.True(ReferenceEquals(line.Second.SourceParagraph, pair.Second.Story.Paragraphs[0]),
+                        "Metric views do not replace canonical source paragraphs.");
+                }
+                TestAssert.True(ReferenceEquals(pair.First.Story.Paragraphs[0].Runs[0], pair.Second.Story.Paragraphs[0].Runs[0]),
+                    "The custom prefix retains its exact source run.");
+            }
+            var kind = footnote ? DocxRelatedStoryKind.Footnote : DocxRelatedStoryKind.Endnote;
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(bounded, actual, out var adjusted, out var owners, default, kind) &&
+                DocxNoteKerning.HasStableOwners(engine.Create(adjusted, measurer, default), owners, default, kind),
+                "The shared advance retry retains every canonical custom-note owner after metric correction.");
+        }
+    }
+
+    public static void DocxCustomNoteLineMetricsRetainFixedRichScaledAndAmbiguousFallbacks()
+    {
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (string variant in new[] { "exact", "scaled", "rich", "kept", "contextual", "missing", "duplicate-reference", "duplicate-target" })
+        {
+            DocxDocument source = ReadCustomNoteMetricFixture(footnote, 10d);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Alignment = variant == "rich" ? DocxTextAlignment.Center : p.Alignment,
+                    KeepRules = p.KeepRules with { KeepLines = variant == "kept" },
+                    LineSpacingPoints = variant == "exact" ? 14d : null,
+                    Spacing = p.Spacing with { ContextualSpacing = variant == "contextual",
+                        LineRuleValue = variant == "exact" ? "exact" : "auto", LineValue = variant == "exact" ? "280" : "240" },
+                })).ToArray(),
+            } : s).ToArray() };
+            if (variant is "missing" or "duplicate-reference") source = source with
+            {
+                BodyElements = source.BodyElements.Select(e => e is DocxParagraphElement pe ? pe with
+                {
+                    Paragraph = pe.Paragraph with { InlineReferences = variant == "missing" ? pe.Paragraph.InlineReferences
+                        .Select(r => r with { CustomMarkText = null }).ToArray() :
+                        pe.Paragraph.InlineReferences.Concat(pe.Paragraph.InlineReferences).ToArray() },
+                } : e).ToArray(),
+            };
+            if (variant == "duplicate-target") source = source with { RelatedStories = source.RelatedStories.Concat(
+                source.RelatedStories.Where(s => s.IsNormalStoryType)).ToArray() };
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, variant == "scaled" ? .5d : 1d);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            TestAssert.True(layout.RelatedStories.Where(s => s.Story.IsNormalStoryType).SelectMany(s => s.TextLines)
+                .All(line => Math.Abs(line.LineHeight!.Value - (variant == "exact" ? 14d : 14.4d)) < .000001d),
+                "Fixed, rich, kept, contextual, originally scaled and ambiguous custom notes retain their established metric boxes.");
+        }
+    }
+
+    private static DocxDocument ReadCustomNoteMetricFixture(bool footnote, double contentSize)
+    {
+        DocxDocument source = ReadCustomDocumentEndnoteFlowFixture("*", footnote);
+        return source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+        {
+            BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+            {
+                Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = contentSize,
+                    Text = string.Join(' ', Enumerable.Repeat("Public custom note source content continues.", 100)) }],
+            })).ToArray(),
+        } : s).ToArray() };
+    }
+
     private sealed class NoteContentMetricMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
         IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
     {

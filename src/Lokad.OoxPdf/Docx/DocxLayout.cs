@@ -345,6 +345,7 @@ internal sealed partial class DocxLayoutEngine
             !document.BodyElements.Any(element => element is DocxTableElement or DocxSectionBreakElement ||
                 element is DocxParagraphElement bodyParagraph &&
                 (bodyParagraph.Paragraph.Images.Count != 0 || bodyParagraph.Paragraph.InlineTextBoxes.Count != 0));
+        IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null;
         var relatedStoryLayoutsByBodyWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var footnoteReserveHeightByBodyWidth = new Dictionary<double, IReadOnlyDictionary<int, double>>();
 
@@ -367,7 +368,9 @@ internal sealed partial class DocxLayoutEngine
             double key = Math.Round(Math.Max(1d, bodyWidth), 3);
             if (!relatedStoryLayoutsByBodyWidth.TryGetValue(key, out IReadOnlyList<DocxRelatedStoryLayout>? layouts))
             {
-                layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer);
+                customNoteTargets ??= DocxCustomNoteMarkerOwners.ResolveTargets(document, cancellationToken);
+                layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints,
+                    paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets);
                 relatedStoryLayoutsByBodyWidth[key] = layouts;
             }
 

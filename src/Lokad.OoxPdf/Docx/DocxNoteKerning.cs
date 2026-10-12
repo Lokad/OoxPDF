@@ -20,7 +20,7 @@ internal static class DocxNoteKerning
                 s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote)) return false;
         if (!TryResolvePages(layout, kind, out var owners, cancellationToken)) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
-        Dictionary<string, string?>? customMarks = null;
+        IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customTargets = null;
         foreach (DocxRelatedStory story in source.RelatedStories.Where(s => s.IsNormalStoryType && s.Kind == kind))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -39,12 +39,9 @@ internal static class DocxNoteKerning
                 // Custom note text has no XML automatic-mark element. Resolve its
                 // first character through one unique, source-owned body reference.
                 // Other alignments and ambiguous/missing owners retain the fallback.
-                if (first.VerticalAlignment != DocxRunVerticalAlignment.Baseline || first.SourceRunIndex < 0 ||
-                    first.SourceTextOffsetInRun != 0) return false;
-                customMarks ??= ResolveCustomMarks(source, kind, cancellationToken);
-                if (!customMarks.TryGetValue(story.Id, out string? mark) || mark is null ||
-                    !first.Text.StartsWith(mark, StringComparison.Ordinal)) return false;
-                protectedPrefix = mark.Length;
+                customTargets ??= DocxCustomNoteMarkerOwners.ResolveTargets(source, cancellationToken);
+                if (!ReferenceEquals(first, customTargets.GetValueOrDefault(story))) return false;
+                protectedPrefix = 1;
             }
             var runs = new List<DocxTextRun>(paragraph.Runs);
             bool changed = false;
@@ -81,44 +78,6 @@ internal static class DocxNoteKerning
             }).ToArray(),
         };
         return true;
-    }
-
-    private static Dictionary<string, string?> ResolveCustomMarks(DocxDocument source,
-        DocxRelatedStoryKind kind, CancellationToken cancellationToken)
-    {
-        var marks = new Dictionary<string, string?>(StringComparer.Ordinal);
-        foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(source))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Dictionary<(int Run, int Offset), DocxTextRun?>? runOwners = null;
-            bool plain = paragraph.InlineReferences.Any(r => r.CustomMarkText is not null) &&
-                DocxPlainBodyFrame.IsPlainParagraph(paragraph);
-            foreach (DocxInlineReference reference in paragraph.InlineReferences)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (reference.Kind != kind || reference.Id is null) continue;
-                string? mark = null;
-                if (reference.CustomMarkText is { Length: 1 } custom && !char.IsWhiteSpace(custom[0]) &&
-                    !char.IsSurrogate(custom[0]) && reference.Revision is null && reference.Revisions.Count == 0 &&
-                    reference.SourceRunIndex >= 0 && reference.TextOffsetInRun >= 0 && plain)
-                {
-                    if (runOwners is null)
-                    {
-                        runOwners = new();
-                        foreach (DocxTextRun run in paragraph.Runs)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            var key = (run.SourceRunIndex, run.SourceTextOffsetInRun);
-                            if (!runOwners.TryAdd(key, run)) runOwners[key] = null;
-                        }
-                    }
-                    if (runOwners.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out DocxTextRun? owner) &&
-                        owner is not null && owner.Text.StartsWith(custom, StringComparison.Ordinal)) mark = custom;
-                }
-                if (!marks.TryAdd(reference.Id, mark)) marks[reference.Id] = null;
-            }
-        }
-        return marks;
     }
 
     internal static bool HasStableOwners(DocxLayout layout, IReadOnlyDictionary<string, PageRange> expected, CancellationToken cancellationToken,
