@@ -4070,6 +4070,49 @@ internal static class DocxFootnotesTests
             "A page turn does not admit an originally scaled source frame.");
     }
 
+    public static void DocxContinuedFootnoteCapacityKeepsSeparatorInsetInsideAdmittedFrame()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        int middlePages = 0;
+        foreach (bool custom in new[] { true, false })
+        foreach (bool widow in new[] { true, false })
+        for (int repeats = 100; repeats <= 140; repeats++)
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, repeats), false, true, 6);
+            source = source with { RelatedStories = source.RelatedStories.Select(s =>
+                s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote ? s with
+                {
+                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    {
+                        KeepRules = p.KeepRules with { WidowControl = widow, WidowControlValue = widow ? "1" : "0" },
+                    })).ToArray(),
+                } : s).ToArray() };
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var feet = layout.Pages.SelectMany((p, index) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .Select(s => (Page: index, Story: s))).ToArray();
+            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                s.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.Equal(string.Concat(canonical.TextLines.Select(l => l.Text)),
+                string.Concat(feet.SelectMany(s => s.Story.StoryLayout.TextLines).Select(l => l.Text)));
+            TestAssert.True(canonical.Story.Paragraphs.All(p => p.KeepRules.WidowControl == widow),
+                "Frame capacity preserves authored widow metadata rather than replacing paragraph policy.");
+            foreach (var foot in feet.Skip(1))
+            {
+                DocxLayoutPage page = layout.Pages[foot.Page];
+                DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && s.StoryLayout.Story.Type == DocxRelatedStoryType.ContinuationSeparator);
+                TestAssert.True(separator.TopY <= page.Height - page.MarginTop + .000001d,
+                    "An admitted continuation charges the complete separator inset before choosing a source take.");
+                TestAssert.True(foot.Story.TextLines.All(l => ReferenceEquals(l.SourceParagraph, canonical.Story.Paragraphs[0])),
+                    "The capacity correction retains complete canonical paragraph ownership.");
+                if (foot != feet[^1]) middlePages++;
+            }
+        }
+        TestAssert.True(middlePages > 0, "Both marker and widow states exercise middle continuation capacity boundaries.");
+    }
+
     public static void DocxMiddleFootnoteContinuationAnchorsActualWidowAwareTakeAtFooter()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);

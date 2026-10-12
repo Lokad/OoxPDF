@@ -987,9 +987,14 @@ internal sealed partial class DocxLayoutEngine
             // keeps its after-spacing under any constant full-block charge; word-compatible
             // takes stay legacy pending the balloon lane, so scaled pages keep the shared
             // full-block charge with null needs exactly as today.
-            double continuationOverhead = printScale >= 1d
+            bool hasPrecedingFragment = bodyLineIndex > 0 || bodyStoryLayout.TextLines[0].SourceLineIndex > 0;
+            // An admitted physical continuation frame owns the separator's first
+            // inset as well as its visible rule. Charging only the rule ride lets
+            // an extra source line and the separator clip cross the frame top.
+            // Deferred heads and legacy frames retain their qualified ride policy.
+            double continuationOverhead = printScale >= 1d && !(frameBottom is not null && hasPrecedingFragment)
                 ? ContinuationTakeCharge(continuationSeparatorLayout, separatorMeasurer,
-                    frameBottom is null || bodyLineIndex > 0 || bodyStoryLayout.TextLines[0].SourceLineIndex > 0)
+                    frameBottom is null || hasPrecedingFragment)
                 : ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer);
             double reservedTopSpace = Math.Max(0d, activePage.Height - activePage.MarginTop - cursorTop);
             double netOverhead = Math.Max(0d, continuationOverhead - reservedTopSpace);
