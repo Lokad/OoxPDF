@@ -2623,3 +2623,31 @@ Root checks 3933 PDFs/two source blobs; packed 0.1.5 smoke passes. Full Windows
 remains L216 evidence. Source-owned minimum-line metric semantics continue as
 L228; permanent safe managed code and bounds/work/publication policies remain.
 Release preparation is deferred.
+
+### RV06-L228: shared natural boxes for minimum note content
+
+Source-owned content-only minimum note lines omitted the existing natural
+Windows/hhea box. They now reuse the automatic related-story metric rule;
+first source-prefix lines, authored minima, typographic requests, exact boxes
+and providers without resolved face semantics retain their treatment. Two
+regressions cover 24 source compositions/both kinds. The exact frozen test
+assembly fails against the parent at its intended missing natural-box assertion.
+Frozen **e2112fc3**, root **b77a3200**.
+
+The 22 retained Word controls qualify four corrections/eighteen exact guards.
+All 2001 source lines/44 notes/124 clips/62 rules/44 navigation pairs retain
+ownership; canonical glyph/font/advance sequences and 425 body/static operations
+remain exact. Twenty-one page-line gaps disappear; one Times continuation gap
+and 11.574pt paired delta remain inherited. Nine raster pages improve/40 exact/
+no tradeoffs. Corrected footnote glyphs pass .2pt (maximum .186pt). Previously
+failing first-rule gaps improve but remain partial up to .729pt; every prior
+passing rule gate stays passing. Endnote constant offsets remain .863pt.
+Destination maximum drops 6.393 to 1.039pt, with no coordinate tradeoffs.
+
+Strict Release is clean. Windows passes 281 note/94 PDF/one static-comment checks
+(375 unique methods); Linux passes 364 checks/eleven existing environmental skips
+and two archive SourceLink warnings. All 7095 frozen byte/page checks pass: 7091
+retained outputs exact/four independently qualified changes/no new inputs. Root
+checks 3933 PDFs/three source blobs; packed 0.1.5 smoke passes. Full Windows remains
+L216 evidence. First-line natural box/bearing work continues as L229. Safe managed
+code and bounds/work/publication policies remain; release preparation is deferred.
