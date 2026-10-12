@@ -11,9 +11,60 @@ internal static class DocxNoteKerning
         internal IReadOnlyList<DocxRelatedStory> SourceStories { get; } = sourceStories;
     }
 
+    internal sealed record JointPageRanges(
+        IReadOnlyDictionary<string, PageRange> Footnotes,
+        IReadOnlyDictionary<string, PageRange> Endnotes);
+
+    internal static bool TryCreateJointDocument(DocxDocument source, DocxLayout layout,
+        out DocxDocument adjusted, out JointPageRanges? pages, CancellationToken cancellationToken)
+    {
+        adjusted = source;
+        pages = null;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote) ||
+            !source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote)) return false;
+        // Both independent plans inspect the same complete original owners.
+        // The renderer measures their combined document in one bounded retry.
+        // Check the complementary admission before cloning the endnote plan,
+        // so the established single-kind fallback incurs no duplicate clone.
+        if (!TryPlanDocument(source, layout, out DocxDocument footnotes, out var footnotePages,
+                cancellationToken, DocxRelatedStoryKind.Footnote, allowMixedFootnote: true) ||
+            !TryPlanDocument(source, layout, out DocxDocument endnotes, out var endnotePages,
+                cancellationToken, DocxRelatedStoryKind.Endnote, allowMixedFootnote: false) ||
+            ReferenceEquals(source, footnotes) && ReferenceEquals(source, endnotes)) return false;
+        adjusted = source with
+        {
+            RelatedStories = source.RelatedStories.Select((story, index) => story.Kind switch
+            {
+                DocxRelatedStoryKind.Footnote => footnotes.RelatedStories[index],
+                DocxRelatedStoryKind.Endnote => endnotes.RelatedStories[index],
+                _ => story,
+            }).ToArray(),
+        };
+        IReadOnlyList<DocxRelatedStory> adjustedSources = adjusted.RelatedStories;
+        IReadOnlyDictionary<string, PageRange> Rebind(IReadOnlyDictionary<string, PageRange> expected)
+        {
+            var rebound = new OwnedPageRanges(adjustedSources);
+            foreach (var entry in expected) rebound.Add(entry.Key, entry.Value);
+            return rebound;
+        }
+        pages = new(Rebind(footnotePages), Rebind(endnotePages));
+        return true;
+    }
+
+    internal static bool HasStableJointOwners(DocxLayout layout, JointPageRanges expected, CancellationToken cancellationToken) =>
+        HasStableOwners(layout, expected.Footnotes, cancellationToken, DocxRelatedStoryKind.Footnote) &&
+        HasStableOwners(layout, expected.Endnotes, cancellationToken, DocxRelatedStoryKind.Endnote);
+
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument adjusted, out IReadOnlyDictionary<string, PageRange> pages, CancellationToken cancellationToken,
-        DocxRelatedStoryKind kind = DocxRelatedStoryKind.Endnote)
+        DocxRelatedStoryKind kind = DocxRelatedStoryKind.Endnote) =>
+        TryPlanDocument(source, layout, out adjusted, out pages, cancellationToken, kind, allowMixedFootnote: false) &&
+        !ReferenceEquals(source, adjusted);
+
+    private static bool TryPlanDocument(DocxDocument source, DocxLayout layout,
+        out DocxDocument adjusted, out IReadOnlyDictionary<string, PageRange> pages, CancellationToken cancellationToken,
+        DocxRelatedStoryKind kind, bool allowMixedFootnote)
     {
         adjusted = source;
         var pageById = new OwnedPageRanges(source.RelatedStories);
@@ -21,9 +72,9 @@ internal static class DocxNoteKerning
         cancellationToken.ThrowIfCancellationRequested();
         if (kind is not (DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote) ||
             !source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == kind)) return false;
-        // A physical mixed-note frame does not admit a new footnote
-        // typography retry; its qualified endnote retry remains independent.
-        if (kind == DocxRelatedStoryKind.Footnote && source.RelatedStories.Any(s =>
+        // A standalone mixed-footnote retry keeps the qualified endnote path
+        // independent. The joint path separately verifies both admissions.
+        if (!allowMixedFootnote && kind == DocxRelatedStoryKind.Footnote && source.RelatedStories.Any(s =>
             s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote)) return false;
         if (!HasCompleteOtherNoteOwners(layout, kind, cancellationToken, source.RelatedStories)) return false;
         if (!TryResolvePages(layout, kind, out var owners, cancellationToken)) return false;
@@ -74,7 +125,8 @@ internal static class DocxNoteKerning
             }
             if (changed) replacements.Add(paragraph, paragraph with { Runs = runs.ToArray() });
         }
-        if (pageById.Count == 0 || replacements.Count == 0) return false;
+        if (pageById.Count == 0) return false;
+        if (replacements.Count == 0) return true;
         DocxParagraph Replace(DocxParagraph p) => replacements.GetValueOrDefault(p, p);
         adjusted = source with
         {

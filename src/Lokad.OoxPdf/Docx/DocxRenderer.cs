@@ -388,18 +388,24 @@ internal sealed partial class DocxRenderer
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
         IReadOnlyDictionary<string, DocxNoteKerning.PageRange> notePages = new Dictionary<string, DocxNoteKerning.PageRange>();
+        DocxNoteKerning.JointPageRanges? jointNotePages = null;
         DocxRelatedStoryKind noteKind = DocxRelatedStoryKind.Endnote;
         bool plainNotes = false;
         if (fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0)
         {
-            foreach (DocxRelatedStoryKind kind in document.RelatedStories.Where(s => s.IsNormalStoryType &&
-                s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote).Select(s => s.Kind).Distinct())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!DocxNoteKerning.TryCreateDocument(document, first, out adjusted, out notePages, cancellationToken, kind)) continue;
-                noteKind = kind;
+            if (DocxNoteKerning.TryCreateJointDocument(document, first, out adjusted, out jointNotePages, cancellationToken))
                 plainNotes = true;
-                break;
+            else
+            {
+                foreach (DocxRelatedStoryKind kind in document.RelatedStories.Where(s => s.IsNormalStoryType &&
+                    s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote).Select(s => s.Kind).Distinct())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!DocxNoteKerning.TryCreateDocument(document, first, out adjusted, out notePages, cancellationToken, kind)) continue;
+                    noteKind = kind;
+                    plainNotes = true;
+                    break;
+                }
             }
         }
         if (plainNotes ||
@@ -413,14 +419,17 @@ internal sealed partial class DocxRenderer
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
+            bool stableOwners = plainNotes
+                ? jointNotePages is not null
+                    ? DocxNoteKerning.HasStableJointOwners(adjustedLayout, jointNotePages, cancellationToken)
+                    : DocxNoteKerning.HasStableOwners(adjustedLayout, notePages, cancellationToken, noteKind)
+                : (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
+                    (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
+                        allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds));
             // Layout admission owns the plain note purpose. Corrected wrapping
             // may change source placements and note-only pages while preserving
             // complete owners. Other retries retain their total-page guard.
-            if ((plainNotes || adjustedLayout.Pages.Count == first.Pages.Count) &&
-                (plainNotes ? DocxNoteKerning.HasStableOwners(adjustedLayout, notePages, cancellationToken, noteKind) :
-                (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
-                (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
-                    allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds))))
+            if ((plainNotes || adjustedLayout.Pages.Count == first.Pages.Count) && stableOwners)
             {
                 document = adjusted;
                 fonts = adjustedFonts;

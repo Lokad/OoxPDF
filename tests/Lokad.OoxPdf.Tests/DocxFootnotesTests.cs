@@ -4070,6 +4070,111 @@ internal static class DocxFootnotesTests
             "A page turn does not admit an originally scaled source frame.");
     }
 
+    public static void DocxJointMixedNoteTypographyPreservesTypedOwnersAndSourceMetadata()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool custom in new[] { true, false })
+        foreach (string threshold in new[] { "0", "20", "22" })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), false, true, 6);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Runs = p.Runs.Select(r => r with { KerningMinimumHalfPointsValue = threshold }).ToArray(),
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout first = engine.Create(source, measurer, default);
+            TestAssert.True(DocxNoteKerning.TryCreateJointDocument(source, first, out DocxDocument adjusted, out var owners, default),
+                "Both admitted note kinds share one source-threshold adjustment plan.");
+            TestAssert.True(owners is not null && owners.Footnotes.ContainsKey("37") && owners.Endnotes.ContainsKey("37"),
+                "Coincident numeric IDs retain separate typed owners.");
+            TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "The plan preserves all body and inline-reference objects.");
+            foreach (DocxRelatedStory story in adjusted.RelatedStories.Where(s => s.IsNormalStoryType))
+            {
+                DocxRelatedStory original = source.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == story.Kind && s.Id == story.Id);
+                TestAssert.Equal(string.Concat(original.Paragraphs[0].Runs.Select(r => r.Text)),
+                    string.Concat(story.Paragraphs[0].Runs.Select(r => r.Text)));
+                DocxTextRun originalPrefix = original.Paragraphs[0].Runs[0];
+                TestAssert.Equal(originalPrefix.IsAutomaticNoteStoryMarker ? originalPrefix :
+                    originalPrefix with { Text = originalPrefix.Text[..1] }, story.Paragraphs[0].Runs[0]);
+                TestAssert.True(story.Paragraphs[0].Runs.Skip(1).Where(r => r.Text.Length != 0).All(r =>
+                    r.PairKerningEnabled == (threshold == "20" || threshold == "22" && r.FontSize == 12d) &&
+                    r.UseLogicalSizeForPdfAdvances == (threshold == "0" || r.FontSize == 10d)),
+                    $"Shared source policy: {story.Kind}, threshold {threshold}, states " + string.Join("; ", story.Paragraphs[0].Runs.Skip(1).Select(r => $"{r.FontSize}/{r.PairKerningEnabled}/{r.UseLogicalSizeForPdfAdvances}/{r.VerticalAlignment}/{r.KerningMinimumHalfPointsValue}")));
+                TestAssert.True(original.Paragraphs[0].Runs.All(r => r.PairKerningEnabled && !r.UseLogicalSizeForPdfAdvances),
+                    "Source typography metadata is immutable.");
+            }
+            DocxLayout changed = engine.Create(adjusted, measurer, default);
+            TestAssert.True(DocxNoteKerning.HasStableJointOwners(changed, owners!, default),
+                "The combined retry retains complete canonical owners for both kinds.");
+            foreach (DocxRelatedStoryKind normalized in new[] { DocxRelatedStoryKind.Footnote, DocxRelatedStoryKind.Endnote })
+            {
+                DocxDocument partial = source with { RelatedStories = source.RelatedStories.Select((s, index) =>
+                    s.Kind == normalized ? adjusted.RelatedStories[index] : s).ToArray() };
+                TestAssert.True(DocxNoteKerning.TryCreateJointDocument(partial, engine.Create(partial, measurer, default),
+                    out var completed, out var completeOwners, default),
+                    "A normalized complementary kind still admits the remaining source correction.");
+                TestAssert.True(DocxNoteKerning.HasStableJointOwners(engine.Create(completed, measurer, default), completeOwners!, default),
+                    "Both complete typed owners survive a partially normalized source.");
+                TestAssert.True(ReferenceEquals(partial.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == normalized).Paragraphs[0],
+                    completed.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == normalized).Paragraphs[0]),
+                    "The already normalized paragraph is retained exactly.");
+            }
+            TestAssert.True(!DocxNoteKerning.TryCreateJointDocument(adjusted, changed, out _, out _, default),
+                "An already normalized document requires no additional typography retry.");
+        }
+    }
+
+    public static void DocxJointMixedNoteTypographyRetainsSingleKindAndIncompleteOwnerFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(true, 32), false, true, 6);
+        DocxLayout first = engine.Create(source, measurer, default);
+        TestAssert.True(DocxNoteKerning.TryCreateJointDocument(source, first, out var adjusted, out var owners, default),
+            "The guard fixture has complete admitted owners.");
+        foreach (DocxRelatedStoryKind lost in new[] { DocxRelatedStoryKind.Footnote, DocxRelatedStoryKind.Endnote })
+        {
+            DocxLayout RemoveKind(DocxLayout layout) => layout with { Pages = layout.Pages.Select(p => p with
+            {
+                PlacedRelatedStories = p.PlacedRelatedStories.Where(s =>
+                    !s.StoryLayout.Story.IsNormalStoryType || s.StoryLayout.Story.Kind != lost).ToArray(),
+            }).ToArray() };
+            TestAssert.True(!DocxNoteKerning.TryCreateJointDocument(source, RemoveKind(first), out _, out _, default),
+                "A missing typed kind rejects joint source admission.");
+            TestAssert.True(!DocxNoteKerning.HasStableJointOwners(RemoveKind(engine.Create(adjusted, measurer, default)), owners!, default),
+                "A lost complementary kind rejects the adjusted retry.");
+        }
+        DocxDocument noStatic = ReadMixedNoteRetryFixture(true, 32);
+        DocxLayout fallback = engine.Create(noStatic, measurer, default);
+        TestAssert.True(!DocxNoteKerning.TryCreateJointDocument(noStatic, fallback, out _, out _, default),
+            "An unadmitted footnote frame keeps the single-kind fallback.");
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(noStatic, fallback, out _, out _, default),
+            "The independently admitted endnote path remains available.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxNoteKerning.TryCreateJointDocument(source, first, out _, out _, cancelled.Token));
+    }
+
+    public static void DocxMixedNoteEmissionSharesSourceNominalAdvancesForBothOwners()
+    {
+        foreach (bool custom in new[] { true, false })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), false, true, 6);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            DocxTextEmissionSnapshot emitted = renderer.InspectTextEmission(source);
+            foreach (string kind in new[] { "Footnote", "Endnote" })
+            {
+                var content = emitted.Lines.Where(l => l.StoryKind == kind && l.StoryVariantType is null)
+                    .SelectMany(l => l.Segments).Where(s => s.TextLength > 1 && !s.IsTerminalLineSpace).ToArray();
+                TestAssert.True(content.Length != 0 && content.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal > 0d),
+                    "Both source-owned mixed note kinds retain logical advances when the emitted font size rounds.");
+            }
+        }
+    }
+
     public static void DocxContinuedFootnoteCapacityKeepsSeparatorInsetInsideAdmittedFrame()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
