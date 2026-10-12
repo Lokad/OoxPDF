@@ -387,10 +387,12 @@ internal sealed partial class DocxRenderer
         var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken);
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
-        IReadOnlyDictionary<string, DocxDocumentEndnoteKerning.PageRange> endnotePages = new Dictionary<string, DocxDocumentEndnoteKerning.PageRange>();
-        bool plainEndnotes = fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
-            DocxDocumentEndnoteKerning.TryCreateDocument(document, first, out adjusted, out endnotePages, cancellationToken);
-        if (plainEndnotes ||
+        IReadOnlyDictionary<string, DocxNoteKerning.PageRange> notePages = new Dictionary<string, DocxNoteKerning.PageRange>();
+        DocxRelatedStoryKind noteKind = document.RelatedStories.FirstOrDefault(s => s.IsNormalStoryType &&
+            s.Kind is DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote)?.Kind ?? DocxRelatedStoryKind.Endnote;
+        bool plainNotes = fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
+            DocxNoteKerning.TryCreateDocument(document, first, out adjusted, out notePages, cancellationToken, noteKind);
+        if (plainNotes ||
             context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             (DocxPlainFootnoteKerning.TryCreateDocument(document, first, out adjusted, out originalPages) ||
@@ -401,13 +403,11 @@ internal sealed partial class DocxRenderer
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
-            // Qualified document-end flow has no body or static-story fields;
-            // plain static stories leave a usable frame bounded by shared edges.
-            // Corrected note wrapping may change first placements and note-only
-            // pages while preserving source owners. Other retry paths keep their
-            // original total-page guard.
-            if ((plainEndnotes || adjustedLayout.Pages.Count == first.Pages.Count) &&
-                (plainEndnotes ? DocxDocumentEndnoteKerning.HasStableOwners(adjustedLayout, endnotePages, cancellationToken) :
+            // Layout admission owns the plain note purpose. Corrected wrapping
+            // may change source placements and note-only pages while preserving
+            // complete owners. Other retries retain their total-page guard.
+            if ((plainNotes || adjustedLayout.Pages.Count == first.Pages.Count) &&
+                (plainNotes ? DocxNoteKerning.HasStableOwners(adjustedLayout, notePages, cancellationToken, noteKind) :
                 (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
                 (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
                     allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds))))

@@ -1886,7 +1886,7 @@ internal static class DocxFootnotesTests
             DocxDocument source = ReadCustomDocumentEndnoteFlowFixture(mark);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
                 "A unique typed reference protects the custom prefix through the shared complete-note correction.");
             TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
                 "Custom note typography preserves body run/reference owners.");
@@ -1911,7 +1911,7 @@ internal static class DocxFootnotesTests
             }
             DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(final, pages, default), "Owned custom markers keep the complete note-page map.");
+            TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default), "Owned custom markers keep the complete note-page map.");
         }
     }
 
@@ -1939,7 +1939,7 @@ internal static class DocxFootnotesTests
         {
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
                 "Missing, repeated, overlapping and mismatched source owners keep the exact fallback.");
         }
     }
@@ -2029,7 +2029,7 @@ internal static class DocxFootnotesTests
         } : s).ToArray() };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-        TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var pages, default),
             "Explicit automatic marker ownership admits the complete baseline frame through the shared rule.");
         foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(pair => pair.First.IsNormalStoryType))
         {
@@ -2040,7 +2040,7 @@ internal static class DocxFootnotesTests
         }
         DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-        TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(final, pages, default), "The owned retry preserves complete note pages.");
+        TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default), "The owned retry preserves complete note pages.");
     }
 
     public static void DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners()
@@ -2064,7 +2064,7 @@ internal static class DocxFootnotesTests
                 })).ToArray(),
             } : s).ToArray() };
             DocxLayout first = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out DocxDocument adjusted, out var pages, default),
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, first, out DocxDocument adjusted, out var pages, default),
                 "An admitted complete paragraph resolves authored kerning against its nominal size.");
             TestAssert.Equal(2, pages.Count);
             TestAssert.True(source.BodyElements.Zip(adjusted.BodyElements).All(pair => ReferenceEquals(pair.First, pair.Second)),
@@ -2080,9 +2080,9 @@ internal static class DocxFootnotesTests
                 TestAssert.Equal(!enabled, oldRun.PairKerningEnabled);
             }
             DocxLayout final = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(adjusted, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(final, pages, default),
+            TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default),
                 "The bounded retry retains the exact complete note-page mapping.");
-            TestAssert.True(!DocxDocumentEndnoteKerning.HasStableOwners(final, new Dictionary<string, DocxDocumentEndnoteKerning.PageRange>(), default),
+            TestAssert.True(!DocxNoteKerning.HasStableOwners(final, new Dictionary<string, DocxNoteKerning.PageRange>(), default),
                 "A changed ownership map cannot qualify the retry.");
         }
     }
@@ -2143,12 +2143,12 @@ internal static class DocxFootnotesTests
         })
         {
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
-            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out _, default) && ReferenceEquals(source, adjusted),
                 "Unsupported ownership or thresholds retain the original document and layout policy.");
         }
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxDocumentEndnoteKerning.TryCreateDocument(plain,
+        TestAssert.Throws<OperationCanceledException>(() => DocxNoteKerning.TryCreateDocument(plain,
             new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(plain, new DocxTests.FamilyWidthTextMeasurer(), default),
             out _, out _, cancelled.Token));
     }
@@ -2159,7 +2159,7 @@ internal static class DocxFootnotesTests
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         DocxLayout first = engine.Create(source, measurer, default);
-        TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default),
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default),
             "Plain continued paragraphs share the authored threshold policy with fitting endnotes.");
         TestAssert.True(pages.Values.Any(range => range.Slices > 1 && range.Last > range.First),
             "The regression exercises an actual multi-page note rather than only a fitting block.");
@@ -2176,15 +2176,15 @@ internal static class DocxFootnotesTests
                 "Absent thresholds use nominal regular-text advances on every slice.");
         }
         DocxLayout final = engine.Create(adjusted, measurer, default);
-        TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(final, pages, default),
+        TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default),
             "The typography retry preserves every source owner and first destination page.");
         var changed = pages.ToDictionary(p => p.Key, p => p.Value);
         string id = changed.First(p => p.Value.Slices > 1).Key;
         changed[id] = changed[id] with { Last = changed[id].Last + 1 };
-        TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(final, changed, default),
+        TestAssert.True(DocxNoteKerning.HasStableOwners(final, changed, default),
             "A legitimate continuation-range change does not invalidate stable first placements.");
         changed[id] = pages[id] with { Slices = pages[id].Slices + 1 };
-        TestAssert.True(!DocxDocumentEndnoteKerning.HasStableOwners(final, changed, default),
+        TestAssert.True(!DocxNoteKerning.HasStableOwners(final, changed, default),
             "A slice count exceeding its page range remains invalid source ownership metadata.");
     }
 
@@ -2194,21 +2194,21 @@ internal static class DocxFootnotesTests
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         DocxLayout layout = engine.Create(source, measurer, default);
-        TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, layout, out _, out var pages, default),
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out _, out var pages, default),
             "The control has qualified multi-page typography ownership.");
         DocxLayout unqualified = layout with { Pages = layout.Pages.Select(page => page with
         {
             PlacedRelatedStories = page.PlacedRelatedStories.Select(p => p.ContentTopOffset > 0d
                 ? p with { UsesPlainDocumentEndnoteTypography = false } : p).ToArray(),
         }).ToArray() };
-        TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, unqualified, out var unchanged, out _, default) &&
+        TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, unqualified, out var unchanged, out _, default) &&
             ReferenceEquals(source, unchanged), "Every continued slice must retain layout-owned admission.");
-        TestAssert.True(!DocxDocumentEndnoteKerning.HasStableOwners(unqualified, pages, default),
+        TestAssert.True(!DocxNoteKerning.HasStableOwners(unqualified, pages, default),
             "Unqualified continuation pages cannot pass the post-retry check.");
         DocxDocument kept = source with { RelatedStories = source.RelatedStories.Select(story => story.IsNormalStoryType
             ? story with { BodyElements = story.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
                 { KeepRules = p.KeepRules with { KeepLines = true } })).ToArray() } : story).ToArray() };
-        TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(kept, engine.Create(kept, measurer, default),
+        TestAssert.True(!DocxNoteKerning.TryCreateDocument(kept, engine.Create(kept, measurer, default),
             out unchanged, out _, default) && ReferenceEquals(kept, unchanged),
             "Continuation does not bypass the established semantic keep-rule fallback.");
     }
@@ -2450,14 +2450,14 @@ internal static class DocxFootnotesTests
         DocxDocument? control = null;
         DocxDocument? adjustedControl = null;
         DocxLayout? finalControl = null;
-        IReadOnlyDictionary<string, DocxDocumentEndnoteKerning.PageRange>? expected = null;
+        IReadOnlyDictionary<string, DocxNoteKerning.PageRange>? expected = null;
         for (int repeats = 20; repeats <= 340 && control is null; repeats++)
         {
             DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, repeats);
             string? shortId = source.RelatedStories.Where(s => s.IsNormalStoryType).Skip(1).First().Id;
             source = WithEndnoteText(source, shortId, "Short note.");
             DocxLayout first = engine.Create(source, measurer, default);
-            if (!DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default)) continue;
+            if (!DocxNoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default)) continue;
             DocxLayout final = engine.Create(adjusted, measurer, default);
             var actual = final.Pages.SelectMany((page, index) => page.PlacedRelatedStories
                 .Where(s => s.StoryLayout.Story.IsNormalStoryType).Select(s => (Id: s.StoryLayout.Story.Id!, Page: index)))
@@ -2469,7 +2469,7 @@ internal static class DocxFootnotesTests
         }
         TestAssert.True(control is not null && finalControl is not null && expected is not null,
             "A bounded width/capacity scan creates real continuation reflow while retaining first owners and total page count.");
-        TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(finalControl!, expected!, default),
+        TestAssert.True(DocxNoteKerning.HasStableOwners(finalControl!, expected!, default),
             "Corrected typography can change continuation slices without falling back to the uncorrected advances.");
         TestAssert.True(control!.BodyElements.Zip(adjustedControl!.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
             "Reflow retains exact source body and inline-reference owners.");
@@ -2478,7 +2478,7 @@ internal static class DocxFootnotesTests
             "Every source marker preserves its original emission policy through the retry.");
         var missingOwner = expected!.ToDictionary(p => p.Key, p => p.Value);
         missingOwner.Remove(missingOwner.Keys.First());
-        TestAssert.True(!DocxDocumentEndnoteKerning.HasStableOwners(finalControl!, missingOwner, default),
+        TestAssert.True(!DocxNoteKerning.HasStableOwners(finalControl!, missingOwner, default),
             "A missing source owner retains the explicit fallback.");
     }
 
@@ -2490,12 +2490,12 @@ internal static class DocxFootnotesTests
         DocxDocument? adjustedControl = null;
         DocxLayout? before = null;
         DocxLayout? after = null;
-        IReadOnlyDictionary<string, DocxDocumentEndnoteKerning.PageRange>? expected = null;
+        IReadOnlyDictionary<string, DocxNoteKerning.PageRange>? expected = null;
         for (int repeats = 20; repeats <= 340 && control is null; repeats++)
         {
             DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, repeats);
             DocxLayout first = engine.Create(source, measurer, default);
-            if (!DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default)) continue;
+            if (!DocxNoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default)) continue;
             DocxLayout final = engine.Create(adjusted, measurer, default);
             var actual = final.Pages.SelectMany((page, index) => page.PlacedRelatedStories
                 .Where(s => s.StoryLayout.Story.IsNormalStoryType).Select(s => (Id: s.StoryLayout.Story.Id!, Page: index)))
@@ -2507,7 +2507,7 @@ internal static class DocxFootnotesTests
         TestAssert.True(control is not null && before is not null && after is not null,
             "A bounded advance/capacity scan adds real note-only pages while retaining first destinations.");
         TestAssert.True(DocxPlainBodyFrame.IsEligible(control!), "The admitted body has no dynamic fields, headers, footers or composed content.");
-        TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(after!, expected!, default),
+        TestAssert.True(DocxNoteKerning.HasStableOwners(after!, expected!, default),
             "Every note retains its qualified source owner and first placement despite the added tail page.");
         var oldBody = before!.Pages.SelectMany((page, index) => page.Items.OfType<DocxTextLineLayout>()
             .Select(l => (index, l.Text, l.X, l.BaselineY, l.Width, l.FontSize, l.SourceBlockIndex, l.SourceParagraphIndex, l.SourceLineIndex)));
@@ -2533,12 +2533,12 @@ internal static class DocxFootnotesTests
         DocxDocument? adjustedControl = null;
         DocxLayout? before = null;
         DocxLayout? after = null;
-        IReadOnlyDictionary<string, DocxDocumentEndnoteKerning.PageRange>? expected = null;
+        IReadOnlyDictionary<string, DocxNoteKerning.PageRange>? expected = null;
         for (int repeats = 20; repeats <= 340 && control is null; repeats++)
         {
             DocxDocument source = ReadWrappedDocumentEndnoteFlowFixture(0, 0, repeats);
             DocxLayout first = engine.Create(source, measurer, default);
-            if (!DocxDocumentEndnoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default)) continue;
+            if (!DocxNoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default)) continue;
             DocxLayout final = engine.Create(adjusted, measurer, default);
             var actual = final.Pages.SelectMany((page, index) => page.PlacedRelatedStories
                 .Where(s => s.StoryLayout.Story.IsNormalStoryType).Select(s => (Id: s.StoryLayout.Story.Id!, Page: index)))
@@ -2549,7 +2549,7 @@ internal static class DocxFootnotesTests
         TestAssert.True(control is not null && before is not null && after is not null,
             "A bounded advance scan exercises a real first-placement change with complete note ownership.");
         TestAssert.True(DocxPlainBodyFrame.IsEligible(control!), "The admitted body has no fields or composed static stories.");
-        TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(after!, expected!, default),
+        TestAssert.True(DocxNoteKerning.HasStableOwners(after!, expected!, default),
             "Corrected wrapping can move first destinations without rejecting the existing source owners.");
         var oldBody = before!.Pages.SelectMany((page, index) => page.Items.OfType<DocxTextLineLayout>()
             .Select(l => (index, l.Text, l.X, l.BaselineY, l.Width, l.FontSize, l.SourceBlockIndex, l.SourceParagraphIndex, l.SourceLineIndex)));
@@ -2574,10 +2574,10 @@ internal static class DocxFootnotesTests
         var substituted = expected!.ToDictionary(p => p.Key, p => p.Value);
         string id = substituted.Keys.First();
         substituted.Add("foreign-owner", substituted[id]); substituted.Remove(id);
-        TestAssert.True(!DocxDocumentEndnoteKerning.HasStableOwners(after, substituted, default), "A substituted owner is rejected despite equal counts.");
+        TestAssert.True(!DocxNoteKerning.HasStableOwners(after, substituted, default), "A substituted owner is rejected despite equal counts.");
         var invalid = expected!.ToDictionary(p => p.Key, p => p.Value);
         invalid[id] = invalid[id] with { First = -1 };
-        TestAssert.True(!DocxDocumentEndnoteKerning.HasStableOwners(after, invalid, default), "Malformed original ownership ranges remain invalid.");
+        TestAssert.True(!DocxNoteKerning.HasStableOwners(after, invalid, default), "Malformed original ownership ranges remain invalid.");
     }
 
     public static void DocxContinuedEndnoteKerningAdmitsFittingStaticFramesAndRetainsFrameFallbacks()
@@ -2615,10 +2615,10 @@ internal static class DocxFootnotesTests
                 "Fitting static admission leaves the original body typography and page-start qualifier unchanged.");
             DocxLayout before = engine.Create(source, measurer, default);
             TestAssert.True(before.Pages.All(p => p.StaticTextLines.Count != 0), "The control renders its real static stories on every page.");
-            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, before, out var adjusted, out var pages, default),
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, before, out var adjusted, out var pages, default),
                 "Automatic plain static stories fit outside the measured body frame and share note typography.");
             DocxLayout after = engine.Create(adjusted, measurer, default);
-            TestAssert.True(DocxDocumentEndnoteKerning.HasStableOwners(after, pages, default), "All note slices retain complete source ownership.");
+            TestAssert.True(DocxNoteKerning.HasStableOwners(after, pages, default), "All note slices retain complete source ownership.");
             TestAssert.True(ReferenceEquals(source.PageSettings, adjusted.PageSettings) && ReferenceEquals(source.HeaderParagraphs, adjusted.HeaderParagraphs) &&
                 ReferenceEquals(source.FooterParagraphs, adjusted.FooterParagraphs), "The retry preserves authored static story ownership and policy.");
             TestAssert.True(before.Pages.Take(Math.Min(before.Pages.Count, after.Pages.Count)).Zip(after.Pages)
@@ -2627,17 +2627,17 @@ internal static class DocxFootnotesTests
                     pair.Second.StaticTextLines.Select(l => (l.Text, l.X, l.BaselineY, l.Width, l.FontSize,
                         l.SourceBlockIndex, l.SourceParagraphIndex, l.SourceLineIndex)))), "Static geometry stays exact on retained pages.");
             DocxDocument overflow = Compose(header, footer, staticParagraph, 10);
-            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(overflow, engine.Create(overflow, measurer, default), out _, out _, default),
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(overflow, engine.Create(overflow, measurer, default), out _, out _, default),
                 "Plain static overflow leaves a usable frame bounded by the shared story edges.");
             DocxDocument consumed = Compose(header, footer, staticParagraph, 100);
-            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(consumed, engine.Create(consumed, measurer, default), out _, out _, default),
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(consumed, engine.Create(consumed, measurer, default), out _, out _, default),
                 "Static content consuming the entire frame retains its fallback and mandatory line progress.");
         }
         foreach (DocxParagraph paragraph in new[] { staticParagraph with { LineSpacingPoints = 14d },
             staticParagraph with { Runs = [staticParagraph.Runs[0] with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }] } })
         {
             DocxDocument source = Compose(true, true, paragraph);
-            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(source, engine.Create(source, measurer, default), out _, out _, default),
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, engine.Create(source, measurer, default), out _, out _, default),
                 "Fixed-height or dynamic static stories retain their explicitly unqualified frame policy.");
         }
         DocxDocument variant = Compose(true, false, staticParagraph);
@@ -2649,7 +2649,7 @@ internal static class DocxFootnotesTests
             HeaderParagraphsByType = variantParagraphs, HeaderBodyElementsByType = variantElements };
         variant = variant with { PageSettings = variantSettings, FinalSectionBreak = variant.FinalSectionBreak! with { PageSettings = variantSettings },
             HeaderParagraphsByType = variantParagraphs, HeaderBodyElementsByType = variantElements };
-        TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(variant, engine.Create(variant, measurer, default), out _, out _, default),
+        TestAssert.True(!DocxNoteKerning.TryCreateDocument(variant, engine.Create(variant, measurer, default), out _, out _, default),
             "A fitting default story does not admit a consumed frame on a reachable even continuation page.");
         DocxDocument mixedBody = ReadDocumentEndnoteFlowFixture(0, 0);
         DocxDocument footnotes = ReadNotePrecedenceFixture("footnote", "decimal", null, null, true);
@@ -2662,7 +2662,7 @@ internal static class DocxFootnotesTests
         TestAssert.Equal(2, mixedNotes.Length);
         TestAssert.True(Math.Abs(mixedNotes[0].TopY - mixedNotes[1].TopY - mixedNotes[0].Height - 3d) < .000001d,
             "Mixed-note static compositions retain their original complete-note boundary spacing.");
-        TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(mixed, mixedLayout, out _, out _, default),
+        TestAssert.True(!DocxNoteKerning.TryCreateDocument(mixed, mixedLayout, out _, out _, default),
             "The static-frame extension preserves the existing mixed-note typography fallback.");
     }
 
@@ -2720,7 +2720,7 @@ internal static class DocxFootnotesTests
                 foreach (var story in page.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType))
                     TestAssert.True(story.TopY - story.Height >= bottom - .001d, "Note clips stay above the selected footer edge.");
             }
-            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, actual, out _, out _, default),
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, actual, out _, out _, default),
                 "A usable plain frame shares the existing note typography policy.");
         }
         DocxLayout fitting = engine.Create(Compose(1, false), measurer, default);
@@ -2857,6 +2857,113 @@ internal static class DocxFootnotesTests
                 "The deferred head reaches the final drain exactly once and in source order.");
             TestAssert.True(ReferenceEquals(source.BodyElements, control!.BodyElements), "Deferral preserves the body reference owners.");
         }
+    }
+
+    public static void DocxPlainFootnoteKerningSharesContentThresholdsAndCompleteOwners()
+    {
+        foreach ((double size, string? minimum, bool enabled, bool nominal) in new (double, string?, bool, bool)[]
+        {
+            (10d, null, false, true), (12d, "0", false, true), (14d, "0", false, true),
+            (10d, "20", true, true), (12d, "24", true, false), (14d, "28", true, true),
+            (10d, "21", false, true), (12d, "25", false, true), (14d, "29", false, true),
+        })
+        {
+            DocxDocument source = WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(100));
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Runs = [p.Runs[0], p.Runs[1] with { FontSize = size, KerningMinimumHalfPointsValue = minimum,
+                        PairKerningEnabled = !enabled }],
+                })).ToArray(),
+            } : s).ToArray() };
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var measurer = new LogicalBoundaryTextMeasurer();
+            DocxLayout first = engine.Create(source, measurer, default);
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, first, out var adjusted, out var pages, default,
+                DocxRelatedStoryKind.Footnote), "Layout-owned footnote frames share the authored note-content threshold policy.");
+            TestAssert.True(pages.Values.Any(p => p.Slices > 1), "The control exercises actual continued notes.");
+            TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body references are not rewritten.");
+            foreach (var pair in source.RelatedStories.Zip(adjusted.RelatedStories).Where(p => p.First.IsNormalStoryType))
+            {
+                TestAssert.True(ReferenceEquals(pair.First.Paragraphs[0].Runs[0], pair.Second.Paragraphs[0].Runs[0]),
+                    "Automatic marker runs retain exact source ownership and emission policy.");
+                DocxTextRun oldRun = pair.First.Paragraphs[0].Runs[1], newRun = pair.Second.Paragraphs[0].Runs[1];
+                TestAssert.Equal(oldRun with { PairKerningEnabled = enabled, UseLogicalSizeForPdfAdvances = nominal }, newRun);
+                TestAssert.Equal(!enabled, oldRun.PairKerningEnabled);
+            }
+            DocxLayout final = engine.Create(adjusted, measurer, default);
+            TestAssert.True(DocxNoteKerning.HasStableOwners(final, pages, default, DocxRelatedStoryKind.Footnote),
+                "Changed wrapping retains complete, ordered source lines across rebased continuation slices.");
+            foreach (var group in final.Pages.SelectMany(p => p.PlacedRelatedStories).Where(p => p.StoryLayout.Story.IsNormalStoryType)
+                .GroupBy(p => p.StoryLayout.Story))
+            {
+                DocxRelatedStoryLayout canonical = final.RelatedStories.Single(s => ReferenceEquals(s.Story, group.Key));
+                TestAssert.True(canonical.TextLines.Select(l => (l.SourceParagraph, l.SourceLineIndex, l.Text))
+                    .SequenceEqual(group.SelectMany(p => p.StoryLayout.TextLines).Select(l => (l.SourceParagraph, l.SourceLineIndex, l.Text))),
+                    "Every canonical line is emitted once, in source order.");
+            }
+        }
+    }
+
+    public static void DocxPlainFootnoteKerningRetainsIncompleteAndUnqualifiedFallbacks()
+    {
+        DocxDocument source = WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(100));
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new LogicalBoundaryTextMeasurer();
+        DocxLayout layout = engine.Create(source, measurer, default);
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out _, out var owners, default, DocxRelatedStoryKind.Footnote),
+            "The control has qualified source-owned footnote continuations.");
+        foreach (DocxLayout invalid in new[]
+        {
+            layout with { Pages = layout.Pages.Select(p => p with { PlacedRelatedStories = p.PlacedRelatedStories
+                .Select(s => s with { UsesPlainFootnoteFrame = false }).ToArray() }).ToArray() },
+            layout with { Pages = layout.Pages.Take(layout.Pages.Count - 1).ToArray() },
+            layout with { Pages = layout.Pages.Concat(layout.Pages.Take(1)).ToArray() },
+        })
+        {
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, invalid, out var unchanged, out _, default,
+                DocxRelatedStoryKind.Footnote) && ReferenceEquals(source, unchanged),
+                "Unqualified, missing or duplicate slices retain the original document.");
+            TestAssert.True(!DocxNoteKerning.HasStableOwners(invalid, owners, default, DocxRelatedStoryKind.Footnote),
+                "Incomplete source coverage cannot qualify the retry.");
+        }
+        foreach (string? fallback in new string?[] { "broken", "custom", "legacy" })
+        {
+            DocxDocument variant = fallback == "legacy" ? ReadWrappedFootnoteFlowFixture(100) : source with
+            {
+                RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+                {
+                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    {
+                        Runs = fallback == "custom" ? [p.Runs[0] with { IsAutomaticNoteStoryMarker = false }, p.Runs[1]] :
+                            [p.Runs[0], p.Runs[1] with { KerningMinimumHalfPointsValue = fallback }],
+                    })).ToArray(),
+                } : s).ToArray(),
+            };
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(variant, engine.Create(variant, measurer, default), out var unchanged,
+                out _, default, DocxRelatedStoryKind.Footnote) && ReferenceEquals(variant, unchanged),
+                "Malformed thresholds, custom marks and legacy frames retain their existing fallbacks.");
+        }
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxNoteKerning.TryCreateDocument(source, layout, out _, out _,
+            cancelled.Token, DocxRelatedStoryKind.Footnote));
+    }
+
+    private static DocxDocument WithPlainFootnoteTestFooter(DocxDocument source)
+    {
+        DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
+        {
+            LineSpacingPoints = null,
+            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+        };
+        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] };
+        var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(footer)] };
+        var settings = source.PageSettings with { FooterDistancePoints = 36d,
+            FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+        return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
+            FooterParagraphs = [footer], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
     }
 
     private static DocxDocument ReadWrappedFootnoteFlowFixture(int repeats)

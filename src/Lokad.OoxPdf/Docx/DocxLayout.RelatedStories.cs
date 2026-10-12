@@ -754,6 +754,7 @@ internal sealed partial class DocxLayoutEngine
                 separatorY: null) with
             {
                 UsesPlainDocumentEndnoteTypography = plainDocumentEndnoteTypography,
+                UsesPlainFootnoteFrame = frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote,
                 NoteDestinationTopOffset = lineIndex == 0 ? noteDestinationTopOffset : 0d,
             });
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
@@ -1738,7 +1739,8 @@ internal sealed partial class DocxLayoutEngine
 
             if (contentTop - storyHeight >= frameBottom - 0.001d)
             {
-                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop - footnoteContentPushdownPoints, separatorY: null);
+                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop - footnoteContentPushdownPoints, separatorY: null)
+                    with { UsesPlainFootnoteFrame = footerKeepOut is not null };
                 activePlacedStories.Add(placedStory);
                 outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                 contentTop -= storyHeight;
@@ -1833,7 +1835,8 @@ internal sealed partial class DocxLayoutEngine
                     separatorThickness = syntheticThicknessPoints;
                 }
 
-                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop, separatorY);
+                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop, separatorY)
+                    with { UsesPlainFootnoteFrame = footerKeepOut is not null };
                 if (separatorY is not null)
                 {
                     placedStory = placedStory with { SeparatorThickness = separatorThickness };

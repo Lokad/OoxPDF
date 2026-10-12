@@ -49,6 +49,9 @@ internal sealed record DocxPlacedRelatedStoryLayout(
     internal bool UsesCompleteDocumentEndnoteFlow { get; init; }
     // Typography uses the same plain flow admission even when it needs slices.
     internal bool UsesPlainDocumentEndnoteTypography { get; init; }
+    // Layout owns admission; typography reuses that purpose instead of rebuilding
+    // static-frame eligibility or coupling it to numbering mode.
+    internal bool UsesPlainFootnoteFrame { get; init; }
 }
 
 internal sealed record DocxFloatingDrawingLayout(
