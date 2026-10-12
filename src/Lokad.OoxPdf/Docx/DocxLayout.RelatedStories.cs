@@ -77,7 +77,8 @@ internal sealed partial class DocxLayoutEngine
         double printScale = 1d,
         IDocxTextMeasurer? separatorMeasurer = null, 
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
-        ISet<(DocxRelatedStoryKind Kind, string Id)>? alreadyPlacedStoryKeys = null)
+        ISet<(DocxRelatedStoryKind Kind, string Id)>? alreadyPlacedStoryKeys = null,
+        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null)
     {
         if (pages.Count == 0)
         {
@@ -301,6 +302,14 @@ internal sealed partial class DocxLayoutEngine
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
+                // Plain source/static semantics qualify the same footer edge used
+                // by body flow. Scaled, dynamic and rich frames keep their fallback;
+                // fitting footer edges equal the margin.
+                Func<DocxLayoutPage, int, int, double>? endnoteFrameBottom =
+                    HasPlainDocumentEndnoteStaticStories(document, activePage, separatorMeasurer, printScale, cancellationToken) &&
+                    CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
+                        documentEndStories, cancellationToken, out _) ? footerKeepOut : null;
+                double FrameBottom() => endnoteFrameBottom?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
                 if (CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
                     cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
@@ -319,7 +328,7 @@ internal sealed partial class DocxLayoutEngine
                     // An overflowing separator would strand its rule at the margin while content
                     // slices onto fresh pages (Office keeps separator and content together);
                     // turn first, mirroring overflowing-item placement everywhere else.
-                    if (ResolveDocumentEndnoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) > cursorTop - activePage.MarginBottom)
+                    if (ResolveDocumentEndnoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) > cursorTop - FrameBottom())
                     {
                         MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
@@ -345,7 +354,7 @@ internal sealed partial class DocxLayoutEngine
                 bool plainEndnoteFlow = plainEndnoteFrame && !document.RelatedStories.Any(story =>
                     story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
                 bool collapseEndnoteBoundaries = plainEndnoteFrame &&
-                    cursorTop - completeEndnoteHeight >= Math.Max(activePage.MarginBottom,
+                    cursorTop - completeEndnoteHeight >= Math.Max(FrameBottom(),
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
                 DocxRelatedStoryLayout? previousEndnote = null;
@@ -360,7 +369,7 @@ internal sealed partial class DocxLayoutEngine
                     if (!collapseEndnoteBoundaries && plainEndnoteFlow &&
                         cursorTop + boundaryOverlap - ResolveStoryTextLineBoxHeight(endnoteStoryLayout.TextLines[0],
                             endnoteStoryLayout.TextLines.Count == 1
-                                ? endnoteStoryLayout.TextLines[0].ParagraphAfterSpacing ?? 0d : 0d) < activePage.MarginBottom)
+                                ? endnoteStoryLayout.TextLines[0].ParagraphAfterSpacing ?? 0d : 0d) < FrameBottom())
                     {
                         boundaryOverlap = 0d;
                     }
@@ -379,7 +388,8 @@ internal sealed partial class DocxLayoutEngine
                         printScale,
                         headerKeepOut,
                         plainDocumentEndnoteTypography: plainEndnoteFlow,
-                        noteDestinationTopOffset: boundaryOverlap);
+                        noteDestinationTopOffset: boundaryOverlap,
+                        frameBottom: endnoteFrameBottom);
                     if (collapseEndnoteBoundaries)
                     {
                         activePlacedStories[^1] = activePlacedStories[^1] with
@@ -616,7 +626,8 @@ internal sealed partial class DocxLayoutEngine
         InFlightRelatedStory? inFlight = null,
         double headContentPushdownPoints = 0d,
         bool plainDocumentEndnoteTypography = false,
-        double noteDestinationTopOffset = 0d)
+        double noteDestinationTopOffset = 0d,
+        Func<DocxLayoutPage, int, int, double>? frameBottom = null)
     {
         if (storyLayout.TextLines.Count == 0)
         {
@@ -640,7 +651,8 @@ internal sealed partial class DocxLayoutEngine
         double consumedHeight = 0d;
         while (lineIndex < storyLayout.TextLines.Count)
         {
-            double availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
+            double FrameBottom(DocxLayoutPage page, int index) => frameBottom?.Invoke(page, index + 1, outputPages.Count) ?? page.MarginBottom;
+            double availableHeight = Math.Max(0d, cursorTop - FrameBottom(activePage, activePageIndex));
             if (availableHeight <= 0.001d)
             {
                 if (stopAfterCurrentPage)
@@ -649,9 +661,9 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
-                availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
+                availableHeight = Math.Max(0d, cursorTop - FrameBottom(activePage, activePageIndex));
                 cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale);
-                availableHeight = Math.Max(0d, cursorTop - activePage.MarginBottom);
+                availableHeight = Math.Max(0d, cursorTop - FrameBottom(activePage, activePageIndex));
             }
 
             int remainingLines = storyLayout.TextLines.Count - lineIndex;

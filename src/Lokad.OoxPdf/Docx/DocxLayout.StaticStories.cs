@@ -15,8 +15,9 @@ internal sealed partial class DocxLayoutEngine
     // the rule below the header text; nohdr agrees 25/25). The layout runs the same
     // static machinery as the final pass, so takes and rendering agree; callers map
     // the keep-out through the first-pin shift into take space. Null when no usable
-    // static measurer is available.
-    private static DocxStaticStoryLayoutResult? LayoutContinuationHeader(
+    // static measurer is available. Plain document-end notes also use the selected
+    // footer's existing body-frame edge at unit scale.
+    private static DocxStaticStoryLayoutResult? LayoutContinuationStaticStory(
         DocxLayoutPage templatePage,
         int pageNumber,
         int pageCount,
@@ -24,7 +25,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         IDocxTextMeasurer? unscaledTextMeasurer,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool header)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -34,17 +36,17 @@ internal sealed partial class DocxLayoutEngine
         IDocxLineMetricsProvider? unscaledLineMetrics =
             (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
         double bodyWidth = Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight);
-        DocxSelectedStaticStory selectedHeader = SelectStaticHeaderFooter(
-            templatePage.PageSettings.HeaderBodyElementsByType,
-            templatePage.PageSettings.HeaderParagraphsByType,
+        DocxSelectedStaticStory selectedStory = SelectStaticHeaderFooter(
+            header ? templatePage.PageSettings.HeaderBodyElementsByType : templatePage.PageSettings.FooterBodyElementsByType,
+            header ? templatePage.PageSettings.HeaderParagraphsByType : templatePage.PageSettings.FooterParagraphsByType,
             templatePage.PageSettings,
             pageNumber);
-        DocxStaticStoryLayoutResult headerLayout = CreateStaticStoryLayout(
-            selectedHeader,
+        DocxStaticStoryLayoutResult layout = CreateStaticStoryLayout(
+            selectedStory,
             templatePage.MarginLeft,
             bodyWidth,
-            templatePage.Height - ResolveHeaderDistance(templatePage),
-            true,
+            header ? templatePage.Height - ResolveHeaderDistance(templatePage) : ResolveFooterDistance(templatePage),
+            header,
             pageNumber,
             pageCount,
             textMeasurer,
@@ -53,16 +55,12 @@ internal sealed partial class DocxLayoutEngine
             paragraphSpacingScale,
             unscaledLineMetrics,
             cancellationToken);
-        bool hasVisibleContent = headerLayout.TextLines.Count != 0 ||
-            headerLayout.InlineImages.Count != 0 ||
-            headerLayout.TableRows.Count != 0 ||
-            headerLayout.InlineTextBoxes.Count != 0;
-        if (!hasVisibleContent)
+        if (!HasVisibleStaticContent(layout))
         {
             return null;
         }
 
-        return headerLayout;
+        return layout;
     }
 
     private static bool HasVisibleStaticContent(DocxStaticStoryLayoutResult layout)

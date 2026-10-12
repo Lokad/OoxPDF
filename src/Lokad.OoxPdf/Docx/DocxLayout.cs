@@ -301,6 +301,7 @@ internal sealed partial class DocxLayoutEngine
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), double>();
         double? bodyFirstBaselineMemo = null;
         bool bodyFirstBaselineComputed = false;
         bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
@@ -1751,7 +1752,7 @@ internal sealed partial class DocxLayoutEngine
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
-                headerLayout = LayoutContinuationHeader(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
+                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true);
                 continuationHeaderByPage[headerKey] = headerLayout;
             }
 
@@ -1808,7 +1809,21 @@ internal sealed partial class DocxLayoutEngine
             double takeScale = paragraphSpacingScale;
             return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale)) / takeScale;
         }
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys).ToArray();
+        double ResolveFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
+            if (!continuationFooterTopByPage.TryGetValue(key, out double top))
+            {
+                var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
+                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false);
+                top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
+                    (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider));
+                continuationFooterTopByPage[key] = top;
+            }
+            return Math.Max(templatePage.MarginBottom, top);
+        }
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut).ToArray();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;

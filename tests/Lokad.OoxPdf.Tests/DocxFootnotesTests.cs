@@ -2627,8 +2627,11 @@ internal static class DocxFootnotesTests
                     pair.Second.StaticTextLines.Select(l => (l.Text, l.X, l.BaselineY, l.Width, l.FontSize,
                         l.SourceBlockIndex, l.SourceParagraphIndex, l.SourceLineIndex)))), "Static geometry stays exact on retained pages.");
             DocxDocument overflow = Compose(header, footer, staticParagraph, 10);
-            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(overflow, engine.Create(overflow, measurer, default), out _, out _, default),
-                "Header or footer flow crossing the body margin retains the existing fallback.");
+            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(overflow, engine.Create(overflow, measurer, default), out _, out _, default),
+                "Plain static overflow leaves a usable frame bounded by the shared story edges.");
+            DocxDocument consumed = Compose(header, footer, staticParagraph, 100);
+            TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(consumed, engine.Create(consumed, measurer, default), out _, out _, default),
+                "Static content consuming the entire frame retains its fallback and mandatory line progress.");
         }
         foreach (DocxParagraph paragraph in new[] { staticParagraph with { LineSpacingPoints = 14d },
             staticParagraph with { Runs = [staticParagraph.Runs[0] with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }] } })
@@ -2639,7 +2642,7 @@ internal static class DocxFootnotesTests
         }
         DocxDocument variant = Compose(true, false, staticParagraph);
         var variantParagraphs = variant.PageSettings.HeaderParagraphsByType.ToDictionary(p => p.Key, p => p.Value);
-        variantParagraphs["even"] = Enumerable.Repeat(staticParagraph, 10).ToArray();
+        variantParagraphs["even"] = Enumerable.Repeat(staticParagraph, 100).ToArray();
         var variantElements = variantParagraphs.ToDictionary(p => p.Key,
             p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
         var variantSettings = variant.PageSettings with { EvenAndOddHeaders = true,
@@ -2647,7 +2650,7 @@ internal static class DocxFootnotesTests
         variant = variant with { PageSettings = variantSettings, FinalSectionBreak = variant.FinalSectionBreak! with { PageSettings = variantSettings },
             HeaderParagraphsByType = variantParagraphs, HeaderBodyElementsByType = variantElements };
         TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(variant, engine.Create(variant, measurer, default), out _, out _, default),
-            "A fitting default story does not admit overflow on a reachable even continuation page.");
+            "A fitting default story does not admit a consumed frame on a reachable even continuation page.");
         DocxDocument mixedBody = ReadDocumentEndnoteFlowFixture(0, 0);
         DocxDocument footnotes = ReadNotePrecedenceFixture("footnote", "decimal", null, null, true);
         mixedBody = mixedBody with { RelatedStories = mixedBody.RelatedStories.Concat(footnotes.RelatedStories
@@ -2661,6 +2664,69 @@ internal static class DocxFootnotesTests
             "Mixed-note static compositions retain their original complete-note boundary spacing.");
         TestAssert.True(!DocxDocumentEndnoteKerning.TryCreateDocument(mixed, mixedLayout, out _, out _, default),
             "The static-frame extension preserves the existing mixed-note typography fallback.");
+    }
+
+    public static void DocxContinuedEndnoteFooterFramesKeepSelectedStoriesClearAndPreserveSourceLines()
+    {
+        DocxDocument plain = ReadWrappedDocumentEndnoteFlowFixture(0, 0, 80);
+        DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph("public footer frame", 12d, 14d) with
+        {
+            LineSpacingPoints = null,
+            Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+        };
+        DocxDocument Compose(int count, bool alternating)
+        {
+            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>>
+            { ["default"] = Enumerable.Repeat(footer, count).ToArray() };
+            if (alternating) paragraphs["even"] = [footer];
+            var elements = paragraphs.ToDictionary(p => p.Key,
+                p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+            var settings = plain.PageSettings with { FooterDistancePoints = 36d, EvenAndOddHeaders = alternating,
+                FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+            return plain with { PageSettings = settings, FinalSectionBreak = plain.FinalSectionBreak! with { PageSettings = settings },
+                FooterParagraphs = paragraphs["default"], FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements };
+        }
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new LogicalBoundaryTextMeasurer();
+        DocxLayout baseline = engine.Create(plain, measurer, default);
+        var expectedBody = baseline.Pages.SelectMany(p => p.Items.OfType<DocxTextLineLayout>())
+            .Select(l => (l.Text, l.X, l.BaselineY, l.SourceParagraph, l.SourceLineIndex)).ToArray();
+        var expectedNotes = baseline.Pages.SelectMany(p => p.PlacedRelatedStories)
+            .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+            .GroupBy(s => s.StoryLayout.Story.Id).ToDictionary(g => g.Key!, g => g.SelectMany(s => s.StoryLayout.TextLines)
+                .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).ToArray());
+        foreach (bool alternating in new[] { false, true })
+        {
+            DocxDocument source = Compose(10, alternating);
+            DocxLayout actual = engine.Create(source, measurer, default);
+            TestAssert.True(actual.Pages.Count >= baseline.Pages.Count, "Reducing the continuation frame does not remove pages.");
+            TestAssert.True(expectedBody.SequenceEqual(actual.Pages.SelectMany(p => p.Items.OfType<DocxTextLineLayout>())
+                .Select(l => (l.Text, l.X, l.BaselineY, l.SourceParagraph, l.SourceLineIndex))), "Body owners and geometry remain exact.");
+            foreach (var group in actual.Pages.SelectMany(p => p.PlacedRelatedStories)
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                .GroupBy(s => s.StoryLayout.Story.Id))
+            {
+                TestAssert.True(expectedNotes[group.Key!].SequenceEqual(group.SelectMany(s => s.StoryLayout.TextLines)
+                    .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))), "Every source line remains ordered and appears exactly once.");
+                TestAssert.Equal(1, group.Count(s => s.ContentTopOffset == 0d));
+            }
+            for (int i = 0; i < actual.Pages.Count; i++)
+            {
+                DocxLayoutPage page = actual.Pages[i];
+                double bottom = Math.Max(page.MarginBottom, actual.FooterContentTopByPage[i]);
+                bool fittingVariant = alternating && (i + 1) % 2 == 0;
+                TestAssert.True(fittingVariant ? bottom == page.MarginBottom : bottom > page.MarginBottom,
+                    "The selected default/even footer owns its own frame edge.");
+                foreach (var story in page.PlacedRelatedStories.Where(s => s.StoryLayout.Story.IsNormalStoryType))
+                    TestAssert.True(story.TopY - story.Height >= bottom - .001d, "Note clips stay above the selected footer edge.");
+            }
+            TestAssert.True(DocxDocumentEndnoteKerning.TryCreateDocument(source, actual, out _, out _, default),
+                "A usable plain frame shares the existing note typography policy.");
+        }
+        DocxLayout fitting = engine.Create(Compose(1, false), measurer, default);
+        TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
+            .SequenceEqual(fitting.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
+            "Fitting static edges leave the original note placement exact.");
     }
 
     private sealed class LogicalBoundaryTextMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider

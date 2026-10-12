@@ -241,13 +241,12 @@ internal sealed partial class DocxLayoutEngine
         DocxPlainBodyFrame.IsPlainParagraph(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
         paragraph.InlineReferences.Count == 0 && paragraph.Runs.All(run => run.FieldKind is null);
 
-    private static bool CanUsePlainDocumentEndnoteFrame(DocxDocument document, DocxLayoutPage page,
-        int pageNumber, int pageCount, IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
+    private static bool HasPlainDocumentEndnoteStaticStories(DocxDocument document, DocxLayoutPage page,
+        [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
-        if (DocxPlainBodyFrame.IsEligible(document)) return true;
         if (!DocxPlainBodyFrame.HasPlainBody(document) || printScale != 1d ||
             document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) ||
-            measurer is not IDocxStaticTextMetricsProvider staticMetrics) return false;
+            measurer is not IDocxStaticTextMetricsProvider) return false;
         DocxPageSettings settings = page.PageSettings;
         if (document.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
             document.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
@@ -269,6 +268,16 @@ internal sealed partial class DocxLayoutEngine
             if (element is not DocxParagraphElement { Revisions.Count: 0, Paragraph: var paragraph } ||
                 !IsPlainStaticParagraph(paragraph)) return false;
         }
+        return true;
+    }
+
+    private static bool CanUsePlainDocumentEndnoteFrame(DocxDocument document, DocxLayoutPage page,
+        int pageNumber, int pageCount, IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
+    {
+        if (DocxPlainBodyFrame.IsEligible(document)) return true;
+        if (!HasPlainDocumentEndnoteStaticStories(document, page, measurer, printScale, cancellationToken)) return false;
+        var staticMetrics = (IDocxStaticTextMetricsProvider)measurer;
+        DocxPageSettings settings = page.PageSettings;
         double width = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
         double tabStop = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
         var metrics = measurer as IDocxLineMetricsProvider;
@@ -285,10 +294,13 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             var headerLayout = Layout(true, number);
             var footerLayout = Layout(false, number);
-            // Reuse the same static flow edges that displace body layout.
-            if (HasVisibleStaticContent(headerLayout) &&
-                headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing < page.Height - page.MarginTop ||
-                ResolveStaticFooterContentTop(footerLayout, metrics) > page.MarginBottom) return false;
+            // Body and continuation notes share the selected static flow edges.
+            // Plain static overflow is usable when those edges leave a frame;
+            // frames consumed entirely by static content retain the fallback.
+            double top = Math.Min(page.Height - page.MarginTop, HasVisibleStaticContent(headerLayout)
+                ? headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing : double.PositiveInfinity);
+            double bottom = Math.Max(page.MarginBottom, ResolveStaticFooterContentTop(footerLayout, metrics));
+            if (top <= bottom) return false;
         }
         return true;
     }
