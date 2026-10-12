@@ -4145,6 +4145,46 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxDeferredMixedEndnoteConsumesSeparatorDeficitOnce()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool matching in new[] { false, true })
+        {
+            int deferred = 0;
+            foreach (int footerLines in new[] { 1, 6 })
+            foreach (int footRepeats in new[] { 96, 100, 104, 120 })
+            {
+                var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d,
+                    matching ? 1.15d : 1.220703125d);
+                DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, footRepeats),
+                    false, true, footerLines);
+                DocxLayout layout = engine.Create(source, measurer, default);
+                DocxLayoutPage page = layout.Pages.First(p => p.PlacedRelatedStories.Any(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+                if (page.Items.Count != 0) continue;
+                deferred++;
+                DocxPlacedRelatedStoryLayout end = page.PlacedRelatedStories.Single(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote);
+                double firstBaseline = end.TextLines[0].BaselineY;
+                // Independent Word controls put the Calibri-content baseline
+                // 25.22pt below the fresh frame's top with a 12pt Arial separator.
+                // Matching metrics retain the separator's own minimum gap.
+                double inset = page.Height - page.MarginTop - firstBaseline;
+                TestAssert.True(Math.Abs(inset - (matching ? 25.08d : 25.22d)) < .02d,
+                    $"The source-first-inset gap agrees with Word and preserves the mark-gap floor: {inset}, custom={custom}, matching={matching}.");
+                DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                    s.Story.Kind == DocxRelatedStoryKind.Endnote);
+                TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                    .SelectMany(s => s.TextLines).Select(l => l.SourceLineIndex).SequenceEqual(
+                        canonical.TextLines.Select(l => l.SourceLineIndex)),
+                    "Gap correction preserves every canonical source owner and order.");
+            }
+            TestAssert.True(deferred > 0, "Both marker and matching/mixed metric profiles witness a deferred head.");
+        }
+    }
+
     public static void DocxDeferredMixedEndnoteKeepsOriginalPlainSourceAdmissionAndOwners()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -4647,11 +4687,18 @@ internal static class DocxFootnotesTests
         } : s).ToArray() };
     }
 
-    private sealed class NoteContentMetricMeasurer(double? separatorWindowsAscender = null) : IDocxTextMeasurer, IDocxLineMetricsProvider,
+    private sealed class NoteContentMetricMeasurer(double? separatorWindowsAscender = null,
+        double? separatorSingleLineEm = null, double? contentSingleLineEm = null) : IDocxTextMeasurer, IDocxLineMetricsProvider,
         IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
-        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.2d;
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize *
+            ((string.IsNullOrEmpty(run?.Text) ? separatorSingleLineEm : contentSingleLineEm) ?? 1.2d);
+        public bool TryGetSingleLineEm(DocxTextRun? run, out double value)
+        {
+            value = (string.IsNullOrEmpty(run?.Text) ? separatorSingleLineEm : contentSingleLineEm) ?? 0d;
+            return value > 0d;
+        }
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.2d;
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize * .9d;
         public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize * .2d;

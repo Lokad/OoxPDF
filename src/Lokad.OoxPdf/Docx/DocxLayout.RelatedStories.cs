@@ -366,6 +366,7 @@ internal sealed partial class DocxLayoutEngine
                         : CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
                     double separatorTop = cursorTop + FootnoteSeparatorGapPoints;
+                    bool usesSourceFirstInset = false;
                     if (deferredMixedEndnoteSource && separatorMeasurer is IDocxStaticTextMetricsProvider headMetrics)
                     {
                         // A fresh-page head keeps the source line's baseline floor,
@@ -376,6 +377,7 @@ internal sealed partial class DocxLayoutEngine
                         {
                             firstInset = Math.Max(firstInset, -documentEndSeparatorLayout.TextLines[0].BaselineY);
                             separatorTop = cursorTop + nominalSeparatorHeight!.Value - firstInset;
+                            usesSourceFirstInset = true;
                         }
                     }
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
@@ -386,6 +388,12 @@ internal sealed partial class DocxLayoutEngine
                     {
                         endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkRun, endnoteMarkSize, separatorMeasurer));
                     }
+
+                    // The admitted first inset already owns the separator's height
+                    // deficit. Consume that contribution once, keeping the mark gap
+                    // as the lower bound for matching content metrics.
+                    if (usesSourceFirstInset)
+                        endnoteContentGapPoints -= ResolveSeparatorSingleLineDeficitCorrection(endnoteMarkRun, endnoteMarkSize, separatorMeasurer);
 
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
