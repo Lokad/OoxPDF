@@ -994,7 +994,16 @@ internal sealed partial class DocxLayoutEngine
             double reservedTopSpace = Math.Max(0d, activePage.Height - activePage.MarginTop - cursorTop);
             double netOverhead = Math.Max(0d, continuationOverhead - reservedTopSpace);
             double bottom = frameBottom?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom;
-            (_, double takeHeight) = TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, Math.Max(0d, cursorTop - bottom - netOverhead), printScale >= 1d ? null : bodyFitAfters);
+            double capacity = Math.Max(0d, cursorTop - bottom - netOverhead);
+            bool hasPageContent = activePage.Items.Count != 0 ||
+                activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType);
+            // A qualified footnote frame anchors the actual widow-aware take,
+            // rather than leaving space for a line moved into the next slice.
+            (_, double takeHeight) = frameBottom is not null
+                ? TakeParagraphStoryLines(bodyStoryLayout.TextLines[0].SourceParagraph!, bodyLineBoxes,
+                    bodyLineIndex, remainingLines, capacity, printScale >= 1d ? null : bodyFitAfters,
+                    hasPageContent, isFreshHead: bodyLineIndex == 0)
+                : TakeStoryLines(bodyLineBoxes, bodyLineIndex, remainingLines, capacity, printScale >= 1d ? null : bodyFitAfters);
             double contentTop = bottom + takeHeight;
             markBaselineY = contentTop + separatorGapPoints;
         }
