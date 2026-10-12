@@ -4222,6 +4222,62 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxMinimumNoteFirstLineBoxAndBearingUseOneNaturalOwner()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool typographic in new[] { false, true })
+        foreach (int minimum in new[] { 8, 12, 20 })
+        {
+            DocxDocument source = WithNoteLineRule(ReadMixedNoteRetryFixture(custom, 32, 120), minimum, exact: false);
+            DocxLayout layout = engine.Create(source, new NoteNaturalBoxMetricMeasurer(typographic), default);
+            foreach (DocxRelatedStoryLayout story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                DocxTextLineLayout first = story.TextLines[0];
+                // The resolved 12pt first box is 14.484375pt and its Windows
+                // ascent is 12.005859375pt. Retained Word controls independently
+                // witness this first-line bearing and the .12pt positioning grid.
+                double natural = typographic ? 13.8d : 14.484375d;
+                double bearing = typographic ? 11.28d : 12.005859375d;
+                double expected = bearing + Math.Max(0d, minimum - natural);
+                TestAssert.True(Math.Abs(first.LineHeight!.Value - Math.Max(minimum, natural)) < .000001d &&
+                    Math.Abs(first.SingleLineHeight!.Value - natural) < .000001d &&
+                    Math.Abs(-first.BaselineY - expected) < .000001d,
+                    $"First natural note owner: box={first.LineHeight}, inset={-first.BaselineY}, custom={custom}, typo={typographic}.");
+                TestAssert.True(ReferenceEquals(first.SourceParagraph, story.Story.Paragraphs[0]),
+                    "The box and bearing keep the original paragraph owner rather than cloning a new source policy.");
+                TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == story.Story.Kind)
+                    .SelectMany(s => s.TextLines).Select(l => l.SourceLineIndex)
+                    .SequenceEqual(story.TextLines.Select(l => l.SourceLineIndex)),
+                    "First-line ownership retains every canonical typed source line and order.");
+            }
+        }
+    }
+
+    public static void DocxMinimumNoteFirstLineKeepsPartialAndUnenlargedBoxFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool complete in new[] { false, true })
+        foreach (int minimum in new[] { 8, 12, 20 })
+        {
+            DocxDocument source = WithNoteLineRule(ReadMixedNoteRetryFixture(custom, 32, 120), minimum, exact: false);
+            IDocxTextMeasurer measurer = complete ? new NoteNaturalBoxMetricMeasurer(false, 1.220703125d) :
+                new NoteContentMetricMeasurer(10.8d, 1.15d, 1.15d);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            foreach (DocxRelatedStoryLayout story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                DocxTextLineLayout first = story.TextLines[0];
+                double natural = complete ? 14.6484375d : 13.8d;
+                double inset = 11.28d + Math.Max(0d, minimum - natural);
+                TestAssert.True(Math.Abs(first.LineHeight!.Value - Math.Max(minimum, natural)) < .000001d &&
+                    Math.Abs(-first.BaselineY - inset) < .000001d,
+                    "Partial face metrics and boxes without a larger natural owner retain their qualified first-line bearing.");
+            }
+        }
+    }
+
     public static void DocxMinimumNoteContentUsesSourceOwnedNaturalMetrics()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -4236,8 +4292,8 @@ internal static class DocxFootnotesTests
             {
                 TestAssert.True(story.TextLines.Count > 2, "Both note kinds exercise source-owned content-only lines.");
                 DocxTextLineLayout first = story.TextLines[0];
-                TestAssert.True(Math.Abs(first.LineHeight!.Value - Math.Max(minimum, 13.8d)) < .000001d,
-                    "The source prefix retains its independently qualified first-line box.");
+                TestAssert.True(Math.Abs(first.LineHeight!.Value - Math.Max(minimum, typographic ? 13.8d : 14.484375d)) < .000001d,
+                    "The first prefix uses its independently qualified source natural box.");
                 // Tahoma's resolved Windows/hhea content box is 2472/2048 at
                 // 10pt. Its independently observed Word pitches alternate on
                 // the .12pt grid around this box. Typographic requests retain
@@ -4890,12 +4946,12 @@ internal static class DocxFootnotesTests
         } : s).ToArray() };
     }
 
-    private sealed class NoteNaturalBoxMetricMeasurer(bool useTypographicMetrics) :
+    private sealed class NoteNaturalBoxMetricMeasurer(bool useTypographicMetrics, double singleLineEm = 1.15d) :
         IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider,
         IDocxHheaLineGapProvider, IDocxHheaDescenderProvider, IDocxTypographicMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
-        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.15d;
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) => fontSize * singleLineEm;
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize * 2472d / 2048d;
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize * 2049d / 2048d;
         public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize * 423d / 2048d;

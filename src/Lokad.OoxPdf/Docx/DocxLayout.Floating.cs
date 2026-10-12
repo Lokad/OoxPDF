@@ -290,6 +290,21 @@ internal sealed partial class DocxLayoutEngine
         bool customNoteMetrics = customNoteMarker is not null && sourceStoryScale == 1d && fixedScale == 1d &&
             transitionScale == 1d && DocxPlainBodyFrame.IsPlainParagraph(paragraph) &&
             HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
+        if (sourceStoryScale == 1d && (customNoteMetrics ||
+            plainNoteMetrics && HasPlainNoteParagraphShape(paragraph)))
+        {
+            DocxLineHeightProfile natural = ResolveNoteContentLineHeightProfile(paragraph, fontSize,
+                textMeasurer, out double? naturalInset);
+            if (lineHeightProfile.SingleLineHeight is { } sourceBox &&
+                natural.SingleLineHeight is { } naturalBox && naturalBox > sourceBox && naturalInset is { } inset)
+            {
+                // A larger natural first-line box owns its measured baseline
+                // bearing as well as its flow charge. Changing either alone
+                // moves the rule and glyphs by different amounts.
+                lineHeightProfile = natural;
+                storyBaselineOffset = Math.Max(storyBaselineOffset, inset);
+            }
+        }
         // RV05: ordered inline atoms (related-story path). Affined images in
         // text-mixed paragraphs attach to wrapped lines at run position.
         DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, baseLineHeight);

@@ -96,7 +96,7 @@ internal sealed partial class DocxLayoutEngine
         double autoLineHeight = ((requestTypographicBox && measuredTypographicBox > 0d) ? measuredTypographicBox : Math.Max(Math.Max(singleLineHeight, hheaLineHeight), windowsBaseBox ?? double.NegativeInfinity)) * effectiveLineSpacingFactor;
         if (selectMaxAcrossRuns)
         {
-            (double relatedBase, double relatedExtra) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hheaLineHeight, metricsProvider, staticMetrics);
+            (double relatedBase, double relatedExtra, _) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hheaLineHeight, metricsProvider, staticMetrics);
             autoLineHeight = (relatedBase + relatedExtra) * effectiveLineSpacingFactor;
         }
         return new DocxLineHeightProfile(
@@ -110,13 +110,18 @@ internal sealed partial class DocxLayoutEngine
             DocxLineHeightSource.BodySingleLineAuto);
     }
 
-    // Source-owned note content keeps the same natural font box under a
-    // minimum line rule as under automatic flow. The source prefix's first
-    // line, exact boxes and providers lacking face metric semantics retain
-    // their qualified treatment.
+    // Source-owned notes share the natural font box under minimum and
+    // automatic flow. A larger first box also returns its measured bearing;
+    // exact boxes and providers lacking face metric semantics retain their
+    // qualified treatment.
     private static DocxLineHeightProfile ResolveNoteContentLineHeightProfile(
-        DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer)
+        DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer) =>
+        ResolveNoteContentLineHeightProfile(paragraph, fontSize, textMeasurer, out _);
+
+    private static DocxLineHeightProfile ResolveNoteContentLineHeightProfile(
+        DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer, out double? naturalFirstInset)
     {
+        naturalFirstInset = null;
         DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, selectMaxAcrossRuns: true);
         if (profile.Source != DocxLineHeightSource.AtLeastLineSpacing ||
             profile.SingleLineHeight is not { } singleLineHeight ||
@@ -126,8 +131,9 @@ internal sealed partial class DocxLayoutEngine
             return profile;
         double hhea = ResolveProfileHheaLineHeight(paragraph, fontSize, metrics, paragraph.Runs.FirstOrDefault(),
             singleLineHeight, selectMaxAcrossRuns: true);
-        (double box, double deficit) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hhea, metrics, staticMetrics);
+        (double box, double deficit, double? ascender) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hhea, metrics, staticMetrics);
         double natural = Math.Max(singleLineHeight, box + deficit);
+        naturalFirstInset = ascender;
         return double.IsFinite(natural) && natural > 0d
             ? profile with { SingleLineHeight = natural, LineHeight = Math.Max(profile.LineHeight, natural) } : profile;
     }
@@ -194,7 +200,7 @@ internal sealed partial class DocxLayoutEngine
 
     private const double RelatedStoryDescDeficitSlope = 0.84d;
 
-    private static (double BaseBox, double ExtraPoints) ResolveRelatedStoryBoxAndDeficit(
+    private static (double BaseBox, double ExtraPoints, double? WindowsAscender) ResolveRelatedStoryBoxAndDeficit(
         DocxParagraph paragraph,
         double legacySingleLineHeight,
         double legacyHheaLineHeight,
@@ -204,7 +210,7 @@ internal sealed partial class DocxLayoutEngine
         double legacyBase = System.Math.Max(legacySingleLineHeight, legacyHheaLineHeight);
         if (staticMetrics is null || paragraph.Runs.Count == 0)
         {
-            return (legacyBase, 0d);
+            return (legacyBase, 0d, null);
         }
 
         bool anyTextRun = false;
@@ -253,12 +259,12 @@ internal sealed partial class DocxLayoutEngine
 
         if (anyTextRun == false)
         {
-            return (legacyBase, 0d);
+            return (legacyBase, 0d, null);
         }
 
         double deficit = maxDescPoints - maxAscOwnDesc;
         double extra = deficit > 0d ? deficit * RelatedStoryDescDeficitSlope : 0d;
-        return (maxAscOwnBox, extra);
+        return (maxAscOwnBox, extra, double.IsFinite(maxAscPoints) && maxAscPoints > 0d ? maxAscPoints : null);
     }
 
     private static bool IsExactLineSpacing(DocxEffectiveParagraphProperties effective)
