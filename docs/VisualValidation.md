@@ -2565,3 +2565,32 @@ inputs. Root checks 3933 PDFs/two source blobs; packed 0.1.5 smoke passes. Full
 Windows remains L216 evidence. Shared physical-footnote gap ownership continues
 as L226. Safe managed code, existing bounds/work/publication limits and release
 deferral remain.
+
+### RV06-L226: shared gap ownership for fresh physical-footnote heads
+
+Fresh admitted physical-footnote heads repeated the separator-height deficit in
+their content pushdown. They now share the accepted endnote gap helper and the
+existing kind-independent nominal separator predicate. Matching metrics keep the
+mark-gap floor; no-static, rich/scaled and continued heads retain their treatment.
+Reserve capacity is unchanged. One regression covers sixty compositions and
+fails the intended Word-gap assertion against the exact parent. Frozen **63a132c3**,
+root **7bd1ef25**.
+
+All 22 retained Word controls preserve 2001 source lines/44 notes/124 clips/62 rules,
+44 navigation pairs and 1223 protected operations. Twelve first heads improve
+below .121pt glyph error/ten outputs remain exact; twelve raster pages improve/
+37 exact/no tradeoffs. Every rule, endnote and continued-footnote position remains
+unchanged. Eight destinations differ more from Word's rounded coordinates, by at
+most .145pt; each follows its corrected clip. Later footnotes retain .834pt error.
+Broader guards retain 22 page-line mismatches, paired deltas up to 102.532pt across
+mismatched flows and inherited 6.393pt destination error. These remain partials.
+
+Strict Release is clean. Windows passes 277 note/94 PDF/one static-comment checks
+(371 unique methods); Linux passes 360 checks/eleven existing skips and two archive
+SourceLink warnings. All 7095 frozen byte/page checks pass: 7083 retained exact and
+twelve independently qualified changes, with no new inputs. Root checks 3933 PDFs
+and three source blobs. Two C# files differ only in LF/CRLF checkout endings;
+normalized contents, Git blobs and both raw hashes are retained. Packed 0.1.5 smoke
+passes; full Windows remains L216 evidence. Continuation source-gap admission
+continues as L227. Safe managed code, existing bounds/work/publication limits and
+release deferral remain.
