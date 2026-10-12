@@ -194,7 +194,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxParagraph? ResolveUnmarkedNoteMetricParagraph(DocxParagraph paragraph)
     {
-        if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+        if (!DocxPlainBodyFrame.IsPlainParagraph(paragraph) || !DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
             paragraph.Runs.Count < 2 || !IsAutomaticSuperscriptNoteMarker(paragraph.Runs[0])) return null;
         double contentSize = paragraph.Runs.Where(r => !IsAutomaticSuperscriptNoteMarker(r) &&
             !string.IsNullOrWhiteSpace(r.Text) && !r.EffectiveProperties.Hidden)
@@ -303,6 +303,12 @@ internal sealed partial class DocxLayoutEngine
                 _ => paragraphX
             };
             double baselineOffset = unmarked ? unmarkedBaselineOffset : storyBaselineOffset;
+            if (unmarkedProfile is not null && activeProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
+                activeProfile.SingleLineHeight is { } naturalLineHeight)
+            {
+                // A minimum line box grows above the same source-owned bottom bearing.
+                baselineOffset += Math.Max(0d, lineHeight - naturalLineHeight);
+            }
             if (firstStoryBaselineOffset is { } firstStoryOffset)
             {
                 // RV06 pagination probe (edge-mixedstory-wc, Word 16.0): under a

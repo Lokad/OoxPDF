@@ -19,6 +19,11 @@ internal static class DocxPlainBodyFrame
     internal static bool HasAutomaticLineFlow(DocxParagraph paragraph) =>
         paragraph.LineSpacingPoints is null && paragraph.Spacing.LineRuleValue is (null or "auto");
 
+    internal static bool HasContentDrivenLineFlow(DocxParagraph paragraph) =>
+        HasAutomaticLineFlow(paragraph) ||
+        paragraph.LineSpacingPoints is { } minimum && double.IsFinite(minimum) && minimum >= 0d &&
+        string.Equals(paragraph.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase);
+
     internal static bool IsPlainParagraph(DocxParagraph p) =>
         p.Alignment == DocxTextAlignment.Left && p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 &&
         p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && p.Revisions.Count == 0 &&

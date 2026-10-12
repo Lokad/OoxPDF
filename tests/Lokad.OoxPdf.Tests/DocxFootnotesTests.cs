@@ -3093,6 +3093,71 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxMinimumNoteLinesHonorBoundsAndSourceMetricOwnership()
+    {
+        foreach (bool footnote in new[] { true, false })
+        foreach (double minimum in new[] { 8d, 12d, 18d })
+        {
+            DocxDocument source = footnote ? ReadWrappedFootnoteFlowFixture(100) : ReadWrappedDocumentEndnoteFlowFixture(0, 0, 100);
+            source = source with { RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = minimum, Spacing = p.Spacing with { LineRuleValue = "atLeast",
+                        LineValue = (minimum * 20d).ToString(CultureInfo.InvariantCulture) },
+                    Runs = [p.Runs[0] with { FontSize = 12d }, p.Runs[1] with { FontSize = 10d }],
+                })).ToArray(),
+            } : s).ToArray() };
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(source, new NoteContentMetricMeasurer(), default);
+            foreach (var story in layout.RelatedStories.Where(s => s.Story.IsNormalStoryType))
+            {
+                TestAssert.True(story.TextLines.Count > 2, "The minimum control contains actual unmarked continuation lines.");
+                TestAssert.True(Math.Abs(story.TextLines[0].LineHeight!.Value - Math.Max(minimum, 14.4d)) < .000001d,
+                    "The marked first line retains its source metric box and authored minimum.");
+                TestAssert.True(story.TextLines.Skip(1).All(l => Math.Abs(l.LineHeight!.Value - Math.Max(minimum, 12d)) < .000001d),
+                    "Minimum note continuation lines use content metrics and retain the authored lower bound.");
+                TestAssert.True(Math.Abs(story.ContentHeight + story.TextLines[^1].BaselineY - 2d) < .000001d,
+                    "Growing a minimum preserves the content's two-point bottom bearing.");
+                TestAssert.True(story.TextLines.All(l => ReferenceEquals(l.SourceParagraph, story.Story.Paragraphs[0]) &&
+                    l.SourceParagraph!.LineSpacingPoints == minimum), "Metric derivation preserves authored paragraph and minimum ownership.");
+            }
+        }
+    }
+
+    public static void DocxMinimumFootnoteFramesRetainCompleteContinuationOwners()
+    {
+        DocxDocument source = WithPlainFootnoteTestFooter(ReadWrappedFootnoteFlowFixture(100));
+        source = source with
+        {
+            BodyElements = source.BodyElements.OfType<DocxParagraphElement>().Take(1).ToArray(),
+            RelatedStories = source.RelatedStories.Where(s => !s.IsNormalStoryType || s.Id == "37").Select(s => s.IsNormalStoryType ? s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    LineSpacingPoints = 18d, Spacing = p.Spacing with { LineRuleValue = "atLeast", LineValue = "360" },
+                    Runs = [p.Runs[0], p.Runs[1] with { FontSize = 10d }],
+                })).ToArray(),
+            } : s).ToArray(),
+        };
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxLayout layout = engine.Create(source, measurer, default);
+        var slices = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+        TestAssert.True(slices.Length > 1 && slices.All(s => s.UsesPlainFootnoteFrame),
+            "The shared minimum footnote frame reaches the continuation drain with explicit frame ownership.");
+        TestAssert.Equal(34, slices[0].TextLines.Count);
+        var canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType);
+        TestAssert.True(canonical.TextLines.Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex)).SequenceEqual(
+            slices.SelectMany(s => s.StoryLayout.TextLines).Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))),
+            "Every source minimum line is placed exactly once and in order.");
+        TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var owners, default,
+            DocxRelatedStoryKind.Footnote), "Minimum frames share the existing source-owned content kerning policy.");
+        TestAssert.True(DocxNoteKerning.HasStableOwners(engine.Create(adjusted, measurer, default), owners, default,
+            DocxRelatedStoryKind.Footnote), "The content retry retains complete minimum-flow owners.");
+        TestAssert.True(ReferenceEquals(source.BodyElements, adjusted.BodyElements), "Body reference owners are retained.");
+    }
+
     private sealed class NoteContentMetricMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
         IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
     {

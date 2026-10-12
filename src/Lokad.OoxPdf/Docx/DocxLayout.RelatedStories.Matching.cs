@@ -335,8 +335,13 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool IsPlainAutomaticNoteParagraph(DocxParagraph paragraph) =>
+        HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
+
+    private static bool IsPlainContentNoteParagraph(DocxParagraph paragraph) =>
+        HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
+
+    private static bool HasPlainNoteParagraphShape(DocxParagraph paragraph) =>
         IsPlainContextualSpacingParagraph(paragraph) && paragraph.Spacing.ContextualSpacing != true &&
-        DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
         paragraph.KeepRules.KeepNext != true && paragraph.KeepRules.KeepLines != true &&
         IsNumericNoteTwips(paragraph.Spacing.BeforeValue) && IsNumericNoteTwips(paragraph.Spacing.AfterValue);
 
@@ -357,7 +362,7 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             hasFootnotes = true;
             if (story.BodyElements.Count != 1 || story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !IsPlainAutomaticNoteParagraph(paragraph)) return false;
+                !IsPlainContentNoteParagraph(paragraph)) return false;
         }
         return hasFootnotes && HasUsablePlainStaticNoteFrame(document, page, 1, 1, measurer, printScale, cancellationToken);
     }
