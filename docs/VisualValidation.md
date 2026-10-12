@@ -2651,3 +2651,33 @@ retained outputs exact/four independently qualified changes/no new inputs. Root
 checks 3933 PDFs/three source blobs; packed 0.1.5 smoke passes. Full Windows remains
 L216 evidence. First-line natural box/bearing work continues as L229. Safe managed
 code and bounds/work/publication policies remain; release preparation is deferred.
+
+### RV06-L229: shared natural first-line box and bearing
+
+Minimum note source-prefix lines now share the larger natural Windows/hhea box
+and its matching baseline bearing with the existing content metric owner.
+Authored minima, typographic requests, exact/scaled/rich/partial-metric and
+unenlarged-box fallbacks retain independently tested treatment. No additional
+font, size, threshold or document-shape branch is introduced. Two regressions
+cover 24 source compositions/both kinds; the exact frozen test assembly fails
+against the parent at its intended first natural box/bearing assertion.
+Frozen **e87e560a**, root **4b42fe78**.
+
+Twenty-two retained/four fresh Word controls qualify eight corrections/eighteen
+byte-exact guards. All 2374 source lines/52 notes/154 clips/77 rules/52 navigation
+pairs and 503 body/static operations retain ownership; canonical glyph/font/
+advance sequences remain exact. Corrected footnote glyphs .186pt/endnote glyphs
+.180pt/footnote rules .129pt pass unchanged .2pt checks. Endnote separator objects
+remain exact. Eight raster pages improve/52 exact/no tradeoffs. One inherited
+Times page-line gap/11.574pt paired delta remains. Four destination-coordinate
+errors increase by up to .784pt; targets follow the corrected source clips on
+their correct pages. Global destination maximum remains 1.039pt. These tradeoffs
+are separate from visible geometry; no full Office parity claim or relaxed gate.
+
+Strict Release is clean. Windows passes 283 note/94 PDF/one static-comment checks
+(377 unique methods); Linux passes 366 checks/eleven existing environmental skips
+and two archive SourceLink warnings. All 7099 frozen byte/page checks pass: 7091
+prior outputs exact/four qualified retained changes/four new Word inputs. Root
+checks 3937 PDFs/three source blobs; packed 0.1.5 smoke passes. Full Windows remains
+L216 evidence. Mixed-note separator occupancy work continues as L230. Safe managed
+code and bounds/work/publication policies remain; release preparation is deferred.
