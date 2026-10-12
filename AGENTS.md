@@ -1,5 +1,16 @@
 NuGet packages are written to ignored `artifacts/nuget/`.
 
+## Safe Managed Library
+
+The shipped `src/Lokad.OoxPdf` library must remain entirely safe managed code.
+Do not use unsafe C#, raw pointers, unchecked memory-access APIs such as
+`Unsafe.ReadUnaligned` or `LoadUnsafe`, or native interop, even for optimization
+or protection. Native interop includes P/Invoke, COM and native-library loading.
+Keep `<AllowUnsafeBlocks>false</AllowUnsafeBlocks>` explicit in the library project.
+
+Safe span-based operations and bounds-checked SIMD are allowed. Separate native
+validation tools, including the PDFium rasterizer, remain outside the library.
+
 ## Repo Map
 
 - `src/Lokad.OoxPdf`: dependency-free library and PDF/OOXML renderers.
