@@ -1386,15 +1386,15 @@ internal static class DocxImagesTests
                 """),
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
-        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
-        TestAssert.True(starts.Count >= 2 && imagePlacement.Success, "Expected positioned text and a placed image, found " + starts.Count + " text starts and image " + imagePlacement.Success);
-        double afterX = double.Parse(starts[1].Groups[1].Value, CultureInfo.InvariantCulture);
-        double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(Math.Abs((afterX - imageX) - 72d) < 0.5, "Following text must start after the 72pt image end: after=" + afterX + " image=" + imageX);
+        foreach (string pdf in RenderInlineImageFontVariants(input))
+        {
+            Match[] starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm").Cast<Match>().ToArray();
+            Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+            TestAssert.True(starts.Length >= 2 && imagePlacement.Success, "Expected positioned text and an inline image.");
+            double baseline = double.Parse(starts[0].Groups[2].Value, CultureInfo.InvariantCulture);
+            Match[] lineStarts = starts.Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - baseline) < .01d).ToArray();
+            AssertInlineImageFollowingText(lineStarts, imagePlacement, "Body");
+        }
     }
 
     // RV05: image-driven breaking. An image that does not fit the line remainder
@@ -1465,21 +1465,15 @@ internal static class DocxImagesTests
                 """),
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
-        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
-        TestAssert.True(starts.Count >= 3 && imagePlacement.Success, "Expected positioned text and a placed image, found " + starts.Count + " text starts and image " + imagePlacement.Success);
-        double firstX = double.Parse(starts[0].Groups[1].Value, CultureInfo.InvariantCulture);
-        double thirdX = double.Parse(starts[2].Groups[1].Value, CultureInfo.InvariantCulture);
-        double firstY = double.Parse(starts[0].Groups[2].Value, CultureInfo.InvariantCulture);
-        double secondY = double.Parse(starts[1].Groups[2].Value, CultureInfo.InvariantCulture);
-        double thirdY = double.Parse(starts[2].Groups[2].Value, CultureInfo.InvariantCulture);
-        double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(Math.Abs(secondY - firstY) < 0.01 && Math.Abs(thirdY - firstY) < 0.01, "Cell image must share its surrounding text line: firstY=" + firstY + " secondY=" + secondY + " thirdY=" + thirdY);
-        TestAssert.True(imageX > firstX && imageX < thirdX, "Cell image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " lineEnd=" + thirdX);
-        TestAssert.True(Math.Abs((double.Parse(starts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Cell following text must start after the 72pt image end: image=" + imageX);
+        foreach (string pdf in RenderInlineImageFontVariants(input))
+        {
+            Match[] starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm").Cast<Match>().ToArray();
+            Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+            TestAssert.True(starts.Length >= 2 && imagePlacement.Success, "Expected positioned text and an inline image.");
+            double baseline = double.Parse(starts[0].Groups[2].Value, CultureInfo.InvariantCulture);
+            Match[] lineStarts = starts.Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - baseline) < .01d).ToArray();
+            AssertInlineImageFollowingText(lineStarts, imagePlacement, "Cell");
+        }
     }
 
     // RV05: related-story (footnote) paragraphs place affined images mid-line like body text.
@@ -1544,20 +1538,15 @@ internal static class DocxImagesTests
                 """),
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
-        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
-        TestAssert.True(starts.Count >= 3 && imagePlacement.Success, "Expected positioned text and a placed image, found " + starts.Count + " text starts and image " + imagePlacement.Success);
-        double bottomY = starts.Cast<System.Text.RegularExpressions.Match>().Min(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture));
-        System.Text.RegularExpressions.Match[] bottomStarts = starts.Cast<System.Text.RegularExpressions.Match>().Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - bottomY) < 0.01).ToArray();
-        TestAssert.True(bottomStarts.Length >= 3, "Expected the footnote line to hold its surrounding text, found " + bottomStarts.Length + " starts at y=" + bottomY);
-        double firstX = double.Parse(bottomStarts[0].Groups[1].Value, CultureInfo.InvariantCulture);
-        double lineEndX = double.Parse(bottomStarts[bottomStarts.Length - 1].Groups[1].Value, CultureInfo.InvariantCulture);
-        double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(imageX > firstX && imageX < lineEndX, "Footnote image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " lineEnd=" + lineEndX);
-        TestAssert.True(Math.Abs((double.Parse(bottomStarts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Footnote following text must start after the 72pt image end: image=" + imageX);
+        foreach (string pdf in RenderInlineImageFontVariants(input))
+        {
+            Match[] starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm").Cast<Match>().ToArray();
+            Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+            TestAssert.True(starts.Length >= 2 && imagePlacement.Success, "Expected positioned text and an inline image.");
+            double baseline = starts.Min(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture));
+            Match[] lineStarts = starts.Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - baseline) < .01d).ToArray();
+            AssertInlineImageFollowingText(lineStarts, imagePlacement, "Footnote");
+        }
     }
 
     // RV05: Office footnote image bottoms sit at the text baseline (Word 16.0
@@ -1694,20 +1683,15 @@ internal static class DocxImagesTests
                 """),
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
-        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
-        TestAssert.True(starts.Count >= 3 && imagePlacement.Success, "Expected positioned text and a placed image, found " + starts.Count + " text starts and image " + imagePlacement.Success);
-        double topY = starts.Cast<System.Text.RegularExpressions.Match>().Max(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture));
-        System.Text.RegularExpressions.Match[] topStarts = starts.Cast<System.Text.RegularExpressions.Match>().Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - topY) < 0.01).ToArray();
-        TestAssert.True(topStarts.Length >= 3, "Expected the header line to hold its surrounding text, found " + topStarts.Length + " starts at y=" + topY);
-        double firstX = double.Parse(topStarts[0].Groups[1].Value, CultureInfo.InvariantCulture);
-        double lineEndX = double.Parse(topStarts[topStarts.Length - 1].Groups[1].Value, CultureInfo.InvariantCulture);
-        double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(imageX > firstX && imageX < lineEndX, "Header image must sit between its surrounding text: first=" + firstX + " image=" + imageX + " lineEnd=" + lineEndX);
-        TestAssert.True(Math.Abs((double.Parse(topStarts[1].Groups[1].Value, CultureInfo.InvariantCulture) - imageX) - 72d) < 0.5, "Header following text must start after the 72pt image end: image=" + imageX);
+        foreach (string pdf in RenderInlineImageFontVariants(input))
+        {
+            Match[] starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm").Cast<Match>().ToArray();
+            Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+            TestAssert.True(starts.Length >= 2 && imagePlacement.Success, "Expected positioned text and an inline image.");
+            double baseline = starts.Max(m => double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture));
+            Match[] lineStarts = starts.Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - baseline) < .01d).ToArray();
+            AssertInlineImageFollowingText(lineStarts, imagePlacement, "Header");
+        }
     }
 
     // RV05: justified image sits at the image-aware stretched position (Word 16.0
@@ -1716,6 +1700,13 @@ internal static class DocxImagesTests
     // pushing the image 60pt right and overflowing the margin.
     public static void DocxJustifiedInlineImageUsesImageAwareStretch()
     {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution calibrated = resolver.Resolve(new FontRequest("Calibri"));
+        if (!calibrated.FamilyName.Equals("Calibri", StringComparison.OrdinalIgnoreCase) ||
+            calibrated.Source.GetBytesAsync(default).AsTask().GetAwaiter().GetResult().IsEmpty)
+        {
+            TestAssert.Skip("The Word-coordinate calibration requires the Calibri font program.");
+        }
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""
@@ -1751,7 +1742,7 @@ internal static class DocxImagesTests
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new DocxTests.SingleResolutionFontResolver(calibrated) });
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
         TestAssert.True(imagePlacement.Success, "Expected a placed justified image.");
@@ -1805,15 +1796,37 @@ internal static class DocxImagesTests
                 """),
             ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        MatchCollection starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm");
-        Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
-        TestAssert.True(starts.Count >= 2 && imagePlacement.Success, "Expected positioned text and a placed image, found " + starts.Count + " text starts and image " + imagePlacement.Success);
-        // Line 1 emits one op per word (justified spaces are gaps): AAA, BBB, then CCC.
-        double afterX = double.Parse(starts[2].Groups[1].Value, CultureInfo.InvariantCulture);
+        foreach (string pdf in RenderInlineImageFontVariants(input))
+        {
+            Match[] starts = Regex.Matches(pdf, @"1 0 0 1 ([\d.]+) ([\d.]+) Tm").Cast<Match>().ToArray();
+            Match imagePlacement = Regex.Match(pdf, @"([\d.]+) ([\d.]+) cm\s*/Im1 Do");
+            TestAssert.True(starts.Length >= 2 && imagePlacement.Success, "Expected positioned text and an inline image.");
+            double baseline = double.Parse(starts[0].Groups[2].Value, CultureInfo.InvariantCulture);
+            Match[] lineStarts = starts.Where(m => Math.Abs(double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) - baseline) < .01d).ToArray();
+            AssertInlineImageFollowingText(lineStarts, imagePlacement, "Justified");
+        }
+    }
+
+    private static IEnumerable<string> RenderInlineImageFontVariants(string input)
+    {
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Courier") })
+        {
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+            yield return File.ReadAllText(output, Encoding.ASCII);
+        }
+    }
+
+    private static void AssertInlineImageFollowingText(Match[] lineStarts, Match imagePlacement, string context)
+    {
         double imageX = double.Parse(imagePlacement.Groups[1].Value, CultureInfo.InvariantCulture);
-        TestAssert.True(Math.Abs((afterX - imageX) - 72d) < 0.5, "Justified image must sit at its stretched run position with following text after the 72pt image end: image=" + imageX + " after=" + afterX);
+        double[] positions = lineStarts.Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
+        TestAssert.True(positions.Length >= 2 && positions.Min() < imageX && positions.Max() > imageX,
+            context + " image must share a line with text on both sides.");
+        // Embedded runs and fallback glyphs emit different numbers of matrices.
+        // In these fixtures the first position beyond the image belongs to the following text.
+        double followingX = positions.Where(x => x > imageX).Min();
+        TestAssert.True(Math.Abs(followingX - imageX - 72d) < .5d,
+            context + " following text must start at the 72pt image end: image=" + imageX + " following=" + followingX);
     }
 }
