@@ -3715,6 +3715,113 @@ internal static class DocxFootnotesTests
                 ReferenceEquals(invalid, unchanged), "Duplicate targets, rich complementary paragraphs, missing references and unadmitted continuation frames retain the fallback.");
     }
 
+    public static void DocxMixedStaticNoteTypographyPreservesComplementaryPlacementAndBoundaryPolicy()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool custom in new[] { false, true })
+        foreach ((bool header, bool footer) in new[] { (true, false), (false, true), (true, true) })
+        foreach (int count in new[] { 1, 6 })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), header, footer, count);
+            DocxLayout before = engine.Create(source, measurer, default);
+            TestAssert.True(!DocxPlainBodyFrame.IsEligible(source) && before.Pages.Any(p => p.StaticTextLines.Count != 0),
+                "The mixed control contains actual static stories outside the original empty-frame admission.");
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, before, out _, out _, default, DocxRelatedStoryKind.Footnote),
+                "The established mixed footnote frame admission remains unchanged.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, before, out var adjusted, out var owners, default),
+                "Complete plain complementary sources share endnote typography in a usable static frame.");
+            DocxLayout after = engine.Create(adjusted, measurer, default);
+            TestAssert.True(DocxNoteKerning.HasStableOwners(after, owners, default) &&
+                ReferenceEquals(source.PageSettings, adjusted.PageSettings) &&
+                source.BodyElements.Zip(adjusted.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
+                "The bounded retry retains both typed source owners, body references and static settings.");
+            var previousFoot = before.Pages.SelectMany((p, page) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .Select(s => (page, s.TopY, s.Height, s.ContentTopOffset, s.StoryLayout.Story.Paragraphs[0])));
+            var currentFoot = after.Pages.SelectMany((p, page) => p.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .Select(s => (page, s.TopY, s.Height, s.ContentTopOffset, s.StoryLayout.Story.Paragraphs[0])));
+            TestAssert.True(previousFoot.SequenceEqual(currentFoot),
+                "Fitting and overflowing static frames preserve every complementary footnote box and canonical paragraph.");
+            static object Geometry(DocxTextLineLayout line) => (line.Text, line.X, line.BaselineY, line.Width, line.FontSize,
+                line.SourceParagraph, line.SourceBlockIndex, line.SourceParagraphIndex, line.SourceLineIndex);
+            TestAssert.True(before.Pages.Count == after.Pages.Count && before.Pages.Zip(after.Pages).All(p =>
+                p.First.Items.OfType<DocxTextLineLayout>().Select(Geometry).SequenceEqual(p.Second.Items.OfType<DocxTextLineLayout>().Select(Geometry)) &&
+                p.First.StaticTextLines.Select(Geometry).SequenceEqual(p.Second.StaticTextLines.Select(Geometry))),
+                "The typography correction preserves body and static geometry.");
+            TestAssert.True(after.Pages.SelectMany(p => p.PlacedRelatedStories)
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                .All(s => s.UsesPlainDocumentEndnoteTypography && !s.UsesCompleteDocumentEndnoteFlow),
+                "Shared typography does not admit mixed static paragraph-boundary or pagination corrections.");
+        }
+    }
+
+    public static void DocxMixedStaticNoteTypographyRetainsSourceShapeAndFrameFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxDocument plain = ReadMixedNoteRetryFixture(true, 32);
+        DocxRelatedStory foot = plain.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote);
+        DocxParagraph paragraph = foot.Paragraphs[0];
+        foreach (DocxParagraph invalid in new[]
+        {
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } },
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepLines = true } },
+            paragraph with { Spacing = paragraph.Spacing with { ContextualSpacing = true } },
+            paragraph with { Spacing = paragraph.Spacing with { AfterValue = "invalid" } },
+            paragraph with { Alignment = DocxTextAlignment.Center },
+        })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(plain with { RelatedStories = plain.RelatedStories.Select(s =>
+                ReferenceEquals(s, foot) ? s with { BodyElements = [new DocxParagraphElement(invalid)] } : s).ToArray() }, true, true, 1);
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, engine.Create(source, measurer, default), out var unchanged, out _, default) &&
+                ReferenceEquals(source, unchanged), "Kept, contextual, malformed and rich complementary sources retain their fallback.");
+        }
+        DocxParagraph staticParagraph = DocxTests.CreateDocxLayoutParagraph("public static frame", 12d, 14d) with
+        {
+            LineSpacingPoints = null, Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+        };
+        foreach (DocxDocument source in new[]
+        {
+            WithMixedNoteStaticFrame(plain, true, true, 100),
+            WithMixedNoteStaticFrame(plain, true, true, 1, staticParagraph with { LineSpacingPoints = 14d }),
+            WithMixedNoteStaticFrame(plain, true, true, 1, staticParagraph with
+                { Runs = [staticParagraph.Runs[0] with { Text = "{NUMPAGES}", FieldKind = DocxFieldKind.NumPages }] }),
+            WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(true, 140), true, true, 1),
+        })
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, engine.Create(source, measurer, default), out _, out _, default),
+                "Consumed, fixed, dynamic and unadmitted continuation frames retain their fallback.");
+        DocxDocument scaled = WithMixedNoteStaticFrame(plain, true, true, 1);
+        DocxLayout scaledLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .5d)
+            .Create(scaled, measurer, default, measurer);
+        TestAssert.True(!DocxNoteKerning.TryCreateDocument(scaled, scaledLayout, out _, out _, default),
+            "Originally scaled mixed frames retain their fallback.");
+    }
+
+    private static DocxDocument WithMixedNoteStaticFrame(DocxDocument source, bool header, bool footer, int count,
+        DocxParagraph? paragraph = null)
+    {
+        paragraph ??= DocxTests.CreateDocxLayoutParagraph("public static frame", 12d, 14d) with
+        {
+            LineSpacingPoints = null, Spacing = DocxParagraphSpacing.Empty with { BeforeValue = "0", AfterValue = "0", LineValue = "240", LineRuleValue = "auto" },
+        };
+        var paragraphs = Enumerable.Repeat(paragraph, count).ToArray();
+        var headers = new Dictionary<string, IReadOnlyList<DocxParagraph>>();
+        var footers = new Dictionary<string, IReadOnlyList<DocxParagraph>>();
+        if (header) headers["default"] = paragraphs;
+        if (footer) footers["default"] = paragraphs;
+        var headerElements = headers.ToDictionary(p => p.Key, p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+        var footerElements = footers.ToDictionary(p => p.Key, p => (IReadOnlyList<DocxBodyElement>)p.Value.Select(v => (DocxBodyElement)new DocxParagraphElement(v)).ToArray());
+        var settings = source.PageSettings with { HeaderDistancePoints = 36d, FooterDistancePoints = 36d,
+            HeaderParagraphsByType = headers, FooterParagraphsByType = footers,
+            HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
+        return source with { PageSettings = settings, FinalSectionBreak = source.FinalSectionBreak! with { PageSettings = settings },
+            HeaderParagraphs = header ? paragraphs : [], FooterParagraphs = footer ? paragraphs : [],
+            HeaderParagraphsByType = headers, FooterParagraphsByType = footers,
+            HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
+    }
+
     private static DocxDocument ReadMixedNoteRetryFixture(bool custom, int repeats)
     {
         return ReadSectionNumberingFixture("footnote", (document, settings, parts) =>

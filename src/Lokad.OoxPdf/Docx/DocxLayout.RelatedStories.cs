@@ -348,13 +348,18 @@ internal sealed partial class DocxLayoutEngine
                     cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
                 }
                 double completeEndnoteHeight = 0d;
-                bool plainEndnoteFrame = CanUsePlainDocumentEndnoteFrame(document, activePage,
+                bool plainEndnoteTypography = CanUsePlainDocumentEndnoteFrame(document, activePage,
                     activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) &&
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
-                bool plainEndnoteFlow = plainEndnoteFrame && !document.RelatedStories.Any(story =>
+                bool hasFootnotes = document.RelatedStories.Any(story =>
                     story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
+                // Mixed static frames share typography without admitting new
+                // paragraph-boundary or pagination corrections.
+                bool plainEndnoteFrame = plainEndnoteTypography &&
+                    (!hasFootnotes || DocxPlainBodyFrame.IsEligible(document));
+                bool plainEndnoteFlow = plainEndnoteFrame && !hasFootnotes;
                 bool collapseEndnoteBoundaries = plainEndnoteFrame &&
                     cursorTop - completeEndnoteHeight >= Math.Max(FrameBottom(),
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
@@ -392,7 +397,7 @@ internal sealed partial class DocxLayoutEngine
                         plainDocumentEndnoteFlow: plainEndnoteFlow,
                         // Typography uses the admitted frame even when a
                         // complementary footnote retains legacy pagination.
-                        plainDocumentEndnoteTypography: plainEndnoteFrame,
+                        plainDocumentEndnoteTypography: plainEndnoteTypography,
                         noteDestinationTopOffset: boundaryOverlap,
                         frameBottom: endnoteFrameBottom);
                     if (collapseEndnoteBoundaries)
