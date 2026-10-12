@@ -3961,6 +3961,51 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxMixedEndnoteCapacityExcludesLatentSeparatorSpaceWithoutMovingInk()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool custom in new[] { false, true })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 140), true, true, 1);
+            DocxRelatedStory end = source.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote);
+            DocxParagraph paragraph = end.Paragraphs[0];
+            DocxParagraph fitting = paragraph with { Runs = paragraph.Runs.Select((r, index) =>
+                index == paragraph.Runs.Count - 1 ? r with { Text = " Public fitting complement." } : r).ToArray() };
+            DocxDocument fittingSource = source with { RelatedStories = source.RelatedStories.Select(s =>
+                ReferenceEquals(s, end) ? s with { BodyElements = [new DocxParagraphElement(fitting)] } : s).ToArray() };
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayout fittingLayout = engine.Create(fittingSource, measurer, default);
+            DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            DocxPlacedRelatedStoryLayout fittingSeparator = fittingLayout.Pages[0].PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            var ends = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote).ToArray();
+            double headBottom = ends[0].TopY - ends[0].Height;
+            TestAssert.True(ends.Length > 1 && separator.SeparatorY is { } ruleY &&
+                headBottom < separator.TopY && headBottom > ruleY + separator.SeparatorThickness,
+                "The continued head may use empty separator padding while clearing its visible rule.");
+            TestAssert.True(separator.TopY == fittingSeparator.TopY && separator.Height == fittingSeparator.Height &&
+                separator.SeparatorY == fittingSeparator.SeparatorY && separator.SeparatorThickness == fittingSeparator.SeparatorThickness &&
+                separator.SeparatorWidth == fittingSeparator.SeparatorWidth,
+                "Head capacity leaves the complementary separator clip and visible rule exactly unchanged.");
+            var foot = layout.Pages[0].PlacedRelatedStories.Single(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote);
+            var fittingFoot = fittingLayout.Pages[0].PlacedRelatedStories.Single(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(foot.TopY == fittingFoot.TopY && foot.Height == fittingFoot.Height && headBottom >= foot.TopY &&
+                ReferenceEquals(foot.StoryLayout.Story.Paragraphs[0], fittingFoot.StoryLayout.Story.Paragraphs[0]),
+                "The reused capacity clears the complete original complementary footnote box and source.");
+            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                s.Story.Kind == DocxRelatedStoryKind.Endnote);
+            TestAssert.Equal(string.Concat(canonical.TextLines.Select(l => l.Text)),
+                string.Concat(ends.SelectMany(s => s.StoryLayout.TextLines).Select(l => l.Text)));
+            TestAssert.True(ends.All(s => !s.UsesCompleteDocumentEndnoteFlow),
+                "Separator capacity preserves the existing mixed paragraph-boundary policy.");
+        }
+    }
+
     private static DocxDocument WithMixedNoteStaticFrame(DocxDocument source, bool header, bool footer, int count,
         DocxParagraph? paragraph = null)
     {

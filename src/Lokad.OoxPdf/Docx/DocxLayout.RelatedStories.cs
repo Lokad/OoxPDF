@@ -335,8 +335,7 @@ internal sealed partial class DocxLayoutEngine
                     allowMixedEndnoteHead, out bool partialMixedEndnoteHead);
                 if (partialMixedEndnoteHead && footerKeepOut is { } mixedFooterBottom)
                     endnoteFrameBottom = (p, number, count) => Math.Max(mixedFooterBottom(p, number, count),
-                        p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
-                            .Select(s => s.TopY).DefaultIfEmpty(p.MarginBottom).Max());
+                        ResolveFootnoteOccupiedTop(p, p.PlacedRelatedStories, separatorMeasurer, printScale));
                 if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
                 {
                     // RV06 endnote probes: document-end endnotes draw the separator rule

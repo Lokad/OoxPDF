@@ -216,6 +216,7 @@ internal sealed partial class DocxLayoutEngine
         double bottom = footnotes.Max(story => story.TopY);
         if (candidateTop - requiredHeight >= bottom) return candidateTop;
         if (!allowPartialHead) return fallbackTop;
+        bottom = ResolveFootnoteOccupiedTop(page, placedStories, measurer, printScale);
         DocxRelatedStoryLayout first = endnotes[0];
         double[] afters = GetStoryLineAfterSpacings(first, deferParagraphAfter: true);
         double[] boxes = GetStoryTextLineBoxHeights(first, afters);
@@ -224,6 +225,32 @@ internal sealed partial class DocxLayoutEngine
             hasPageContent: true, isFreshHead: true);
         partialHead = take > 0;
         return partialHead ? candidateTop : fallbackTop;
+    }
+
+    private static double ResolveFootnoteOccupiedTop(DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories, IDocxTextMeasurer? measurer, double printScale)
+    {
+        DocxPlacedRelatedStoryLayout[] footnotes = placedStories
+            .Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote).ToArray();
+        DocxRelatedStoryLayout[] content = footnotes.Where(s => s.StoryLayout.Story.IsNormalStoryType)
+            .Select(s => s.StoryLayout).ToArray();
+        double top = page.MarginBottom;
+        foreach (DocxPlacedRelatedStoryLayout story in footnotes)
+        {
+            double occupiedTop = story.TopY;
+            if (!story.StoryLayout.Story.IsNormalStoryType)
+            {
+                // A qualified empty separator can carry latent paragraph-after
+                // space in its legacy clip. Use the nominal flow charge while
+                // preserving its clip and always clearing the visible rule.
+                occupiedTop -= Math.Max(0d, story.Height - ResolvePlainNoteSeparatorHeight(
+                    story.StoryLayout, page, measurer, content, printScale));
+                if (story.SeparatorY is { } ruleY)
+                    occupiedTop = Math.Max(occupiedTop, ruleY + story.SeparatorThickness);
+            }
+            top = Math.Max(top, occupiedTop);
+        }
+        return top;
     }
 
     private static bool CanUseNominalDocumentEndnoteFlow(
