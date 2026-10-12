@@ -4248,6 +4248,85 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxFittingSeparatorPaintRetainsSourceBearingWithoutMovingNoteFlow()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (var profile in new[] { (Ascender: 2049, Descender: 423, Strikeout: 689,
+            WordMixedGap: 17.28d),
+            (Ascender: 2059, Descender: 430, Strikeout: 679,
+            WordMixedGap: 17.16d) })
+        {
+            DocxDocument source = WithFittingSeparatorBearingSource(custom);
+            var measurer = new FittingSeparatorBearingMeasurer(profile.Ascender, profile.Descender, profile.Strikeout);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayoutPage page = layout.Pages.Single(p => p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+            TestAssert.True(page.Items.Count > 0, "The independent metric profile witnesses a fitting occupied head.");
+            DocxPlacedRelatedStoryLayout end = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote);
+            DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote &&
+                s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            // Independent Word references supply these local rule/first-glyph
+            // distances; source profiles use their recorded font table metrics.
+            double expected = profile.WordMixedGap;
+            double actual = separator.SeparatorY!.Value - end.TextLines[0].BaselineY;
+            TestAssert.True(Math.Abs(actual - expected) < .13d,
+                $"Independent Word fitting rule-to-first distance: {actual}, expected={expected}, custom={custom}.");
+            TestAssert.True(Math.Abs(separator.TopY - separator.Height - end.TextLines[0].BaselineY -
+                    14.6484375d) < .002d, "Rule painting retains the existing Calibri content flow origin and gap.");
+            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s =>
+                s.Story.IsNormalStoryType && s.Story.Kind == DocxRelatedStoryKind.Endnote);
+            TestAssert.True(end.TextLines.Select(l => l.SourceLineIndex).SequenceEqual(
+                canonical.TextLines.Select(l => l.SourceLineIndex)),
+                "The rule correction retains the complete canonical note source.");
+        }
+    }
+
+    public static void DocxFittingSeparatorPaintKeepsMissingLineBearingFallback()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (var profile in new[] { (Ascender: 2049, Descender: 423, Strikeout: 689, LegacyGap: 17.966d),
+            (Ascender: 2059, Descender: 430, Strikeout: 679, LegacyGap: 17.907d) })
+        {
+            DocxDocument source = WithFittingSeparatorBearingSource(custom);
+            var measurer = new FittingSeparatorBearingMeasurer(profile.Ascender, profile.Descender,
+                profile.Strikeout, availableLineBearing: false);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayoutPage page = layout.Pages.Single(p => p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+            DocxPlacedRelatedStoryLayout end = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote);
+            DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote &&
+                s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            TestAssert.True(Math.Abs(separator.SeparatorY!.Value - end.TextLines[0].BaselineY - profile.LegacyGap) < .02d,
+                "Missing line bearings retain the qualified rule fallback even when a Windows ascent is available.");
+            TestAssert.True(Math.Abs(separator.TopY - separator.Height - end.TextLines[0].BaselineY -
+                14.6484375d) < .002d, "The missing-metric fallback retains its source content gap.");
+        }
+    }
+
+    private static DocxDocument WithFittingSeparatorBearingSource(bool custom)
+    {
+        DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), false, true, 6);
+        return source with
+        {
+            RelatedStories = source.RelatedStories.Select(s => s with
+            {
+                BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                {
+                    Runs = p.Runs.Select(r => r with
+                    {
+                        FontFamily = !s.IsNormalStoryType ? "source-bearing" : "content-bearing",
+                    }).ToArray(),
+                })).ToArray(),
+            }).ToArray(),
+        };
+    }
+
     public static void DocxPhysicalFootnoteHeadUsesSharedSourceGapAndRetainsFallbacks()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -5110,6 +5189,43 @@ internal static class DocxFootnotesTests
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => MeasureHheaDescender(run, fontSize);
         public bool UseTypographicMetrics(DocxTextRun? run) => useTypographicMetrics;
         public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize) => fontSize;
+    }
+
+    private sealed class FittingSeparatorBearingMeasurer(int ascenderUnits, int descenderUnits,
+        int strikeoutUnits, bool availableLineBearing = true) : IDocxTextMeasurer,
+        IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider,
+        IDocxTypographicMetricsProvider
+    {
+        private static bool IsSourceBearing(DocxTextRun? run) => run?.FontFamily == "source-bearing";
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
+        public double MeasureSingleLineHeight(DocxTextRun? run, double fontSize) =>
+            fontSize * (IsSourceBearing(run) ? 1.15d : 1.220703125d);
+        public bool TryGetSingleLineEm(DocxTextRun? run, out double value)
+        {
+            value = IsSourceBearing(run) ? 1.15d : 1.220703125d;
+            return true;
+        }
+        public bool TryGetStrikeoutRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+        {
+            positionEm = strikeoutUnits / 2048d;
+            thicknessEm = .0625d;
+            return IsSourceBearing(run);
+        }
+        public bool UseTypographicMetrics(DocxTextRun? run) => false;
+        public double MeasureTypographicLineHeight(DocxTextRun? run, double fontSize) => fontSize *
+            (IsSourceBearing(run) ? ascenderUnits == 2049 ? 1d : 2191d / 2048d : 1.220703125d);
+        public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize *
+            (IsSourceBearing(run) ? (ascenderUnits + descenderUnits) / 2048d : 1.220703125d);
+        public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize *
+            (IsSourceBearing(run) ? availableLineBearing ? ascenderUnits / 2048d : 0d : .75d);
+        public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize *
+            (IsSourceBearing(run) ? descenderUnits / 2048d : .25d);
+        public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) =>
+            IsSourceBearing(run) ? 0d : fontSize * .220703125d;
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize *
+            (IsSourceBearing(run) ? ascenderUnits / 2048d : 1950d / 2048d);
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize *
+            (IsSourceBearing(run) ? descenderUnits / 2048d : 550d / 2048d);
     }
 
     private sealed class NoteContentMetricMeasurer(double? separatorWindowsAscender = null,

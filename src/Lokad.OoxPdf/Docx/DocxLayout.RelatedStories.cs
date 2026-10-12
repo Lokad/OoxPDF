@@ -367,6 +367,7 @@ internal sealed partial class DocxLayoutEngine
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
                     double separatorTop = cursorTop + FootnoteSeparatorGapPoints;
                     bool ownsSeparatorFirstBearing = false;
+                    double separatorRuleFirstBearing = 0d;
                     if (deferredMixedEndnoteSource && separatorMeasurer is IDocxStaticTextMetricsProvider headMetrics)
                     {
                         // A fresh-page head keeps the source line's baseline floor,
@@ -382,7 +383,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                     if (!deferredMixedEndnoteSource && !partialMixedEndnoteHead && mixedEndnoteSourceFrame is not null &&
                         separatorMeasurer is IDocxStaticTextMetricsProvider fittingMetrics &&
-                        separatorMeasurer is IDocxLineMetricsProvider)
+                        separatorMeasurer is IDocxLineMetricsProvider fittingLineMetrics)
                     {
                         double ascender = fittingMetrics.MeasureWindowsAscender(endnoteMarkRun, endnoteMarkSize);
                         double covered = Math.Min(
@@ -397,9 +398,23 @@ internal sealed partial class DocxLayoutEngine
                             // Uncovered bearings keep their qualified origin/gap.
                             ownsSeparatorFirstBearing = Math.Max(ascender, sourceInset) <=
                                 DocxLineMetrics.WordAutoLineBaselineOffsetEm * endnoteMarkSize + covered;
+                            double hheaAscender = fittingLineMetrics.MeasureHheaAscender(endnoteMarkRun, endnoteMarkSize);
+                            double paintCoverage = ResolveContentHheaAscenderExcess(documentEndStories,
+                                separatorMeasurer, endnoteMarkSize);
+                            if (double.IsFinite(hheaAscender) && hheaAscender > 0d &&
+                                double.IsFinite(paintCoverage) && paintCoverage >= 0d)
+                            {
+                                // Rule painting retains the source first bearing
+                                // confirmed by line metrics. Content covers its
+                                // font bearing at the mark size; flow keeps its
+                                // existing source-size charge and content gap.
+                                separatorRuleFirstBearing = Math.Max(0d,
+                                    Math.Min(sourceInset, hheaAscender) -
+                                    DocxLineMetrics.WordAutoLineBaselineOffsetEm * endnoteMarkSize - paintCoverage);
+                            }
                         }
                     }
-                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
+                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight, ruleFirstBearingPoints: separatorRuleFirstBearing);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                     double endnoteContentGapPoints = 0d;
@@ -1342,7 +1357,10 @@ internal sealed partial class DocxLayoutEngine
     }
 
     // The excess needs both sides Tahoma-like (Calibri on either side of the mark/content pair holds the validated level while Tahoma on both raises it about 0.8): the caller meets the mark-side term above with the content-side term below in the minimum, so single-sided Tahoma keeps the legacy level.
-    private static double ResolveContentHheaAscenderExcess(IReadOnlyList<DocxRelatedStoryLayout>? contentStories, IDocxTextMeasurer? separatorMeasurer)
+    // Flow uses each source run's own size. Rule painting expresses the same
+    // source font bearing at its mark size, without changing the flow charge.
+    private static double ResolveContentHheaAscenderExcess(IReadOnlyList<DocxRelatedStoryLayout>? contentStories,
+        IDocxTextMeasurer? separatorMeasurer, double? referenceFontSizePoints = null)
     {
         if (contentStories is null || contentStories.Count == 0 || separatorMeasurer is not IDocxLineMetricsProvider metrics)
         {
@@ -1383,7 +1401,7 @@ internal sealed partial class DocxLayoutEngine
                     hasRuns = true;
                     if (runExcessEm > 0d)
                     {
-                        excessMax = System.Math.Max(excessMax, runExcessEm * EndnoteSeparatorHheaAscenderExcessSlope * runSize);
+                        excessMax = System.Math.Max(excessMax, runExcessEm * EndnoteSeparatorHheaAscenderExcessSlope * (referenceFontSizePoints ?? runSize));
                     }
                 }
             }
@@ -1583,7 +1601,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? separatorMeasurer,
         bool useSizeDrivenPlacementHeight = false,
         IReadOnlyList<DocxRelatedStoryLayout>? contentStoriesForHhea = null,
-        double? placementHeightOverride = null)
+        double? placementHeightOverride = null,
+        double ruleFirstBearingPoints = 0d)
     {
         double separatorHeight = ResolvePlacedStoryHeight(separatorLayout, page);
         if (useSizeDrivenPlacementHeight)
@@ -1594,7 +1613,7 @@ internal sealed partial class DocxLayoutEngine
         double separatorBottom = separatorTop - separatorHeight;
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(separatorLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
-        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: separatorBottom + ruleBottomOffsetPoints);
+        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: separatorBottom + ruleBottomOffsetPoints - ruleFirstBearingPoints);
         if (placementHeightOverride.HasValue)
         {
             placedSeparator = placedSeparator with { Height = separatorHeight };
