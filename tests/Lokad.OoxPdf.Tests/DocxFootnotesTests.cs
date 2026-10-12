@@ -3637,6 +3637,78 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxCustomNoteSuffixMetricsFollowActualSourceSpans()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool footnote in new[] { false, true })
+        foreach (string suffix in new[] { "*", "tail", string.Join(' ', Enumerable.Repeat(
+            "Adjacent source text remains at its authored size and wraps across lines.", 8)) })
+        foreach (double minimum in new[] { 8d, 18d })
+        {
+            DocxDocument source = ReadCustomNoteMetricFixture(footnote, 10d);
+            DocxDocument WithMinimum(double points) => source with
+            {
+                RelatedStories = source.RelatedStories.Select(s => s.IsNormalStoryType ? s with
+                {
+                    BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
+                    {
+                        Runs = [p.Runs[0] with { Text = "*" + suffix }, p.Runs[1]],
+                        LineSpacingPoints = points, Spacing = p.Spacing with { LineRuleValue = "atLeast",
+                            LineValue = (points * 20d).ToString(CultureInfo.InvariantCulture) },
+                    })).ToArray(),
+                } : s).ToArray(),
+            };
+            var kind = footnote ? DocxRelatedStoryKind.Footnote : DocxRelatedStoryKind.Endnote;
+            DocxDocument Correct(DocxDocument authored)
+            {
+                TestAssert.True(DocxNoteKerning.TryCreateDocument(authored, engine.Create(authored, measurer, default),
+                    out var adjusted, out var owners, default, kind), "The complete note retry splits an owned custom prefix.");
+                TestAssert.True(DocxNoteKerning.HasStableOwners(engine.Create(adjusted, measurer, default), owners, default, kind),
+                    "Wrapped adjacent source text preserves all canonical note owners.");
+                TestAssert.True(authored.BodyElements.Zip(adjusted.BodyElements).All(p => ReferenceEquals(p.First, p.Second)),
+                    "The suffix correction preserves authored body references.");
+                foreach (var pair in authored.RelatedStories.Zip(adjusted.RelatedStories).Where(p => p.First.IsNormalStoryType))
+                {
+                    DocxTextRun original = pair.First.Paragraphs[0].Runs[0];
+                    DocxTextRun prefix = pair.Second.Paragraphs[0].Runs[0], tail = pair.Second.Paragraphs[0].Runs[1];
+                    TestAssert.Equal(original with { Text = "*" }, prefix);
+                    TestAssert.Equal(suffix, tail.Text);
+                    TestAssert.Equal(original.SourceRunIndex, tail.SourceRunIndex);
+                    TestAssert.Equal(original.SourceTextOffsetInRun + 1, tail.SourceTextOffsetInRun);
+                    TestAssert.True(!tail.IsAutomaticNoteStoryMarker && !tail.PairKerningEnabled && tail.UseLogicalSizeForPdfAdvances,
+                        "Only the first character is protected; its adjacent text keeps its own advance policy and XML offset.");
+                    TestAssert.Equal("*" + suffix, original.Text);
+                }
+                return adjusted;
+            }
+            DocxLayout natural = engine.Create(Correct(WithMinimum(8d)), measurer, default);
+            DocxLayout bounded = engine.Create(Correct(WithMinimum(minimum)), measurer, default);
+            foreach (var pair in natural.RelatedStories.Where(s => s.Story.IsNormalStoryType)
+                .Zip(bounded.RelatedStories.Where(s => s.Story.IsNormalStoryType)))
+            {
+                TestAssert.Equal(pair.First.TextLines.Count, pair.Second.TextLines.Count);
+                double naturalBottom = 0d, boundedBottom = 0d;
+                bool suffixContinues = false, contentContinues = false;
+                foreach (var lines in pair.First.TextLines.Zip(pair.Second.TextLines))
+                {
+                    double expected = lines.First.Segments.Max(s => s.StyleRun.FontSize) * 1.2d;
+                    naturalBottom += expected; boundedBottom += Math.Max(minimum, expected);
+                    TestAssert.True(Math.Abs(lines.First.LineHeight!.Value - expected) < .000001d &&
+                        Math.Abs(lines.Second.LineHeight!.Value - Math.Max(minimum, expected)) < .000001d &&
+                        Math.Abs(lines.First.BaselineY + naturalBottom - lines.Second.BaselineY - boundedBottom) < .000001d,
+                        "Each wrapped line uses its present source sizes and retains its bottom bearing inside a minimum box.");
+                    TestAssert.True(ReferenceEquals(lines.Second.SourceParagraph, pair.Second.Story.Paragraphs[0]),
+                        "Metric views retain the complete source paragraph owner.");
+                    suffixContinues |= lines.First.IsFirstParagraphLine != true && lines.First.Segments.Any(s => s.StyleRun.FontSize == 12d);
+                    contentContinues |= lines.First.IsFirstParagraphLine != true && expected == 12d;
+                }
+                TestAssert.True(contentContinues && (suffix.Length < 20 || suffixContinues),
+                    "Long prefixes wrap before the smaller content continues with its own metric box.");
+            }
+        }
+    }
+
     public static void DocxCustomNoteLineMetricsRetainFixedRichScaledAndAmbiguousFallbacks()
     {
         var measurer = new NoteContentMetricMeasurer();
