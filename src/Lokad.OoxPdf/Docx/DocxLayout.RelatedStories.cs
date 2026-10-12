@@ -1692,8 +1692,9 @@ internal sealed partial class DocxLayoutEngine
             }
             seatedHeight += ResolvePlacedStoryHeight(headLayout, activePage);
         }
-        bool drawHeadSeparator = true;
-        if (inFlightNotes is not null)
+        bool sharesContinuationSeparator = plainSharedHead && continuationSeparatorLayout is { TextLines.Count: > 0 };
+        bool drawHeadSeparator = !sharesContinuationSeparator;
+        if (inFlightNotes is not null && !sharesContinuationSeparator)
         {
             drawHeadSeparator = false;
             foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
@@ -1714,17 +1715,22 @@ internal sealed partial class DocxLayoutEngine
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
         }
+        // A plain footer-frame batch owns one physical separator, matching its
+        // shared reserve. A continued first note supplies the full-width rule.
+        bool sharedSeparatorPlaced = drawHeadSeparator;
         double contentTop = storiesTop;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
             double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
-            if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0)
+            if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0 &&
+                (footerKeepOut is null || !sharedSeparatorPlaced))
             {
                 (DocxTextRun? continuationGapRun, double continuationGapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
                 double continuationGapPoints = ResolveSeparatorGapPoints(continuationGapRun, continuationGapFontSizePoints, separatorMeasurer);
                 (DocxPlacedRelatedStoryLayout placedContinuation, _) = PlaceContinuationSeparatorStory(activePage, activePageIndex, continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop + continuationGapPoints, separatorMeasurer, printScale);
                 activePlacedStories.Add(placedContinuation);
+                sharedSeparatorPlaced = true;
                 outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             }
 

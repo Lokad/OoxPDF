@@ -2781,6 +2781,9 @@ internal static class DocxFootnotesTests
                         $"Footnote glyphs clear selected footer text through the final drain: note={story.StoryLayout.Story.Id}, line={line.SourceLineIndex}, baseline={line.BaselineY}, footer={highestFooterBaseline}.");
                 TestAssert.True(page.PlacedRelatedStories.All(s => s.SeparatorY is null || s.SeparatorY > highestFooterBaseline),
                     "Head and continuation rules also stay above selected footer text.");
+                if (page.PlacedRelatedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType))
+                    TestAssert.True(page.PlacedRelatedStories.Count(s => s.SeparatorY is not null) == 1,
+                        "A shared footnote compartment emits one physical separator.");
             }
         }
         DocxLayout consumed = engine.Create(Compose(100, true), measurer, default);
