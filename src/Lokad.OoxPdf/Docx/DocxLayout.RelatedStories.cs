@@ -306,11 +306,22 @@ internal sealed partial class DocxLayoutEngine
                 // Plain source/static semantics qualify the same footer edge used
                 // by body flow. Scaled, dynamic and rich frames keep their fallback;
                 // fitting footer edges equal the margin.
-                Func<DocxLayoutPage, int, int, double>? endnoteFrameBottom =
-                    !document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote) &&
-                    HasPlainStaticNoteStories(document, activePage, separatorMeasurer, printScale, cancellationToken) &&
+                bool hasFootnotes = document.RelatedStories.Any(story =>
+                    story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
+                Func<DocxLayoutPage, int, int, double>? endnoteFrameBottom = null;
+                if (hasFootnotes)
+                {
+                    // Pages carrying both kinds share the physical footer edge.
+                    // Empty endnote continuations retain their existing fallback.
+                    if (footerKeepOut is { } footerBottom &&
+                        CanUsePlainFootnoteStaticFrame(document, activePage, separatorMeasurer, printScale, cancellationToken))
+                        endnoteFrameBottom = (p, number, count) => p.PlacedRelatedStories.Any(s =>
+                            s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                            ? footerBottom(p, number, count) : p.MarginBottom;
+                }
+                else if (HasPlainStaticNoteStories(document, activePage, separatorMeasurer, printScale, cancellationToken) &&
                     CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
-                        documentEndStories, cancellationToken, out _) ? footerKeepOut : null;
+                        documentEndStories, cancellationToken, out _)) endnoteFrameBottom = footerKeepOut;
                 double FrameBottom() => endnoteFrameBottom?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
                 if (CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
@@ -353,8 +364,6 @@ internal sealed partial class DocxLayoutEngine
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
-                bool hasFootnotes = document.RelatedStories.Any(story =>
-                    story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
                 // Mixed static frames share typography without admitting new
                 // paragraph-boundary or pagination corrections.
                 bool plainEndnoteFrame = plainEndnoteTypography &&

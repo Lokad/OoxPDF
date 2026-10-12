@@ -3799,6 +3799,77 @@ internal static class DocxFootnotesTests
             "Originally scaled mixed frames retain their fallback.");
     }
 
+    public static void DocxMixedFootnoteFrameClearsOverflowingFooterWithoutChangingTypographyOwner()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        foreach (bool custom in new[] { false, true })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), false, true, 6);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            var footnotes = layout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .Select(s => (Page: page, Index: index, Story: s))).ToArray();
+            TestAssert.Equal(1, footnotes.Length);
+            var foot = footnotes[0];
+            double footerTop = layout.FooterContentTopByPage[foot.Index];
+            TestAssert.True(footerTop > foot.Page.MarginBottom && foot.Story.TopY - foot.Story.Height >= footerTop - .000001d,
+                "A mixed footnote's complete physical box clears the selected overflowing footer edge.");
+            TestAssert.True(foot.Story.UsesPlainFootnoteFrame && foot.Story.ContentTopOffset == 0d &&
+                foot.Story.TextLines.All(l => ReferenceEquals(l.SourceParagraph, foot.Story.StoryLayout.Story.Paragraphs[0])),
+                "The shared physical frame retains the complete canonical footnote source.");
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out _, out _, default, DocxRelatedStoryKind.Footnote),
+                "Physical footer clearance retains the original mixed footnote typography fallback.");
+            TestAssert.True(DocxNoteKerning.TryCreateDocument(source, layout, out var adjusted, out var owners, default),
+                "Physical footer clearance preserves the existing endnote owner of the single successful typography retry.");
+            DocxLayout after = engine.Create(adjusted, measurer, default);
+            TestAssert.True(DocxNoteKerning.HasStableOwners(after, owners, default),
+                "Both typed note kinds retain complete canonical owners after the retry.");
+            var placed = after.Pages[foot.Index].PlacedRelatedStories.Single(s => s.StoryLayout.Story.IsNormalStoryType &&
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(placed.TopY == foot.Story.TopY && placed.Height == foot.Story.Height &&
+                ReferenceEquals(placed.StoryLayout.Story.Paragraphs[0], foot.Story.StoryLayout.Story.Paragraphs[0]),
+                "The endnote retry leaves the corrected complementary physical placement and source unchanged.");
+            DocxDocument continued = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 140), false, true, 6);
+            DocxLayout continuedLayout = engine.Create(continued, measurer, default);
+            var continuedEnds = continuedLayout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
+                .Select(s => (Index: index, Story: s))).ToArray();
+            TestAssert.True(continuedEnds.Length > 1 && continuedEnds[0].Index > foot.Index &&
+                continuedEnds.All(s => !s.Story.UsesPlainDocumentEndnoteTypography),
+                "An endnote head cannot use the footer band below its complementary footnote; empty continuations retain their fallback.");
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(continued, continuedLayout, out _, out _, default),
+                "Unadmitted continued mixed endnotes retain the established typography fallback.");
+        }
+    }
+
+    public static void DocxMixedFootnoteFrameRetainsRichComplementarySourceFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new NoteContentMetricMeasurer();
+        DocxDocument plain = ReadMixedNoteRetryFixture(true, 32);
+        DocxRelatedStory end = plain.RelatedStories.Single(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote);
+        DocxParagraph paragraph = end.Paragraphs[0];
+        foreach (DocxParagraph invalid in new[]
+        {
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } },
+            paragraph with { KeepRules = paragraph.KeepRules with { KeepLines = true } },
+            paragraph with { Spacing = paragraph.Spacing with { ContextualSpacing = true } },
+            paragraph with { Spacing = paragraph.Spacing with { AfterValue = "invalid" } },
+            paragraph with { Alignment = DocxTextAlignment.Center },
+        })
+        {
+            DocxDocument source = WithMixedNoteStaticFrame(plain with { RelatedStories = plain.RelatedStories.Select(s =>
+                ReferenceEquals(s, end) ? s with { BodyElements = [new DocxParagraphElement(invalid)] } : s).ToArray() }, false, true, 6);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories)
+                .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .All(s => !s.UsesPlainFootnoteFrame), $"The shared frame requires plain flow sources for both note kinds ({invalid.KeepRules.KeepNext}, {invalid.KeepRules.KeepLines}, {invalid.Spacing.ContextualSpacing}, {invalid.Spacing.AfterValue}, {invalid.Alignment}).");
+            TestAssert.True(!DocxNoteKerning.TryCreateDocument(source, layout, out _, out _, default, DocxRelatedStoryKind.Footnote),
+                "Rich complementary sources retain the original mixed footnote typography fallback.");
+        }
+    }
+
     private static DocxDocument WithMixedNoteStaticFrame(DocxDocument source, bool header, bool footer, int count,
         DocxParagraph? paragraph = null)
     {

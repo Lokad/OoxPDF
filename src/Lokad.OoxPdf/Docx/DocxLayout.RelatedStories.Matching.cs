@@ -274,7 +274,7 @@ internal sealed partial class DocxLayoutEngine
         int pageNumber, int pageCount, IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (DocxPlainBodyFrame.IsEligible(document)) return true;
-        if (!HasPlainFootnoteSources(document, cancellationToken, out _) ||
+        if (!HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Footnote, cancellationToken, out _) ||
             !HasPlainStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;
         return HasUsablePlainStaticNoteFrame(document, page, pageNumber, pageCount, measurer, printScale, cancellationToken);
     }
@@ -359,22 +359,23 @@ internal sealed partial class DocxLayoutEngine
             !page.PageSettings.HeaderBodyElementsByType.Values.Any(v => v.Count != 0) &&
             !page.PageSettings.FooterParagraphsByType.Values.Any(v => v.Count != 0) &&
             !page.PageSettings.FooterBodyElementsByType.Values.Any(v => v.Count != 0) ||
-            document.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote) ||
+            !HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Endnote, cancellationToken, out _, requirePlainParagraph: true) ||
             !HasPlainStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;
-        return HasPlainFootnoteSources(document, cancellationToken, out bool hasFootnotes) && hasFootnotes &&
+        return HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Footnote, cancellationToken, out bool hasFootnotes) && hasFootnotes &&
             HasUsablePlainStaticNoteFrame(document, page, 1, 1, measurer, printScale, cancellationToken);
     }
 
-    private static bool HasPlainFootnoteSources(DocxDocument document, CancellationToken cancellationToken,
-        out bool hasFootnotes)
+    private static bool HasPlainNoteFlowSources(DocxDocument document, DocxRelatedStoryKind kind,
+        CancellationToken cancellationToken, out bool hasSources, bool requirePlainParagraph = false)
     {
-        hasFootnotes = false;
-        foreach (DocxRelatedStory story in document.RelatedStories.Where(s => s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Footnote))
+        hasSources = false;
+        foreach (DocxRelatedStory story in document.RelatedStories.Where(s => s.IsNormalStoryType && s.Kind == kind))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            hasFootnotes = true;
+            hasSources = true;
             if (story.BodyElements.Count != 1 || story.BodyElements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !IsPlainNoteFlowParagraph(paragraph)) return false;
+                !IsPlainNoteFlowParagraph(paragraph) ||
+                requirePlainParagraph && !DocxPlainBodyFrame.IsPlainParagraph(paragraph)) return false;
         }
         return true;
     }

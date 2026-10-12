@@ -21,6 +21,10 @@ internal static class DocxNoteKerning
         cancellationToken.ThrowIfCancellationRequested();
         if (kind is not (DocxRelatedStoryKind.Endnote or DocxRelatedStoryKind.Footnote) ||
             !source.RelatedStories.Any(s => s.IsNormalStoryType && s.Kind == kind)) return false;
+        // A physical mixed-note frame does not admit a new footnote
+        // typography retry; its qualified endnote retry remains independent.
+        if (kind == DocxRelatedStoryKind.Footnote && source.RelatedStories.Any(s =>
+            s.IsNormalStoryType && s.Kind == DocxRelatedStoryKind.Endnote)) return false;
         if (!HasCompleteOtherNoteOwners(layout, kind, cancellationToken, source.RelatedStories)) return false;
         if (!TryResolvePages(layout, kind, out var owners, cancellationToken)) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
