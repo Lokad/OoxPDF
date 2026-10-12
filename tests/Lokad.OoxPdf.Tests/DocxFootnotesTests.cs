@@ -4185,6 +4185,43 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxPhysicalFootnoteHeadUsesSharedSourceGapAndRetainsFallbacks()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        foreach (bool custom in new[] { false, true })
+        foreach (bool matching in new[] { false, true })
+        foreach (int footerLines in new[] { 0, 1, 6 })
+        foreach (int footRepeats in new[] { 0, 96, 100, 104, 120 })
+        {
+            var measurer = new NoteContentMetricMeasurer(10.8d, 1.15d,
+                matching ? 1.15d : 1.220703125d, useStrikeoutMetrics: true);
+            DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32, footRepeats),
+                false, footerLines != 0, Math.Max(1, footerLines));
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayoutPage page = layout.Pages.First(p => p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote));
+            DocxPlacedRelatedStoryLayout foot = page.PlacedRelatedStories.First(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote);
+            DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
+                s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            // Word's Arial separator with Calibri content has a 16.44pt
+            // rule-to-first-glyph distance. The unframed path keeps its existing
+            // 17.15pt distance; matching metrics retain the mark-gap floor.
+            double expected = matching ? 16.31d : footerLines == 0 ? 17.15d : 16.44d;
+            double actual = separator.SeparatorY!.Value - foot.TextLines[0].BaselineY;
+            TestAssert.True(Math.Abs(actual - expected) < .02d,
+                $"Physical head source gap and fallback: {actual}, custom={custom}, matching={matching}, footer={footerLines}.");
+            DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                s.Story.Kind == DocxRelatedStoryKind.Footnote);
+            TestAssert.True(layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                .SelectMany(s => s.TextLines).Select(l => l.SourceLineIndex).SequenceEqual(
+                    canonical.TextLines.Select(l => l.SourceLineIndex)),
+                "Physical head placement retains every canonical source owner and order.");
+        }
+    }
+
     public static void DocxDeferredMixedEndnoteKeepsOriginalPlainSourceAdmissionAndOwners()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -4688,7 +4725,8 @@ internal static class DocxFootnotesTests
     }
 
     private sealed class NoteContentMetricMeasurer(double? separatorWindowsAscender = null,
-        double? separatorSingleLineEm = null, double? contentSingleLineEm = null) : IDocxTextMeasurer, IDocxLineMetricsProvider,
+        double? separatorSingleLineEm = null, double? contentSingleLineEm = null,
+        bool useStrikeoutMetrics = false) : IDocxTextMeasurer, IDocxLineMetricsProvider,
         IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
@@ -4698,6 +4736,12 @@ internal static class DocxFootnotesTests
         {
             value = (string.IsNullOrEmpty(run?.Text) ? separatorSingleLineEm : contentSingleLineEm) ?? 0d;
             return value > 0d;
+        }
+        public bool TryGetStrikeoutRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+        {
+            positionEm = .2587890625d;
+            thicknessEm = .05d;
+            return useStrikeoutMetrics && string.IsNullOrEmpty(run?.Text);
         }
         public double MeasureHheaLineHeight(DocxTextRun? run, double fontSize) => fontSize * 1.2d;
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize * .9d;

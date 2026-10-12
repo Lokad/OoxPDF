@@ -198,7 +198,7 @@ internal sealed partial class DocxLayoutEngine
         if (footnotes.Length == 0) return fallbackTop;
         double candidateTop = ResolveEndnoteStartTop(page, placedStories
             .Where(story => story.StoryLayout.Story.Kind != DocxRelatedStoryKind.Footnote).ToArray(), printScale);
-        if (CanUseNominalDocumentEndnoteFlow(page, separator, printScale, endnotes))
+        if (CanUseNominalNoteSeparatorFlow(page, separator, printScale, endnotes))
         {
             candidateTop -= ResolveTrailingBodyAfterSpacing(page);
         }
@@ -253,7 +253,7 @@ internal sealed partial class DocxLayoutEngine
         return top;
     }
 
-    private static bool CanUseNominalDocumentEndnoteFlow(
+    private static bool CanUseNominalNoteSeparatorFlow(
         DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale,
         IReadOnlyList<DocxRelatedStoryLayout> contentStories)
     {
@@ -358,7 +358,7 @@ internal sealed partial class DocxLayoutEngine
         out double contentHeight)
     {
         contentHeight = 0d;
-        if (stories.Count == 0 || !CanUseNominalDocumentEndnoteFlow(page, separator, printScale, stories)) return false;
+        if (stories.Count == 0 || !CanUseNominalNoteSeparatorFlow(page, separator, printScale, stories)) return false;
         DocxRelatedStoryLayout? previous = null;
         foreach (DocxRelatedStoryLayout story in stories)
         {
@@ -439,7 +439,7 @@ internal sealed partial class DocxLayoutEngine
         // The empty separator carries eight latent points in the legacy story
         // layout. Nominal document-end flow uses the last body paragraph's actual
         // after-spacing instead; separator paragraph spacing is ignored by Office.
-        return CanUseNominalDocumentEndnoteFlow(page, separator, printScale, contentStories)
+        return CanUseNominalNoteSeparatorFlow(page, separator, printScale, contentStories)
             ? Math.Max(0d, height - DocxDefaults.DefaultParagraphAfterSpacingPoints) : height;
     }
 

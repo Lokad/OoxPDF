@@ -323,7 +323,7 @@ internal sealed partial class DocxLayoutEngine
                     CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
                         documentEndStories, cancellationToken, out _)) endnoteFrameBottom = footerKeepOut;
                 double FrameBottom() => endnoteFrameBottom?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
-                if (CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
+                if (CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
                     cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
                 }
@@ -363,7 +363,7 @@ internal sealed partial class DocxLayoutEngine
                     deferredMixedEndnoteSource = mixedEndnoteSourceFrame is not null && activePageIndex != endnoteSourcePageIndex;
                     double? nominalSeparatorHeight = deferredMixedEndnoteSource
                         ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, mixedEndnoteSourceFrame!, separatorMeasurer, documentEndStories, printScale)
-                        : CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
+                        : CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
                     double separatorTop = cursorTop + FootnoteSeparatorGapPoints;
                     bool usesSourceFirstInset = false;
@@ -389,13 +389,9 @@ internal sealed partial class DocxLayoutEngine
                         endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkRun, endnoteMarkSize, separatorMeasurer));
                     }
 
-                    // The admitted first inset already owns the separator's height
-                    // deficit. Consume that contribution once, keeping the mark gap
-                    // as the lower bound for matching content metrics.
-                    if (usesSourceFirstInset)
-                        endnoteContentGapPoints -= ResolveSeparatorSingleLineDeficitCorrection(endnoteMarkRun, endnoteMarkSize, separatorMeasurer);
-
-                    cursorTop = separatorBottom - System.Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints);
+                    cursorTop = separatorBottom - (usesSourceFirstInset
+                        ? ResolveSourceInsetNoteContentGap(endnoteContentGapPoints, endnoteMarkRun, endnoteMarkSize, separatorMeasurer)
+                        : Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints));
                 }
                 double completeEndnoteHeight = 0d;
                 bool plainEndnoteTypography = CanUsePlainDocumentEndnoteFrame(document, activePage,
@@ -1427,6 +1423,13 @@ internal sealed partial class DocxLayoutEngine
         return ascenderDeficitEm * EndnoteSeparatorSmallAscSupplementSlope * smallSizePoints;
     }
 
+    // Source-owned heads consume the separator-height deficit once. The mark
+    // gap remains the floor for matching content metrics and metric fallbacks.
+    private static double ResolveSourceInsetNoteContentGap(double contentGapPoints,
+        DocxTextRun? markRun, double markFontSizePoints, IDocxTextMeasurer? separatorMeasurer) =>
+        Math.Max(ResolveSeparatorGapPoints(markRun, markFontSizePoints, separatorMeasurer),
+            contentGapPoints - ResolveSeparatorSingleLineDeficitCorrection(markRun, markFontSizePoints, separatorMeasurer));
+
     private static double ResolveFootnoteContentGapPoints(
         IReadOnlyList<DocxTextLineLayout> contentTextLines,
         DocxTextRun? markRun,
@@ -1732,6 +1735,10 @@ internal sealed partial class DocxLayoutEngine
         (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
         double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapRun, gapFontSizePoints, separatorMeasurer);
+        if (footerKeepOut is not null && !continuesHead && CanUseNominalNoteSeparatorFlow(activePage,
+            separatorLayout, printScale, footnoteStories.Select(s => s.StoryLayout).ToArray()))
+            footnoteContentGapPoints = ResolveSourceInsetNoteContentGap(footnoteContentGapPoints,
+                gapRun, gapFontSizePoints, separatorMeasurer);
         double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
         double storiesTop = cursorTop;
         double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, footnoteStories[0].StoryLayout, headerKeepOut);
