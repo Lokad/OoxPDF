@@ -4072,6 +4072,79 @@ internal static class DocxFootnotesTests
         }
     }
 
+    public static void DocxDeferredMixedEndnoteUsesResolvedSeparatorFirstLineOrigin()
+    {
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var witnessed = new HashSet<(double? Ascent, bool Custom, int Size, bool Registered)>();
+        foreach (double? ascent in new double?[] { null, 12d })
+        foreach (bool custom in new[] { false, true })
+        foreach (int size in new[] { 8, 12, 16 })
+        foreach (bool registered in new[] { false, true })
+        foreach (int footerLines in new[] { 1, 6 })
+        foreach (int footRepeats in new[] { 96, 100, 104, 120 })
+        {
+            var measurer = new NoteContentMetricMeasurer(ascent);
+            DocxDocument source = ReadMixedNoteRetryFixture(custom, 32, footRepeats, (_, settings, parts) =>
+            {
+                XDocument notes = XDocument.Parse(parts["word/endnotes.xml"]);
+                XElement separator = notes.Root!.Elements(NoteWord + "endnote").Single(n =>
+                    (string?)n.Attribute(NoteWord + "type") == "separator");
+                XElement properties = new(NoteWord + "rPr", new XElement(NoteWord + "sz",
+                    new XAttribute(NoteWord + "val", size * 2)));
+                separator.Element(NoteWord + "p")!.Element(NoteWord + "pPr")!.Add(new XElement(properties));
+                separator.Descendants(NoteWord + "r").Single().AddFirst(new XElement(properties));
+                parts["word/endnotes.xml"] = notes.ToString();
+                if (registered) settings.Root!.Add(new XElement(NoteWord + "endnotePr",
+                    new XElement(NoteWord + "endnote", new XAttribute(NoteWord + "id", "-1"))));
+            });
+            source = WithMixedNoteStaticFrame(source, false, true, footerLines);
+            DocxLayout layout = engine.Create(source, measurer, default);
+            DocxLayoutPage page = layout.Pages.First(p => p.PlacedRelatedStories.Any(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+            if (page.Items.Count != 0) continue;
+            witnessed.Add((ascent, custom, size, registered));
+            DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote &&
+                s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+            DocxTextLineLayout first = separator.StoryLayout.TextLines.Single();
+            TestAssert.Equal(registered ? (double)size : 12d, first.Segments[0].StyleRun.FontSize);
+            DocxTextRun mark = first.Segments[0].StyleRun;
+            TestAssert.True(Math.Abs(separator.TopY - separator.Height -
+                (page.Height - page.MarginTop - Math.Max(-first.BaselineY,
+                    measurer.MeasureWindowsAscender(mark, mark.FontSize)))) < .000001d,
+                "The head baseline preserves the source floor and the visible mark's measured first ascent.");
+            var ends = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s =>
+                s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote).ToArray();
+            TestAssert.True(ends.All(s => s.UsesPlainDocumentEndnoteTypography && !s.UsesCompleteDocumentEndnoteFlow),
+                "Source origin placement retains the existing mixed typography and paragraph-boundary policy.");
+            TestAssert.True(ends.SelectMany(s => s.TextLines).Select(l => l.SourceLineIndex).SequenceEqual(
+                layout.RelatedStories.Single(s => s.Story.IsNormalStoryType &&
+                    s.Story.Kind == DocxRelatedStoryKind.Endnote).TextLines.Select(l => l.SourceLineIndex)),
+                "Every original canonical line retains its source owner and order.");
+        }
+        TestAssert.Equal(24, witnessed.Count);
+        foreach (double unavailable in new[] { 0d, -1d })
+        {
+            int fallbacks = 0;
+            foreach (int footerLines in new[] { 1, 6 })
+            foreach (int footRepeats in new[] { 96, 100, 104, 120 })
+            {
+                DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(true, 32, footRepeats),
+                    false, true, footerLines);
+                DocxLayout layout = engine.Create(source, new NoteContentMetricMeasurer(unavailable), default);
+                DocxLayoutPage page = layout.Pages.First(p => p.PlacedRelatedStories.Any(s =>
+                    s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote));
+                if (page.Items.Count != 0) continue;
+                fallbacks++;
+                DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(s =>
+                    s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote &&
+                    s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+                TestAssert.Equal(page.Height - page.MarginTop + 3d, separator.TopY);
+            }
+            TestAssert.True(fallbacks > 0, "Unavailable separator metrics retain witnessed deferred-head placement.");
+        }
+    }
+
     public static void DocxDeferredMixedEndnoteKeepsOriginalPlainSourceAdmissionAndOwners()
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
@@ -4402,7 +4475,8 @@ internal static class DocxFootnotesTests
             HeaderBodyElementsByType = headerElements, FooterBodyElementsByType = footerElements };
     }
 
-    private static DocxDocument ReadMixedNoteRetryFixture(bool custom, int repeats, int footnoteRepeats = 0)
+    private static DocxDocument ReadMixedNoteRetryFixture(bool custom, int repeats, int footnoteRepeats = 0,
+        Action<XDocument, XDocument, Dictionary<string, string>>? modify = null)
     {
         return ReadSectionNumberingFixture("footnote", (document, settings, parts) =>
         {
@@ -4447,6 +4521,7 @@ internal static class DocxFootnotesTests
             types.Root!.Add(new XElement(types.Root.Name.Namespace + "Override", new XAttribute("PartName", "/word/endnotes.xml"),
                 new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml")));
             parts["[Content_Types].xml"] = types.ToString();
+            modify?.Invoke(document, settings, parts);
         });
     }
 
@@ -4572,7 +4647,7 @@ internal static class DocxFootnotesTests
         } : s).ToArray() };
     }
 
-    private sealed class NoteContentMetricMeasurer : IDocxTextMeasurer, IDocxLineMetricsProvider,
+    private sealed class NoteContentMetricMeasurer(double? separatorWindowsAscender = null) : IDocxTextMeasurer, IDocxLineMetricsProvider,
         IDocxStaticTextMetricsProvider, IDocxHheaLineGapProvider, IDocxHheaDescenderProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * fontSize * .5d;
@@ -4581,7 +4656,8 @@ internal static class DocxFootnotesTests
         public double MeasureHheaAscender(DocxTextRun? run, double fontSize) => fontSize * .9d;
         public double MeasureHheaDescender(DocxTextRun? run, double fontSize) => fontSize * .2d;
         public double MeasureHheaLineGap(DocxTextRun? run, double fontSize) => fontSize * .1d;
-        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * .9d;
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) =>
+            string.IsNullOrEmpty(run?.Text) && separatorWindowsAscender is double value ? value : fontSize * .9d;
         public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize * .2d;
     }
 

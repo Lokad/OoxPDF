@@ -365,7 +365,20 @@ internal sealed partial class DocxLayoutEngine
                         ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, mixedEndnoteSourceFrame!, separatorMeasurer, documentEndStories, printScale)
                         : CanUseNominalDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
-                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
+                    double separatorTop = cursorTop + FootnoteSeparatorGapPoints;
+                    if (deferredMixedEndnoteSource && separatorMeasurer is IDocxStaticTextMetricsProvider headMetrics)
+                    {
+                        // A fresh-page head keeps the source line's baseline floor,
+                        // enlarged by the visible mark's measured ascent. Missing
+                        // metrics retain the existing ride.
+                        double firstInset = headMetrics.MeasureWindowsAscender(endnoteMarkRun, endnoteMarkSize);
+                        if (firstInset > 0d && double.IsFinite(firstInset))
+                        {
+                            firstInset = Math.Max(firstInset, -documentEndSeparatorLayout.TextLines[0].BaselineY);
+                            separatorTop = cursorTop + nominalSeparatorHeight!.Value - firstInset;
+                        }
+                    }
+                    (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                     double endnoteContentGapPoints = 0d;
