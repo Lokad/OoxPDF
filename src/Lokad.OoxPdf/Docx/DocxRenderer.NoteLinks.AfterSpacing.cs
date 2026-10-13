@@ -37,7 +37,10 @@ internal sealed partial class DocxRenderer
             {
                 var first = firstLines[paragraph];
                 double before = Math.Max(0d, (first.AppliedBeforeSpacing ?? 0d) - (first.PendingAfterSpacing ?? 0d));
-                candidates[paragraph] = new NoteReferenceSpacing(before, paragraph.SpacingAfterPoints, line);
+                // Resolved paragraph gaps are recorded on the first line;
+                // the final visible line owns the after-gap's hit area.
+                candidates[paragraph] = new NoteReferenceSpacing(before,
+                    first.ParagraphAfterSpacing ?? paragraph.SpacingAfterPoints, line);
             }
         }
         return candidates;
