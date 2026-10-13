@@ -3225,3 +3225,24 @@ another build or broad suite/corpus. Strict Release has zero warnings/errors.
 Existing thresholds, version0.1.5, release deferral and safety/work/publication
 limits remain. Manual/log geometry and the rejected minor-stroke rollout stay
 explicit; no new full-catalogue or package qualification is claimed.
+
+## RV06-L251: empty manual-layout metadata
+
+Runtime **c7a06a01** distinguishes raw manual-layout presence from authored
+coordinates. Empty nodes and target/mode metadata preserve automatic line-plot
+measurement. Explicit/partial/malformed coordinates retain their existing path;
+raw source metadata stays inspectable. Twelve independent Office controls qualify
+eight improvements/four exact guards across metadata, font/frame widths and
+source-bound/reversed axes. One malformed coordinate is candidate-only exact.
+All131 text states,26 font programs/275 glyphs and1081 paint/path-topology states
+are protected. Empty metadata produces exact automatic PDFs. The single changed
+inherited source is canonically equivalent to the new control, with identical
+independent Office page rasters; three neighboring PDFs stay exact.
+
+One frozen artifact passes19 capability-specific checks. Root transfer verifies
+398 source identities/17 assets and four CLI smoke PDFs without a rebuild or
+repeated suite/corpus. Strict Release has zero warnings/errors. L250's same-DLL
+Linux checks and L247's broader corpus remain the recent milestones; no new
+full-catalogue/platform/package claim is made. Existing thresholds,0.1.5/release
+deferral and safety/work/publication limits remain. L249 remains rejected pending
+reassessment of linear-scale source paint; logarithmic geometry remains separate.
