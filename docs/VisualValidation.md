@@ -3171,3 +3171,25 @@ two SourceLink warnings. Seven source blobs/raw identities match. The exact
 frozen rendering test fails the parent at its visible label assertion. No new
 full-catalogue or complete Office parity claim. Version0.1.5, release deferral,
 safe managed code and existing bounds/work/publication limits remain.
+
+## RV06-L248: complete owners for wrapped-marker kerning
+
+Runtime **d31c0b67** reuses the complete source-marker ownership scope for the
+existing wrapped Calibri pair-normalization retry and each-page numbering.
+Existing font, size, threshold, leading and reserve admissions stay in force.
+Fourteen independent Word controls cover raw default/zero/unmet/met/mixed
+thresholds, early/later markers, spacing and decimalZero labels. Thirteen
+corrections improve both raster metrics on all26 affected pages; the met guard
+stays exact. Source-authored words/order/pages,28 font programs,1064 shared glyphs,
+112 graphics and56 distinct same-page note links/vertical hit areas are protected.
+
+One qualified artifact is reused. Its prior1257-method prototype sweep and647
+PDF conversions remain valid:645 outputs stay exact and the two changed inherited
+dependencies have fresh Word qualification. Twenty-eight capability-specific
+checks pass. Root transfer verifies398 source identities and17 identical build
+assets; four CLI smoke conversions match frozen PDFs without another root build,
+suite or corpus pass. Git checkout line endings explain65 raw source-hash
+differences; Git blobs and canonical source bytes match. Strict Release has zero
+warnings/errors. L247 provides the recent broader/Linux milestone; no new
+cross-platform/package qualification is claimed here. Visual thresholds,
+version0.1.5, release deferral and existing safety/work/publication limits remain.
