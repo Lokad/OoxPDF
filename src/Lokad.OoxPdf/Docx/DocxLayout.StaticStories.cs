@@ -459,7 +459,7 @@ internal sealed partial class DocxLayoutEngine
                             images.Add(new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth,
-                                staticBaselineY - placed.Height,
+                                staticSingleLineHeight.HasValue ? staticBaselineY : staticBaselineY - placed.Height,
                                 placed.Width,
                                 placed.Height,
                                 pageNumber,
@@ -533,8 +533,10 @@ internal sealed partial class DocxLayoutEngine
             paragraphIndex++;
         }
 
+        bool canAnchorInlineImages = images.All(image => image.Image.SourceRunIndex >= 0) &&
+            lines.All(line => line.SingleLineHeight.HasValue);
         if (!isHeader &&
-            images.Count == 0 &&
+            (images.Count == 0 || canAnchorInlineImages) &&
             boxes.Count == 0 &&
             tableRows.Count == 0 &&
             lines.Any(line => line.SingleLineHeight.HasValue))
@@ -545,14 +547,20 @@ internal sealed partial class DocxLayoutEngine
             // block bottom-anchors its trailing cursor (content plus trailing after
             // spacing) at the footer distance (residuals minus 0.11, minus 0.15,
             // minus 0.11, minus 0.02). The shift preserves every internal pitch (all
-            // proven above) and only translates the block; stories with images,
+            // proven above) and only translates the block; standalone images,
             // textboxes, tables, or exact/atLeast lines keep legacy placement
             // (unprobed there), as do explicit-rule single lines by construction of
             // the gate below combined with the unchanged legacy path above.
+            // Affined images in naturally measured lines share the baseline and
+            // block translation. Fixed/legacy frames retain separate placement.
             double footerShift = startY - (cursorY - pendingSpacingAfter);
             for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
             {
                 lines[lineIndex] = lines[lineIndex] with { BaselineY = lines[lineIndex].BaselineY + footerShift };
+            }
+            for (int imageIndex = 0; imageIndex < images.Count; imageIndex++)
+            {
+                images[imageIndex] = images[imageIndex] with { Y = images[imageIndex].Y + footerShift };
             }
         }
 

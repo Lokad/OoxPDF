@@ -12,6 +12,60 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxImagesTests
 {
+    public static void DocxStaticStoryInlineImagesShareTheTextBaseline()
+    {
+        foreach (string story in new[] { "header", "footer" })
+        foreach (string kind in new[] { "svg", "static-image" })
+        {
+            string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", $"docx-{kind}-{story}.docx"));
+            DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            double[] baselines = Regex.Matches(page.Content, @"[-\d.]+ 0 0 [-\d.]+ [-\d.]+ ([-\d.]+) Tm")
+                .Select(match => double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
+            double baseline = story == "header" ? baselines.Max() : baselines.Min();
+            Match placement = kind == "svg"
+                ? Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) 144 72 re\s+W\s+n")
+                : Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) cm\s*/Im1 Do");
+            TestAssert.True(placement.Success, "Expected the authored static-story picture.");
+            double bottom = double.Parse(placement.Groups[1].Value, CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs(bottom - baseline) < .01d, "Static inline image bottom must share its surrounding text baseline.");
+            TestAssert.True(baseline > 36d, "Measured footer content must remain above its authored footer distance.");
+            TestAssert.Contains("Following body.", DocxPageFootnoteNumberingTests.DecodeText(page));
+        }
+    }
+
+    public static void DocxStaticStoryInlineImagesRetainFixedFrameFallback()
+    {
+        foreach (string name in new[] { "docx-static-fixed-footer", "docx-static-mixed-fixed-footer" })
+        {
+            string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name + ".docx"));
+            DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            Match viewport = Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) 144 72 re\s+W\s+n");
+            TestAssert.True(viewport.Success, "Expected the authored fixed-frame picture.");
+            double top = double.Parse(viewport.Groups[1].Value, CultureInfo.InvariantCulture) + 72d;
+            double[] baselines = Regex.Matches(page.Content, @"[-\d.]+ 0 0 [-\d.]+ [-\d.]+ ([-\d.]+) Tm")
+                .Select(match => double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
+            TestAssert.True(baselines.Any(baseline => Math.Abs(baseline - top) < .01d), "Fixed line frames retain their existing image placement until clipping is qualified.");
+        }
+    }
+
+    public static void DocxSvgRepeatedPicturePaintsEverySharedPlacement()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-svg-repeated.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxInlineImage[] images = document.Paragraphs.SelectMany(paragraph => paragraph.Images).ToArray();
+        TestAssert.Equal(2, images.Length);
+        TestAssert.Equal(images[0].PartName, images[1].PartName);
+        PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, null, CancellationToken.None).Single();
+        TestAssert.Equal(0, page.Images.Count);
+        TestAssert.Equal(2, Regex.Matches(page.Content, "0 0.667 0.4 rg").Count);
+        TestAssert.Equal(2, Regex.Matches(DocxPageFootnoteNumberingTests.DecodeText(page), "Before").Count);
+    }
+
     public static void DocxSvgImagePrefersNativeRelationshipAndPreservesInlineFlow()
     {
         string input = WriteSvgDocxFixture("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><rect x=\"10\" y=\"8\" width=\"100\" height=\"44\" fill=\"#00AA66\"/></svg>");
