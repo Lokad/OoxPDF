@@ -4,6 +4,8 @@ This document tracks implemented rendering behavior. Anything not listed as supp
 
 ## PPTX
 
+- Line-chart minor units default to selected major/5; authored units take precedence. Present major-gridline elements reserve overlapping levels even with hidden paint; absent elements permit coincident minors. Automatic major/label fit and source-origin/boundary coverage remain partial; other chart kinds retain their existing minor path.
+
 - Generated numeric axis ticks reuse the existing 100000 chart expansion cap and cumulative chart-range budget. Dense expansion rejects before allocation; invalid bounds and non-progressing floating-point additions reject through the existing limit exception.
 
 Supported:

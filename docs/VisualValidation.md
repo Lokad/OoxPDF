@@ -2970,3 +2970,29 @@ heap accounting. Safe managed code, cancellation, existing resource/work/cache/
 staging/publication bounds and 0.1.5 release deferral hold. Office source controls
 continue to show minor-interval/major-level/boundary gaps; rendering work resumes
 as L241 without transferring a parity claim.
+
+
+### RV06-L241: line-chart minor subdivisions and source presence
+
+Frozen **f3802d82**, root **17087483**, derives omitted minor units from the
+selected major interval divided by five, with authored minor precedence. Sorted
+bounded levels merge in linear work. Existing scene major-element presence owns
+overlap exclusion: hidden/noFill majors reserve levels; absent majors permit
+coincident minor lines. Horizontal painting has one shared owner. Other chart
+kinds retain their prior path; the broad Cartesian prototype worsens a negative
+column by .658452 MAE and two area cases, so it is rejected.
+
+Forty-one Office controls qualify twelve changed PDFs: eleven improved raster
+pages/29 exact/one new partial crossing tradeoff (+.002852 MAE/.000030 changed
+pixel ratio). All 553 text operations/3328 non-minor graphics operations/88 font
+program checks and stroke properties stay exact; only twelve grouped minor paths
+change. Five portable methods include six emitted-PDF source compositions. Strict
+Windows Release and 405 chart/201 OOXML checks pass; nineteen Linux checks pass
+with two archive SourceLink warnings. The exact frozen emitted-geometry regression
+fails the accepted parent and two ordinary tick guards pass. Public252/retained158
+stay exact. Frozen/root each reproduce 451 qualified PDF check executions
+(41+252+158, overlapping inputs); eight root DOCX guards and seven source blobs/raw
+hashes match. No public gate/full-catalogue/parity claim is changed. L240 admission/
+work bounds, safe managed code and existing cancellation/cache/staging/publication
+constraints remain; release stays deferred at 0.1.5. Automatic major/label fit,
+source origin/boundary/crossing and minor width/dash residuals continue as L242.
