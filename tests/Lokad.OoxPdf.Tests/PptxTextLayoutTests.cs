@@ -2236,14 +2236,34 @@ internal static class PptxTextLayoutTests
         TestAssert.Contains(" 24 Tf", pdf);
     }
 
+    public static void PptxMissingKerningUsesIndependentOfficeThresholdBelowAndAtEquality()
+    {
+        // Independent Office pairs agree for omitted/explicit-12pt thresholds
+        // at 10/12/18pt across Cambria Math, Calibri, Arial and Times New Roman.
+        // Synthetic pair data witnesses the threshold without installed fonts.
+        foreach (string wrap in new[] { "none", "square" })
+        foreach (int size in new[] { 10, 12, 18, 24 })
+        {
+            byte[] absent = RenderNoWrapKerningPdf(NoWrapKerningParagraph(null, fontSize: size), $"wrap=\"{wrap}\"");
+            byte[] explicitThreshold = RenderNoWrapKerningPdf(NoWrapKerningParagraph("1200", fontSize: size), $"wrap=\"{wrap}\"");
+            byte[] disabled = RenderNoWrapKerningPdf(NoWrapKerningParagraph("10000", fontSize: size), $"wrap=\"{wrap}\"");
+            TestAssert.True(absent.SequenceEqual(explicitThreshold),
+                $"Omitted kerning agrees with the independent Office threshold: size={size}, wrap={wrap}.");
+            TestAssert.True(size < 12 ? absent.SequenceEqual(disabled) : !absent.SequenceEqual(disabled),
+                "The source threshold is inactive below 12pt and active at equality.");
+        }
+    }
+
     public static void PptxNoWrapZeroKerningKeepsNominalGlyphAdvances()
     {
         byte[] zero = RenderNoWrapKerningPdf(NoWrapKerningParagraph("0"));
         byte[] disabled = RenderNoWrapKerningPdf(NoWrapKerningParagraph("10000"));
         byte[] absent = RenderNoWrapKerningPdf(NoWrapKerningParagraph(null));
         byte[] active = RenderNoWrapKerningPdf(NoWrapKerningParagraph("1"));
-        TestAssert.True(zero.SequenceEqual(disabled) && zero.SequenceEqual(absent),
-            "Admitted zero must retain nominal advances and match absent/disabled kerning exactly.");
+        TestAssert.True(zero.SequenceEqual(disabled),
+            "Admitted explicit zero retains nominal advances and matches disabled kerning.");
+        TestAssert.True(absent.SequenceEqual(active),
+            "Office's omitted 12pt threshold is active for this 24pt source.");
         TestAssert.True(!zero.SequenceEqual(active), "Positive active kerning must remain distinct.");
         string zeroArray = Regex.Matches(Encoding.ASCII.GetString(zero), @"\[[^\]\r\n]*\] TJ").Single().Value;
         string activeArray = Regex.Matches(Encoding.ASCII.GetString(active), @"\[[^\]\r\n]*\] TJ").Single().Value;
@@ -2292,11 +2312,11 @@ internal static class PptxTextLayoutTests
         }
     }
 
-    private static string NoWrapKerningParagraph(string? direct, string? inherited = null, string alignment = "l", string bullet = "")
+    private static string NoWrapKerningParagraph(string? direct, string? inherited = null, string alignment = "l", string bullet = "", int fontSize = 24)
     {
         string kern = direct is null ? "" : $" kern=\"{direct}\"";
         string defaults = inherited is null ? "" : $"<a:defRPr kern=\"{inherited}\"/>";
-        return $"<a:p><a:pPr algn=\"{alignment}\">{bullet}{defaults}</a:pPr><a:r><a:rPr sz=\"2400\"{kern}><a:latin typeface=\"TestFont\"/></a:rPr><a:t>ABAB</a:t></a:r></a:p>";
+        return $"<a:p><a:pPr algn=\"{alignment}\">{bullet}{defaults}</a:pPr><a:r><a:rPr sz=\"{fontSize * 100}\"{kern}><a:latin typeface=\"TestFont\"/></a:rPr><a:t>ABAB</a:t></a:r></a:p>";
     }
 
     private static byte[] RenderNoWrapKerningPdf(string paragraphs, string body = "wrap=\"none\"", string autofit = "<a:noAutofit/>", string shape = "")

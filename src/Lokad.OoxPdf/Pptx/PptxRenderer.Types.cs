@@ -46,6 +46,7 @@ internal sealed partial class PptxRenderer
         public const double OfficeSyntheticBoldAdvanceTighteningEm = 0.007d;
         public const double OfficeSyntheticBoldItalicCharacterSpacingEm = 0.01545d;
         public const double OfficeHighlightContinuationCharacterSpacingEm = -0.003d;
+        public const double OfficeDefaultKerningMinimumFontSizePoints = 12d;
         public const double OfficeAutofitNumberedDenseCharacterSpacingEm = -0.002d;
         public const double OfficeAutofitNumberedDefaultCharacterSpacingEm = -0.004d;
         public const double OfficeStrikePositionFontScale = 0.211d;

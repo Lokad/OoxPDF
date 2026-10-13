@@ -186,12 +186,11 @@ internal sealed partial class PptxRenderer
         bool IsKerningEnabled()
         {
             XAttribute? threshold = runProperties?.Attribute("kern") ?? defaultRunProperties?.Attribute("kern");
-            if (threshold is null)
-            {
-                return false;
-            }
-
-            double minimumFontSize = int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;
+            // Office uses its 12pt threshold when the source cascade omits
+            // kerning. Explicit zero keeps the qualified no-wrap nominal rule.
+            double minimumFontSize = threshold is null
+                ? PptxTextMetricRules.OfficeDefaultKerningMinimumFontSizePoints
+                : int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;
             if (disableZeroKerning && minimumFontSize == 0d)
             {
                 return false;
