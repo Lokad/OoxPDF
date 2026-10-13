@@ -3193,3 +3193,35 @@ differences; Git blobs and canonical source bytes match. Strict Release has zero
 warnings/errors. L247 provides the recent broader/Linux milestone; no new
 cross-platform/package qualification is claimed here. Visual thresholds,
 version0.1.5, release deferral and existing safety/work/publication limits remain.
+
+## RV06-L249/L250: source stroke concern and upper-bound interval ownership
+
+The L249 minor-stroke prototype is retained outside the root. It repairs a
+confirmed dropped authored width, but four manual/log/missing-bound layouts
+regress on both raster metrics among73 affected comparisons. Sixty-nine improve;
+all prior parent measurements and converted PDFs are reused. Thirteen independent
+Office controls give nine improvements/four exact guards; malformed negative
+width is a candidate-only fallback. Those results do not qualify a wider rollout.
+
+Runtime **95bbe763** resolves the shared missing-lower-bound defect independently.
+One linear line-chart axis with a finite authored maximum/positive major interval
+anchors its automatic minimum to that interval lattice. Maxima107/103 with
+interval20 produce-13/-17. Measurement, emitted labels and subdivisions share
+the resolved origin. Sixteen Office controls, including fractional and negative
+ranges, qualify eleven improvements/five exact/no tradeoffs. Changed numeric
+labels match Office. Source font metrics/hinting remain exact in32 checks;332
+shared glyphs and22 newly used glyphs retain source outlines/advances. Different
+generated inventories can change subset bytes. All64 authored text states remain
+protected.261 minor intervals match Office counts/relative spacing within its
+verified0.12pt interior-coordinate precision, with maximum normalized residual
+.000360 and non-grid extrema recorded. Absolute parity remains incomplete.
+
+One artifact passes25 selected Windows checks and17 Linux checks using identical
+DLLs, with no Linux rebuild. Fourteen freshly identical PDFs reuse Office evidence;
+twelve specific inherited/neighbors leave ten exact and two independently
+qualified changes. Two further negative controls use the same artifact. Root
+transfer verifies398 sources/17 identical assets and four CLI smoke PDFs without
+another build or broad suite/corpus. Strict Release has zero warnings/errors.
+Existing thresholds, version0.1.5, release deferral and safety/work/publication
+limits remain. Manual/log geometry and the rejected minor-stroke rollout stay
+explicit; no new full-catalogue or package qualification is claimed.
