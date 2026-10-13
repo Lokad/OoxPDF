@@ -470,11 +470,11 @@ internal sealed partial class PptxSceneBuilder
             return [];
         }
 
+        bool singleLinePlot = plots.Count == 1 && plots[0].PlotKind == PptxSceneChartPlotKind.Line;
         PptxSceneLineStyle majorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMajor");
         PptxSceneLineStyle minorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMinor");
         int? preferredGalleryStyle = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chartXml?.Root);
-        if (!stylePart.IsDefined && plots.Count == 1 &&
-            plots[0].PlotKind == PptxSceneChartPlotKind.Line &&
+        if (!stylePart.IsDefined && singleLinePlot &&
             preferredGalleryStyle is 102 or 118 or 126)
         {
             // Independently qualified line-plot gallery roles. Other plot kinds
@@ -540,7 +540,7 @@ internal sealed partial class PptxSceneBuilder
                 majorGridlines is not null,
                 minorGridlines is not null,
                 ReadChartAxisLine(axis, theme, colorMap),
-                ReadChartGridlineLine(majorGridlines, theme, colorMap),
+                ReadChartGridlineLine(majorGridlines, theme, colorMap, singleLinePlot ? majorStyleLine : default),
                 ReadChartGridlineLine(minorGridlines, theme, colorMap),
                 majorStyleLine,
                 minorStyleLine,
@@ -656,6 +656,11 @@ internal sealed partial class PptxSceneBuilder
 
     internal static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap)
     {
+        return ReadChartGridlineLine(gridlines, theme, colorMap, default);
+    }
+
+    private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)
+    {
         XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
@@ -663,7 +668,44 @@ internal sealed partial class PptxSceneBuilder
             return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null, null, null, null, null, true);
         }
 
-        return ReadChartLine(shapeProperties, theme, colorMap);
+        if (!inheritedLine.HasLine || line is null)
+        {
+            return ReadChartLine(shapeProperties, theme, colorMap);
+        }
+
+        bool hasFill = line.Elements().Any(element => element.Name.Namespace == DrawingNamespace && element.Name.LocalName.EndsWith("Fill", StringComparison.Ordinal));
+        if (hasFill && !PptxColorResolver.TryReadSolidColorWithAlpha(line, theme, colorMap, out _, out _))
+        {
+            // Unsupported or unresolved authored fills keep the existing fallback.
+            return ReadChartLine(shapeProperties, theme, colorMap);
+        }
+
+        // Resolve omissions on a detached line; the authored XML remains intact.
+        // Reuse the ordinary reader so width-dependent dash normalization has
+        // one owner and explicit color/alpha/width/caps/joins retain precedence.
+        var resolvedLine = new XElement(line);
+        if (!hasFill)
+        {
+            var color = new XElement(DrawingNamespace + "srgbClr", new XAttribute("val", $"{inheritedLine.Color.Red:X2}{inheritedLine.Color.Green:X2}{inheritedLine.Color.Blue:X2}"));
+            if (inheritedLine.Alpha < 1d)
+            {
+                color.Add(new XElement(DrawingNamespace + "alpha", new XAttribute("val", (int)Math.Round(inheritedLine.Alpha * 100000d))));
+            }
+            resolvedLine.AddFirst(new XElement(DrawingNamespace + "solidFill", color));
+        }
+        if (resolvedLine.Attribute("cap") is null) resolvedLine.SetAttributeValue("cap", inheritedLine.CapValue);
+        if (resolvedLine.Attribute("cmpd") is null) resolvedLine.SetAttributeValue("cmpd", inheritedLine.CompoundValue);
+        if (resolvedLine.Element(DrawingNamespace + "prstDash") is null && inheritedLine.DashPreset is not null)
+        {
+            resolvedLine.Add(new XElement(DrawingNamespace + "prstDash", new XAttribute("val", inheritedLine.DashPreset)));
+        }
+        if (!resolvedLine.Elements().Any(element => element.Name == DrawingNamespace + "round" || element.Name == DrawingNamespace + "bevel" || element.Name == DrawingNamespace + "miter") &&
+            inheritedLine.JoinValue is not null)
+        {
+            resolvedLine.Add(new XElement(DrawingNamespace + inheritedLine.JoinValue));
+        }
+
+        return ReadChartLine(new XElement(ChartNamespace + "spPr", resolvedLine), theme, colorMap, inheritedLine.Width);
     }
 
     private static double? ReadChartAxisScalingValue(XElement axis, string elementName)

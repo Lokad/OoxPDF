@@ -2644,6 +2644,62 @@ var tail = rendererType.GetMethod(
         TestAssert.True(Regex.IsMatch(mapped, @"0\.737 0\.741 0\.753 RG\s+1 w"), "Expected independently measured slide color-map minor role.");
     }
 
+    public static void PptxPartialMajorGridlineStrokeKeepsAuthoredWidthWithInheritedColor()
+    {
+        foreach (string xml in new[]
+        {
+            "<c:majorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:majorGridlines>",
+            "<c:majorGridlines><c:spPr><a:ln w=\"19050\" cap=\"rnd\"><a:prstDash val=\"dash\"/><a:round/></a:ln></c:spPr></c:majorGridlines>",
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: xml);
+            TestAssert.True(Regex.IsMatch(pdf, @"0\.537 G\s+1\.5 w"), "Authored width must survive inherited gallery color.");
+            if (xml.Contains("prstDash", StringComparison.Ordinal)) TestAssert.True(Regex.IsMatch(pdf, @"\[6 4\.5\s*\] 0 d"), "Expected dash lengths scaled by authored width.");
+        }
+        string minor = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:minorGridlines>");
+        TestAssert.True(Regex.IsMatch(minor, @"0\.737 G\s+1 w"), "Minor partial strokes retain their existing fallback until interval geometry is qualified.");
+    }
+
+    public static void PptxPartialMajorGridlineStrokeInheritsRoleWidthAndKeepsSourceAlpha()
+    {
+        foreach (string properties in new[]
+        {
+            "<a:solidFill><a:srgbClr val=\"A030D0\"/></a:solidFill>",
+            "<a:solidFill><a:srgbClr val=\"A030D0\"><a:alpha val=\"50000\"/></a:srgbClr></a:solidFill>",
+            "<a:solidFill><a:srgbClr val=\"A030D0\"/></a:solidFill><a:prstDash val=\"dash\"/>",
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln>" + properties + "</a:ln></c:spPr></c:majorGridlines>");
+            TestAssert.True(Regex.IsMatch(pdf, @"0\.627 0\.188 0\.816 RG\s+1 w"), "Authored color must inherit the omitted gallery width.");
+            if (properties.Contains("alpha", StringComparison.Ordinal)) TestAssert.Contains("/CA 0.5", pdf);
+            if (properties.Contains("prstDash", StringComparison.Ordinal)) TestAssert.True(Regex.IsMatch(pdf, @"\[4 3\s*\] 0 d"), "Expected dash lengths scaled by inherited width.");
+        }
+    }
+
+    public static void PptxPartialMajorGridlineStrokeKeepsRoleDecorationsAndUnsupportedFallbacks()
+    {
+        const string inherited = "<cs:style xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" id=\"1\"><cs:gridlineMajor><cs:spPr><a:ln w=\"25400\" cap=\"rnd\"><a:solidFill><a:srgbClr val=\"44CC88\"><a:alpha val=\"85000\"/></a:srgbClr></a:solidFill><a:prstDash val=\"dash\"/><a:round/></a:ln></cs:spPr></cs:gridlineMajor></cs:style>";
+        string inheritedPdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:majorGridlines>", stylePart: inherited);
+        TestAssert.True(Regex.IsMatch(inheritedPdf, @"0\.267 0\.8 0\.533 RG\s+1\.5 w"), "Width-only source must retain inherited style-part color.");
+        TestAssert.True(Regex.IsMatch(inheritedPdf, @"\[6 4\.5\s*\] 0 d"), "Expected inherited dash preset scaled by authored width.");
+        TestAssert.Contains("/CA 0.85", inheritedPdf);
+        string explicitPdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"9525\" cap=\"flat\"><a:solidFill><a:srgbClr val=\"A030D0\"/></a:solidFill><a:prstDash val=\"solid\"/><a:bevel/></a:ln></c:spPr></c:majorGridlines>", stylePart: inherited);
+        TestAssert.True(Regex.IsMatch(explicitPdf, @"0\.627 0\.188 0\.816 RG\s+0\.75 w\s+\[\] 0 d\s+0 J\s+2 j"), "Complete authored stroke must override inherited decorations.");
+        TestAssert.DoesNotContain("/CA 0.85", explicitPdf);
+
+        foreach (string fill in new[] { "<a:gradFill/>", "<a:solidFill><a:schemeClr val=\"unresolved\"/></a:solidFill>" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"19050\">" + fill + "</a:ln></c:spPr></c:majorGridlines>");
+            TestAssert.True(Regex.IsMatch(pdf, @"0\.537 G\s+1 w"), "Unsupported authored fill must retain the existing role fallback.");
+        }
+        foreach (string? guard in new string?[] { null, "composed" })
+        {
+            string style = guard is null ? "<c:style val=\"18\"/>" : GalleryStyleChoice(118);
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, guard: guard, galleryStyle: style, gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:majorGridlines>");
+            TestAssert.DoesNotContain("0.537 G", pdf);
+        }
+    }
+
     private static string GalleryStyleChoice(int modern)
     {
         return $"<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice xmlns:c14=\"http://schemas.microsoft.com/office/drawing/2007/8/2/chart\" Requires=\"c14\"><c14:style val=\"{modern}\"/></mc:Choice><mc:Fallback><c:style val=\"{modern - 100}\"/></mc:Fallback></mc:AlternateContent>";

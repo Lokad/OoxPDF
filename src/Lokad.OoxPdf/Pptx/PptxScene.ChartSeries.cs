@@ -247,7 +247,7 @@ internal sealed partial class PptxSceneBuilder
         return ReadChartLine(shapeProperties, theme, PptxColorMap.Default);
     }
 
-    private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, double? inheritedWidth = null)
     {
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
@@ -257,7 +257,7 @@ internal sealed partial class PptxSceneBuilder
 
         bool widthSpecified = line?.Attribute("w") is not null;
         return shapeProperties is not null &&
-            PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: null)
+            PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: inheritedWidth)
                 ? new PptxSceneLineStyle(
                     true,
                     color,
