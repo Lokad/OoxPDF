@@ -4,6 +4,8 @@ This document tracks implemented rendering behavior. Anything not listed as supp
 
 ## PPTX
 
+- Generated numeric axis ticks reuse the existing 100000 chart expansion cap and cumulative chart-range budget. Dense expansion rejects before allocation; invalid bounds and non-progressing floating-point additions reject through the existing limit exception.
+
 Supported:
 
 - Slide discovery, slide order, and slide size.

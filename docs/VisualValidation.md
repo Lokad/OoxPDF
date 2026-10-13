@@ -2945,4 +2945,28 @@ exact. Frozen/root each reproduce 434 PDF check executions (24+252+158,
 overlapping inputs); eight root DOCX guards remain exact. Three source blobs/raw
 hashes match. Last full Windows remains L230; L238's 201 OOXML-resource passes are
 prior evidence. Safe managed code, resource/work/publication limits and 0.1.5
-release deferral hold. Minor intervals/coverage continue as L240.
+release deferral hold. Minor intervals/coverage continue after bounded tick work L240, as L241.
+
+
+### RV06-L240: bounded numeric axis tick expansion
+
+Frozen **b51f06cf**, root **4872475a**, rejects a demonstrated non-progressing
+axis-tick loop: min=1e16, max=1e16+4 and unit=1 cannot advance the represented
+value. An isolated accepted-parent child enters the loop and is terminated after
+two seconds; the fixed runtime rejects promptly. Dense generated ticks reuse
+the existing 100000 chart expansion cap and cumulative chart-range budget before
+allocation. Invalid/non-finite bounds and stalled additions reject through the
+existing limit exception. Ordinary tick calculation and rendered output stay exact.
+
+Five focused regressions cover dense admission, cumulative work, cap boundaries,
+floating-point progress and conversion-level limit propagation. Strict Windows
+Release and 400 chart/201 OOXML checks pass; fourteen portable Linux checks pass
+with two archive SourceLink warnings. Exact frozen tests demonstrate one safe
+expected parent failure and two protected tick passes. Frozen/root each reproduce
+442 exact PDF check executions (32 unit/retained controls +252 public PPTX +158
+retained contexts, overlapping inputs); eight root DOCX guards stay exact. Three
+source blobs/raw hashes match. No new full catalogue, quota knob, framework or
+heap accounting. Safe managed code, cancellation, existing resource/work/cache/
+staging/publication bounds and 0.1.5 release deferral hold. Office source controls
+continue to show minor-interval/major-level/boundary gaps; rendering work resumes
+as L241 without transferring a parity claim.
