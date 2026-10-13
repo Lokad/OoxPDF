@@ -4252,12 +4252,13 @@ internal static class DocxFootnotesTests
     {
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         foreach (bool custom in new[] { false, true })
+        foreach (bool matching in new[] { false, true })
         foreach (var profile in new[] { (Ascender: 2049, Descender: 423, Strikeout: 689,
-            WordMixedGap: 17.28d),
+            WordMixedGap: 17.28d, WordMatchingGap: 17.88d),
             (Ascender: 2059, Descender: 430, Strikeout: 679,
-            WordMixedGap: 17.16d) })
+            WordMixedGap: 17.16d, WordMatchingGap: 17.76d) })
         {
-            DocxDocument source = WithFittingSeparatorBearingSource(custom);
+            DocxDocument source = WithFittingSeparatorBearingSource(custom, matching);
             var measurer = new FittingSeparatorBearingMeasurer(profile.Ascender, profile.Descender, profile.Strikeout);
             DocxLayout layout = engine.Create(source, measurer, default);
             DocxLayoutPage page = layout.Pages.Single(p => p.PlacedRelatedStories.Any(s =>
@@ -4270,11 +4271,12 @@ internal static class DocxFootnotesTests
                 s.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
             // Independent Word references supply these local rule/first-glyph
             // distances; source profiles use their recorded font table metrics.
-            double expected = profile.WordMixedGap;
+            double expected = matching ? profile.WordMatchingGap : profile.WordMixedGap;
             double actual = separator.SeparatorY!.Value - end.TextLines[0].BaselineY;
             TestAssert.True(Math.Abs(actual - expected) < .13d,
-                $"Independent Word fitting rule-to-first distance: {actual}, expected={expected}, custom={custom}.");
-            TestAssert.True(Math.Abs(separator.TopY - separator.Height - end.TextLines[0].BaselineY -
+                $"Independent Word fitting rule-to-first distance: {actual}, expected={expected}, custom={custom}, matching={matching}.");
+            if (!matching)
+                TestAssert.True(Math.Abs(separator.TopY - separator.Height - end.TextLines[0].BaselineY -
                     14.6484375d) < .002d, "Rule painting retains the existing Calibri content flow origin and gap.");
             DocxRelatedStoryLayout canonical = layout.RelatedStories.Single(s =>
                 s.Story.IsNormalStoryType && s.Story.Kind == DocxRelatedStoryKind.Endnote);
@@ -4309,9 +4311,10 @@ internal static class DocxFootnotesTests
         }
     }
 
-    private static DocxDocument WithFittingSeparatorBearingSource(bool custom)
+    private static DocxDocument WithFittingSeparatorBearingSource(bool custom, bool matching = false)
     {
-        DocxDocument source = WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), false, true, 6);
+        DocxDocument source = WithNoteLineRule(
+            WithMixedNoteStaticFrame(ReadMixedNoteRetryFixture(custom, 32), false, true, 6), 8, exact: false);
         return source with
         {
             RelatedStories = source.RelatedStories.Select(s => s with
@@ -4320,7 +4323,7 @@ internal static class DocxFootnotesTests
                 {
                     Runs = p.Runs.Select(r => r with
                     {
-                        FontFamily = !s.IsNormalStoryType ? "source-bearing" : "content-bearing",
+                        FontFamily = !s.IsNormalStoryType || matching ? "source-bearing" : "content-bearing",
                     }).ToArray(),
                 })).ToArray(),
             }).ToArray(),
