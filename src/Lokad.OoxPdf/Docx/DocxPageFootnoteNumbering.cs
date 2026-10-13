@@ -10,7 +10,7 @@ internal static class DocxPageFootnoteNumbering
     internal static bool IsEligibleDocument(DocxDocument document, bool includeContinuousRestart = false)
     {
         if (!DocxPlainBodyFrame.IsEligible(document) ||
-            document.Settings.FootnoteReferenceSettings.NumberRestartValue is not (null or "continuous")) return false;
+            !document.Settings.FootnoteReferenceSettings.HasKnownNumberRestart) return false;
         var settings = document.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         return (settings.NumberRestartValue == "eachPage" || includeContinuousRestart &&
                 settings.NumberRestartValue is "continuous" or "eachSect") &&

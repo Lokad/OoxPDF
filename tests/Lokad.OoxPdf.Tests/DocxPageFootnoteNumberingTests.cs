@@ -97,7 +97,7 @@ internal static class DocxPageFootnoteNumberingTests
             (xml, _, _) => xml.Descendants(Word + "p").First().Add(new XElement(Word + "ins", new XAttribute(Word + "id", "9"),
                 new XElement(Word + "r", new XElement(Word + "t", "public revision")))),
             (xml, _, _) => { XElement p = xml.Descendants(Word + "p").First(); p.ReplaceWith(new XElement(Word + "tbl", new XElement(Word + "tr", new XElement(Word + "tc", p)))); },
-            (_, settings, _) => settings.Descendants(Word + "footnotePr").Single().Add(new XElement(Word + "numRestart", new XAttribute(Word + "val", "eachPage"))),
+            (_, settings, _) => settings.Descendants(Word + "footnotePr").Single().Add(new XElement(Word + "numRestart", new XAttribute(Word + "val", "unknown"))),
             (_, _, notes) => notes.Root!.Elements(Word + "footnote").First(n => n.Attribute(Word + "type") is null)
                 .Add(new XElement(Word + "p", new XElement(Word + "r", new XElement(Word + "t", "another note paragraph"))))
         ];
@@ -288,6 +288,39 @@ internal static class DocxPageFootnoteNumberingTests
 
     internal static DocxLayout CreateLayout(DocxDocument document) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
         .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+
+    public static void DocxPageFootnoteNumbersUseSectionRequestDespiteDocumentRestartMetadata()
+    {
+        foreach (string restart in new[] { "continuous", "eachSect", "eachPage" })
+        {
+            var source = ReadFixture(modify: (_, settings, _) => settings.Descendants(Word + "footnotePr").Single()
+                .Add(new XElement(Word + "numRestart", new XAttribute(Word + "val", restart))));
+            var first = CreateLayout(source);
+            TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(source, first, out var numbered, out var owners),
+                "Explicit section eachPage owns numbering despite known document restart metadata.");
+            TestAssert.Equal("4,5,4,5", string.Join(',', numbered.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
+            TestAssert.Equal(restart, source.Settings.FootnoteReferenceSettings.NumberRestartValue!);
+            TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(numbered, CreateLayout(numbered), owners), "All source markers and complete notes retain their pages.");
+        }
+    }
+
+    public static void DocxPageFootnoteNumbersKeepDocumentOnlyAndUnknownRequestsSeparate()
+    {
+        foreach (string? sectionRestart in new string?[] { null, "continuous", "eachSect" })
+        {
+            var source = ReadFixture(modify: (xml, settings, _) =>
+            {
+                settings.Descendants(Word + "footnotePr").Single().Add(new XElement(Word + "numRestart", new XAttribute(Word + "val", "eachPage")));
+                var restart = xml.Descendants(Word + "footnotePr").Single().Element(Word + "numRestart")!;
+                if (sectionRestart is null) restart.Remove(); else restart.SetAttributeValue(Word + "val", sectionRestart);
+            });
+            TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, CreateLayout(source), out var fallback, out _), "Document metadata does not create a section each-page request.");
+            TestAssert.True(ReferenceEquals(source, fallback), "Other section requests retain their numbering purpose.");
+        }
+        var unknown = ReadFixture(modify: (_, settings, _) => settings.Descendants(Word + "footnotePr").Single()
+            .Add(new XElement(Word + "numRestart", new XAttribute(Word + "val", "unknown"))));
+        TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(unknown), "Unrecognized source metadata retains explicit fallback.");
+    }
 
     internal static string DecodeText(PdfPage page)
     {

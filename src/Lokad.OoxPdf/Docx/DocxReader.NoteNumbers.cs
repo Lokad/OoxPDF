@@ -97,7 +97,7 @@ internal sealed partial class DocxReader
             // Document restart metadata does not supply omitted section values.
             // Section eachPage still requires rendered page ownership and keeps
             // the existing fallback below; document eachPage is not that request.
-            (authored.NumberRestartValue is null or "continuous" or "eachSect" or "eachPage") &&
+            authored.HasKnownNumberRestart &&
             sections.All(s =>
             {
                 DocxNoteReferenceSettings section = ReadNoteReferenceSettings(s.Properties.Element(word + name));

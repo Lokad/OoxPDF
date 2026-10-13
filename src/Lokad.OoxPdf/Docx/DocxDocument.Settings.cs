@@ -51,6 +51,7 @@ internal sealed record DocxNoteReferenceSettings(
     string? NumberRestartValue)
 {
     public static DocxNoteReferenceSettings Empty { get; } = new(null, null, null, null, null);
+    internal bool HasKnownNumberRestart => NumberRestartValue is null or "continuous" or "eachSect" or "eachPage";
 }
 
 internal sealed record DocxCompatSetting(
