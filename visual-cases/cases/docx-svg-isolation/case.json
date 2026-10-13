@@ -7,7 +7,7 @@
     "docx",
     "images",
     "svg",
-    "approximate"
+    "needs-review"
   ],
   "docxMarkup": "all",
   "docxMarkupGeometry": "word-compatible",
