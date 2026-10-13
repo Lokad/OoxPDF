@@ -2915,3 +2915,34 @@ executions (36 controls+252 public+158 retained, overlapping inputs); eight root
 DOCX guards stay exact. Three source blobs/raw hashes match. Last full Windows
 remains L230. Permanent safe managed code, resource/work/publication limits and
 0.1.5 release deferral hold. Partial line-gridline inheritance continues as L239.
+
+
+### RV06-L239: partial major-gridline property ownership
+
+Qualified single line plots retain authored major-gridline width/color/alpha and
+decorations while inheriting omissions from the role through the existing reader.
+Width-only keeps 1.5pt; color-only inherits 1pt. Unsupported/unresolved fills,
+visibility and legacy/composed/other-kind fallbacks remain intact. Minor
+normalization raises MAE/ratio by .063162/.002157 and is rejected: five candidate
+minor levels differ from forty Office levels. Its geometry and existing dash
+mapping remain partial. Failed composed Office export is candidate-only fallback
+evidence. Base **b11614a8/root 08ec2606**; final **d40b7bc3/root 4515b4cc**.
+
+A malformed-width probe demonstrates that initial inherited color could activate
+a negative PDF width. Final source restores its prior fallback while preserving
+valid zero-width hairlines. Exact final tests fail the pre-fix resolver on this
+case. Four portable methods cover fourteen source compositions; no additional
+parser/framework, font/size/shape exception or quota is introduced.
+
+Twenty-four Office controls qualify five improved raster pages/19 exact/no
+tradeoffs; width-only MAE falls 1.1282 to .9920. Only five grouped major-gridline
+stroke states change; all 363 text operations/1966 path and clip geometries/50
+embedded-font program checks and axis/tick/series ownership stay exact. Strict
+Windows Release and 395 chart methods pass; thirteen Linux checks pass with two
+archive SourceLink warnings. Exact final tests demonstrate four L238 failures/
+five protected passes. All 252 public PPTX inputs and 158 retained contexts stay
+exact. Frozen/root each reproduce 434 PDF check executions (24+252+158,
+overlapping inputs); eight root DOCX guards remain exact. Three source blobs/raw
+hashes match. Last full Windows remains L230; L238's 201 OOXML-resource passes are
+prior evidence. Safe managed code, resource/work/publication limits and 0.1.5
+release deferral hold. Minor intervals/coverage continue as L240.
