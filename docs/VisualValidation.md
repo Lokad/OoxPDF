@@ -3080,3 +3080,34 @@ fails the parent; two ordinary tick controls pass. Evidence is under ignored
 `artifacts/plan-revision-20261005/rv06-l244/`. Safe managed code, existing resource/
 work/cancellation/cache/staging/publication limits, 0.1.5 and release deferral remain.
 No full-catalogue or parity claim is made. Crossing layout proceeds as L245.
+
+### RV06-L245: category-axis source crossing and automatic line clearances
+
+Revision **b07db2d9** shares category-axis crossing, label placement, clearances,
+authored offsets and tick direction for the existing automatic untitled,
+legendless, single-line admission. Source low/high labels stay at their edges;
+nextTo labels follow the category crossing and reversed value direction.
+Manual/composed/secondary, unsupported-scale, unresolved-font and small-layout
+fallbacks retain their earlier behavior. Other renderer kinds are unaffected.
+
+Thirty-nine Office comparisons qualify 36 raster improvements, two exact outputs
+and one explicit partial tradeoff: MAE +.022156, threshold ratio -.000001. In that
+out-of-range source, Office and candidate emit six horizontal major levels while
+the parent emits five. The correct added level exposes an inherited axis-paint
+difference: candidate black .75pt versus Office gray 1pt. No source-value/font
+exception or relaxed public gate conceals this dependency. Axis/minor-stroke
+style ownership and broader font-strip baselines remain partial.
+
+All 78 embedded-font programs, 818 glyphs, 389 text states and 3235 paint states
+remain protected; 2620 geometry changes have source-backed roles. All 252 public
+PPTX and 158 retained PDFs remain exact. Eight changed earlier controls each
+improve through independent Office comparisons.
+
+Frozen/root strict Release and 417 chart/201 OOXML tests pass with zero warnings
+or errors. Each source reproduces 601 exact PDF checks (191 controls, 252 public
+and 158 retained, overlapping sets). Thirty-one Linux checks pass; the isolated
+source-only archive build retains two SourceLink warnings. Seven source blobs/raw
+identities and eight DOCX guards match. Exact frozen tests fail the parent at four
+intended regressions; three protected guards pass. No new full catalogue or
+complete Office parity is claimed. Version 0.1.5, release deferral, safe managed
+code and existing resource/work/publication limits remain.

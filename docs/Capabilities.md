@@ -4,7 +4,9 @@ This document tracks implemented rendering behavior. Anything not listed as supp
 
 ## PPTX
 
-- A single linear line-chart source axis shares its authored minimum and interval endpoints across label measurement/emission, ticks and grids. Maximum labels appear only on the interval lattice; unsupported log, implicit-minimum, composed/secondary and normalized-minimum fallbacks remain. Crossing layout and dense automatic intervals remain partial, including three measured new negative-range raster tradeoffs.
+- A single linear line-chart source axis shares its authored minimum and interval endpoints across label measurement/emission, ticks and grids. Maximum labels appear only on the interval lattice; unsupported log, implicit-minimum, composed/secondary and normalized-minimum fallbacks remain. Dense automatic intervals and broader font-strip geometry remain partial.
+
+- Eligible automatic untitled/legendless single-line plots share a category-axis owner for source crossing, low/high/nextTo labels, plot clearances, authored offsets and reversed tick direction. Thirty-nine Office controls qualify 36 raster improvements and two exact PDFs, with one explicit small inherited axis-style tradeoff. Manual/composed/secondary, unsupported-scale, unresolved-font and small-layout fallbacks remain; axis/minor-stroke styling and broader font-strip metrics remain partial.
 
 - Authored category-label offsets in eligible automatic line plots share one normal-font-line-height adjustment between plot reserve and label placement. Category baselines remain anchored; default-offset output and manual/composed/unknown-font/small-layout fallbacks stay unchanged. Default font-strip metrics and dense automatic intervals remain partial.
 
