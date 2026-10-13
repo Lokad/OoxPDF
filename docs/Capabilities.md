@@ -84,7 +84,7 @@ Supported:
 
 Partial or approximated:
 
-- Embedded SVG pictures use the shared vector subset for inline and anchored placement, with paths, shapes, fills, strokes, gradients and isolated opacity. Native relationships take precedence; malformed/unusable vectors can retain the authored raster preview. Word picture viewport clipping is preserved. Crop/transform propagation, wider story coverage and Word radial-gradient fidelity remain partial.
+- Embedded SVG pictures use the shared vector subset for inline and anchored placement, with paths, shapes, fills, strokes, gradients and isolated opacity. Native relationships take precedence; malformed/unusable vectors can retain the authored raster preview. Word picture viewport clipping is preserved. Repeated pictures, body/table placement and naturally measured header/footer lines are qualified. Static inline images share their text baseline and measured footer block translation; fixed/legacy line frames retain fallback. Crop/transform propagation, fixed-line clipping and Word radial-gradient fidelity remain partial. The public isolation case retains a foreground-recall gate under review.
 
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
