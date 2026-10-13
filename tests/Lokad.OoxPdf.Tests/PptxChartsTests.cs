@@ -2700,6 +2700,15 @@ var tail = rendererType.GetMethod(
         }
     }
 
+    public static void PptxPartialMajorGridlineStrokeKeepsInvalidWidthFallback()
+    {
+        string negative = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"-12700\"/></c:spPr></c:majorGridlines>");
+        TestAssert.DoesNotContain("-1 w", negative);
+        TestAssert.True(Regex.IsMatch(negative, @"0\.537 G\s+1 w"), "Invalid partial width must retain the existing role fallback.");
+        string zero = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"0\"/></c:spPr></c:majorGridlines>");
+        TestAssert.True(Regex.IsMatch(zero, @"0\.537 G\s+0 w"), "Valid zero-width source must keep its PDF hairline width.");
+    }
+
     private static string GalleryStyleChoice(int modern)
     {
         return $"<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice xmlns:c14=\"http://schemas.microsoft.com/office/drawing/2007/8/2/chart\" Requires=\"c14\"><c14:style val=\"{modern}\"/></mc:Choice><mc:Fallback><c:style val=\"{modern - 100}\"/></mc:Fallback></mc:AlternateContent>";

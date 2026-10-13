@@ -705,7 +705,9 @@ internal sealed partial class PptxSceneBuilder
             resolvedLine.Add(new XElement(DrawingNamespace + inheritedLine.JoinValue));
         }
 
-        return ReadChartLine(new XElement(ChartNamespace + "spPr", resolvedLine), theme, colorMap, inheritedLine.Width);
+        PptxSceneLineStyle resolved = ReadChartLine(new XElement(ChartNamespace + "spPr", resolvedLine), theme, colorMap, inheritedLine.Width);
+        // Inherited color must not activate a previously ignored invalid width.
+        return resolved.Width < 0d ? ReadChartLine(shapeProperties, theme, colorMap) : resolved;
     }
 
     private static double? ReadChartAxisScalingValue(XElement axis, string elementName)
