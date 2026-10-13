@@ -2807,3 +2807,21 @@ predictions; the model is rejected before changing production. Existing .2pt
 gates and source layout remain. L232's full runtime qualification still applies;
 no new full-catalogue qualification or Office parity is claimed. Source-owned
 note-link spacing is the next bounded rendering investigation, L234.
+
+### RV06-L234: resolved source gap for note-link spacing
+
+The existing complete-owner path reads its after-gap from resolved metadata on
+the first line, while the final visible line keeps ownership of the annotation
+extension. Missing metadata retains the authored fallback; existing eligibility
+guards remain. The shared spacing qualifier already excludes contextual sources
+from this path, so the review does not demonstrate a contextual rendering defect.
+Frozen **55f998a1**, root **16e336a5**.
+
+Seventeen focused methods pass on Windows and Linux with zero failures/skips.
+Strict Windows Release has zero warnings/errors; Linux retains two archive
+SourceLink warnings. Twenty-four retained Word controls/48 pages preserve exact
+PDF identity, including text, graphics and annotations. Their source/PDF/view
+identities transfer through the accepted L232 frozen audit. One source blob and
+raw source hash match. This is bounded ownership maintenance; no new full audit,
+catalogue qualification, changed visual behavior or broader fidelity is claimed.
+The rendering roadmap continues with public PPTX autofit/overflow probes, L235.
