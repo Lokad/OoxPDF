@@ -1,5 +1,13 @@
 NuGet packages are written to ignored `artifacts/nuget/`.
 
+Keep this workspace near or below a loose 5 GB disk target. Check infrequently,
+for example after broad validation or about weekly during sustained work, with
+`pwsh tools/MeasureWorkspaceFootprint.ps1`. Retain current inputs, compact evidence
+and useful reference PDFs; remove obsolete generated runs and retired worktrees
+after preserving any uncommitted source changes. Preserve tracked files, private
+inputs and Git history. This is workspace housekeeping, not a library quota or
+a strict CI gate.
+
 ## Safe Managed Library
 
 The shipped `src/Lokad.OoxPdf` library must remain entirely safe managed code.
