@@ -3271,3 +3271,23 @@ without another run. Root transfer verifies398 sources/17 build assets and four
 CLI smoke PDFs, with no root rebuild or repeated suite/corpus. Strict Release
 passes; thresholds,0.1.5/release deferral and existing safety/work/publication
 limits remain. No new full-catalogue or package claim. Workspace2.820GB/no errors.
+
+## RV06-L253: authoritative section note-numbering requests
+
+Runtime **8168e939** shares the supported restart vocabulary between reader and
+renderer admission. Known document eachPage/eachSect metadata preserves an
+explicit section eachPage request; document-only metadata remains separate.
+Twenty-one Word controls across Arial/Calibri/Times and11/12/14pt bodies qualify
+twelve corrections/24 improving pages and nine exact guards/18 pages. Generated
+body/footer labels and source note pages match Word. Unknown metadata, unsupported
+document shapes and stable-owner retries retain fallback; no font/size/threshold
+exception or reader cascade change is introduced.
+
+Seventy source font-metric/hinting checks,1806 shared glyphs,588 authored text
+states,168 graphics and84 distinct complete note destinations/vertical hit areas
+are protected. Fifty-three unique targeted methods pass;31 inherited/neighbors
+stay exact. One artifact transfers398 source identities/17 build assets and
+matches four root CLI smoke PDFs without another build or broad suite/corpus.
+Strict Release has zero warnings/errors. L252 retains the recent broader/platform
+milestone; no new full-catalogue/platform/package claim. Existing thresholds,
+0.1.5/release deferral and safety/work/publication limits remain.
