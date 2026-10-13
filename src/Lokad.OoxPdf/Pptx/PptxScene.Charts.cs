@@ -516,6 +516,7 @@ internal sealed partial class PptxSceneBuilder
             (bool? noMultiLevelLabels, string noMultiLevelLabelsValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "noMultiLvlLbl");
             XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
             XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
+            bool hasLogarithmicScale = axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
             axes.Add(PptxSceneChartAxis.Defined(
                 id,
                 axis.Name.LocalName,
@@ -543,7 +544,7 @@ internal sealed partial class PptxSceneBuilder
                 minorGridlines is not null,
                 ReadChartAxisLine(axis, theme, colorMap, axisStyleLine),
                 ReadChartGridlineLine(majorGridlines, theme, colorMap, singleLinePlot ? majorStyleLine : default),
-                ReadChartGridlineLine(minorGridlines, theme, colorMap),
+                ReadChartGridlineLine(minorGridlines, theme, colorMap, singleLinePlot && !hasLogarithmicScale ? minorStyleLine : default),
                 majorStyleLine,
                 minorStyleLine,
                 ReadChartTextStyleOverride(axis, theme, colorMap),
@@ -561,7 +562,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null),
-                hasLogarithmicScale: axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null));
+                hasLogarithmicScale: hasLogarithmicScale));
         }
 
         return axes;

@@ -2684,7 +2684,60 @@ var tail = rendererType.GetMethod(
             if (xml.Contains("prstDash", StringComparison.Ordinal)) TestAssert.True(Regex.IsMatch(pdf, @"\[6 4\.5\s*\] 0 d"), "Expected dash lengths scaled by authored width.");
         }
         string minor = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:minorGridlines>");
-        TestAssert.True(Regex.IsMatch(minor, @"0\.737 G\s+1 w"), "Minor partial strokes retain their existing fallback until interval geometry is qualified.");
+        TestAssert.True(Regex.IsMatch(minor, @"0\.737 G\s+1\.5 w"), "Minor strokes share source property ownership with major gridlines.");
+    }
+
+    public static void PptxPartialMinorGridlineStrokeKeepsAuthoredWidthAndDecorations()
+    {
+        foreach (int style in new[] { 102, 118, 126 })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(style),
+                gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"19050\" cap=\"rnd\"><a:prstDash val=\"dash\"/><a:round/></a:ln></c:spPr></c:minorGridlines>");
+            TestAssert.True(Regex.IsMatch(pdf, @"0\.737 G\s+1\.5 w\s+\[6 4\.5\s*\] 0 d\s+1 J\s+1 j"), "Authored minor width/decorations retain inherited gallery color.");
+        }
+        string theme = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), themeDarkColor: "204060",
+            gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:minorGridlines>");
+        TestAssert.True(Regex.IsMatch(theme, @"0\.741 0\.753 0\.773 RG\s+1\.5 w"), "Source width must keep the theme-derived minor role.");
+    }
+
+    public static void PptxPartialMinorGridlineStrokeInheritsWidthAndKeepsColorAlpha()
+    {
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118),
+            gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val=\"CC2255\"><a:alpha val=\"50000\"/></a:srgbClr></a:solidFill><a:prstDash val=\"dash\"/></a:ln></c:spPr></c:minorGridlines>");
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.8 0\.133 0\.333 RG\s+1 w\s+\[4 3\s*\] 0 d"), "Color-only minor source inherits its role width and scales dashes once.");
+        TestAssert.Contains("/CA 0.5", pdf);
+    }
+
+    public static void PptxPartialMinorGridlineStrokeRetainsInvalidFillAndScopeFallbacks()
+    {
+        foreach (string line in new[] { "<a:ln w=\"-12700\"/>", "<a:ln w=\"19050\"><a:gradFill/></a:ln>", "<a:ln w=\"19050\"><a:solidFill><a:schemeClr val=\"unresolved\"/></a:solidFill></a:ln>" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118),
+                gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr>" + line + "</c:spPr></c:minorGridlines>");
+            TestAssert.True(Regex.IsMatch(pdf, @"0\.737 G\s+1 w"), "Invalid partial width and unsupported fills retain the role fallback.");
+            TestAssert.DoesNotContain("-1 w", pdf);
+        }
+        string zero = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118),
+            gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"0\"/></c:spPr></c:minorGridlines>");
+        TestAssert.True(Regex.IsMatch(zero, @"0\.737 G\s+0 w"), "Valid authored hairlines retain zero width.");
+        string hidden = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118),
+            gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines>");
+        TestAssert.DoesNotContain("0.737 G", hidden);
+        foreach (string? guard in new string?[] { null, "composed" })
+        {
+            string style = guard is null ? "<c:style val=\"18\"/>" : GalleryStyleChoice(118);
+            string fallback = RenderLegendlessLineLayoutProbe(12, 360, 100, guard: guard, galleryStyle: style,
+                gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:minorGridlines>");
+            TestAssert.DoesNotContain("0.737 G", fallback);
+        }
+    }
+
+    public static void PptxPartialMinorGridlineStrokeKeepsUnsupportedLogScaleFallback()
+    {
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, guard: "log", galleryStyle: GalleryStyleChoice(118), axisMinimum: 7d,
+            gridlines: "<c:majorGridlines/><c:minorGridlines><c:spPr><a:ln w=\"19050\"/></c:spPr></c:minorGridlines>");
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.737 G\s+1 w"), "Unsupported logarithmic geometry retains its existing minor-stroke fallback.");
+        TestAssert.DoesNotContain("0.737 G\n1.5 w", pdf);
     }
 
     public static void PptxPartialMajorGridlineStrokeInheritsRoleWidthAndKeepsSourceAlpha()
@@ -3031,7 +3084,7 @@ var tail = rendererType.GetMethod(
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{layout}}{{line}}{{(guard == "composed" ? line : "")}}
                   <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/>{{categoryTicks}}{{categoryShape}}<c:crossAx val="20"/>{{categoryCrossing}}{{labelPosition}}{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
-                  <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}{{minimum}}<c:max val="{{(axisMaximum ?? maximum).ToString(CultureInfo.InvariantCulture)}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/>{{valueShape}}<c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  <c:valAx><c:axId val="20"/><c:scaling>{{(guard == "log" ? "<c:logBase val=\"10\"/>" : "")}}{{orientation}}{{minimum}}<c:max val="{{(axisMaximum ?? maximum).ToString(CultureInfo.InvariantCulture)}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/>{{valueShape}}<c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>
