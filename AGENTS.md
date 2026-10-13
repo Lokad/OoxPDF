@@ -29,7 +29,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 
 ## Tools
 
-- `tools/RunDocxAffectedTests.ps1`: qualify overlapping DOCX/balloon methods once for one frozen assembly, with report/hash provenance.
+- `tools/RunDocxAffectedTests.ps1`: qualify explicit capability selectors once per method for one frozen assembly; use `-AllDocx` at broader milestones.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
