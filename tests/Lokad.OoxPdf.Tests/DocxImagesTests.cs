@@ -12,6 +12,129 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxImagesTests
 {
+    public static void DocxSvgImagePrefersNativeRelationshipAndPreservesInlineFlow()
+    {
+        string input = WriteSvgDocxFixture("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><rect x=\"10\" y=\"8\" width=\"100\" height=\"44\" fill=\"#00AA66\"/></svg>");
+        try
+        {
+            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            var image = document.Paragraphs.Single().Images.Single();
+            TestAssert.Equal("image/svg+xml", image.ContentType);
+            TestAssert.Equal("image/png", image.RasterFallback!.ContentType);
+            TestAssert.Equal(144d, image.WidthPoints); TestAssert.Equal(72d, image.HeightPoints);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Equal(0, page.Images.Count);
+            TestAssert.Contains("0 0.667 0.4 rg", page.Content);
+            TestAssert.Contains("Before", DocxPageFootnoteNumberingTests.DecodeText(page));
+            TestAssert.Contains("After", DocxPageFootnoteNumberingTests.DecodeText(page));
+            TestAssert.Equal(0, diagnostics.Count);
+        }
+        finally { File.Delete(input); }
+    }
+
+    public static void DocxSvgImagePublishesGradientAndIsolationResources()
+    {
+        const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"0.25\"/><stop offset=\"1\" stop-color=\"#0000FF\" stop-opacity=\"1\"/></linearGradient></defs><g opacity=\"0.5\"><rect width=\"100\" height=\"50\" fill=\"url(#g)\"/><rect x=\"20\" y=\"10\" width=\"100\" height=\"50\" fill=\"#008000\"/></g></svg>";
+        string input = WriteSvgDocxFixture(svg); string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        try
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver(), DiagnosticSink = diagnostics.Add });
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.Contains("/Subtype /Form", pdf);
+            TestAssert.True(pdf.Contains("/ShadingType 2", StringComparison.Ordinal), "Expected axial shading: " + string.Join(';', diagnostics.Select(d => d.ToString())));
+            TestAssert.Contains("/Transparency", pdf);
+            TestAssert.DoesNotContain("/Subtype /Image", pdf);
+        }
+        finally { File.Delete(input); File.Delete(output); }
+    }
+
+    public static void DocxSvgImageKeepsMissingAndMalformedRasterFallbacks()
+    {
+        foreach (bool missing in new[] { false, true })
+        {
+            string input = WriteSvgDocxFixture("<svg>", missingSvgRelationship: missing);
+            try
+            {
+                var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);var diagnostics = new List<OoxPdfDiagnostic>();
+                PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                    .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+                TestAssert.Equal(1, page.Images.Count);
+                if (!missing)
+                    TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.PageIndex == 1 && d.SlideIndex is null && d.Fallback == "RasterImage"), "Malformed SVG diagnoses the authored raster fallback on the document page: " + string.Join(';', diagnostics.Select(d => d.ToString())));
+            }
+            finally { File.Delete(input); }
+        }
+    }
+
+    public static void DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation()
+    {
+        string input = WriteSvgDocxFixture("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><path d=\"M0 0 L120 0 L60 60 Z\" fill=\"#00AA66\"/></svg>", anchored: true);
+        try
+        {
+            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            TestAssert.Equal("image/svg+xml", document.FloatingDrawings.Single().Image!.ContentType);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            TestAssert.Equal(0, page.Images.Count);TestAssert.Contains("0 0.667 0.4 rg", page.Content);
+            using var cancellation = new CancellationTokenSource();cancellation.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(document, null, cancellation.Token).ToArray());
+        }
+        finally { File.Delete(input); }
+    }
+
+    public static void DocxSvgImageDoesNotHideXmlLimitsBehindRasterFallback()
+    {
+        string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\">" +
+            string.Concat(Enumerable.Repeat("<g>", SafeXml.DefaultMaxDepth + 1)) +
+            string.Concat(Enumerable.Repeat("</g>", SafeXml.DefaultMaxDepth + 1)) + "</svg>";
+        string input = WriteSvgDocxFixture(svg);
+        try
+        {
+            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray());
+        }
+        finally { File.Delete(input); }
+    }
+
+    public static void DocxSvgOnlyImageClipsPaintToItsViewport()
+    {
+        string input = WriteSvgDocxFixture("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><rect x=\"-10\" y=\"-10\" width=\"140\" height=\"80\" fill=\"#00AA66\"/></svg>", nativeOnly: true);
+        try
+        {
+            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            TestAssert.True(document.Paragraphs.Single().Images.Single().RasterFallback is null, "Native-only SVG must not invent a raster preview.");
+            PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(document, null, CancellationToken.None).Single();
+            TestAssert.Equal(0, page.Images.Count);
+            TestAssert.True(Regex.IsMatch(page.Content, @"144 72 re\s+W\s+n"), "Authored SVG viewport must clip overflowing paint.");
+            TestAssert.Contains("Before", DocxPageFootnoteNumberingTests.DecodeText(page));
+            TestAssert.Contains("After", DocxPageFootnoteNumberingTests.DecodeText(page));
+        }
+        finally { File.Delete(input); }
+    }
+
+    private static string WriteSvgDocxFixture(string svg, bool anchored = false, bool missingSvgRelationship = false, bool nativeOnly = false)
+    {
+        string start = anchored
+            ? "<wp:anchor distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"0\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>" : "<wp:inline>";
+        string ending = anchored ? "</wp:anchor>" : "</wp:inline>";
+        return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Default Extension=\"png\" ContentType=\"image/png\"/><Default Extension=\"svg\" ContentType=\"image/svg+xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>"),
+            ["_rels/.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rDoc\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>"),
+            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rPreview\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/preview.png\"/><Relationship Id=\"rSvg\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/vector.svg\"/></Relationships>"),
+            ["word/document.xml"] = TestFixtures.Utf8($$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main"><w:body><w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r><w:r><w:drawing>{{start}}<wp:extent cx="1828800" cy="914400"/>{{(anchored ? "<wp:wrapNone/>" : "")}}<wp:docPr id="1" name="Public vector"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="Public vector"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip{{(nativeOnly ? "" : " r:embed=\"rPreview\"")}}><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="{{(missingSvgRelationship ? "missing" : "rSvg")}}"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>{{ending}}</w:drawing></w:r><w:r><w:t xml:space="preserve"> After</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440"/></w:sectPr></w:body></w:document>
+                """),
+            ["word/media/preview.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 255, 255, 0, 255]),
+            ["word/media/vector.svg"] = TestFixtures.Utf8(svg)
+        });
+    }
+
     public static void DocxSyntheticInlinePngRendersImageXObject()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>

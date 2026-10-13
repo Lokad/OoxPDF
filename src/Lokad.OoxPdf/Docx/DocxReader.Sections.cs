@@ -248,27 +248,30 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? revision)
     {
         XElement? extent = drawing.Element(WordprocessingDrawingNamespace + "extent");
-        string? relationshipId = ReadDrawingImageRelationshipId(drawing);
-        if (extent is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        if (extent is null)
         {
             return null;
         }
-
-        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        OoxPart? previewPart = ResolvePart(ReadDrawingImageRelationshipId(drawing));
+        OoxPart? vectorPart = ResolvePart(ReadDrawingSvgRelationshipId(drawing));
+        bool useVector = vectorPart?.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) == true;
+        OoxPart? imagePart = useVector ? vectorPart : previewPart;
         if (imagePart is null)
         {
             return null;
         }
-
-        return new DocxInlineImage(
-            OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX")),
-            OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX")),
-            imagePart.ContentType,
-            imagePart.Bytes,
-            imagePart.Name)
+        double width = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX"));
+        double height = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX"));
+        return Create(imagePart) with
         {
-            Revisions = RevisionList(revision)
+            RasterFallback = useVector && previewPart is not null && !ReferenceEquals(previewPart, vectorPart) &&
+                !previewPart.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) ? Create(previewPart) : null
         };
+
+        DocxInlineImage Create(OoxPart part) => new(width, height, part.ContentType, part.Bytes, part.Name)
+            { Revisions = RevisionList(revision) };
+        OoxPart? ResolvePart(string? id) => id is not null && relationships.TryGetValue(id, out OoxRelationship? relationship) &&
+            !relationship.IsExternal && relationship.ResolvedTarget is { } target ? package.GetPart(target) : null;
     }
 
     private static string? ReadDrawingImageRelationshipId(XElement drawing)
@@ -276,8 +279,12 @@ internal sealed partial class DocxReader
         return (string?)drawing
             .Descendants(DrawingNamespace + "blip")
             .FirstOrDefault()
-            ?.Attribute(RelationshipsNamespace + "embed");
+            ?.Attribute(RelationshipsNamespace + "embed") ?? ReadDrawingSvgRelationshipId(drawing);
     }
+
+    private static string? ReadDrawingSvgRelationshipId(XElement drawing) =>
+        (string?)drawing.Descendants(XName.Get("svgBlip", "http://schemas.microsoft.com/office/drawing/2016/SVG/main"))
+            .FirstOrDefault()?.Attribute(RelationshipsNamespace + "embed");
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxInlineImage? ReadVmlInlineImage(

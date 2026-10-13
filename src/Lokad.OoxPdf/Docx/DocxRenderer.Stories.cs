@@ -183,13 +183,8 @@ internal sealed partial class DocxRenderer
 
         if (drawing.Drawing.Image is { } image)
         {
-            PdfImageXObject? xObject = CreateImage(image, imageCache, diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken);
-            if (xObject is not null)
-            {
-                string imageName = "Im" + imageIndex++;
-                graphics.DrawImage(imageName, placedX, placedTop - height, width, height);
-                pageImages.Add(new PdfImageResource(imageName, xObject));
-            }
+            RenderImage(image, placedX, placedTop - height, width, height, graphics, pageImages,
+                diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex);
         }
 
         if (drawing.TextBoxLayout is { } textBoxLayout)

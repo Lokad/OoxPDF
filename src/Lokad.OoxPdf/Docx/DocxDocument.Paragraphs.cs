@@ -629,6 +629,9 @@ internal sealed record DocxRunFonts(
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
 {
+    // DrawingML SVG extensions can carry an ordinary raster preview. Retain
+    // that authored fallback for a missing or unparseable vector image.
+    public DocxInlineImage? RasterFallback { get; init; }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
     // RV05: source run affinity for ordered inline atoms. Images read from a run
     // carry that run index; -1 means the position was not recorded.

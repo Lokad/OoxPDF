@@ -109,15 +109,8 @@ internal sealed partial class DocxRenderer
         ref int imageIndex)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        PdfImageXObject? xObject = CreateImage(image.Image, imageCache, diagnosticSink, image.PageIndex, cancellationToken);
-        if (xObject is null)
-        {
-            return;
-        }
-
-        string imageName = "Im" + imageIndex++;
-        graphics.DrawImage(imageName, image.X, image.Y, image.Width, image.Height);
-        pageImages.Add(new PdfImageResource(imageName, xObject));
+        RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
+            diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex);
     }
 
     private static void AddEmissionSegmentWithFontFallback(

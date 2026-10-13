@@ -12,6 +12,34 @@ internal sealed partial class PptxRenderer
 {
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
     {
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - OoxUnits.EmuToPoints(bounds.Y) - height;
+        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken);
+    }
+
+    // The vector paint pipeline owns no presentation state. DOCX supplies its
+    // already resolved PDF rectangle and maps diagnostics to the document page.
+    internal static bool TryRenderSvgImage(PdfGraphicsBuilder graphics, double x, double y, double width, double height,
+        byte[] bytes, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, string? partName, CancellationToken cancellationToken)
+    {
+        Action<OoxPdfDiagnostic>? pageSink = diagnosticSink is null ? null :
+            diagnostic => diagnosticSink(diagnostic with { SlideIndex = null, PageIndex = pageIndex });
+        graphics.SaveState();
+        try
+        {
+            graphics.ClipRectangle(x, y, width, height);
+            return RenderSvgPictureCore(graphics, x, y, width, height, default, bytes, default, default,
+                pageSink, 0, partName, cancellationToken);
+        }
+        finally { graphics.RestoreState(); }
+    }
+
+    private static bool RenderSvgPictureCore(PdfGraphicsBuilder graphics, double x, double y, double width, double height,
+        ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex, string? partName, CancellationToken cancellationToken)
+    {
         XDocument svg;
         try
         {
@@ -31,7 +59,7 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex,
                 Feature: "svg",
                 Fallback: "Ignored"));
-            return;
+            return false;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -48,15 +76,10 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex,
                 Feature: "svg",
                 Fallback: "Ignored"));
-            return;
+            return false;
         }
 
 
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
         double imageX = x + fillRect.Left * width;
         double imageY = y + fillRect.Bottom * height;
         double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
@@ -85,7 +108,7 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex,
                 Feature: "svg",
                 Fallback: "Ignored"));
-            return;
+            return false;
         }
 
         graphics.SaveState();
@@ -103,7 +126,7 @@ internal sealed partial class PptxRenderer
         if (svg.Root is { } root && IsFullyTransparentSvgContainer(root))
         {
             graphics.RestoreState();
-            return;
+            return true;
         }
 
         var gradients = ReadSvgGradients(svg);
@@ -427,6 +450,7 @@ internal sealed partial class PptxRenderer
         ReportIgnoredSvgOpacity(svg, usedGradientIds, admittedContainers, admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
 
         graphics.RestoreState();
+        return true;
     }
 
     // RV07: unsupported rendered content must diagnose instead of silently

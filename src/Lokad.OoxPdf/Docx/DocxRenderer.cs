@@ -1211,7 +1211,9 @@ internal sealed partial class DocxRenderer
                 graphics.Shadings,
                 graphics.Patterns,
                 annotations,
-                fontResources.FallbackFontResources);
+                fontResources.FallbackFontResources,
+                graphics.Groups,
+                graphics.ShadingPatterns);
         }
 
         IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations()
