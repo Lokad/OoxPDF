@@ -3111,3 +3111,28 @@ identities and eight DOCX guards match. Exact frozen tests fail the parent at fo
 intended regressions; three protected guards pass. No new full catalogue or
 complete Office parity is claimed. Version 0.1.5, release deferral, safe managed
 code and existing resource/work/publication limits remain.
+
+### RV06-L246: shared modern line-axis stroke inheritance
+
+Commit `23292d0e` fixes ignored width-only axes and black0.75pt modern-gallery
+fallbacks. Axes and major gridlines share one omission reader; the typed scene
+publishes the final axis stroke. Source overrides/noFill keep precedence. The
+existing single-line102/118/126 gallery admission stays bounded; classic,
+composed, other-gallery and explicit-style-part fallbacks remain.
+
+Eighteen independent Office controls plus182 affected existing checks qualify
+197 lower-mean-error comparisons and3 exact guards.126 improve both metrics;
+71 have threshold-only tradeoffs with lower mean error.394 axis paint states
+match Office. All17448 graphics geometries,2613 complete text operations,
+400 embedded font programs and4544 glyphs remain exact against the parent.
+The3155 paint changes are orthogonal axis/tick strokes. Existing vertical-axis
+crossing residuals and minor-stroke defaults remain separate; no geometry or
+font exception was added to conceal them.
+
+Frozen/root strict Release and422 chart/201 OOXML tests pass without warnings or
+errors. Each reproduces619 exact PDF checks (209 controls,252 public,158 retained;
+sets overlap). Eight DOCX guards remain exact. Thirty-six portable Linux checks
+pass; the source-only archive build retains two SourceLink warnings. Four source
+blobs/raw identities match; frozen tests fail the parent at four intended
+regressions and retain the fallback guard. No new full-catalogue or complete
+Office-parity claim; version0.1.5 and release deferral remain.
