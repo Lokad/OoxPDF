@@ -84,6 +84,8 @@ Supported:
 
 Partial or approximated:
 
+- Embedded SVG pictures use the shared vector subset for inline and anchored placement, with paths, shapes, fills, strokes, gradients and isolated opacity. Native relationships take precedence; malformed/unusable vectors can retain the authored raster preview. Word picture viewport clipping is preserved. Crop/transform propagation, wider story coverage and Word radial-gradient fidelity remain partial.
+
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
 - Advanced numbering formats, character-unit list indents, and complex bidirectional list layout are approximate.
@@ -176,7 +178,7 @@ Each row links an unsupported family to its detection diagnostic, fallback, and 
 | PPTX missing image parts | `IMAGE_MISSING_PART` Error | Ignored, conversion continues | `PptxMissingImagePartDiagnosesErrorAndContinues` (pptx-images) |
 | Undecodable images | `IMAGE_UNSUPPORTED_FORMAT` Error | Ignored | DocxImagesTests, ImagingTests, PptxImagesTests |
 | Cropped-image decode | `IMAGE_CROP_UNSUPPORTED_FORMAT` Warning | PDF clipping | PptxImagesTests |
-| SVG pictures | `SVG_UNSUPPORTED_CONTENT` Error/Warning | Ignored / Partial | PptxImagesTests SVG diagnostics |
+| SVG pictures | `SVG_UNSUPPORTED_CONTENT` Error/Warning | Ignored / Partial / RasterImage | PPTX SVG diagnostics; DOCX native/preview fallback and viewport tests |
 | DOCX floating charts | `DOCX_UNSUPPORTED_CHART` Warning | Ignored | `DocxUnsupportedChartInHeaderIsDiagnosed` (docx-core) |
 | DOCX SmartArt | `DOCX_UNSUPPORTED_SMARTART` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | DOCX equations | `DOCX_UNSUPPORTED_EQUATION` Warning | Ignored | `DocxUnsupportedEquationInFooterIsDiagnosed` (docx-core) |
