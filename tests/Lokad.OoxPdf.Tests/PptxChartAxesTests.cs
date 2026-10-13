@@ -445,9 +445,9 @@ internal static class PptxChartAxesTests
             var method = typeof(PptxRenderer).GetMethod("ReadLineChartAxisTickPolicy", flags) ?? throw new InvalidOperationException("Expected source policy.");
             Type extentsType = typeof(PptxRenderer).GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic)!;
             object extents = Activator.CreateInstance(extentsType, [7d, 107d])!;
-            TestAssert.Equal(log.Length == 0 ? "SourceMinimumIntervals" : "ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, extents])!.ToString());
+            TestAssert.Equal(log.Length == 0 ? "SourceMinimumIntervals" : "ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, extents, false])!.ToString());
             object fallbackExtents = Activator.CreateInstance(extentsType, [0d, 100d])!;
-            TestAssert.Equal("ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, fallbackExtents])!.ToString());
+            TestAssert.Equal("ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, fallbackExtents, false])!.ToString());
         }
     }
 
