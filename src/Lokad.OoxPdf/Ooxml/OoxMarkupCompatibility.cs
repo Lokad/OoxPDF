@@ -124,7 +124,47 @@ internal static class OoxMarkupCompatibility
             return;
         }
 
+        PreservePreferredChartGalleryStyle(alternate, fallback);
+
         alternate.ReplaceWith(fallback.Elements().ToArray());
+    }
+
+    private static void PreservePreferredChartGalleryStyle(XElement alternate, XElement fallback)
+    {
+        XElement? chartSpace = alternate.Parent;
+        if (chartSpace?.Name != OoxNamespaces.ChartNamespace + "chartSpace")
+        {
+            return;
+        }
+
+        XNamespace compatibility = OoxNamespaces.MarkupCompatibilityNamespace;
+        // Preserve the preferred chart-gallery declaration without opting into
+        // other unsupported c14 content or changing the selected fallback tree.
+        XElement? preferred = alternate.Elements(compatibility + "Choice").FirstOrDefault();
+        XElement? preferredStyle = preferred is not null && !preferred.Elements().Skip(1).Any() ? preferred.Elements().FirstOrDefault() : null;
+        XElement? fallbackStyle = !fallback.Elements().Skip(1).Any() ? fallback.Elements().FirstOrDefault() : null;
+        string[] required = ((string?)preferred?.Attribute("Requires") ?? string.Empty)
+            .Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        if (required.Length == 1 &&
+            preferred?.GetNamespaceOfPrefix(required[0]) == OoxNamespaces.ChartStyle2010Namespace &&
+            preferredStyle?.Name == OoxNamespaces.ChartStyle2010Namespace + "style" &&
+            fallbackStyle?.Name == OoxNamespaces.ChartNamespace + "style" &&
+            int.TryParse((string?)preferredStyle.Attribute("val"), out int style) &&
+            style is >= 101 and <= 148)
+        {
+            chartSpace.AddAnnotation(new ChartGalleryChoice(style));
+        }
+
+    }
+
+    private sealed record ChartGalleryChoice(int Value);
+
+    internal static int? ReadPreferredChartGalleryStyle(XElement? chartSpace)
+    {
+        XElement? direct = chartSpace?.Element(OoxNamespaces.ChartStyle2010Namespace + "style");
+        return direct is not null && int.TryParse((string?)direct.Attribute("val"), out int value) && value is >= 101 and <= 148
+            ? value
+            : chartSpace?.Annotation<ChartGalleryChoice>()?.Value;
     }
 
     private static bool IsUnderstoodChoice(XElement choice)

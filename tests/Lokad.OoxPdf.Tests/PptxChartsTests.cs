@@ -2573,7 +2573,83 @@ var tail = rendererType.GetMethod(
         TestAssert.True(pdf.Contains(expected, StringComparison.Ordinal), "Expected " + expected + "; actual clips: " + actual);
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false)
+    public static void PptxGalleryGridlinesUsePreferredModernRolesAndKeepLegacyFallbacks()
+    {
+        foreach (int modern in new[] { 102, 118, 126 })
+        {
+            string choice = GalleryStyleChoice(modern);
+            string modernPdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: choice, gridlines: "<c:majorGridlines/><c:minorGridlines/>");
+            TestAssert.True(Regex.IsMatch(modernPdf, @"0\.537 G\s+1 w"), "Expected gridline stroke state: 0.537 G / 1 w.");
+            TestAssert.True(Regex.IsMatch(modernPdf, @"0\.737 G\s+1 w"), "Expected gridline stroke state: 0.737 G / 1 w.");
+            string direct = $"<c14:style xmlns:c14=\"http://schemas.microsoft.com/office/drawing/2007/8/2/chart\" val=\"{modern}\"/>";
+            string directPdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: direct, gridlines: "<c:majorGridlines/><c:minorGridlines/>");
+            TestAssert.True(Regex.IsMatch(directPdf, @"0\.537 G\s+1 w"), "Expected direct modern gallery role.");
+            TestAssert.True(Regex.IsMatch(directPdf, @"0\.737 G\s+1 w"), "Expected direct modern minor gallery role.");
+            string legacyPdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: $"<c:style val=\"{modern - 100}\"/>", gridlines: "<c:majorGridlines/><c:minorGridlines/>");
+            TestAssert.DoesNotContain("0.737 G", legacyPdf);
+            if (modern != 102) TestAssert.DoesNotContain("0.537 G", legacyPdf);
+            TestAssert.True(Regex.IsMatch(legacyPdf, @"0\.922 G\s+0\.25 w"), "Expected gridline stroke state: 0.922 G / 0.25 w.");
+        }
+
+        string composed = RenderLegendlessLineLayoutProbe(12, 360, 100, guard: "composed", galleryStyle: GalleryStyleChoice(118));
+        TestAssert.DoesNotContain("0.537 G", composed);
+    }
+
+    public static void PptxGalleryGridlinesKeepAuthoredStrokesAndVisibility()
+    {
+        string explicitStroke = "<c:majorGridlines><c:spPr><a:ln w=\"19050\"><a:solidFill><a:srgbClr val=\"A030D0\"/></a:solidFill><a:prstDash val=\"dash\"/></a:ln></c:spPr></c:majorGridlines>";
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: explicitStroke);
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.627 0\.188 0\.816 RG\s+1\.5 w"), "Expected gridline stroke state: 0.627 0.188 0.816 RG / 1.5 w.");
+        TestAssert.DoesNotContain("0.537 G", pdf);
+        string hidden = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>");
+        TestAssert.DoesNotContain("0.537 G", hidden);
+        string absent = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "");
+        TestAssert.DoesNotContain("0.537 G", absent);
+    }
+
+    public static void PptxGalleryStyleMetadataDoesNotAdmitUnsupportedChoicePayloads()
+    {
+        foreach (string choice in new[]
+        {
+            GalleryStyleChoice(118).Replace("<c14:style val=\"118\"/>", "<c14:style val=\"118\"/><c14:unsupported/>"),
+            GalleryStyleChoice(118).Replace("Requires=\"c14\"", "Requires=\"c14 other\"").Replace("<mc:Choice", "<mc:Choice xmlns:other=\"urn:unknown\""),
+            GalleryStyleChoice(118).Replace("val=\"118\"", "val=\"invalid\""),
+            GalleryStyleChoice(119),
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: choice);
+            TestAssert.DoesNotContain("0.537 G", pdf);
+        }
+    }
+
+    public static void PptxGalleryGridlinesKeepStylePartRoleOwnership()
+    {
+        const string stylePart = "<cs:style xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" id=\"1\"><cs:gridlineMajor><cs:spPr><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"44CC88\"/></a:solidFill></a:ln></cs:spPr></cs:gridlineMajor></cs:style>";
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines/><c:minorGridlines/>", stylePart: stylePart);
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.267 0\.8 0\.533 RG\s+0\.75 w"), "Expected source style-part gridline stroke.");
+        TestAssert.Contains("0.922 G", pdf);
+        TestAssert.DoesNotContain("0.537 G", pdf);
+        TestAssert.DoesNotContain("0.737 G", pdf);
+    }
+
+    public static void PptxGalleryGridlinesUseIndependentThemeColorTransform()
+    {
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines/><c:minorGridlines/>", themeDarkColor: "204060");
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.549 0\.573 0\.616 RG\s+1 w"), "Expected independently measured theme major-gridline color.");
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.741 0\.753 0\.773 RG\s+1 w"), "Expected independently measured theme minor-gridline color.");
+        TestAssert.DoesNotContain("0.537 G", pdf);
+        TestAssert.DoesNotContain("0.737 G", pdf);
+        string mapped = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines/><c:minorGridlines/>", themeDarkColor: "204060", mapTextToDark2: true);
+        TestAssert.True(Regex.IsMatch(mapped, @"0\.541 0\.553 0\.576 RG\s+1 w"), "Expected independently measured slide color-map major role.");
+        TestAssert.True(Regex.IsMatch(mapped, @"0\.737 0\.741 0\.753 RG\s+1 w"), "Expected independently measured slide color-map minor role.");
+    }
+
+    private static string GalleryStyleChoice(int modern)
+    {
+        return $"<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice xmlns:c14=\"http://schemas.microsoft.com/office/drawing/2007/8/2/chart\" Requires=\"c14\"><c14:style val=\"{modern}\"/></mc:Choice><mc:Fallback><c:style val=\"{modern - 100}\"/></mc:Fallback></mc:AlternateContent>";
+    }
+
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false)
     {
         string line = $$"""
             <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
@@ -2583,16 +2659,17 @@ var tail = rendererType.GetMethod(
             """;
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              {{galleryStyle}}
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
                   <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/><c:crossAx val="20"/>{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
-                  <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{maximum / 5}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/><c:majorGridlines/>{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{maximum / 5}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>
             </c:chartSpace>
             """;
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        var parts = new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -2602,10 +2679,22 @@ var tail = rendererType.GetMethod(
             ["ppt/slides/slide1.xml"] = $$"""
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{width * 12700}}" cy="2743200"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+                  {{(mapTextToDark2 ? "<p:clrMapOvr><a:overrideClrMapping bg1=\"lt1\" tx1=\"dk2\" bg2=\"lt2\" tx2=\"dk1\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/></p:clrMapOvr>" : "")}}
                 </p:sld>
                 """,
             ["ppt/charts/chart1.xml"] = chart
-        });
+        };
+        if (stylePart is not null)
+        {
+            parts["ppt/charts/_rels/chart1.xml.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdStyle\" Type=\"http://schemas.microsoft.com/office/2011/relationships/chartStyle\" Target=\"style1.xml\"/></Relationships>";
+            parts["ppt/charts/style1.xml"] = stylePart;
+        }
+        if (themeDarkColor is not null)
+        {
+            parts["ppt/_rels/presentation.xml.rels"] = parts["ppt/_rels/presentation.xml.rels"].Replace("</Relationships>", "<Relationship Id=\"rIdTheme\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/></Relationships>", StringComparison.Ordinal);
+            parts["ppt/theme/theme1.xml"] = $"<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:themeElements><a:clrScheme name=\"Probe\"><a:dk1><a:srgbClr val=\"{themeDarkColor}\"/></a:dk1><a:lt1><a:srgbClr val=\"FFF0D0\"/></a:lt1><a:dk2><a:srgbClr val=\"0E2841\"/></a:dk2></a:clrScheme></a:themeElements></a:theme>";
+        }
+        string input = TestFixtures.WriteTempPackage(".pptx", parts);
         string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");
         try
         {

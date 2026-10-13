@@ -48,7 +48,7 @@ internal sealed partial class PptxSceneBuilder
             ? new Dictionary<string, OoxRelationship>(StringComparer.Ordinal)
             : package.GetRelationships(chartPart.Name, cancellationToken).ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart);
+        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots);
         return new PptxSceneChart(
             relationshipId,
             targetPartName,
@@ -460,7 +460,7 @@ internal sealed partial class PptxSceneBuilder
             : (IsOoxmlBooleanElementEnabled(marker), (string?)marker.Attribute("val") ?? string.Empty);
     }
 
-    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartStyle stylePart)
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartStyle stylePart, IReadOnlyList<PptxSceneChartPlot> plots)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -468,6 +468,22 @@ internal sealed partial class PptxSceneBuilder
         if (plotArea is null)
         {
             return [];
+        }
+
+        PptxSceneLineStyle majorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMajor");
+        PptxSceneLineStyle minorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMinor");
+        int? preferredGalleryStyle = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chartXml?.Root);
+        if (!stylePart.IsDefined && plots.Count == 1 &&
+            plots[0].PlotKind == PptxSceneChartPlotKind.Line &&
+            preferredGalleryStyle is 102 or 118 or 126)
+        {
+            // Independently qualified line-plot gallery roles. Other plot kinds
+            // retain their fallback pending geometry qualification. Authored gridline
+            // strokes still take precedence; axis strokes and plot geometry keep
+            // their existing ownership. Other galleries retain their fallback.
+            RgbColor textColor = theme.TryResolveColor("tx1", colorMap, out RgbColor resolvedColor) ? resolvedColor : new RgbColor(0, 0, 0);
+            majorStyleLine = new PptxSceneLineStyle(true, LinearLightColor.TintTowardWhite(textColor, 0.25d), 1d, 1d, [], null, null, null, null, null, null, null, true);
+            minorStyleLine = new PptxSceneLineStyle(true, LinearLightColor.TintTowardWhite(textColor, 0.5d), 1d, 1d, [], null, null, null, null, null, null, null, true);
         }
 
         var axes = new List<PptxSceneChartAxis>();
@@ -526,8 +542,8 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartAxisLine(axis, theme, colorMap),
                 ReadChartGridlineLine(majorGridlines, theme, colorMap),
                 ReadChartGridlineLine(minorGridlines, theme, colorMap),
-                ReadChartStyleRoleLine(stylePart, "gridlineMajor"),
-                ReadChartStyleRoleLine(stylePart, "gridlineMinor"),
+                majorStyleLine,
+                minorStyleLine,
                 ReadChartTextStyleOverride(axis, theme, colorMap),
                 tickLabelPosition,
                 majorTickMark,
