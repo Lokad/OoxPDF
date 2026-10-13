@@ -3136,3 +3136,38 @@ pass; the source-only archive build retains two SourceLink warnings. Four source
 blobs/raw identities match; frozen tests fail the parent at four intended
 regressions and retain the fallback guard. No new full-catalogue or complete
 Office-parity claim; version0.1.5 and release deferral remain.
+
+### RV06-L247: multiple source-owned footnote markers
+
+Commit `ec21bc51` fixes per-page numbering when a paragraph contains several
+generated footnote markers. The previous guard left labels105..108 where Word
+restarts4/5 or09/10 per physical page. An indexed source-run/actual-segment map
+and shared run qualifier use one explicit ownership scope. Numbering can own
+every marker; kerning, leading and separator-reserve corrections retain their
+single-reference admissions. A single numbering retry must retain all complete
+marker/note pages. No font/size/threshold exception is added.
+
+Twenty independent Word controls cover source IDs/starts, decimal/decimalZero,
+break forms, Arial/Calibri/Times,14pt text and wrapped/met/mixed frames. Eighteen
+corrections improve both raster metrics on all36 admitted pages. Two raw Calibri
+wrapped frames retain exact parent output: their pair flags do not match source
+thresholds under the existing normalized-frame policy. Those partial fallbacks
+remain explicit; malformed/shared source owners, incomplete/moved notes and
+unstable pages retain their existing exclusions.
+
+All624 authored text operations and advances,160 marker operations,64 source
+font-program checks,1718 shared glyphs and160 graphics operations are protected.
+Every horizontal position follows exact source-hmtx marker advances on the
+existing half-point superscript grid;784 projections have maximum error below
+.000954pt. All vertical positions/matrices and80 distinct same-page note
+destinations/vertical hit areas stay exact. Source digits and metadata remain
+intact; only generated marker labels and their width-dependent positions change.
+
+Frozen/root strict Release builds and1255 unique affected DOCX/balloon methods
+pass (1253 DOCX and122 balloons, overlapping coverage). Each reproduces647 exact
+PDF checks:619 inherited PPTX,20 independent DOCX and8 inherited DOCX guards.
+Thirty-one portable Linux checks pass; the isolated source-only build retains
+two SourceLink warnings. Seven source blobs/raw identities match. The exact
+frozen rendering test fails the parent at its visible label assertion. No new
+full-catalogue or complete Office parity claim. Version0.1.5, release deferral,
+safe managed code and existing bounds/work/publication limits remain.
