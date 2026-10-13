@@ -3,6 +3,8 @@ using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Docx;
 
+internal enum DocxFootnoteOwnerScope { SingleReferenceParagraphs, AllSourceReferences }
+
 internal static class DocxPageFootnoteNumbering
 {
     internal static bool IsEligibleDocument(DocxDocument document, bool includeContinuousRestart = false)
@@ -21,12 +23,13 @@ internal static class DocxPageFootnoteNumbering
 
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument numbered, out IReadOnlyDictionary<string, int> referencePages, bool allowWrappedBody = false,
-        DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal)
+        DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
     {
         numbered = source;
         referencePages = new Dictionary<string, int>();
         if (!IsEligibleDocument(source) || !TryMapReferencePages(source, layout, out var pages, allowWrappedBody,
-            calibriPolicy: calibriPolicy)) return false;
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope)) return false;
         var settings = source.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         var counts = new Dictionary<int, int>();
         var labels = new Dictionary<string, (string Before, string After)>(StringComparer.Ordinal);
@@ -34,19 +37,25 @@ internal static class DocxPageFootnoteNumbering
         foreach (var paragraph in source.Paragraphs)
         {
             if (paragraph.InlineReferences.Count == 0) continue;
-            var reference = paragraph.InlineReferences.Single();
-            int page = pages[reference.Id!];
-            counts.TryGetValue(page, out int count);
-            int value = checked((settings.NumberStart ?? 1) + count);
-            counts[page] = count + 1;
-            string label = value.ToString(settings.NumberFormatValue == "decimalZero" ? "D2" : "D", CultureInfo.InvariantCulture);
+            var runLabels = new Dictionary<int, string>();
+            var references = new List<DocxInlineReference>();
+            foreach (var reference in paragraph.InlineReferences)
+            {
+                int page = pages[reference.Id!];
+                counts.TryGetValue(page, out int count);
+                int value = checked((settings.NumberStart ?? 1) + count);
+                counts[page] = count + 1;
+                string label = value.ToString(settings.NumberFormatValue == "decimalZero" ? "D2" : "D", CultureInfo.InvariantCulture);
+                runLabels.Add(reference.SourceRunIndex, label);
+                references.Add(reference with { DisplayText = label });
+                labels.Add(reference.Id!, (reference.DisplayText!, label));
+            }
             // Only the generated marker in its own source run changes. Authored
             // digits and original source offsets retain their identities.
-            var runs = paragraph.Runs.Select(r => r.SourceRunIndex == reference.SourceRunIndex
+            var runs = paragraph.Runs.Select(r => runLabels.TryGetValue(r.SourceRunIndex, out string? label)
                 ? r with { Text = label } : r).ToArray();
             replacements.Add(paragraph, paragraph with { Runs = runs,
-                InlineReferences = [reference with { DisplayText = label }] });
-            labels.Add(reference.Id!, (reference.DisplayText!, label));
+                InlineReferences = references.ToArray() });
         }
         foreach (var story in source.RelatedStories.Where(s => s.IsNormalStoryType))
         {
@@ -70,9 +79,10 @@ internal static class DocxPageFootnoteNumbering
     }
 
     internal static bool HasStablePages(DocxDocument numbered, DocxLayout layout,
-        IReadOnlyDictionary<string, int> originalPages, bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal) =>
+        IReadOnlyDictionary<string, int> originalPages, bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs) =>
         TryMapReferencePages(numbered, layout, out var actual, allowWrappedBody,
-            calibriPolicy: calibriPolicy) && actual.Count == originalPages.Count &&
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope) && actual.Count == originalPages.Count &&
         actual.All(p => originalPages.TryGetValue(p.Key, out int before) && before == p.Value);
 
     internal static bool HasCompleteNoteOwners(DocxDocument document, DocxLayout layout) =>
@@ -89,7 +99,8 @@ internal static class DocxPageFootnoteNumbering
         HasStablePages(document, after, pages);
 
     private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages,
-        bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal)
+        bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
     {
         pages = new(StringComparer.Ordinal);
         var linesByParagraph = new Dictionary<DocxParagraph, List<(int Page, DocxTextLineLayout Line)>>(ReferenceEqualityComparer.Instance);
@@ -120,26 +131,35 @@ internal static class DocxPageFootnoteNumbering
         bool? wrappedBodyEligible = null;
         foreach (var p in document.Paragraphs.Where(p => p.InlineReferences.Count != 0))
         {
-            if (p.InlineReferences.Count != 1 || !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
+            if ((ownerScope != DocxFootnoteOwnerScope.AllSourceReferences && p.InlineReferences.Count != 1) ||
+                !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
             bool wrapped = lines.Count != 1;
-            if (wrapped && (!allowWrappedBody || (wrappedBodyEligible ??= DocxWrappedFootnoteFrame.IsEligible(document, calibriPolicy)) != true ||
+            if (wrapped && (!allowWrappedBody || (wrappedBodyEligible ??= DocxWrappedFootnoteFrame.IsEligible(document, calibriPolicy, ownerScope)) != true ||
                 lines.Any(l => l.Page != lines[0].Page))) return false;
-            var r = p.InlineReferences[0];
-            if (r.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(r.Id) || string.IsNullOrEmpty(r.DisplayText) ||
-                r.CustomMarkText is not null || !string.IsNullOrEmpty(r.CustomMarkFollowsValue) && !OoxBoolean.IsOff(r.CustomMarkFollowsValue) ||
-                r.Revision is not null || r.Revisions.Count != 0 || !r.DisplayText.All(char.IsAsciiDigit)) return false;
-            var marker = p.Runs.Where(run => run.SourceRunIndex == r.SourceRunIndex).ToArray();
-            var ownedLines = lines.Where(l => l.Line.Segments.Any(s => s.Role == DocxTextSegmentRole.Text &&
-                s.SourceTextRunIndex == r.SourceRunIndex && s.SourceTextOffsetInRun == r.TextOffsetInRun &&
-                s.Text == r.DisplayText)).ToArray();
-            if (wrapped && (ownedLines.Length != 1 || ownedLines[0].Line.Segments.Count(s => s.Role == DocxTextSegmentRole.Text &&
-                s.SourceTextRunIndex == r.SourceRunIndex && s.SourceTextOffsetInRun == r.TextOffsetInRun &&
-                s.Text == r.DisplayText) != 1)) return false;
-            int ownerPage = wrapped ? ownedLines[0].Page : lines[0].Page;
-            if (marker.Length != 1 || marker[0].SourceTextOffsetInRun != r.TextOffsetInRun || marker[0].Text != r.DisplayText ||
-                !notes.TryGetValue(r.Id, out var places) || places.Count != 1 || places[0].Page != ownerPage ||
-                places[0].Note.ContentTopOffset != 0d || places[0].Note.TextLines.Count != 1 ||
-                places[0].Note.StoryLayout.TextLines.Count != 1 || !pages.TryAdd(r.Id, ownerPage)) return false;
+            // Index source runs and actual text segments once per paragraph.
+            // Numbering can own every marker; layout/kerning purposes retain
+            // their independently qualified single-reference paragraph scope.
+            var markerRuns = p.Runs.GroupBy(r => r.SourceRunIndex).ToDictionary(g => g.Key, g => g.ToArray());
+            var markerLines = lines.SelectMany(l => l.Line.Segments.Where(s => s.Role == DocxTextSegmentRole.Text)
+                .Select(s => (l.Page, Segment: s)))
+                .GroupBy(l => (l.Segment.SourceTextRunIndex, l.Segment.SourceTextOffsetInRun, l.Segment.Text))
+                .ToDictionary(g => g.Key, g => g.ToArray());
+            var ownedRuns = new HashSet<int>();
+            foreach (var r in p.InlineReferences)
+            {
+                if (r.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(r.Id) || string.IsNullOrEmpty(r.DisplayText) ||
+                    r.CustomMarkText is not null || !string.IsNullOrEmpty(r.CustomMarkFollowsValue) && !OoxBoolean.IsOff(r.CustomMarkFollowsValue) ||
+                    r.Revision is not null || r.Revisions.Count != 0 || !r.DisplayText.All(char.IsAsciiDigit)) return false;
+                if (!markerRuns.TryGetValue(r.SourceRunIndex, out var marker) || !ownedRuns.Add(r.SourceRunIndex)) return false;
+                bool completeSegmentOwner = wrapped || ownerScope == DocxFootnoteOwnerScope.AllSourceReferences;
+                markerLines.TryGetValue((r.SourceRunIndex, r.TextOffsetInRun, r.DisplayText), out var ownedLines);
+                if (completeSegmentOwner && ownedLines?.Length != 1) return false;
+                int ownerPage = completeSegmentOwner ? ownedLines![0].Page : lines[0].Page;
+                if (marker.Length != 1 || marker[0].SourceTextOffsetInRun != r.TextOffsetInRun || marker[0].Text != r.DisplayText ||
+                    !notes.TryGetValue(r.Id, out var places) || places.Count != 1 || places[0].Page != ownerPage ||
+                    places[0].Note.ContentTopOffset != 0d || places[0].Note.TextLines.Count != 1 ||
+                    places[0].Note.StoryLayout.TextLines.Count != 1 || !pages.TryAdd(r.Id, ownerPage)) return false;
+            }
         }
         return pages.Count > 0 && pages.Count == notes.Count &&
             pages.Count == document.RelatedStories.Count(s => s.IsNormalStoryType);

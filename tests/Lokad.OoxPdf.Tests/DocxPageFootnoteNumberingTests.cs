@@ -137,6 +137,155 @@ internal static class DocxPageFootnoteNumberingTests
         }
     }
 
+    public static void DocxMultipleFootnoteNumbersRestartEachSourceMarkerAndKeepLayoutScope()
+    {
+        foreach (bool runBreak in new[] { false, true })
+        foreach ((string format, int start) in new[] { ("decimal", 1), ("decimal", 4), ("decimalZero", 9) })
+        {
+            DocxDocument source = ReadMultipleFixture(runBreak, format, start);
+            DocxLayout first = CreateLayout(source);
+            TestAssert.Equal(2, first.Pages.Count);
+            TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, first, out _, out _), "Existing layout/kerning callers retain single-reference scope.");
+            TestAssert.True(!DocxPageFootnoteNumbering.HasCompleteNoteOwners(source, first), "Complete-reserve corrections retain their prior admission.");
+            TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(source, first, out var numbered, out var owners,
+                ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "Every actual source marker with a complete same-page note can restart.");
+            TestAssert.Equal("1,1,2,2", string.Join(',', new[] { "37", "4", "73", "8" }.Select(id => owners[id])));
+            DocxInlineReference[] before = source.Paragraphs.SelectMany(p => p.InlineReferences).ToArray();
+            DocxInlineReference[] after = numbered.Paragraphs.SelectMany(p => p.InlineReferences).ToArray();
+            for (int i = 0; i < after.Length; i++)
+            {
+                string label = (start + i % 2).ToString(format == "decimalZero" ? "D2" : "D", CultureInfo.InvariantCulture);
+                TestAssert.Equal(label, after[i].DisplayText);
+                TestAssert.Equal(before[i].SourceRunIndex, after[i].SourceRunIndex);
+                TestAssert.Equal(before[i].TextOffsetInRun, after[i].TextOffsetInRun);
+                TestAssert.Equal(label, numbered.RelatedStories.Single(s => s.Id == after[i].Id).Paragraphs[0].Runs[0].Text);
+            }
+            foreach (var p in source.Paragraphs.Where(p => p.InlineReferences.Count != 0))
+            {
+                var changed = numbered.Paragraphs.Single(q => q.InlineReferences.Any(r => r.Id == p.InlineReferences[0].Id));
+                var generated = p.InlineReferences.Select(r => r.SourceRunIndex).ToHashSet();
+                TestAssert.Equal(string.Concat(p.Runs.Where(r => !generated.Contains(r.SourceRunIndex)).Select(r => r.Text)),
+                    string.Concat(changed.Runs.Where(r => !generated.Contains(r.SourceRunIndex)).Select(r => r.Text)));
+            }
+            TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(numbered, CreateLayout(numbered), owners,
+                ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "Every complete marker/note pair retains its physical page.");
+        }
+    }
+
+    public static void DocxMultipleFootnoteOwnersRejectMissingAndDuplicateSegments()
+    {
+        DocxDocument source = ReadMultipleFixture();
+        DocxLayout first = CreateLayout(source);
+        var paragraph = source.Paragraphs.First(p => p.InlineReferences.Count != 0);
+        var reference = paragraph.InlineReferences[0];
+        var line = first.Pages[0].Items.OfType<DocxTextLineLayout>().Single(l => ReferenceEquals(l.SourceParagraph, paragraph));
+        var marker = line.Segments.Single(s => s.SourceTextRunIndex == reference.SourceRunIndex && s.SourceTextOffsetInRun == reference.TextOffsetInRun);
+        foreach (bool duplicate in new[] { false, true })
+        {
+            var segments = duplicate ? line.Segments.Append(marker).ToArray() : line.Segments.Where(s => !ReferenceEquals(s, marker)).ToArray();
+            var pages = first.Pages.ToArray();
+            pages[0] = pages[0] with { Items = pages[0].Items.Select(i => ReferenceEquals(i, line) ? line with { Segments = segments } : i).ToArray() };
+            TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, first with { Pages = pages }, out var fallback, out _,
+                ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "A generated marker must own exactly one actual segment.");
+            TestAssert.True(ReferenceEquals(source, fallback), "Ambiguous or missing owners preserve the original document.");
+        }
+    }
+
+    public static void DocxMultipleFootnoteNumbersRenderSeparateLabelsAndDestinations()
+    {
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            DocxDocument source = ReadMultipleFixture(runBreak: true, format: "decimalZero", start: 9);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
+            PdfPage[] pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            for (int page = 0; page < pages.Length; page++)
+            {
+                string text = DecodeText(pages[page]);
+                TestAssert.Contains("105", text); TestAssert.Contains("108;", text);
+                TestAssert.Equal(4, Regex.Matches(text, @"(?<!\d)(?:09|10)(?!\d)").Count);
+                TestAssert.Contains("09 Public destination", text); TestAssert.Contains("10 Public destination", text);
+                TestAssert.Equal(2, pages[page].Annotations.Count);
+                TestAssert.Equal(2, pages[page].Annotations.Select(a => a.Destination).Distinct().Count());
+                TestAssert.True(pages[page].Annotations.All(a => a.Destination!.Value.PageIndex == page && a.Width > 0d && a.Height > 0d),
+                    "Every independently rewritten marker points into its own same-page note.");
+            }
+            TestAssert.Equal("105,106,107,108", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
+        }
+    }
+
+    public static void DocxMultipleFootnoteNumbersKeepExplicitSourceFallbacks()
+    {
+        Action<XDocument, XDocument, XDocument>[] exclusions = [
+            (xml, _, _) => xml.Descendants(Word + "footnoteReference").First().SetAttributeValue(Word + "customMarkFollows", "1"),
+            (xml, _, _) => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
+            (_, _, notes) => notes.Root!.Elements(Word + "footnote").First(n => n.Attribute(Word + "type") is null)
+                .Add(new XElement(Word + "p", new XElement(Word + "r", new XElement(Word + "t", "another note paragraph")))),
+            (xml, _, _) => {
+                XElement[] refs = xml.Descendants(Word + "footnoteReference").Take(2).ToArray();
+                refs[1].SetAttributeValue(Word + "id", refs[0].Attribute(Word + "id")!.Value);
+            },
+            (xml, _, _) => {
+                XElement[] refs = xml.Descendants(Word + "footnoteReference").Take(2).ToArray();
+                XElement shared = refs[0].Parent!;
+                shared.Add(new XElement(refs[1])); refs[1].Parent!.Remove();
+            }
+        ];
+        foreach (var exclusion in exclusions)
+        {
+            DocxDocument source = ReadMultipleFixture(modify: exclusion);
+            TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, CreateLayout(source), out var fallback, out _,
+                ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "Unsupported settings, incomplete notes and ambiguous source owners retain fallback.");
+            TestAssert.True(ReferenceEquals(source, fallback), "Fallback keeps authored runs, references and stories intact.");
+        }
+    }
+
+    public static void DocxMultipleWrappedFootnoteNumbersShareOwnedRunQualification()
+    {
+        DocxDocument source = ReadMultipleFixture(modify: (xml, _, notes) =>
+        {
+            foreach (var p in xml.Descendants(Word + "p").Where(p => p.Descendants(Word + "footnoteReference").Any()))
+                p.Descendants(Word + "t").First().Value = string.Concat(Enumerable.Repeat("Public wrapping text ", 25)) + "105 ";
+            foreach (var properties in xml.Descendants(Word + "rPr").Concat(notes.Descendants(Word + "rPr")))
+            {
+                var fonts = properties.Element(Word + "rFonts");
+                if (fonts is null) { fonts = new XElement(Word + "rFonts"); properties.AddFirst(fonts); }
+                foreach (string attribute in new[] { "ascii", "hAnsi", "eastAsia", "cs" }) fonts.SetAttributeValue(Word + attribute, "Arial");
+            }
+        });
+        DocxLayout first = CreateLayout(source);
+        var paragraph = source.Paragraphs.First(p => p.InlineReferences.Count != 0);
+        TestAssert.True(first.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().Count(l => ReferenceEquals(l.SourceParagraph, paragraph)) > 1,
+            "The source must exercise actual wrapping.");
+        TestAssert.True(!DocxWrappedFootnoteFrame.IsEligible(source, DocxWrappedCalibriPolicy.NormalizedNominal),
+            "Legacy layout/kerning purposes retain their single-reference frame.");
+        TestAssert.True(DocxWrappedFootnoteFrame.IsEligible(source, DocxWrappedCalibriPolicy.NormalizedNominal, DocxFootnoteOwnerScope.AllSourceReferences),
+            "The same font/format rules can qualify every uniquely owned marker.");
+        TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(source, first, out var numbered, out var owners,
+            allowWrappedBody: true, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "Complete same-page wrapped owners can restart.");
+        TestAssert.Equal("4,5,4,5", string.Join(',', numbered.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
+        TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(numbered, CreateLayout(numbered), owners,
+            allowWrappedBody: true, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "The numbering retry keeps all four complete owners.");
+    }
+
+    private static DocxDocument ReadMultipleFixture(bool runBreak = false, string format = "decimal", int start = 4,
+        Action<XDocument, XDocument, XDocument>? modify = null)
+        => ReadFixture(runBreak, format, start, (xml, settings, notes) =>
+        {
+            var paragraphs = xml.Descendants(Word + "p").Where(p => p.Descendants(Word + "footnoteReference").Any()).ToArray();
+            for (int i = 0; i < paragraphs.Length; i++)
+            {
+                paragraphs[i].Descendants(Word + "t").First().Value = new[] { "Alpha", "Bravo", "Charlie", "Delta" }[i] + " 105 ";
+                paragraphs[i].Descendants(Word + "t").Last().Value = " 108; ";
+            }
+            for (int i = 0; i < paragraphs.Length; i += 2)
+            {
+                paragraphs[i].Add(paragraphs[i + 1].Elements(Word + "r").Select(r => new XElement(r)));
+                paragraphs[i + 1].Remove();
+            }
+            modify?.Invoke(xml, settings, notes);
+        });
+
     internal static DocxLayout CreateLayout(DocxDocument document) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
         .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 

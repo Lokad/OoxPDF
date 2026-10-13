@@ -442,7 +442,7 @@ internal sealed partial class DocxRenderer
         if (fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.TryCreateDocument(document, first, out var numbered, out var pages,
                 allowWrappedBody: context.WordCompatiblePrintScale == 1d,
-                calibriPolicy: numberingPolicy))
+                calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences))
             return (document, fonts, first);
         // Corrected labels need their own glyph subset and measured advances.
         // One bounded retry is accepted only when body and complete note pages
@@ -451,7 +451,7 @@ internal sealed partial class DocxRenderer
         var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken);
         return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStablePages(numbered, final, pages,
             allowWrappedBody: context.WordCompatiblePrintScale == 1d,
-            calibriPolicy: numberingPolicy)
+            calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences)
             ? (numbered, numberedFonts, final) : (document, fonts, first);
     }
 

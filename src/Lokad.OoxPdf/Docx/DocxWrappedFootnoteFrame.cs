@@ -39,7 +39,8 @@ internal static class DocxWrappedFootnoteFrame
             nominal || differingMet ? DocxBodyKerningKind.Mixed : DocxBodyKerningKind.UniformMet, matches, disabled);
     }
 
-    internal static bool IsEligible(DocxDocument document, DocxWrappedCalibriPolicy purpose)
+    internal static bool IsEligible(DocxDocument document, DocxWrappedCalibriPolicy purpose,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
     {
         string? family = document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily;
         bool admitted = string.Equals(family, "Arial", StringComparison.OrdinalIgnoreCase) ||
@@ -64,8 +65,7 @@ internal static class DocxWrappedFootnoteFrame
                 p.SpacingBeforePoints == 0d && p.SpacingAfterPoints == 0d) && p.LineSpacingPoints is null &&
             p.LineSpacingFactor == 1d && DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(p) &&
             p.KeepRules.KeepNext != true && p.KeepRules.KeepLines != true &&
-            p.Runs.Where(r => r.Text.Length != 0).All(r => DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(p, r) &&
-                string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase))) &&
+            DocxMinimumBodyLineLeading.AreQualifiedParagraphRuns(p, family, ownerScope)) &&
             document.RelatedStories.SelectMany(s => s.Paragraphs).All(p => p.Runs.Where(r => r.Text.Any(char.IsLetter)).All(r =>
                 DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(p, r) &&
                 string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase)));

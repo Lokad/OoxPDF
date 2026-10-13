@@ -77,7 +77,30 @@ internal static class DocxMinimumBodyLineLeading
     {
         if (paragraph.InlineReferences.Count > 1) return false;
         var reference = paragraph.InlineReferences.FirstOrDefault();
-        bool marker = reference is not null && run.SourceRunIndex == reference.SourceRunIndex;
+        return IsQualifiedOwnedRun(run, reference?.SourceRunIndex == run.SourceRunIndex ? reference : null, fontSize);
+    }
+
+    internal static bool AreQualifiedParagraphRuns(DocxParagraph paragraph, string? family, DocxFootnoteOwnerScope ownerScope)
+    {
+        if (ownerScope != DocxFootnoteOwnerScope.AllSourceReferences)
+            return paragraph.Runs.Where(r => r.Text.Length != 0).All(r => IsQualifiedParagraphRun(paragraph, r) &&
+                string.Equals(r.FontFamily, family, StringComparison.OrdinalIgnoreCase));
+
+        var references = new Dictionary<int, DocxInlineReference>();
+        foreach (var reference in paragraph.InlineReferences)
+            if (!references.TryAdd(reference.SourceRunIndex, reference)) return false;
+        foreach (var run in paragraph.Runs.Where(r => r.Text.Length != 0))
+        {
+            references.TryGetValue(run.SourceRunIndex, out var reference);
+            if (!IsQualifiedOwnedRun(run, reference, 12d) ||
+                !string.Equals(run.FontFamily, family, StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
+    }
+
+    private static bool IsQualifiedOwnedRun(DocxTextRun run, DocxInlineReference? reference, double fontSize)
+    {
+        bool marker = reference is not null;
         if (marker && (run.SourceTextOffsetInRun != reference!.TextOffsetInRun ||
             run.Text != reference.DisplayText || run.Text.Length == 0 || !run.Text.All(char.IsAsciiDigit))) return false;
         return IsQualifiedRun(run, marker, fontSize);
