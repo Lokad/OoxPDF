@@ -2520,6 +2520,122 @@ var tail = rendererType.GetMethod(
 
     }
 
+    public static void PptxLegendlessLinePlotMeasuresTickLabelsAcrossWidthsAndSizes()
+    {
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
+        foreach (int size in new[] { 12, 18, 24 })
+        foreach (int width in new[] { 144, 360 })
+        foreach (int maximum in new[] { 100, 1000 })
+        {
+            string label = maximum.ToString(CultureInfo.InvariantCulture);
+            double labelWidth = label.Sum(c => font.GetAdvanceWidth(font.MapCodePoint(c))) * size / (double)font.UnitsPerEm;
+            double left = 72d + labelWidth + 6.5d + size * 0.92d;
+            double plotWidth = width - (left - 72d) - 11d;
+            string pdf = RenderLegendlessLineLayoutProbe(size, width, maximum);
+            double bottomReserve = 7d + size * (0.22d + 1.35d * 1.18d);
+            double topReserve = 5d + size * 1.1d / 2d; // The fake source declares Windows ascent 900 and descent 200 in a 1000-unit em.
+            AssertLineLayoutClip(FormattableString.Invariant($"{left:0.###} {252d + bottomReserve:0.###} {plotWidth:0.###} {216d - bottomReserve - topReserve:0.###} re W* n"), pdf);
+        }
+
+        // Source holes retain their index/blank semantics while sharing the same plot box.
+        foreach (string blank in new[] { "gap", "zero", "span" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, blank: blank);
+            AssertLineLayoutClip("122.06 291.634 298.94 161.466 re W* n", pdf);
+        }
+    }
+
+    public static void PptxLegendlessLinePlotRetainsSourceLayoutFallbacks()
+    {
+        foreach (string guard in new[] { "hidden", "right", "extra-axis", "composed", "title", "manual", "category-hidden", "category-top" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard);
+            AssertLineLayoutClip("106.56 286.56 218.88 146.88 re W* n", pdf);
+        }
+
+        // An unavailable measured strip must not produce a negative plot width.
+        string tiny = RenderLegendlessLineLayoutProbe(24, 24, 1000);
+        AssertLineLayoutClip("74.88 286.56 18.24 146.88 re W* n", tiny);
+    }
+
+    public static void PptxLegendlessLinePlotUsesSelectedFontLineBox()
+    {
+        string windows = RenderLegendlessLineLayoutProbe(18, 360, 100);
+        string typographic = RenderLegendlessLineLayoutProbe(18, 360, 100, typographicMetrics: true);
+        AssertLineLayoutClip("122.06 291.634 298.94 161.466 re W* n", windows);
+        // The same source face declares 1000 typographic units versus 1100 Windows units.
+        AssertLineLayoutClip("122.06 291.634 298.94 162.366 re W* n", typographic);
+    }
+
+    private static void AssertLineLayoutClip(string expected, string pdf)
+    {
+        string actual = string.Join("; ", Regex.Matches(pdf, @"[-.\d]+ [-.\d]+ [-.\d]+ [-.\d]+ re W\* n").Select(m => m.Value).Distinct());
+        TestAssert.True(pdf.Contains(expected, StringComparison.Ordinal), "Expected " + expected + "; actual clips: " + actual);
+    }
+
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false)
+    {
+        string line = $$"""
+            <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
+              <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+              <c:val><c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>{{maximum / 2}}</c:v></c:pt>{{(blank is null ? "<c:pt idx=\"1\"><c:v>30</c:v></c:pt>" : "")}}<c:pt idx="2"><c:v>{{maximum}}</c:v></c:pt></c:numLit></c:val>
+            </c:ser><c:axId val="10"/><c:axId val="20"/>{{(guard == "extra-axis" ? "<c:axId val=\"30\"/>" : "")}}</c:lineChart>
+            """;
+        string chart = $$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
+                <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
+                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/><c:crossAx val="20"/>{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
+                  <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{maximum / 5}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/><c:majorGridlines/>{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
+                </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
+              </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>
+            </c:chartSpace>
+            """;
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart\" Target=\"../charts/chart1.xml\"/></Relationships>",
+            ["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="{{width * 12700}}" cy="2743200"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/charts/chart1.xml"] = chart
+        });
+        string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");
+        try
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new LineLayoutProbeFontResolver(typographicMetrics), DiagnosticSink = diagnostics.Add });
+            TestAssert.True(diagnostics.Count == 0, "Unexpected layout probe diagnostics: " + string.Join("; ", diagnostics));
+            return File.ReadAllText(output, Encoding.ASCII);
+        }
+        finally { File.Delete(input); File.Delete(output); }
+    }
+
+    private sealed class LineLayoutProbeFontResolver : IFontResolver
+    {
+        private readonly MemoryFontProgramSource source;
+
+        public LineLayoutProbeFontResolver(bool typographicMetrics)
+        {
+            byte[] bytes = TestFontBuilder.CreateTestFont();
+            if (typographicMetrics)
+            {
+                (int offset, int length) = TestFontBuilder.GetTableRange(bytes, "OS/2");
+                TestAssert.True(length >= 78, "Expected the source OS/2 metric-selection field.");
+                bytes[offset + 63] |= 0x80;
+            }
+            source = new MemoryFontProgramSource("line-layout-probe", bytes);
+        }
+        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "TestFont",
+            new FontStyleKey(false, false, 400, 0, false), source, IsFallback: false);
+    }
+
     public static void PptxSyntheticChartNoTitleRightLegendLeftInsetKeepsOfficePadding()
     {
         var method = typeof(PptxRenderer).GetMethod(
@@ -2579,7 +2695,7 @@ var tail = rendererType.GetMethod(
     public static void PptxSyntheticChartBarValueAxisReserveKeepsOfficeGap()
     {
         var method = typeof(PptxRenderer).GetMethod(
-            "ComputeBarValueAxisLeftReserve",
+            "ComputeCartesianValueAxisLeftReserve",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart value-reserve helper to remain inspectable by the Office evidence guard.");
 
@@ -2625,7 +2741,7 @@ var tail = rendererType.GetMethod(
     public static void PptxSyntheticBarCategoryBottomReserveMeasuresOfficeStrip()
     {
         var method = typeof(PptxRenderer).GetMethod(
-            "ComputeBarLabelStripBottomReserve",
+            "ComputeCartesianLabelStripBottomReserve",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected bar category bottom helper to remain inspectable by the Office evidence guard.");
         double seven = (double)method!.Invoke(null, [6.96d])!;

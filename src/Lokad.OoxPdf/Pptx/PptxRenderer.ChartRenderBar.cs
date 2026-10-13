@@ -546,7 +546,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            double requiredBottomReserve = ComputeBarLabelStripBottomReserve(bottomTickStyle.FontSize);
+            double requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(bottomTickStyle.FontSize);
             double presetBottomReserve = plotBox.Y - frame.Y;
             double newY = Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
                 ? plotBox.Y
@@ -650,7 +650,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            double requiredReserve = ComputeBarValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
+            double requiredReserve = ComputeCartesianValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
             bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false);
@@ -712,7 +712,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-            double requiredBottomReserve = ComputeBarLabelStripBottomReserve(categoryTickStyle.FontSize);
+            double requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(categoryTickStyle.FontSize);
             double presetBottomReserve = plotBox.Y - frame.Y;
             if (Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
             {
@@ -786,7 +786,7 @@ internal sealed partial class PptxRenderer
                     return plotBox;
                 }
 
-                requiredReserve = ComputeBarValueAxisLeftReserve(stackedMaxLabelWidth, stackedTickStyle.FontSize);
+                requiredReserve = ComputeCartesianValueAxisLeftReserve(stackedMaxLabelWidth, stackedTickStyle.FontSize);
             }
             else
             {
@@ -1214,12 +1214,12 @@ internal sealed partial class PptxRenderer
     // Left reserve for horizontal-bar category labels: widest label plus the shared Office
     // axis-label-to-plot gap (bar-stacked-port decomposes exactly to frame + 50.0pt label +
     // 23.2pt, the same gap calibrated for value-axis labels).
-    // Left reserve for single-plot non-stacked vertical-bar value labels: frame indent plus
+    // Shared left reserve for measured cartesian value labels: frame indent plus
     // widest tick label plus a font-relative gap (Office origins decompose to frame plus
     // 6.5pt plus tick width plus 0.92 times tick font size; the old shared 23.2pt gap
     // overshot narrow-tick titled columns like the composite port by 5.7pt). Stacked,
     // multi-axis and horizontal paths keep their own estimators.
-    private static double ComputeBarValueAxisLeftReserve(double maxValueLabelWidth, double tickFontSize)
+    private static double ComputeCartesianValueAxisLeftReserve(double maxValueLabelWidth, double tickFontSize)
     {
         return maxValueLabelWidth +
             PptxChartMetricRules.BarValueAxisLabelFrameIndent +
@@ -1229,7 +1229,7 @@ internal sealed partial class PptxRenderer
     // Bottom reserve for the label strip below a bar plot: frame margin plus descent
     // plus our emitted label gap (Office baselines frame plus 7.0 plus descent on
     // vertical category and horizontal value labels alike).
-    private static double ComputeBarLabelStripBottomReserve(double labelFontSize)
+    private static double ComputeCartesianLabelStripBottomReserve(double labelFontSize)
     {
         return PptxChartMetricRules.BarCategoryBottomMargin +
             labelFontSize * PptxChartMetricRules.BarCategoryDescentFactor +

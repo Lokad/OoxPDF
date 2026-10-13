@@ -414,14 +414,78 @@ internal sealed partial class PptxRenderer
                 : hasTitle && hasRightLegend && hasLineChart
                     ? GetLineTitleRightLegendPlotBox()
                     : GetDefaultChartPlotBox(frame);
+            if (!hasTitle && !legend.Visible && hasLineChart &&
+                TryGetLegendlessLineAutomaticPlotBox(defaultPlotBox, out ChartPlotBox measuredPlotBox))
+            {
+                defaultPlotBox = measuredPlotBox;
+            }
             return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
                 ? manualPlotLayout
                 : ChartPlotLayout.FromPlotBox(defaultPlotBox);
 
+            bool TryGetLegendlessLineAutomaticPlotBox(ChartPlotBox defaultBox, out ChartPlotBox plotBox)
+            {
+                plotBox = defaultBox;
+                // A manual layout owns its source geometry; composed plots and
+                // extra value-axis strips retain their existing layout fallback.
+                if (sceneChart is null || sceneChart.PlotAreaLayout.HasLayout || sceneChart.Plots.Count != 1)
+                {
+                    return false;
+                }
+
+                PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
+                XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
+                if (plotElement is null)
+                {
+                    return false;
+                }
+
+                IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
+                if (valueAxes.Count != 1 || valueAxes[0].SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Left } valueAxis ||
+                    !IsSceneOrXmlChartAxisLabelVisible(valueAxis, valueAxes[0].XmlAxis))
+                {
+                    return false;
+                }
+
+                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, plotElement);
+                if (categoryAxis.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } ||
+                    !IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+                {
+                    return false;
+                }
+
+                double maxLabelWidth = MeasureLineChartValueLabelWidth(out ChartTextStyle tickStyle);
+                if (maxLabelWidth <= 0d)
+                {
+                    return false;
+                }
+
+                double leftReserve = ComputeCartesianValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
+                double width = frame.Width - leftReserve - PptxChartMetricRules.ColumnPlotRightReserve;
+                if (width < 1d)
+                {
+                    return false;
+                }
+
+                ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis,
+                    fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+                double topReserve = PptxChartMetricRules.AutomaticCartesianTopPadding + textMeasurer.MeasureNormalLineHeight(tickStyle) / 2d;
+                double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
+                double height = frame.Height - topReserve - bottomReserve;
+                if (height < 1d)
+                {
+                    return false;
+                }
+
+                plotBox = new ChartPlotBox(frame.X + leftReserve, frame.Y + bottomReserve, width, height);
+                return true;
+            }
+
             ChartPlotBox GetLineTitleRightLegendPlotBox()
             {
                 ChartPlotBox presetBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
-                double maxValueLabelWidth = MeasureLineChartValueLabelWidth();
+                double maxValueLabelWidth = MeasureLineChartValueLabelWidth(out _);
                 if (maxValueLabelWidth <= 0d)
                 {
                     return presetBox;
@@ -442,8 +506,9 @@ internal sealed partial class PptxRenderer
                 return new ChartPlotBox(x, presetBox.Y, width, presetBox.Height);
             }
 
-            double MeasureLineChartValueLabelWidth()
+            double MeasureLineChartValueLabelWidth(out ChartTextStyle tickStyle)
             {
+                tickStyle = default;
                 XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
                 PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
                 if (plotElement is null)
@@ -479,6 +544,7 @@ internal sealed partial class PptxRenderer
                     ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), valueExtents);
                     IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
                     ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                    tickStyle = valueAxisTextStyle;
                     string[] tickLabels = tickValues
                         .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
                         .ToArray();
@@ -502,6 +568,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> lineTickValues = GetChartAxisTickValues(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
                 ChartTextStyle lineValueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, lineValueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                tickStyle = lineValueAxisTextStyle;
                 string[] lineTickLabels = lineTickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, lineValueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
                     .ToArray();

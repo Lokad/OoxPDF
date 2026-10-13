@@ -221,6 +221,26 @@ internal sealed partial class PptxRenderer
             this.kerningEnabled = kerningEnabled;
         }
 
+        public double MeasureNormalLineHeight(ChartTextStyle style)
+        {
+            OpenTypeFont? font = estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic);
+            if (font is null || font.UnitsPerEm == 0)
+            {
+                return style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            }
+
+            // Match the existing font metric ownership: the authored selection
+            // flag chooses typographic metrics; other faces use their Windows box.
+            double units = (font.Os2.SelectionFlags & 0x80) != 0
+                ? font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap
+                : font.Os2.WindowsAscender + font.Os2.WindowsDescender;
+            double ratio = units / font.UnitsPerEm;
+            return ratio > PptxTextMetricRules.MinimumFontLineBoxMetricRatio &&
+                ratio <= PptxTextMetricRules.MaximumFontLineBoxMetricRatio
+                ? style.FontSize * ratio
+                : style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+        }
+
         public double Measure(string text, ChartTextStyle style)
         {
             return Measure(text, style.FontSize, style.FontFamily, style.Bold, style.Italic, style.CharacterSpacing);
