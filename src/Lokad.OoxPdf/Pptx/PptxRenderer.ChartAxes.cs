@@ -454,7 +454,8 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlValueAxisCrossingValue(sceneAxis, xmlAxis, extents),
             ReadSceneOrXmlMajorGridlines(sceneAxis, xmlAxis),
             ReadSceneOrXmlMinorGridlines(sceneAxis, xmlAxis),
-            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme));
+            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme),
+            sceneAxis?.HasMajorGridlineElement ?? xmlAxis?.Element(ChartNamespace + "majorGridlines") is not null);
     }
 
     private static ChartBubbleValueAxisOptions ReadSceneOrXmlChartBubbleValueAxisOptions(

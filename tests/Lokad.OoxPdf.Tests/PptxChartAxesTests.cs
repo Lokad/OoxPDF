@@ -267,6 +267,76 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(secondaryFactor, multipleRight);
     }
 
+    public static void PptxChartMinorGridlinesUseSelectedMajorSubdivisions()
+    {
+        foreach ((double max, double major, double expectedMinor, int count) in new[] { (100d, 20d, 4d, 20), (100d, 10d, 2d, 40), (1d, .2d, .04d, 20) })
+        {
+            IReadOnlyList<double> values = ReadMinorGridlineValues(max, major, null);
+            TestAssert.Equal(count, values.Count);
+            TestAssert.True(Math.Abs(values[0] - expectedMinor) < 1e-8, "First automatic minor must subdivide the selected major interval.");
+            TestAssert.True(Math.Abs(values[^1] - (max - expectedMinor)) < 1e-8, "Last minor must stop before the major endpoint.");
+        }
+
+        TestAssert.Equal(20, ReadMinorGridlineValues(100d, null, null, targetCount: 9d).Count);
+        TestAssert.Equal(40, ReadMinorGridlineValues(100d, null, null, targetCount: 10d).Count);
+    }
+
+    public static void PptxChartMinorGridlinesKeepAuthoredUnitsAndExcludeMajorLevels()
+    {
+        IReadOnlyList<double> dense = ReadMinorGridlineValues(100d, 20d, 1d);
+        TestAssert.Equal(95, dense.Count);
+        foreach (double value in new[] { 0d, 20d, 40d, 60d, 80d, 100d })
+        {
+            TestAssert.True(!dense.Contains(value), "Major levels and endpoints must not emit minor strokes.");
+        }
+
+        IReadOnlyList<double> independent = ReadMinorGridlineValues(100d, 10d, 4d);
+        TestAssert.Equal(20, independent.Count);
+        TestAssert.True(independent.Contains(8d) && independent.Contains(12d), "An authored minor unit must keep its independent spacing.");
+        TestAssert.True(!independent.Contains(20d), "Coincident major levels must still be excluded.");
+        IReadOnlyList<double> absent = ReadMinorGridlineValues(100d, 20d, 4d, hasMajorElement: false);
+        TestAssert.Equal(25, absent.Count);
+        TestAssert.True(absent.Contains(20d) && absent.Contains(100d), "Absent major-gridline source leaves coincident minor levels visible.");
+    }
+
+    public static void PptxChartMinorGridlinesRetainCrossingExclusion()
+    {
+        IReadOnlyList<double> ordinary = ReadMinorGridlineValues(100d, 20d, 1d);
+        IReadOnlyList<double> crossing = ReadMinorGridlineValues(100d, 20d, 1d, crossing: 48d);
+        TestAssert.Equal(94, crossing.Count);
+        TestAssert.True(ordinary.Where(value => value != 48d).SequenceEqual(crossing), "Only the existing crossing exclusion may remove another minor level.");
+        TestAssert.True(ordinary.SequenceEqual(ReadMinorGridlineValues(100d, 20d, 1d, crossing: 40d)), "A crossing already owned by a major level must not remove another minor.");
+    }
+
+    public static void PptxChartMinorGridlinesRetainTickAndCumulativeWorkBounds()
+    {
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 33 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadMinorGridlineValues(100d, 20d, 4d));
+        TestAssert.Equal(7L, scope.Budget.ChartRangeCells);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadMinorGridlineValues(100d, 20d, 1e-12));
+        TestAssert.Equal(14L, scope.Budget.ChartRangeCells);
+    }
+
+    private static IReadOnlyList<double> ReadMinorGridlineValues(double max, double? major, double? minor, double? crossing = 0d, double targetCount = 9d, bool hasMajorElement = true)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        Type renderer = typeof(PptxRenderer);
+        Type extentsType = renderer.GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart extents.");
+        Type unitsType = renderer.GetNestedType("ChartAxisUnits", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart units.");
+        object extents = Activator.CreateInstance(extentsType, [0d, max]) ?? throw new InvalidOperationException("Expected chart extents instance.");
+        object units = Activator.CreateInstance(unitsType, [major, minor]) ?? throw new InvalidOperationException("Expected chart units instance.");
+        System.Reflection.MethodInfo method = renderer.GetMethod("GetChartMinorGridlineValues", flags) ?? throw new InvalidOperationException("Expected shared minor interval resolver.");
+        try
+        {
+            return (IReadOnlyList<double>)(method.Invoke(null, [extents, units, crossing, targetCount, hasMajorElement]) ?? throw new InvalidOperationException("Expected minor levels."));
+        }
+        catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is { } inner)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(inner).Throw();
+            throw;
+        }
+    }
+
     public static void PptxChartAxisTickExpansionRejectsDenseUnitsBeforeCharging()
     {
         using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);

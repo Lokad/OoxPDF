@@ -32,10 +32,7 @@ internal sealed partial class PptxRenderer
         }
 
         double range = Math.Max(1d, span);
-        if (explicitUnit is not { } unit || !double.IsFinite(unit) || unit <= 0d)
-        {
-            unit = ChooseChartAxisMajorUnit(range, autoTickTargetCount);
-        }
+        double unit = ResolveChartAxisTickUnit(range, explicitUnit, autoTickTargetCount);
 
         // Ticks expand source ranges just like dense chart slots. Reuse their
         // per-site cap and conversion budget before allocating or iterating.
@@ -90,6 +87,57 @@ internal sealed partial class PptxRenderer
         return GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: true, autoTickTargetCount)
             .Where(value => crossingValue is not { } crossing || Math.Abs(value - crossing) > PptxChartMetricRules.AxisValueEpsilon)
             .ToArray();
+    }
+
+    private static double ResolveChartAxisTickUnit(double range, double? explicitUnit, double autoTickTargetCount)
+    {
+        return explicitUnit is { } unit && double.IsFinite(unit) && unit > 0d
+            ? unit
+            : ChooseChartAxisMajorUnit(range, autoTickTargetCount);
+    }
+
+    private static IReadOnlyList<double> GetChartGridlineValues(ChartValueExtents extents, ChartAxisUnits units, bool major, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement)
+    {
+        if (major)
+        {
+            return GetChartGridlineValues(extents, units.MajorUnit, crossingValue, autoTickTargetCount);
+        }
+
+        return GetChartMinorGridlineValues(extents, units, crossingValue, autoTickTargetCount, hasMajorGridlineElement);
+    }
+
+    private static IReadOnlyList<double> GetChartMinorGridlineValues(ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement)
+    {
+        // Office minor intervals subdivide the selected major interval into five
+        // parts, unless a source minor unit overrides them. A present major
+        // gridline element reserves its levels even when noFill hides its paint;
+        // an absent element leaves coincident minor levels visible.
+        IReadOnlyList<double> majorValues = hasMajorGridlineElement
+            ? GetChartAxisTickValues(extents, units.MajorUnit, includeEndpoints: true, autoTickTargetCount)
+            : Array.Empty<double>();
+        double majorUnit = ResolveChartAxisTickUnit(Math.Max(1d, extents.Max - extents.Min), units.MajorUnit, autoTickTargetCount);
+        double minorUnit = units.MinorUnit is { } authored && double.IsFinite(authored) && authored > 0d ? authored : majorUnit / 5d;
+        IReadOnlyList<double> minorValues = GetChartAxisTickValues(extents, minorUnit, includeEndpoints: true, autoTickTargetCount);
+        var values = new List<double>(minorValues.Count);
+        int majorIndex = 0;
+        foreach (double value in minorValues)
+        {
+            // Both lists are sorted and bounded; merge their levels in linear
+            // work rather than searching every major level for every minor.
+            while (majorIndex < majorValues.Count && majorValues[majorIndex] < value - PptxChartMetricRules.AxisValueEpsilon)
+            {
+                majorIndex++;
+            }
+
+            bool overlapsMajor = majorIndex < majorValues.Count && Math.Abs(majorValues[majorIndex] - value) <= PptxChartMetricRules.AxisValueEpsilon;
+            bool overlapsCrossing = crossingValue is { } crossing && Math.Abs(value - crossing) <= PptxChartMetricRules.AxisValueEpsilon;
+            if (!overlapsMajor && !overlapsCrossing)
+            {
+                values.Add(value);
+            }
+        }
+
+        return values;
     }
 
     private static double GetChartValuePlotRatio(ChartValueExtents extents, double value, bool reversed)

@@ -50,7 +50,7 @@ internal sealed partial class PptxRenderer
                 RenderInChartPlotAreaClip(
                     graphics,
                     plotBox,
-                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor));
+                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor, valueAxisOptions.HasMajorGridlineElement));
             }
 
             if (majorGridlines)
@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
                 RenderInChartPlotAreaClip(
                     graphics,
                     plotBox,
-                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major));
+                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, valueAxisOptions.HasMajorGridlineElement));
             }
 
             ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;

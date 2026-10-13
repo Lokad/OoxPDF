@@ -1336,6 +1336,18 @@ internal sealed partial class PptxRenderer
 
     private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke)
     {
+        DrawHorizontalChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
+            () => GetChartGridlineValues(extents, explicitUnit, crossingValue, PptxChartMetricRules.AxisNiceTickTargetCount));
+    }
+
+    private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, bool hasMajorGridlineElement)
+    {
+        DrawHorizontalChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
+            () => GetChartGridlineValues(extents, units, major, crossingValue, PptxChartMetricRules.AxisNiceTickTargetCount, hasMajorGridlineElement));
+    }
+
+    private static void DrawHorizontalChartGridlinePaths(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, Func<IReadOnlyList<double>> readValues)
+    {
         ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
         if (stroke.Alpha <= 0.001d)
         {
@@ -1352,7 +1364,7 @@ internal sealed partial class PptxRenderer
         SetChartStroke(graphics, stroke with { Join = stroke.Join ?? 1 });
         double range = Math.Max(1d, extents.Max - extents.Min);
         bool hasPath = false;
-        foreach (double value in GetChartGridlineValues(extents, explicitUnit, crossingValue, PptxChartMetricRules.AxisNiceTickTargetCount))
+        foreach (double value in readValues())
         {
             double y = ChartValueToPlotCoordinate(extents, value, plotY, plotHeight, reversed);
             graphics.MoveTo(plotX, y);

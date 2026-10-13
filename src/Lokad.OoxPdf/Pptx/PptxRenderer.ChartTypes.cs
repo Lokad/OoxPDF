@@ -493,7 +493,7 @@ internal sealed partial class PptxRenderer
         public static ChartGridlineStyle Empty { get; } = new(null, null);
     }
 
-    private readonly record struct ChartValueAxisRenderOptions(ChartAxisUnits Units, bool Reversed, double? CrossingValue, bool MajorGridlines, bool MinorGridlines, ChartGridlineStyle GridlineStyle);
+    private readonly record struct ChartValueAxisRenderOptions(ChartAxisUnits Units, bool Reversed, double? CrossingValue, bool MajorGridlines, bool MinorGridlines, ChartGridlineStyle GridlineStyle, bool HasMajorGridlineElement);
 
     private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle);
 

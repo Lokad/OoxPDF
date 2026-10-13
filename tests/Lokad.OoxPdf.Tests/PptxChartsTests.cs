@@ -2714,6 +2714,24 @@ var tail = rendererType.GetMethod(
         return $"<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice xmlns:c14=\"http://schemas.microsoft.com/office/drawing/2007/8/2/chart\" Requires=\"c14\"><c14:style val=\"{modern}\"/></mc:Choice><mc:Fallback><c:style val=\"{modern - 100}\"/></mc:Fallback></mc:AlternateContent>";
     }
 
+    public static void PptxChartMinorGridlinesRenderWithoutDuplicatingMajorLevels()
+    {
+        string visibleMajor = "<c:majorGridlines><c:spPr><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"888888\"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>";
+        string hiddenMajor = "<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>";
+        string minor = "<c:minorGridlines><c:spPr><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"BBBBBB\"/></a:solidFill></a:ln></c:spPr></c:minorGridlines>";
+        foreach (string major in new[] { visibleMajor, string.Empty, hiddenMajor })
+        {
+            foreach (string authoredMinor in new[] { "<c:minorUnit val=\"4\"/>", string.Empty })
+            {
+                string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100,
+                    gridlines: major + minor + "<c:majorUnit val=\"20\"/>" + authoredMinor);
+                Match path = Regex.Match(pdf, @"0\.733 G\s+0\.75 w(?<body>.*?)\sS(?:\s|$)", RegexOptions.Singleline);
+                TestAssert.True(path.Success, "Expected the authored minor stroke.");
+                TestAssert.Equal(major.Length == 0 ? 25 : 20, Regex.Matches(path.Groups["body"].Value, @"\s[-\d.]+ [-\d.]+ l").Count);
+            }
+        }
+    }
+
     private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false)
     {
         string line = $$"""
