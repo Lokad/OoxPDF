@@ -618,10 +618,10 @@ internal sealed partial class PptxRenderer
 
                 ChartAxisSource lineValueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
                 XElement? valueAxisForScale = ResolveXmlValueAxisForSource(sceneChart, lineValueAxis, chartXml);
-                ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartValueExtents lineValueExtents = ReadLineChartValueAxisExtents(sceneChart, lineValueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 measuredLineExtents = lineValueExtents;
                 ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueAxis.SceneAxis, valueAxisForScale), percentStacked);
-                IReadOnlyList<double> lineTickValues = GetChartAxisTickValuesCore(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, ReadLineChartAxisTickPolicy(sceneChart, lineValueAxis.SceneAxis, lineValueExtents));
+                IReadOnlyList<double> lineTickValues = GetChartAxisTickValuesCore(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, ReadLineChartAxisTickPolicy(sceneChart, lineValueAxis.SceneAxis, lineValueExtents, percentStacked));
                 ChartTextStyle lineValueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, lineValueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 tickStyle = lineValueAxisTextStyle;
                 string[] lineTickLabels = lineTickValues

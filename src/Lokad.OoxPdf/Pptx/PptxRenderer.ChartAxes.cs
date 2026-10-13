@@ -202,19 +202,62 @@ internal sealed partial class PptxRenderer
             : axisUnits;
     }
 
-    private static ChartAxisTickPolicy ReadLineChartAxisTickPolicy(PptxSceneChart? chart, PptxSceneChartAxis? axis, ChartValueExtents extents)
+    private static ChartAxisTickPolicy ReadLineChartAxisTickPolicy(PptxSceneChart? chart, PptxSceneChartAxis? axis, ChartValueExtents extents, bool percentStacked = false)
     {
-        // The single linear source axis owns its lattice. Unsupported scales,
-        // composed/secondary axes and normalized fallback bounds keep their policy.
-        if (chart is null || chart.Plots.Count != 1 || chart.Plots[0].PlotKind != PptxSceneChartPlotKind.Line ||
-            chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) != 1 || axis is null || !axis.HasScaling ||
-            axis.Minimum is not { } minimum || !double.IsFinite(minimum) || minimum != extents.Min ||
-            axis.HasLogarithmicScale)
-        {
-            return ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
-        }
+        // Bounds were resolved once before measurement/emission. Recomputing
+        // ceiling arithmetic here could shift a fractional origin a second time.
+        return CanOwnLineChartSourceRange(chart, axis) &&
+            (axis!.Minimum is { } minimum
+                ? double.IsFinite(minimum) && minimum == extents.Min
+                : !percentStacked && TryGetLineChartMaximumInterval(axis, extents, out _, out _))
+            ? ChartAxisTickPolicy.SourceMinimumIntervals
+            : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
+    }
 
-        return ChartAxisTickPolicy.SourceMinimumIntervals;
+    private static ChartValueExtents ReadLineChartValueAxisExtents(PptxSceneChart? chart, PptxSceneChartAxis? axis,
+        XElement? valueAxis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
+    {
+        ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(axis, valueAxis, fallback, percentStacked,
+            useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        return !percentStacked && TryResolveLineChartSourceRange(chart, axis, extents, out ChartValueExtents owned)
+            ? owned : extents;
+    }
+
+    private static bool TryResolveLineChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis,
+        ChartValueExtents extents, out ChartValueExtents owned)
+    {
+        owned = extents;
+        if (!CanOwnLineChartSourceRange(chart, axis)) return false;
+        if (axis!.Minimum is { } minimum)
+        {
+            return double.IsFinite(minimum) && minimum == extents.Min;
+        }
+        if (!TryGetLineChartMaximumInterval(axis, extents, out double maximum, out double unit)) return false;
+        // An authored upper bound anchors whole source intervals down to the
+        // automatic lower bound. This also gives labels and minor subdivisions
+        // the same origin; no new tick iteration or allocation is needed here.
+        double intervals = Math.Ceiling((maximum - extents.Min) / unit);
+        double lower = maximum - intervals * unit;
+        if (!double.IsFinite(intervals) || !double.IsFinite(lower) || lower >= maximum || lower > extents.Min)
+        {
+            return false;
+        }
+        owned = new ChartValueExtents(lower, maximum);
+        return true;
+    }
+
+    private static bool CanOwnLineChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>
+        chart is not null && chart.Plots.Count == 1 && chart.Plots[0].PlotKind == PptxSceneChartPlotKind.Line &&
+        chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
+        axis is { HasScaling: true, HasLogarithmicScale: false };
+
+    private static bool TryGetLineChartMaximumInterval(PptxSceneChartAxis axis, ChartValueExtents extents,
+        out double maximum, out double unit)
+    {
+        maximum = axis.Maximum ?? double.NaN;
+        unit = axis.MajorUnit ?? double.NaN;
+        return string.IsNullOrEmpty(axis.MinimumValue) && double.IsFinite(maximum) && maximum == extents.Max &&
+            double.IsFinite(unit) && unit > 0d && double.IsFinite(extents.Min) && maximum > extents.Min;
     }
 
     private sealed class ChartTextMeasurer

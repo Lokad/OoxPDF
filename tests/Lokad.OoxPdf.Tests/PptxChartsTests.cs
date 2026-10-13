@@ -2874,6 +2874,40 @@ var tail = rendererType.GetMethod(
         }
     }
 
+    public static void PptxLineAuthoredMaximumAnchorsAutomaticMinimumAndGridlines()
+    {
+        const string stroke = "<c:majorGridlines><c:spPr><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"888888\"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>";
+        foreach ((int maximum, int unit, int labels, int gridLevels) in new[] { (107, 20, 7, 7), (103, 20, 7, 7), (97, 20, 6, 6), (100, 20, 6, 5), (107, 10, 12, 12) })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, maximum, gridlines: stroke, axisMajorUnit: unit, omitAxisMinimum: true);
+            TestAssert.Equal(labels + 3, Regex.Matches(pdf, @"\sBT\s").Count);
+            Match path = Regex.Match(pdf, @"0\.533 G\s+1 w(?<body>.*?)\sS(?:\s|$)", RegexOptions.Singleline);
+            TestAssert.True(path.Success, "The source upper-bound lattice must drive gridline emission.");
+            TestAssert.Equal(gridLevels, Regex.Matches(path.Groups["body"].Value, @"\s[-\d.]+ [-\d.]+ l").Count);
+        }
+    }
+
+    public static void PptxLineAuthoredMaximumUsesOneOriginForFractionalIntervals()
+    {
+        string pdf = RenderLegendlessLineLayoutProbe(18, 360, 1, axisMaximum: 1.07d, axisMajorUnit: .2d, omitAxisMinimum: true);
+        TestAssert.Equal(10, Regex.Matches(pdf, @"\sBT\s").Count);
+    }
+
+    public static void PptxLineAuthoredMaximumKeepsNormalizedPercentStackedBounds()
+    {
+        string pdf = RenderLegendlessLineLayoutProbe(18, 360, 1, axisMaximum: 1.07d, axisMajorUnit: .2d, omitAxisMinimum: true, guard: "percent-stacked");
+        TestAssert.Equal(10, Regex.Matches(pdf, @"\sBT\s").Count);
+    }
+
+    public static void PptxLineAuthoredMaximumKeepsFixedAndComposedSourceFallbacks()
+    {
+        string fixedMinimum = RenderLegendlessLineLayoutProbe(18, 360, 107, axisMinimum: 7d, axisMajorUnit: 20d);
+        TestAssert.Equal(9, Regex.Matches(fixedMinimum, @"\sBT\s").Count);
+        string composed = RenderLegendlessLineLayoutProbe(18, 360, 107, guard: "composed", axisMinimum: 0d, axisMajorUnit: 20d);
+        string omitted = RenderLegendlessLineLayoutProbe(18, 360, 107, guard: "composed", axisMajorUnit: 20d, omitAxisMinimum: true);
+        TestAssert.Equal(composed, omitted);
+    }
+
     public static void PptxLegendlessLineCategoryAxisUsesItsSourceCrossing()
     {
         foreach (double valueCrossing in new[] { 0d, 70d })
@@ -2950,8 +2984,9 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null)
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null)
     {
+        string minimum = omitAxisMinimum ? "" : "<c:min val=\"" + axisMinimum.ToString(CultureInfo.InvariantCulture) + "\"/>";
         string categoryCrossing = categoryCrossesAt is { } categoryValue ? "<c:crossesAt val=\"" + categoryValue.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
         string valueCrossing = valueCrossesAt is { } value ? "<c:crossesAt val=\"" + value.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
         string labelPosition = categoryLabelPosition is { } position ? "<c:tickLblPos val=\"" + position + "\"/>" : "";
@@ -2960,7 +2995,7 @@ var tail = rendererType.GetMethod(
         string categoryShape = categoryStroke is null ? "" : "<c:spPr>" + categoryStroke + "</c:spPr>";
         string valueShape = valueStroke is null ? "" : "<c:spPr>" + valueStroke + "</c:spPr>";
         string line = $$"""
-            <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
+            <c:lineChart><c:grouping val="{{(guard == "percent-stacked" ? "percentStacked" : "standard")}}"/><c:ser><c:idx val="0"/><c:order val="0"/>
               <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
               <c:val><c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>{{maximum / 2}}</c:v></c:pt>{{(blank is null ? "<c:pt idx=\"1\"><c:v>30</c:v></c:pt>" : "")}}<c:pt idx="2"><c:v>{{maximum}}</c:v></c:pt></c:numLit></c:val>
             </c:ser><c:axId val="10"/><c:axId val="20"/>{{(guard == "extra-axis" ? "<c:axId val=\"30\"/>" : "")}}</c:lineChart>
@@ -2971,7 +3006,7 @@ var tail = rendererType.GetMethod(
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
                   <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/>{{categoryTicks}}{{categoryShape}}<c:crossAx val="20"/>{{categoryCrossing}}{{labelPosition}}{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
-                  <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}<c:min val="{{axisMinimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/>{{valueShape}}<c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}{{minimum}}<c:max val="{{(axisMaximum ?? maximum).ToString(CultureInfo.InvariantCulture)}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/>{{valueShape}}<c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>
