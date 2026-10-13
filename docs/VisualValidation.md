@@ -2996,3 +2996,23 @@ hashes match. No public gate/full-catalogue/parity claim is changed. L240 admiss
 work bounds, safe managed code and existing cancellation/cache/staging/publication
 constraints remain; release stays deferred at 0.1.5. Automatic major/label fit,
 source origin/boundary/crossing and minor width/dash residuals continue as L242.
+
+### RV06-L242: rejected automatic line-axis interval prototype
+
+The general automatic-capacity prototype failed two independent height/font
+holdouts before freezing source. A narrower prototype retained all label output
+and shared the label interval only when selected font advance plus clearance fit
+the plot. Among 112 Office controls, it changed 66 PDFs: 39 raster improvements,
+46 exact outputs and 27 tradeoffs. Increasing grid density amplified existing
+plot-geometry residuals, predominantly in Arial controls. No font-name or metric-
+selection exception was introduced to evade these controls.
+
+All 1618 text operations, 9733 non-grid graphics operations, 230 embedded-font
+program checks and stroke properties remained exact; only 68 grouped grid paths
+changed. Strict Release and 409 chart tests passed. Of 252 public PPTX checks,
+only the intended line-span case changed; all 158 retained checks stayed exact.
+The prototype was rejected before integration, with source/runtime/evidence
+preserved under ignored `artifacts/plan-revision-20261005/rv06-l242/`. Production
+remains at accepted L241. Category-label reserve ownership is the next
+investigation; its suspected relation to the residual is not yet established.
+No frozen/Linux/root acceptance, gate relaxation or parity claim is made.
