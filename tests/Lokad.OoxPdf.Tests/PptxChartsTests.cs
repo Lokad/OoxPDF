@@ -2597,13 +2597,17 @@ var tail = rendererType.GetMethod(
 
     public static void PptxGalleryGridlinesKeepAuthoredStrokesAndVisibility()
     {
+        const string axisStroke = "<a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln>";
         string explicitStroke = "<c:majorGridlines><c:spPr><a:ln w=\"19050\"><a:solidFill><a:srgbClr val=\"A030D0\"/></a:solidFill><a:prstDash val=\"dash\"/></a:ln></c:spPr></c:majorGridlines>";
-        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: explicitStroke);
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: explicitStroke,
+            categoryStroke: axisStroke, valueStroke: axisStroke);
         TestAssert.True(Regex.IsMatch(pdf, @"0\.627 0\.188 0\.816 RG\s+1\.5 w"), "Expected gridline stroke state: 0.627 0.188 0.816 RG / 1.5 w.");
         TestAssert.DoesNotContain("0.537 G", pdf);
-        string hidden = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>");
+        string hidden = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118),
+            gridlines: "<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>", categoryStroke: axisStroke, valueStroke: axisStroke);
         TestAssert.DoesNotContain("0.537 G", hidden);
-        string absent = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "");
+        string absent = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            categoryStroke: axisStroke, valueStroke: axisStroke);
         TestAssert.DoesNotContain("0.537 G", absent);
     }
 
@@ -2707,6 +2711,90 @@ var tail = rendererType.GetMethod(
         TestAssert.True(Regex.IsMatch(negative, @"0\.537 G\s+1 w"), "Invalid partial width must retain the existing role fallback.");
         string zero = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "<c:majorGridlines><c:spPr><a:ln w=\"0\"/></c:spPr></c:majorGridlines>");
         TestAssert.True(Regex.IsMatch(zero, @"0\.537 G\s+0 w"), "Valid zero-width source must keep its PDF hairline width.");
+    }
+
+    public static void PptxGalleryAxesUseQualifiedModernStrokeRoles()
+    {
+        foreach (int style in new[] { 102, 118, 126 })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(style), gridlines: "");
+            AssertLineProbeAxisStroke(pdf, true, "0.537 G", "1");
+            AssertLineProbeAxisStroke(pdf, false, "0.537 G", "1");
+        }
+    }
+
+    public static void PptxGalleryAxesResolvePartialSourceProperties()
+    {
+        string width = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            categoryStroke: "<a:ln w=\"19050\"/>", valueStroke: "<a:ln w=\"25400\"/>");
+        AssertLineProbeAxisStroke(width, true, "0.537 G", "1.5");
+        AssertLineProbeAxisStroke(width, false, "0.537 G", "2");
+        string color = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            categoryStroke: "<a:ln><a:solidFill><a:srgbClr val=\"CC2255\"/></a:solidFill></a:ln>",
+            valueStroke: "<a:ln><a:solidFill><a:srgbClr val=\"2255CC\"/></a:solidFill></a:ln>");
+        AssertLineProbeAxisStroke(color, true, "0.8 0.133 0.333 RG", "1");
+        AssertLineProbeAxisStroke(color, false, "0.133 0.333 0.8 RG", "1");
+    }
+
+    public static void PptxGalleryAxesPreserveExplicitStrokeAndNoFill()
+    {
+        string explicitStroke = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            categoryStroke: "<a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"CC2255\"/></a:solidFill></a:ln>",
+            valueStroke: "<a:ln w=\"38100\"><a:solidFill><a:srgbClr val=\"2255CC\"/></a:solidFill></a:ln>");
+        AssertLineProbeAxisStroke(explicitStroke, true, "0.8 0.133 0.333 RG", "2");
+        AssertLineProbeAxisStroke(explicitStroke, false, "0.133 0.333 0.8 RG", "3");
+        string hiddenCategory = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            categoryStroke: "<a:ln><a:noFill/></a:ln>");
+        AssertLineProbeAxisStroke(hiddenCategory, true, null, null);
+        AssertLineProbeAxisStroke(hiddenCategory, false, "0.537 G", "1");
+        string hiddenValue = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            valueStroke: "<a:ln><a:noFill/></a:ln>");
+        AssertLineProbeAxisStroke(hiddenValue, true, "0.537 G", "1");
+        AssertLineProbeAxisStroke(hiddenValue, false, null, null);
+    }
+
+    public static void PptxGalleryAxesRetainUnqualifiedSourceFallbacks()
+    {
+        foreach ((string? guard, string style, string? stylePart) in new (string?, string, string?)[]
+        {
+            (null, "<c:style val=\"18\"/>", null),
+            (null, GalleryStyleChoice(119), null),
+            ("composed", GalleryStyleChoice(118), null),
+            (null, GalleryStyleChoice(118), "<cs:style xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\" id=\"1\"/>")
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, guard: guard, galleryStyle: style, gridlines: "", stylePart: stylePart,
+                categoryStroke: "<a:ln w=\"19050\"/>");
+            AssertLineProbeAxisStroke(pdf, true, "0 G", "0.75");
+        }
+    }
+
+    public static void PptxGalleryAxesUseMappedThemeAndKeepInvalidWidthFallback()
+    {
+        string mapped = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            themeDarkColor: "204060", mapTextToDark2: true);
+        AssertLineProbeAxisStroke(mapped, true, "0.541 0.553 0.576 RG", "1");
+        AssertLineProbeAxisStroke(mapped, false, "0.541 0.553 0.576 RG", "1");
+        string invalid = RenderLegendlessLineLayoutProbe(12, 360, 100, galleryStyle: GalleryStyleChoice(118), gridlines: "",
+            categoryStroke: "<a:ln w=\"-12700\"/>", valueStroke: "<a:ln w=\"0\"/>");
+        AssertLineProbeAxisStroke(invalid, true, "0.537 G", "1");
+        AssertLineProbeAxisStroke(invalid, false, "0.537 G", "0");
+        TestAssert.DoesNotContain("-1 w", invalid);
+    }
+
+    private static void AssertLineProbeAxisStroke(string pdf, bool horizontal, string? color, string? width)
+    {
+        MatchCollection strokes = Regex.Matches(pdf,
+            @"(?<color>[\d. ]+ (?:G|RG))\s+(?<width>[\d.]+) w\s+\[\] 0 d\s+0 J\s+0 j\s+q\s+[-\d. ]+ re W\* n\s+(?<x1>[-\d.]+) (?<y1>[-\d.]+) m\s+(?<x2>[-\d.]+) (?<y2>[-\d.]+) l\s+S");
+        Match[] axes = strokes.Cast<Match>().Where(match => horizontal
+            ? match.Groups["y1"].Value == match.Groups["y2"].Value
+            : match.Groups["x1"].Value == match.Groups["x2"].Value).ToArray();
+        TestAssert.Equal(color is null ? 0 : 1, axes.Length);
+        foreach (Match axis in axes)
+        {
+            TestAssert.Equal(color!, axis.Groups["color"].Value.Trim());
+            TestAssert.Equal(width!, axis.Groups["width"].Value);
+        }
     }
 
     private static string GalleryStyleChoice(int modern)
@@ -2862,13 +2950,15 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false)
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null)
     {
         string categoryCrossing = categoryCrossesAt is { } categoryValue ? "<c:crossesAt val=\"" + categoryValue.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
         string valueCrossing = valueCrossesAt is { } value ? "<c:crossesAt val=\"" + value.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
         string labelPosition = categoryLabelPosition is { } position ? "<c:tickLblPos val=\"" + position + "\"/>" : "";
         string orientation = valueAxisReversed ? "<c:orientation val=\"maxMin\"/>" : "";
         string categoryTicks = categoryMajorTicks ? "<c:majorTickMark val=\"out\"/>" : "";
+        string categoryShape = categoryStroke is null ? "" : "<c:spPr>" + categoryStroke + "</c:spPr>";
+        string valueShape = valueStroke is null ? "" : "<c:spPr>" + valueStroke + "</c:spPr>";
         string line = $$"""
             <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
               <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
@@ -2880,8 +2970,8 @@ var tail = rendererType.GetMethod(
               {{galleryStyle}}
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
-                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/>{{categoryTicks}}<c:crossAx val="20"/>{{categoryCrossing}}{{labelPosition}}{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
-                  <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}<c:min val="{{axisMinimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/>{{categoryTicks}}{{categoryShape}}<c:crossAx val="20"/>{{categoryCrossing}}{{labelPosition}}{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
+                  <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}<c:min val="{{axisMinimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/>{{valueShape}}<c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>

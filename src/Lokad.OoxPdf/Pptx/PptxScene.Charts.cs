@@ -473,17 +473,19 @@ internal sealed partial class PptxSceneBuilder
         bool singleLinePlot = plots.Count == 1 && plots[0].PlotKind == PptxSceneChartPlotKind.Line;
         PptxSceneLineStyle majorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMajor");
         PptxSceneLineStyle minorStyleLine = ReadChartStyleRoleLine(stylePart, "gridlineMinor");
+        PptxSceneLineStyle axisStyleLine = default;
         int? preferredGalleryStyle = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chartXml?.Root);
         if (!stylePart.IsDefined && singleLinePlot &&
             preferredGalleryStyle is 102 or 118 or 126)
         {
             // Independently qualified line-plot gallery roles. Other plot kinds
             // retain their fallback pending geometry qualification. Authored gridline
-            // strokes still take precedence; axis strokes and plot geometry keep
-            // their existing ownership. Other galleries retain their fallback.
+            // and axis strokes still take precedence. Other galleries and explicit
+            // style parts retain their fallback pending independent qualification.
             RgbColor textColor = theme.TryResolveColor("tx1", colorMap, out RgbColor resolvedColor) ? resolvedColor : new RgbColor(0, 0, 0);
             majorStyleLine = new PptxSceneLineStyle(true, LinearLightColor.TintTowardWhite(textColor, 0.25d), 1d, 1d, [], null, null, null, null, null, null, null, true);
             minorStyleLine = new PptxSceneLineStyle(true, LinearLightColor.TintTowardWhite(textColor, 0.5d), 1d, 1d, [], null, null, null, null, null, null, null, true);
+            axisStyleLine = majorStyleLine;
         }
 
         var axes = new List<PptxSceneChartAxis>();
@@ -539,7 +541,7 @@ internal sealed partial class PptxSceneBuilder
                 IsChartGridlineVisible(minorGridlines),
                 majorGridlines is not null,
                 minorGridlines is not null,
-                ReadChartAxisLine(axis, theme, colorMap),
+                ReadChartAxisLine(axis, theme, colorMap, axisStyleLine),
                 ReadChartGridlineLine(majorGridlines, theme, colorMap, singleLinePlot ? majorStyleLine : default),
                 ReadChartGridlineLine(minorGridlines, theme, colorMap),
                 majorStyleLine,
@@ -583,14 +585,13 @@ internal sealed partial class PptxSceneBuilder
 
     internal static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? shapeProperties = axis.Element(ChartNamespace + "spPr");
-        XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
-        if (line?.Element(DrawingNamespace + "noFill") is not null)
-        {
-            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null, null, null, null, null, true);
-        }
+        return ReadChartAxisLine(axis, theme, colorMap, default);
+    }
 
-        return ReadChartLine(shapeProperties, theme, colorMap);
+    private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)
+    {
+        PptxSceneLineStyle line = ReadChartLineWithInheritedProperties(axis.Element(ChartNamespace + "spPr"), theme, colorMap, inheritedLine);
+        return line.HasLine ? line : inheritedLine;
     }
 
     internal static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)
@@ -662,7 +663,11 @@ internal sealed partial class PptxSceneBuilder
 
     private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)
     {
-        XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
+        return ReadChartLineWithInheritedProperties(gridlines?.Element(ChartNamespace + "spPr"), theme, colorMap, inheritedLine);
+    }
+
+    private static PptxSceneLineStyle ReadChartLineWithInheritedProperties(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)
+    {
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
