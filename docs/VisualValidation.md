@@ -2852,3 +2852,38 @@ qualified PPTX PDFs; eight root DOCX guards remain exact. This is an affected
 PPTX qualification, not a new full-catalogue or broad L232 audit. Last full
 Windows remains L230. Safe managed code, resource/work/publication limits and
 0.1.5 release deferral hold. Glyph-advance residuals continue as bounded L236.
+
+
+### RV06-L236: glyph-position diagnosis
+
+Seventeen independently qualified controls map 2482 visible glyph positions.
+Unconditional precise-width compensation predicts worse mean Office X error in
+17 of 25 neighbors; it is rejected before production. Calibri baseline/advance
+residuals remain partial. Matching font metrics and retained hinting tables provide
+no evidence of cache corruption or missing hinting. This is a diagnostic review;
+L235 qualification remains unchanged.
+
+### RV06-L237: automatic legendless line-chart plot reserves
+
+Qualified untitled legendless line charts share existing measured cartesian label
+reserves and use the source font's selected normal line box for top clearance.
+Manual/composed/extra-axis, hidden/top-category and too-small frames retain their
+prior layout fallback. A horizontal-only prototype produced two raster tradeoffs
+and was rejected. Frozen **66326db3**, root **e09926db**.
+
+Twenty-three independent Office controls qualify 19 improved raster pages/four
+exact guards/no tradeoffs. Primary MAE falls 5.329 to 1.003. Source text/font/size/
+advance/text state, styles, indices and path segmentation retain identity; plot,
+clip, series and dependent label positions change. Top/right residuals remain
+within .007/.001pt. Left/bottom residuals reach 1.423/2.722pt; default gridline
+styling remains partial. No prior gate is relaxed or complete Office parity claimed.
+
+Strict Windows Release has zero warnings/errors; 386 chart tests pass. Six portable
+Linux methods pass, with two existing archive SourceLink warnings. Exact frozen
+new tests fail the accepted parent twice while their fallback method passes.
+All 158 retained PPTX contexts remain exact. All seven native-line inputs among
+252 tracked PPTX fixtures are freshly covered: six exact/one independently
+qualified change. Frozen/root each reproduce 188 PDF checks; eight root DOCX
+guards remain exact. Five source blobs/raw hashes match. This is bounded affected
+qualification; last full Windows remains L230. Safe managed code, resource/work/
+publication limits and 0.1.5 release deferral hold. Gridline defaults continue as L238.
