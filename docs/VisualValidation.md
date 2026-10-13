@@ -2887,3 +2887,31 @@ qualified change. Frozen/root each reproduce 188 PDF checks; eight root DOCX
 guards remain exact. Five source blobs/raw hashes match. This is bounded affected
 qualification; last full Windows remains L230. Safe managed code, resource/work/
 publication limits and 0.1.5 release deferral hold. Gridline defaults continue as L238.
+
+
+### RV06-L238: modern line-chart gallery gridline roles
+
+Single line plots with verified modern gallery declarations 102/118/126 inherit
+1pt major/minor gridline roles from mapped tx1 through the existing linear-light
+.25/.5 white tint. Preferred style metadata preserves the selected legacy tree
+and existing series recipes; authored/visibility/style-part/legacy/composed/other-
+kind paths retain their fallback. A broader Cartesian prototype has eleven raster
+tradeoffs, including one increased MAE, and is rejected. Frozen **77d575a9**, root
+**21ba5045**.
+
+Thirty-six Office controls qualify twelve improved raster pages/24 exact/no
+tradeoffs. Span MAE falls 1.0025 to .7811. Twenty grouped gridline strokes change;
+all 559 text operations/2772 path and clip geometries/74 embedded-font program
+checks and axis/tick/series styles remain exact. Width-only 1.5pt declarations
+still inherit 1pt; minor-grid spacing/coverage and axis-style residuals remain
+partial. No existing fidelity threshold is relaxed or full Office parity claimed.
+
+Strict Windows Release is clean: 391 chart/201 OOXML-resource methods pass. Nine
+portable Linux checks pass, with two archive SourceLink warnings. Exact frozen new
+tests demonstrate two parent failures/three protected passes. All 252 tracked
+public PPTX inputs are freshly compared: 251 exact/one qualified span change;
+all 158 retained contexts stay exact. Frozen/root each reproduce 446 PDF check
+executions (36 controls+252 public+158 retained, overlapping inputs); eight root
+DOCX guards stay exact. Three source blobs/raw hashes match. Last full Windows
+remains L230. Permanent safe managed code, resource/work/publication limits and
+0.1.5 release deferral hold. Partial line-gridline inheritance continues as L239.
