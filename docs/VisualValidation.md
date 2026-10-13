@@ -3246,3 +3246,28 @@ Linux checks and L247's broader corpus remain the recent milestones; no new
 full-catalogue/platform/package claim is made. Existing thresholds,0.1.5/release
 deferral and safety/work/publication limits remain. L249 remains rejected pending
 reassessment of linear-scale source paint; logarithmic geometry remains separate.
+
+## RV06-L252: linear-scale minor-stroke ownership
+
+Runtime **3887bd3c**, with harness correction **c3d611a0**, reuses the shared
+line-property resolver for supported linear line axes. Existing typed log-scale
+presence retains its unsupported geometry fallback. L250/L251's shared geometry
+fixes allow the earlier source-width concern to qualify without chart-ID, font,
+size or sign exceptions. All72 changed inherited comparisons improve both raster
+metrics;69 comparisons and13 independent Office controls reuse evidence through
+fresh exact candidate/parent PDF identities. Only three updated geometry parents
+need fresh comparison. Those three also improve. Authored fields/noFill/invalid/
+other-gallery/composed behavior and the log guard are protected. The source
+hairline0 versus Office0.14pt residual remains explicit.
+
+Twenty-seven targeted tests pass. The related axis/layout milestone qualifies432
+chart methods and252 exact public PDFs on one library artifact. It exposed a
+stale reflection invocation and flat-bundle fixture lookup: the affected test
+method was corrected, its runner rebuilt without rebuilding the library,430
+completed unchanged checks reused and two failed methods retested. Thirty-four
+Linux checks use the same DLLs. A trailing-CR shell footer failed after all reports
+and identity checks completed; those results are verified and script syntax fixed
+without another run. Root transfer verifies398 sources/17 build assets and four
+CLI smoke PDFs, with no root rebuild or repeated suite/corpus. Strict Release
+passes; thresholds,0.1.5/release deferral and existing safety/work/publication
+limits remain. No new full-catalogue or package claim. Workspace2.820GB/no errors.
