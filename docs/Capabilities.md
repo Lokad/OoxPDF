@@ -4,6 +4,8 @@ This document tracks implemented rendering behavior. Anything not listed as supp
 
 ## PPTX
 
+- Authored category-label offsets in eligible automatic line plots share one normal-font-line-height adjustment between plot reserve and label placement. Category baselines remain anchored; default-offset output and manual/composed/unknown-font/small-layout fallbacks stay unchanged. Default font-strip metrics and dense automatic intervals remain partial.
+
 - Line-chart minor units default to selected major/5; authored units take precedence. Present major-gridline elements reserve overlapping levels even with hidden paint; absent elements permit coincident minors. Automatic major/label fit and source-origin/boundary coverage remain partial; other chart kinds retain their existing minor path.
 
 - Generated numeric axis ticks reuse the existing 100000 chart expansion cap and cumulative chart-range budget. Dense expansion rejects before allocation; invalid bounds and non-progressing floating-point additions reject through the existing limit exception.

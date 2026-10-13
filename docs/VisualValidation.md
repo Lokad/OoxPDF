@@ -3016,3 +3016,31 @@ preserved under ignored `artifacts/plan-revision-20261005/rv06-l242/`. Productio
 remains at accepted L241. Category-label reserve ownership is the next
 investigation; its suspected relation to the residual is not yet established.
 No frozen/Linux/root acceptance, gate relaxation or parity claim is made.
+
+
+### RV06-L243: authored category-label offset ownership
+
+Frozen **cdeea3e7**, root **ec1acfca**, shares a measured offset adjustment between
+automatic line plot reserve and category-label placement. Twelve independently
+authored Office controls across Aptos12/18, Arial18 and Tahoma18 show reserve
+increments of normal category line-height/4, with at most .00836pt residual and
+stationary category baselines. Twelve mixed-axis controls separately establish
+category ownership of the bottom strip and value-axis ownership of top clearance.
+The broader default font-strip formula remains unverified and deferred.
+
+All twelve affected raster pages improve with no tradeoffs. All 180 text encoding,
+font, advance and X-position checks, 24 font-program checks and stroke properties
+stay exact. Geometry is qualified by plot-affine movement, rigid marker/tick and
+category-clip translations, and value-strip edges. All 124 default-offset controls,
+252 public PPTX outputs and 158 retained outputs remain byte-identical.
+
+Frozen/root strict Release and 408 chart/201 OOXML checks pass with zero warnings
+or errors. Twenty-two Linux checks pass with two archive SourceLink warnings.
+Each source reproduces 546 qualified PDF check executions (136+252+158, overlapping
+inputs); eight root DOCX guards and seven source blobs/raw hashes match. Exact
+frozen offset/baseline and selected-metric tests fail the parent; two ordinary
+tick controls pass. Evidence is under ignored `artifacts/plan-revision-20261005/rv06-l243/`.
+Safe managed code, existing bounds/work/cancellation/cache/staging/publication,
+0.1.5 and release deferral remain. No full-catalogue, gate-relaxation or parity
+claim is made. Source origins/endpoints continue as L244; L242 density rollout and
+broader default font-strip metrics stay deferred.
