@@ -431,7 +431,7 @@ internal sealed partial class PptxRenderer
                 plotBox = defaultBox;
                 // A manual layout owns its source geometry; composed plots and
                 // extra value-axis strips retain their existing layout fallback.
-                if (sceneChart is null || sceneChart.PlotAreaLayout.HasLayout || sceneChart.Plots.Count != 1)
+                if (sceneChart is null || sceneChart.PlotAreaLayout.HasGeometryValues || sceneChart.Plots.Count != 1)
                 {
                     return false;
                 }

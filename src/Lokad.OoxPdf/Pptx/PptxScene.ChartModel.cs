@@ -776,7 +776,15 @@ internal readonly record struct PptxSceneChartManualLayout(
     PptxSceneChartManualLayoutMode WidthModeKind,
     string WidthMode,
     PptxSceneChartManualLayoutMode HeightModeKind,
-    string HeightMode);
+    string HeightMode)
+{
+    // Raw presence stays inspectable. Empty layout metadata supplies no plot
+    // coordinates; malformed authored values retain their existing fallback.
+    public bool HasGeometryValues => HasLayout &&
+        (X.HasValue || Y.HasValue || Width.HasValue || Height.HasValue ||
+         !string.IsNullOrEmpty(XValue) || !string.IsNullOrEmpty(YValue) ||
+         !string.IsNullOrEmpty(WidthValue) || !string.IsNullOrEmpty(HeightValue));
+}
 
 internal enum PptxSceneChartManualLayoutTarget
 {

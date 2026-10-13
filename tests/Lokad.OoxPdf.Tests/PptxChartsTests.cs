@@ -2545,6 +2545,29 @@ var tail = rendererType.GetMethod(
         }
     }
 
+    public static void PptxLegendlessLineEmptyManualLayoutKeepsAutomaticGeometry()
+    {
+        string automatic = RenderLegendlessLineLayoutProbe(18, 288, 100);
+        foreach (string manual in new[] { "", "<c:layoutTarget val=\"inner\"/>", "<c:xMode val=\"factor\"/><c:yMode val=\"edge\"/>" })
+        {
+            string empty = RenderLegendlessLineLayoutProbe(18, 288, 100,
+                manualLayoutXml: "<c:layout><c:manualLayout>" + manual + "</c:manualLayout></c:layout>");
+            TestAssert.Equal(automatic, empty);
+        }
+    }
+
+    public static void PptxChartManualLayoutSeparatesPresenceFromGeometryValues()
+    {
+        foreach ((string fields, bool geometry) in new[] { ("", false), ("<c:layoutTarget val=\"outer\"/>", false), ("<c:xMode val=\"factor\"/>", false), ("<c:x val=\"0\"/>", true), ("<c:h val=\"0.68\"/>", true), ("<c:y val=\"bad\"/>", true) })
+        {
+            XDocument xml = XDocument.Parse("<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:plotArea><c:layout><c:manualLayout>" + fields + "</c:manualLayout></c:layout></c:plotArea></c:chartSpace>");
+            PptxSceneChartManualLayout layout = PptxSceneBuilder.ReadChartPlotAreaManualLayout(xml);
+            TestAssert.True(layout.HasLayout, "Authored manual-layout presence remains inspectable.");
+            TestAssert.Equal(geometry, layout.HasGeometryValues);
+        }
+        TestAssert.True(!default(PptxSceneChartManualLayout).HasGeometryValues, "Absent layout has no coordinates.");
+    }
+
     public static void PptxLegendlessLinePlotRetainsSourceLayoutFallbacks()
     {
         foreach (string guard in new[] { "hidden", "right", "extra-axis", "composed", "title", "manual", "category-hidden", "category-top" })
@@ -2984,9 +3007,11 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null)
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null, string? manualLayoutXml = null)
     {
         string minimum = omitAxisMinimum ? "" : "<c:min val=\"" + axisMinimum.ToString(CultureInfo.InvariantCulture) + "\"/>";
+        string layout = manualLayoutXml ?? (guard == "manual"
+            ? "<c:layout><c:manualLayout><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.12\"/><c:y val=\"0.16\"/><c:w val=\"0.76\"/><c:h val=\"0.68\"/></c:manualLayout></c:layout>" : "");
         string categoryCrossing = categoryCrossesAt is { } categoryValue ? "<c:crossesAt val=\"" + categoryValue.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
         string valueCrossing = valueCrossesAt is { } value ? "<c:crossesAt val=\"" + value.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
         string labelPosition = categoryLabelPosition is { } position ? "<c:tickLblPos val=\"" + position + "\"/>" : "";
@@ -3004,7 +3029,7 @@ var tail = rendererType.GetMethod(
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               {{galleryStyle}}
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
-                <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
+                <c:plotArea>{{layout}}{{line}}{{(guard == "composed" ? line : "")}}
                   <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/>{{categoryTicks}}{{categoryShape}}<c:crossAx val="20"/>{{categoryCrossing}}{{labelPosition}}{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
                   <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}{{minimum}}<c:max val="{{(axisMaximum ?? maximum).ToString(CultureInfo.InvariantCulture)}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/>{{valueShape}}<c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
