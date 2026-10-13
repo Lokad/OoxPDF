@@ -2786,8 +2786,89 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null)
+    public static void PptxLegendlessLineCategoryAxisUsesItsSourceCrossing()
     {
+        foreach (double valueCrossing in new[] { 0d, 70d })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryCrossesAt: 50d, valueCrossesAt: valueCrossing);
+            AssertLineLayoutClip("122.06 266.9 298.94 186.2 re W* n", pdf);
+            TestAssert.True(Regex.IsMatch(pdf, @"122\.06 360 m\s+421 360 l\s+S"),
+                "The category axis at value 50 must cross halfway through the 0..100 scale, independently of the value axis crossing.");
+        }
+    }
+
+    public static void PptxLegendlessLineCategoryLabelsFollowCrossingAndSourceSide()
+    {
+        foreach ((string position, bool reversed, string baseline) in new[]
+        {
+            ("nextTo", false, "331.326"), ("low", false, "262.96"),
+            ("high", false, "445.376"), ("nextTo", true, "377.01")
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryCrossesAt: 50d,
+                categoryLabelPosition: position, valueAxisReversed: reversed);
+            MatchCollection labels = Regex.Matches(pdf, @"/CCA1 18 Tf\s+0 Tc\s+1 0 0 1 [-\d.]+ (?<y>[-\d.]+) Tm");
+            TestAssert.Equal(3, labels.Count);
+            foreach (Match label in labels) { TestAssert.Equal(baseline, label.Groups["y"].Value); }
+        }
+    }
+
+    public static void PptxLegendlessLineTopCategoryOffsetKeepsBaseline()
+    {
+        foreach (int offset in new[] { 0, 50, 100, 200 })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: offset,
+                categoryCrossesAt: 50d, categoryLabelPosition: "high");
+            MatchCollection labels = Regex.Matches(pdf, @"/CCA1 18 Tf\s+0 Tc\s+1 0 0 1 [-\d.]+ (?<y>[-\d.]+) Tm");
+            TestAssert.Equal(3, labels.Count);
+            foreach (Match label in labels) { TestAssert.Equal("445.376", label.Groups["y"].Value); }
+        }
+    }
+
+    public static void PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks()
+    {
+        foreach (string guard in new[] { "manual", "composed", "right", "category-top", "extra-axis", "hidden" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard,
+                categoryCrossesAt: 50d, categoryLabelPosition: "high");
+            AssertLineLayoutClip("106.56 286.56 218.88 146.88 re W* n", pdf);
+            MatchCollection labels = Regex.Matches(pdf, @"/CCA1 18 Tf\s+0 Tc\s+1 0 0 1 [-\d.]+ (?<y>[-\d.]+) Tm");
+            TestAssert.True(labels.Count > 0, "Expected category text in the inherited fallback.");
+            foreach (Match label in labels) { TestAssert.Equal("257.886", label.Groups["y"].Value); }
+        }
+    }
+
+    public static void PptxLegendlessLineCategoryTicksFollowValueDirection()
+    {
+        foreach ((bool reversed, string labelPosition, double crossing, double axisY) in new[]
+        {
+            (false, "high", 50d, 347.633d),
+            (true, "low", 50d, 372.367d),
+            (true, "nextTo", 0d, 428.366d)
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryCrossesAt: crossing,
+                categoryLabelPosition: labelPosition, valueAxisReversed: reversed, categoryMajorTicks: true);
+            Match[] ticks = Regex.Matches(pdf, @"(?<x>[-\d.]+) (?<from>[-\d.]+) m\s+\k<x> (?<to>[-\d.]+) l\s+S")
+                .Cast<Match>().Where(m => Math.Abs(double.Parse(m.Groups["to"].Value, CultureInfo.InvariantCulture) - axisY) < .002d &&
+                    Math.Abs(double.Parse(m.Groups["from"].Value, CultureInfo.InvariantCulture) - axisY) < 10d).ToArray();
+            TestAssert.Equal(4, ticks.Length);
+            foreach (Match tick in ticks)
+            {
+                double start = double.Parse(tick.Groups["from"].Value, CultureInfo.InvariantCulture);
+                TestAssert.True(reversed ? start > axisY : start < axisY,
+                    "Outward category ticks must follow value-axis direction independently of low/high label placement.");
+            }
+        }
+    }
+
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false)
+    {
+        string categoryCrossing = categoryCrossesAt is { } categoryValue ? "<c:crossesAt val=\"" + categoryValue.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
+        string valueCrossing = valueCrossesAt is { } value ? "<c:crossesAt val=\"" + value.ToString(CultureInfo.InvariantCulture) + "\"/>" : "";
+        string labelPosition = categoryLabelPosition is { } position ? "<c:tickLblPos val=\"" + position + "\"/>" : "";
+        string orientation = valueAxisReversed ? "<c:orientation val=\"maxMin\"/>" : "";
+        string categoryTicks = categoryMajorTicks ? "<c:majorTickMark val=\"out\"/>" : "";
         string line = $$"""
             <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
               <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
@@ -2799,8 +2880,8 @@ var tail = rendererType.GetMethod(
               {{galleryStyle}}
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
-                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/><c:crossAx val="20"/>{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
-                  <c:valAx><c:axId val="20"/><c:scaling><c:min val="{{axisMinimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/>{{categoryTicks}}<c:crossAx val="20"/>{{categoryCrossing}}{{labelPosition}}{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
+                  <c:valAx><c:axId val="20"/><c:scaling>{{orientation}}<c:min val="{{axisMinimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{valueCrossing}}{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>

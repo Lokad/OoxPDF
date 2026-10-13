@@ -442,7 +442,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1, null);
 
-    private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark, double tickFontSize)
+    private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark, double tickFontSize, bool topSide = false)
     {
         if (pointCount <= 0)
         {
@@ -456,7 +456,7 @@ internal sealed partial class PptxRenderer
             edges[i] = plotX + slotWidth * i;
         }
 
-        StrokeMajorTickSegments(graphics, edges, axisY, verticalSegments: true, outwardIsLowSide: true, majorTickMark, tickFontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+        StrokeMajorTickSegments(graphics, edges, axisY, verticalSegments: true, outwardIsLowSide: !topSide, majorTickMark, tickFontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
     }
 
     // Shared cartesian major-tick segments for category slot boundaries and value
@@ -503,7 +503,9 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle);
 
-    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null);
+    private readonly record struct ChartCategoryAxisPlacement(double CrossingValue, double LabelPlotRatio, bool LabelsTopSide, bool AxisTopSide);
+
+    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null, ChartCategoryAxisPlacement? AutomaticCategoryAxisPlacement = null);
 
     private readonly record struct ChartFrameBox(double X, double Y, double Width, double Height);
 

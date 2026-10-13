@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -246,7 +246,7 @@ internal sealed partial class PptxRenderer
         if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
         {
             SetChartStroke(graphics, categoryAxisStroke);
-            DrawLineChartCategoryAxisMajorTicks(graphics, plotX, plotWidth, pointCount, valueAxisCrossingY, axesStyle.CategoryAxisMajorTickMark, categoryTickFontSize);
+            DrawLineChartCategoryAxisMajorTicks(graphics, plotX, plotWidth, pointCount, valueAxisCrossingY, axesStyle.CategoryAxisMajorTickMark, categoryTickFontSize, categoryTicksTopSide);
         }
     }
 
@@ -402,8 +402,10 @@ internal sealed partial class PptxRenderer
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
         ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
         double? categoryLabelOffsetAdjustment = null;
+        ChartCategoryAxisPlacement? categoryAxisPlacement = null;
+        ChartValueExtents? measuredLineExtents = null;
         ChartPlotLayout plotLayout = GetLineChartPlotLayout();
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement);
 
         ChartPlotLayout GetLineChartPlotLayout()
         {
@@ -485,6 +487,48 @@ internal sealed partial class PptxRenderer
                 if (height < 1d)
                 {
                     return false;
+                }
+
+                // The category axis owns its crossing on the value scale. Its
+                // label side/position also owns the clearance; low/high labels
+                // stay at the plot edge while nextTo labels follow the crossing.
+                // Keep unsupported scales and unresolved font boxes on the
+                // existing layout/emission fallback.
+                if (!valueAxis.HasLogarithmicScale && measuredLineExtents is { } extents &&
+                    textMeasurer.TryMeasureNormalLineHeight(tickStyle, out _) &&
+                    textMeasurer.TryMeasureNormalLineHeight(categoryStyle, out _) &&
+                    ReadSceneOrXmlValueAxisCrossingValue(categoryAxis.SceneAxis, categoryAxis.XmlAxis, extents) is { } crossing &&
+                    double.IsFinite(crossing))
+                {
+                    bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, valueAxes[0].XmlAxis);
+                    double crossingRatio = GetChartValuePlotRatio(extents, crossing, reversed);
+                    PptxSceneChartTickLabelPosition position = categoryAxis.SceneAxis.TickLabelPositionKind;
+                    bool topSide = position == PptxSceneChartTickLabelPosition.High ||
+                        position != PptxSceneChartTickLabelPosition.Low && reversed;
+                    double labelRatio = position == PptxSceneChartTickLabelPosition.Low ? 0d :
+                        position == PptxSceneChartTickLabelPosition.High ? 1d : crossingRatio;
+                    double categoryReserve = bottomReserve;
+                    double numericReserve = topReserve;
+                    if (topSide)
+                    {
+                        bottomReserve = numericReserve;
+                        topReserve = labelRatio > 0d
+                            ? Math.Max(numericReserve, (categoryReserve - (1d - labelRatio) * (frame.Height - bottomReserve)) / labelRatio)
+                            : numericReserve;
+                    }
+                    else if (labelRatio > 0d)
+                    {
+                        bottomReserve = labelRatio < 1d
+                            ? Math.Max(numericReserve, (categoryReserve - labelRatio * (frame.Height - topReserve)) / (1d - labelRatio))
+                            : numericReserve;
+                    }
+
+                    height = frame.Height - topReserve - bottomReserve;
+                    if (height < 1d)
+                    {
+                        return false;
+                    }
+                    categoryAxisPlacement = new ChartCategoryAxisPlacement(crossing, labelRatio, topSide, reversed);
                 }
 
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
@@ -575,6 +619,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource lineValueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
                 XElement? valueAxisForScale = ResolveXmlValueAxisForSource(sceneChart, lineValueAxis, chartXml);
                 ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                measuredLineExtents = lineValueExtents;
                 ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> lineTickValues = GetChartAxisTickValuesCore(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, ReadLineChartAxisTickPolicy(sceneChart, lineValueAxis.SceneAxis, lineValueExtents));
                 ChartTextStyle lineValueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, lineValueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");

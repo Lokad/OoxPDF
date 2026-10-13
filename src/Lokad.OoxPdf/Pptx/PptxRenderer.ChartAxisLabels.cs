@@ -81,7 +81,9 @@ internal sealed partial class PptxRenderer
                 x = labelCenterX - width / 2d;
                 double axisY = verticalAxisY ?? plotBox.Y;
                 y = categoryLabelsTopSide
-                    ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor * labelOffsetScale
+                    ? automaticLabelOffsetAdjustment is { } topAdjustment
+                        ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor + topAdjustment
+                        : axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor * labelOffsetScale
                     : automaticLabelOffsetAdjustment is { } adjustment
                         ? axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor - adjustment
                         : axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
