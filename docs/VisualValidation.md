@@ -2825,3 +2825,30 @@ identities transfer through the accepted L232 frozen audit. One source blob and
 raw source hash match. This is bounded ownership maintenance; no new full audit,
 catalogue qualification, changed visual behavior or broader fidelity is claimed.
 The rendering roadmap continues with public PPTX autofit/overflow probes, L235.
+
+
+### RV06-L235: Office default PPTX kerning threshold
+
+Omitted PPTX kerning now uses Office's 12pt default through the existing shared
+source rule. Explicit thresholds retain their boundary/scaling; the qualified
+explicit-zero no-wrap fallback remains. Twelve independent Office pairs across
+four fonts, square/no-wrap and 10/12/18pt have identical omitted/explicit-12pt
+text operations. The exact new frozen test assembly fails the accepted parent
+at 12pt equality after passing its below-threshold composition. Frozen
+**cc724b30**, root **5c8d6880**; three source blobs/raw hashes match.
+
+Twenty-eight controls qualify eleven changed PDFs/17 exact: nine raster pages
+improve/eighteen stay exact/one Calibri no-wrap control remains a partial tradeoff
+(MAE +.0146815, changed-pixel ratio +.00009163). Cambria-fit MAE falls 1.359 to
+.366. Source text/font/size/baseline state, paragraph/run cascades and frames
+retain identity; advances, dependent X positions and seven highlight widths
+change. No passing gate is lost or relaxed; complete Office parity is not claimed.
+
+Strict Windows Release has zero warnings/errors; all 185 typography tests pass.
+Four portable Linux regressions pass, with two existing archive SourceLink
+warnings. All 158 retained PPTX contexts are accounted for: 157 exact/one
+independently qualified change/zero unknowns. Frozen and root each reproduce 186
+qualified PPTX PDFs; eight root DOCX guards remain exact. This is an affected
+PPTX qualification, not a new full-catalogue or broad L232 audit. Last full
+Windows remains L230. Safe managed code, resource/work/publication limits and
+0.1.5 release deferral hold. Glyph-advance residuals continue as bounded L236.
