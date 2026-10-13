@@ -1068,6 +1068,7 @@ internal sealed partial class PptxRenderer
         public const double HorizontalBarOuterPlotRightReserve = 15.1d;
         public const double CategoryAxisVerticalWidthFactor = 1.35d;
         public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
+        public const double CategoryAxisLabelOffsetNormalLineHeightRatio = 0.25d;
         public const double CategoryAxisVerticalTopSideOffsetFactor = 0.70d;
         public const double CategoryAxisMajorTickLength = 4d;
         // Major tick-mark ink length scales with the tick label size: Office draws 5.71pt

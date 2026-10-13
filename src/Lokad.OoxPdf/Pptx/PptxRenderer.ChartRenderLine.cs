@@ -401,8 +401,9 @@ internal sealed partial class PptxRenderer
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
         ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+        double? categoryLabelOffsetAdjustment = null;
         ChartPlotLayout plotLayout = GetLineChartPlotLayout();
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment);
 
         ChartPlotLayout GetLineChartPlotLayout()
         {
@@ -472,12 +473,21 @@ internal sealed partial class PptxRenderer
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double topReserve = PptxChartMetricRules.AutomaticCartesianTopPadding + textMeasurer.MeasureNormalLineHeight(tickStyle) / 2d;
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
+                double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                double? measuredOffsetAdjustment = null;
+                if (labelOffsetScale != 1d && textMeasurer.TryMeasureNormalLineHeight(categoryStyle, out double categoryLineHeight))
+                {
+                    measuredOffsetAdjustment = categoryLineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (labelOffsetScale - 1d);
+                    bottomReserve += measuredOffsetAdjustment.Value;
+                }
+
                 double height = frame.Height - topReserve - bottomReserve;
                 if (height < 1d)
                 {
                     return false;
                 }
 
+                categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
                 plotBox = new ChartPlotBox(frame.X + leftReserve, frame.Y + bottomReserve, width, height);
                 return true;
             }

@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static void RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null)
     {
         if (labels.Count == 0)
         {
@@ -82,7 +82,9 @@ internal sealed partial class PptxRenderer
                 double axisY = verticalAxisY ?? plotBox.Y;
                 y = categoryLabelsTopSide
                     ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor * labelOffsetScale
-                    : axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
+                    : automaticLabelOffsetAdjustment is { } adjustment
+                        ? axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor - adjustment
+                        : axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
                 alignment = TextAlignment.Center;
             }
 

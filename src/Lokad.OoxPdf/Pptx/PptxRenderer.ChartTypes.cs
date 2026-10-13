@@ -497,7 +497,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle);
 
-    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend);
+    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null);
 
     private readonly record struct ChartFrameBox(double X, double Y, double Width, double Height);
 

@@ -223,10 +223,18 @@ internal sealed partial class PptxRenderer
 
         public double MeasureNormalLineHeight(ChartTextStyle style)
         {
+            return TryMeasureNormalLineHeight(style, out double height)
+                ? height
+                : style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+        }
+
+        public bool TryMeasureNormalLineHeight(ChartTextStyle style, out double height)
+        {
+            height = 0d;
             OpenTypeFont? font = estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic);
             if (font is null || font.UnitsPerEm == 0)
             {
-                return style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+                return false;
             }
 
             // Match the existing font metric ownership: the authored selection
@@ -235,10 +243,13 @@ internal sealed partial class PptxRenderer
                 ? font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap
                 : font.Os2.WindowsAscender + font.Os2.WindowsDescender;
             double ratio = units / font.UnitsPerEm;
-            return ratio > PptxTextMetricRules.MinimumFontLineBoxMetricRatio &&
-                ratio <= PptxTextMetricRules.MaximumFontLineBoxMetricRatio
-                ? style.FontSize * ratio
-                : style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            if (ratio <= PptxTextMetricRules.MinimumFontLineBoxMetricRatio || ratio > PptxTextMetricRules.MaximumFontLineBoxMetricRatio)
+            {
+                return false;
+            }
+
+            height = style.FontSize * ratio;
+            return true;
         }
 
         public double Measure(string text, ChartTextStyle style)

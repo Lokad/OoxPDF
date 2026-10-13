@@ -2732,7 +2732,48 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false)
+    public static void PptxLegendlessLinePlotCategoryOffsetKeepsBaselineAndMeasuresReserve()
+    {
+        foreach ((int offset, string clip) in new[]
+        {
+            (0, "122.06 286.684 298.94 166.416 re W* n"),
+            (50, "122.06 289.159 298.94 163.941 re W* n"),
+            (100, "122.06 291.634 298.94 161.466 re W* n"),
+            (200, "122.06 296.584 298.94 156.516 re W* n")
+        })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: offset);
+            AssertLineLayoutClip(clip, pdf);
+            MatchCollection labels = Regex.Matches(pdf, @"/CCA1 18 Tf\s+0 Tc\s+1 0 0 1 [-\d.]+ (?<y>[-\d.]+) Tm");
+            TestAssert.Equal(3, labels.Count);
+            foreach (Match label in labels)
+            {
+                TestAssert.Equal("262.96", label.Groups["y"].Value);
+            }
+        }
+    }
+
+    public static void PptxLegendlessLinePlotCategoryOffsetUsesSelectedCategoryMetric()
+    {
+        string windows = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: 200);
+        string typographic = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: 200, typographicMetrics: true);
+        AssertLineLayoutClip("122.06 296.584 298.94 156.516 re W* n", windows);
+        AssertLineLayoutClip("122.06 296.134 298.94 157.866 re W* n", typographic);
+    }
+
+    public static void PptxLegendlessLinePlotCategoryOffsetRetainsSourceLayoutFallbacks()
+    {
+        foreach (string guard in new[] { "manual", "composed", "right", "category-top", "category-hidden" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard, categoryLabelOffset: 200);
+            AssertLineLayoutClip("106.56 286.56 218.88 146.88 re W* n", pdf);
+        }
+
+        string crowded = RenderLegendlessLineLayoutProbe(48, 360, 100, categoryLabelOffset: 2000);
+        AssertLineLayoutClip("115.2 286.56 273.6 146.88 re W* n", crowded);
+    }
+
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null)
     {
         string line = $$"""
             <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
@@ -2745,7 +2786,7 @@ var tail = rendererType.GetMethod(
               {{galleryStyle}}
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
-                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/><c:crossAx val="20"/>{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
+                  <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/><c:crossAx val="20"/>{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
                   <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{maximum / 5}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
