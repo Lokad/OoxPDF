@@ -959,6 +959,8 @@ internal sealed record PptxSceneChartAxis
 
     public bool HasScaling { get; }
 
+    public bool HasLogarithmicScale { get; private init; }
+
     public double? Minimum { get; }
 
     public string MinimumValue { get; }
@@ -1183,7 +1185,8 @@ internal sealed record PptxSceneChartAxis
         string noMultiLevelLabelsValue,
         string? numberFormat,
         PptxSceneChartNumberFormat numberFormatInfo,
-        PptxSceneChartTitle title)
+        PptxSceneChartTitle title,
+        bool hasLogarithmicScale = false)
     {
         return new PptxSceneChartAxis(
             id,
@@ -1238,7 +1241,7 @@ internal sealed record PptxSceneChartAxis
             noMultiLevelLabelsValue,
             numberFormat,
             numberFormatInfo,
-            title);
+            title) { HasLogarithmicScale = hasLogarithmicScale };
     }
 }
 

@@ -493,7 +493,13 @@ internal sealed partial class PptxRenderer
         public static ChartGridlineStyle Empty { get; } = new(null, null);
     }
 
-    private readonly record struct ChartValueAxisRenderOptions(ChartAxisUnits Units, bool Reversed, double? CrossingValue, bool MajorGridlines, bool MinorGridlines, ChartGridlineStyle GridlineStyle, bool HasMajorGridlineElement);
+    private readonly record struct ChartValueAxisRenderOptions(ChartAxisUnits Units, bool Reversed, double? CrossingValue, bool MajorGridlines, bool MinorGridlines, ChartGridlineStyle GridlineStyle, bool HasMajorGridlineElement, ChartAxisTickPolicy TickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints);
+
+    private enum ChartAxisTickPolicy
+    {
+        ZeroAlignedWithEndpoints,
+        SourceMinimumIntervals
+    }
 
     private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle);
 

@@ -202,6 +202,21 @@ internal sealed partial class PptxRenderer
             : axisUnits;
     }
 
+    private static ChartAxisTickPolicy ReadLineChartAxisTickPolicy(PptxSceneChart? chart, PptxSceneChartAxis? axis, ChartValueExtents extents)
+    {
+        // The single linear source axis owns its lattice. Unsupported scales,
+        // composed/secondary axes and normalized fallback bounds keep their policy.
+        if (chart is null || chart.Plots.Count != 1 || chart.Plots[0].PlotKind != PptxSceneChartPlotKind.Line ||
+            chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) != 1 || axis is null || !axis.HasScaling ||
+            axis.Minimum is not { } minimum || !double.IsFinite(minimum) || minimum != extents.Min ||
+            axis.HasLogarithmicScale)
+        {
+            return ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
+        }
+
+        return ChartAxisTickPolicy.SourceMinimumIntervals;
+    }
+
     private sealed class ChartTextMeasurer
     {
         private readonly TextAdvanceEstimator estimator;

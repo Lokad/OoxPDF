@@ -25,6 +25,11 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints, double autoTickTargetCount)
     {
+        return GetChartAxisTickValuesCore(extents, explicitUnit, includeEndpoints, autoTickTargetCount, ChartAxisTickPolicy.ZeroAlignedWithEndpoints);
+    }
+
+    private static IReadOnlyList<double> GetChartAxisTickValuesCore(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints, double autoTickTargetCount, ChartAxisTickPolicy tickPolicy)
+    {
         double span = extents.Max - extents.Min;
         if (!double.IsFinite(extents.Min) || !double.IsFinite(extents.Max) || !double.IsFinite(span) || span < 0d)
         {
@@ -51,9 +56,12 @@ internal sealed partial class PptxRenderer
             values.Add(extents.Min);
         }
 
-        double first = Math.Ceiling(extents.Min / unit) * unit;
+        double first = tickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals
+            ? extents.Min
+            : Math.Ceiling(extents.Min / unit) * unit;
         int intervals = 0;
-        for (double value = first; value < extents.Max - PptxChartMetricRules.AxisValueEpsilon;)
+        double value = first;
+        for (; value < extents.Max - PptxChartMetricRules.AxisValueEpsilon;)
         {
             if (++intervals > intervalWork)
             {
@@ -74,7 +82,8 @@ internal sealed partial class PptxRenderer
             value = next;
         }
 
-        if (includeEndpoints)
+        if (includeEndpoints && (tickPolicy == ChartAxisTickPolicy.ZeroAlignedWithEndpoints ||
+            Math.Abs(value - extents.Max) <= PptxChartMetricRules.AxisValueEpsilon))
         {
             values.Add(extents.Max);
         }
@@ -98,26 +107,38 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<double> GetChartGridlineValues(ChartValueExtents extents, ChartAxisUnits units, bool major, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement)
     {
+        return GetChartGridlineValuesCore(extents, units, major, crossingValue, autoTickTargetCount, hasMajorGridlineElement, ChartAxisTickPolicy.ZeroAlignedWithEndpoints);
+    }
+
+    private static IReadOnlyList<double> GetChartGridlineValuesCore(ChartValueExtents extents, ChartAxisUnits units, bool major, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement, ChartAxisTickPolicy tickPolicy)
+    {
         if (major)
         {
-            return GetChartGridlineValues(extents, units.MajorUnit, crossingValue, autoTickTargetCount);
+            return GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, autoTickTargetCount, tickPolicy)
+                .Where(value => crossingValue is not { } crossing || Math.Abs(value - crossing) > PptxChartMetricRules.AxisValueEpsilon)
+                .ToArray();
         }
 
-        return GetChartMinorGridlineValues(extents, units, crossingValue, autoTickTargetCount, hasMajorGridlineElement);
+        return GetChartMinorGridlineValuesCore(extents, units, crossingValue, autoTickTargetCount, hasMajorGridlineElement, tickPolicy);
     }
 
     private static IReadOnlyList<double> GetChartMinorGridlineValues(ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement)
+    {
+        return GetChartMinorGridlineValuesCore(extents, units, crossingValue, autoTickTargetCount, hasMajorGridlineElement, ChartAxisTickPolicy.ZeroAlignedWithEndpoints);
+    }
+
+    private static IReadOnlyList<double> GetChartMinorGridlineValuesCore(ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement, ChartAxisTickPolicy tickPolicy)
     {
         // Office minor intervals subdivide the selected major interval into five
         // parts, unless a source minor unit overrides them. A present major
         // gridline element reserves its levels even when noFill hides its paint;
         // an absent element leaves coincident minor levels visible.
         IReadOnlyList<double> majorValues = hasMajorGridlineElement
-            ? GetChartAxisTickValues(extents, units.MajorUnit, includeEndpoints: true, autoTickTargetCount)
+            ? GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, autoTickTargetCount, tickPolicy)
             : Array.Empty<double>();
         double majorUnit = ResolveChartAxisTickUnit(Math.Max(1d, extents.Max - extents.Min), units.MajorUnit, autoTickTargetCount);
         double minorUnit = units.MinorUnit is { } authored && double.IsFinite(authored) && authored > 0d ? authored : majorUnit / 5d;
-        IReadOnlyList<double> minorValues = GetChartAxisTickValues(extents, minorUnit, includeEndpoints: true, autoTickTargetCount);
+        IReadOnlyList<double> minorValues = GetChartAxisTickValuesCore(extents, minorUnit, includeEndpoints: true, autoTickTargetCount, tickPolicy);
         var values = new List<double>(minorValues.Count);
         int majorIndex = 0;
         foreach (double value in minorValues)

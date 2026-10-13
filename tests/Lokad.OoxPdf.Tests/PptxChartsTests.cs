@@ -2773,7 +2773,20 @@ var tail = rendererType.GetMethod(
         AssertLineLayoutClip("115.2 286.56 273.6 146.88 re W* n", crowded);
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null)
+    public static void PptxChartSourceMinimumIntervalsEmitLabelsAndGridlineLevels()
+    {
+        string stroke = "<c:majorGridlines><c:spPr><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"888888\"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>";
+        foreach ((int maximum, int labels, int gridLevels) in new[] { (107, 6, 5), (103, 5, 4) })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 360, maximum, gridlines: stroke, axisMinimum: 7d, axisMajorUnit: 20d);
+            TestAssert.Equal(labels + 3, Regex.Matches(pdf, @"\sBT\s").Count);
+            Match path = Regex.Match(pdf, @"0\.533 G\s+1 w(?<body>.*?)\sS(?:\s|$)", RegexOptions.Singleline);
+            TestAssert.True(path.Success, "Expected source major gridlines.");
+            TestAssert.Equal(gridLevels, Regex.Matches(path.Groups["body"].Value, @"\s[-\d.]+ [-\d.]+ l").Count);
+        }
+    }
+
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null)
     {
         string line = $$"""
             <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
@@ -2787,7 +2800,7 @@ var tail = rendererType.GetMethod(
               <c:chart>{{(guard == "title" ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Guard</a:t></a:r></a:p></c:rich></c:tx></c:title>" : "")}}
                 <c:plotArea>{{(guard == "manual" ? "<c:layout><c:manualLayout/></c:layout>" : "")}}{{line}}{{(guard == "composed" ? line : "")}}
                   <c:catAx><c:axId val="10"/><c:axPos val="{{(guard == "category-top" ? "t" : "b")}}"/><c:crossAx val="20"/>{{(guard == "category-hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}{{(categoryLabelOffset is { } offset ? "<c:lblOffset val=\"" + offset.ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}</c:catAx>
-                  <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{maximum / 5}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
+                  <c:valAx><c:axId val="20"/><c:scaling><c:min val="{{axisMinimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{maximum}}"/></c:scaling><c:majorUnit val="{{(axisMajorUnit ?? maximum / 5).ToString(CultureInfo.InvariantCulture)}}"/><c:axPos val="{{(guard == "right" ? "r" : "l")}}"/><c:crossAx val="10"/>{{gridlines ?? "<c:majorGridlines/>"}}{{(guard == "hidden" ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:valAx>
                   {{(guard == "extra-axis" ? "<c:valAx><c:axId val=\"30\"/><c:axPos val=\"r\"/><c:crossAx val=\"10\"/></c:valAx>" : "")}}
                 </c:plotArea><c:dispBlanksAs val="{{blank ?? "gap"}}"/>
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>

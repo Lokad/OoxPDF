@@ -397,17 +397,74 @@ internal static class PptxChartAxesTests
         }
     }
 
-    private static IReadOnlyList<double> ReadBoundedAxisTicks(double min, double max, double? unit, bool includeEndpoints = true)
+    public static void PptxChartSourceMinimumIntervalsUseAuthoredLatticeAndAlignedEndpoints()
+    {
+        foreach ((double min, double max, string expected) in new[]
+        {
+            (7d, 107d, "7,27,47,67,87,107"),
+            (-7d, 93d, "-7,13,33,53,73,93"),
+            (0.5d, 100.5d, "0.5,20.5,40.5,60.5,80.5,100.5"),
+            (7d, 103d, "7,27,47,67,87"),
+            (0d, 97d, "0,20,40,60,80")
+        })
+        {
+            IReadOnlyList<double> ticks = ReadBoundedAxisTicks(min, max, 20d, sourceMinimumIntervals: true);
+            TestAssert.Equal(expected, string.Join(",", ticks.Select(v => v.ToString(CultureInfo.InvariantCulture))));
+        }
+        TestAssert.Equal("7,20,40,60,80,100,107", string.Join(",", ReadBoundedAxisTicks(7d, 107d, 20d).Select(v => v.ToString(CultureInfo.InvariantCulture))));
+    }
+
+    public static void PptxChartSourceMinimumIntervalsRetainWorkAndProgressBounds()
+    {
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 11 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(7d, 107d, 1e-12, sourceMinimumIntervals: true));
+        TestAssert.Equal(0L, scope.Budget.ChartRangeCells);
+        TestAssert.Equal(6, ReadBoundedAxisTicks(7d, 107d, 20d, sourceMinimumIntervals: true).Count);
+        TestAssert.Equal(7L, scope.Budget.ChartRangeCells);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(-7d, 93d, 20d, sourceMinimumIntervals: true));
+        TestAssert.Equal(7L, scope.Budget.ChartRangeCells);
+        using OoxConversionBudget.Scope progress = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 100 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(1e16, 1e16 + 4d, 1d, sourceMinimumIntervals: true));
+        TestAssert.Equal(6L, progress.Budget.ChartRangeCells);
+    }
+
+    public static void PptxChartSourceMinimumPolicyKeepsSceneAuthorityAndUnsupportedFallbacks()
+    {
+        foreach (string log in new[] { "", "<c:logBase val=\"10\"/>", "<c:logBase val=\"invalid\"/>" })
+        {
+            PptxSceneChart chart = PptxTests.BuildSingleChartScene($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea>
+                  <c:lineChart><c:axId val="10"/><c:axId val="20"/></c:lineChart>
+                  <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                  <c:valAx><c:axId val="20"/><c:scaling>{{log}}<c:min val="7"/><c:max val="107"/></c:scaling><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+                </c:plotArea></c:chart></c:chartSpace>
+                """) ?? throw new InvalidOperationException("Expected source axis scene.");
+            PptxSceneChartAxis axis = chart.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value);
+            TestAssert.Equal(log.Length != 0, axis.HasLogarithmicScale);
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+            var method = typeof(PptxRenderer).GetMethod("ReadLineChartAxisTickPolicy", flags) ?? throw new InvalidOperationException("Expected source policy.");
+            Type extentsType = typeof(PptxRenderer).GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic)!;
+            object extents = Activator.CreateInstance(extentsType, [7d, 107d])!;
+            TestAssert.Equal(log.Length == 0 ? "SourceMinimumIntervals" : "ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, extents])!.ToString());
+            object fallbackExtents = Activator.CreateInstance(extentsType, [0d, 100d])!;
+            TestAssert.Equal("ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, fallbackExtents])!.ToString());
+        }
+    }
+
+    private static IReadOnlyList<double> ReadBoundedAxisTicks(double min, double max, double? unit, bool includeEndpoints = true, bool sourceMinimumIntervals = false)
     {
         const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
         Type extentsType = typeof(PptxRenderer).GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected chart value extents.");
         object extents = Activator.CreateInstance(extentsType, [min, max]) ?? throw new InvalidOperationException("Expected chart value extents instance.");
-        System.Reflection.MethodInfo method = typeof(PptxRenderer).GetMethod("GetChartAxisTickValues", flags)
+        System.Reflection.MethodInfo method = typeof(PptxRenderer).GetMethod(sourceMinimumIntervals ? "GetChartAxisTickValuesCore" : "GetChartAxisTickValues", flags)
             ?? throw new InvalidOperationException("Expected chart axis tick expansion.");
         try
         {
-            return (IReadOnlyList<double>)(method.Invoke(null, [extents, unit, includeEndpoints, 10d]) ?? throw new InvalidOperationException("Expected chart ticks."));
+            object[] arguments = sourceMinimumIntervals
+                ? [extents, unit!, includeEndpoints, 10d, Enum.Parse(typeof(PptxRenderer).GetNestedType("ChartAxisTickPolicy", System.Reflection.BindingFlags.NonPublic)!, "SourceMinimumIntervals")]
+                : [extents, unit!, includeEndpoints, 10d];
+            return (IReadOnlyList<double>)(method.Invoke(null, arguments) ?? throw new InvalidOperationException("Expected chart ticks."));
         }
         catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is { } inner)
         {

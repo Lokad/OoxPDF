@@ -558,7 +558,8 @@ internal sealed partial class PptxSceneBuilder
                 noMultiLevelLabelsValue,
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
-                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null)));
+                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null),
+                hasLogarithmicScale: axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null));
         }
 
         return axes;
