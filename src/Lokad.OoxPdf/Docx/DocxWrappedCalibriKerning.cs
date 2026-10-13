@@ -4,10 +4,11 @@ internal static class DocxWrappedCalibriKerning
 {
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument adjusted, out IReadOnlyDictionary<string, int> pages,
-        DocxWrappedCalibriPolicy policy = DocxWrappedCalibriPolicy.SourceNominal)
+        DocxWrappedCalibriPolicy policy = DocxWrappedCalibriPolicy.SourceNominal,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
     {
         adjusted = source;
-        if (!DocxPageFootnoteNumbering.TryGetWrappedCalibriPages(source, layout, out pages, policy)) return false;
+        if (!DocxPageFootnoteNumbering.TryGetWrappedCalibriPages(source, layout, out pages, policy, ownerScope)) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var paragraph in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {

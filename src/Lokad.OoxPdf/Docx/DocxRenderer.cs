@@ -413,19 +413,20 @@ internal sealed partial class DocxRenderer
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             (DocxPlainFootnoteKerning.TryCreateDocument(document, first, out adjusted, out originalPages) ||
                 DocxWrappedCalibriKerning.TryCreateDocument(document, first, out adjusted, out originalPages,
-                    DocxWrappedCalibriPolicy.SourceThresholds)))
+                    DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences)))
         {
             var adjustedFonts = PrepareFontResources(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
-                DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds);
+                DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds, DocxFootnoteOwnerScope.AllSourceReferences);
             bool stableOwners = plainNotes
                 ? jointNotePages is not null
                     ? DocxNoteKerning.HasStableJointOwners(adjustedLayout, jointNotePages, cancellationToken)
                     : DocxNoteKerning.HasStableOwners(adjustedLayout, notePages, cancellationToken, noteKind)
                 : (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
                     (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
-                        allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds));
+                        allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds,
+                        ownerScope: DocxFootnoteOwnerScope.AllSourceReferences));
             // Layout admission owns the plain note purpose. Corrected wrapping
             // may change source placements and note-only pages while preserving
             // complete owners. Other retries retain their total-page guard.

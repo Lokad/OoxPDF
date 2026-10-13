@@ -78,6 +78,65 @@ internal static class DocxWrappedCalibriKerningTests
         TestAssert.Equal("105,106,107,108", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
     }
 
+    public static void DocxMultipleWrappedCalibriNormalizesOwnedMarkersWithExplicitScope()
+    {
+        foreach (string? threshold in new string?[] { null, "0", "26", "mixed" })
+        {
+            var source = ReadMultiple(threshold);
+            var first = DocxPageFootnoteNumberingTests.CreateLayout(source);
+            TestAssert.True(!DocxWrappedCalibriKerning.TryCreateDocument(source, first, out _, out _, DocxWrappedCalibriPolicy.SourceThresholds),
+                "Legacy callers retain their single-reference frame.");
+            TestAssert.True(DocxWrappedCalibriKerning.TryCreateDocument(source, first, out var adjusted, out var owners,
+                DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences), "The shared complete-owner scope admits source pair normalization.");
+            foreach (var run in adjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline))
+            {
+                TestAssert.True(DocxKerningThreshold.TryGetMinimum(run, out ushort minimum), "Raw thresholds remain parseable.");
+                TestAssert.Equal(minimum is > 0 and <= 24, run.PairKerningEnabled);
+            }
+            var current = DocxPageFootnoteNumberingTests.CreateLayout(adjusted);
+            TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(adjusted, current, owners, allowWrappedBody: true,
+                calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "Every complete source owner retains its page.");
+            TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(adjusted, current, out var numbered, out _, allowWrappedBody: true,
+                calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences), "Only the normalized clone admits numbering.");
+            TestAssert.Equal("09,10,09,10", string.Join(',', numbered.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
+            TestAssert.True(!DocxPageFootnoteNumbering.HasCompleteNoteOwners(adjusted, current), "Separator-reserve admission remains separate.");
+            TestAssert.Equal("105,106,107,108", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(r => r.DisplayText)));
+        }
+    }
+
+    public static void DocxMultipleWrappedCalibriKeepsMalformedAndIncompleteOwnerFallbacks()
+    {
+        foreach (string threshold in new[] { "bad", "32768", "24" })
+        {
+            var source = ReadMultiple(threshold);
+            TestAssert.True(!DocxWrappedCalibriKerning.TryCreateDocument(source, DocxPageFootnoteNumberingTests.CreateLayout(source), out var fallback, out _,
+                DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences), "Malformed and uniform-met source policies retain their prior fallback.");
+            TestAssert.True(ReferenceEquals(source, fallback), "Rejected normalization preserves the reader's original model.");
+        }
+        var complete = ReadMultiple(null);var layout = DocxPageFootnoteNumberingTests.CreateLayout(complete);
+        var pages = layout.Pages.ToArray();var notes = pages[0].PlacedRelatedStories.ToArray();
+        int index = Array.FindIndex(notes, n => n.StoryLayout.Story.IsNormalStoryType);
+        notes[index] = notes[index] with { ContentTopOffset = 1d };
+        pages[0] = pages[0] with { PlacedRelatedStories = notes };
+        TestAssert.True(!DocxWrappedCalibriKerning.TryCreateDocument(complete, layout with { Pages = pages }, out _, out _,
+            DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences), "A partial note cannot acquire normalized owners.");
+    }
+
+    private static DocxDocument ReadMultiple(string? threshold) => Read(threshold == "mixed" ? null : threshold, (xml, _, _) =>
+    {
+        var paragraphs = xml.Root!.Element(W + "body")!.Elements(W + "p").Where(p => p.Descendants(W + "footnoteReference").Any()).ToArray();
+        for (int i = 0; i < paragraphs.Length; i += 2)
+        {
+            paragraphs[i].Add(paragraphs[i + 1].Elements(W + "r").Select(r => new XElement(r)));paragraphs[i + 1].Remove();
+        }
+        if (threshold == "mixed")
+        {
+            int index = 0;
+            foreach (var rp in xml.Root.Element(W + "body")!.Descendants(W + "rPr"))
+                rp.Add(new XElement(W + "kern", new XAttribute(W + "val", index++ % 2 == 0 ? "24" : "32")));
+        }
+    });
+
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static DocxDocument Read(string? threshold, Action<XDocument, XDocument, XDocument>? modify = null) =>
         DocxWrappedFootnoteNumberingTests.Read(later: true, format: "decimalZero", family: "Calibri", modify: (xml, settings, notes) =>

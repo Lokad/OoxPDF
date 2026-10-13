@@ -166,14 +166,15 @@ internal static class DocxPageFootnoteNumbering
     }
 
     internal static bool TryGetWrappedCalibriPages(DocxDocument document, DocxLayout layout,
-        out IReadOnlyDictionary<string, int> pages, DocxWrappedCalibriPolicy policy)
+        out IReadOnlyDictionary<string, int> pages, DocxWrappedCalibriPolicy policy,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
     {
         pages = new Dictionary<string, int>();
         string? family = document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily;
         if (!string.Equals(family, "Calibri", StringComparison.OrdinalIgnoreCase) ||
             !IsEligibleDocument(document) || DocxPlainFootnoteKerning.HasSingleLineBody(layout) ||
-            !DocxWrappedFootnoteFrame.IsEligible(document, policy) ||
-            !TryMapReferencePages(document, layout, out var mapped, allowWrappedBody: true, calibriPolicy: policy)) return false;
+            !DocxWrappedFootnoteFrame.IsEligible(document, policy, ownerScope) ||
+            !TryMapReferencePages(document, layout, out var mapped, allowWrappedBody: true, calibriPolicy: policy, ownerScope: ownerScope)) return false;
         pages = mapped;
         return true;
     }
