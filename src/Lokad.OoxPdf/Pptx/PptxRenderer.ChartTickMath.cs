@@ -25,25 +25,56 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints, double autoTickTargetCount)
     {
-        double range = Math.Max(1d, extents.Max - extents.Min);
-        if (explicitUnit is not { } unit || unit <= 0d)
+        double span = extents.Max - extents.Min;
+        if (!double.IsFinite(extents.Min) || !double.IsFinite(extents.Max) || !double.IsFinite(span) || span < 0d)
+        {
+            throw new OoxPdfLimitExceededException("Chart axis tick bounds are not a finite ordered range.");
+        }
+
+        double range = Math.Max(1d, span);
+        if (explicitUnit is not { } unit || !double.IsFinite(unit) || unit <= 0d)
         {
             unit = ChooseChartAxisMajorUnit(range, autoTickTargetCount);
         }
 
-        var values = new List<double>();
+        // Ticks expand source ranges just like dense chart slots. Reuse their
+        // per-site cap and conversion budget before allocating or iterating.
+        int endpointWork = includeEndpoints ? 2 : 0;
+        double intervalWork = Math.Ceiling(span / unit);
+        if (!double.IsFinite(intervalWork) || intervalWork > MaxChartDensePoints - endpointWork)
+        {
+            throw new OoxPdfLimitExceededException("Chart axis tick expansion exceeds the maximum supported chart point count of " + MaxChartDensePoints + ".");
+        }
+
+        int work = (int)intervalWork + endpointWork;
+        OoxConversionBudget.Current?.ChargeChartRangeCells(work);
+        var values = new List<double>(work);
         if (includeEndpoints)
         {
             values.Add(extents.Min);
         }
 
         double first = Math.Ceiling(extents.Min / unit) * unit;
-        for (double value = first; value < extents.Max - PptxChartMetricRules.AxisValueEpsilon; value += unit)
+        int intervals = 0;
+        for (double value = first; value < extents.Max - PptxChartMetricRules.AxisValueEpsilon;)
         {
+            if (++intervals > intervalWork)
+            {
+                throw new OoxPdfLimitExceededException("Chart axis tick expansion exceeds its bounded interval count.");
+            }
+
             if (value > extents.Min + PptxChartMetricRules.AxisValueEpsilon)
             {
                 values.Add(value);
             }
+
+            double next = value + unit;
+            if (next <= value)
+            {
+                throw new OoxPdfLimitExceededException("Chart axis tick unit cannot advance within its value range.");
+            }
+
+            value = next;
         }
 
         if (includeEndpoints)

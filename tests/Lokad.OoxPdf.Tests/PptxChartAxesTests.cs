@@ -267,6 +267,85 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(secondaryFactor, multipleRight);
     }
 
+    public static void PptxChartAxisTickExpansionRejectsDenseUnitsBeforeCharging()
+    {
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(0d, 1d, 1e-12));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(0d, 99999d, 1d));
+        TestAssert.Equal(0L, scope.Budget.ChartRangeCells);
+    }
+
+    public static void PptxChartAxisTickExpansionChargesExistingCumulativeBudget()
+    {
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 11 });
+        TestAssert.Equal("0,1,2,3,4", string.Join(",", ReadBoundedAxisTicks(0d, 4d, 1d)));
+        TestAssert.Equal(6L, scope.Budget.ChartRangeCells);
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(0d, 4d, 1d));
+        TestAssert.Equal(6L, scope.Budget.ChartRangeCells);
+    }
+
+    public static void PptxChartAxisTickExpansionKeepsBoundaryAndOrdinaryTicks()
+    {
+        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
+        IReadOnlyList<double> boundary = ReadBoundedAxisTicks(0d, 99998d, 1d);
+        TestAssert.Equal(99999, boundary.Count);
+        TestAssert.Equal(0d, boundary[0]);
+        TestAssert.Equal(99998d, boundary[^1]);
+        TestAssert.Equal(100000L, scope.Budget.ChartRangeCells);
+        TestAssert.Equal("-7,-5,0,5,7", string.Join(",", ReadBoundedAxisTicks(-7d, 7d, 5d)));
+        TestAssert.Equal("0,5,10,15,20,25,30,35,40,45,50", string.Join(",", ReadBoundedAxisTicks(0d, 50d, null)));
+        TestAssert.Equal("1,2,3", string.Join(",", ReadBoundedAxisTicks(0d, 4d, 1d, includeEndpoints: false)));
+    }
+
+    public static void PptxChartAxisTickExpansionRejectsNonprogressAndInvalidBounds()
+    {
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(1e16, 1e16 + 4d, 1d));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(9007199254740990d, 9007199254740996d, 1d));
+        foreach ((double min, double max) in new[] { (double.NaN, 4d), (0d, double.PositiveInfinity), (-double.MaxValue, double.MaxValue), (4d, 0d) })
+        {
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(min, max, 1d));
+        }
+    }
+
+    public static void PptxChartAxisTickExpansionConversionPropagatesLimitFailure()
+    {
+        foreach ((string min, string max, string unit) in new[] { ("0", "1", "1e-12"), ("10000000000000000", "10000000000000004", "1") })
+        {
+            string chart = $"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <c:chart><c:plotArea>
+                    <c:lineChart>
+                      <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                      <c:axId val="10"/><c:axId val="20"/>
+                    </c:lineChart>
+                    <c:catAx><c:axId val="10"/><c:crossAx val="20"/></c:catAx>
+                    <c:valAx><c:axId val="20"/><c:scaling><c:min val="{min}"/><c:max val="{max}"/></c:scaling><c:majorUnit val="{unit}"/><c:crossAx val="10"/></c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PptxTests.ConvertSingleChartAndCollectDiagnostics(chart));
+        }
+    }
+
+    private static IReadOnlyList<double> ReadBoundedAxisTicks(double min, double max, double? unit, bool includeEndpoints = true)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        Type extentsType = typeof(PptxRenderer).GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected chart value extents.");
+        object extents = Activator.CreateInstance(extentsType, [min, max]) ?? throw new InvalidOperationException("Expected chart value extents instance.");
+        System.Reflection.MethodInfo method = typeof(PptxRenderer).GetMethod("GetChartAxisTickValues", flags)
+            ?? throw new InvalidOperationException("Expected chart axis tick expansion.");
+        try
+        {
+            return (IReadOnlyList<double>)(method.Invoke(null, [extents, unit, includeEndpoints, 10d]) ?? throw new InvalidOperationException("Expected chart ticks."));
+        }
+        catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is { } inner)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(inner).Throw();
+            throw;
+        }
+    }
+
     public static void PptxChartVerticalValueAxisAutoTicksUseOfficeDenseDefault()
     {
         Type extentsType = typeof(PptxRenderer).GetNestedType(

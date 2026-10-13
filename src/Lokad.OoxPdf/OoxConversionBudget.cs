@@ -32,8 +32,8 @@ namespace Lokad.OoxPdf;
 /// <para>Shared allocating boundaries (R03-R04): content images charge once in
 /// <see cref="Imaging.OoxImageDecoder"/> (including crop/recolor/effect variants),
 /// font programs charge once in <see cref="Fonts.FontProgramLoader"/> and subsets once
-/// in <see cref="Pdf.PdfEmbeddedFont"/>, and chart dense slots charge against
-/// chart range cells. Cache hits do not recharge; limit failures escape tolerant
+/// in <see cref="Pdf.PdfEmbeddedFont"/>, and chart dense slots and generated
+/// axis ticks charge against chart range cells. Cache hits do not recharge; limit failures escape tolerant
 /// catch filters and per-node recovery.
 /// </para>
 /// </remarks>
