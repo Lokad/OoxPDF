@@ -2788,3 +2788,22 @@ exact/six qualified changes. Two source blobs and packed 0.1.5 smoke pass.
 Last full Windows catalogue remains L230 (2615 passes/one optional private skip).
 Fitting content-bearing/flow-charge work continues as L233. Safe managed code,
 bounds/work/publication policies and release deferral remain.
+
+### RV06-L233: fitting-source alignment and rejected flow charge
+
+The fitting separator regression sources now use the same minimum-8 note
+spacing as their independent Word controls. This restores matching-font coverage
+alongside mixed fonts and missing line metrics: twelve source compositions,
+six focused methods, zero failures/skips. Root **44ae512b** changes tests only.
+Strict Release has zero warnings/errors; eight fresh control PDFs remain exact
+to the accepted L232 runtime.
+
+Eight new Word controls vary separator mark/note-prefix sizes through (8,10),
+(10,12), (10,14) and (12,16), using Tahoma/Verdana marks and Calibri content.
+All 296 source lines/16 notes retain exact line/page assignments; inherited
+baseline offsets reach .488pt. The proposed charge for content bearing beyond
+the mark box predicts four worse neighbors, reaching .737pt. These are diagnostic
+predictions; the model is rejected before changing production. Existing .2pt
+gates and source layout remain. L232's full runtime qualification still applies;
+no new full-catalogue qualification or Office parity is claimed. Source-owned
+note-link spacing is the next bounded rendering investigation, L234.
