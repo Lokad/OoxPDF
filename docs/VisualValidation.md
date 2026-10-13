@@ -3044,3 +3044,39 @@ Safe managed code, existing bounds/work/cancellation/cache/staging/publication,
 0.1.5 and release deferral remain. No full-catalogue, gate-relaxation or parity
 claim is made. Source origins/endpoints continue as L244; L242 density rollout and
 broader default font-strip metrics stay deferred.
+
+
+### RV06-L244: linear line-axis source minima and endpoints
+
+Frozen **ecd59d63**, root **692c225e**, shares one bounded source-minimum/interval
+endpoint policy across line label measurement/emission, ticks and major/minor
+grids. Supported source sequences match Office across positive, negative and
+fractional minima, incomplete maxima, reversals and unit variants. Typed scene
+preserves logarithmic-scale presence; unsupported log, implicit-minimum,
+composed/secondary and normalized-minimum cases retain their fallback.
+
+Twenty-four Office comparisons qualify twenty changed PDFs: seventeen raster
+improvements, four exact outputs and three new partial negative-range tradeoffs.
+MAE increases are .104690/.025613/.038319; threshold pixel-ratio increases are
+.004235/.001576/.000208. These expose a pre-existing crossing-layout mismatch:
+Office uses a lower plot reserve for interior crossings and places category
+labels at the crossing/on the reversed side; candidate plot Y/category baseline
+retain earlier behavior. No sign/font exception or public gate relaxation is added.
+
+All 504 glyph outline/instruction/advance/side-bearing checks, 24 category-font
+program identities, 232 text placements and 1704 stroke-state checks pass.
+Numeric subsets may change with the corrected labels. Source grid/tick lattices,
+label-strip width, marker/series and clip geometry are independently qualified.
+All 252 public PPTX and 158 retained outputs stay exact; of 136 older controls,
+only the intended offset7 case changes. A duplicated composed synthetic plot is
+rejected by Office and has a candidate-only exact fallback proof.
+
+Frozen/root strict Release and 412 chart/201 OOXML tests pass with zero warnings
+or errors. Twenty-six Linux tests pass with two archive SourceLink warnings.
+Each source reproduces 570 qualified PDF checks (160+252+158, overlapping inputs;
+159 Office-informed control checks and one candidate-only). Eleven source blobs/
+raw hashes and eight root DOCX guards match. Exact frozen emitted-source regression
+fails the parent; two ordinary tick controls pass. Evidence is under ignored
+`artifacts/plan-revision-20261005/rv06-l244/`. Safe managed code, existing resource/
+work/cancellation/cache/staging/publication limits, 0.1.5 and release deferral remain.
+No full-catalogue or parity claim is made. Crossing layout proceeds as L245.

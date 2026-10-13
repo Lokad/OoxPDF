@@ -4,6 +4,8 @@ This document tracks implemented rendering behavior. Anything not listed as supp
 
 ## PPTX
 
+- A single linear line-chart source axis shares its authored minimum and interval endpoints across label measurement/emission, ticks and grids. Maximum labels appear only on the interval lattice; unsupported log, implicit-minimum, composed/secondary and normalized-minimum fallbacks remain. Crossing layout and dense automatic intervals remain partial, including three measured new negative-range raster tradeoffs.
+
 - Authored category-label offsets in eligible automatic line plots share one normal-font-line-height adjustment between plot reserve and label placement. Category baselines remain anchored; default-offset output and manual/composed/unknown-font/small-layout fallbacks stay unchanged. Default font-strip metrics and dense automatic intervals remain partial.
 
 - Line-chart minor units default to selected major/5; authored units take precedence. Present major-gridline elements reserve overlapping levels even with hidden paint; absent elements permit coincident minors. Automatic major/label fit and source-origin/boundary coverage remain partial; other chart kinds retain their existing minor path.
