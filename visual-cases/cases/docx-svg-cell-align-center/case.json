@@ -1,0 +1,25 @@
+{
+  "id": "docx-svg-cell-align-center",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-svg-cell-align-center.docx",
+  "dpi": 96,
+  "tags": [
+    "docx",
+    "vertical-alignment",
+    "svg",
+    "approximate"
+  ],
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.2,
+    "maxChangedPixelRatioAtThreshold16": 0.004,
+    "minStructuralSimilarity": 0.985,
+    "minForegroundRecall": 0.99
+  },
+  "allowedUnsupportedFeatures": []
+}
