@@ -11,6 +11,43 @@ internal sealed partial class DocxRenderer
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        DocxPictureCrop crop = image.Crop;
+        if (crop.IsEmpty)
+        {
+            RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
+                pageIndex, cancellationToken, imageCache, ref imageIndex);
+            return;
+        }
+        double sourceWidth = width / (1d - crop.Left - crop.Right);
+        double sourceHeight = height / (1d - crop.Top - crop.Bottom);
+        double sourceX = x - crop.Left * sourceWidth;
+        double sourceY = y - crop.Bottom * sourceHeight;
+        if (!crop.IsUsable || !double.IsFinite(sourceWidth) || !double.IsFinite(sourceHeight) ||
+            !double.IsFinite(sourceX) || !double.IsFinite(sourceY))
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_IMAGE_CROP", OoxPdfSeverity.Warning,
+                "The picture source rectangle is unusable; the uncropped image is retained.", image.PartName,
+                PageIndex: pageIndex, Feature: "image crop", Fallback: "UncroppedImage"));
+            RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
+                pageIndex, cancellationToken, imageCache, ref imageIndex);
+            return;
+        }
+        // Crop changes paint inside the authored viewport, never its layout extent.
+        // The same mapping applies to native vectors and their raster fallback.
+        graphics.SaveState();
+        try
+        {
+            graphics.ClipRectangle(x, y, width, height);
+            RenderImageCore(image, sourceX, sourceY, sourceWidth, sourceHeight, graphics, pageImages,
+                diagnosticSink, pageIndex, cancellationToken, imageCache, ref imageIndex);
+        }
+        finally { graphics.RestoreState(); }
+    }
+
+    private static void RenderImageCore(DocxInlineImage image, double x, double y, double width, double height,
+        PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
+        int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex)
+    {
         if (image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             Action<OoxPdfDiagnostic>? svgSink = diagnosticSink is null ? null : diagnostic =>

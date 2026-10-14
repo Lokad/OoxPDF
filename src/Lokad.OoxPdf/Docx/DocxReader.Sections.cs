@@ -262,6 +262,10 @@ internal sealed partial class DocxReader
         }
         double width = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX"));
         double height = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX"));
+        XElement? sourceRectangle = drawing.Descendants(DrawingNamespace + "blip").FirstOrDefault()
+            ?.Parent?.Element(DrawingNamespace + "srcRect");
+        var crop = new DocxPictureCrop(ReadCropFraction("l"), ReadCropFraction("t"),
+            ReadCropFraction("r"), ReadCropFraction("b"));
         return Create(imagePart) with
         {
             RasterFallback = useVector && previewPart is not null && !ReferenceEquals(previewPart, vectorPart) &&
@@ -269,7 +273,15 @@ internal sealed partial class DocxReader
         };
 
         DocxInlineImage Create(OoxPart part) => new(width, height, part.ContentType, part.Bytes, part.Name)
-            { Revisions = RevisionList(revision) };
+            { Revisions = RevisionList(revision), Crop = crop };
+        double ReadCropFraction(string attribute)
+        {
+            string? raw = (string?)sourceRectangle?.Attribute(attribute);
+            if (raw is null) return 0d;
+            bool percent = raw.EndsWith('%');
+            return double.TryParse(percent ? raw[..^1] : raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+                ? value / (percent ? 100d : 100000d) : double.NaN;
+        }
         OoxPart? ResolvePart(string? id) => id is not null && relationships.TryGetValue(id, out OoxRelationship? relationship) &&
             !relationship.IsExternal && relationship.ResolvedTarget is { } target ? package.GetPart(target) : null;
     }

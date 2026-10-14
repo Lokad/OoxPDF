@@ -629,6 +629,7 @@ internal sealed record DocxRunFonts(
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
 {
+    public DocxPictureCrop Crop { get; init; }
     // DrawingML SVG extensions can carry an ordinary raster preview. Retain
     // that authored fallback for a missing or unparseable vector image.
     public DocxInlineImage? RasterFallback { get; init; }
@@ -636,6 +637,15 @@ internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, 
     // RV05: source run affinity for ordered inline atoms. Images read from a run
     // carry that run index; -1 means the position was not recorded.
     public int SourceRunIndex { get; init; } = -1;
+}
+
+internal readonly record struct DocxPictureCrop(double Left, double Top, double Right, double Bottom)
+{
+    public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
+    public bool IsUsable => double.IsFinite(Left) && double.IsFinite(Top) &&
+        double.IsFinite(Right) && double.IsFinite(Bottom) &&
+        double.IsFinite(1d - Left - Right) && double.IsFinite(1d - Top - Bottom) &&
+        1d - Left - Right > 0d && 1d - Top - Bottom > 0d;
 }
 
 // An inline DrawingML textbox (wp:inline plus wps:txbx, no blip): unlike floating
