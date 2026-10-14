@@ -10,6 +10,15 @@ font script-style glyph variants and owned subset mappings. Those script boxes
 also participate in fitting inline prose and following-word wrapping. One
 inline fraction with literal numerator and denominator uses the same ownership
 and placement contract.
+Authored no-bar fractions (`m:type m:val="noBar"`) now use the same source roles and
+font resources as bar fractions. Parent MATH stack shifts and minimum ink gaps
+place the two children, with no painted rule. Six independent Word controls
+improve across display/inline placement, 12/20 pt mathematics and normal Calibri
+children; two paired bar controls remain byte-identical. The 12 pt display
+controls differ by at most 0.11 pt horizontally and 0.07 pt vertically. Larger
+and inline controls retain residuals up to 1.31 pt, and the existing visual
+thresholds remain unchanged. Nested stacks and other fraction types retain
+the whole-equation fallback.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
