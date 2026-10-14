@@ -1534,12 +1534,87 @@ internal static class DocxTableCellsTests
         }
     }
 
+    public static void DocxTableMinimumPicturesMoveWithTheirTextAndLineFrames()
+    {
+        var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string alignment in new[] { "top", "center", "bottom" })
+        foreach (double minimum in new[] { 12d, 18d, 24d })
+        foreach (double pictureHeight in new[] { 4d, 18d, 48d })
+        foreach (string? rule in new string?[] { null, "exact", "atLeast", "auto" })
+        {
+            double? height = rule is "exact" or "atLeast" ? 180d : null;
+            DocxLayout fallback = CreateParagraphMinimumLayout("min-single", measurer, "header", height, rule,
+                verticalAlignment: alignment, minimumSpacing: minimum, pictureHeight: pictureHeight);
+            DocxLayout actual = CreateParagraphMinimumLayout("min-single", measurer, rowHeight: height, rowRule: rule,
+                verticalAlignment: alignment, minimumSpacing: minimum, pictureHeight: pictureHeight);
+            DocxTableRowLayout oldRow = fallback.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            DocxTableRowLayout newRow = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(oldRow.Y, newRow.Y);
+            TestAssert.Equal(oldRow.Height, newRow.Height);
+            var oldCell = oldRow.Cells.Single();
+            var newCell = newRow.Cells.Single();
+            var oldLine = oldCell.TextLines.Single();
+            var newLine = newCell.TextLines.Single();
+            var oldImage = oldCell.InlineImages.Single();
+            var newImage = newCell.InlineImages.Single();
+            if (minimum > 14d)
+                TestAssert.True(newLine.BodyLineBoxBaselineInsetPoints is not null,
+                    "A resolved picture paragraph receives the independently qualified minimum-slot correction.");
+            if (alignment == "top" && minimum > 14d && pictureHeight is 4d or 48d)
+                TestAssert.True(Math.Abs(oldLine.BaselineY - newLine.BaselineY -
+                    (pictureHeight == 4d ? minimum - 14d : 0d)) < .000001d,
+                    "Small pictures retain minimum headroom; tall pictures already occupy it.");
+            TestAssert.True(Math.Abs(newImage.Y - newLine.BaselineY) < .000001d,
+                "A minimum-leading inline picture stays on its surrounding text baseline.");
+            TestAssert.True(Math.Abs((oldImage.Y - newImage.Y) - (oldLine.BaselineY - newLine.BaselineY)) < .000001d,
+                "Text and its source-affined picture move together.");
+            TestAssert.Equal(oldImage.X, newImage.X);
+            TestAssert.Equal(oldImage.Width, newImage.Width);
+            TestAssert.Equal(oldImage.Height, newImage.Height);
+            TestAssert.True(oldImage.LineFrame is { } oldFrame && newImage.LineFrame is { } newFrame &&
+                Math.Abs((oldFrame.Bottom - newFrame.Bottom) - (oldImage.Y - newImage.Y)) < .000001d &&
+                oldFrame.Height == newFrame.Height,
+                "The picture's drawable line frame follows the same translation.");
+            TestAssert.Equal(fallback.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
+                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+        }
+    }
+
+    public static void DocxTableMinimumPicturesRetainIncompleteAndComplexOwnershipFallbacks()
+    {
+        var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string variant in new[] { "header", "rich", "mixed", "block-picture" })
+        {
+            var layout = CreateParagraphMinimumLayout("min-single,min-single", measurer, variant,
+                rowHeight: 180d, rowRule: "exact", verticalAlignment: "bottom", pictureHeight: 18d);
+            var cell = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+            TestAssert.True(cell.TextLines.All(l => l.BodyLineBoxBaselineInsetPoints is null),
+                "Unqualified cell content retains the existing minimum placement fallback: " + variant);
+            TestAssert.Equal(2, cell.InlineImages.Count);
+        }
+    }
+
+    public static void DocxTableMinimumPicturesPreserveWrappedLineAffinity()
+    {
+        var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        var layout = CreateParagraphMinimumLayout("min", measurer,
+            rowHeight: 180d, rowRule: "exact", minimumSpacing: 24d, pictureHeight: 18d);
+        var cell = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+        var image = cell.InlineImages.Single();
+        TestAssert.True(cell.TextLines.Count > 1, "The control must wrap.");
+        TestAssert.True(cell.TextLines.Any(line => Math.Abs(line.BaselineY - image.Y) < .000001d),
+            "The picture stays on its own wrapped line after minimum placement.");
+        for (int i = 1; i < cell.TextLines.Count; i++)
+            TestAssert.True(cell.TextLines[i - 1].BaselineY - cell.TextLines[i].BaselineY >= 24d - .000001d,
+                "The authored minimum pitch remains a floor across picture-driven wrapped lines.");
+    }
+
     private static DocxLayout CreateParagraphMinimumLayout(string pattern, IDocxTextMeasurer measurer, string variant = "",
         double? rowHeight = null, string? rowRule = null,
         IReadOnlyList<(string Family, double Size, bool Bold, bool Italic)>? paragraphFonts = null,
         string? verticalAlignment = null, DocxTableCellMargins? cellMargins = null, double pageHeight = 700d, int rowCount = 1, int columnCount = 1, double minimumSpacing = 24d,
         double? shortNeighborMinimum = null, DocxTableCellMargins? shortNeighborMargins = null, double exactSpacing = 24d, string? borderSize = null,
-        IReadOnlyList<(double? Height, string? Rule)>? rowHeightRules = null)
+        IReadOnlyList<(double? Height, string? Rule)>? rowHeightRules = null, double? pictureHeight = null)
     {
         DocxParagraph[] paragraphs = pattern.Split(',').Select((token, index) =>
         {
@@ -1561,6 +1636,13 @@ internal static class DocxTableCellsTests
             }).ToArray() };
             if (variant == "mixed" && index == 1)
                 paragraph = paragraph with { Runs = [.. paragraph.Runs, paragraph.Runs[0] with { FontFamily = "LoAsc", Text = " Mixed run" }] };
+            if (pictureHeight is { } imageHeight)
+                paragraph = paragraph with
+                {
+                    Runs = paragraph.Runs.Select(r => r with { SourceRunIndex = 0 }).ToArray(),
+                    Images = [new DocxInlineImage(18d, imageHeight, "image/png", [], null)
+                        { SourceRunIndex = variant == "block-picture" ? -1 : 1 }]
+                };
             return paragraph;
         }).ToArray();
         var cell = new DocxTableCell(string.Empty, paragraphs, null, null, null, verticalAlignment ?? (variant is "center" or "center-rich" ? "center" : null), [],

@@ -2,44 +2,22 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static IReadOnlyList<DocxTextLineLayout> AdjustTableMinimumLinePlacement(
+    private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images) AdjustTableMinimumLinePlacement(
         DocxTable table, DocxTableRow row, DocxTableCell cell,
-        IReadOnlyList<DocxTextLineLayout> lines, IDocxTextMeasurer? measurer,
+        IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> images, IDocxTextMeasurer? measurer,
         double cellHeight, double rowTopPadding, double usedHeight, bool isLastRow, double marginAdvance,
         bool automaticMinimumPlacement)
     {
-        if (!lines.Any(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing)) return lines;
-        if (!IsEligibleTableMinimumCell(table, row, cell, measurer)) return lines;
+        if (!lines.Any(l => l.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing)) return (lines, images);
+        if (!IsEligibleTableMinimumCell(table, row, cell, measurer)) return (lines, images);
+        // Every admitted picture must already belong to a resolved inline line.
+        // Block pictures and incomplete source ownership retain their prior model.
+        if (images.Count != cell.Paragraphs.Sum(p => p.Images.Count) || images.Any(image =>
+            image.LineFrame is not { IsUsable: true } || image.SourceParagraphIndex is not { } index ||
+            index < 0 || index >= cell.Paragraphs.Count ||
+            !cell.Paragraphs[index].Images.Any(source => ReferenceEquals(source, image.Image))))
+            return (lines, images);
         var metrics = (IDocxLineMetricsProvider)measurer!;
-        double alignmentShift = 0d;
-        // Single-cell automatic tables already have qualified placement. Grid
-        // alignment must not move their existing exact/minimum overflow slots.
-        bool alignAutomaticGrid = automaticMinimumPlacement &&
-            (table.Rows.Count > 1 || row.Cells.Count > 1);
-        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top &&
-            (!automaticMinimumPlacement || alignAutomaticGrid))
-        {
-            // Word aligns the paragraph slot extent. The terminal bottom border
-            // hangs below it; the first-baseline inset is already applied.
-            if (!automaticMinimumPlacement && (row.HeightPoints is not > 0d ||
-                string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) ||
-                cell.Paragraphs.Any(p => p.Runs.Count == 0))) return lines;
-            double topPadding = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, 1d);
-            double bottomPadding = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, 1d);
-            double baselineInset = ResolveTableCellFirstBaselineInset(cell.Paragraphs, measurer);
-            double borderAdvance = isLastRow ? row.Cells
-                .Select(c => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(c.Borders, "bottom")))
-                .DefaultIfEmpty(0d).Max() : 0d;
-            if (!automaticMinimumPlacement && bottomPadding > 0d && marginAdvance == 0d) return lines;
-            double oldExtra = Math.Max(0d, cellHeight - topPadding - bottomPadding - baselineInset - usedHeight);
-            // Align the complete slot extent using the row's maximum bottom
-            // margin. A shorter cell's own padding does not enlarge that extent.
-            double alignmentBottom = automaticMinimumPlacement
-                ? row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, 1d)).Max()
-                : marginAdvance;
-            double newExtra = Math.Max(0d, cellHeight - topPadding - alignmentBottom - borderAdvance - usedHeight);
-            alignmentShift = ResolveVerticalContentOffset(cell, newExtra) - ResolveVerticalContentOffset(cell, oldExtra);
-        }
         var byParagraph = new Dictionary<DocxParagraph, List<DocxTextLineLayout>>(ReferenceEqualityComparer.Instance);
         foreach (DocxTextLineLayout line in lines)
         {
@@ -65,15 +43,71 @@ internal sealed partial class DocxLayoutEngine
                 paragraphLines[0].FontSize, slotHeight, false, cell.Paragraphs, paragraph, measurer) + excess;
             adjustments.Add(paragraph, (excess, inset));
         }
-        if (adjustments.Count == 0 && alignmentShift == 0d) return lines;
-        // Word puts the excess minimum-height slot above the first baseline.
-        // Cursor advances and row measurement already include this space.
-        return lines.Select(l => l.SourceParagraph is { } p && adjustments.TryGetValue(p, out var adjustment) ? l with
+        var lineOwners = images.Count == 0 ? null : lines.ToLookup(line => (line.SourceParagraphIndex, line.BaselineY));
+        var imageOwners = new Dictionary<DocxInlineImageLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
+        var absorbedByLine = new Dictionary<DocxTextLineLayout, double>(ReferenceEqualityComparer.Instance);
+        foreach (DocxInlineImageLayout image in images)
         {
-            BaselineY = l.BaselineY - adjustment.Excess - alignmentShift,
-            BodyLineBoxBaselineInsetPoints = adjustment.Inset,
-            BodyLineBoxHeightPoints = l.LineHeight
-        } : alignmentShift == 0d ? l : l with { BaselineY = l.BaselineY - alignmentShift }).ToArray();
+            DocxTextLineLayout[] owners = lineOwners![(image.SourceParagraphIndex, image.Y)].ToArray();
+            if (owners.Length != 1 || !imageOwners.TryAdd(image, owners[0])) return (lines, images);
+            DocxTextLineLayout owner = owners[0];
+            if (!ReferenceEquals(owner.SourceParagraph, cell.Paragraphs[image.SourceParagraphIndex!.Value]))
+                return (lines, images);
+            if (owner.SourceParagraph is not { } paragraph || !adjustments.TryGetValue(paragraph, out var adjustment)) continue;
+            // Minimum leading and picture growth occupy the same space above
+            // the baseline. A tall picture consumes that headroom only once.
+            double after = owner.SourceLineIndex == byParagraph[paragraph][^1].SourceLineIndex
+                ? byParagraph[paragraph][0].ParagraphAfterSpacing ?? 0d : 0d;
+            double growth = Math.Max(0d, image.LineFrame!.Value.Height - (owner.LineHeight ?? 0d) - after);
+            double absorbed = Math.Min(adjustment.Excess, growth);
+            absorbedByLine[owner] = Math.Max(absorbedByLine.GetValueOrDefault(owner), absorbed);
+        }
+        double absorbedHeight = absorbedByLine.Values.Sum();
+        double alignmentShift = 0d;
+        // Single-cell automatic tables retain their qualified alignment rule.
+        bool alignAutomaticGrid = automaticMinimumPlacement && (table.Rows.Count > 1 || row.Cells.Count > 1);
+        if (cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top && (!automaticMinimumPlacement || alignAutomaticGrid))
+        {
+            if (!automaticMinimumPlacement && (row.HeightPoints is not > 0d ||
+                string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase) ||
+                cell.Paragraphs.Any(p => p.Runs.Count == 0))) return (lines, images);
+            double topPadding = rowTopPadding + ResolveTableCellTopBorderContentInset(cell, 1d);
+            double bottomPadding = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, 1d);
+            double baselineInset = ResolveTableCellFirstBaselineInset(cell.Paragraphs, measurer);
+            double borderAdvance = isLastRow ? row.Cells
+                .Select(c => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(c.Borders, "bottom")))
+                .DefaultIfEmpty(0d).Max() : 0d;
+            if (!automaticMinimumPlacement && bottomPadding > 0d && marginAdvance == 0d) return (lines, images);
+            double oldExtra = Math.Max(0d, cellHeight - topPadding - bottomPadding - baselineInset - usedHeight);
+            double alignmentBottom = automaticMinimumPlacement
+                ? row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, 1d)).Max() : marginAdvance;
+            double newExtra = Math.Max(0d, cellHeight - topPadding - alignmentBottom - borderAdvance - usedHeight + absorbedHeight);
+            alignmentShift = ResolveVerticalContentOffset(cell, newExtra) - ResolveVerticalContentOffset(cell, oldExtra);
+        }
+        if (adjustments.Count == 0 && alignmentShift == 0d) return (lines, images);
+        var shifts = images.Count == 0 ? null : new Dictionary<DocxTextLineLayout, double>(ReferenceEqualityComparer.Instance);
+        double consumed = 0d;
+        IReadOnlyList<DocxTextLineLayout> adjustedLines = lines.Select(line =>
+        {
+            double absorbed = absorbedByLine.GetValueOrDefault(line);
+            consumed += absorbed;
+            bool adjusted = line.SourceParagraph is { } paragraph && adjustments.TryGetValue(paragraph, out _);
+            var adjustment = adjusted ? adjustments[line.SourceParagraph!] : default;
+            double shift = (adjusted ? adjustment.Excess : 0d) + alignmentShift - consumed;
+            shifts?.Add(line, shift);
+            return adjusted ? line with
+            {
+                BaselineY = line.BaselineY - shift,
+                BodyLineBoxBaselineInsetPoints = adjustment.Inset - absorbed,
+                BodyLineBoxHeightPoints = line.LineHeight
+            } : shift == 0d ? line : line with { BaselineY = line.BaselineY - shift };
+        }).ToArray();
+        IReadOnlyList<DocxInlineImageLayout> adjustedImages = images.Count == 0 ? images : images.Select(image =>
+        {
+            double shift = shifts![imageOwners[image]];
+            return shift == 0d ? image : image.Translate(0d, -shift);
+        }).ToArray();
+        return (adjustedLines, adjustedImages);
     }
     private static bool IsEligibleTableMinimumCell(
         DocxTable table, DocxTableRow row, DocxTableCell cell, IDocxTextMeasurer? measurer)
@@ -93,7 +127,7 @@ internal sealed partial class DocxLayoutEngine
             cell.TextDirectionValue is not (null or "lrTb") ||
             cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
             cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
-            cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p)) ||
+            cell.Paragraphs.Any(p => !IsPlainContextualSpacingParagraph(p, allowSourceAffinedImages: true)) ||
             measurer is not IDocxLineMetricsProvider ||
             measurer is not IDocxStaticTextMetricsProvider ||
             measurer is not IDocxHheaDescenderProvider || measurer is not IDocxHheaLineGapProvider)

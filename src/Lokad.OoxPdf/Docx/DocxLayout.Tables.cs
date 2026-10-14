@@ -1625,7 +1625,7 @@ internal sealed partial class DocxLayoutEngine
                 ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d)
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
-                cellTextLines = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, textMeasurer,
+                (cellTextLines, cellPlacedImages) = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, cellPlacedImages, textMeasurer,
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
                     rowIndex < tableContext.AlignedMinimumRowBottomMargins.Count ? tableContext.AlignedMinimumRowBottomMargins[rowIndex] : 0d,
                     tableContext.AutomaticMinimumRowPlacement && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue));
