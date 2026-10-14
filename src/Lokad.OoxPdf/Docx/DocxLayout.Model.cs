@@ -36,6 +36,9 @@ internal sealed record DocxLayoutPage(
 // fragmentation (wrapped lines, row fragments), never the renderer.
 internal abstract record DocxLayoutItem;
 
+internal sealed record DocxEquationLayout(DocxPreparedMathParagraph Math, double X, double BaselineY,
+    double Scale, int SourceBlockIndex, DocxParagraph SourceParagraph) : DocxLayoutItem;
+
 internal sealed record DocxTextLineLayout(
     string Text,
     DocxTextRun StyleRun,
@@ -263,7 +266,11 @@ internal sealed record DocxFontResources(
     DocxRunFontResource? Fallback,
     IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> FallbackChains,
     IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> FallbackFaces,
-    IReadOnlyList<PdfFallbackFontResource> FallbackFontResources);
+    IReadOnlyList<PdfFallbackFontResource> FallbackFontResources)
+{
+    public IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph> MathParagraphs { get; init; } =
+        new Dictionary<DocxParagraph, DocxPreparedMathParagraph>();
+}
 
 internal sealed record DocxTextEmissionSegment(
     string Text,

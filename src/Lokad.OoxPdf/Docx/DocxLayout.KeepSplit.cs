@@ -440,7 +440,8 @@ internal sealed partial class DocxLayoutEngine
         bool scaleExactBodyAdvances,
         double availableHeight,
         bool allowAutomaticMinimumGridPlacement,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -448,7 +449,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         DocxParagraph paragraph = paragraphElement.Paragraph;
-        double height = EstimateParagraphContentHeight(paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
+        double height = ParagraphHeight(paragraph);
         int paragraphCount = 1;
         int firstTableRowCount = 0;
         int nextSearchIndex = elementIndex + 1;
@@ -463,7 +464,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale,
                     paragraphSpacingScale);
                 height += spacingProfile.AppliedBeforeSpacing;
-                height += EstimateParagraphContentHeight(nextParagraph.Paragraph, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
+                height += ParagraphHeight(nextParagraph.Paragraph);
                 paragraphCount++;
                 paragraph = nextParagraph.Paragraph;
                 nextSearchIndex = nextIndex + 1;
@@ -481,6 +482,12 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return new DocxKeepBlockEstimate(height, paragraphCount, firstTableRowCount);
+
+        double ParagraphHeight(DocxParagraph value) =>
+            mathParagraphs is not null && mathParagraphs.TryGetValue(value, out DocxPreparedMathParagraph? math) &&
+            FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale)
+                ? math.LineHeight * paragraphSpacingScale
+                : EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
 
         double EstimateFirstTableRowHeight(DocxTable table, double remainingHeight)
         {
@@ -501,6 +508,9 @@ internal sealed partial class DocxLayoutEngine
             return frame.RowHeights[0];
         }
     }
+
+    private static bool FitsMathDisplayWidth(DocxParagraph paragraph, DocxPreparedMathParagraph math, double width, double scale) =>
+        math.Box.Width * scale <= width - GetParagraphTextStartOffset(paragraph, scale) - GetParagraphRightInset(paragraph, scale);
 
     internal static List<int> KeepChainBlockIndexes(IReadOnlyList<DocxBodyElement> elements, int elementIndex)
     {

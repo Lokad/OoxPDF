@@ -292,7 +292,8 @@ internal sealed partial class DocxLayoutEngine
         return Create(document, textMeasurer, cancellationToken);
     }
 
-    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage = null, IReadOnlyDictionary<int, double>? footerFrameBottomDisplacementByPage = null)
+    internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage = null, IReadOnlyDictionary<int, double>? footerFrameBottomDisplacementByPage = null,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
@@ -1372,11 +1373,35 @@ internal sealed partial class DocxLayoutEngine
                     width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
                     scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
                     availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
-                    cancellationToken);
+                    cancellationToken, mathParagraphs);
                 if (cursorY - keepEstimate.Height <= keepBottom)
                 {
                     AdvanceColumnOrPage();
                     RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                }
+            }
+
+            if (mathParagraphs is not null && mathParagraphs.TryGetValue(paragraph, out DocxPreparedMathParagraph? math) &&
+                FitsMathDisplayWidth(paragraph, math, width, paragraphSpacingScale) &&
+                math.LineHeight * paragraphSpacingScale <= page.Height - page.MarginTop - page.MarginBottom)
+            {
+                double advance = math.LineHeight * paragraphSpacingScale;
+                if (cursorY - advance < ParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(advance)))
+                { AdvanceForOverflowingItem(advance, elementIndex); }
+                if (cursorY - advance >= ParagraphFrameBottom())
+                {
+                    double leftInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
+                    double areaWidth = width - leftInset - GetParagraphRightInset(paragraph, paragraphSpacingScale);
+                    double boxWidth = math.Box.Width * paragraphSpacingScale;
+                    double alignment = math.Equation.AlignmentValue switch
+                    { "left" => 0d, "right" => areaWidth - boxWidth, _ => (areaWidth - boxWidth) / 2d };
+                    currentItems.Add(new DocxEquationLayout(math, x + leftInset + alignment,
+                        cursorY - math.BaselineInset * paragraphSpacingScale, paragraphSpacingScale, elementIndex, paragraph));
+                    activeColumnHasContent = true;
+                    cursorY -= advance;
+                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                    previousParagraph = paragraph;
+                    continue;
                 }
             }
 

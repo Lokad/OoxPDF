@@ -65,7 +65,8 @@ internal sealed partial class DocxReader
         void Emit(string id, string feature, string diagnosticPartName, string fallback, bool approximated)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!emitted.Add(id))
+            string key = id == "DOCX_UNSUPPORTED_EQUATION" ? id + "\0" + diagnosticPartName : id;
+            if (!emitted.Add(key))
             {
                 return;
             }

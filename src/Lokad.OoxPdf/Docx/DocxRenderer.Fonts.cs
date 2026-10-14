@@ -68,7 +68,10 @@ internal sealed partial class DocxRenderer
 
         ReportComplexScriptApproximation(plan, diagnosticSink, cancellationToken);
 
-        return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources);
+        return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources)
+        {
+            MathParagraphs = PrepareMathParagraphs(document, fontResolver, fontCache, resources, cancellationToken)
+        };
     }
 
     // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines, so the

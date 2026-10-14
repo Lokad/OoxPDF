@@ -21,6 +21,7 @@ internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxM
 internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode
 {
     public bool HasUnsupportedProperties { get; init; }
+    public string? ExplicitFontFamily { get; init; }
 }
 internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode;
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;

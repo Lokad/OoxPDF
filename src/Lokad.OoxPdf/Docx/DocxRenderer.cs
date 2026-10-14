@@ -178,6 +178,7 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         if (!HasRenderableContent())
         {
+            ReportEquationDiagnostics(document, [], diagnosticSink, cancellationToken);
             // R06.2: admit the single blank page like any produced page.
             OoxConversionBudget.Current?.ChargePdfPages(1);
             yield return new PdfPage(document.PageWidthPoints, document.PageHeightPoints);
@@ -508,7 +509,7 @@ internal sealed partial class DocxRenderer
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels,
             useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
-        DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer);
+        DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, mathParagraphs: fontResources.MathParagraphs);
         // Maps stay dense: explicitly unconstrained pages record zero so the
         // beyond-map last-entry fallback in Create only fires past the first layout's
         // page count, never for a recorded storyless page (w53 even-pages probe:
@@ -533,7 +534,7 @@ internal sealed partial class DocxRenderer
 
         return headerDisplacementByPage.Values.All(value => value == 0d) && footerDisplacementByPage.Values.All(value => value == 0d)
             ? first
-            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage);
+            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage, fontResources.MathParagraphs);
     }
 
     private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document, CancellationToken cancellationToken = default)
@@ -1060,6 +1061,7 @@ internal sealed partial class DocxRenderer
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
+        ReportEquationDiagnostics(document, layout.Pages.SelectMany(page => page.Items).OfType<DocxEquationLayout>(), diagnosticSink, cancellationToken);
         // RV06: comment balloons and range washes wear first-seen author colors;
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.
@@ -1580,6 +1582,14 @@ internal sealed partial class DocxRenderer
         {
             case DocxTextLineLayout textLine:
                 RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken);
+                break;
+            case DocxEquationLayout equation:
+                graphics.SaveState();
+                graphics.Transform(equation.Scale, 0d, 0d, equation.Scale,
+                    equation.X + ResolveTextEmissionXOffset(markupContext),
+                    equation.BaselineY - ResolveTextEmissionBaselineOffset(markupContext));
+                DocxMathBoxPainter.Paint(equation.Math.Box, graphics, 0d, 0d, cancellationToken);
+                graphics.RestoreState();
                 break;
             case DocxInlineImageLayout image:
                 double imageXOffset = ResolveTextEmissionXOffset(markupContext);

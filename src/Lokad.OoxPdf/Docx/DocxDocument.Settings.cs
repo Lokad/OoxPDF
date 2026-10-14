@@ -14,6 +14,7 @@ internal sealed record DocxDocumentSettings(
     bool? MirrorMargins,
     IReadOnlyList<DocxCompatSetting> CompatSettings)
 {
+    public string? MathFontFamily { get; init; }
     public static DocxDocumentSettings Empty { get; } = new(null, null, null, null, null, DocxRevisionViewSettings.Empty, DocxTrackChangesSettings.Empty, DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, []);
 }
 

@@ -97,6 +97,8 @@ internal static class DocxMathParser
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),
+                ExplicitFontFamily = (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "ascii")
+                    ?? (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "hAnsi"),
                 HasUnsupportedProperties = element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
                     property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr") == true
             };

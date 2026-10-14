@@ -50,7 +50,25 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
         DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
         DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
-        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, diagnosticSink, warnedMustUnderstandParts, cancellationToken);
+        var equationDiagnostics = new List<OoxPdfDiagnostic>();
+        int equationSourceCount = 0;
+        foreach (XElement equation in document.Descendants(MathNamespace + "oMath"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            equationSourceCount++;
+        }
+        Action<OoxPdfDiagnostic>? featureSink = diagnosticSink;
+        if (diagnosticSink is not null || equationSourceCount != 0 || document.Descendants(MathNamespace + "oMathPara").Any())
+        {
+            featureSink = diagnostic =>
+            {
+                // Font availability and frame admission belong to rendering. Preserve
+                // probes until that stage can distinguish painted and ignored math.
+                if (diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION") { equationDiagnostics.Add(diagnostic); }
+                else { diagnosticSink?.Invoke(diagnostic); }
+            };
+        }
+        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, featureSink, warnedMustUnderstandParts, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr").LastOrDefault();
@@ -98,6 +116,9 @@ internal sealed partial class DocxReader
                 [])
             {
                 FontCatalog = fontCatalog,
+                MainPartName = documentPart.Name,
+                EquationSourceCount = equationSourceCount,
+                EquationDiagnostics = equationDiagnostics,
                 StyleCatalog = ToStyleCatalog(styles),
                 HeaderParagraphsByType = headersByType,
                 FooterParagraphsByType = footersByType,
@@ -143,6 +164,9 @@ internal sealed partial class DocxReader
             [])
         {
             FontCatalog = fontCatalog,
+            MainPartName = documentPart.Name,
+            EquationSourceCount = equationSourceCount,
+            EquationDiagnostics = equationDiagnostics,
             StyleCatalog = ToStyleCatalog(styles),
             HeaderParagraphsByType = headersByType,
             FooterParagraphsByType = footersByType,
@@ -234,7 +258,10 @@ internal sealed partial class DocxReader
             endnoteReferenceSettings,
             (string?)mirrorMargins?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(mirrorMargins),
-            compatSettings);
+            compatSettings)
+        {
+            MathFontFamily = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "mathFont")?.Attribute(MathNamespace + "val")
+        };
     }
 
 
