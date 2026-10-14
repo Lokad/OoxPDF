@@ -25,7 +25,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeMathUnsupportedStructuredRowsKeepTheirFallback()
     {
         RequireMathFont();
-        foreach ((string kind, string placement) in new[] { ("scripts", "inline"), ("fraction", "inline") })
+        foreach ((string kind, string placement) in new[] { ("fraction", "inline") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = Renderer().RenderBlankPages(Fixture(kind, placement), diagnostics.Add, CancellationToken.None).Single();
@@ -33,6 +33,53 @@ internal static class DocxNativeMathTests
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
             TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
         }
+    }
+
+    public static void DocxNativeInlineScriptsPreserveMeaningAlongsideSourceOwnedProse()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(Fixture("scripts", "inline"), diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("xi2", text);
+        TestAssert.Contains("Before formula:", text);
+        TestAssert.Contains("Following prose.", text);
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+            "Supported inline script roles must report native approximate painting.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Painted inline scripts cannot report ignored mathematics.");
+    }
+
+    public static void DocxNativeInlineScriptsWrapFollowingProseAndRetainOverwideFallback()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage fitting = Renderer().RenderBlankPages(NamedFixture("docx-omml-inline-script-wrap110"), diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(fitting).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("xi2", text);
+        TestAssert.Contains("after formula.", text);
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Following-prose wrapping must share the same script source owner.");
+        diagnostics.Clear();
+        PdfPage overwide = Renderer().RenderBlankPages(NamedFixture("docx-omml-inline-script-overwide30"), diagnostics.Add, CancellationToken.None).Single();
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
+            "Unqualified formula relocation retains its whole-equation fallback.");
+        TestAssert.True(!overwide.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "Fallback output cannot publish an unused mathematical subset.");
+    }
+
+    public static void DocxNativeInlineScriptFrameKeepsFollowingProseWithinItsAdmittedBody()
+    {
+        RequireMathFont();
+        DocxDocument document = NamedFixture("docx-omml-inline-script-boundary140");
+        DocxRenderer renderer = Renderer();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("xi2", text);
+        TestAssert.Contains("Following prose.", text);
+        var tail = renderer.InspectTextEmission(document).Lines.Last(line => line.SourceBlockIndex == 8);
+        TestAssert.True(tail.Segments.All(segment => segment.BaselineY >= document.MarginBottomPoints),
+            "The shared inline script frame must keep its following prose within the admitted source body.");
     }
 
     public static void DocxNativeDisplayScriptsPaintDistinctBaseAndScriptRoles()

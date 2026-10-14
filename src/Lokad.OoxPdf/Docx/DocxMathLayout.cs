@@ -117,10 +117,10 @@ internal static partial class DocxMathLayout
     }
 
     private static DocxMathFraction? GetFraction(DocxEquation equation) =>
-        GetStandaloneChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
+        equation.Display && GetSingleUnadornedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
             ? fraction : null;
 
-    private static DocxMathNode? GetStandaloneChild(DocxEquation equation) =>
-        equation.Display && equation.Content.PropertiesXml.Count == 0 && equation.Content.Children.Count == 1
+    private static DocxMathNode? GetSingleUnadornedChild(DocxEquation equation) =>
+        equation.Content.PropertiesXml.Count == 0 && equation.Content.Children.Count == 1
             ? equation.Content.Children[0] : null;
 }
