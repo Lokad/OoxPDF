@@ -13,6 +13,7 @@ internal static class TestCatalog
         .. FromType("docx-page", typeof(DocxSpacedWrappedFootnoteTests)),
         .. FromType("docx-page", typeof(DocxMixedWrappedFootnoteTests)),
         .. FromType("fonts", typeof(FontProgramCacheTests)),
+        .. FromType("fonts", typeof(MathFontTests)),
         .. FromType("api", typeof(DiagnosticOutcomeTests)),
         .. FromType("cli", typeof(CliTests)),
         .. FromType("tools", typeof(ToolBudgetTests)),

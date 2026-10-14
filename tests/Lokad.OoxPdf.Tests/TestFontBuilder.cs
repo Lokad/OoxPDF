@@ -35,6 +35,9 @@ internal static class TestFontBuilder
         return Assemble(scalerTag: new string(new[] { (char)0, (char)1, (char)0, (char)0 }), includeOutlines: true);
     }
 
+    public static byte[] CreateMathFont(byte[] mathTable) =>
+        Assemble(scalerTag: new string(new[] { (char)0, (char)1, (char)0, (char)0 }), includeOutlines: true, mathTable: mathTable);
+
     public static byte[] CreateCffKindFont(string familyName = "TestFont")
 
     {
@@ -58,7 +61,7 @@ internal static class TestFontBuilder
         throw new InvalidOperationException("Test font is missing table " + tag + ".");
     }
 
-    private static byte[] Assemble(string scalerTag, bool includeOutlines, string familyName = "TestFont")
+    private static byte[] Assemble(string scalerTag, bool includeOutlines, string familyName = "TestFont", byte[]? mathTable = null)
     {
         byte[] head = BuildHead();
         byte[] hhea = BuildHhea();
@@ -81,6 +84,8 @@ internal static class TestFontBuilder
             ("post", post),
             ("GPOS", gpos),
         };
+
+        if (mathTable is not null) { tables.Add(("MATH", mathTable)); }
 
         if (includeOutlines)
         {
