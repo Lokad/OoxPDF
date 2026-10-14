@@ -168,8 +168,9 @@ internal sealed partial class PptxRenderer
     {
         public const double TitleFallbackFontSize = 12d;
         public const double LegendFallbackFontSize = 9d;
-        public const double CategoryAxisFallbackFontSize = 9d;
-        public const double ValueAxisFallbackFontSize = 8.5d;
+        public const double AxisFallbackFontSize = 10d;
+        public const double CategoryAxisFallbackFontSize = AxisFallbackFontSize;
+        public const double ValueAxisFallbackFontSize = AxisFallbackFontSize;
         public const double DataLabelFallbackFontSize = 8.5d;
         public const double AxisSingleValueHeadroomFactor = 1.2d;
         public const double AxisValueEpsilon = 0.0001d;

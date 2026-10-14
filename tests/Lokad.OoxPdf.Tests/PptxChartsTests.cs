@@ -3060,7 +3060,7 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null, string? manualLayoutXml = null, bool barPlot = false)
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null, string? manualLayoutXml = null, bool barPlot = false, bool omitChartTextProperties = false)
     {
         string minimum = omitAxisMinimum ? "" : "<c:min val=\"" + axisMinimum.ToString(CultureInfo.InvariantCulture) + "\"/>";
         string layout = manualLayoutXml ?? (guard == "manual"
@@ -3093,6 +3093,12 @@ var tail = rendererType.GetMethod(
               </c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"><a:latin typeface="TestFont"/></a:defRPr></a:pPr></a:p></c:txPr>
             </c:chartSpace>
             """;
+        if (omitChartTextProperties)
+        {
+            XDocument parsedChart = XDocument.Parse(chart);
+            parsedChart.Root?.Element(XName.Get("txPr", "http://schemas.openxmlformats.org/drawingml/2006/chart"))?.Remove();
+            chart = parsedChart.ToString(SaveOptions.DisableFormatting);
+        }
         var parts = new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -5859,6 +5865,31 @@ var tail = rendererType.GetMethod(
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected axis default stroke.");
         object stroke = axisDefault.GetValue(null) ?? throw new InvalidOperationException("Expected axis default stroke value.");
         TestAssert.Equal(new RgbColor(0, 0, 0), (RgbColor)stroke.GetType().GetProperty("Color")?.GetValue(stroke)!);
+    }
+
+    public static void PptxChartAxisDefaultTextSizesMatchOfficeAcrossBarAndLine()
+    {
+        foreach (bool bar in new[] { false, true })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100,
+                barPlot: bar, omitChartTextProperties: true);
+            double[] sizes = Regex.Matches(pdf, @"/[A-Za-z][A-Za-z0-9]* (?<size>[0-9.]+) Tf").Cast<Match>()
+                .Select(m => double.Parse(m.Groups["size"].Value, CultureInfo.InvariantCulture)).ToArray();
+            TestAssert.True(sizes.Length > 0 && sizes.All(size => Math.Abs(size - 9.96d) < .001d),
+                "Both default axis roles emit Office's nominal10pt size: " + string.Join(",", sizes));
+        }
+    }
+
+    public static void PptxChartAxisDefaultTextSizesPreserveAuthoredOverrides()
+    {
+        foreach (bool bar in new[] { false, true })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100, barPlot: bar);
+            double[] sizes = Regex.Matches(pdf, @"/[A-Za-z][A-Za-z0-9]* (?<size>[0-9.]+) Tf").Cast<Match>()
+                .Select(m => double.Parse(m.Groups["size"].Value, CultureInfo.InvariantCulture)).ToArray();
+            TestAssert.True(sizes.Length > 0 && sizes.All(size => Math.Abs(size - 12d) < .001d),
+                "The chart-wide authored size keeps precedence over the shared axis default: " + string.Join(",", sizes));
+        }
     }
 
     public static void PptxGalleryAxisFallbackIgnoresUnrelatedStylePartPresence()
