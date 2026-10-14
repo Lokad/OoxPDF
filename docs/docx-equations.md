@@ -162,6 +162,16 @@ assembly bytes. Sixteen direct neighbors and four root smoke PDFs stay exact.
 Three public cases retain their review gates. Variant symbols and other styled
 alphabets retain fallback until their semantic mappings are qualified.
 
+Common theta, phi, epsilon, kappa, rho and pi variants, partial differential and
+nabla now retain their own mathematical style glyphs. A shared symbol table
+serves italic, bold and bold-italic without replacing variant letters with
+ordinary Greek forms. Eight Word controls qualify six improvements/two exact
+plain rows; all 56 embedded outlines match source glyphs. Maximum position
+differences are 0.13 pt horizontally and 0.02 pt vertically. Fifteen affected
+methods, 24 exact direct neighbors and four matching root smoke PDFs qualify one
+artifact. Two public variant cases keep their review gates; unsupported alphabets
+and Word-property inheritance remain staged.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
