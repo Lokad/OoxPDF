@@ -11,10 +11,24 @@ internal static class DocxMathParagraphPolicy
     {
         if (!HasSupportedOwner(paragraph) || !paragraph.Equations[0].Display ||
             paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)) ||
-            paragraph.Spacing.LineValue is not null || paragraph.Spacing.LineRuleValue is not null)
+            !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
         DocxEquation equation = paragraph.Equations[0];
         return equation.AlignmentValue is null or "center" or "centerGroup" or "left" or "right" ? equation : null;
+    }
+
+    public static bool TryGetDisplayLineSpacingFactor(DocxParagraph paragraph, out double factor)
+    {
+        factor = 1d;
+        if (paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null)
+            return false;
+        if (paragraph.Spacing.LineValue is null) { return true; }
+        if (!int.TryParse(paragraph.Spacing.LineValue, System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture, out int line) || line <= 0) { return false; }
+        factor = paragraph.LineSpacingFactor;
+        // Compressed automatic slots change Office's first math baseline and
+        // need a separate placement contract. Expanded slots retain the box.
+        return double.IsFinite(factor) && factor >= 1d;
     }
 
     public static DocxEquation? GetInlineRow(DocxParagraph paragraph) =>

@@ -80,7 +80,10 @@ internal sealed partial class DocxRenderer
             if (!DocxMathLayout.TryMeasure(candidate.Equation,
                 run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
-            if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight)) { continue; }
+            double lineSpacingFactor = 1d;
+            if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
+                { continue; }
+            if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight, lineSpacingFactor)) { continue; }
             layouts.Add(candidate.Paragraph, new(candidate.Equation, box, above, lineHeight));
         }
         return layouts;

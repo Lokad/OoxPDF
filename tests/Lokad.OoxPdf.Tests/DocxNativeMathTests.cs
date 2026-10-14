@@ -7,6 +7,72 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeDisplayFractionParentMetricsRetainWordChildBaselineSeparation()
+    {
+        RequireMathFont();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-display-spacing-fraction-child18-parent12-auto240"),
+            null, CancellationToken.None).Single();
+        PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        double Y(int point)
+        {
+            TestAssert.True(resource.Font.TryGetEncodedCid(resource.Font.Font.MapCodePoint(point), out ushort cid),
+                "Expected an owned display-fraction child glyph.");
+            var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"1 0 0 1 [-\d.]+ ([-\d.]+) Tm\s*<" + cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + @"> Tj");
+            TestAssert.True(operation.Success, "Expected stored numerator/denominator baselines.");
+            return double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        TestAssert.True(Math.Abs(Y(0x1D44E) - Y(0x1D450) - 17.16d) < 0.15d,
+            "Word separates enlarged children by17.16pt using parent12 metrics; child-owned25.66pt shifts fail.");
+    }
+
+    public static void DocxNativeDisplayAutomaticSpacingPaintsLiteralFractionAndScriptMeaning()
+    {
+        RequireMathFont();
+        foreach ((string kind, string place, string meaning) in new[]
+            { ("literal", "first", "α+β=γ"), ("fraction", "first", "a+bc"), ("scripts", "after", "xi2") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-display-spacing-{kind}-{place}-auto360"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Expanded automatic spacing must retain actual native mathematical meaning.");
+        }
+    }
+
+    public static void DocxNativeDisplaySpacingUsesTheMathFontLineRatherThanTheParentSize()
+    {
+        RequireMathFont();
+        foreach ((string stem, double expected) in new[]
+            { ("literal-first", 7.08d), ("literal-child18-parent12", 10.56d) })
+        {
+            double Tail(int line)
+            {
+                DocxDocument document = NamedFixture($"docx-omml-display-spacing-{stem}-auto{line}");
+                // Inspect actual following-prose placement; source child18/parent12
+                // independently distinguishes math-font spacing from parent spacing.
+                return Renderer().InspectTextEmission(document).Lines.Last().Segments[0].BaselineY;
+            }
+            TestAssert.True(Math.Abs(Tail(240) - Tail(360) - expected) < 0.15d,
+                "The extra paragraph advance must agree with the independent Word font-line contrast.");
+        }
+    }
+
+    public static void DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-display-spacing-literal-first-auto120"),
+            diagnostics.Add, CancellationToken.None).Single();
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION") &&
+            diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"),
+            "Compressed slots need their own baseline contract and retain explicit fallback.");
+        TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "Unpainted math cannot publish unused resources.");
+    }
+
     public static void DocxNativeSignedArgumentSizesPaintTheirSourceOwnedRoles()
     {
         RequireMathFont();

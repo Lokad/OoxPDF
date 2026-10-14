@@ -9,23 +9,29 @@ internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel);
 
 internal static partial class DocxMathLayout
 {
-    public static bool TryGetLineMetrics(DocxMathBox box, CancellationToken token, out double above, out double height)
+    public static bool TryGetLineMetrics(DocxMathBox box, CancellationToken token, out double above, out double height,
+        double lineSpacingFactor = 1d)
     {
         above = box.AboveBaseline;
-        double below = box.BelowBaseline, leading = 0d;
+        double below = box.BelowBaseline, leading = 0d, naturalLine = 0d;
+        height = 0d;
+        if (!double.IsFinite(lineSpacingFactor) || lineSpacingFactor < 1d) { return false; }
         foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
         {
             token.ThrowIfCancellationRequested();
             var font = glyph.Font.Font.Font;
             above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(font, glyph.FontSize));
             below = Math.Max(below, -font.Os2.TypographicDescender * glyph.FontSize / font.UnitsPerEm);
+            naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(font, glyph.FontSize));
             if (font.TryGetMathConstants(out OpenTypeMathConstants constants))
                 leading = Math.Max(leading, constants.GetValue(OpenTypeMathConstant.MathLeading) * glyph.FontSize / font.UnitsPerEm);
         }
         // MathLeading protects tall ink above the ordinary typographic box.
         // Apply it once to the composed box, rather than once per child/glyph.
         above = Math.Max(above, box.AboveBaseline + leading);
-        height = above + below;
+        // Automatic paragraph expansion adds ordinary font-line spacing after
+        // the occupied math frame; it does not scale tall ink or its baseline.
+        height = above + below + naturalLine * (lineSpacingFactor - 1d);
         return double.IsFinite(above) && double.IsFinite(height) && height > 0d;
     }
 
@@ -84,16 +90,12 @@ internal static partial class DocxMathLayout
         { fallback = "MixedMathFractionMetrics"; return false; }
         if (!font.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
-        double parentSize = size;
-        if (!equation.Display)
-        {
-            if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
-            { fallback = "UnsupportedMathFractionSource"; return false; }
-            double childNominal = sources[0].Run.Text.FontSize;
-            parentSize = equation.ParentFontSize ?? childNominal;
-            if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
-            { fallback = "MixedMathFractionMetrics"; return false; }
-        }
+        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
+        { fallback = "UnsupportedMathFractionSource"; return false; }
+        double childNominal = sources[0].Run.Text.FontSize;
+        double parentSize = equation.ParentFontSize ?? childNominal;
+        if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
+        { fallback = "MixedMathFractionMetrics"; return false; }
         double scale = parentSize / font.UnitsPerEm;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * scale;
         double thickness = constants.GetValue(OpenTypeMathConstant.FractionRuleThickness) * scale;
