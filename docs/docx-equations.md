@@ -6,7 +6,8 @@ and fitting inline literal rows alongside prose. It also paints one display
 fraction with literal numerator and denominator, using the font's OpenType MATH
 axis, shifts, minimum gaps, rule thickness and leading. Default display scripts
 with literal base/subscript/superscript rows now use separate measured boxes,
-font script-style glyph variants and owned subset mappings.
+font script-style glyph variants and owned subset mappings. Those script boxes
+also participate in fitting inline prose and following-word wrapping.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
@@ -17,7 +18,7 @@ Painted rows report `DOCX_APPROXIMATED_EQUATION`. Inline formulas share the pros
 baseline and move following prose by their measured width. Following prose can
 wrap at its word boundary while the complete formula stays at its fitting source
 line position. A formula that needs operator breaking or relocation retains
-the whole-row fallback. Inline or nested scripts and fractions,
+the whole-row fallback. Nested scripts, inline or nested fractions,
 table/story placements, reference/revision decorations and unsupported explicit
 line rules retain `DOCX_UNSUPPORTED_EQUATION` with part provenance
 and `Ignored` fallback. Missing fonts or glyphs also keep the whole-row fallback.
@@ -70,7 +71,16 @@ controls' maximum horizontal residual to 0.20 pt; composed boxes retain their
 previous behavior. Six new lower/upper contrasts and 624 independent font
 queries support the rule. Small raster trades remain recorded for 8 pt, default
 prose and q controls; all visual thresholds are unchanged.
-These results remain approximate. Argument controls, inline/nested structures and wider owners remain staged,
+Twelve inline-script controls cover surrounding prose, sizes, descenders,
+following-word wrapping, two body boundaries and an overwide fallback. Eleven
+gain painted math and improve against Word; one fallback stays exact. Placement
+residuals reach 1.09 pt horizontally and 1.52 pt vertically. At the 120 pt body
+boundary, the previous and current renderer both move following prose to page 2
+while Word keeps it on page 1; the inherited prose-spacing issue remains open.
+The 140 pt boundary keeps following prose within the admitted body. All original
+visual and page-count gates remain unchanged.
+These results remain approximate. Argument controls, nested structures, inline
+fractions and wider owners remain staged,
 with their source structure preserved.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
