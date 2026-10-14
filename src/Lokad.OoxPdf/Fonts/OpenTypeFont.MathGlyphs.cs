@@ -4,6 +4,25 @@ namespace Lokad.OoxPdf.Fonts;
 
 internal sealed partial class OpenTypeFont
 {
+    public bool TryIsMathExtendedShape(ushort glyph, out bool extended)
+    {
+        extended = false;
+        if (glyph >= GlyphCount) { return false; }
+        if (!tables.TryGetValue("MATH", out TableRecord math)) { return true; }
+        ReadOnlySpan<byte> table = bytes.AsSpan(math.Offset, math.Length);
+        if (table.Length < 10 || U16(table, 0) != 1 || U16(table, 2) != 0) { return false; }
+        int infoOffset = U16(table, 6);
+        if (infoOffset == 0) { return true; }
+        if (infoOffset < 10 || table.Length - infoOffset < 8) { return false; }
+        ReadOnlySpan<byte> info = table.Slice(infoOffset);
+        int coverageOffset = U16(info, 4);
+        if (coverageOffset == 0) { return true; }
+        if (coverageOffset < 8 || info.Length - coverageOffset < 4 ||
+            !TryGetCoverageIndex(info.Slice(coverageOffset), glyph, out int index)) { return false; }
+        extended = index >= 0;
+        return true;
+    }
+
     public bool TryGetGlyphBounds(ushort glyph, out FontBounds bounds)
     {
         bounds = default;

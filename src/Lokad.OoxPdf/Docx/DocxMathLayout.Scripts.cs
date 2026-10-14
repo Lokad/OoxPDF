@@ -42,15 +42,22 @@ internal static partial class DocxMathLayout
             superscript is null || superscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
+        bool boxBase = basis.Glyphs.Count != 1;
+        if (!boxBase)
+        {
+            ushort glyph = font.MapCodePoint(basis.Glyphs[0].RenderCodePoint);
+            if (!font.TryIsMathExtendedShape(glyph, out boxBase))
+            { fallback = "InvalidMathExtendedShapeCoverage"; return false; }
+        }
         double up = 0d, down = 0d;
         if (superscript is not null)
             up = Math.Max(Value(OpenTypeMathConstant.SuperscriptShiftUp), Math.Max(
-                basis.AboveBaseline - Value(OpenTypeMathConstant.SuperscriptBaselineDropMax),
+                boxBase ? basis.AboveBaseline - Value(OpenTypeMathConstant.SuperscriptBaselineDropMax) : 0d,
                 superscript.BelowBaseline + Value(OpenTypeMathConstant.SuperscriptBottomMin)));
         if (subscript is not null)
             down = Math.Max(Value(OpenTypeMathConstant.SubscriptShiftDown), Math.Max(
                 subscript.AboveBaseline - Value(OpenTypeMathConstant.SubscriptTopMax),
-                basis.BelowBaseline + Value(OpenTypeMathConstant.SubscriptBaselineDropMin)));
+                boxBase ? basis.BelowBaseline + Value(OpenTypeMathConstant.SubscriptBaselineDropMin) : 0d));
         if (subscript is not null && superscript is not null)
         {
             double missing = Math.Max(0d, Value(OpenTypeMathConstant.SubSuperscriptGapMin) -

@@ -7,6 +7,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathScriptStyleTests
 {
+    public static void MathFontExtendedShapeCoverageDistinguishesGlyphAndBoxOwners()
+    {
+        foreach (bool ranges in new[] { false, true })
+        {
+            byte[] table = new byte[ranges ? 28 : 24];
+            void U(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(at), value);
+            U(0, 1); U(6, 10); U(14, 8); U(18, ranges ? (ushort)2 : (ushort)1); U(20, 1); U(22, 34);
+            if (ranges) { U(24, 34); U(26, 0); }
+            OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(table));
+            TestAssert.True(font.TryIsMathExtendedShape(34, out bool extended) && extended,
+                "Covered font glyphs own the extended-shape baseline contract.");
+            TestAssert.True(font.TryIsMathExtendedShape(35, out extended) && !extended,
+                "Ordinary glyphs cannot inherit composed-box baseline-drop constraints.");
+            for (int length = 1; length < table.Length; length++)
+            {
+                font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(table[..length]));
+                TestAssert.True(!font.TryIsMathExtendedShape(34, out _), "Truncated selected coverage keeps explicit fallback.");
+                TestAssert.True(font.MapCodePoint('A') != 0, "Optional math-shape defects preserve ordinary face use.");
+            }
+        }
+        TestAssert.True(TestFontBuilder.LoadTestFont().TryIsMathExtendedShape(34, out bool missing) && !missing,
+            "Absent MATH coverage keeps ordinary glyph ownership.");
+    }
+
     public static void MathFontScriptAlternatesHonorMathLanguageAndBothCoverageFormats()
     {
         foreach (bool ranges in new[] { false, true })

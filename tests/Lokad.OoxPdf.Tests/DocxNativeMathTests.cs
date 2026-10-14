@@ -92,6 +92,23 @@ internal static class DocxNativeMathTests
             "The shared script frame must admit following prose without crossing the source body boundary.");
     }
 
+    public static void DocxNativeDisplayDescenderScriptUsesGlyphRatherThanBoxDropMinimum()
+    {
+        RequireMathFont();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-script-descender12"), null, CancellationToken.None).Single();
+        PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        ushort original = resource.Font.Font.MapCodePoint(0x1D456);
+        TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(original, 1, CancellationToken.None, out ushort script), "Expected script-style i.");
+        TestAssert.True(resource.Font.TryGetEncodedCid(script, out ushort cid), "Expected an owned script subset CID.");
+        string code = cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture);
+        var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+            @"1 0 0 1 [-\d.]+ ([-\d.]+) Tm\s*<" + code + @"> Tj");
+        TestAssert.True(operation.Success, "The native script must retain a stored relative baseline.");
+        double baseline = double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        TestAssert.True(baseline >= -3.3d,
+            "The Word-backed descender control cannot receive the extra composed-box drop (old baseline below -4.4pt).");
+    }
+
     public static void DocxNativeDisplayFractionPaintsDistinctSourceRolesAndStoredRule()
     {
         RequireMathFont();
