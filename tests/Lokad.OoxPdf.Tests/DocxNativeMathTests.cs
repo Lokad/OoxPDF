@@ -75,6 +75,47 @@ internal static class DocxNativeMathTests
         TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "Fallback output cannot publish unused math fonts.");
     }
 
+    public static void DocxNativeInlineMathWrapsFollowingProseWithoutLosingItsSourceBoundary()
+    {
+        RequireMathFont();
+        DocxDocument document = NamedFixture("docx-omml-wrap-middle140");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        DocxRenderer renderer = Renderer();
+        PdfPage page = renderer.RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("α+β=γ", text);
+        TestAssert.Contains("after formula.", text);
+        TestAssert.Contains("Following prose.", text);
+        TestAssert.True(!text.Contains('\u200B'), "Layout markers cannot leak into emitted prose.");
+        var lines = renderer.InspectTextEmission(document).Lines.Where(line => line.SourceBlockIndex == 0).ToArray();
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.True(lines[0].Segments[0].BaselineY > lines[1].Segments[0].BaselineY,
+            "Following prose must own a subsequent line, preserving the mathematical source position.");
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+            "A fitting formula remains painted when only its following prose requires wrapping.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Supported prose wrapping cannot claim ignored mathematical content.");
+    }
+
+    public static void DocxNativeInlineMathWrapsBeginningAndLongTailProseWithoutChangingSourceText()
+    {
+        RequireMathFont();
+        foreach (string name in new[] { "docx-omml-prosewrap-begin90", "docx-omml-prosewrap-long140" })
+        {
+            DocxDocument document = NamedFixture(name);
+            DocxRenderer renderer = Renderer();
+            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains("α+β=γ", text);
+            TestAssert.Contains("Following prose.", text);
+            string prose = string.Concat(document.Paragraphs[0].Runs.Select(run => run.Text));
+            TestAssert.True(prose.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(word => text.Contains(word, StringComparison.Ordinal)),
+                "Every following prose word must survive source-owned formula wrapping.");
+            var lines = renderer.InspectTextEmission(document).Lines.Where(line => line.SourceBlockIndex == 0).ToArray();
+            TestAssert.True(lines.Length >= 2, "The mathematical box must participate in following-prose line breaking.");
+        }
+    }
+
     public static void DocxNativeMathSettingsAndExplicitRunFacesRemainDistinct()
     {
         DocxDocument document = Fixture("literal", "after");

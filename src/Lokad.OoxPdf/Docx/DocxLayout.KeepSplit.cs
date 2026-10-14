@@ -496,11 +496,12 @@ internal sealed partial class DocxLayoutEngine
             DocxWrappedTextLine[] lines = WrapTextLines(spans, firstWidth, nextWidth, size, textMeasurer,
                 ScaleTabStopPositions(value.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale,
                 ShouldAllowCharacterLevelWordWrap(value), pageNumber, cancellationToken).ToArray();
-            if (CreateMidLineMath(value, math, spans, lines, firstWidth, nextWidth, size, textMeasurer, paragraphSpacingScale,
-                defaultTabStopPoints, pageNumber ?? 1) is null) { return regular; }
+            int proseLineCount = lines.Length;
+            if (WrapInlineMath(value, math, spans, ref lines, firstWidth, nextWidth, size, textMeasurer, paragraphSpacingScale,
+                defaultTabStopPoints, pageNumber ?? 1, cancellationToken) is null) { return regular; }
             double lineHeight = ResolveLineHeightProfile(value, size, textMeasurer).LineHeight;
             var expansion = ResolveInlineMathExpansion(math, size, lineHeight, lineHeight, paragraphSpacingScale, IsExactLineSpacing(value.EffectiveProperties));
-            return regular + expansion.Above + expansion.Below;
+            return regular + (lines.Length - proseLineCount) * lineHeight + expansion.Above + expansion.Below;
         }
 
         double EstimateFirstTableRowHeight(DocxTable table, double remainingHeight)

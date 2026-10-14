@@ -111,12 +111,19 @@ internal sealed record DocxTextSpan(
     string Text,
     DocxTextRun StyleRun,
     int SourceTextRunIndex,
-    int SourceTextOffsetInRun);
+    int SourceTextOffsetInRun)
+{
+    // Layout-only marker; never part of the source prose or emitted text.
+    public bool IsInlineObjectMarker { get; init; }
+}
 
 internal sealed record DocxWrappedTextLine(
     string Text,
     IReadOnlyList<DocxTextSpan> Spans,
-    bool EndsWithIntraTokenBreak);
+    bool EndsWithIntraTokenBreak)
+{
+    public int? InlineObjectCharOffset { get; init; }
+}
 
 internal sealed record DocxInlineImageLayout(
     DocxInlineImage Image,

@@ -1419,6 +1419,11 @@ internal sealed partial class DocxLayoutEngine
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
+                DocxMidLineMath? inlineMath = mathParagraphs is not null && mathParagraphs.TryGetValue(paragraph, out var preparedMath) &&
+                    !preparedMath.Equation.Display
+                    ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
+                        paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
+                    : null;
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, ParagraphFrameBottom(), HasCurrentColumnContent()))
                 {
                     AdvanceColumnOrPage();
@@ -1428,11 +1433,6 @@ internal sealed partial class DocxLayoutEngine
                 // RV05: ordered inline atoms (body path). Affined images in text-mixed
                 // paragraphs attach to wrapped lines at run position; wrapping is untouched.
                 midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective)), lineHeight);
-                DocxMidLineMath? inlineMath = mathParagraphs is not null && mathParagraphs.TryGetValue(paragraph, out var preparedMath) &&
-                    !preparedMath.Equation.Display
-                    ? CreateMidLineMath(paragraph, preparedMath, textSpans, lines, paragraphWidth, continuationParagraphWidth,
-                        paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1)
-                    : null;
                 double? typographicBaselineInset = lineHeightProfile.Source == DocxLineHeightSource.BodySingleLineAuto
                     ? DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer) : null;
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)

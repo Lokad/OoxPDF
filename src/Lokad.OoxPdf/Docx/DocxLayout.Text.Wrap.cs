@@ -194,6 +194,26 @@ internal sealed partial class DocxLayoutEngine
         bool segmentHasHiddenBreaks = text.AsSpan(segmentStart, segmentLength).ContainsAny("\u00AD\u200B");
         bool segmentHasDynamicFields = SpansOverlapDynamicField(spans, segmentStart, segmentLength);
         List<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength).ToList();
+        // Layout markers represent atomic objects. Split their token boundaries
+        // so an object can move without splitting or reordering adjacent prose.
+        int markerStart = 0;
+        foreach (DocxTextSpan span in spans)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (span.IsInlineObjectMarker && markerStart >= segmentStart && markerStart < segmentStart + segmentLength)
+            {
+                int tokenIndex = tokens.FindIndex(token => token.Start <= markerStart && token.Start + token.Length > markerStart);
+                TextToken token = tokens[tokenIndex];
+                var replacement = new List<TextToken>(3);
+                if (token.Start < markerStart) { replacement.Add(token with { Length = markerStart - token.Start }); }
+                replacement.Add(new TextToken(markerStart, 1, false));
+                int after = markerStart + 1;
+                if (after < token.Start + token.Length) { replacement.Add(token with { Start = after, Length = token.Start + token.Length - after }); }
+                tokens.RemoveAt(tokenIndex);
+                tokens.InsertRange(tokenIndex, replacement);
+            }
+            markerStart += span.Text.Length;
+        }
         if (tokens.Count == 0)
         {
             yield break;
@@ -827,10 +847,21 @@ internal sealed partial class DocxLayoutEngine
     {
         string lineText = text.Substring(start, length);
         bool preserveTerminalSoftHyphen = endsWithIntraTokenBreak && lineText.EndsWith('\u00AD');
+        IReadOnlyList<DocxTextSpan> sliced = SliceTextSpans(spans, start, length, spanStarts);
+        int? objectOffset = null;
+        if (sliced.Any(span => span.IsInlineObjectMarker))
+        {
+            int visibleLength = 0;
+            foreach (DocxTextSpan span in sliced)
+            {
+                if (span.IsInlineObjectMarker) { objectOffset = visibleLength; }
+                else { visibleLength += RemoveHiddenBreakCharacters(span.Text, preserveTerminalSoftHyphen: false).Length; }
+            }
+        }
         return new DocxWrappedTextLine(
             RemoveHiddenBreakCharacters(lineText, preserveTerminalSoftHyphen),
-            NormalizeHiddenBreakSpans(SliceTextSpans(spans, start, length, spanStarts), preserveTerminalSoftHyphen),
-            endsWithIntraTokenBreak);
+            NormalizeHiddenBreakSpans(sliced, preserveTerminalSoftHyphen),
+            endsWithIntraTokenBreak) { InlineObjectCharOffset = objectOffset };
     }
 
     private static int FindSpanIndex(int[] spanStarts, int position)
@@ -872,11 +903,11 @@ internal sealed partial class DocxLayoutEngine
             if (sliceStart < sliceEnd)
             {
                 int spanOffset = sliceStart - spanStart;
-                sliced.Add(new DocxTextSpan(
-                    span.Text[spanOffset..(sliceEnd - spanStart)],
-                    span.StyleRun,
-                    span.SourceTextRunIndex,
-                    span.SourceTextOffsetInRun + spanOffset));
+                sliced.Add(span with
+                {
+                    Text = span.Text[spanOffset..(sliceEnd - spanStart)],
+                    SourceTextOffsetInRun = span.SourceTextOffsetInRun + spanOffset
+                });
             }
 
             if (spanEnd >= end)
