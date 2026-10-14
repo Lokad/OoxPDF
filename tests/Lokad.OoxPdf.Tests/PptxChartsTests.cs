@@ -3060,7 +3060,7 @@ var tail = rendererType.GetMethod(
         }
     }
 
-    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null, string? manualLayoutXml = null)
+    private static string RenderLegendlessLineLayoutProbe(int size, int width, int maximum, string? blank = null, string? guard = null, bool typographicMetrics = false, string? galleryStyle = null, string? gridlines = null, string? stylePart = null, string? themeDarkColor = null, bool mapTextToDark2 = false, int? categoryLabelOffset = null, double axisMinimum = 0d, double? axisMajorUnit = null, double? categoryCrossesAt = null, double? valueCrossesAt = null, string? categoryLabelPosition = null, bool valueAxisReversed = false, bool categoryMajorTicks = false, string? categoryStroke = null, string? valueStroke = null, bool omitAxisMinimum = false, double? axisMaximum = null, string? manualLayoutXml = null, bool barPlot = false)
     {
         string minimum = omitAxisMinimum ? "" : "<c:min val=\"" + axisMinimum.ToString(CultureInfo.InvariantCulture) + "\"/>";
         string layout = manualLayoutXml ?? (guard == "manual"
@@ -3078,6 +3078,9 @@ var tail = rendererType.GetMethod(
               <c:val><c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>{{maximum / 2}}</c:v></c:pt>{{(blank is null ? "<c:pt idx=\"1\"><c:v>30</c:v></c:pt>" : "")}}<c:pt idx="2"><c:v>{{maximum}}</c:v></c:pt></c:numLit></c:val>
             </c:ser><c:axId val="10"/><c:axId val="20"/>{{(guard == "extra-axis" ? "<c:axId val=\"30\"/>" : "")}}</c:lineChart>
             """;
+        if (barPlot)
+            line = line.Replace("lineChart", "barChart", StringComparison.Ordinal)
+                .Replace("<c:grouping", "<c:barDir val=\"col\"/><c:grouping", StringComparison.Ordinal);
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               {{galleryStyle}}
@@ -5858,20 +5861,43 @@ var tail = rendererType.GetMethod(
         TestAssert.Equal(new RgbColor(0, 0, 0), (RgbColor)stroke.GetType().GetProperty("Color")?.GetValue(stroke)!);
     }
 
-    public static void PptxGalleryAxisFamilyDefaultNeedsStyleTwoWithoutPart()
+    public static void PptxGalleryAxisFallbackIgnoresUnrelatedStylePartPresence()
+    {
+        const string style = "<cs:chartStyle xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" id=\"201\"><cs:gridlineMajor><cs:spPr><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"446688\"/></a:solidFill></a:ln></cs:spPr></cs:gridlineMajor></cs:chartStyle>";
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100,
+            galleryStyle: "<c:style val=\"2\"/>", stylePart: style, barPlot: true);
+        TestAssert.True(pdf.Contains("0.537 G", StringComparison.Ordinal),
+            "Unstyled gallery2 axes retain the Office gray fallback when a style part supplies other roles.");
+        TestAssert.True(pdf.Contains("0.267 0.4 0.533 RG", StringComparison.Ordinal),
+            "Authored major-gridline role color remains intact.");
+    }
+
+    public static void PptxGalleryAxisFallbackPreservesExplicitStrokeAndNoFillWithStylePart()
+    {
+        const string style = "<cs:chartStyle xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" id=\"201\"><cs:gridlineMajor><cs:spPr><a:ln><a:solidFill><a:srgbClr val=\"446688\"/></a:solidFill></a:ln></cs:spPr></cs:gridlineMajor></cs:chartStyle>";
+        string pdf = RenderLegendlessLineLayoutProbe(12, 360, 100,
+            galleryStyle: "<c:style val=\"2\"/>", stylePart: style, barPlot: true,
+            categoryStroke: "<a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"112233\"/></a:solidFill></a:ln>",
+            valueStroke: "<a:ln><a:noFill/></a:ln>");
+        TestAssert.True(pdf.Contains("0.067 0.133 0.2 RG", StringComparison.Ordinal),
+            "The explicit category-axis stroke keeps its source color.");
+        TestAssert.True(!pdf.Contains("0.537 G", StringComparison.Ordinal),
+            "The gallery fallback must not replace explicit strokes or revive a no-fill axis.");
+    }
+
+    public static void PptxGalleryAxisFamilyDefaultNeedsStyleTwo()
     {
         // Gallery style 2 without a style part renders unstyled axis-family strokes
-        // gray-0.537 at width 1.0; any other gallery id, missing id, or style-part
-        // chart keeps the null default (legacy black fallback downstream).
+        // gray-0.537 at width1.0. A style part does not suppress that fallback;
+        // authored strokes/no-fill already retain precedence in the caller.
         System.Reflection.MethodInfo gallery = typeof(PptxRenderer).GetMethod(
             "ResolveGalleryAxisFamilyDefault",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected gallery axis default.");
-        object styled = gallery.Invoke(null, ["2", false]) ?? throw new InvalidOperationException("Expected gallery default stroke.");
+        object styled = gallery.Invoke(null, ["2"]) ?? throw new InvalidOperationException("Expected gallery default stroke.");
         TestAssert.Equal(new RgbColor(137, 137, 137), (RgbColor)styled.GetType().GetProperty("Color")?.GetValue(styled)!);
         TestAssert.Equal(1d, (double)styled.GetType().GetProperty("Width")?.GetValue(styled)!);
-        TestAssert.True(gallery.Invoke(null, ["18", false]) is null, "Gallery default must not touch other style ids.");
-        TestAssert.True(gallery.Invoke(null, [null, false]) is null, "Gallery default must not touch style-less charts.");
-        TestAssert.True(gallery.Invoke(null, ["2", true]) is null, "Gallery default must not touch style-part charts.");
+        TestAssert.True(gallery.Invoke(null, ["18"]) is null, "Gallery default must not touch other style ids.");
+        TestAssert.True(gallery.Invoke(null, [null]) is null, "Gallery default must not touch style-less charts.");
     }
 
     public static void PptxBubbleMaxRadiusMatchesOfficePlotRatio()

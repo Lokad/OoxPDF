@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
                 // (multi-plot dual-axis charts keep legacy output); explicit styles win by
                 // construction since only null entries are replaced.
-                if (barCharts.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart?.StyleId, sceneChart?.StylePart.IsDefined == true) is { } galleryAxisDefault)
+                if (barCharts.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart?.StyleId) is { } galleryAxisDefault)
                 {
                     // SecondaryValueAxis stays untouched: its null-ness gates secondary-axis
                     // emission downstream, and filling it would conjure duplicate axis lines.

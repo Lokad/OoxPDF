@@ -478,13 +478,8 @@ internal sealed partial class PptxRenderer
     // multi-plot dual-axis charts keep legacy output for lack of axis-color evidence.
     // Modern Office applies the c14 Choice branch, not this fallback value, so a future
     // c14-capable normalization must revisit which branch drives the gray.
-    private static ChartSeriesStroke? ResolveGalleryAxisFamilyDefault(string? galleryStyleId, bool hasStylePart)
+    private static ChartSeriesStroke? ResolveGalleryAxisFamilyDefault(string? galleryStyleId)
     {
-        if (hasStylePart)
-        {
-            return null;
-        }
-
         if (galleryStyleId != "2")
         {
             return null;
