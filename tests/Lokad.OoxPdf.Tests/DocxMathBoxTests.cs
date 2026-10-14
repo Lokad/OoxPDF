@@ -8,6 +8,40 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxExplicitStylesPreserveSourceAndSelectTheMathematicalAlphabet()
+    {
+        foreach ((string style, int[] expected) in new[]
+        {
+            ("p", new[] { 0x41, 0x68, 0x2B, 0x3D, 0x78, 0x32 }),
+            ("i", new[] { 0x1D434, 0x210E, 0x2B, 0x3D, 0x1D465, 0x32 }),
+            ("b", new[] { 0x1D400, 0x1D421, 0x2B, 0x3D, 0x1D431, 0x1D7D0 }),
+            ("bi", new[] { 0x1D468, 0x1D489, 0x2B, 0x3D, 0x1D499, 0x1D7D0 })
+        })
+        {
+            var row = new DocxMathRow([new DocxMathRun(Run("Ah+h=x2"), style, "roman")]);
+            TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out var points, out _),
+                "An explicit supported style must discover its mathematical alphabet.");
+            TestAssert.True(points.SequenceEqual(expected), "Styled letters/digits own their Unicode glyphs; operators remain ordinary.");
+            TestAssert.Equal("Ah+h=x2", ((DocxMathRun)row.Children[0]).Text.Text);
+        }
+    }
+
+    public static void DocxMathBoxExplicitStylesRetainUnqualifiedAlphabetAndWordPropertyFallbacks()
+    {
+        foreach (var run in new[]
+        {
+            new DocxMathRun(Run("α"), "b", null),
+            new DocxMathRun(Run("A"), "future", null),
+            new DocxMathRun(Run("A"), "b", "double-struck"),
+            new DocxMathRun(Run("A") with { Bold = true }, "b", null),
+            new DocxMathRun(Run("A") with { Underline = true }, "bi", null)
+        })
+        {
+            TestAssert.True(!DocxMathRowLayout.TryGetRenderCodePoints(new([run]), CancellationToken.None, out var points, out _) &&
+                points.Count == 0, "Unqualified source styling must retain the complete fallback without partial glyph discovery.");
+        }
+    }
+
     public static void DocxMathBoxOperatorSpacingOwnerPreservesGlyphAdvanceAndRejectsInvalidSizes()
     {
         var font = Resource(TestFontBuilder.LoadTestFont(), "A+B");

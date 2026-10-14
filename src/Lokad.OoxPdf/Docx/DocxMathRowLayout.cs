@@ -103,7 +103,7 @@ internal static class DocxMathRowLayout
                 foreach (Rune rune in run.Text.Text.EnumerateRunes())
                 {
                     token.ThrowIfCancellationRequested();
-                    int rendered = run.MathStyleValue == "p" ? rune.Value : ItalicCodePoint(rune.Value);
+                    int rendered = RenderCodePoint(rune.Value, run.MathStyleValue);
                     if (rendered < 0) { fallback = "UnsupportedMathAlphabet"; return false; }
                     OoxConversionBudget.Current?.ChargeSceneNodes(1);
                     atoms.Add(new(run, rune, new Rune(rendered), Kind(rune.Value)));
@@ -115,10 +115,24 @@ internal static class DocxMathRowLayout
     }
 
     private static bool HasSupportedStyle(DocxMathRun run) =>
-        !run.HasUnsupportedProperties && run.MathStyleValue is null or "i" or "p" && run.ScriptValue is null or "roman" &&
+        !run.HasUnsupportedProperties && run.MathStyleValue is null or "i" or "p" or "b" or "bi" && run.ScriptValue is null or "roman" &&
         !run.Text.Bold && !run.Text.Underline && !run.Text.Strike && !run.Text.DoubleStrike && !run.Text.Hidden &&
         !run.Text.AllCaps && !run.Text.SmallCaps && run.Text.VerticalAlignmentValue is null && run.Text.CharacterSpacingPoints == 0d &&
         run.Text.HighlightValue is null && run.Text.ShadingFillHex is null;
+
+    private static int RenderCodePoint(int codePoint, string? style)
+    {
+        if (style == "p") { return codePoint; }
+        if (style is null or "i") { return ItalicCodePoint(codePoint); }
+        bool italic = style == "bi";
+        if (codePoint is >= 'A' and <= 'Z') { return (italic ? 0x1D468 : 0x1D400) + codePoint - 'A'; }
+        if (codePoint is >= 'a' and <= 'z') { return (italic ? 0x1D482 : 0x1D41A) + codePoint - 'a'; }
+        if (codePoint is >= '0' and <= '9') { return 0x1D7CE + codePoint - '0'; }
+        // Operators retain their mathematical symbol glyph. Other alphabets
+        // keep fallback until their explicit styled mapping is qualified.
+        if (Rune.IsLetter(new Rune(codePoint)) || Rune.IsDigit(new Rune(codePoint))) { return -1; }
+        return codePoint;
+    }
 
     private static int ItalicCodePoint(int codePoint)
     {

@@ -7,6 +7,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeExplicitMathStylesPaintTheirSourceMeaningInDisplayAndInlineRows()
+    {
+        RequireMathFont();
+        foreach (string placement in new[] { "display", "inline" })
+        foreach (string style in new[] { "b", "bi" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-style-literal-{placement}-12-{style}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("Ah+h=x", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Explicit math styles must report actual native painting through the shared box/font path.");
+        }
+    }
+
+    public static void DocxNativeExplicitMathScriptStylesOwnTheirLetterAndDigitSubsetMappings()
+    {
+        RequireMathFont();
+        foreach ((string style, int x, int i) in new[] { ("b", 0x1D431, 0x1D422), ("bi", 0x1D499, 0x1D48A) })
+        {
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-style-scripts-display-12-{style}"),
+                null, CancellationToken.None).Single();
+            TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+            foreach ((int point, int level) in new[] { (x, 0), (i, 1), (0x1D7D0, 1) })
+            {
+                ushort glyph = resource.Font.Font.MapCodePoint(point);
+                if (level != 0) { TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(glyph, level, CancellationToken.None, out glyph),
+                    "Expected the style's script glyph ownership."); }
+                TestAssert.True(resource.Font.TryGetEncodedCid(glyph, out ushort cid), "Styled source glyphs must own a published subset CID.");
+                TestAssert.Equal(point, resource.Font.UnicodeByCid[cid]);
+            }
+        }
+    }
+
     public static void DocxNativeDisplayFractionOperatorGapUsesTheParentMathSize()
     {
         RequireMathFont();
