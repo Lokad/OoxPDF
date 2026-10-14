@@ -7,6 +7,65 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathArgumentPropertiesPreserveTypedSizeAndConservativeEligibility()
+    {
+        foreach ((string properties, int? size, bool unsupported, bool eligible) in new (string, int?, bool, bool)[]
+        {
+            ("", null, false, true), ("<m:argPr/>", null, false, true),
+            ("<m:argPr><m:argSz m:val='0'/></m:argPr>", 0, false, true),
+            ("<m:argPr><m:argSz m:val='-1'/></m:argPr>", -1, false, false),
+            ("<m:argPr><m:argSz m:val='1'/></m:argPr>", 1, false, false),
+            ("<m:argPr><m:argSz/></m:argPr>", null, true, false),
+            ("<m:argPr><m:argSz m:val='no'/></m:argPr>", null, true, false),
+            ("<m:argPr><m:argSz m:val='2147483648'/></m:argPr>", null, true, false),
+            ("<m:argPr><m:argSz m:val='0' extra='1'/></m:argPr>", null, true, false),
+            ("<m:argPr><m:argSz m:val='0'><m:unknown/></m:argSz></m:argPr>", null, true, false),
+            ("<m:argPr><m:argSz m:val='0'/>text</m:argPr>", null, true, false),
+            ("<m:argPr><m:argSz m:val='0'/><m:argSz m:val='0'/></m:argPr>", null, true, false),
+            ("<m:argPr><m:unknown/></m:argPr>", null, true, false),
+            ("<m:argPr/><m:argPr/>", null, true, false),
+            ("<m:argPr/><m:ctrlPr/>", null, true, false),
+            ("<m:ctrlPr/>", null, true, false)
+        })
+        {
+            DocxMathRow row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'>" + properties +
+                "<m:r><m:rPr><m:sty m:val='p'/></m:rPr><m:t>x</m:t></m:r></m:oMath>"));
+            TestAssert.Equal(size, row.ArgumentProperties?.Size);
+            TestAssert.Equal(unsupported, row.ArgumentProperties?.HasUnsupportedProperties ?? false);
+            TestAssert.Equal(eligible, row.HasSupportedProperties);
+            TestAssert.Equal(eligible, DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out _, out _));
+            TestAssert.Equal("x", RowText(row));
+            if (properties.Length != 0) { TestAssert.True(row.PropertiesXml.Count != 0, "Raw authored controls remain available for fallback."); }
+        }
+        TestAssert.True(!new DocxMathRow([]) { PropertiesXml = ["<unknown/>"] }.HasSupportedProperties,
+            "Unparsed synthetic properties cannot silently acquire neutral semantics.");
+    }
+
+    public static void DocxMathNeutralArgumentPropertiesShareLiteralAndStructuredDiscovery()
+    {
+        foreach (string body in new[]
+        {
+            "<m:r><m:t>x</m:t></m:r>",
+            "<m:sSubSup><m:e><m:r><m:t>x</m:t></m:r></m:e><m:sub>{0}<m:r><m:t>i</m:t></m:r></m:sub><m:sup>{0}<m:r><m:t>2</m:t></m:r></m:sup></m:sSubSup>",
+            "<m:f><m:num>{0}<m:r><m:t>a</m:t></m:r></m:num><m:den>{0}<m:r><m:t>b</m:t></m:r></m:den></m:f>"
+        })
+        foreach (string properties in new[] { "<m:argPr/>", "<m:argPr><m:argSz m:val='0'/></m:argPr>" })
+        {
+            DocxMathRow row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'>" + properties +
+                body.Replace("{0}", properties, StringComparison.Ordinal) + "</m:oMath>"));
+            foreach (bool display in new[] { false, true })
+            {
+                var equation = new DocxEquation(row, 0, 0, display, null, null, null);
+                TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var runs),
+                    "Neutral argument properties share the same literal/structured source discovery.");
+                TestAssert.True(runs.Count != 0, "Source meaning must remain discoverable.");
+                DocxMathRow unknown = row with { PropertiesXml = ["<unknown/>"], ArgumentProperties = null };
+                TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = unknown }, CancellationToken.None, out _),
+                    "Unknown root controls preserve the whole-equation fallback.");
+            }
+        }
+    }
+
     public static void DocxMathPinnedControlsRetainStructureAndProseBoundaries()
     {
         foreach (string kind in new[] { "literal", "scripts", "fraction" })

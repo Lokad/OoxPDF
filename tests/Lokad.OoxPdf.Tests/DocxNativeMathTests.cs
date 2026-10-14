@@ -7,6 +7,19 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNeutralArgumentPropertiesPaintDefaultScriptRoles()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-script-scale-arg0"), diagnostics.Add, CancellationToken.None).Single();
+        TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+        TestAssert.Contains(" 8.52 Tf", page.Content);
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+            "Explicit neutral argument size must paint the default source script roles.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Neutral properties cannot report ignored mathematics.");
+    }
+
     public static void DocxNativeDisplayMathRetainsMeaningAndReportsPaintedContent()
     {
         RequireMathFont();

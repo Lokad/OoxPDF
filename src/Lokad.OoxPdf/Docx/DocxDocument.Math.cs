@@ -20,7 +20,13 @@ internal abstract record DocxMathNode
     public IReadOnlyList<string> PropertiesXml { get; init; } = [];
 }
 
-internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxMathNode;
+internal sealed record DocxMathArgumentProperties(int? Size, bool HasUnsupportedProperties);
+internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxMathNode
+{
+    public DocxMathArgumentProperties? ArgumentProperties { get; init; }
+    public bool HasSupportedProperties => PropertiesXml.Count == 0 ||
+        ArgumentProperties is { HasUnsupportedProperties: false, Size: null or 0 };
+}
 internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode
 {
     public bool HasUnsupportedProperties { get; init; }

@@ -39,7 +39,8 @@ internal static class DocxMathParser
             DocxMathNode node;
             if (IsRow(name))
             {
-                node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
+                node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())
+                { ArgumentProperties = ReadArgumentProperties(element) };
             }
             else if (name == "f" && Role(element, "num") is { } numerator && Role(element, "den") is { } denominator &&
                 HasOnlyRoles(element, "num", "den"))
@@ -90,6 +91,28 @@ internal static class DocxMathParser
         (string?)element.Element(MathNamespace + property)?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
     private static string[] ReadProperties(XElement element) => element.Elements().Where(IsProperty)
         .Select(child => child.ToString(SaveOptions.DisableFormatting)).ToArray();
+
+    private static DocxMathArgumentProperties? ReadArgumentProperties(XElement element)
+    {
+        XElement[] properties = element.Elements().Where(IsProperty).ToArray();
+        if (properties.Length == 0) { return null; }
+        if (properties.Length != 1 || properties[0].Name != MathNamespace + "argPr")
+            return new(null, true);
+        XElement argument = properties[0];
+        XElement[] children = argument.Elements().ToArray();
+        if (argument.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration) ||
+            !string.IsNullOrWhiteSpace(string.Concat(argument.Nodes().OfType<XText>().Select(text => text.Value))))
+            return new(null, true);
+        if (children.Length == 0) { return new(null, false); }
+        if (children.Length != 1 || children[0].Name != MathNamespace + "argSz") { return new(null, true); }
+        XElement size = children[0];
+        if (size.HasElements || !string.IsNullOrWhiteSpace(size.Value) ||
+            size.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration && attribute.Name != MathNamespace + "val") ||
+            !int.TryParse((string?)size.Attribute(MathNamespace + "val"),
+                System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value))
+            return new(null, true);
+        return new(value, false);
+    }
 
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun)
     {

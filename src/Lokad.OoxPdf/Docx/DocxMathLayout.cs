@@ -128,10 +128,10 @@ internal static partial class DocxMathLayout
     }
 
     private static DocxMathFraction? GetFraction(DocxEquation equation) =>
-        GetSingleUnadornedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
+        GetSingleSupportedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
             ? fraction : null;
 
-    private static DocxMathNode? GetSingleUnadornedChild(DocxEquation equation) =>
-        equation.Content.PropertiesXml.Count == 0 && equation.Content.Children.Count == 1
+    private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
+        equation.Content.HasSupportedProperties && equation.Content.Children.Count == 1
             ? equation.Content.Children[0] : null;
 }

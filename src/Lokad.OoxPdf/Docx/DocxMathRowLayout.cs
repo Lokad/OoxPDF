@@ -87,7 +87,7 @@ internal static class DocxMathRowLayout
         while (pending.TryPop(out DocxMathNode? node))
         {
             token.ThrowIfCancellationRequested();
-            if (node is DocxMathRow sequence && sequence.PropertiesXml.Count == 0)
+            if (node is DocxMathRow sequence && sequence.HasSupportedProperties)
             {
                 for (int i = sequence.Children.Count - 1; i >= 0; i--) { pending.Push(sequence.Children[i]); }
             }
