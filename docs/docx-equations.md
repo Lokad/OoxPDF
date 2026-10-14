@@ -129,6 +129,16 @@ methods qualify one Release artifact; 33 selected neighbors and four root smoke
 outputs retain their pinned bytes. Three new public cases keep their review
 gates. Compressed spacing needs its separate baseline contract.
 
+Fraction operator spacing now uses the same parent math size as the axis, rule
+and shifts, while glyph sizes, advances and italic corrections retain their
+own font ownership. Word's embedded outlines confirm ordinary source glyphs
+for both default and enlarged arguments. Six controls cover 8/12/16/18/20 pt
+children under a 12 pt parent: five improve and one stays exact, without raster
+trades. The enlarged argument's horizontal residual falls from 1.86 pt to
+0.53 pt; vertical differences up to 1.16 pt remain. Fifty-two focused methods
+and 48 exact selected neighbors qualify one artifact; four root smoke outputs
+match without rebuilding. Two new public cases preserve the review thresholds.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
