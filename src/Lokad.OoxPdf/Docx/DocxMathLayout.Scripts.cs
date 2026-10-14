@@ -30,17 +30,21 @@ internal static partial class DocxMathLayout
         foreach (DocxMathRunSource source in sources)
         {
             token.ThrowIfCancellationRequested();
-            if (source.Run.Text.FontSize != size || !ReferenceEquals(resolveFont(source.Run)?.Font.Font, font))
+            if (source.Run.Text.FontSize != size || !source.Run.NormalText && !ReferenceEquals(resolveFont(source.Run)?.Font.Font, font))
             { fallback = "MixedMathScriptMetrics"; return false; }
         }
         if (!DocxMathRowLayout.TryMeasure(scripts.Base, resolveFont, token, out DocxMathBox? basis, out fallback, exportFontSize: true) ||
             basis is null || basis.Glyphs.Count == 0) { fallback ??= "EmptyMathScriptBase"; return false; }
+        if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))
+            { fallback = "MixedMathScriptBaseMetrics"; return false; }
         DocxMathBox? subscript = null, superscript = null;
         if (scripts.Subscript is { } sub && (!DocxMathArgumentMetrics.TryGetScriptLevel(sub, out int subLevel) ||
-            !DocxMathRowLayout.TryMeasure(sub, resolveFont, token, out subscript, out fallback, scriptLevel: subLevel, exportFontSize: true, allowArgumentSize: true) ||
+            !DocxMathRowLayout.TryMeasure(sub, resolveFont, token, out subscript, out fallback, scriptLevel: subLevel, exportFontSize: true,
+                allowArgumentSize: true, scriptMetricsFont: font) ||
             subscript is null || subscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSubscript"; return false; }
         if (scripts.Superscript is { } sup && (!DocxMathArgumentMetrics.TryGetScriptLevel(sup, out int supLevel) ||
-            !DocxMathRowLayout.TryMeasure(sup, resolveFont, token, out superscript, out fallback, scriptLevel: supLevel, exportFontSize: true, allowArgumentSize: true) ||
+            !DocxMathRowLayout.TryMeasure(sup, resolveFont, token, out superscript, out fallback, scriptLevel: supLevel, exportFontSize: true,
+                allowArgumentSize: true, scriptMetricsFont: font) ||
             superscript is null || superscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;

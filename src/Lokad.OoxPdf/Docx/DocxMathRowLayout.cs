@@ -14,7 +14,8 @@ internal static class DocxMathRowLayout
 
     public static bool TryMeasure(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false,
-        bool allowArgumentSize = false, double? operatorSpacingFontSize = null)
+        bool allowArgumentSize = false, double? operatorSpacingFontSize = null,
+        Lokad.OoxPdf.Fonts.OpenTypeFont? scriptMetricsFont = null)
     {
         box = null;
         token.ThrowIfCancellationRequested();
@@ -34,13 +35,13 @@ internal static class DocxMathRowLayout
             double size = atom.Run.Text.FontSize;
             if (scriptLevel != 0)
             {
-                if (!DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, scriptLevel, out size))
+                if (!DocxMathArgumentMetrics.TryGetScriptFontSize(scriptMetricsFont ?? font, size, scriptLevel, out size))
                 { fallback = "MissingMathScriptScale"; return false; }
             }
             else if (exportFontSize) { size = OfficePdfTextEmissionProfile.FontSize(size); }
             if (!double.IsFinite(size) || size <= 0d) { fallback = "InvalidMathFontSize"; return false; }
             ushort glyph = font.MapCodePoint(atom.Render.Value);
-            if (scriptLevel != 0 && !font.TryGetMathScriptGlyph(glyph, scriptLevel, token, out glyph))
+            if (scriptLevel != 0 && !atom.Run.NormalText && !font.TryGetMathScriptGlyph(glyph, scriptLevel, token, out glyph))
             { fallback = "UnsupportedMathScriptGlyph"; return false; }
             if (glyph == 0) { fallback = "MissingMathGlyph"; return false; }
             if (!resource.Font.TryGetEncodedCid(glyph, out ushort cid)) { fallback = "MissingMathEncoding"; return false; }

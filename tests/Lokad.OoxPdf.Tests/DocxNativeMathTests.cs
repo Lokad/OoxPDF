@@ -7,6 +7,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNormalScriptArgumentsUseTheParentScaleAndOwnTheirTextFace()
+    {
+        RequireMathFont();
+        foreach ((string name, double size, int resources) in new[]
+        {
+            ("sub-default-default", 8.52d, 1), ("sub-calibri-default", 8.52d, 2),
+            ("sup-arial-default", 8.52d, 2), ("sub-calibri-minus1", 6.96d, 2), ("sup-arial-plus1", 12d, 2)
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-script-" + name),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("xmax", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Contains(" " + size.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " Tf", page.Content);
+            TestAssert.Equal(resources, page.Fonts.Count(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)));
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Normal-text script arguments must retain actual parent/child font and source-role ownership.");
+        }
+    }
+
     public static void DocxNativeNormalTextRetainsTextAndMathematicalVariableOwnership()
     {
         RequireMathFont();

@@ -7,6 +7,33 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathScriptStyleTests
 {
+    public static void MathFontNormalScriptChildrenUseParentScaleWithoutChildMathTables()
+    {
+        byte[] constants = new byte[224];
+        BinaryPrimitives.WriteUInt16BigEndian(constants, 1);
+        BinaryPrimitives.WriteUInt16BigEndian(constants.AsSpan(4), 10);
+        BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(10), 73);
+        OpenTypeFont parentFont = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(constants));
+        OpenTypeFont textFont = TestFontBuilder.LoadTestFont();
+        var parentResource = new PdfFontResource("Math1", PdfEmbeddedFont.Create(parentFont, ['A'], CancellationToken.None));
+        var childResource = new PdfFontResource("Text1", PdfEmbeddedFont.Create(textFont, ['B'], CancellationToken.None));
+        var argument = new DocxMathRow([new DocxMathRun(new("B", 12d, null, false, false, false, null, "TestFont"), null, null)
+            { NormalTextValue = true }]);
+        TestAssert.True(!DocxMathRowLayout.TryMeasure(argument, _ => childResource, CancellationToken.None,
+            out _, out _, scriptLevel: 1), "An unowned script scale cannot be guessed from a text face without MATH.");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(argument, _ => childResource, CancellationToken.None,
+            out var box, out _, scriptLevel: 1, scriptMetricsFont: parentFont),
+            "The parent math face can own the script scale while the child owns ordinary text glyphs.");
+        DocxMathGlyphPlacement glyph = TestAssert.NotNull(box).Glyphs.Single();
+        TestAssert.True(ReferenceEquals(glyph.Font, childResource) && Math.Abs(glyph.FontSize - 8.52d) < 1e-9,
+            "Parent scaling cannot replace the child's text face or subset ownership.");
+        var basis = new DocxMathRow([new DocxMathRun(new("A", 12d, null, false, false, false, null, "TestFont"), "p", null)]);
+        var equation = new DocxEquation(new([new DocxMathScripts(basis, argument, null)]), 0, 0, true, null, null, null);
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, run => run.NormalText ? childResource : parentResource,
+            CancellationToken.None, out var composed, out _), "Mixed normal-text child faces share the parent script geometry.");
+        TestAssert.True(TestAssert.NotNull(composed).Glyphs[1].BaselineY < 0d, "The normal-text child retains its subscript role.");
+    }
+
     public static void MathFontScriptArgumentIncrementsOwnFontStyleAndPreserveParentMetrics()
     {
         byte[] constants = new byte[224];

@@ -57,7 +57,7 @@ internal sealed partial class DocxRenderer
                 foreach (int point in points)
                 {
                     ushort glyph = font.MapCodePoint(point);
-                    if (glyph == 0 || source.ScriptLevel != 0 && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
+                    if (glyph == 0 || source.ScriptLevel != 0 && !run.NormalText && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
                     { valid = false; break; }
                     if (!group.Glyphs.TryGetValue(glyph, out int existing) || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
                 }
