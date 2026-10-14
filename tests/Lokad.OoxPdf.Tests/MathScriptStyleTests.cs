@@ -7,6 +7,61 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathScriptStyleTests
 {
+    public static void MathFontCornerKernSignedThresholdsHonorEqualityAndAbsentCorners()
+    {
+        foreach (bool ranges in new[] { false, true })
+        {
+            OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(KernTable(ranges)));
+            foreach ((double height, short expected) in new[] { (-101d, (short)-70), (-100d, (short)20), (499.99d, (short)20), (500d, (short)90) })
+            {
+                TestAssert.True(font.TryGetMathKern(34, MathKernCorner.TopRight, height, out short actual),
+                    "Signed corner corrections must resolve at a bounded font-relative height.");
+                TestAssert.Equal(expected, actual);
+            }
+            TestAssert.True(font.TryGetMathKern(34, MathKernCorner.BottomLeft, 0d, out short absent) && absent == 0,
+                "Absent corners contribute zero to the paired-height sum.");
+            TestAssert.True(font.TryGetMathKern(35, MathKernCorner.TopRight, 0d, out absent) && absent == 0,
+                "Uncovered glyphs contribute zero without invalidating ordinary metrics.");
+        }
+    }
+
+    public static void MathFontCornerKernTruncationBadOffsetsAndNonfiniteHeightsKeepFallback()
+    {
+        byte[] complete = KernTable(false);
+        for (int length = 1; length < complete.Length; length++)
+        {
+            OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(complete[..length]));
+            TestAssert.True(!font.TryGetMathKern(34, MathKernCorner.TopRight, 0d, out _),
+                "Truncated selected corner data cannot publish a correction.");
+            TestAssert.True(font.MapCodePoint('A') != 0, "Optional MATH corner defects preserve ordinary face use.");
+        }
+        foreach (int offset in new[] { 6, 16, 18, 22, 36 })
+        {
+            byte[] invalid = (byte[])complete.Clone();
+            BinaryPrimitives.WriteUInt16BigEndian(invalid.AsSpan(offset), ushort.MaxValue);
+            OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(invalid));
+            TestAssert.True(!font.TryGetMathKern(34, MathKernCorner.TopRight, 0d, out _), "Malformed selected offsets/counts keep fallback.");
+        }
+        OpenTypeFont valid = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(complete));
+        TestAssert.True(!valid.TryGetMathKern(34, MathKernCorner.TopRight, double.NaN, out _), "Nonfinite query heights keep fallback.");
+        TestAssert.True(TestFontBuilder.LoadTestFont().TryGetMathKern(34, MathKernCorner.TopRight, 0d, out short missing) && missing == 0,
+            "A missing MATH table contributes no corner kerning.");
+    }
+
+    private static byte[] KernTable(bool ranges)
+    {
+        int kern = ranges ? 40 : 36;
+        byte[] data = new byte[kern + 22];
+        void U(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(data.AsSpan(at), value);
+        void I(int at, short value) => BinaryPrimitives.WriteInt16BigEndian(data.AsSpan(at), value);
+        U(0, 1); U(6, 10); U(16, 8); U(18, 12); U(20, 1); U(22, (ushort)(kern - 18));
+        U(30, ranges ? (ushort)2 : (ushort)1); U(32, 1); U(34, 34);
+        if (ranges) { U(36, 34); U(38, 0); }
+        U(kern, 2); I(kern + 2, -100); I(kern + 6, 500);
+        I(kern + 10, -70); I(kern + 14, 20); I(kern + 18, 90);
+        return data;
+    }
+
     public static void MathFontExtendedShapeCoverageDistinguishesGlyphAndBoxOwners()
     {
         foreach (bool ranges in new[] { false, true })

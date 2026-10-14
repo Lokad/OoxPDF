@@ -109,6 +109,28 @@ internal static class DocxNativeMathTests
             "The Word-backed descender control cannot receive the extra composed-box drop (old baseline below -4.4pt).");
     }
 
+    public static void DocxNativeDisplayMathCornerKernMovesTheScriptToItsMeasuredOfficeGap()
+    {
+        RequireMathFont();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-kern-y-sub"), null, CancellationToken.None).Single();
+        PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        ushort basis = resource.Font.Font.MapCodePoint(0x1D466);
+        TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(resource.Font.Font.MapCodePoint(0x1D456), 1,
+            CancellationToken.None, out ushort script), "Expected script-style i.");
+        TestAssert.True(resource.Font.TryGetEncodedCid(basis, out ushort baseCid), "The base must own a published subset CID.");
+        TestAssert.True(resource.Font.TryGetEncodedCid(script, out ushort scriptCid), "The script must own a published subset CID.");
+        double X(ushort cid)
+        {
+            string code = cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture);
+            var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"1 0 0 1 ([-\d.]+) [-\d.]+ Tm\s*<" + code + @"> Tj");
+            TestAssert.True(operation.Success, "Expected a stored source glyph position.");
+            return double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        TestAssert.True(Math.Abs(X(scriptCid) - X(baseCid) - 6.36d) < 0.15d,
+            "The independently measured Word gap is6.36pt; the unkerned6.71pt and minimum-sum5.66pt placements fail this contrast.");
+    }
+
     public static void DocxNativeDisplayFractionPaintsDistinctSourceRolesAndStoredRule()
     {
         RequireMathFont();

@@ -73,6 +73,21 @@ internal static partial class DocxMathLayout
         { fallback = "InvalidMathScriptItalicCorrection"; return false; }
         double subX = basis.Width - correction * last.FontSize / font.UnitsPerEm;
         double supX = basis.Width;
+        if (basis.Glyphs.Count == 1)
+        {
+            if (subscript?.Glyphs.Count == 1)
+            {
+                if (!TryScriptKern(last, subscript.Glyphs[0], -down, superscript: false, token, out double kern))
+                { fallback = "InvalidMathScriptKern"; return false; }
+                subX += kern;
+            }
+            if (superscript?.Glyphs.Count == 1)
+            {
+                if (!TryScriptKern(last, superscript.Glyphs[0], up, superscript: true, token, out double kern))
+                { fallback = "InvalidMathScriptKern"; return false; }
+                supX += kern;
+            }
+        }
         double width = Math.Max(basis.Width, Math.Max(subscript is null ? 0d : subX + subscript.Width,
             superscript is null ? 0d : supX + superscript.Width)) + Value(OpenTypeMathConstant.SpaceAfterScript);
         double above = Math.Max(basis.AboveBaseline, Math.Max(subscript is null ? 0d : subscript.AboveBaseline - down,
@@ -98,5 +113,31 @@ internal static partial class DocxMathLayout
                 glyphs.Add(glyph with { X = glyph.X + x, BaselineY = glyph.BaselineY + baseline });
             }
         }
+    }
+
+    private static bool TryScriptKern(DocxMathGlyphPlacement basis, DocxMathGlyphPlacement script,
+        double scriptBaseline, bool superscript, CancellationToken token, out double result)
+    {
+        result = 0d;
+        OpenTypeFont baseFont = basis.Font.Font.Font, scriptFont = script.Font.Font.Font;
+        ushort baseGlyph = baseFont.MapCodePoint(basis.RenderCodePoint);
+        if (!scriptFont.TryGetMathScriptGlyph(scriptFont.MapCodePoint(script.RenderCodePoint), 1, token, out ushort scriptGlyph) ||
+            !baseFont.TryGetGlyphBounds(baseGlyph, out var baseBounds) ||
+            !scriptFont.TryGetGlyphBounds(scriptGlyph, out var scriptBounds)) { return false; }
+        double baseScale = basis.FontSize / baseFont.UnitsPerEm, scriptScale = script.FontSize / scriptFont.UnitsPerEm;
+        MathKernCorner baseCorner = superscript ? MathKernCorner.TopRight : MathKernCorner.BottomRight;
+        MathKernCorner scriptCorner = superscript ? MathKernCorner.BottomLeft : MathKernCorner.TopLeft;
+        double scriptEdge = (superscript ? scriptBounds.YMin : scriptBounds.YMax) * scriptScale;
+        double baseEdge = (superscript ? baseBounds.YMax : baseBounds.YMin) * baseScale;
+        if (!baseFont.TryGetMathKern(baseGlyph, baseCorner, (scriptBaseline + scriptEdge) / baseScale, out short baseAtScript) ||
+            !scriptFont.TryGetMathKern(scriptGlyph, scriptCorner, scriptEdge / scriptScale, out short scriptAtScript) ||
+            !baseFont.TryGetMathKern(baseGlyph, baseCorner, baseEdge / baseScale, out short baseAtBase) ||
+            !scriptFont.TryGetMathKern(scriptGlyph, scriptCorner, (baseEdge - scriptBaseline) / scriptScale, out short scriptAtBase)) { return false; }
+        // Word lower/upper-pair comparisons favor the greater corner sum.
+        // The OpenType overview describes the minimum; retain this deliberate
+        // Office behavior with independent glyph/height contrasts and gates.
+        result = Math.Max(baseAtScript * baseScale + scriptAtScript * scriptScale,
+            baseAtBase * baseScale + scriptAtBase * scriptScale);
+        return double.IsFinite(result);
     }
 }
