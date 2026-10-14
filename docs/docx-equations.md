@@ -4,7 +4,9 @@ Native OMML rendering is in progress. A first native slice paints standalone
 literal display rows in the DOCX body, with left, center or right alignment,
 and fitting inline literal rows alongside prose. It also paints one display
 fraction with literal numerator and denominator, using the font's OpenType MATH
-axis, shifts, minimum gaps, rule thickness and leading.
+axis, shifts, minimum gaps, rule thickness and leading. Default display scripts
+with literal base/subscript/superscript rows now use separate measured boxes,
+font script-style glyph variants and owned subset mappings.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
@@ -15,7 +17,7 @@ Painted rows report `DOCX_APPROXIMATED_EQUATION`. Inline formulas share the pros
 baseline and move following prose by their measured width. Following prose can
 wrap at its word boundary while the complete formula stays at its fitting source
 line position. A formula that needs operator breaking or relocation retains
-the whole-row fallback. Scripts, inline or nested fractions,
+the whole-row fallback. Inline or nested scripts and fractions,
 table/story placements, reference/revision decorations and unsupported explicit
 line rules retain `DOCX_UNSUPPORTED_EQUATION` with part provenance
 and `Ignored` fallback. Missing fonts or glyphs also keep the whole-row fallback.
@@ -48,8 +50,19 @@ default prose retains its separate 2.37 pt spacing residual. The numerator,
 denominator and rule share stored measured geometry and font resources. These
 results remain approximate at the existing visual gates. Missing or invalid MATH
 constants, mixed fraction metric owners, nested structures and unsupported
-control formatting retain the complete fallback. Scripts and inline fractions
-remain staged, with their source structure preserved.
+control formatting retain the complete fallback.
+
+Ten display-script controls cover 8/12/16/20/24 pt sizes, individual and paired
+roles, descenders and a body boundary. All improve against Word, with matching
+equation page assignments and emitted font sizes. Font MATH scaling, downward
+half-point nominal rounding and the PDF export grid are resolved separately;
+the `ssty` glyphs match independent font inspection. Glyph-to-Unicode ownership
+keeps alternate subsets distinct while retaining canonical subset identities.
+Horizontal residuals reach 0.53 pt and descender/subscript vertical residuals
+reach 1.14 pt; default preceding prose retains a separate spacing residual.
+These results remain approximate at unchanged visual thresholds. Math kerning,
+argument controls, inline/nested structures and wider owners remain staged,
+with their source structure preserved.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
