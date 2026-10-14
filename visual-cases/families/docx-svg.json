@@ -1,7 +1,7 @@
 {
   "id": "docx-svg",
   "kind": "docx",
-  "description": "DOCX native SVG inline, anchored, repeated and story placement; preview preference, alpha and isolation.",
+  "description": "DOCX native SVG inline, anchored, repeated and story placement; authored source crop/padding, preview preference, alpha and isolation.",
   "support": {
     "minStructuralSimilarity": 0.985,
     "minForegroundRecall": 0.99

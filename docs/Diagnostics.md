@@ -52,6 +52,7 @@ Unsupported feature warnings:
 
 - `DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT`: character-unit paragraph indents are ignored; twip-based indents render.
 - `DOCX_UNSUPPORTED_CHART`: a DrawingML chart payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
+- `DOCX_UNSUPPORTED_IMAGE_CROP`: the picture source rectangle is malformed, non-finite or empty; the uncropped image is retained.
 - `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default final output when markup printing was not requested.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a complex field was malformed in a way that prevents cached-result or placeholder rendering, nested inside another field instruction, or had no supported dynamic placeholder and no cached result to render.
 - `DOCX_UNSUPPORTED_ENDNOTE`: endnote references were detected and ignored.
