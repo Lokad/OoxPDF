@@ -3291,3 +3291,25 @@ matches four root CLI smoke PDFs without another build or broad suite/corpus.
 Strict Release has zero warnings/errors. L252 retains the recent broader/platform
 milestone; no new full-catalogue/platform/package claim. Existing thresholds,
 0.1.5/release deferral and safety/work/publication limits remain.
+
+
+## RV06-L256: declared static frames and visible footer reservation
+
+Runtime **b933fbde** uses the existing line-height profile for resolved static
+exact/minimum frames. Exact pictures retain source extents and carry a clip;
+footer translation and scaled-story placement keep its origin with the image.
+The visible footer envelope also bounds body flow. Unresolved metrics retain
+their explicit fallback. Thirty independent Word controls qualify29 primary
+raster improvements and one exact guard; eight dense controls match Word body
+page assignments. Forty font-metric/hinting checks,1032 decoded glyphs and1108
+horizontal text/spacing states remain protected. Two earlier fixed/mixed guards
+receive fresh Office comparisons and now improve. Small baseline residuals and
+the independent SVG isolation/radial gaps remain open; thresholds are unchanged.
+
+One frozen artifact passes48 unique capability-specific methods and63 exact PDF
+identity checks. Matching Office inspections/rasters are reused. Root transfer
+verifies399 sources,14 fixtures and17 assets, with four matching CLI smoke PDFs
+and no root rebuild or repeated suite/corpus. Strict Release has zero warnings
+or errors. L255 retains the recent same-DLL Linux/package milestone and L252 the
+broader corpus milestone. Version0.1.5, release deferral, safe managed code and
+existing bounds/cancellation/work/cache/staging/publication limits remain.
