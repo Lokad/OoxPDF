@@ -617,7 +617,7 @@ internal static class PptxChartLegendsTests
 
     public static void PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
             ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
@@ -655,19 +655,28 @@ internal static class PptxChartLegendsTests
                   </c:plotArea><c:legend><c:legendPos val="b"/><c:overlay/></c:legend></c:chart>
                 </c:chartSpace>
                 """)
-        });
+        };
+        string input = TestFixtures.WriteTempPackage(".pptx", parts);
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        // The overlay legend still reserves nothing; the plot box now also fits the rendered
-        // value tick labels under the recalibrated label reserve (frame indent plus
-        // font-relative gap).
-        TestAssert.Contains("98.136 271.958 257.486 188.05 re f", pdf);
-        TestAssert.DoesNotContain("104.256 259.56 247.68 191.16 re f", pdf);
-        TestAssert.DoesNotContain("100.8 282.24 236.16 174.96 re f", pdf);
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XDocument chart = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/charts/chart1.xml"]));
+        chart.Descendants(c + "legend").Single().Remove();
+        parts["ppt/charts/chart1.xml"] = Encoding.UTF8.GetBytes(chart.ToString(SaveOptions.DisableFormatting));
+        string referenceInput = TestFixtures.WriteTempPackage(".pptx", parts);
+        string referenceOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(referenceInput, referenceOutput);
+        string referencePdf = File.ReadAllText(referenceOutput, Encoding.ASCII);
+        const string cyanPlot = @"0 1 1 rg\s+(?<rectangle>[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ re f)";
+        Match overlayPlot = Regex.Match(pdf, cyanPlot);
+        Match referencePlot = Regex.Match(referencePdf, cyanPlot);
+        TestAssert.True(overlayPlot.Success && referencePlot.Success, "Both controls must paint their source cyan plot.");
+        TestAssert.Equal(referencePlot.Groups["rectangle"].Value, overlayPlot.Groups["rectangle"].Value);
+        File.Delete(input); File.Delete(output); File.Delete(referenceInput); File.Delete(referenceOutput);
     }
 
     public static void PptxSyntheticChartAutoTitleUsesOfficeScaledSize()

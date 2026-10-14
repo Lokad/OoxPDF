@@ -710,7 +710,7 @@ internal static class PptxCompositionTests
 
     public static void PptxSyntheticGroupedBarChartUsesGroupTransform()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
             ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
@@ -751,19 +751,39 @@ internal static class PptxCompositionTests
                   </c:barChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """)
-        });
+        };
+        string input = TestFixtures.WriteTempPackage(".pptx", parts);
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        // The grouped plot box now also fits the rendered value tick labels under the
-        // recalibrated label reserve (frame indent plus font-relative gap); the transform
-        // still applies.
-        TestAssert.Contains("170.136 330.653 115.675 62.683 re f", pdf);
-        TestAssert.Contains("213.514 330.653 28.919 62.683 re f", pdf);
-        TestAssert.DoesNotContain("160.128 326.52 123.84 63.72 re f", pdf);
-        TestAssert.DoesNotContain("86.4 406.08 118.08 51.84 re f", pdf);
+        XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XDocument slide = XDocument.Parse(Encoding.UTF8.GetString(parts["ppt/slides/slide1.xml"]));
+        XElement group = slide.Descendants(p + "grpSp").Single();
+        XElement groupOrigin = group.Element(p + "grpSpPr")!.Element(a + "xfrm")!.Element(a + "off")!;
+        groupOrigin.SetAttributeValue("x", "0");
+        groupOrigin.SetAttributeValue("y", "0");
+        parts["ppt/slides/slide1.xml"] = Encoding.UTF8.GetBytes(slide.ToString(SaveOptions.DisableFormatting));
+        string referenceInput = TestFixtures.WriteTempPackage(".pptx", parts);
+        string referenceOutput = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        OoxPdfConverter.Convert(referenceInput, referenceOutput);
+        string referencePdf = File.ReadAllText(referenceOutput, Encoding.ASCII);
+        Match[] groupedRects = Regex.Matches(pdf, @"(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f").Cast<Match>().ToArray();
+        Match[] referenceRects = Regex.Matches(referencePdf, @"(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f").Cast<Match>().ToArray();
+        TestAssert.True(groupedRects.Length >= 2, "The control must paint its plot and bar rectangles.");
+        TestAssert.Equal(groupedRects.Length, referenceRects.Length);
+        TestAssert.Equal(referenceRects[0].Value, groupedRects[0].Value);
+        for (int i = 1; i < groupedRects.Length; i++)
+        foreach ((string field, double delta) in new[] { ("x", 72d), ("y", -72d), ("w", 0d), ("h", 0d) })
+        {
+            double grouped = double.Parse(groupedRects[i].Groups[field].Value, CultureInfo.InvariantCulture);
+            double ungrouped = double.Parse(referenceRects[i].Groups[field].Value, CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs(grouped - ungrouped - delta) < .002d,
+                $"The source group's72pt translation moves the plot and bar while preserving dimensions: rectangle{i}/{field}, {grouped} vs {ungrouped}, expected delta{delta}.");
+        }
+        File.Delete(input); File.Delete(output); File.Delete(referenceInput); File.Delete(referenceOutput);
     }
 }
