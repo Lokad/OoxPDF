@@ -286,8 +286,7 @@ internal sealed partial class DocxLayoutEngine
         {
             return (lines, placedImages, usedHeight);
         }
-        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
-        double extra = Math.Max(0d, availableHeight - usedHeight);
+        double extra = ResolveTableCellExtraVerticalSpace(paragraphs, cellHeight, paddingTop, paddingBottom, usedHeight, baselineInset);
         double verticalOffset = ResolveVerticalContentOffset(cell, extra);
         return verticalOffset == 0d
             ? (lines, placedImages, usedHeight)
@@ -899,8 +898,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double usedHeight = Math.Max(0d, startBaselineY - cursorY);
-        double availableHeight = Math.Max(0d, cellHeight - paddingTop - paddingBottom - baselineInset);
-        double extra = Math.Max(0d, availableHeight - usedHeight);
+        double extra = ResolveTableCellExtraVerticalSpace(paragraphs, cellHeight, paddingTop, paddingBottom, usedHeight, baselineInset);
         double verticalOffset = ResolveVerticalContentOffset(cell, extra);
         return verticalOffset == 0d
             ? (images, boxes)
@@ -1040,6 +1038,17 @@ internal sealed partial class DocxLayoutEngine
     // R17: single vertical-alignment execution point. The parsed enum keeps the
     // two content shifters (text lines, images/boxes) consistent; unknown spellings
     // ride the Top fallback from parsing.
+    private static double ResolveTableCellExtraVerticalSpace(IReadOnlyList<DocxParagraph> paragraphs,
+        double cellHeight, double paddingTop, double paddingBottom, double usedHeight, double baselineInset)
+    {
+        // Natural/exact slots include their baseline inset in used height.
+        // Minimum-leading content retains the separately reserved initial headroom.
+        bool reservesHeadroom = paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is > 0d &&
+            !IsExactLineSpacing(paragraph.EffectiveProperties));
+        double headroom = reservesHeadroom ? baselineInset : 0d;
+        return Math.Max(0d, cellHeight - paddingTop - paddingBottom - headroom - usedHeight);
+    }
+
     private static double ResolveVerticalContentOffset(DocxTableCell cell, double extra)
     {
         return cell.VerticalAlignment switch

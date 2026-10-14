@@ -2003,6 +2003,44 @@ internal static class DocxTablesLayoutTests
         TestAssert.True(bottomBaseline < centerBaseline, "Bottom-aligned cell text should move below centered cell text.");
     }
 
+    public static void DocxTableVerticalAlignmentOwnsTheFullPaddedCellSpace()
+    {
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Cell", 10d, 12d);
+        var top = new DocxTableCell("Cell", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var center = top with { VerticalAlignmentValue = "center" };
+        var bottom = top with { VerticalAlignmentValue = "bottom" };
+        var table = new DocxTable(null, [40d, 40d, 40d], [new DocxTableRow([top, center, bottom], 60d)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+        double topBaseline = row.Cells[0].TextLines.Single().BaselineY;
+        double extra = row.Cells[0].Height - row.Cells[0].TextLines.Single().LineHeight!.Value;
+        TestAssert.True(Math.Abs(row.Cells[1].TextLines.Single().BaselineY - (topBaseline - extra / 2d)) < 0.001d,
+            "Center alignment should consume half of the unused padded cell space.");
+        TestAssert.True(Math.Abs(row.Cells[2].TextLines.Single().BaselineY - (topBaseline - extra)) < 0.001d,
+            "Bottom alignment should consume all unused padded cell space, without another baseline-inset deduction.");
+    }
+
+    public static void DocxTableVerticalAlignmentKeepsMinimumLeadingHeadroom()
+    {
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Cell", 10d, 24d) with
+        {
+            Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "atLeast" }
+        };
+        var top = new DocxTableCell("Cell", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var bottom = top with { VerticalAlignmentValue = "bottom" };
+        var table = new DocxTable(null, [40d, 40d], [new DocxTableRow([top, bottom], 60d)]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
+            .Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+        double fullUnusedSpace = row.Cells[0].Height - row.Cells[0].TextLines.Single().LineHeight!.Value;
+        double shift = row.Cells[0].TextLines.Single().BaselineY - row.Cells[1].TextLines.Single().BaselineY;
+        TestAssert.True(shift > 0d && shift < fullUnusedSpace - 0.001d,
+            "Declared minimum leading must retain its reserved baseline headroom during alignment.");
+    }
+
     public static void DocxTableLayoutStageExpandsRowsToCellContent()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
