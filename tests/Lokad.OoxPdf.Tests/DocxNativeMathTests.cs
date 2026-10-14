@@ -7,6 +7,38 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNormalTextRetainsTextAndMathematicalVariableOwnership()
+    {
+        RequireMathFont();
+        foreach (string placement in new[] { "display", "inline" })
+        foreach (string face in new[] { "default", "calibri" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-normal-text-{placement}-{face}-true"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("sin x", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Normal text and mathematical variables must retain their shared native equation ownership.");
+            var resources = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(face == "default" ? 1 : 2, resources.Length);
+        }
+    }
+
+    public static void DocxNativeExplicitFalseNormalTextUsesMathGlyphsAndFace()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-text-display-calibri-false"),
+            diagnostics.Add, CancellationToken.None).Single();
+        PdfFontResource font = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        TestAssert.True(font.Font.Font.MapCodePoint(0x1D460) != 0, "Explicit false retains the mathematical italic alphabet.");
+        TestAssert.True(font.Font.TryGetEncodedCid(font.Font.Font.MapCodePoint(0x1D460), out _),
+            "The math face owns the italic s glyph, rather than the authored normal-text face.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "An explicit false property is a supported math-mode control.");
+    }
+
     public static void DocxNativeVariantSymbolsRetainTheirDistinctStyledSubsetMappings()
     {
         RequireMathFont();

@@ -127,13 +127,27 @@ internal static class DocxMathParser
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
             {
                 PropertiesXml = ReadProperties(element),
+                NormalTextValue = element.Element(MathNamespace + "rPr")?.Element(MathNamespace + "nor") is { } authoredNormal
+                    ? Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(authoredNormal, false, valueAttributeName: MathNamespace + "val") : null,
                 ExplicitFontFamily = (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "ascii")
                     ?? (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "hAnsi"),
                 HasUnsupportedProperties = element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
-                    property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr") == true
+                    property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr" &&
+                    property.Name != MathNamespace + "nor") == true || !HasSupportedNormalTextProperty(element)
             };
         }
         return Unsupported(element);
+    }
+
+    private static bool HasSupportedNormalTextProperty(XElement element)
+    {
+        XElement[] properties = element.Element(MathNamespace + "rPr")?.Elements(MathNamespace + "nor").ToArray() ?? [];
+        if (properties.Length == 0) { return true; }
+        if (properties.Length != 1 || properties[0].HasElements || !string.IsNullOrWhiteSpace(properties[0].Value) ||
+            properties[0].Attributes().Any(attribute => !attribute.IsNamespaceDeclaration && attribute.Name != MathNamespace + "val"))
+            return false;
+        string? value = (string?)properties[0].Attribute(MathNamespace + "val");
+        return value is null || Lokad.OoxPdf.Ooxml.OoxBoolean.IsTrue(value) || Lokad.OoxPdf.Ooxml.OoxBoolean.IsOff(value);
     }
 
     private static DocxMathUnsupported Unsupported(XElement element) =>

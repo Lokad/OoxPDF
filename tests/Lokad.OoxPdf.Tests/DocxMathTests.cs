@@ -7,6 +7,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathNormalTextPropertiesRetainTypedDefaultsAndMalformedFallback()
+    {
+        foreach ((string property, bool? expected, bool unsupported) in new (string, bool?, bool)[]
+        {
+            ("", null, false), ("<m:nor/>", true, false), ("<m:nor m:val='1'/>", true, false),
+            ("<m:nor m:val='true'/>", true, false), ("<m:nor m:val='0'/>", false, false),
+            ("<m:nor m:val='false'/>", false, false), ("<m:nor m:val='unknown'/>", false, true),
+            ("<m:nor/><m:nor/>", true, true), ("<m:nor extra='1'/>", true, true)
+        })
+        {
+            DocxMathRow row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:r><m:rPr>" +
+                property + "</m:rPr><m:t>sin</m:t></m:r></m:oMath>"));
+            DocxMathRun run = (DocxMathRun)row.Children[0];
+            TestAssert.Equal(expected, run.NormalTextValue);
+            TestAssert.Equal(unsupported, run.HasUnsupportedProperties);
+            TestAssert.Equal("sin", run.Text.Text);
+            TestAssert.Equal(!unsupported, DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out var points, out _));
+            if (run.NormalText && !unsupported) { TestAssert.True(points.SequenceEqual("sin".Select(c => (int)c)),
+                "Normal text owns its original alphabet instead of mathematical italic substitutions."); }
+        }
+    }
+
     public static void DocxMathArgumentPropertiesPreserveTypedSizeAndConservativeEligibility()
     {
         foreach ((string properties, int? size, bool unsupported, bool eligible) in new (string, int?, bool, bool)[]

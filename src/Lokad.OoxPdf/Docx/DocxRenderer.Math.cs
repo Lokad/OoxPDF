@@ -45,7 +45,9 @@ internal sealed partial class DocxRenderer
             {
                 token.ThrowIfCancellationRequested();
                 DocxMathRun run = source.Run;
-                string family = run.ExplicitFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math";
+                string family = run.NormalText
+                    ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
+                    : (run.NormalTextValue is false ? null : run.ExplicitFontFamily) ?? document.Settings.MathFontFamily ?? "Cambria Math";
                 FontFaceResolution resolution = resolver.Resolve(new FontRequest(family));
                 OpenTypeFont? font = LoadFont(resolution, fontCache, token);
                 if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }

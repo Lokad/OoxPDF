@@ -8,6 +8,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxNormalTextDoesNotAcquireMathematicalOperatorSpacing()
+    {
+        var font = Resource(TestFontBuilder.LoadTestFont(), "A+B=C");
+        var normal = new DocxMathRow([new DocxMathRun(Run("A+B=C"), null, null) { NormalTextValue = true }]);
+        TestAssert.True(DocxMathRowLayout.TryMeasure(normal, _ => font, CancellationToken.None, out var box, out _),
+            "Normal-text runs retain ordinary glyphs and font advances.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        double x = 0d;
+        foreach (DocxMathGlyphPlacement glyph in measured.Glyphs)
+        {
+            TestAssert.True(Math.Abs(glyph.X - x) < 1e-9, "Normal text must not insert mathematical binary/relation glue.");
+            x += glyph.Advance;
+        }
+        TestAssert.Equal("A+B=C", string.Concat(measured.Glyphs.Select(g => new System.Text.Rune(g.RenderCodePoint).ToString())));
+    }
+
     public static void DocxMathBoxVariantSymbolsKeepTheirSourceIdentityAndDistinctStyleGlyphs()
     {
         int[] source = [0x2202, 0x03F5, 0x03D1, 0x03F0, 0x03D5, 0x03F1, 0x03D6];
@@ -155,7 +171,7 @@ internal static class DocxMathBoxTests
         TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(Plain("Aahαβγ"), CancellationToken.None, out points, out _), "Plain math style preserves the declared alphabet.");
         TestAssert.Equal("41,61,68,3B1,3B2,3B3", string.Join(',', points.Select(point => point.ToString("X", CultureInfo.InvariantCulture))));
         var unsupported = DocxMathParser.Read(System.Xml.Linq.XElement.Parse("""
-            <m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:r><m:rPr><m:nor/></m:rPr><m:t>A</m:t></m:r></m:oMath>
+            <m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:r><m:rPr><m:unknown/></m:rPr><m:t>A</m:t></m:r></m:oMath>
             """), (_, text) => Run(text), CancellationToken.None);
         TestAssert.True(((DocxMathRun)unsupported.Children.Single()).HasUnsupportedProperties, "Unsupported source properties must survive parser admission.");
         TestAssert.True(!DocxMathRowLayout.TryGetRenderCodePoints(unsupported, CancellationToken.None, out _, out _), "Unsupported source properties cannot silently become ordinary math.");

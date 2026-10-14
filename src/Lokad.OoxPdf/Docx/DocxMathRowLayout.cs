@@ -58,15 +58,15 @@ internal static class DocxMathRowLayout
             {
                 // Italic correction belongs to the previous glyph; operator glue
                 // is a semantic math-unit rule, independent of font or fixture.
-                if (kind != AtomKind.Ordinary) { x += previousCorrection; }
-                if (scriptLevel == 0) { x += Glue(previous, kind) * (operatorSpacingFontSize ?? size) / 18d; }
+                if (!atom.Run.NormalText && kind != AtomKind.Ordinary) { x += previousCorrection; }
+                if (!atom.Run.NormalText && scriptLevel == 0) { x += Glue(previous, kind) * (operatorSpacingFontSize ?? size) / 18d; }
             }
             RgbColor color = default;
             RgbColor.TryParse(atom.Run.Text.ColorHex, out color);
             glyphs.Add(new(atom.Source.Value, atom.Render.Value, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
                 size, x, 0d, advance, color) { OriginalGlyph = glyph });
             x += advance;
-            previousCorrection = italic * scale;
+            previousCorrection = atom.Run.NormalText ? 0d : italic * scale;
             previous = kind;
         }
         x += previousCorrection;
@@ -103,10 +103,10 @@ internal static class DocxMathRowLayout
                 foreach (Rune rune in run.Text.Text.EnumerateRunes())
                 {
                     token.ThrowIfCancellationRequested();
-                    int rendered = RenderCodePoint(rune.Value, run.MathStyleValue);
+                    int rendered = run.NormalText ? rune.Value : RenderCodePoint(rune.Value, run.MathStyleValue);
                     if (rendered < 0) { fallback = "UnsupportedMathAlphabet"; return false; }
                     OoxConversionBudget.Current?.ChargeSceneNodes(1);
-                    atoms.Add(new(run, rune, new Rune(rendered), Kind(rune.Value)));
+                    atoms.Add(new(run, rune, new Rune(rendered), run.NormalText ? AtomKind.Ordinary : Kind(rune.Value)));
                 }
             }
             else { fallback = node is DocxMathUnsupported unsupported ? "UnsupportedMathNode:" + unsupported.ElementName : "UnsupportedMathStructureOrStyle"; return false; }

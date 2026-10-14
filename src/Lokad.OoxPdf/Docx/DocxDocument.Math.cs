@@ -30,6 +30,8 @@ internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxM
 }
 internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode
 {
+    public bool? NormalTextValue { get; init; }
+    public bool NormalText => NormalTextValue == true;
     public bool HasUnsupportedProperties { get; init; }
     public string? ExplicitFontFamily { get; init; }
 }
