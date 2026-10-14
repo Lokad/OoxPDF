@@ -3313,3 +3313,17 @@ and no root rebuild or repeated suite/corpus. Strict Release has zero warnings
 or errors. L255 retains the recent same-DLL Linux/package milestone and L252 the
 broader corpus milestone. Version0.1.5, release deferral, safe managed code and
 existing bounds/cancellation/work/cache/staging/publication limits remain.
+
+
+## RV06-L257: centered-autofit qualification correction
+
+CI exposed one stale regression that required a different centered word break
+and treated a preserved trailing space as visible overflow. Independent
+PowerPoint output confirms the existing two lines and centered visible text.
+Test correction **f3120ff8** checks visible-atom bounds and equal margins on
+every line, plus preservation of the trailing-space advance. Rendering and
+visual thresholds are unchanged. Five focused checks pass using the accepted
+L256 library, with no library rebuild. Verified source/tree identities, seven
+transferred test assets, the root catalogue and an exact CLI PDF smoke qualify
+the transfer without repeating the suite or corpus. The CI delivery milestone
+runs separately on Windows and Ubuntu.
