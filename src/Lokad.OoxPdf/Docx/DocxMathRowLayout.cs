@@ -23,7 +23,7 @@ internal static class DocxMathRowLayout
         { fallback = "InvalidMathOperatorSpacingSize"; return false; }
         if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
-        double x = 0d, above = 0d, below = 0d, previousCorrection = 0d;
+        double x = 0d, above = 0d, below = 0d, previousCorrection = 0d, slantedInkRight = 0d;
         AtomKind previous = AtomKind.Open;
         for (int i = 0; i < atoms.Count; i++)
         {
@@ -48,6 +48,7 @@ internal static class DocxMathRowLayout
             if (!font.TryGetMathItalicCorrection(glyph, out short italic)) { fallback = "InvalidMathGlyphMetrics"; return false; }
             double scale = size / font.UnitsPerEm;
             double advance = font.GetAdvanceWidth(glyph) * scale;
+            double shear = atom.Run.NormalText && atom.Run.Text.Italic && Math.Abs(font.Post.ItalicAngle) < 0.01d ? 1d / 3d : 0d;
             if (font.TryGetGlyphBounds(glyph, out var bounds))
             { above = Math.Max(above, bounds.YMax * scale); below = Math.Max(below, -bounds.YMin * scale); }
             else if (!Rune.IsWhiteSpace(atom.Render)) { fallback = "MissingMathGlyphBounds"; return false; }
@@ -65,12 +66,16 @@ internal static class DocxMathRowLayout
             RgbColor color = default;
             RgbColor.TryParse(atom.Run.Text.ColorHex, out color);
             glyphs.Add(new(atom.Source.Value, atom.Render.Value, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
-                size, x, 0d, advance, color) { OriginalGlyph = glyph });
+                size, x, 0d, advance, color) { OriginalGlyph = glyph,
+                    TextShear = shear });
+            if (shear != 0d && font.TryGetGlyphBounds(glyph, out var slantedBounds))
+                slantedInkRight = Math.Max(slantedInkRight, x + (slantedBounds.XMax + shear * slantedBounds.YMax) * scale);
             x += advance;
             previousCorrection = atom.Run.NormalText ? 0d : italic * scale;
             previous = kind;
         }
         x += previousCorrection;
+        x = Math.Max(x, slantedInkRight);
         if (!double.IsFinite(x) || !double.IsFinite(above) || !double.IsFinite(below) || x < 0d)
         { fallback = "InvalidMathExtent"; return false; }
         box = new DocxMathBox(x, above, below, glyphs);
@@ -117,7 +122,7 @@ internal static class DocxMathRowLayout
 
     private static bool HasSupportedStyle(DocxMathRun run) =>
         !run.HasUnsupportedProperties && run.MathStyleValue is null or "i" or "p" or "b" or "bi" && run.ScriptValue is null or "roman" &&
-        !run.Text.Bold && !run.Text.Underline && !run.Text.Strike && !run.Text.DoubleStrike && !run.Text.Hidden &&
+        (!run.Text.Bold || run.NormalText) && !run.Text.Underline && !run.Text.Strike && !run.Text.DoubleStrike && !run.Text.Hidden &&
         !run.Text.AllCaps && !run.Text.SmallCaps && run.Text.VerticalAlignmentValue is null && run.Text.CharacterSpacingPoints == 0d &&
         run.Text.HighlightValue is null && run.Text.ShadingFillHex is null;
 

@@ -7,6 +7,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNormalTextStylesSelectAuthoredFacesAndMeasuredMathSlant()
+    {
+        RequireMathFont();
+        foreach (string face in new[] { "calibri", "arial" })
+        foreach (string style in new[] { "b", "i", "bi" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-normal-text-style-{face}-{style}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("sin x", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            PdfFontResource text = page.Fonts.First(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+            TestAssert.Equal(style.Contains('b'), text.Font.Font.Os2.WeightClass >= 600);
+            TestAssert.Equal(style.Contains('i'), Math.Abs(text.Font.Font.Post.ItalicAngle) > 0.01d);
+            TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "An available normal-text face owns its authored weight and slant.");
+        }
+        PdfPage synthetic = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-text-style-default-i"),
+            null, CancellationToken.None).Single();
+        TestAssert.Contains("sin x", DocxPageFootnoteNumberingTests.DecodeText(synthetic).Normalize(NormalizationForm.FormKC));
+        TestAssert.Contains("0.333", synthetic.Content);
+    }
+
     public static void DocxNativeNormalFractionsRetainParentMetricsAndChildFontMeaning()
     {
         RequireMathFont();

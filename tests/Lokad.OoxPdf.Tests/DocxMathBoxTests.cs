@@ -8,6 +8,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxNormalItalicUsesStoredSlantAndBalancedGraphicsState()
+    {
+        var font = Resource(TestFontBuilder.LoadTestFont(), "A");
+        var row = new DocxMathRow([new DocxMathRun(Run("A") with { Italic = true }, null, null) { NormalTextValue = true }]);
+        TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => font, CancellationToken.None, out var box, out _),
+            "A normal-text italic run retains its ordinary glyph and explicit synthetic slant.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.True(Math.Abs(measured.Glyphs.Single().TextShear - 1d / 3d) < 1e-9,
+            "The stored one-third slant matches the independent Office math-face text state.");
+        var graphics = new PdfGraphicsBuilder();
+        graphics.SaveState();
+        DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+        TestAssert.Equal(1, graphics.StateDepth);
+        graphics.RestoreState();
+        TestAssert.Equal(0, graphics.StateDepth);
+        TestAssert.Contains("0.333", graphics.ToString());
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [font])], CancellationToken.None);
+        TestAssert.True(output.Length > 0, "Slanted glyph painting retains resource and graphics-state validation.");
+    }
+
     public static void DocxMathBoxNormalTextDoesNotAcquireMathematicalOperatorSpacing()
     {
         var font = Resource(TestFontBuilder.LoadTestFont(), "A+B=C");

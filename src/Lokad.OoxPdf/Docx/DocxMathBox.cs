@@ -8,6 +8,7 @@ internal sealed record DocxMathGlyphPlacement(
     double FontSize, double X, double BaselineY, double Advance, RgbColor Color)
 {
     public ushort OriginalGlyph { get; init; }
+    public double TextShear { get; init; }
 }
 
 internal sealed record DocxMathBox(
@@ -35,10 +36,18 @@ internal static class DocxMathBoxPainter
         foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
         {
             token.ThrowIfCancellationRequested();
-            graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, x + glyph.X, baselineY + glyph.BaselineY,
+            double glyphX = x + glyph.X, glyphY = baselineY + glyph.BaselineY;
+            if (glyph.TextShear != 0d)
+            {
+                graphics.SaveState();
+                graphics.Transform(1d, 0d, glyph.TextShear, 1d, glyphX, glyphY);
+                glyphX = glyphY = 0d;
+            }
+            graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, glyphX, glyphY,
                 glyph.Color.Red, glyph.Color.Green, glyph.Color.Blue, glyph.EncodedGlyph,
                 italic: false, characterSpacing: 0d, textRenderingMode: 0,
                 strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+            if (glyph.TextShear != 0d) { graphics.RestoreState(); }
         }
     }
 }

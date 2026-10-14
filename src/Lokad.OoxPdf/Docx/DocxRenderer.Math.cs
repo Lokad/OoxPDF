@@ -55,7 +55,13 @@ internal sealed partial class DocxRenderer
                 string family = run.NormalText
                     ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
                     : (run.NormalTextValue is false ? null : run.ExplicitFontFamily) ?? document.Settings.MathFontFamily ?? "Cambria Math";
-                FontFaceResolution resolution = resolver.Resolve(new FontRequest(family));
+                FontRequest request = run.NormalText ? new(family, run.Text.Bold, run.Text.Italic) : new(family);
+                FontFaceResolution resolution = resolver.Resolve(request);
+                // A normal-text face owns its authored weight/slant. Missing
+                // styles need separate synthetic-emission qualification.
+                if (run.NormalText && !resolution.HasMathTable &&
+                    (request.Bold != resolution.Bold || request.Italic != resolution.Italic))
+                    { valid = false; break; }
                 OpenTypeFont? font = LoadFont(resolution, fontCache, token);
                 if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }
                 var key = (resolution.Source.StableId, resolution.FontFaceIndex);
