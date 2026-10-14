@@ -139,6 +139,19 @@ trades. The enlarged argument's horizontal residual falls from 1.86 pt to
 and 48 exact selected neighbors qualify one artifact; four root smoke outputs
 match without rebuilding. Two new public cases preserve the review thresholds.
 
+Explicit math run styles now select upright, italic, bold or bold-italic Latin
+letters through one alphabet mapper. Bold digits retain their upright bold
+mathematical glyphs in either bold style; operators keep their ordinary symbols.
+Existing font/subset ownership also serves styled script arguments. Ten Word
+controls cover display/inline rows, 12/20 pt sizes, scripts and the italic h
+exception. Eight improve, two stay exact and 54 embedded glyph outlines match
+the installed source font. Position differences remain below 0.19 pt horizontally
+and 0.28 pt vertically; 20 pt literal emission retains a 0.04 pt size difference.
+Fifty-six focused methods, 54 exact existing math PDFs and four matching root
+smoke outputs qualify one artifact. Three public cases keep their review gates.
+Other styled alphabets and inheritance from ordinary Word bold/italic run
+properties remain on explicit fallback, alongside unsupported decorations.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
