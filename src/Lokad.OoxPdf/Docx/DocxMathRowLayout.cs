@@ -14,9 +14,12 @@ internal static class DocxMathRowLayout
 
     public static bool TryMeasure(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false,
-        bool allowArgumentSize = false)
+        bool allowArgumentSize = false, double? operatorSpacingFontSize = null)
     {
         box = null;
+        token.ThrowIfCancellationRequested();
+        if (operatorSpacingFontSize is { } spacingSize && (!double.IsFinite(spacingSize) || spacingSize <= 0d))
+        { fallback = "InvalidMathOperatorSpacingSize"; return false; }
         if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
         double x = 0d, above = 0d, below = 0d, previousCorrection = 0d;
@@ -56,7 +59,7 @@ internal static class DocxMathRowLayout
                 // Italic correction belongs to the previous glyph; operator glue
                 // is a semantic math-unit rule, independent of font or fixture.
                 if (kind != AtomKind.Ordinary) { x += previousCorrection; }
-                if (scriptLevel == 0) { x += Glue(previous, kind) * size / 18d; }
+                if (scriptLevel == 0) { x += Glue(previous, kind) * (operatorSpacingFontSize ?? size) / 18d; }
             }
             RgbColor color = default;
             RgbColor.TryParse(atom.Run.Text.ColorHex, out color);

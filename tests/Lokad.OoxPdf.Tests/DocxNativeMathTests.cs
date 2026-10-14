@@ -7,6 +7,25 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeDisplayFractionOperatorGapUsesTheParentMathSize()
+    {
+        RequireMathFont();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-display-spacing-fraction-child18-parent12-auto240"),
+            null, CancellationToken.None).Single();
+        PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        double X(int point)
+        {
+            TestAssert.True(resource.Font.TryGetEncodedCid(resource.Font.Font.MapCodePoint(point), out ushort cid),
+                "Expected an owned ordinary display argument glyph.");
+            var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"1 0 0 1 ([-\d.]+) [-\d.]+ Tm\s*<" + cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + @"> Tj");
+            TestAssert.True(operation.Success, "Expected stored numerator glyph placement.");
+            return double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        TestAssert.True(Math.Abs(X('+') - X(0x1D44E) - 12.60d) < 0.60d,
+            "The Word12.60pt transition remains approximate; glyph-owned14.47pt operator spacing exceeds the qualified residual.");
+    }
+
     public static void DocxNativeDisplayFractionParentMetricsRetainWordChildBaselineSeparation()
     {
         RequireMathFont();

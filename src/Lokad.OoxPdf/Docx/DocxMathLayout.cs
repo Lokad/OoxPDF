@@ -78,8 +78,16 @@ internal static partial class DocxMathLayout
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;
         int scriptLevel = equation.Display ? 0 : 1;
-        if (!DocxMathRowLayout.TryMeasure(fraction.Numerator, resolveFont, token, out DocxMathBox? numerator, out fallback, scriptLevel) ||
-            !DocxMathRowLayout.TryMeasure(fraction.Denominator, resolveFont, token, out DocxMathBox? denominator, out fallback, scriptLevel) ||
+        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
+        { fallback = "UnsupportedMathFractionSource"; return false; }
+        double childNominal = sources[0].Run.Text.FontSize;
+        double parentSize = equation.ParentFontSize ?? childNominal;
+        if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
+        { fallback = "MixedMathFractionMetrics"; return false; }
+        if (!DocxMathRowLayout.TryMeasure(fraction.Numerator, resolveFont, token, out DocxMathBox? numerator, out fallback, scriptLevel,
+                operatorSpacingFontSize: parentSize) ||
+            !DocxMathRowLayout.TryMeasure(fraction.Denominator, resolveFont, token, out DocxMathBox? denominator, out fallback, scriptLevel,
+                operatorSpacingFontSize: parentSize) ||
             numerator is null || denominator is null || numerator.Glyphs.Count == 0 || denominator.Glyphs.Count == 0)
         { fallback ??= "EmptyMathFraction"; return false; }
         DocxMathGlyphPlacement first = numerator.Glyphs[0];
@@ -90,12 +98,6 @@ internal static partial class DocxMathLayout
         { fallback = "MixedMathFractionMetrics"; return false; }
         if (!font.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
-        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
-        { fallback = "UnsupportedMathFractionSource"; return false; }
-        double childNominal = sources[0].Run.Text.FontSize;
-        double parentSize = equation.ParentFontSize ?? childNominal;
-        if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
-        { fallback = "MixedMathFractionMetrics"; return false; }
         double scale = parentSize / font.UnitsPerEm;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * scale;
         double thickness = constants.GetValue(OpenTypeMathConstant.FractionRuleThickness) * scale;

@@ -8,6 +8,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxOperatorSpacingOwnerPreservesGlyphAdvanceAndRejectsInvalidSizes()
+    {
+        var font = Resource(TestFontBuilder.LoadTestFont(), "A+B");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(Plain("A+B"), _ => font, CancellationToken.None, out var normal, out _),
+            "Expected ordinary operator spacing.");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(Plain("A+B"), _ => font, CancellationToken.None, out var parent, out _,
+            operatorSpacingFontSize: 6d), "Expected independently owned parent operator spacing.");
+        DocxMathBox original = TestAssert.NotNull(normal), owned = TestAssert.NotNull(parent);
+        TestAssert.True(owned.Width < original.Width && owned.Glyphs.Zip(original.Glyphs).All(pair =>
+            pair.First.FontSize == pair.Second.FontSize && pair.First.Advance == pair.Second.Advance &&
+            pair.First.EncodedGlyph == pair.Second.EncodedGlyph),
+            "Changing the math-unit owner must preserve physical glyph sizing, advance and encoding.");
+        foreach (double invalid in new[] { 0d, -1d, double.NaN, double.PositiveInfinity })
+        {
+            TestAssert.True(!DocxMathRowLayout.TryMeasure(Plain("A+B"), _ => font, CancellationToken.None,
+                out var box, out _, operatorSpacingFontSize: invalid) && box is null,
+                "Invalid operator spacing ownership cannot publish partial geometry.");
+        }
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathRowLayout.TryMeasure(Plain("A+B"), _ => font,
+            cancelled.Token, out _, out _, operatorSpacingFontSize: double.NaN));
+    }
+
     public static void DocxMathBoxPainterUsesTheMeasuredGlyphsPositionsAndResources()
     {
         var font = Resource(TestFontBuilder.LoadTestFont(), "A+B=C");
