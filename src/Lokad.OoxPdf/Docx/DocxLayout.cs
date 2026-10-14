@@ -1393,7 +1393,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     double leftInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                     double areaWidth = width - leftInset - GetParagraphRightInset(paragraph, paragraphSpacingScale);
-                    double boxWidth = math.Box.Width * paragraphSpacingScale;
+                    double boxWidth = math.Box.AdvanceWidth * paragraphSpacingScale;
                     double alignment = math.Equation.AlignmentValue switch
                     { "left" => 0d, "right" => areaWidth - boxWidth, _ => (areaWidth - boxWidth) / 2d };
                     currentItems.Add(new DocxEquationLayout(math, x + leftInset + alignment,

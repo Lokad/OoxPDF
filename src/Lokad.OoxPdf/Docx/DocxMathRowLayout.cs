@@ -75,10 +75,11 @@ internal static class DocxMathRowLayout
             previous = kind;
         }
         x += previousCorrection;
+        double advanceWidth = x;
         x = Math.Max(x, slantedInkRight);
         if (!double.IsFinite(x) || !double.IsFinite(above) || !double.IsFinite(below) || x < 0d)
         { fallback = "InvalidMathExtent"; return false; }
-        box = new DocxMathBox(x, above, below, glyphs);
+        box = new DocxMathBox(x, above, below, glyphs) { LogicalAdvance = advanceWidth == x ? null : advanceWidth };
         fallback = null;
         return true;
     }

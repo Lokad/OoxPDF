@@ -77,8 +77,8 @@ internal static partial class DocxMathLayout
         ushort lastGlyph = last.OriginalGlyph;
         if (!font.TryGetMathItalicCorrection(lastGlyph, out short correction))
         { fallback = "InvalidMathScriptItalicCorrection"; return false; }
-        double subX = basis.Width - correction * last.FontSize / font.UnitsPerEm;
-        double supX = basis.Width;
+        double subX = basis.AdvanceWidth - correction * last.FontSize / font.UnitsPerEm;
+        double supX = basis.AdvanceWidth;
         if (basis.Glyphs.Count == 1)
         {
             if (subscript?.Glyphs.Count == 1)
@@ -94,8 +94,10 @@ internal static partial class DocxMathLayout
                 supX += kern;
             }
         }
-        double width = Math.Max(basis.Width, Math.Max(subscript is null ? 0d : subX + subscript.Width,
-            superscript is null ? 0d : supX + superscript.Width)) + Value(OpenTypeMathConstant.SpaceAfterScript);
+        double advanceWidth = Math.Max(basis.AdvanceWidth, Math.Max(subscript is null ? 0d : subX + subscript.AdvanceWidth,
+            superscript is null ? 0d : supX + superscript.AdvanceWidth)) + Value(OpenTypeMathConstant.SpaceAfterScript);
+        double width = Math.Max(advanceWidth, Math.Max(basis.Width, Math.Max(subscript is null ? 0d : subX + subscript.Width,
+            superscript is null ? 0d : supX + superscript.Width)) + Value(OpenTypeMathConstant.SpaceAfterScript));
         double above = Math.Max(basis.AboveBaseline, Math.Max(subscript is null ? 0d : subscript.AboveBaseline - down,
             superscript is null ? 0d : superscript.AboveBaseline + up));
         double below = Math.Max(basis.BelowBaseline, Math.Max(subscript is null ? 0d : subscript.BelowBaseline + down,
@@ -107,7 +109,7 @@ internal static partial class DocxMathLayout
         Append(basis, 0d, 0d);
         if (subscript is not null) { Append(subscript, subX, -down); }
         if (superscript is not null) { Append(superscript, supX, up); }
-        box = new DocxMathBox(width, above, below, glyphs);
+        box = new DocxMathBox(width, above, below, glyphs) { LogicalAdvance = advanceWidth == width ? null : advanceWidth };
         fallback = null;
         return true;
 

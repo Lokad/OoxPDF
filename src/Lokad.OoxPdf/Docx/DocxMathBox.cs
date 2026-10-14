@@ -15,6 +15,8 @@ internal sealed record DocxMathBox(
     double Width, double AboveBaseline, double BelowBaseline,
     IReadOnlyList<DocxMathGlyphPlacement> Glyphs)
 {
+    public double? LogicalAdvance { get; init; }
+    public double AdvanceWidth => LogicalAdvance ?? Width;
     public DocxMathMetricOwner? ParentMetrics { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
 }

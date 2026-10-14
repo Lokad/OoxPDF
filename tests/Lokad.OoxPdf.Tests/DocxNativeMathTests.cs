@@ -7,6 +7,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeSlantedScriptCenteringUsesLogicalAdvanceAndRetainsInk()
+    {
+        RequireMathFont();
+        foreach ((string suffix, double wordX) in new[] { ("sub-default-i", 295.01d), ("sup-default-i", 294.65d) })
+        {
+            var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            PdfPage page = renderer.RenderBlankPages(NamedFixture("docx-omml-styled-owner-" + suffix),
+                null, CancellationToken.None).Single();
+            PdfFontResource font = page.Fonts.Single(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+            TestAssert.True(font.Font.TryGetEncodedCid(font.Font.Font.MapCodePoint(0x1D465), out ushort cid),
+                "Expected the mathematical base's owned CID.");
+            var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"1 0 0 1 ([-\d.]+) [-\d.]+ Tm\s*<" + cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + @"> Tj");
+            TestAssert.True(operation.Success, "Expected the untransformed mathematical base placement.");
+            double actual = double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            var frame = System.Text.RegularExpressions.Regex.Match(page.Content, @"q\s*1 0 0 1 ([-\d.]+) [-\d.]+ cm");
+            TestAssert.True(frame.Success, "Expected the source equation's stored frame transform.");
+            actual += double.Parse(frame.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs(actual - wordX) < 0.20d,
+                $"Word centers the logical script advance: actual{actual:F3}/expected{wordX:F3}; slanted ink width shifts the base by roughly0.75pt.");
+            TestAssert.Contains("0.333", page.Content);
+        }
+    }
+
     public static void DocxNativeNormalTextStylesSelectAuthoredFacesAndMeasuredMathSlant()
     {
         RequireMathFont();

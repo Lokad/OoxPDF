@@ -8,6 +8,19 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxSeparatesSyntheticSlantInkFromItsLogicalAdvance()
+    {
+        var font = Resource(TestFontBuilder.LoadTestFont(), "A");
+        var row = new DocxMathRow([new DocxMathRun(Run("A") with { Italic = true }, null, null) { NormalTextValue = true }]);
+        TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => font, CancellationToken.None, out var box, out _),
+            "Expected a slanted normal-text box.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.True(Math.Abs(measured.AdvanceWidth - measured.Glyphs.Single().Advance) < 1e-9,
+            "Logical advance retains the glyph's text advance rather than its slanted right ink edge.");
+        TestAssert.True(measured.Width >= measured.AdvanceWidth,
+            "The occupied box must still contain the slanted ink for fit and clipping decisions.");
+    }
+
     public static void DocxMathBoxNormalItalicUsesStoredSlantAndBalancedGraphicsState()
     {
         var font = Resource(TestFontBuilder.LoadTestFont(), "A");
