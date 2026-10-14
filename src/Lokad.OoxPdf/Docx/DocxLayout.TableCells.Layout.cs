@@ -576,7 +576,9 @@ internal sealed partial class DocxLayoutEngine
                                 SourceBlockIndex: null,
                                 SourceParagraphIndex: paragraphIndex,
                                 Story: null)
-                            { LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
+                            // Cell cursors originate at the first baseline; the
+                            // drawable line frame originates at the line top.
+                            { LineFrame = DocxPictureLineFrame.FromLine(cursorY + cellFirstBaselineInset, lineHeight, extraAbove, lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                         }
                     }
                     firstLine = false;

@@ -403,6 +403,38 @@ internal static class DocxImagesTests
         TestAssert.Equal(90d, mapped.LineFrame!.Value.Height); TestAssert.Equal(2, mapped.PageIndex);
     }
 
+    public static void DocxTablePictureLineFrameCoversTheAuthoredImageTop()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-svg-rotated-table.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxInlineImageLayout image = layout.Pages.Single().Items.OfType<DocxTableRowLayout>()
+            .Single().Cells.Single().InlineImages.Single();
+        DocxPictureLineFrame frame = image.LineFrame!.Value;
+        TestAssert.True(frame.Bottom + frame.Height >= image.Y + image.Height - 0.001d,
+            "The cell baseline origin must not cut the authored picture top out of its drawable line frame.");
+    }
+
+    public static void DocxTablePictureRotationSharesTheAlignedCellContentClip()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-svg-rotated-table.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        DocxTableElement element = document.BodyElements.OfType<DocxTableElement>().Single();
+        DocxTableRow row = element.Table.Rows.Single();
+        DocxTable table = element.Table with
+        {
+            Rows = [row with { HeightPoints = 204d, HeightRuleValue = "exact", Cells = [row.Cells.Single() with { VerticalAlignmentValue = "center" }] }]
+        };
+        document = document with { BodyElements = document.BodyElements.Select(item => ReferenceEquals(item, element) ? new DocxTableElement(table) : item).ToArray() };
+        PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, null, CancellationToken.None).Single();
+        MatchCollection clips = Regex.Matches(page.Content, @"[-0-9.]+ ([-0-9.]+) [-0-9.]+ ([-0-9.]+) re\s+W\s+n");
+        TestAssert.True(clips.Count >= 2, "Expected cell and picture clipping operations.");
+        TestAssert.Equal(clips[0].Groups[1].Value, clips[1].Groups[1].Value);
+        TestAssert.Equal(clips[0].Groups[2].Value, clips[1].Groups[2].Value);
+    }
+
     private static string WriteSvgDocxFixture(string svg, bool anchored = false, bool missingSvgRelationship = false, bool nativeOnly = false, string? crop = null, string? transformAttributes = null, string? pictureExtent = null)
     {
         string extent = pictureExtent ?? "<a:ext cx=\"1828800\" cy=\"914400\"/>";
