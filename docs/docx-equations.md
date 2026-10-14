@@ -12,6 +12,14 @@ to report `DOCX_UNSUPPORTED_EQUATION` with the existing part provenance and
 PDF output. Measurement and painting will share a math-box model, qualified
 against independent Word references before supported diagnostics change.
 
+Literal-row component measurement and painting now use the same bounded glyph
+box model, with mathematical alphabet selection, operator spacing and explicit
+fallbacks. The isolated inline reference passes the existing DOCX visual gates.
+The display reference retains a positioning residual and remains under review;
+substituting Word positions is a diagnostic only. These checks do not qualify
+DOCX paragraph placement, wrapping or pagination. Scripts and fractions remain
+outside the first component slice, with their source structure preserved.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
