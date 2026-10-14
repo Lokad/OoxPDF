@@ -80,6 +80,11 @@ internal sealed partial class DocxRenderer
             {
                 X = PrecompensateX(originX + image.X),
                 Y = PrecompensateY(originY + image.Y),
+                ClipBounds = image.ClipBounds is { } clip ? clip with
+                {
+                    X = PrecompensateX(originX + clip.X),
+                    Y = PrecompensateY(originY + clip.Y)
+                } : null,
                 PageIndex = pageIndex
             };
         }

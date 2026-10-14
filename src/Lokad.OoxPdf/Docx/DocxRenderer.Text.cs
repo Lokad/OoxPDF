@@ -109,8 +109,15 @@ internal sealed partial class DocxRenderer
         ref int imageIndex)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
-            diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex);
+        bool clipped = image.ClipBounds.HasValue;
+        if (clipped) graphics.SaveState();
+        try
+        {
+            if (image.ClipBounds is { } clip) graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
+            RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
+                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex);
+        }
+        finally { if (clipped) graphics.RestoreState(); }
     }
 
     private static void AddEmissionSegmentWithFontFallback(

@@ -1919,7 +1919,12 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images, double deltaY, double deltaX)
     {
         return images
-            .Select(image => image with { X = image.X + deltaX, Y = image.Y + deltaY })
+            .Select(image => image with
+            {
+                X = image.X + deltaX,
+                Y = image.Y + deltaY,
+                ClipBounds = image.ClipBounds is { } clip ? clip with { X = clip.X + deltaX, Y = clip.Y + deltaY } : null
+            })
             .ToArray();
     }
 

@@ -84,12 +84,28 @@ internal sealed partial class DocxLayoutEngine
             // metrics keep legacy.
             double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
             double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
-            if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
+            if (firstFooterLine.LineHeightSource == DocxLineHeightSource.ExactLineSpacing)
+            {
+                firstFooterOffset = ResolveDeclaredStaticBaselineOffset(firstFooterLine.LineHeightSource, firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, 0d);
+            }
+            else if (firstFooterLine.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
+                unscaledLineMetrics is IDocxStaticTextMetricsProvider footerMetrics)
+            {
+                double descender = firstFooterParagraph.Runs.Select(run => footerMetrics.MeasureWindowsDescender(run, run.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
+                firstFooterOffset = ResolveDeclaredStaticBaselineOffset(firstFooterLine.LineHeightSource, firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, descender);
+            }
+            else if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
             {
                 firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
             }
 
             footerContentTop = firstFooterLine.BaselineY + firstFooterOffset;
+        }
+
+        foreach (DocxInlineImageLayout image in footerLayout.InlineImages)
+        {
+            double visibleTop = image.ClipBounds is { } clip ? clip.Y + clip.Height : image.Y + image.Height;
+            footerContentTop = Math.Max(footerContentTop, visibleTop);
         }
 
         return footerContentTop;
@@ -329,6 +345,7 @@ internal sealed partial class DocxLayoutEngine
                     double staticLineHeight = ascender + descender;
                     double staticBaselineY = isHeader ? cursorY - ascender : cursorY + descender;
                     double? staticSingleLineHeight = null;
+                    DocxLineHeightSource staticLineHeightSource = DocxLineHeightSource.StaticWindowsExtents;
                     if (unscaledLineMetrics is not null &&
                         staticEffective.LineSpacingPoints is null)
                     {
@@ -373,6 +390,15 @@ internal sealed partial class DocxLayoutEngine
 
                         staticBaselineY = cursorY - staticBaselineOffset;
                     }
+                    else if (unscaledLineMetrics is not null && staticEffective.LineSpacingPoints is > 0d)
+                    {
+                        DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, staticFontSize, textMeasurer, selectMaxAcrossRuns: true);
+                        staticLineHeight = profile.LineHeight * paragraphSpacingScale;
+                        staticSingleLineHeight = profile.SingleLineHeight;
+                        staticLineHeightSource = profile.Source;
+                        double baselineOffset = ResolveDeclaredStaticBaselineOffset(profile.Source, staticFontSize, profile.LineHeight, descender);
+                        staticBaselineY = cursorY - baselineOffset;
+                    }
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
                     IReadOnlyList<DocxTextSegmentLayout> emissionSegments = segments;
                     if (staticMidLinePlan is not null && staticMidLinePlan.ImagesByLine[staticLineIndex].Count != 0)
@@ -405,7 +431,7 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraph: paragraph,
                         SourceParagraphIndex: paragraphIndex,
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
-                        LineHeightSource: DocxLineHeightSource.StaticWindowsExtents, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
+                        LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
                     // RV06 header-align probe: headers and footers keep one row-end space
                     // beyond authored trailing on the last wrapped line too.
                     if (paragraph.Images.Count == 0 &&
@@ -459,13 +485,19 @@ internal sealed partial class DocxLayoutEngine
                             images.Add(new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth,
-                                staticSingleLineHeight.HasValue ? staticBaselineY : staticBaselineY - placed.Height,
+                                staticSingleLineHeight.HasValue || staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
+                                    ? staticBaselineY : staticBaselineY - placed.Height,
                                 placed.Width,
                                 placed.Height,
                                 pageNumber,
                                 SourceBlockIndex: null,
                                 SourceParagraphIndex: paragraphIndex,
-                                Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType)));
+                                Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
+                            {
+                                ClipBounds = staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
+                                    ? new PdfRectangle(lineX + beforeWidth, staticBaselineY, placed.Width, Math.Min(placed.Height, Math.Max(0d, cursorY - staticBaselineY)))
+                                    : null
+                            });
                             placedStaticImages.Add(placed.Image);
                         }
                     }
@@ -534,12 +566,12 @@ internal sealed partial class DocxLayoutEngine
         }
 
         bool canAnchorInlineImages = images.All(image => image.Image.SourceRunIndex >= 0) &&
-            lines.All(line => line.SingleLineHeight.HasValue);
+            lines.All(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing);
         if (!isHeader &&
             (images.Count == 0 || canAnchorInlineImages) &&
             boxes.Count == 0 &&
             tableRows.Count == 0 &&
-            lines.Any(line => line.SingleLineHeight.HasValue))
+            lines.Any(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing))
         {
             // Office A/B (w38 default multi-line footer at distance 36, w39 tokened
             // multi-line footer at 72, w40 bare multi-line footer at 54, w43-solo
@@ -547,12 +579,10 @@ internal sealed partial class DocxLayoutEngine
             // block bottom-anchors its trailing cursor (content plus trailing after
             // spacing) at the footer distance (residuals minus 0.11, minus 0.15,
             // minus 0.11, minus 0.02). The shift preserves every internal pitch (all
-            // proven above) and only translates the block; standalone images,
-            // textboxes, tables, or exact/atLeast lines keep legacy placement
-            // (unprobed there), as do explicit-rule single lines by construction of
-            // the gate below combined with the unchanged legacy path above.
-            // Affined images in naturally measured lines share the baseline and
-            // block translation. Fixed/legacy frames retain separate placement.
+            // proven above) and only translates the block. Measured natural and
+            // declared frames share this owner, including affined pictures and
+            // their clips. Standalone images, textboxes, tables and frames without
+            // resolved metrics retain their separate placement.
             double footerShift = startY - (cursorY - pendingSpacingAfter);
             for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
             {
@@ -560,7 +590,12 @@ internal sealed partial class DocxLayoutEngine
             }
             for (int imageIndex = 0; imageIndex < images.Count; imageIndex++)
             {
-                images[imageIndex] = images[imageIndex] with { Y = images[imageIndex].Y + footerShift };
+                DocxInlineImageLayout image = images[imageIndex];
+                images[imageIndex] = image with
+                {
+                    Y = image.Y + footerShift,
+                    ClipBounds = image.ClipBounds is { } clip ? clip with { Y = clip.Y + footerShift } : null
+                };
             }
         }
 
@@ -589,6 +624,7 @@ internal sealed partial class DocxLayoutEngine
 
             double planFontSize = GetParagraphFontSize(planParagraph);
             bool useSingleHeight = planUnscaledMetrics is not null && planParagraph.EffectiveProperties.LineSpacingPoints is null;
+            bool useDeclaredHeight = planUnscaledMetrics is not null && planParagraph.EffectiveProperties.LineSpacingPoints is > 0d;
             double maxHeight = 0d;
             double maxDisplacement = 0d;
             if (planUnscaledMetrics is not null && useSingleHeight)
@@ -602,6 +638,14 @@ internal sealed partial class DocxLayoutEngine
                     maxDisplacement += UntokenedParagraphBaselineExtraPoints;
                 }
             }
+            else if (useDeclaredHeight)
+            {
+                DocxLineHeightProfile profile = ResolveLineHeightProfile(planParagraph, planFontSize, textMeasurer, selectMaxAcrossRuns: true);
+                maxHeight = profile.LineHeight * planScale;
+                double maximumDescender = planLines.SelectMany(line => line.Spans)
+                    .Select(span => planMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
+                maxDisplacement = ResolveDeclaredStaticBaselineOffset(profile.Source, planFontSize, profile.LineHeight, maximumDescender);
+            }
 
             foreach (DocxWrappedTextLine planLine in planLines)
             {
@@ -613,7 +657,7 @@ internal sealed partial class DocxLayoutEngine
 
                 double ascender = planLine.Spans.Max(span => planMetrics.MeasureWindowsAscender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
                 double descender = planLine.Spans.Max(span => planMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize));
-                if (!useSingleHeight)
+                if (!useSingleHeight && !useDeclaredHeight)
                 {
                     maxHeight = Math.Max(maxHeight, ascender + descender);
                     maxDisplacement = Math.Max(maxDisplacement, planIsHeader ? ascender : -descender);
@@ -846,6 +890,13 @@ internal sealed partial class DocxLayoutEngine
     private static double MeasureStaticTextSpansForWrapping(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
     {
         return MeasureStaticTextSpans(NormalizeHiddenBreakSpans(spans, preserveTerminalSoftHyphen: false), textMeasurer);
+    }
+
+    private static double ResolveDeclaredStaticBaselineOffset(DocxLineHeightSource? source, double fontSize, double lineHeight, double descender)
+    {
+        return source == DocxLineHeightSource.ExactLineSpacing
+            ? DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing: true)
+            : Math.Max(0d, lineHeight - descender);
     }
 
     private static string ResolveStaticFieldPlaceholders(DocxTextRun run, int pageNumber, int pageCount)

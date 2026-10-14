@@ -35,7 +35,7 @@ internal static class DocxImagesTests
         }
     }
 
-    public static void DocxStaticStoryInlineImagesRetainFixedFrameFallback()
+    public static void DocxStaticStoryDeclaredFramesClipInlineImages()
     {
         foreach (string name in new[] { "docx-static-fixed-footer", "docx-static-mixed-fixed-footer" })
         {
@@ -43,13 +43,49 @@ internal static class DocxImagesTests
             DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .RenderBlankPages(document, null, CancellationToken.None).Single();
-            Match viewport = Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) 144 72 re\s+W\s+n");
-            TestAssert.True(viewport.Success, "Expected the authored fixed-frame picture.");
-            double top = double.Parse(viewport.Groups[1].Value, CultureInfo.InvariantCulture) + 72d;
+            Match viewport = Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) 144 17.6 re\s+W\s+n");
+            TestAssert.True(viewport.Success, "Declared22pt line must clip the72pt picture to its resolved baseline frame.");
+            double bottom = double.Parse(viewport.Groups[1].Value, CultureInfo.InvariantCulture);
             double[] baselines = Regex.Matches(page.Content, @"[-\d.]+ 0 0 [-\d.]+ [-\d.]+ ([-\d.]+) Tm")
                 .Select(match => double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
-            TestAssert.True(baselines.Any(baseline => Math.Abs(baseline - top) < .01d), "Fixed line frames retain their existing image placement until clipping is qualified.");
+            TestAssert.True(baselines.Any(baseline => Math.Abs(baseline - bottom) < .01d), "Clipped picture and text must share the resolved baseline.");
+            TestAssert.True(bottom > 36d, "Measured fixed footer block must remain above its authored distance.");
         }
+    }
+
+    public static void DocxFooterInlineImageReservesItsVisibleHeight()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-static-footer-body-flow.docx"));
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        PdfPage[] pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        TestAssert.True(pages.Length > 1, "Dense body must paginate around the footer picture.");
+        foreach (PdfPage page in pages)
+        {
+            Match viewport = Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) 144 72 re\s+W\s+n");
+            TestAssert.True(viewport.Success, "Every page must retain its footer picture.");
+            double bottom = double.Parse(viewport.Groups[1].Value, CultureInfo.InvariantCulture);
+            double[] bodyBaselines = Regex.Matches(page.Content, @"[-\d.]+ 0 0 [-\d.]+ [-\d.]+ ([-\d.]+) Tm")
+                .Select(match => double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
+                .Where(baseline => baseline > bottom + 1d).ToArray();
+            TestAssert.True(bodyBaselines.Min() > bottom + 72d, "Body text must remain above the visible footer picture.");
+        }
+    }
+
+    public static void DocxInlineImageClipTravelsWithScaledStoryPlacement()
+    {
+        var image = new DocxInlineImageLayout(new DocxInlineImage(144d, 72d, "image/svg+xml", [], null),
+            10d, 20d, 144d, 72d, 1, null, 0, null)
+        {
+            ClipBounds = new PdfRectangle(10d, 20d, 144d, 17.6d)
+        };
+        var map = new DocxRenderer.FloatingTextBoxEmissionMap(.76d, -17d, 75d, 792d);
+        DocxInlineImageLayout mapped = map.PrecompensateImage(image, 36d, 400d, 2);
+        TestAssert.True(mapped.ClipBounds is { } clip && Math.Abs(clip.X - mapped.X) < .000001d &&
+            Math.Abs(clip.Y - mapped.Y) < .000001d, "Image and clip must share the mapped origin.");
+        TestAssert.Equal(144d, mapped.ClipBounds!.Value.Width);
+        TestAssert.Equal(17.6d, mapped.ClipBounds.Value.Height);
+        TestAssert.Equal(2, mapped.PageIndex);
     }
 
     public static void DocxSvgRepeatedPicturePaintsEverySharedPlacement()

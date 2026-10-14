@@ -123,7 +123,10 @@ internal sealed record DocxInlineImageLayout(
     int PageIndex,
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
-    DocxStoryId? Story) : DocxLayoutItem;
+    DocxStoryId? Story) : DocxLayoutItem
+{
+    public PdfRectangle? ClipBounds { get; init; }
+}
 
 // An inline textbox laid out as a body-flow block. Coordinates are absolute flow
 // space (the box origin is known at layout time), so consumers use them directly
