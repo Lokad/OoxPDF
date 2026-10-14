@@ -3469,3 +3469,27 @@ qualified outputs;479 cases/11 families validate. The final primary regression
 fails against the pinned parent while two guard methods pass. Safe managed0.1.5,
 release deferral and all existing bounds/work/publication remain. Rendering
 continues while the accepted push runs CI; prior7ec86425 is green on both platforms.
+
+
+## RV06-L264: shared minimum-picture row extent
+
+Runtime **190f658d** returns full measured cell height and minimum-picture overlap;
+existing ownership and complete-frame rules select the occupied height. Line
+placement and measurement share the finite overlap resolver. Fixed rows, natural
+floors and existing rich/header/fragment/keep/nested fallbacks remain explicit.
+
+Thirty-two independent Word controls qualify28 improvements/four exact/no
+regressions across fonts, minimum heights, picture sizes, alignment, row rules,
+grids, wrapping, two paragraphs and margins. The9.262pt following-body error
+becomes at most0.090pt; first baselines differ by at most0.020pt. Sixty-four font
+programs,1353 glyphs and211 horizontal text/font/encoding/kerning/page states stay
+protected. Twenty-seven selected prior PDFs remain exact.
+
+One frozen Release artifact passes47 specific methods. The occupied-extent
+regression fails the pinned parent while three ownership/fallback guards pass.
+Root verifies399 sources/39 fixtures/17 assets and four matching CLI smoke PDFs,
+without rebuild/repeated suites/corpora. Four public automatic/content/grid/wrapped
+cases pass unchanged0.2 MAE/0.004 ratio/0.985 SSIM/0.99 recall gates using qualified
+outputs;483 cases/11 families validate. Safe managed0.1.5 and all bounds/work/
+publication remain. Prior9a908751 CI passes2691 Windows/417 Ubuntu methods plus
+source Release/package/tools; rendering continues during the new push's CI.
