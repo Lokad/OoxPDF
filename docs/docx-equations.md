@@ -21,8 +21,9 @@ baseline and move following prose by their measured width. Following prose can
 wrap at its word boundary while the complete formula stays at its fitting source
 line position. A formula that needs operator breaking or relocation retains
 the whole-row fallback. Nested scripts or fractions,
-table/story placements, reference/revision decorations and unsupported explicit
-line rules retain `DOCX_UNSUPPORTED_EQUATION` with part provenance
+table/story placements, reference/revision decorations and display rows with
+compressed automatic or exact/minimum line spacing retain
+`DOCX_UNSUPPORTED_EQUATION` with part provenance
 and `Ignored` fallback. Missing fonts or glyphs also keep the whole-row fallback.
 These diagnostics describe actual painted content, not just parsed structure.
 
@@ -112,6 +113,21 @@ neighbors and four matching root CLI smoke outputs. No root rebuild or corpus
 replay is required. Three new public cases keep their original review gates.
 Nonzero controls on other row roles, unsupported formatting, nested structures
 and wider owners remain staged. These results remain approximate.
+
+Standalone display rows now admit explicit single or expanded automatic line
+spacing. Expansion adds an ordinary math-font line's extra advance after the
+occupied equation frame, preserving its baseline and tall ink. The same stored
+height drives placement and keep measurement. Eighteen Word controls cover
+literals, fractions, scripts, preceding prose, child/parent sizes and four fixed
+or compressed fallbacks. Twelve improve raster comparisons; two script controls
+gain foreground recall while SSIM falls by about 0.0039; four fallbacks stay
+identical. Existing preceding-prose placement differences reach 2.38 pt.
+Display fractions now share parent-owned axis, rule and shift metrics with inline
+fractions. The enlarged-child denominator difference falls from 9.41 pt to
+0.91 pt; horizontal spacing differences up to 1.86 pt remain. Fifty focused
+methods qualify one Release artifact; 33 selected neighbors and four root smoke
+outputs retain their pinned bytes. Three new public cases keep their review
+gates. Compressed spacing needs its separate baseline contract.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
