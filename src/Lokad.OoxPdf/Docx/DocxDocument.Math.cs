@@ -23,7 +23,10 @@ internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, str
     public bool HasUnsupportedProperties { get; init; }
     public string? ExplicitFontFamily { get; init; }
 }
-internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode;
+internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode
+{
+    public bool HasUnsupportedProperties { get; init; }
+}
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
 internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,

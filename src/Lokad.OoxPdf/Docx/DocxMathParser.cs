@@ -44,7 +44,11 @@ internal static class DocxMathParser
             else if (name == "f" && Role(element, "num") is { } numerator && Role(element, "den") is { } denominator &&
                 HasOnlyRoles(element, "num", "den"))
             {
-                node = new DocxMathFraction(numerator, denominator, PropertyValue(element, "fPr", "type"));
+                node = new DocxMathFraction(numerator, denominator, PropertyValue(element, "fPr", "type"))
+                {
+                    HasUnsupportedProperties = element.Elements().Any(child => IsProperty(child) && child.Name != MathNamespace + "fPr") ||
+                        element.Element(MathNamespace + "fPr")?.Elements().Any(child => child.Name != MathNamespace + "type") == true
+                };
             }
             else if (name is "sSub" or "sSup" or "sSubSup" && Role(element, "e") is { } basis &&
                 (name == "sSup" || Role(element, "sub") is not null) &&

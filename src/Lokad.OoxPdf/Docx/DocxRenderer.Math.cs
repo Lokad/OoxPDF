@@ -39,9 +39,9 @@ internal sealed partial class DocxRenderer
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = element.Paragraph;
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
-            if (equation is null || !DocxMathRowLayout.TryGetRenderCodePoints(equation.Content, token, out _, out _)) { continue; }
+            if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRun> mathRuns)) { continue; }
             bool valid = true;
-            foreach (DocxMathRun run in equation.Content.Children.OfType<DocxMathRun>())
+            foreach (DocxMathRun run in mathRuns)
             {
                 token.ThrowIfCancellationRequested();
                 string family = run.ExplicitFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math";
@@ -68,18 +68,10 @@ internal sealed partial class DocxRenderer
         foreach (var candidate in candidates)
         {
             token.ThrowIfCancellationRequested();
-            if (!DocxMathRowLayout.TryMeasure(candidate.Equation.Content,
+            if (!DocxMathLayout.TryMeasure(candidate.Equation,
                 run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
-            double above = box.AboveBaseline, below = box.BelowBaseline;
-            foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
-            {
-                var font = glyph.Font.Font.Font;
-                above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(font, glyph.FontSize));
-                below = Math.Max(below, -font.Os2.TypographicDescender * glyph.FontSize / font.UnitsPerEm);
-            }
-            double lineHeight = above + below;
-            if (!double.IsFinite(above) || !double.IsFinite(lineHeight) || lineHeight <= 0d) { continue; }
+            if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight)) { continue; }
             layouts.Add(candidate.Paragraph, new(candidate.Equation, box, above, lineHeight));
         }
         return layouts;

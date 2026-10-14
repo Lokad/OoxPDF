@@ -9,12 +9,23 @@ internal sealed record DocxMathGlyphPlacement(
 
 internal sealed record DocxMathBox(
     double Width, double AboveBaseline, double BelowBaseline,
-    IReadOnlyList<DocxMathGlyphPlacement> Glyphs);
+    IReadOnlyList<DocxMathGlyphPlacement> Glyphs)
+{
+    public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
+}
+
+internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor Color);
 
 internal static class DocxMathBoxPainter
 {
     public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token)
     {
+        foreach (DocxMathRulePlacement rule in box.Rules)
+        {
+            token.ThrowIfCancellationRequested();
+            graphics.SetFillRgb(rule.Color.Red, rule.Color.Green, rule.Color.Blue);
+            graphics.FillRectangle(x + rule.X, baselineY + rule.Y, rule.Width, rule.Thickness);
+        }
         foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
         {
             token.ThrowIfCancellationRequested();

@@ -25,7 +25,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeMathUnsupportedStructuredRowsKeepTheirFallback()
     {
         RequireMathFont();
-        foreach ((string kind, string placement) in new[] { ("scripts", "after"), ("fraction", "after") })
+        foreach ((string kind, string placement) in new[] { ("scripts", "after"), ("fraction", "inline") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = Renderer().RenderBlankPages(Fixture(kind, placement), diagnostics.Add, CancellationToken.None).Single();
@@ -33,6 +33,35 @@ internal static class DocxNativeMathTests
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
             TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
         }
+    }
+
+    public static void DocxNativeDisplayFractionPaintsDistinctSourceRolesAndStoredRule()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(Fixture("fraction", "after"), diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("a+bc", text);
+        TestAssert.Contains("Following prose.", text);
+        TestAssert.Contains(" re f", page.Content);
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+            "Painted numerator, denominator and rule must report approximate native rendering.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "A fully painted display fraction cannot report ignored source content.");
+    }
+
+    public static void DocxNativeDisplayFractionUsesItsFullFrameBeforeFollowingProseTurnsPage()
+    {
+        RequireMathFont();
+        DocxDocument document = NamedFixture("docx-omml-display-fraction-boundary12");
+        PdfPage[] pages = Renderer().RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        TestAssert.Equal(2, pages.Length);
+        string first = DocxPageFootnoteNumberingTests.DecodeText(pages[0]).Normalize(NormalizationForm.FormKC);
+        string second = DocxPageFootnoteNumberingTests.DecodeText(pages[1]).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("a+bc", first);
+        TestAssert.True(!first.Contains("Following prose.", StringComparison.Ordinal),
+            "Fraction ink, font leading and denominator must consume one complete frame before following prose is admitted.");
+        TestAssert.Contains("Following prose.", second);
     }
 
     public static void DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline()
