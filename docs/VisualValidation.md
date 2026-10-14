@@ -3371,3 +3371,29 @@ milestone0534b512 passed both platforms,2677 Windows and417 portable Ubuntu
 methods plus solution/package/tool checks. Rendering continues during CI for
 the new push. Version0.1.5/release deferral, safe managed code and existing
 bounds/cancellation/work/cache/staging/publication limits remain.
+
+
+## RV06-L260: source-frame rotation and image movement ownership
+
+Runtime **bf8d470f** fits stored picture dimensions uniformly inside the flow
+extent, top-left aligned, then rotates/crops/flips shared vector/raster/preview
+paint. Paragraph line clipping includes measured image growth and consumed
+final after-spacing; anchors retain full rotated viewports. Image movement now
+owns both clips and line frames across placements. A short-text-slot prototype
+hid pictures and was rejected despite improving primary metrics. Unresolved
+source/line frames retain an explicit unrotated fallback, without Office parity.
+
+Twenty-one independent Word controls qualify20 primary-metric improvements and
+one exact missing-frame fallback. Twenty-one font programs,439 decoded glyphs
+and98 full authored text/font/encoding/kerning/geometry/page states are protected.
+Twenty-eight earlier crop/flip/neighbors remain exact. One frozen artifact passes
+46 capability-specific methods. Root verifies399 sources,27 fixtures and17 assets
+plus four matching CLI smoke PDFs, with no rebuild or repeated suite/corpus.
+Strict Release has zero warnings/errors. Five new cases validate in471 cases/11
+families: three meet retained gates, rotated table/exact-footer remain needs-review.
+Earlier SVG gaps and all thresholds remain. The preceding3ea43bac CI milestone
+passed Windows2680/portable Ubuntu417 methods, package and tool checks. Rendering
+continues during CI for this push. Safe managed0.1.5/release deferral and existing
+bounds/cancellation/work/cache/staging/publication limits remain. Retirement of
+13 clean historical worktrees reduces the workspace from3.924GB to2.958GB while
+preserving source revisions, inputs, frozen binaries and external evidence.
