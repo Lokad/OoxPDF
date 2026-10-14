@@ -1,0 +1,12 @@
+{
+  "id": "docx-math",
+  "kind": "docx",
+  "description": "Native OMML mathematical structure and approximate body display-row rendering; inline, scripts, fractions and story placements remain staged.",
+  "support": {
+    "minStructuralSimilarity": 0.985,
+    "minForegroundRecall": 0.99
+  },
+  "casePatterns": [
+    "docx-math-*"
+  ]
+}

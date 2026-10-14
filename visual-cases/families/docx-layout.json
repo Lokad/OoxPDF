@@ -12,6 +12,7 @@
   "excludePatterns": [
     "docx-markup-*",
     "docx-private-grounded-*",
-    "docx-svg-*"
+    "docx-svg-*",
+    "docx-math-*"
   ]
 }
