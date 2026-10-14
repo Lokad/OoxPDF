@@ -185,6 +185,17 @@ neighbors qualify one artifact; four root smoke PDFs match without rebuilding.
 Three public cases keep their review gates. Rich normal-text formatting and
 script/fraction metric owners still need separate qualification.
 
+Normal-text subscript/superscript arguments now take their scale from the parent
+math face while retaining child glyphs, ordinary-text variants and authored
+faces. The base still owns valid MATH placement constants; unsupported base or
+mixed mathematical metric owners retain fallback. Eight Word controls cover
+math/Calibri/Arial children, both script roles and signed size increments. All
+improve; maximum position differences are 0.18 pt horizontally and 0.11 pt
+vertically. Twenty-eight focused methods and 39 exact style/scale/kerning/boundary
+neighbors qualify one artifact, with four matching root smoke PDFs. Three
+public cases retain their review gates. Normal-text fractions and richer
+formatting remain separate capability work.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
