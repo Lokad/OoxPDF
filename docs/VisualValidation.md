@@ -3327,3 +3327,25 @@ L256 library, with no library rebuild. Verified source/tree identities, seven
 transferred test assets, the root catalogue and an exact CLI PDF smoke qualify
 the transfer without repeating the suite or corpus. The CI delivery milestone
 runs separately on Windows and Ubuntu.
+
+
+## RV06-L258: DOCX source cropping and negative padding
+
+Runtime **97448de8** retains authored source rectangles and maps source paint
+inside the existing viewport across SVG, raster and preview fallback. Layout
+extents stay unchanged; unusable rectangles retain the uncropped image with a
+specific diagnostic. Ten independent Word controls improve both primary raster
+metrics. Ten font programs,210 decoded glyphs and42 full authored text/font/
+encoding/kerning/geometry/page states remain exact. Six uncropped neighbors keep
+identical PDFs. Rotation/flips and VML cropping remain separate.
+
+One frozen artifact passes29 specific methods. Root transfer verifies399 sources,
+18 fixtures and17 assets, with four identical CLI smoke PDFs and no rebuild or
+repeated suite/corpus. Strict Release has zero warnings/errors. Four new public
+cases validate in the462-case/11-family catalogue. Three meet retained gates;
+cropped exact-footer remains needs-review atSSIM0.947083/recall0.944162 against
+0.985/0.99. Existing isolation/radial gaps remain open. Workspace3.703GB is below
+the loose target. CI's preceding0595336c milestone passed both platforms,2674
+Windows and417 portable Ubuntu methods; the new push runs CI during further
+rendering work. Safe managed code,0.1.5/release deferral and existing bounds,
+cancellation, cumulative work, bounded caches/staging and publication remain.
