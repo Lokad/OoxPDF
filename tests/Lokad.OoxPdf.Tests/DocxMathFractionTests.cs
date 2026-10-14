@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontInlineFractionRetainsParentMetricsAndScaledChildGlyphs()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        TestAssert.True(DocxMathLayout.TryMeasure(Fraction() with { Display = false }, _ => resource, CancellationToken.None,
+            out DocxMathBox? box, out string? reason), reason ?? "Expected an inline fraction.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.True(measured.Glyphs.All(glyph => Math.Abs(glyph.FontSize - 8.52d) < 1e-9),
+            "Numerator and denominator glyphs own the script-style font size.");
+        TestAssert.True(Math.Abs(measured.Rules[0].Thickness - 40d * 12d / resource.Font.Font.UnitsPerEm) < 1e-9,
+            "The fraction axis/rule metrics remain owned by the parent math size, independently of child scaling.");
+        TestAssert.True(measured.Glyphs.Take(3).All(glyph => glyph.BaselineY > measured.Rules[0].Y + measured.Rules[0].Thickness) &&
+            measured.Glyphs[3].BaselineY < measured.Rules[0].Y, "Scaled child roles remain on opposite sides of the parent rule.");
+    }
+
     public static void MathFontFractionConstantsDriveStoredRuleAndChildBaselines()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
@@ -74,8 +88,8 @@ internal static class DocxMathFractionTests
         TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out IReadOnlyList<DocxMathRunSource> runs),
             "Display fractions must discover their source runs without flattening numerator/denominator roles.");
         TestAssert.Equal("A+BC", string.Concat(runs.Select(source => source.Run.Text.Text)));
-        TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Display = false }, CancellationToken.None, out _),
-            "Unqualified inline script-size behavior keeps the whole fraction fallback.");
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation with { Display = false }, CancellationToken.None, out var inline) &&
+            inline.All(source => source.ScriptLevel == 1), "Inline fraction arguments retain their script-style ownership.");
         DocxMathFraction fraction = (DocxMathFraction)equation.Content.Children[0];
         foreach (var unsupported in new[] { fraction with { TypeValue = "skw" }, fraction with { HasUnsupportedProperties = true },
             fraction with { Numerator = new([fraction]) } })
@@ -119,6 +133,7 @@ internal static class DocxMathFractionTests
         byte[] bytes = new byte[224];
         BinaryPrimitives.WriteUInt16BigEndian(bytes, 1);
         BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(4), 10);
+        BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(10), 73);
         Set(OpenTypeMathConstant.AxisHeight, 250);
         Set(OpenTypeMathConstant.MathLeading, 120);
         Set(OpenTypeMathConstant.FractionRuleThickness, thickness);
@@ -126,6 +141,10 @@ internal static class DocxMathFractionTests
         Set(OpenTypeMathConstant.FractionDenominatorDisplayStyleShiftDown, 500);
         Set(OpenTypeMathConstant.FractionNumDisplayStyleGapMin, 100);
         Set(OpenTypeMathConstant.FractionDenomDisplayStyleGapMin, 100);
+        Set(OpenTypeMathConstant.FractionNumeratorShiftUp, 500);
+        Set(OpenTypeMathConstant.FractionDenominatorShiftDown, 400);
+        Set(OpenTypeMathConstant.FractionNumeratorGapMin, 100);
+        Set(OpenTypeMathConstant.FractionDenominatorGapMin, 100);
         return bytes;
         void Set(OpenTypeMathConstant field, short value) => BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(18 + (int)field * 4), value);
     }

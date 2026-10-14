@@ -328,7 +328,11 @@ internal sealed partial class DocxReader
                     DocxMathParser.Read(equation, ReadMathRun, cancellationToken),
                     runs.Count, sourceRunIndex, display,
                     (string?)properties?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val"),
-                    properties?.ToString(SaveOptions.DisableFormatting), revision));
+                    properties?.ToString(SaveOptions.DisableFormatting), revision)
+                {
+                    ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize
+                        ?? DocxDefaults.UnstyledRunFontSizePoints
+                });
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)

@@ -55,7 +55,7 @@ internal static class DocxMathRowLayout
                 // Italic correction belongs to the previous glyph; operator glue
                 // is a semantic math-unit rule, independent of font or fixture.
                 if (kind != AtomKind.Ordinary) { x += previousCorrection; }
-                x += Glue(previous, kind) * size / 18d;
+                if (scriptLevel == 0) { x += Glue(previous, kind) * size / 18d; }
             }
             RgbColor color = default;
             RgbColor.TryParse(atom.Run.Text.ColorHex, out color);

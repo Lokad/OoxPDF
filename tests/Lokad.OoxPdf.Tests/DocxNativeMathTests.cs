@@ -25,14 +25,59 @@ internal static class DocxNativeMathTests
     public static void DocxNativeMathUnsupportedStructuredRowsKeepTheirFallback()
     {
         RequireMathFont();
-        foreach ((string kind, string placement) in new[] { ("fraction", "inline") })
+        DocxDocument source = Fixture("fraction", "inline");
+        DocxParagraph paragraph = source.Paragraphs[0];
+        DocxEquation equation = paragraph.Equations[0];
+        DocxMathFraction fraction = (DocxMathFraction)equation.Content.Children[0];
+        DocxParagraph unsupported = paragraph with { Equations = [equation with
+        { Content = new([fraction with { Numerator = new([fraction]) }]) }] };
+        DocxDocument document = source with { BodyElements = source.BodyElements.Select(element =>
+            element is DocxParagraphElement p && ReferenceEquals(p.Paragraph, paragraph) ? new DocxParagraphElement(unsupported) : element).ToArray() };
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "Unsupported math must not publish unused equation fonts.");
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
+    }
+
+    public static void DocxNativeInlineFractionPreservesSourceRolesAlongsideProse()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(Fixture("fraction", "inline"), diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("a+bc", text);
+        TestAssert.Contains("Before formula:", text);
+        TestAssert.Contains("Following prose.", text);
+        TestAssert.Contains(" 8.52 Tf", page.Content);
+        TestAssert.Contains(" re f", page.Content);
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+            "A painted inline fraction must report actual native approximate rendering.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Painted numerator/denominator/rule cannot report ignored mathematics.");
+    }
+
+    public static void DocxNativeInlineFractionChildSizesDoNotTakeOwnershipOfParentShifts()
+    {
+        RequireMathFont();
+        DocxDocument document = NamedFixture("docx-omml-inline-fraction-tall18");
+        DocxEquation equation = document.Paragraphs[0].Equations[0];
+        TestAssert.True(equation.ParentFontSize is { } parent && Math.Abs(parent - 12d) < 1e-9,
+            "The source paragraph owns the parent math metric size independently of18pt child formatting.");
+        PdfPage page = Renderer().RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        double Y(int point)
         {
-            var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(Fixture(kind, placement), diagnostics.Add, CancellationToken.None).Single();
-            TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "Unsupported math must not publish unused equation fonts.");
-            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
-            TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
+            TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(resource.Font.Font.MapCodePoint(point), 1,
+                CancellationToken.None, out ushort glyph), "Expected a script-style argument glyph.");
+            TestAssert.True(resource.Font.TryGetEncodedCid(glyph, out ushort cid), "Expected an owned fraction subset CID.");
+            var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"1 0 0 1 [-\d.]+ ([-\d.]+) Tm\s*<" + cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + @"> Tj");
+            TestAssert.True(operation.Success, "Expected a stored child baseline.");
+            return double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         }
+        TestAssert.True(Math.Abs(Y(0x1D44E) - Y(0x1D450) - 13.08d) < 0.15d,
+            "The independently measured parent shifts separate tall child baselines by13.08pt; child-owned19.60pt spacing fails.");
     }
 
     public static void DocxNativeInlineScriptsPreserveMeaningAlongsideSourceOwnedProse()

@@ -9,7 +9,10 @@ internal sealed record DocxEquation(
     bool Display,
     string? AlignmentValue,
     string? PropertiesXml,
-    DocxRevisionInfo? Revision);
+    DocxRevisionInfo? Revision)
+{
+    public double? ParentFontSize { get; init; }
+}
 
 internal abstract record DocxMathNode
 {

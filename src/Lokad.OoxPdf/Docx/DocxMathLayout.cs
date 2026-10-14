@@ -39,7 +39,7 @@ internal static partial class DocxMathLayout
             if (scripts.Superscript is { } sup) { rows.Add((sup, 1)); }
         }
         else if (GetFraction(equation) is { } fraction)
-        { rows.Add((fraction.Numerator, 0)); rows.Add((fraction.Denominator, 0)); }
+        { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level)); rows.Add((fraction.Denominator, level)); }
         else { rows.Add((equation.Content, 0)); }
         var result = new List<DocxMathRunSource>();
         foreach ((DocxMathRow row, int level) in rows)
@@ -67,8 +67,9 @@ internal static partial class DocxMathLayout
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;
-        if (!DocxMathRowLayout.TryMeasure(fraction.Numerator, resolveFont, token, out DocxMathBox? numerator, out fallback) ||
-            !DocxMathRowLayout.TryMeasure(fraction.Denominator, resolveFont, token, out DocxMathBox? denominator, out fallback) ||
+        int scriptLevel = equation.Display ? 0 : 1;
+        if (!DocxMathRowLayout.TryMeasure(fraction.Numerator, resolveFont, token, out DocxMathBox? numerator, out fallback, scriptLevel) ||
+            !DocxMathRowLayout.TryMeasure(fraction.Denominator, resolveFont, token, out DocxMathBox? denominator, out fallback, scriptLevel) ||
             numerator is null || denominator is null || numerator.Glyphs.Count == 0 || denominator.Glyphs.Count == 0)
         { fallback ??= "EmptyMathFraction"; return false; }
         DocxMathGlyphPlacement first = numerator.Glyphs[0];
@@ -79,13 +80,23 @@ internal static partial class DocxMathLayout
         { fallback = "MixedMathFractionMetrics"; return false; }
         if (!font.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
-        double scale = size / font.UnitsPerEm;
+        double parentSize = size;
+        if (!equation.Display)
+        {
+            if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
+            { fallback = "UnsupportedMathFractionSource"; return false; }
+            double childNominal = sources[0].Run.Text.FontSize;
+            parentSize = equation.ParentFontSize ?? childNominal;
+            if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
+            { fallback = "MixedMathFractionMetrics"; return false; }
+        }
+        double scale = parentSize / font.UnitsPerEm;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * scale;
         double thickness = constants.GetValue(OpenTypeMathConstant.FractionRuleThickness) * scale;
-        double numeratorShift = constants.GetValue(OpenTypeMathConstant.FractionNumeratorDisplayStyleShiftUp) * scale;
-        double denominatorShift = constants.GetValue(OpenTypeMathConstant.FractionDenominatorDisplayStyleShiftDown) * scale;
-        double numeratorGap = constants.GetValue(OpenTypeMathConstant.FractionNumDisplayStyleGapMin) * scale;
-        double denominatorGap = constants.GetValue(OpenTypeMathConstant.FractionDenomDisplayStyleGapMin) * scale;
+        double numeratorShift = constants.GetValue(equation.Display ? OpenTypeMathConstant.FractionNumeratorDisplayStyleShiftUp : OpenTypeMathConstant.FractionNumeratorShiftUp) * scale;
+        double denominatorShift = constants.GetValue(equation.Display ? OpenTypeMathConstant.FractionDenominatorDisplayStyleShiftDown : OpenTypeMathConstant.FractionDenominatorShiftDown) * scale;
+        double numeratorGap = constants.GetValue(equation.Display ? OpenTypeMathConstant.FractionNumDisplayStyleGapMin : OpenTypeMathConstant.FractionNumeratorGapMin) * scale;
+        double denominatorGap = constants.GetValue(equation.Display ? OpenTypeMathConstant.FractionDenomDisplayStyleGapMin : OpenTypeMathConstant.FractionDenominatorGapMin) * scale;
         if (thickness <= 0d || numeratorShift < 0d || denominatorShift < 0d || numeratorGap < 0d || denominatorGap < 0d)
         { fallback = "InvalidMathFractionConstants"; return false; }
         numeratorShift = Math.Max(numeratorShift, axis + thickness / 2d + numeratorGap + numerator.BelowBaseline);
@@ -117,7 +128,7 @@ internal static partial class DocxMathLayout
     }
 
     private static DocxMathFraction? GetFraction(DocxEquation equation) =>
-        equation.Display && GetSingleUnadornedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
+        GetSingleUnadornedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
             ? fraction : null;
 
     private static DocxMathNode? GetSingleUnadornedChild(DocxEquation equation) =>

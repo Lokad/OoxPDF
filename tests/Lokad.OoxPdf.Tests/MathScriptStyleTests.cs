@@ -7,6 +7,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathScriptStyleTests
 {
+    public static void MathFontScriptArgumentsUseSemanticOperatorSpacing()
+    {
+        byte[] constants = new byte[224];
+        BinaryPrimitives.WriteUInt16BigEndian(constants, 1);
+        BinaryPrimitives.WriteUInt16BigEndian(constants.AsSpan(4), 10);
+        BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(10), 100);
+        OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(constants));
+        var resource = new PdfFontResource("Math1", PdfEmbeddedFont.Create(font, "A+B=C".Select(c => (int)c), CancellationToken.None));
+        var row = new DocxMathRow([new DocxMathRun(new("A+B=C", 12d, null, false, false, false, null, "TestFont"), "p", null)]);
+        TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => resource, CancellationToken.None, out DocxMathBox? normal, out _), "Expected ordinary math row.");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(row, _ => resource, CancellationToken.None, out DocxMathBox? script, out _, scriptLevel: 1),
+            "Expected script-style argument row.");
+        DocxMathBox argument = TestAssert.NotNull(script), ordinary = TestAssert.NotNull(normal);
+        TestAssert.True(argument.Width < ordinary.Width, "Script-style binary/relation operators do not inherit ordinary-row glue.");
+        TestAssert.True(Math.Abs(argument.Glyphs[1].X - argument.Glyphs[0].Advance) < 1e-9,
+            "The argument's first binary operator follows the stored glyph advance without ordinary-style glue.");
+        TestAssert.True(argument.Glyphs.Select(g => g.SourceCodePoint).SequenceEqual(ordinary.Glyphs.Select(g => g.SourceCodePoint)),
+            "The semantic style changes spacing while preserving mathematical source characters.");
+    }
+
     public static void MathFontCornerKernSignedThresholdsHonorEqualityAndAbsentCorners()
     {
         foreach (bool ranges in new[] { false, true })
