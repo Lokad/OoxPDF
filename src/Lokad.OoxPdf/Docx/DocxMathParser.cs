@@ -95,7 +95,11 @@ internal static class DocxMathParser
             return new DocxMathRun(
                 readRun(element, string.Concat(element.Elements(MathNamespace + "t").Select(text => text.Value))),
                 PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
-            { PropertiesXml = ReadProperties(element) };
+            {
+                PropertiesXml = ReadProperties(element),
+                HasUnsupportedProperties = element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
+                    property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr") == true
+            };
         }
         return Unsupported(element);
     }

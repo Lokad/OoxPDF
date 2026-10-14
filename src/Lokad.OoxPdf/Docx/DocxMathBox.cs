@@ -1,0 +1,27 @@
+using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
+
+namespace Lokad.OoxPdf.Docx;
+
+internal sealed record DocxMathGlyphPlacement(
+    int SourceCodePoint, int RenderCodePoint, PdfFontResource Font, string EncodedGlyph,
+    double FontSize, double X, double BaselineY, double Advance, RgbColor Color);
+
+internal sealed record DocxMathBox(
+    double Width, double AboveBaseline, double BelowBaseline,
+    IReadOnlyList<DocxMathGlyphPlacement> Glyphs);
+
+internal static class DocxMathBoxPainter
+{
+    public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token)
+    {
+        foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
+        {
+            token.ThrowIfCancellationRequested();
+            graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, x + glyph.X, baselineY + glyph.BaselineY,
+                glyph.Color.Red, glyph.Color.Green, glyph.Color.Blue, glyph.EncodedGlyph,
+                italic: false, characterSpacing: 0d, textRenderingMode: 0,
+                strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+        }
+    }
+}

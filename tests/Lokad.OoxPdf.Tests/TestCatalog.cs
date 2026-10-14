@@ -31,6 +31,7 @@ internal static class TestCatalog
         .. FromType(ClassifyDocx, typeof(DocxTests)),
         .. FromType("docx-images", typeof(DocxImagesTests)),
         .. FromType("docx-math", typeof(DocxMathTests)),
+        .. FromType(name => name.StartsWith("MathFont", StringComparison.Ordinal) ? "fonts" : "docx-math", typeof(DocxMathBoxTests)),
         .. FromType("docx-numbering", typeof(DocxNumberingTests)),
         .. FromType("docx-text", typeof(DocxTextTests)),
         .. FromType("docx-text", typeof(DocxTextWrapTests)),

@@ -18,7 +18,10 @@ internal abstract record DocxMathNode
 }
 
 internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxMathNode;
-internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode;
+internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, string? ScriptValue) : DocxMathNode
+{
+    public bool HasUnsupportedProperties { get; init; }
+}
 internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode;
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
