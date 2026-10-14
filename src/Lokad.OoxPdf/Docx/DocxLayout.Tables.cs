@@ -426,7 +426,13 @@ internal sealed partial class DocxLayoutEngine
             double contentHeight = textMeasurer is null
                 ? 0d
                 : row.Cells
-                    .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale))
+                    .Select((cell, columnIndex) =>
+                    {
+                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale);
+                        if (!(measured.MinimumPictureOverlap > 0d)) return measured.FullHeight;
+                        return measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
+                            IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
+                    })
                     .DefaultIfEmpty(0d)
                     .Max();
             bool eligibleTopRow = adjustAlignedMinimumMargins && allowDeclaredTopMargins &&

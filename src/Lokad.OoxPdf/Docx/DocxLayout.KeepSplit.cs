@@ -491,7 +491,7 @@ internal sealed partial class DocxLayoutEngine
             double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
             double contentHeight = row.Cells
-                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale))
+                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale).FullHeight)
                 .DefaultIfEmpty(0d)
                 .Max();
             return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow: table.Rows.Count == 1,

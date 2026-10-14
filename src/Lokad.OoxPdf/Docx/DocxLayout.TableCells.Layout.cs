@@ -66,7 +66,15 @@ internal sealed partial class DocxLayoutEngine
         return previousBaselineY - tuck - excess;
     }
 
-    private static double MeasureTableCellContentHeight(
+    private readonly record struct DocxTableCellContentHeight(double FullHeight, double MinimumPictureOverlap)
+    {
+        public double Resolve(bool minimumPicturesOwned) => minimumPicturesOwned &&
+            double.IsFinite(FullHeight) && double.IsFinite(MinimumPictureOverlap) &&
+            MinimumPictureOverlap > 0d && MinimumPictureOverlap <= FullHeight
+                ? FullHeight - MinimumPictureOverlap : FullHeight;
+    }
+
+    private static DocxTableCellContentHeight MeasureTableCellContentHeight(
         DocxTableCell cell,
         double cellWidth,
         IDocxTextMeasurer textMeasurer,
@@ -86,7 +94,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
-            return 0d;
+            return default;
         }
 
         double paddingLeft = ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, paragraphSpacingScale);
@@ -95,6 +103,7 @@ internal sealed partial class DocxLayoutEngine
         double paddingBottom = ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double contentHeight = paddingTop + paddingBottom;
+        double minimumPictureOverlap = 0d;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         bool previousParagraphHasText = false;
@@ -164,10 +173,20 @@ internal sealed partial class DocxLayoutEngine
                 previousTextFontSize = fontSize;
                 previousTextLineHeight = lineHeight;
                 contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
+                double minimumExcess = 0d;
+                if (lineHeightProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
+                    estimatePlan is not null && estimatePlan.PlacedMask.All(placed => placed) &&
+                    textMeasurer is IDocxLineMetricsProvider metrics && paragraph.Runs.Count > 0)
+                {
+                    double natural = metrics.MeasureSingleLineHeight(paragraph.Runs[0], fontSize);
+                    if (double.IsFinite(natural) && natural > 0d)
+                        minimumExcess = Math.Max(0d, lineHeight - natural);
+                }
                 for (int estimateLineIndex = 0; estimateLineIndex < estimateLines.Length; estimateLineIndex++)
                 {
                     double estimateShift = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (estimatePlan?.ShiftAboveHeights[estimateLineIndex] ?? 0d);
                     contentHeight += lineHeight + estimateShift;
+                    minimumPictureOverlap += ResolveMinimumPictureOverlap(minimumExcess, estimateShift);
                 }
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
@@ -215,7 +234,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         contentHeight += pendingSpacingAfter;
-        return contentHeight;
+        return new(contentHeight, minimumPictureOverlap);
     }
 
     private static double MeasureNestedTableHeight(

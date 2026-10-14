@@ -1549,8 +1549,13 @@ internal static class DocxTableCellsTests
                 verticalAlignment: alignment, minimumSpacing: minimum, pictureHeight: pictureHeight);
             DocxTableRowLayout oldRow = fallback.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
             DocxTableRowLayout newRow = actual.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
-            TestAssert.Equal(oldRow.Y, newRow.Y);
-            TestAssert.Equal(oldRow.Height, newRow.Height);
+            TestAssert.True(Math.Abs(oldRow.Y + oldRow.Height - newRow.Y - newRow.Height) < .000001d,
+                "Minimum picture measurement preserves the row's top origin.");
+            if (rule is "exact" or "atLeast" || pictureHeight == 4d)
+                TestAssert.Equal(oldRow.Height, newRow.Height);
+            else
+                TestAssert.True(newRow.Height <= oldRow.Height,
+                    "Automatic rows count overlapping minimum and picture headroom once.");
             var oldCell = oldRow.Cells.Single();
             var newCell = newRow.Cells.Single();
             var oldLine = oldCell.TextLines.Single();
@@ -1575,8 +1580,29 @@ internal static class DocxTableCellsTests
                 Math.Abs((oldFrame.Bottom - newFrame.Bottom) - (oldImage.Y - newImage.Y)) < .000001d &&
                 oldFrame.Height == newFrame.Height,
                 "The picture's drawable line frame follows the same translation.");
-            TestAssert.Equal(fallback.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY,
-                actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY);
+            TestAssert.True(Math.Abs(actual.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY -
+                fallback.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY -
+                (oldRow.Height - newRow.Height)) < .000001d,
+                "Following body flow tracks the actual row-height reduction.");
+        }
+    }
+
+    public static void DocxTableMinimumPictureRowsUseTheOccupiedInlineExtent()
+    {
+        var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        foreach (string? rule in new string?[] { null, "auto", "atLeast" })
+        {
+            var layout = CreateParagraphMinimumLayout("min-single", measurer,
+                rowHeight: rule == "atLeast" ? 20d : null, rowRule: rule,
+                minimumSpacing: 24d, pictureHeight: 48d);
+            var row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            // The source picture occupies48pt above its baseline. The qualified
+            // face contributes14pt natural height,10.44pt ascent, plus6pt after.
+            TestAssert.True(Math.Abs(row.Height - 57.56d) < .000001d,
+                "An automatic/content-dominated row includes the picture, descender and paragraph after-gap once.");
+            TestAssert.True(Math.Abs(row.Cells.Single().InlineImages.Single().Y -
+                row.Cells.Single().TextLines.Single().BaselineY) < .000001d,
+                "Measured row extent retains text/picture baseline ownership.");
         }
     }
 

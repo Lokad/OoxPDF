@@ -59,7 +59,7 @@ internal sealed partial class DocxLayoutEngine
             double after = owner.SourceLineIndex == byParagraph[paragraph][^1].SourceLineIndex
                 ? byParagraph[paragraph][0].ParagraphAfterSpacing ?? 0d : 0d;
             double growth = Math.Max(0d, image.LineFrame!.Value.Height - (owner.LineHeight ?? 0d) - after);
-            double absorbed = Math.Min(adjustment.Excess, growth);
+            double absorbed = ResolveMinimumPictureOverlap(adjustment.Excess, growth);
             absorbedByLine[owner] = Math.Max(absorbedByLine.GetValueOrDefault(owner), absorbed);
         }
         double absorbedHeight = absorbedByLine.Values.Sum();
@@ -109,6 +109,11 @@ internal sealed partial class DocxLayoutEngine
         }).ToArray();
         return (adjustedLines, adjustedImages);
     }
+
+    private static double ResolveMinimumPictureOverlap(double excess, double pictureGrowth) =>
+        double.IsFinite(excess) && excess > 0d && double.IsFinite(pictureGrowth) && pictureGrowth > 0d
+            ? Math.Min(excess, pictureGrowth) : 0d;
+
     private static bool IsEligibleTableMinimumCell(
         DocxTable table, DocxTableRow row, DocxTableCell cell, IDocxTextMeasurer? measurer)
     {
