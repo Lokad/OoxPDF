@@ -8,6 +8,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxVariantSymbolsKeepTheirSourceIdentityAndDistinctStyleGlyphs()
+    {
+        int[] source = [0x2202, 0x03F5, 0x03D1, 0x03F0, 0x03D5, 0x03F1, 0x03D6];
+        foreach ((string style, int start) in new[] { ("i", 0x1D715), ("b", 0x1D6DB), ("bi", 0x1D74F) })
+        foreach ((int point, int offset) in source.Select((point, offset) => (point, offset)))
+        {
+            string text = new System.Text.Rune(point).ToString();
+            var row = new DocxMathRow([new DocxMathRun(Run(text), style, null)]);
+            TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out var points, out _),
+                "A supported variant symbol must retain its specific mathematical glyph.");
+            TestAssert.Equal(start + offset, points.Single());
+            TestAssert.Equal(text, ((DocxMathRun)row.Children[0]).Text.Text);
+        }
+        var theta = new DocxMathRow([new DocxMathRun(Run("θϑ"), "bi", null)]);
+        TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(theta, CancellationToken.None, out var distinct, out _),
+            "Ordinary and variant theta must remain discoverable together.");
+        TestAssert.True(distinct.Count == 2 && distinct[0] != distinct[1],
+            "Variant symbols cannot collapse to visually similar ordinary Greek letters.");
+    }
+
     public static void DocxMathBoxGreekStylesPreserveEveryBasicLetterThroughUnicodeNormalization()
     {
         foreach (string style in new[] { "b", "bi" })
@@ -48,7 +68,7 @@ internal static class DocxMathBoxTests
     {
         foreach (var run in new[]
         {
-            new DocxMathRun(Run("ϕ"), "b", null),
+            new DocxMathRun(Run("Ж"), "b", null),
             new DocxMathRun(Run("A"), "future", null),
             new DocxMathRun(Run("A"), "b", "double-struck"),
             new DocxMathRun(Run("A") with { Bold = true }, "b", null),

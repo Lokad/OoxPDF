@@ -7,6 +7,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeVariantSymbolsRetainTheirDistinctStyledSubsetMappings()
+    {
+        RequireMathFont();
+        foreach ((string style, int[] points) in new[]
+        {
+            ("i", new[] { 0x1D717, 0x1D719, 0x1D716 }),
+            ("b", new[] { 0x1D6DD, 0x1D6DF, 0x1D6DC }),
+            ("bi", new[] { 0x1D751, 0x1D753, 0x1D750 })
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-symbol-style-variants-{style}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+            foreach (int point in points)
+            {
+                TestAssert.True(resource.Font.TryGetEncodedCid(resource.Font.Font.MapCodePoint(point), out ushort cid),
+                    "A distinct variant glyph must own an encoded CID.");
+                TestAssert.Equal(point, resource.Font.UnicodeByCid[cid]);
+            }
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Supported variant symbols must report their native painting.");
+        }
+    }
+
     public static void DocxNativeGreekStylesRetainLowerUpperAndScriptMeaning()
     {
         RequireMathFont();

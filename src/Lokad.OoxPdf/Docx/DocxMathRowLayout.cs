@@ -132,6 +132,8 @@ internal static class DocxMathRowLayout
         if (codePoint is >= 0x03B1 and <= 0x03C9)
             { return (italic ? 0x1D736 : 0x1D6C2) + codePoint - 0x03B1; }
         if (codePoint is >= '0' and <= '9') { return 0x1D7CE + codePoint - '0'; }
+        if (codePoint == 0x2207) { return italic ? 0x1D735 : 0x1D6C1; }
+        if (TryGetVariantSymbolOffset(codePoint, out int variant)) { return (italic ? 0x1D74F : 0x1D6DB) + variant; }
         // Operators retain their mathematical symbol glyph. Other alphabets
         // keep fallback until their explicit styled mapping is qualified.
         if (Rune.IsLetter(new Rune(codePoint)) || Rune.IsDigit(new Rune(codePoint))) { return -1; }
@@ -144,8 +146,26 @@ internal static class DocxMathRowLayout
         if (codePoint is >= 'a' and <= 'z') { return codePoint == 'h' ? 0x210E : 0x1D44E + codePoint - 'a'; }
         if (codePoint is >= 0x0391 and <= 0x03A9 && codePoint != 0x03A2) { return 0x1D6E2 + codePoint - 0x0391; }
         if (codePoint is >= 0x03B1 and <= 0x03C9) { return 0x1D6FC + codePoint - 0x03B1; }
+        if (codePoint == 0x2207) { return 0x1D6FB; }
+        if (TryGetVariantSymbolOffset(codePoint, out int variant)) { return 0x1D715 + variant; }
         if (Rune.IsLetter(new Rune(codePoint)) && codePoint is not (>= 0x1D400 and <= 0x1D7FF) && codePoint != 0x210E) { return -1; }
         return codePoint;
+    }
+
+    private static bool TryGetVariantSymbolOffset(int codePoint, out int offset)
+    {
+        offset = codePoint switch
+        {
+            0x2202 => 0, // partial differential
+            0x03F5 => 1, // epsilon symbol
+            0x03D1 => 2, // theta symbol
+            0x03F0 => 3, // kappa symbol
+            0x03D5 => 4, // phi symbol
+            0x03F1 => 5, // rho symbol
+            0x03D6 => 6, // pi symbol
+            _ => -1
+        };
+        return offset >= 0;
     }
 
     private static AtomKind Kind(int codePoint) => codePoint switch
