@@ -3349,3 +3349,25 @@ the loose target. CI's preceding0595336c milestone passed both platforms,2674
 Windows and417 portable Ubuntu methods; the new push runs CI during further
 rendering work. Safe managed code,0.1.5/release deferral and existing bounds,
 cancellation, cumulative work, bounded caches/staging and publication remain.
+
+
+## RV06-L259: authored DOCX picture flips
+
+Runtime **0b0a49b6** retains horizontal/vertical picture flags and applies one
+viewport-centered mirror after source crop across vector/raster/preview paint.
+Invalid crop fallback preserves the flip; source layout extents and static-line
+clips remain unchanged. Twelve independent Word controls improve both primary
+raster metrics. Twelve font programs,248 decoded glyphs and50 full authored
+text/font/encoding/kerning/geometry/page states stay exact. Sixteen earlier crop
+and neighboring PDFs remain identical. Rotation and VML crop/flip stay separate.
+
+One frozen artifact passes32 specific methods. Root transfer verifies399 sources,
+22 fixtures and17 assets, with four exact CLI smoke PDFs and no rebuild or
+repeated suite/corpus. Strict Release has zero warnings/errors. Four new public
+cases validate in the466-case/11-family catalogue. Three meet existing gates;
+flipped exact-footer remains needs-review atSSIM0.961155/recall0.978416 against
+0.985/0.99. Earlier residuals and all thresholds remain. The preceding crop CI
+milestone0534b512 passed both platforms,2677 Windows and417 portable Ubuntu
+methods plus solution/package/tool checks. Rendering continues during CI for
+the new push. Version0.1.5/release deferral, safe managed code and existing
+bounds/cancellation/work/cache/staging/publication limits remain.
