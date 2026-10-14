@@ -208,6 +208,18 @@ methods, 33 exact direct neighbors and four matching root smoke PDFs qualify one
 artifact. Three public cases retain their review gates. Rich formatting,
 unsupported parent/mixed mathematical metrics and nesting remain staged.
 
+Normal-text bold/italic now requests the authored text face instead of only its
+family. Available Calibri/Arial faces retain their own weight and slant. The
+single math face retains ordinary outlines and uses Word's measured one-third
+local italic shear; glyph measurement includes the sheared right ink edge and
+painting balances its saved graphics state. The initial missing-style omission
+prototype was rejected because it lost visible italic text. Nine Word controls
+all improve, with maximum differences below 0.17 pt horizontally and 0.23 pt
+vertically. Twenty focused methods, 28 exact direct neighbors and four matching
+root smoke PDFs qualify one artifact. Three public cases keep their review
+gates. Other unavailable non-math styles and unsupported decorations retain
+explicit fallback; the global PDF italic-emission rule is unchanged.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
