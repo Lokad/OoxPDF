@@ -1,0 +1,22 @@
+{
+  "id": "pptx-chart-axis-font-explicit",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-chart-axis-font-explicit.pptx",
+  "dpi": 96,
+  "tags": [
+    "pptx",
+    "chart",
+    "axis-font",
+    "default-font",
+    "approximate"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.2,
+    "minForegroundRecall": 0.9,
+    "maxChangedPixelRatioAtThreshold16": 0.025
+  }
+}

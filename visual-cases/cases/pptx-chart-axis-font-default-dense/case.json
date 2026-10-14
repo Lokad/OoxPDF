@@ -1,0 +1,22 @@
+{
+  "id": "pptx-chart-axis-font-default-dense",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-chart-axis-font-default-dense.pptx",
+  "dpi": 96,
+  "tags": [
+    "pptx",
+    "chart",
+    "axis-font",
+    "default-font",
+    "needs-review"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.2,
+    "minForegroundRecall": 0.9,
+    "maxChangedPixelRatioAtThreshold16": 0.025
+  }
+}
