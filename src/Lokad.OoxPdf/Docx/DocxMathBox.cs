@@ -5,7 +5,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxMathGlyphPlacement(
     int SourceCodePoint, int RenderCodePoint, PdfFontResource Font, string EncodedGlyph,
-    double FontSize, double X, double BaselineY, double Advance, RgbColor Color);
+    double FontSize, double X, double BaselineY, double Advance, RgbColor Color)
+{
+    public ushort OriginalGlyph { get; init; }
+}
 
 internal sealed record DocxMathBox(
     double Width, double AboveBaseline, double BelowBaseline,

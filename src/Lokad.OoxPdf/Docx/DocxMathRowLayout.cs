@@ -13,10 +13,11 @@ internal static class DocxMathRowLayout
     private sealed record Atom(DocxMathRun Run, Rune Source, Rune Render, AtomKind Kind);
 
     public static bool TryMeasure(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
-        CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false)
+        CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false,
+        bool allowArgumentSize = false)
     {
         box = null;
-        if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback)) { return false; }
+        if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
         double x = 0d, above = 0d, below = 0d, previousCorrection = 0d;
         AtomKind previous = AtomKind.Open;
@@ -60,7 +61,7 @@ internal static class DocxMathRowLayout
             RgbColor color = default;
             RgbColor.TryParse(atom.Run.Text.ColorHex, out color);
             glyphs.Add(new(atom.Source.Value, atom.Render.Value, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
-                size, x, 0d, advance, color));
+                size, x, 0d, advance, color) { OriginalGlyph = glyph });
             x += advance;
             previousCorrection = italic * scale;
             previous = kind;
@@ -73,21 +74,24 @@ internal static class DocxMathRowLayout
         return true;
     }
 
-    public static bool TryGetRenderCodePoints(DocxMathRow row, CancellationToken token, out IReadOnlyList<int> codePoints, out string? fallback)
+    public static bool TryGetRenderCodePoints(DocxMathRow row, CancellationToken token, out IReadOnlyList<int> codePoints, out string? fallback,
+        bool allowArgumentSize = false)
     {
-        bool valid = TryGetAtoms(row, token, out List<Atom> atoms, out fallback);
+        bool valid = TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize);
         codePoints = valid ? atoms.Select(atom => atom.Render.Value).Distinct().ToArray() : [];
         return valid;
     }
 
-    private static bool TryGetAtoms(DocxMathRow row, CancellationToken token, out List<Atom> atoms, out string? fallback)
+    private static bool TryGetAtoms(DocxMathRow row, CancellationToken token, out List<Atom> atoms, out string? fallback,
+        bool allowArgumentSize = false)
     {
         atoms = []; fallback = null;
         var pending = new Stack<DocxMathNode>(); pending.Push(row);
         while (pending.TryPop(out DocxMathNode? node))
         {
             token.ThrowIfCancellationRequested();
-            if (node is DocxMathRow sequence && sequence.HasSupportedProperties)
+            if (node is DocxMathRow sequence && (sequence.HasSupportedProperties ||
+                ReferenceEquals(sequence, row) && allowArgumentSize && sequence.HasKnownArgumentProperties))
             {
                 for (int i = sequence.Children.Count - 1; i >= 0; i--) { pending.Push(sequence.Children[i]); }
             }

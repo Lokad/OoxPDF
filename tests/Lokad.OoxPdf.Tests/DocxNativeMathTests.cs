@@ -7,6 +7,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeSignedArgumentSizesPaintTheirSourceOwnedRoles()
+    {
+        RequireMathFont();
+        foreach ((string name, double size) in new[]
+            { ("docx-omml-argsize-both-12-minus1", 6.96d), ("docx-omml-argsize-both-12-plus1", 12d),
+              ("docx-omml-argsize-both-12-absentval", 8.52d) })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture(name), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Contains(" " + size.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " Tf", page.Content);
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Supported signed/default argument controls must report their actual native painting.");
+        }
+    }
+
     public static void DocxNativeNeutralArgumentPropertiesPaintDefaultScriptRoles()
     {
         RequireMathFont();

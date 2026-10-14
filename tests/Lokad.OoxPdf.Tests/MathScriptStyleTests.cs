@@ -7,6 +7,41 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathScriptStyleTests
 {
+    public static void MathFontScriptArgumentIncrementsOwnFontStyleAndPreserveParentMetrics()
+    {
+        byte[] constants = new byte[224];
+        BinaryPrimitives.WriteUInt16BigEndian(constants, 1);
+        BinaryPrimitives.WriteUInt16BigEndian(constants.AsSpan(4), 10);
+        BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(10), 73);
+        BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(12), 60);
+        OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(constants));
+        var resource = new PdfFontResource("Math1", PdfEmbeddedFont.Create(font, ['A', 'B'], CancellationToken.None));
+        foreach ((int increment, int expectedLevel, double expectedSize) in new[]
+            { (-2, 2, 6.96d), (-1, 2, 6.96d), (0, 1, 8.52d), (1, 0, 12d), (2, 0, 12d) })
+        {
+            string xml = "<m:oMath xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'><m:sSub>" +
+                "<m:e><m:r><m:rPr><m:sty m:val='p'/></m:rPr><m:t>A</m:t></m:r></m:e>" +
+                $"<m:sub><m:argPr><m:argSz m:val='{increment}'/></m:argPr>" +
+                "<m:r><m:rPr><m:sty m:val='p'/></m:rPr><m:t>B</m:t></m:r></m:sub></m:sSub></m:oMath>";
+            DocxMathRow row = DocxMathParser.Read(System.Xml.Linq.XElement.Parse(xml),
+                (_, text) => new(text, 12d, null, false, false, false, null, "TestFont"), CancellationToken.None);
+            var equation = new DocxEquation(row, 0, 0, true, null, null, null);
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var runs),
+                "Known source increments must discover the role's actual style.");
+            TestAssert.Equal(expectedLevel, runs.Single(source => source.Run.Text.Text == "B").ScriptLevel);
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason),
+                reason ?? "Expected measured script arguments.");
+            DocxMathBox measured = TestAssert.NotNull(box);
+            TestAssert.True(Math.Abs(measured.Glyphs[0].FontSize - 12d) < 1e-9 &&
+                Math.Abs(measured.Glyphs[1].FontSize - expectedSize) < 1e-9,
+                "The argument owns its resolved style size while the base retains parent metrics.");
+            TestAssert.Equal(font.MapCodePoint('B'), measured.Glyphs[1].OriginalGlyph);
+            TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = ((DocxMathScripts)row.Children[0]).Subscript! },
+                CancellationToken.None, out _) || increment == 0,
+                "Signed increments are admitted only on supported script argument roles.");
+        }
+    }
+
     public static void MathFontScriptArgumentsUseSemanticOperatorSpacing()
     {
         byte[] constants = new byte[224];

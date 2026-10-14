@@ -5,6 +5,18 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxMathArgumentMetrics
 {
+    public static bool TryGetScriptLevel(DocxMathRow argument, out int level)
+    {
+        level = 1;
+        if (!argument.HasSupportedProperties && !argument.HasKnownArgumentProperties) { return false; }
+        int increment = argument.ArgumentProperties?.Size ?? 0;
+        if (increment is < -2 or > 2) { return false; }
+        // Source increments adjust the role's starting style, bounded to the
+        // font's text/script/script-script sizes. Other row roles stay neutral.
+        level = Math.Clamp(1 - increment, 0, 2);
+        return true;
+    }
+
     public static bool TryGetScriptFontSize(OpenTypeFont font, double nominalSize, int level, out double emittedSize)
     {
         emittedSize = 0d;

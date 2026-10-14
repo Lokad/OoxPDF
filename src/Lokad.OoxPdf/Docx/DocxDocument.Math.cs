@@ -24,6 +24,7 @@ internal sealed record DocxMathArgumentProperties(int? Size, bool HasUnsupported
 internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxMathNode
 {
     public DocxMathArgumentProperties? ArgumentProperties { get; init; }
+    public bool HasKnownArgumentProperties => ArgumentProperties is { HasUnsupportedProperties: false };
     public bool HasSupportedProperties => PropertiesXml.Count == 0 ||
         ArgumentProperties is { HasUnsupportedProperties: false, Size: null or 0 };
 }

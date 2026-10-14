@@ -31,20 +31,24 @@ internal static partial class DocxMathLayout
 
     public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
-        var rows = new List<(DocxMathRow Row, int Level)>();
+        var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
         if (GetScripts(equation) is { } scripts)
         {
-            rows.Add((scripts.Base, 0));
-            if (scripts.Subscript is { } sub) { rows.Add((sub, 1)); }
-            if (scripts.Superscript is { } sup) { rows.Add((sup, 1)); }
+            rows.Add((scripts.Base, 0, false));
+            foreach (DocxMathRow? argument in new[] { scripts.Subscript, scripts.Superscript })
+            {
+                if (argument is null) { continue; }
+                if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level)) { runs = []; return false; }
+                rows.Add((argument, level, true));
+            }
         }
         else if (GetFraction(equation) is { } fraction)
-        { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level)); rows.Add((fraction.Denominator, level)); }
-        else { rows.Add((equation.Content, 0)); }
+        { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
+        else { rows.Add((equation.Content, 0, false)); }
         var result = new List<DocxMathRunSource>();
-        foreach ((DocxMathRow row, int level) in rows)
+        foreach ((DocxMathRow row, int level, bool allowArgumentSize) in rows)
         {
-            if (!DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _)) { runs = []; return false; }
+            if (!DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _, allowArgumentSize)) { runs = []; return false; }
             var pending = new Stack<DocxMathNode>();
             pending.Push(row);
             while (pending.TryPop(out DocxMathNode? node))

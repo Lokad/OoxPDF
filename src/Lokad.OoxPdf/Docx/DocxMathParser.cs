@@ -107,9 +107,12 @@ internal static class DocxMathParser
         if (children.Length != 1 || children[0].Name != MathNamespace + "argSz") { return new(null, true); }
         XElement size = children[0];
         if (size.HasElements || !string.IsNullOrWhiteSpace(size.Value) ||
-            size.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration && attribute.Name != MathNamespace + "val") ||
-            !int.TryParse((string?)size.Attribute(MathNamespace + "val"),
-                System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value))
+            size.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration && attribute.Name != MathNamespace + "val"))
+            return new(null, true);
+        string? source = (string?)size.Attribute(MathNamespace + "val");
+        int value = 0;
+        if (source is not null && (!int.TryParse(source,
+            System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value) || value is < -2 or > 2))
             return new(null, true);
         return new(value, false);
     }

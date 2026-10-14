@@ -36,16 +36,18 @@ internal static partial class DocxMathLayout
         if (!DocxMathRowLayout.TryMeasure(scripts.Base, resolveFont, token, out DocxMathBox? basis, out fallback, exportFontSize: true) ||
             basis is null || basis.Glyphs.Count == 0) { fallback ??= "EmptyMathScriptBase"; return false; }
         DocxMathBox? subscript = null, superscript = null;
-        if (scripts.Subscript is { } sub && (!DocxMathRowLayout.TryMeasure(sub, resolveFont, token, out subscript, out fallback, scriptLevel: 1) ||
+        if (scripts.Subscript is { } sub && (!DocxMathArgumentMetrics.TryGetScriptLevel(sub, out int subLevel) ||
+            !DocxMathRowLayout.TryMeasure(sub, resolveFont, token, out subscript, out fallback, scriptLevel: subLevel, exportFontSize: true, allowArgumentSize: true) ||
             subscript is null || subscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSubscript"; return false; }
-        if (scripts.Superscript is { } sup && (!DocxMathRowLayout.TryMeasure(sup, resolveFont, token, out superscript, out fallback, scriptLevel: 1) ||
+        if (scripts.Superscript is { } sup && (!DocxMathArgumentMetrics.TryGetScriptLevel(sup, out int supLevel) ||
+            !DocxMathRowLayout.TryMeasure(sup, resolveFont, token, out superscript, out fallback, scriptLevel: supLevel, exportFontSize: true, allowArgumentSize: true) ||
             superscript is null || superscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
         bool boxBase = basis.Glyphs.Count != 1;
         if (!boxBase)
         {
-            ushort glyph = font.MapCodePoint(basis.Glyphs[0].RenderCodePoint);
+            ushort glyph = basis.Glyphs[0].OriginalGlyph;
             if (!font.TryIsMathExtendedShape(glyph, out boxBase))
             { fallback = "InvalidMathExtendedShapeCoverage"; return false; }
         }
@@ -68,7 +70,7 @@ internal static partial class DocxMathLayout
             down += missing - raise;
         }
         DocxMathGlyphPlacement last = basis.Glyphs[^1];
-        ushort lastGlyph = font.MapCodePoint(last.RenderCodePoint);
+        ushort lastGlyph = last.OriginalGlyph;
         if (!font.TryGetMathItalicCorrection(lastGlyph, out short correction))
         { fallback = "InvalidMathScriptItalicCorrection"; return false; }
         double subX = basis.Width - correction * last.FontSize / font.UnitsPerEm;
@@ -119,10 +121,11 @@ internal static partial class DocxMathLayout
         double scriptBaseline, bool superscript, CancellationToken token, out double result)
     {
         result = 0d;
+        token.ThrowIfCancellationRequested();
         OpenTypeFont baseFont = basis.Font.Font.Font, scriptFont = script.Font.Font.Font;
-        ushort baseGlyph = baseFont.MapCodePoint(basis.RenderCodePoint);
-        if (!scriptFont.TryGetMathScriptGlyph(scriptFont.MapCodePoint(script.RenderCodePoint), 1, token, out ushort scriptGlyph) ||
-            !baseFont.TryGetGlyphBounds(baseGlyph, out var baseBounds) ||
+        ushort baseGlyph = basis.OriginalGlyph;
+        ushort scriptGlyph = script.OriginalGlyph;
+        if (scriptGlyph == 0 || !baseFont.TryGetGlyphBounds(baseGlyph, out var baseBounds) ||
             !scriptFont.TryGetGlyphBounds(scriptGlyph, out var scriptBounds)) { return false; }
         double baseScale = basis.FontSize / baseFont.UnitsPerEm, scriptScale = script.FontSize / scriptFont.UnitsPerEm;
         MathKernCorner baseCorner = superscript ? MathKernCorner.TopRight : MathKernCorner.BottomRight;
