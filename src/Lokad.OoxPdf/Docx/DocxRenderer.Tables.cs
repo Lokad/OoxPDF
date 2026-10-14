@@ -112,7 +112,7 @@ internal sealed partial class DocxRenderer
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
-                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image with { X = image.X + geometryXOffset, Y = image.Y - geometryYOffset }, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex);
+                    RenderInlineImage(geometryXOffset == 0d && geometryYOffset == 0d ? image : image.Translate(geometryXOffset, -geometryYOffset), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex);
                 }
 
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)

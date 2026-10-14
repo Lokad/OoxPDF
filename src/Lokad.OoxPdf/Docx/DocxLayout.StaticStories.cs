@@ -494,6 +494,7 @@ internal sealed partial class DocxLayoutEngine
                                 SourceParagraphIndex: paragraphIndex,
                                 Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
                             {
+                                LineFrame = DocxPictureLineFrame.FromLine(cursorY, staticLineHeight, extraAbove, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                                 ClipBounds = staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
                                     ? new PdfRectangle(lineX + beforeWidth, staticBaselineY, placed.Width, Math.Min(placed.Height, Math.Max(0d, cursorY - staticBaselineY)))
                                     : null
@@ -591,11 +592,7 @@ internal sealed partial class DocxLayoutEngine
             for (int imageIndex = 0; imageIndex < images.Count; imageIndex++)
             {
                 DocxInlineImageLayout image = images[imageIndex];
-                images[imageIndex] = image with
-                {
-                    Y = image.Y + footerShift,
-                    ClipBounds = image.ClipBounds is { } clip ? clip with { Y = clip.Y + footerShift } : null
-                };
+                images[imageIndex] = image.Translate(0d, footerShift);
             }
         }
 

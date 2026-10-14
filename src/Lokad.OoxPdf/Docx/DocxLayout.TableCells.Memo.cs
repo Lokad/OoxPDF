@@ -262,7 +262,7 @@ internal sealed partial class DocxLayoutEngine
             var relative = new List<DocxInlineImageLayout>(images.Count);
             foreach (DocxInlineImageLayout image in images)
             {
-                relative.Add(image with { X = image.X - originX, Y = image.Y - originY });
+                relative.Add(image.Translate(-originX, -originY));
             }
 
             return relative;

@@ -126,6 +126,25 @@ internal sealed record DocxInlineImageLayout(
     DocxStoryId? Story) : DocxLayoutItem
 {
     public PdfRectangle? ClipBounds { get; init; }
+    public DocxPictureLineFrame? LineFrame { get; init; }
+
+    public DocxInlineImageLayout Translate(double deltaX, double deltaY) => this with
+    {
+        X = X + deltaX, Y = Y + deltaY,
+        ClipBounds = ClipBounds is { } clip ? clip with { X = clip.X + deltaX, Y = clip.Y + deltaY } : null,
+        LineFrame = LineFrame is { } line ? line with { Bottom = line.Bottom + deltaY } : null
+    };
+
+    public DocxInlineImageLayout Relocate(double x, double y, int? pageIndex = null) =>
+        Translate(x - X, y - Y) with { PageIndex = pageIndex ?? PageIndex };
+}
+
+internal readonly record struct DocxPictureLineFrame(double Bottom, double Height)
+{
+    public bool IsUsable => double.IsFinite(Bottom) && double.IsFinite(Height) && Height > 0d && double.IsFinite(Bottom + Height);
+
+    public static DocxPictureLineFrame FromLine(double cursorY, double lineHeight, double imageGrowth, double afterSpacing) =>
+        new(cursorY - lineHeight - afterSpacing, lineHeight + imageGrowth + afterSpacing);
 }
 
 // An inline textbox laid out as a body-flow block. Coordinates are absolute flow

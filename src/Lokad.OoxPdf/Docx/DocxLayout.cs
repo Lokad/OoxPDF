@@ -1505,7 +1505,8 @@ internal sealed partial class DocxLayoutEngine
                                 placed.Height,
                                 pages.Count + 1,
                                 SourceBlockIndex: elementIndex,
-                                SourceParagraphIndex: 0, Story: null));
+                                SourceParagraphIndex: 0, Story: null)
+                            { LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                         }
 
                         emissionSegments = ShiftSegmentsPastMidLineImages(lineShape.Segments, line.Spans, paragraph, firstLine, lineX, imageShifts);
@@ -1919,12 +1920,7 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images, double deltaY, double deltaX)
     {
         return images
-            .Select(image => image with
-            {
-                X = image.X + deltaX,
-                Y = image.Y + deltaY,
-                ClipBounds = image.ClipBounds is { } clip ? clip with { X = clip.X + deltaX, Y = clip.Y + deltaY } : null
-            })
+            .Select(image => image.Translate(deltaX, deltaY))
             .ToArray();
     }
 

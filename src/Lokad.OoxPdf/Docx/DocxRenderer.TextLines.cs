@@ -439,7 +439,7 @@ internal sealed partial class DocxRenderer
                 .Select(line => TranslateTextLine(line, deltaX, deltaY))
                 .ToArray(),
             InlineImages = cell.InlineImages
-                .Select(image => image with { X = image.X + deltaX, Y = image.Y + deltaY })
+                .Select(image => image.Translate(deltaX, deltaY))
                 .ToArray(),
             NestedTableRows = cell.NestedRows
                 .Select(row => TranslateTableRow(row, deltaX, deltaY))

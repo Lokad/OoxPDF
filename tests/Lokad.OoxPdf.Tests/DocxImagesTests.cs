@@ -323,8 +323,89 @@ internal static class DocxImagesTests
         finally { File.Delete(input); }
     }
 
-    private static string WriteSvgDocxFixture(string svg, bool anchored = false, bool missingSvgRelationship = false, bool nativeOnly = false, string? crop = null, string? transformAttributes = null)
+    public static void DocxPictureRotationRetainsOriginalFrameAndNormalizesAngles()
     {
+        foreach ((string angle, double expected) in new[] { ("5400000", 90d), ("-1800000", -30d), ("21600000", 0d) })
+        {
+            string input = WriteSvgDocxFixture("<svg", transformAttributes: $" rot=\"{angle}\"");
+            try
+            {
+                DocxInlineImage image = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final).Paragraphs.Single().Images.Single();
+                TestAssert.Equal(expected, image.RotationDegrees);
+                TestAssert.Equal(new DocxPictureFrame(144d, 72d), image.PictureFrame!.Value);
+                TestAssert.Equal(image.PictureFrame, image.RasterFallback!.PictureFrame);
+                TestAssert.Equal(expected, image.RasterFallback!.RotationDegrees);
+            }
+            finally { File.Delete(input); }
+        }
+    }
+
+    public static void DocxPictureRotationFitsTheSourceFrameAndPreservesFlowExtent()
+    {
+        string input = WriteSvgDocxFixture("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><rect width=\"120\" height=\"60\" fill=\"green\"/></svg>",
+            transformAttributes: " rot=\"5400000\"", pictureExtent: "<a:ext cx=\"914400\" cy=\"1828800\"/>");
+        try
+        {
+            DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            TestAssert.Equal(144d, document.Paragraphs.Single().Images.Single().WidthPoints);
+            TestAssert.Equal(72d, document.Paragraphs.Single().Images.Single().HeightPoints);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("0 -1 1 0 ", page.Content);
+            Match lineClip = Regex.Match(page.Content, @"[-0-9.]+ [-0-9.]+ [-0-9.]+ ([-0-9.]+) re\s+W\s+n");
+            TestAssert.True(lineClip.Success && double.Parse(lineClip.Groups[1].Value, CultureInfo.InvariantCulture) >= 72d,
+                "The picture line clip must include measured image growth, rather than just the short text slot.");
+            TestAssert.True(Regex.IsMatch(page.Content, @"36 72 re\s+W\s+n"), "Expected uniform source-frame fit, rather than stretching to the flow extent.");
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.Contains("Before", DocxPageFootnoteNumberingTests.DecodeText(page));
+            TestAssert.Contains("After", DocxPageFootnoteNumberingTests.DecodeText(page));
+        }
+        finally { File.Delete(input); }
+    }
+
+    public static void DocxPictureRotationKeepsExplicitUnresolvedFrameFallback()
+    {
+        foreach ((string angle, string? extent) in new[] { ("NaN", (string?)null), ("5400000", ""), ("5400000", "<a:ext cx=\"0\" cy=\"914400\"/>") })
+        {
+            string input = WriteSvgDocxFixture("<svg", transformAttributes: $" rot=\"{angle}\" flipH=\"1\"", pictureExtent: extent);
+            try
+            {
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                    .RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, CancellationToken.None).Single();
+                TestAssert.Equal(1, page.Images.Count);
+                TestAssert.Contains("-1 0 0 1 ", page.Content);
+                TestAssert.Contains("144 0 0 72 ", page.Content);
+                TestAssert.Equal(1, diagnostics.Count(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_IMAGE_TRANSFORM" && diagnostic.Fallback == "UnrotatedImage"));
+                TestAssert.True(!page.Content.Contains("NaN", StringComparison.Ordinal), "Unresolved rotation must not reach PDF numbers.");
+            }
+            finally { File.Delete(input); }
+        }
+    }
+
+    public static void DocxPictureLineFrameTravelsWithImagePlacement()
+    {
+        var image = new DocxInlineImageLayout(new DocxInlineImage(144d, 72d, "image/png", [], null),
+            10d, 20d, 144d, 72d, 1, null, null, null)
+        {
+            ClipBounds = new PdfRectangle(10d, 20d, 144d, 17.6d),
+            LineFrame = new DocxPictureLineFrame(12d, 90d)
+        };
+        DocxInlineImageLayout moved = image.Translate(30d, -7d);
+        TestAssert.Equal(40d, moved.X); TestAssert.Equal(13d, moved.Y);
+        TestAssert.Equal(5d, moved.LineFrame!.Value.Bottom); TestAssert.Equal(90d, moved.LineFrame!.Value.Height);
+        TestAssert.Equal(13d, moved.ClipBounds!.Value.Y);
+        var map = new DocxRenderer.FloatingTextBoxEmissionMap(0.76d, -17d, 75d, 792d);
+        DocxInlineImageLayout mapped = map.PrecompensateImage(image, 36d, 400d, 2);
+        TestAssert.True(Math.Abs((mapped.LineFrame!.Value.Bottom - image.LineFrame!.Value.Bottom) - (mapped.Y - image.Y)) < 0.000001d,
+            "The line slot must follow the same placement shift as the picture.");
+        TestAssert.Equal(90d, mapped.LineFrame!.Value.Height); TestAssert.Equal(2, mapped.PageIndex);
+    }
+
+    private static string WriteSvgDocxFixture(string svg, bool anchored = false, bool missingSvgRelationship = false, bool nativeOnly = false, string? crop = null, string? transformAttributes = null, string? pictureExtent = null)
+    {
+        string extent = pictureExtent ?? "<a:ext cx=\"1828800\" cy=\"914400\"/>";
         string start = anchored
             ? "<wp:anchor distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"0\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>" : "<wp:inline>";
         string ending = anchored ? "</wp:anchor>" : "</wp:inline>";
@@ -334,7 +415,7 @@ internal static class DocxImagesTests
             ["_rels/.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rDoc\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>"),
             ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rPreview\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/preview.png\"/><Relationship Id=\"rSvg\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/vector.svg\"/></Relationships>"),
             ["word/document.xml"] = TestFixtures.Utf8($$"""
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main"><w:body><w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r><w:r><w:drawing>{{start}}<wp:extent cx="1828800" cy="914400"/>{{(anchored ? "<wp:wrapNone/>" : "")}}<wp:docPr id="1" name="Public vector"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="Public vector"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip{{(nativeOnly ? "" : " r:embed=\"rPreview\"")}}><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="{{(missingSvgRelationship ? "missing" : "rSvg")}}"/></a:ext></a:extLst></a:blip>{{crop}}<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm{{transformAttributes}}><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>{{ending}}</w:drawing></w:r><w:r><w:t xml:space="preserve"> After</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440"/></w:sectPr></w:body></w:document>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main"><w:body><w:p><w:r><w:t xml:space="preserve">Before </w:t></w:r><w:r><w:drawing>{{start}}<wp:extent cx="1828800" cy="914400"/>{{(anchored ? "<wp:wrapNone/>" : "")}}<wp:docPr id="1" name="Public vector"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="Public vector"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip{{(nativeOnly ? "" : " r:embed=\"rPreview\"")}}><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="{{(missingSvgRelationship ? "missing" : "rSvg")}}"/></a:ext></a:extLst></a:blip>{{crop}}<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm{{transformAttributes}}><a:off x="0" y="0"/>{{extent}}</a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>{{ending}}</w:drawing></w:r><w:r><w:t xml:space="preserve"> After</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440"/></w:sectPr></w:body></w:document>
                 """),
             ["word/media/preview.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 255, 255, 0, 255]),
             ["word/media/vector.svg"] = TestFixtures.Utf8(svg)

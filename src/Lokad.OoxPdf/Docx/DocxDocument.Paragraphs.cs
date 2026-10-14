@@ -632,6 +632,8 @@ internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, 
     public DocxPictureCrop Crop { get; init; }
     public bool FlipHorizontal { get; init; }
     public bool FlipVertical { get; init; }
+    public double RotationDegrees { get; init; }
+    public DocxPictureFrame? PictureFrame { get; init; }
     // DrawingML SVG extensions can carry an ordinary raster preview. Retain
     // that authored fallback for a missing or unparseable vector image.
     public DocxInlineImage? RasterFallback { get; init; }
@@ -648,6 +650,11 @@ internal readonly record struct DocxPictureCrop(double Left, double Top, double 
         double.IsFinite(Right) && double.IsFinite(Bottom) &&
         double.IsFinite(1d - Left - Right) && double.IsFinite(1d - Top - Bottom) &&
         1d - Left - Right > 0d && 1d - Top - Bottom > 0d;
+}
+
+internal readonly record struct DocxPictureFrame(double Width, double Height)
+{
+    public bool IsUsable => double.IsFinite(Width) && double.IsFinite(Height) && Width > 0d && Height > 0d;
 }
 
 // An inline DrawingML textbox (wp:inline plus wps:txbx, no blip): unlike floating

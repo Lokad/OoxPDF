@@ -76,17 +76,7 @@ internal sealed partial class DocxRenderer
         {
             // Image dimensions stay file values, like body images on scaled pages; only the
             // position joins the uniform map.
-            return image with
-            {
-                X = PrecompensateX(originX + image.X),
-                Y = PrecompensateY(originY + image.Y),
-                ClipBounds = image.ClipBounds is { } clip ? clip with
-                {
-                    X = PrecompensateX(originX + clip.X),
-                    Y = PrecompensateY(originY + clip.Y)
-                } : null,
-                PageIndex = pageIndex
-            };
+            return image.Relocate(PrecompensateX(originX + image.X), PrecompensateY(originY + image.Y), pageIndex);
         }
 
         public DocxTableRowLayout PrecompensateRow(DocxTableRowLayout row)
@@ -107,11 +97,7 @@ internal sealed partial class DocxRenderer
                             .Select(cellLine => self.PrecompensateLine(cellLine, 0d, 0d))
                             .ToArray(),
                         InlineImages = cell.InlineImages
-                            .Select(cellImage => cellImage with
-                            {
-                                X = self.PrecompensateX(cellImage.X),
-                                Y = self.PrecompensateY(cellImage.Y)
-                            })
+                            .Select(cellImage => cellImage.Relocate(self.PrecompensateX(cellImage.X), self.PrecompensateY(cellImage.Y)))
                             .ToArray()
                     })
                     .ToArray()

@@ -268,6 +268,9 @@ internal sealed partial class DocxReader
             ReadCropFraction("r"), ReadCropFraction("b"));
         XElement? pictureTransform = drawing.Descendants(XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"))
             .FirstOrDefault()?.Element(DrawingNamespace + "xfrm");
+        XElement? pictureExtent = pictureTransform?.Element(DrawingNamespace + "ext");
+        double rotation = pictureTransform?.Attribute("rot") is null ? 0d :
+            OoxXml.ReadOptionalDouble(pictureTransform, "rot", double.NaN) / 60000d;
         return Create(imagePart) with
         {
             RasterFallback = useVector && previewPart is not null && !ReferenceEquals(previewPart, vectorPart) &&
@@ -278,7 +281,11 @@ internal sealed partial class DocxReader
         {
             Revisions = RevisionList(revision), Crop = crop,
             FlipHorizontal = OoxXml.ParseOptionalBool(pictureTransform, "flipH"),
-            FlipVertical = OoxXml.ParseOptionalBool(pictureTransform, "flipV")
+            FlipVertical = OoxXml.ParseOptionalBool(pictureTransform, "flipV"),
+            RotationDegrees = double.IsFinite(rotation) ? rotation % 360d : rotation,
+            PictureFrame = pictureExtent is null ? null : new DocxPictureFrame(
+                OoxXml.ReadOptionalDouble(pictureExtent, "cx", double.NaN) / 12700d,
+                OoxXml.ReadOptionalDouble(pictureExtent, "cy", double.NaN) / 12700d)
         };
         double ReadCropFraction(string attribute)
         {

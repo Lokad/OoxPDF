@@ -575,7 +575,8 @@ internal sealed partial class DocxLayoutEngine
                                 pageIndex,
                                 SourceBlockIndex: null,
                                 SourceParagraphIndex: paragraphIndex,
-                                Story: null));
+                                Story: null)
+                            { LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                         }
                     }
                     firstLine = false;
@@ -901,7 +902,7 @@ internal sealed partial class DocxLayoutEngine
         double verticalOffset = ResolveVerticalContentOffset(cell, extra);
         return verticalOffset == 0d
             ? (images, boxes)
-            : (images.Select(image => image with { Y = image.Y - verticalOffset }).ToArray(),
+            : (images.Select(image => image.Translate(0d, -verticalOffset)).ToArray(),
                 boxes.Select(box => ShiftInlineTextBox(box, -verticalOffset, 0d)).ToArray());
     }
 

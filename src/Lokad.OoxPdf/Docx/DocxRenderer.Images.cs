@@ -8,52 +8,90 @@ internal sealed partial class DocxRenderer
 {
     private static void RenderImage(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
-        int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex)
+        int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
+        DocxPictureLineFrame? lineFrame = null, bool requireLineFrame = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxPictureCrop crop = image.Crop;
         bool hasFlip = image.FlipHorizontal || image.FlipVertical;
-        if (crop.IsEmpty && !hasFlip)
+        bool rotates = image.RotationDegrees != 0d;
+        double paintX = x, paintY = y, paintWidth = width, paintHeight = height;
+        if (rotates)
+        {
+            bool resolved = TryResolveRotatedPictureFrame(image, x, y, width, height, lineFrame, requireLineFrame, out PdfRectangle frame);
+            if (resolved) { paintX = frame.X; paintY = frame.Y; paintWidth = frame.Width; paintHeight = frame.Height; }
+            if (!resolved)
+            {
+                diagnosticSink?.Invoke(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_IMAGE_TRANSFORM", OoxPdfSeverity.Warning,
+                    "The picture rotation has no usable source or line frame; unrotated paint is retained.", image.PartName,
+                    PageIndex: pageIndex, Feature: "picture rotation", Fallback: "UnrotatedImage"));
+                rotates = false; paintY = y; paintWidth = width; paintHeight = height;
+            }
+        }
+        if (crop.IsEmpty && !hasFlip && !rotates)
         {
             RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
                 pageIndex, cancellationToken, imageCache, ref imageIndex);
             return;
         }
-        double sourceWidth = width / (1d - crop.Left - crop.Right);
-        double sourceHeight = height / (1d - crop.Top - crop.Bottom);
-        double sourceX = x - crop.Left * sourceWidth;
-        double sourceY = y - crop.Bottom * sourceHeight;
+        double sourceWidth = paintWidth / (1d - crop.Left - crop.Right);
+        double sourceHeight = paintHeight / (1d - crop.Top - crop.Bottom);
+        double sourceX = paintX - crop.Left * sourceWidth;
+        double sourceY = paintY - crop.Bottom * sourceHeight;
         if (!crop.IsUsable || !double.IsFinite(sourceWidth) || !double.IsFinite(sourceHeight) ||
             !double.IsFinite(sourceX) || !double.IsFinite(sourceY))
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_IMAGE_CROP", OoxPdfSeverity.Warning,
                 "The picture source rectangle is unusable; the uncropped image is retained.", image.PartName,
                 PageIndex: pageIndex, Feature: "image crop", Fallback: "UncroppedImage"));
-            sourceX = x; sourceY = y; sourceWidth = width; sourceHeight = height;
-            if (!hasFlip)
+            sourceX = paintX; sourceY = paintY; sourceWidth = paintWidth; sourceHeight = paintHeight;
+            if (!hasFlip && !rotates)
             {
                 RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
                     pageIndex, cancellationToken, imageCache, ref imageIndex);
                 return;
             }
         }
-        // Crop changes paint inside the authored viewport, never its layout extent.
-        // The same mapping applies to native vectors and their raster fallback.
         graphics.SaveState();
         try
         {
-            graphics.ClipRectangle(x, y, width, height);
-            if (hasFlip)
+            double radians = rotates ? -(image.RotationDegrees % 360d) * Math.PI / 180d : 0d;
+            double cos = Math.Cos(radians), sin = Math.Sin(radians);
+            double centerX = paintX + paintWidth / 2d, centerY = paintY + paintHeight / 2d;
+            if (!rotates) graphics.ClipRectangle(paintX, paintY, paintWidth, paintHeight);
+            if (rotates && lineFrame is { IsUsable: true } line)
             {
-                // Mirror the cropped paint around the authored viewport. Existing
-                // static-line clips remain in page coordinates outside this state.
-                graphics.Transform(image.FlipHorizontal ? -1d : 1d, 0d, 0d, image.FlipVertical ? -1d : 1d,
-                    image.FlipHorizontal ? 2d * x + width : 0d, image.FlipVertical ? 2d * y + height : 0d);
+                // Paragraph clipping stays in page space; the picture viewport rotates.
+                double rotatedWidth = Math.Abs(cos) * paintWidth + Math.Abs(sin) * paintHeight;
+                graphics.ClipRectangle(centerX - rotatedWidth / 2d, line.Bottom, rotatedWidth, line.Height);
             }
+            if (hasFlip || rotates)
+            {
+                double sx = image.FlipHorizontal ? -1d : 1d, sy = image.FlipVertical ? -1d : 1d;
+                double a = cos * sx, b = rotates ? sin * sx : 0d, c = rotates ? -sin * sy : 0d, d = cos * sy;
+                graphics.Transform(a, b, c, d, centerX - a * centerX - c * centerY, centerY - b * centerX - d * centerY);
+            }
+            if (rotates) graphics.ClipRectangle(paintX, paintY, paintWidth, paintHeight);
             RenderImageCore(image, sourceX, sourceY, sourceWidth, sourceHeight, graphics, pageImages,
                 diagnosticSink, pageIndex, cancellationToken, imageCache, ref imageIndex);
         }
         finally { graphics.RestoreState(); }
+    }
+
+    private static bool TryResolveRotatedPictureFrame(DocxInlineImage image, double x, double y, double width, double height,
+        DocxPictureLineFrame? lineFrame, bool requireLineFrame, out PdfRectangle frame)
+    {
+        frame = default;
+        if (image.RotationDegrees == 0d || !double.IsFinite(image.RotationDegrees) ||
+            image.PictureFrame is not { IsUsable: true } source ||
+            (requireLineFrame && lineFrame is not { IsUsable: true })) return false;
+        double scale = Math.Min(width / source.Width, height / source.Height);
+        double paintWidth = source.Width * scale, paintHeight = source.Height * scale;
+        double paintY = y + height - paintHeight;
+        if (!double.IsFinite(x) || !double.IsFinite(paintY) || !double.IsFinite(paintWidth) ||
+            !double.IsFinite(paintHeight) || paintWidth <= 0d || paintHeight <= 0d) return false;
+        frame = new PdfRectangle(x, paintY, paintWidth, paintHeight);
+        return true;
     }
 
     private static void RenderImageCore(DocxInlineImage image, double x, double y, double width, double height,

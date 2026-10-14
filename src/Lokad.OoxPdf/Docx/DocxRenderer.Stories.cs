@@ -256,12 +256,7 @@ internal sealed partial class DocxRenderer
             .Cast<DocxLayoutItem>()
             .Concat(textBoxLayout.InlineImages.Select(image => uniformMap
                 ? map.PrecompensateImage(image, contentX, contentTop, drawing.AnchorPageIndex ?? image.PageIndex)
-                : image with
-                {
-                    X = contentX + image.X,
-                    Y = contentTop + image.Y,
-                    PageIndex = drawing.AnchorPageIndex ?? image.PageIndex
-                }))
+                : image.Relocate(contentX + image.X, contentTop + image.Y, drawing.AnchorPageIndex)))
             .Concat(textBoxLayout.TableRows.Select(row => uniformMap
                 ? map.PrecompensateRow(TranslateTableRow(row, contentX, contentTop))
                 : TranslateTableRow(row, contentX, contentTop)))

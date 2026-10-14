@@ -109,13 +109,18 @@ internal sealed partial class DocxRenderer
         ref int imageIndex)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        bool clipped = image.ClipBounds.HasValue;
+        // A resolved rotation uses the whole paragraph line frame, rather than
+        // the unrotated picture's baseline-to-top clip.
+        bool usesRotatedLineFrame = TryResolveRotatedPictureFrame(image.Image, image.X, image.Y,
+            image.Width, image.Height, image.LineFrame, requireLineFrame: true, out _);
+        bool clipped = !usesRotatedLineFrame && image.ClipBounds.HasValue;
         if (clipped) graphics.SaveState();
         try
         {
-            if (image.ClipBounds is { } clip) graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
+            if (clipped && image.ClipBounds is { } clip) graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
             RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
-                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex);
+                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex,
+                image.LineFrame, requireLineFrame: true);
         }
         finally { if (clipped) graphics.RestoreState(); }
     }
