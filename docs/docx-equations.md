@@ -59,7 +59,10 @@ half-point nominal rounding and the PDF export grid are resolved separately;
 the `ssty` glyphs match independent font inspection. Glyph-to-Unicode ownership
 keeps alternate subsets distinct while retaining canonical subset identities.
 Horizontal residuals reach 0.53 pt and descender/subscript vertical residuals
-reach 1.14 pt; default preceding prose retains a separate spacing residual.
+previously reached 1.14 pt. The shared distinction between ordinary glyphs and
+composed or font-declared extended bases reduces that descender control to
+0.40 pt; seven descender controls improve and ten protected script/composed
+controls stay exact. Default preceding prose retains a separate spacing residual.
 These results remain approximate at unchanged visual thresholds. Math kerning,
 argument controls, inline/nested structures and wider owners remain staged,
 with their source structure preserved.
