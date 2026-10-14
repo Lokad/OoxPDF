@@ -7,6 +7,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontNormalFractionChildrenRetainParentConstantsAndLeadingWithoutChildMathTables()
+    {
+        OpenTypeFont parent = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(Constants()));
+        OpenTypeFont text = TestFontBuilder.LoadTestFont();
+        var child = new PdfFontResource("Text1", PdfEmbeddedFont.Create(text, "A+BC".Select(c => (int)c), CancellationToken.None));
+        DocxMathRow Normal(string value) => new([new DocxMathRun(new(value, 12d, null, false, false, false, null, "TestFont"),
+            null, null) { NormalTextValue = true }]);
+        var equation = new DocxEquation(new([new DocxMathFraction(Normal("A+B"), Normal("C"), null)]), 0, 0, false, null, null, null)
+            { ParentFontSize = 12d };
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => child, CancellationToken.None, out _, out _),
+            "Text faces cannot invent parent MATH fraction constants.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => child, CancellationToken.None, out var box, out var reason, parent),
+            reason ?? "A separately owned parent supplies script scale and fraction constants.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.True(measured.Glyphs.All(glyph => ReferenceEquals(glyph.Font, child) && Math.Abs(glyph.FontSize - 8.52d) < 1e-9),
+            "Scaled normal text retains its text-face subset and ordinary glyphs.");
+        TestAssert.True(DocxMathLayout.TryGetLineMetrics(measured, CancellationToken.None, out double above, out _),
+            "Parent-owned leading survives composition even when no child has MATH.");
+        TestAssert.True(Math.Abs(above - measured.AboveBaseline - 120d * 12d / parent.UnitsPerEm) < 1e-9,
+            "The parent font contributes one mathematical leading term, independently of child font tables.");
+        TestAssert.True(measured.ParentMetrics is { } owner && ReferenceEquals(owner.Font, parent) && owner.Size == 12d,
+            "Font and size remain one typed metric owner.");
+    }
+
     public static void MathFontInlineFractionRetainsParentMetricsAndScaledChildGlyphs()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));

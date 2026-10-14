@@ -14,8 +14,11 @@ internal sealed record DocxMathBox(
     double Width, double AboveBaseline, double BelowBaseline,
     IReadOnlyList<DocxMathGlyphPlacement> Glyphs)
 {
+    public DocxMathMetricOwner? ParentMetrics { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
 }
+
+internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font, double Size);
 
 internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor Color);
 

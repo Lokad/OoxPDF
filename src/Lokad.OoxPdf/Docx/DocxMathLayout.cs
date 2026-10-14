@@ -26,6 +26,8 @@ internal static partial class DocxMathLayout
             if (font.TryGetMathConstants(out OpenTypeMathConstants constants))
                 leading = Math.Max(leading, constants.GetValue(OpenTypeMathConstant.MathLeading) * glyph.FontSize / font.UnitsPerEm);
         }
+        if (box.ParentMetrics is { } parent && parent.Font.TryGetMathConstants(out OpenTypeMathConstants parentConstants))
+            leading = Math.Max(leading, parentConstants.GetValue(OpenTypeMathConstant.MathLeading) * parent.Size / parent.Font.UnitsPerEm);
         // MathLeading protects tall ink above the ordinary typographic box.
         // Apply it once to the composed box, rather than once per child/glyph.
         above = Math.Max(above, box.AboveBaseline + leading);
@@ -70,7 +72,7 @@ internal static partial class DocxMathLayout
     }
 
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
-        CancellationToken token, out DocxMathBox? box, out string? fallback)
+        CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont = null)
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
@@ -84,21 +86,22 @@ internal static partial class DocxMathLayout
         double parentSize = equation.ParentFontSize ?? childNominal;
         if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
         { fallback = "MixedMathFractionMetrics"; return false; }
+        OpenTypeFont? metricOwner = parentMetricsFont ?? resolveFont(sources[0].Run)?.Font.Font;
+        if (metricOwner is null || !metricOwner.TryGetMathConstants(out OpenTypeMathConstants constants))
+        { fallback = "MissingMathFractionConstants"; return false; }
         if (!DocxMathRowLayout.TryMeasure(fraction.Numerator, resolveFont, token, out DocxMathBox? numerator, out fallback, scriptLevel,
-                operatorSpacingFontSize: parentSize) ||
+                operatorSpacingFontSize: parentSize, scriptMetricsFont: metricOwner) ||
             !DocxMathRowLayout.TryMeasure(fraction.Denominator, resolveFont, token, out DocxMathBox? denominator, out fallback, scriptLevel,
-                operatorSpacingFontSize: parentSize) ||
+                operatorSpacingFontSize: parentSize, scriptMetricsFont: metricOwner) ||
             numerator is null || denominator is null || numerator.Glyphs.Count == 0 || denominator.Glyphs.Count == 0)
         { fallback ??= "EmptyMathFraction"; return false; }
         DocxMathGlyphPlacement first = numerator.Glyphs[0];
-        var font = first.Font.Font.Font;
         double size = first.FontSize;
         if (numerator.Glyphs.Concat(denominator.Glyphs).Any(glyph =>
-            !ReferenceEquals(glyph.Font.Font.Font, font) || glyph.FontSize != size))
+            glyph.FontSize != size) || sources.Any(source => !source.Run.NormalText &&
+                !ReferenceEquals(resolveFont(source.Run)?.Font.Font, metricOwner)))
         { fallback = "MixedMathFractionMetrics"; return false; }
-        if (!font.TryGetMathConstants(out OpenTypeMathConstants constants))
-        { fallback = "MissingMathFractionConstants"; return false; }
-        double scale = parentSize / font.UnitsPerEm;
+        double scale = parentSize / metricOwner.UnitsPerEm;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * scale;
         double thickness = constants.GetValue(OpenTypeMathConstant.FractionRuleThickness) * scale;
         double numeratorShift = constants.GetValue(equation.Display ? OpenTypeMathConstant.FractionNumeratorDisplayStyleShiftUp : OpenTypeMathConstant.FractionNumeratorShiftUp) * scale;
@@ -120,7 +123,8 @@ internal static partial class DocxMathLayout
         Append(denominator, -denominatorShift);
         OoxConversionBudget.Current?.ChargeSceneNodes(1);
         box = new DocxMathBox(width, above, below, glyphs)
-        { Rules = [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, first.Color)] };
+        { Rules = [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, first.Color)],
+            ParentMetrics = sources.Any(source => source.Run.NormalText) ? new(metricOwner, parentSize) : null };
         fallback = null;
         return true;
 
@@ -138,6 +142,9 @@ internal static partial class DocxMathLayout
     private static DocxMathFraction? GetFraction(DocxEquation equation) =>
         GetSingleSupportedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
             ? fraction : null;
+
+    public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs) =>
+        GetFraction(equation) is not null && runs.Any(source => source.Run.NormalText);
 
     private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
         equation.Content.HasSupportedProperties && equation.Content.Children.Count == 1

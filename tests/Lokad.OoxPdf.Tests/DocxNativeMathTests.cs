@@ -7,6 +7,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNormalFractionsRetainParentMetricsAndChildFontMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning, int resources) in new[]
+        {
+            ("display-default-normal", "ratetime", 1), ("display-calibri-normal", "ratetime", 1),
+            ("inline-arial-normal", "ratetime", 1), ("display-calibri-mixed", "ratex", 2), ("inline-arial-mixed", "ratex", 2)
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-fraction-" + suffix),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(resources, page.Fonts.Count(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)));
+            TestAssert.Contains(" re f", page.Content);
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Normal/mixed fraction children retain actual native rules, parent metrics and source-face ownership.");
+        }
+    }
+
     public static void DocxNativeNormalScriptArgumentsUseTheParentScaleAndOwnTheirTextFace()
     {
         RequireMathFont();

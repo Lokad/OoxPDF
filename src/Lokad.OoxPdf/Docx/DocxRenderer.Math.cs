@@ -31,7 +31,7 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
     {
-        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation)>();
+        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics)>();
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
         foreach (DocxParagraphElement element in document.BodyElements.OfType<DocxParagraphElement>())
@@ -40,6 +40,13 @@ internal sealed partial class DocxRenderer
             DocxParagraph paragraph = element.Paragraph;
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
             if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
+            OpenTypeFont? parentMetrics = null;
+            if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns))
+            {
+                FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
+                parentMetrics = LoadFont(parent, fontCache, token);
+                if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
+            }
             bool valid = true;
             foreach (DocxMathRunSource source in mathRuns)
             {
@@ -64,7 +71,7 @@ internal sealed partial class DocxRenderer
                 if (!valid) { break; }
                 runKeys[run] = key;
             }
-            if (valid) { candidates.Add((paragraph, equation)); }
+            if (valid) { candidates.Add((paragraph, equation, parentMetrics)); }
         }
         var fonts = new Dictionary<(string StableId, int FaceIndex), PdfFontResource>();
         foreach (var group in groups)
@@ -80,7 +87,7 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (!DocxMathLayout.TryMeasure(candidate.Equation,
-                run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _) ||
+                run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
             double lineSpacingFactor = 1d;
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
