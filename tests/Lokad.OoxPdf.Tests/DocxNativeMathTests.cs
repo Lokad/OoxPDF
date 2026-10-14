@@ -7,6 +7,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNoBarStacksPaintTheirSourceMeaningAndOwnChildFaces()
+    {
+        RequireMathFont();
+        foreach (string placement in new[] { "display", "inline" })
+        foreach (string kind in new[] { "math12", "math20", "normal12" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-stack-{placement}-{kind}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("n+1k", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(!page.Content.Contains(" re f", StringComparison.Ordinal), "An authored noBar stack must not paint a fraction rule.");
+            PdfFontResource child = page.Fonts.First(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+            TestAssert.True(child.Font.Font.FamilyName.Contains(kind == "normal12" ? "Calibri" : "Cambria", StringComparison.OrdinalIgnoreCase),
+                "A stack retains its source glyph face independently of the parent metric owner.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Diagnostics must describe the actual painted stack.");
+        }
+    }
+
+    public static void DocxNativeNoBarDisplayStackRetainsWordBaselineSeparation()
+    {
+        RequireMathFont();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-stack-display-math12"), null, CancellationToken.None).Single();
+        PdfFontResource font = page.Fonts.Single(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        double Baseline(int codePoint)
+        {
+            TestAssert.True(font.Font.TryGetEncodedCid(font.Font.Font.MapCodePoint(codePoint), out ushort cid), "Expected an owned source glyph.");
+            var operation = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"1 0 0 1 [-\d.]+ ([-\d.]+) Tm\s*<" + cid.ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + @"> Tj");
+            TestAssert.True(operation.Success, "Expected the stored child baseline.");
+            return double.Parse(operation.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        TestAssert.True(Math.Abs(Baseline(0x1D45B) - Baseline(0x1D458) - 17.16d) < 0.15d,
+            "The independent Word stack keeps n/k baselines 17.16pt apart.");
+    }
+
     public static void DocxNativeSlantedScriptCenteringUsesLogicalAdvanceAndRetainsInk()
     {
         RequireMathFont();

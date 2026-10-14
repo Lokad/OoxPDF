@@ -7,6 +7,59 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontNoBarStacksKeepSeparatedSourceRolesWithoutPaintingARule()
+    {
+        byte[] constants = Constants(thickness: -1);
+        Set(OpenTypeMathConstant.StackTopDisplayStyleShiftUp, 600);
+        Set(OpenTypeMathConstant.StackBottomDisplayStyleShiftDown, 400);
+        Set(OpenTypeMathConstant.StackDisplayStyleGapMin, 1800);
+        var resource = Resource(TestFontBuilder.CreateMathFont(constants));
+        DocxEquation source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children[0];
+        source = source with { Content = new([fraction with { TypeValue = "noBar" }]) };
+        TestAssert.True(DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out var box, out var reason),
+            reason ?? "Stack metrics do not depend on an unused fraction-rule thickness.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.Equal(0, measured.Rules.Count);
+        TestAssert.Equal("A+BC", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+        double bottomOfTop = double.PositiveInfinity, topOfBottom = double.NegativeInfinity;
+        foreach (DocxMathGlyphPlacement glyph in measured.Glyphs)
+        {
+            TestAssert.True(resource.Font.Font.TryGetGlyphBounds(glyph.OriginalGlyph, out var bounds), "Expected source ink.");
+            double scale = glyph.FontSize / resource.Font.Font.UnitsPerEm;
+            if (glyph.SourceCodePoint == 'C') topOfBottom = glyph.BaselineY + bounds.YMax * scale;
+            else bottomOfTop = Math.Min(bottomOfTop, glyph.BaselineY + bounds.YMin * scale);
+        }
+        TestAssert.True(bottomOfTop - topOfBottom >= 1800d * 12d / resource.Font.Font.UnitsPerEm - 1e-9,
+            "The independently stored ink bounds must respect the font's minimum stack gap.");
+        var graphics = new PdfGraphicsBuilder();
+        DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+        TestAssert.True(!graphics.ToString().Contains(" re f", StringComparison.Ordinal), "A stack must not acquire a visible fraction bar.");
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], CancellationToken.None);
+        TestAssert.True(output.Length > 0, "Owned source encodings/resources must form a valid PDF.");
+        void Set(OpenTypeMathConstant field, short value) => BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(18 + (int)field * 4), value);
+    }
+
+    public static void MathFontNoBarStacksRejectInvalidMetricsAndRetainInlineScriptOwnership()
+    {
+        DocxEquation source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children[0];
+        source = source with { Display = false, Content = new([fraction with { TypeValue = "noBar" }]) };
+        var valid = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        TestAssert.True(DocxMathLayout.TryMeasure(source, _ => valid, CancellationToken.None, out var box, out _), "Expected inline stack.");
+        TestAssert.True(TestAssert.NotNull(box).Glyphs.All(g => Math.Abs(g.FontSize - 8.52d) < 1e-9),
+            "Stack children retain the existing parent-owned inline script scale.");
+        byte[] invalid = Constants();
+        BinaryPrimitives.WriteInt16BigEndian(invalid.AsSpan(18 + (int)OpenTypeMathConstant.StackGapMin * 4), -1);
+        var bad = Resource(TestFontBuilder.CreateMathFont(invalid));
+        TestAssert.True(!DocxMathLayout.TryMeasure(source, _ => bad, CancellationToken.None, out box, out _)
+            && box is null, "Invalid stack metrics cannot publish a partial box.");
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => valid, cancelled.Token, out _, out _));
+    }
+
     public static void MathFontNormalFractionChildrenRetainParentConstantsAndLeadingWithoutChildMathTables()
     {
         OpenTypeFont parent = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(Constants()));
