@@ -187,3 +187,10 @@ Each row links an unsupported family to its detection diagnostic, fallback, and 
 | DOCX macros | `DOCX_UNSUPPORTED_MACRO` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | Strict OOXML | `OOXML_STRICT_DIALECT` Warning | May render missing | OoxmlTests dialect probes (ooxml) |
 | Font packs | `FONT_PACK_*` throw codes | Conversion fails with DiagnosticId | FontTests pack suites (fonts) |
+
+
+Gallery2 bar-axis fallbacks remain available when an unrelated chart style part
+exists. Explicit/no-fill strokes retain precedence. Nine PowerPoint controls
+qualify three corrections/six exact guards; modified explicit axis role colors
+are ignored by PowerPoint in this context, so role inheritance remains deferred.
+This scope preserves major-gridline ownership and other gallery/plot guards.

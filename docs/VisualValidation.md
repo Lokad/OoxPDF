@@ -3518,3 +3518,26 @@ recall gates. The margin case's first-page SSIM0.982089 stays needs-review again
 managed0.1.5, release deferral and all bounds/work/publication remain. Prior
 3bbfc05f CI passes2692 Windows/417 Ubuntu methods plus source Release/package/
 tools; rendering continues while the accepted push runs CI.
+
+
+## RV06-L266: gallery2 axis fallback with style parts
+
+Runtime **0c90245a** removes an unrelated style-part presence exclusion from
+gallery2 axis fallback. Authored/no-fill strokes, existing plot/gallery guards
+and major-gridline role ownership stay intact. Nine independent PowerPoint
+controls qualify three improvements/six exact/no regressions. Four axis strokes
+change from black0.75pt to Office gray0.537/1pt;499 path/clip/fill/decorations,
+37 embedded-font/metrics,404 glyphs and145 full text-state checks remain exact.
+PowerPoint ignores modified explicit axis role colors in these valid controls;
+role inheritance stays deferred.
+
+One frozen Release passes25 specific chart methods/eight exact neighbors. The
+integration regression fails the parent; explicit/no-fill guard passes. Root
+verifies399 sources/45 fixtures/17 assets and four matching CLI smoke PDFs, with
+no rebuild/repeated suite/corpus. Two public individual composite-chart gates
+pass unchanged; their broader family SSIM0.995 remains partial.489 cases/11
+families validate. Invalid namespace/child-order helper outputs and an Office-
+rejected line-only transformation are retained/excluded from fidelity evidence.
+Safe managed0.1.5/release deferral and all bounds/work/publication remain. Prior
+d73cd072 CI passes2694 Windows/417 Ubuntu methods plus source Release/package/
+tools; rendering continues during the accepted push's CI.
