@@ -42,7 +42,13 @@ internal static partial class DocxMathLayout
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
         if (GetScripts(equation) is { } scripts)
         {
-            rows.Add((scripts.Base, 0, false));
+            if (GetFraction(equation with { Content = scripts.Base }) is { } basis)
+            {
+                int level = equation.Display ? 0 : 1;
+                rows.Add((basis.Numerator, level, false));
+                rows.Add((basis.Denominator, level, false));
+            }
+            else { rows.Add((scripts.Base, 0, false)); }
             foreach (DocxMathRow? argument in new[] { scripts.Subscript, scripts.Superscript })
             {
                 if (argument is null) { continue; }

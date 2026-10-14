@@ -13,7 +13,7 @@ internal static partial class DocxMathLayout
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token, out DocxMathBox? box, out string? fallback)
     {
         box = null; fallback = null;
-        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0 || sources[0].ScriptLevel != 0)
+        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
         { fallback = "UnsupportedMathScriptSource"; return false; }
         DocxMathRun owner = sources[0].Run;
         PdfFontResource? ownerResource = resolveFont(owner);
@@ -33,7 +33,14 @@ internal static partial class DocxMathLayout
             if (source.Run.Text.FontSize != size || !source.Run.NormalText && !ReferenceEquals(resolveFont(source.Run)?.Font.Font, font))
             { fallback = "MixedMathScriptMetrics"; return false; }
         }
-        if (!DocxMathRowLayout.TryMeasure(scripts.Base, resolveFont, token, out DocxMathBox? basis, out fallback, exportFontSize: true) ||
+        DocxEquation baseEquation = equation with { Content = scripts.Base };
+        bool fractionBase = GetFraction(baseEquation) is not null;
+        // Discovery has already required literal fraction children. This one
+        // composition step cannot recurse through arbitrary authored nesting.
+        bool measuredBase = fractionBase
+            ? TryMeasure(baseEquation, resolveFont, token, out DocxMathBox? basis, out fallback)
+            : DocxMathRowLayout.TryMeasure(scripts.Base, resolveFont, token, out basis, out fallback, exportFontSize: true);
+        if (!measuredBase ||
             basis is null || basis.Glyphs.Count == 0) { fallback ??= "EmptyMathScriptBase"; return false; }
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))
             { fallback = "MixedMathScriptBaseMetrics"; return false; }
@@ -48,7 +55,7 @@ internal static partial class DocxMathLayout
             superscript is null || superscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
-        bool boxBase = basis.Glyphs.Count != 1;
+        bool boxBase = fractionBase || basis.Glyphs.Count != 1;
         if (!boxBase)
         {
             ushort glyph = basis.Glyphs[0].OriginalGlyph;
@@ -75,7 +82,8 @@ internal static partial class DocxMathLayout
         }
         DocxMathGlyphPlacement last = basis.Glyphs[^1];
         ushort lastGlyph = last.OriginalGlyph;
-        if (!font.TryGetMathItalicCorrection(lastGlyph, out short correction))
+        short correction = 0;
+        if (!fractionBase && !font.TryGetMathItalicCorrection(lastGlyph, out correction))
         { fallback = "InvalidMathScriptItalicCorrection"; return false; }
         double subX = basis.AdvanceWidth - correction * last.FontSize / font.UnitsPerEm;
         double supX = basis.AdvanceWidth;
@@ -106,10 +114,12 @@ internal static partial class DocxMathLayout
             !double.IsFinite(up) || !double.IsFinite(down) || width < 0d || above < 0d || below < 0d || up < 0d || down < 0d || subX < 0d)
         { fallback = "InvalidMathScriptExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(basis.Glyphs.Count + (subscript?.Glyphs.Count ?? 0) + (superscript?.Glyphs.Count ?? 0));
+        var rules = new List<DocxMathRulePlacement>(basis.Rules.Count);
         Append(basis, 0d, 0d);
         if (subscript is not null) { Append(subscript, subX, -down); }
         if (superscript is not null) { Append(superscript, supX, up); }
-        box = new DocxMathBox(width, above, below, glyphs) { LogicalAdvance = advanceWidth == width ? null : advanceWidth };
+        box = new DocxMathBox(width, above, below, glyphs)
+        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics };
         fallback = null;
         return true;
 
@@ -119,6 +129,11 @@ internal static partial class DocxMathLayout
             {
                 token.ThrowIfCancellationRequested();
                 glyphs.Add(glyph with { X = glyph.X + x, BaselineY = glyph.BaselineY + baseline });
+            }
+            foreach (DocxMathRulePlacement rule in child.Rules)
+            {
+                token.ThrowIfCancellationRequested();
+                rules.Add(rule with { X = rule.X + x, Y = rule.Y + baseline });
             }
         }
     }

@@ -7,6 +7,54 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontFractionScriptBasesRetainChildRulesRolesAndSelectedStyles()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxEquation source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children[0];
+        foreach (bool display in new[] { true, false })
+        foreach (string type in new[] { "bar", "noBar" })
+        {
+            var scripts = new DocxMathScripts(new([fraction with { TypeValue = type }]), Row("B"), Row("B"));
+            source = source with { Display = display, Content = new([scripts]) };
+            TestAssert.True(DocxMathLayout.TryGetRuns(source, CancellationToken.None, out var runs), "Expected typed nested-base discovery.");
+            TestAssert.True(runs.Count == 4 && runs[0].ScriptLevel == (display ? 0 : 1) && runs[2].ScriptLevel == 1,
+                "Base fraction arguments inherit the equation style while script arguments own script style.");
+            TestAssert.True(DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out var box, out var reason),
+                reason ?? "The existing boxes must compose without dropping the base.");
+            DocxMathBox measured = TestAssert.NotNull(box);
+            TestAssert.Equal("A+BCBB", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+            TestAssert.Equal(type == "bar" ? 1 : 0, measured.Rules.Count);
+            TestAssert.True(measured.Glyphs[^2].BaselineY <= measured.Glyphs[3].BaselineY &&
+                measured.Glyphs[^1].BaselineY >= measured.Glyphs[0].BaselineY &&
+                measured.Glyphs[^2].BaselineY < measured.Glyphs[^1].BaselineY,
+                "Nested-base scripts retain their lower/upper roles; zero minimum-drop constants permit equal child baselines.");
+            var graphics = new PdfGraphicsBuilder();
+            DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+            using var output = new MemoryStream();
+            PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], CancellationToken.None);
+            TestAssert.True(output.Length > 0, "Nested glyphs and rules must retain valid owned resources/encodings.");
+        }
+    }
+
+    public static void MathFontFractionScriptBasesRetainDeeperFallbackCancellationAndWorkBounds()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxEquation source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children[0];
+        var scripts = new DocxMathScripts(new([fraction]), null, Row("B"));
+        source = source with { Content = new([scripts]) };
+        var deeper = source with { Content = new([scripts with
+            { Base = new([fraction with { Numerator = new([fraction]) }]) }]) };
+        TestAssert.True(!DocxMathLayout.TryGetRuns(deeper, CancellationToken.None, out _) &&
+            !DocxMathLayout.TryMeasure(deeper, _ => resource, CancellationToken.None, out var box, out _) && box is null,
+            "The bounded first nesting grammar cannot admit deeper structures through recursive composition.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out _, out _));
+    }
+
     public static void MathFontNoBarStacksKeepSeparatedSourceRolesWithoutPaintingARule()
     {
         byte[] constants = Constants(thickness: -1);

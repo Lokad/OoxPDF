@@ -7,6 +7,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeFractionScriptBasesRetainNestedMeaningAndAuthoredRules()
+    {
+        RequireMathFont();
+        foreach (string placement in new[] { "display", "inline" })
+        foreach (string kind in new[] { "bar", "stack" })
+        foreach (string role in new[] { "sub", "sup" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nested-base-{placement}-{kind}-{role}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("n+1k2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(kind == "bar", page.Content.Contains(" re f", StringComparison.Ordinal));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Nested source diagnostics must describe the actual painted structure.");
+        }
+    }
+
     public static void DocxNativeNoBarStacksPaintTheirSourceMeaningAndOwnChildFaces()
     {
         RequireMathFont();
