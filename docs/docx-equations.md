@@ -17,8 +17,17 @@ improve across display/inline placement, 12/20 pt mathematics and normal Calibri
 children; two paired bar controls remain byte-identical. The 12 pt display
 controls differ by at most 0.11 pt horizontally and 0.07 pt vertically. Larger
 and inline controls retain residuals up to 1.31 pt, and the existing visual
-thresholds remain unchanged. Nested stacks and other fraction types retain
-the whole-equation fallback.
+thresholds remain unchanged. Other fraction types retain the whole-equation fallback.
+
+A script base may now contain one bar fraction or no-bar stack with literal
+children. The existing measured boxes compose their glyphs, rules and extents;
+fraction children inherit display/inline style, while the outer script argument
+retains its own script style. Eight independent Word controls improve across
+subscript/superscript and display/inline placement. Display position differences
+are below 0.15 pt horizontally and 0.14 pt vertically; inline differences reach
+0.65 pt vertically. Sixteen direct neighbor PDFs remain byte-identical. This
+first nesting grammar retains deeper structures on explicit fallback and keeps
+the existing visual thresholds unchanged.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
@@ -29,7 +38,7 @@ Painted rows report `DOCX_APPROXIMATED_EQUATION`. Inline formulas share the pros
 baseline and move following prose by their measured width. Following prose can
 wrap at its word boundary while the complete formula stays at its fitting source
 line position. A formula that needs operator breaking or relocation retains
-the whole-row fallback. Nested scripts or fractions,
+the whole-row fallback. Deeper nested scripts or fractions,
 table/story placements, reference/revision decorations and display rows with
 compressed automatic or exact/minimum line spacing retain
 `DOCX_UNSUPPORTED_EQUATION` with part provenance
