@@ -88,8 +88,17 @@ axis, rule and shifts even when child sizes differ. Script-style binary and
 relation operators omit ordinary-row glue. Larger-child placement improves from
 6.24 pt to 0.30 pt after preserving that ownership; smaller math retains a
 1.07 pt vertical residual. Full visual gates still need review.
-These results remain approximate. Argument controls, nested structures and wider owners remain staged,
-with their source structure preserved.
+Empty argument properties and explicit zero argument size now share the default
+row eligibility rule. A cached Word script control improves from SSIM 0.7820 to
+0.9238 and foreground recall 0.4879 to 0.8237; emitted script sizes match Word,
+with position differences below 0.05 pt horizontally and 0.40 pt vertically.
+Forty-four focused methods cover typed source properties, native painting and
+existing math invariants. Nineteen selected capability neighbors remain byte
+identical; four root CLI smoke outputs reuse the same qualified artifact.
+Unknown, duplicate or malformed controls and nonzero size increments retain
+the whole-equation fallback. Layout does not reparse the retained raw XML.
+These results remain approximate at unchanged visual thresholds. Nonzero
+argument sizing, nested structures and wider owners remain staged.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
