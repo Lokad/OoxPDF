@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeGreekStylesRetainLowerUpperAndScriptMeaning()
+    {
+        RequireMathFont();
+        foreach ((string kind, string meaning) in new[] { ("lower", "α+β=γ"), ("upper", "Γ+Θ=Σ"), ("scripts", "αβ2") })
+        foreach (string style in new[] { "b", "bi" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-greek-style-{kind}-{style}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Styled Greek letters must retain their actual native glyph/subset ownership.");
+        }
+    }
+
     public static void DocxNativeExplicitMathStylesPaintTheirSourceMeaningInDisplayAndInlineRows()
     {
         RequireMathFont();

@@ -127,6 +127,10 @@ internal static class DocxMathRowLayout
         bool italic = style == "bi";
         if (codePoint is >= 'A' and <= 'Z') { return (italic ? 0x1D468 : 0x1D400) + codePoint - 'A'; }
         if (codePoint is >= 'a' and <= 'z') { return (italic ? 0x1D482 : 0x1D41A) + codePoint - 'a'; }
+        if (codePoint is >= 0x0391 and <= 0x03A9 && codePoint != 0x03A2)
+            { return (italic ? 0x1D71C : 0x1D6A8) + codePoint - 0x0391; }
+        if (codePoint is >= 0x03B1 and <= 0x03C9)
+            { return (italic ? 0x1D736 : 0x1D6C2) + codePoint - 0x03B1; }
         if (codePoint is >= '0' and <= '9') { return 0x1D7CE + codePoint - '0'; }
         // Operators retain their mathematical symbol glyph. Other alphabets
         // keep fallback until their explicit styled mapping is qualified.

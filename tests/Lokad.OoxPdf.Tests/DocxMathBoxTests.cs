@@ -8,6 +8,24 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxGreekStylesPreserveEveryBasicLetterThroughUnicodeNormalization()
+    {
+        foreach (string style in new[] { "b", "bi" })
+        foreach (int point in Enumerable.Range(0x0391, 0x03A9 - 0x0391 + 1)
+            .Where(point => point != 0x03A2).Concat(Enumerable.Range(0x03B1, 0x03C9 - 0x03B1 + 1)))
+        {
+            string text = new System.Text.Rune(point).ToString();
+            var row = new DocxMathRow([new DocxMathRun(Run(text), style, null)]);
+            TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out var points, out _),
+                "A basic Greek letter must resolve its explicit mathematical weight/style.");
+            int rendered = points.Single();
+            TestAssert.True(rendered is >= 0x1D6A8 and <= 0x1D74E && rendered != point,
+                "Explicit Greek styles use the Unicode mathematical alphabet, including the capital-sigma gap.");
+            TestAssert.Equal(text, new System.Text.Rune(rendered).ToString().Normalize(System.Text.NormalizationForm.FormKC));
+            TestAssert.Equal(text, ((DocxMathRun)row.Children[0]).Text.Text);
+        }
+    }
+
     public static void DocxMathBoxExplicitStylesPreserveSourceAndSelectTheMathematicalAlphabet()
     {
         foreach ((string style, int[] expected) in new[]
@@ -30,7 +48,7 @@ internal static class DocxMathBoxTests
     {
         foreach (var run in new[]
         {
-            new DocxMathRun(Run("α"), "b", null),
+            new DocxMathRun(Run("ϕ"), "b", null),
             new DocxMathRun(Run("A"), "future", null),
             new DocxMathRun(Run("A"), "b", "double-struck"),
             new DocxMathRun(Run("A") with { Bold = true }, "b", null),
