@@ -12,7 +12,8 @@ internal sealed partial class DocxRenderer
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxPictureCrop crop = image.Crop;
-        if (crop.IsEmpty)
+        bool hasFlip = image.FlipHorizontal || image.FlipVertical;
+        if (crop.IsEmpty && !hasFlip)
         {
             RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
                 pageIndex, cancellationToken, imageCache, ref imageIndex);
@@ -28,9 +29,13 @@ internal sealed partial class DocxRenderer
             diagnosticSink?.Invoke(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_IMAGE_CROP", OoxPdfSeverity.Warning,
                 "The picture source rectangle is unusable; the uncropped image is retained.", image.PartName,
                 PageIndex: pageIndex, Feature: "image crop", Fallback: "UncroppedImage"));
-            RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
-                pageIndex, cancellationToken, imageCache, ref imageIndex);
-            return;
+            sourceX = x; sourceY = y; sourceWidth = width; sourceHeight = height;
+            if (!hasFlip)
+            {
+                RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
+                    pageIndex, cancellationToken, imageCache, ref imageIndex);
+                return;
+            }
         }
         // Crop changes paint inside the authored viewport, never its layout extent.
         // The same mapping applies to native vectors and their raster fallback.
@@ -38,6 +43,13 @@ internal sealed partial class DocxRenderer
         try
         {
             graphics.ClipRectangle(x, y, width, height);
+            if (hasFlip)
+            {
+                // Mirror the cropped paint around the authored viewport. Existing
+                // static-line clips remain in page coordinates outside this state.
+                graphics.Transform(image.FlipHorizontal ? -1d : 1d, 0d, 0d, image.FlipVertical ? -1d : 1d,
+                    image.FlipHorizontal ? 2d * x + width : 0d, image.FlipVertical ? 2d * y + height : 0d);
+            }
             RenderImageCore(image, sourceX, sourceY, sourceWidth, sourceHeight, graphics, pageImages,
                 diagnosticSink, pageIndex, cancellationToken, imageCache, ref imageIndex);
         }

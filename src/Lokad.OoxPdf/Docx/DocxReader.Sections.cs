@@ -266,6 +266,8 @@ internal sealed partial class DocxReader
             ?.Parent?.Element(DrawingNamespace + "srcRect");
         var crop = new DocxPictureCrop(ReadCropFraction("l"), ReadCropFraction("t"),
             ReadCropFraction("r"), ReadCropFraction("b"));
+        XElement? pictureTransform = drawing.Descendants(XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"))
+            .FirstOrDefault()?.Element(DrawingNamespace + "xfrm");
         return Create(imagePart) with
         {
             RasterFallback = useVector && previewPart is not null && !ReferenceEquals(previewPart, vectorPart) &&
@@ -273,7 +275,11 @@ internal sealed partial class DocxReader
         };
 
         DocxInlineImage Create(OoxPart part) => new(width, height, part.ContentType, part.Bytes, part.Name)
-            { Revisions = RevisionList(revision), Crop = crop };
+        {
+            Revisions = RevisionList(revision), Crop = crop,
+            FlipHorizontal = OoxXml.ParseOptionalBool(pictureTransform, "flipH"),
+            FlipVertical = OoxXml.ParseOptionalBool(pictureTransform, "flipV")
+        };
         double ReadCropFraction(string attribute)
         {
             string? raw = (string?)sourceRectangle?.Attribute(attribute);

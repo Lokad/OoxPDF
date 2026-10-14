@@ -630,6 +630,8 @@ internal sealed record DocxRunFonts(
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
 {
     public DocxPictureCrop Crop { get; init; }
+    public bool FlipHorizontal { get; init; }
+    public bool FlipVertical { get; init; }
     // DrawingML SVG extensions can carry an ordinary raster preview. Retain
     // that authored fallback for a missing or unparseable vector image.
     public DocxInlineImage? RasterFallback { get; init; }
