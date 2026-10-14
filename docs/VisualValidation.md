@@ -3541,3 +3541,25 @@ rejected line-only transformation are retained/excluded from fidelity evidence.
 Safe managed0.1.5/release deferral and all bounds/work/publication remain. Prior
 d73cd072 CI passes2694 Windows/417 Ubuntu methods plus source Release/package/
 tools; rendering continues during the accepted push's CI.
+
+
+## RV06-L268: shared default axis font size
+
+Runtime **e2138927** replaces separate9pt/8.5pt category/value defaults with one
+nominal10pt default (9.96pt after existing chart quantization). Source/style/
+element sizes retain precedence. Sixteen independent PowerPoint controls across
+frames, galleries, fonts, omitted/explicit sizes, bar/line and intervals qualify
+ten improvements/six exact/no regressions.32 embedded-font/metric checks/368
+glyphs/186 text contents remain exact. Default size and its measured layout
+change together; explicit-size PDFs stay identical.
+
+One frozen Release passes64 specific text/axis/interval/override methods/eight
+exact neighbors. Primary default-size regression fails parent; source-size guard
+passes. Root verifies399 sources/49 fixtures/17 assets and four matching CLI PDFs
+without rebuilding/repeating suites/corpora. Source-only public inventory finds
+zero previous fixtures affected, so no public corpus is replayed. Two new
+individual gates pass; dense ratio0.033465 against0.025 and bar geometry/recall
+stay needs-review with all thresholds unchanged.493 cases/11 families validate.
+Safe managed0.1.5/release deferral and bounds/work/publication remain. Prior
+3f2acc44 CI passes2696 Windows/417 Ubuntu methods plus source Release/package/
+tools; rendering continues during the accepted push's CI.

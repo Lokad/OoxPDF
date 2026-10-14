@@ -194,3 +194,10 @@ exists. Explicit/no-fill strokes retain precedence. Nine PowerPoint controls
 qualify three corrections/six exact guards; modified explicit axis role colors
 are ignored by PowerPoint in this context, so role inheritance remains deferred.
 This scope preserves major-gridline ownership and other gallery/plot guards.
+
+
+Category and value axes share a nominal10pt default when source text sizes are
+omitted (9.96pt after existing chart quantization). Source/style/element sizes
+retain precedence. Sixteen PowerPoint controls qualify ten improvements/six exact
+guards across frames, galleries and bar/line plots; default strip/baseline, dense
+interval and bar geometry remain partial at unchanged visual gates.
