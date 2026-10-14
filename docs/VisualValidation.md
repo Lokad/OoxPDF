@@ -3397,3 +3397,26 @@ continues during CI for this push. Safe managed0.1.5/release deferral and existi
 bounds/cancellation/work/cache/staging/publication limits remain. Retirement of
 13 clean historical worktrees reduces the workspace from3.924GB to2.958GB while
 preserving source revisions, inputs, frozen binaries and external evidence.
+
+
+## RV06-L261: cell-owned rotated picture clipping
+
+Runtime **4e209958** uses the existing cell content clip for rotated pictures,
+including aligned/repeated paragraphs. The line-frame origin reuses the measured
+cell baseline inset. Eight Word controls improve similarity/foreground recall;
+seven also improve both primary metrics. Bottom alignment's unchanged11.46pt
+position offset retains MAE+0.005318/threshold16 ratio+0.000267, while SSIM improves
+0.800331->0.845339 and recall0.707421->0.856607. The remaining alignment defect is
+explicit, with no font/size/bottom-specific exception. Sixteen font programs,
+336 glyphs and52 complete authored text/encoding/kerning/geometry/page states
+remain exact. The public rotated-table case now meets every retained gate:
+MAE0.049681/SSIM0.993828/recall0.998959. Its thresholds are unchanged.
+
+One frozen artifact passes19 specific methods and48 unchanged neighboring PDF
+identities. Root verifies399 sources,27 fixtures and17 assets plus four exact CLI
+smoke PDFs without rebuilding/repeating the suite or corpus. Strict Release has
+zero warnings/errors. The initial paragraph-only clipping prototype is retained
+as rejected evidence. Arial11, aligned-position and prior SVG residuals remain
+open. The preceding2f8e730b CI milestone passed Windows2684/Ubuntu417 methods and
+source Release/package/tool gates; rendering continues during CI for the push.
+Safe managed0.1.5/release deferral and all existing bounds/work/publication remain.
