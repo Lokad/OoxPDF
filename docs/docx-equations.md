@@ -2,7 +2,9 @@
 
 Native OMML rendering is in progress. A first native slice paints standalone
 literal display rows in the DOCX body, with left, center or right alignment,
-and fitting inline literal rows alongside prose.
+and fitting inline literal rows alongside prose. It also paints one display
+fraction with literal numerator and denominator, using the font's OpenType MATH
+axis, shifts, minimum gaps, rule thickness and leading.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
@@ -13,7 +15,7 @@ Painted rows report `DOCX_APPROXIMATED_EQUATION`. Inline formulas share the pros
 baseline and move following prose by their measured width. Following prose can
 wrap at its word boundary while the complete formula stays at its fitting source
 line position. A formula that needs operator breaking or relocation retains
-the whole-row fallback. Scripts, fractions,
+the whole-row fallback. Scripts, inline or nested fractions,
 table/story placements, reference/revision decorations and unsupported explicit
 line rules retain `DOCX_UNSUPPORTED_EQUATION` with part provenance
 and `Ignored` fallback. Missing fonts or glyphs also keep the whole-row fallback.
@@ -39,8 +41,15 @@ Word, with equation baseline residuals at most 0.14 pt. Horizontal residuals rea
 2.63 pt, and following-line spacing still needs work. Full visual gates still
 need review. A whole-formula relocation prototype was rejected because Word
 breaks those equations at mathematical operators.
-Scripts and fractions remain outside the
-first rendering slice, with their source structure preserved.
+Nine display-fraction controls cover sizes, alignment, descenders, explicit bar
+type and a page boundary. All improve against Word, with matching equation page
+assignments. Eight controls have vertical residuals below 0.18 pt; preceding
+default prose retains its separate 2.37 pt spacing residual. The numerator,
+denominator and rule share stored measured geometry and font resources. These
+results remain approximate at the existing visual gates. Missing or invalid MATH
+constants, mixed fraction metric owners, nested structures and unsupported
+control formatting retain the complete fallback. Scripts and inline fractions
+remain staged, with their source structure preserved.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
