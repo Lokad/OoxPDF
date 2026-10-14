@@ -7,7 +7,9 @@ fraction with literal numerator and denominator, using the font's OpenType MATH
 axis, shifts, minimum gaps, rule thickness and leading. Default display scripts
 with literal base/subscript/superscript rows now use separate measured boxes,
 font script-style glyph variants and owned subset mappings. Those script boxes
-also participate in fitting inline prose and following-word wrapping.
+also participate in fitting inline prose and following-word wrapping. One
+inline fraction with literal numerator and denominator uses the same ownership
+and placement contract.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
@@ -18,7 +20,7 @@ Painted rows report `DOCX_APPROXIMATED_EQUATION`. Inline formulas share the pros
 baseline and move following prose by their measured width. Following prose can
 wrap at its word boundary while the complete formula stays at its fitting source
 line position. A formula that needs operator breaking or relocation retains
-the whole-row fallback. Nested scripts, inline or nested fractions,
+the whole-row fallback. Nested scripts or fractions,
 table/story placements, reference/revision decorations and unsupported explicit
 line rules retain `DOCX_UNSUPPORTED_EQUATION` with part provenance
 and `Ignored` fallback. Missing fonts or glyphs also keep the whole-row fallback.
@@ -79,8 +81,14 @@ boundary, the previous and current renderer both move following prose to page 2
 while Word keeps it on page 1; the inherited prose-spacing issue remains open.
 The 140 pt boundary keeps following prose within the admitted body. All original
 visual and page-count gates remain unchanged.
-These results remain approximate. Argument controls, nested structures, inline
-fractions and wider owners remain staged,
+Thirteen further controls qualify inline fractions and multi-atom script
+arguments. Twelve improve against Word and one overwide fallback remains exact.
+Numerator/denominator glyphs use script style; parent source metrics own the
+axis, rule and shifts even when child sizes differ. Script-style binary and
+relation operators omit ordinary-row glue. Larger-child placement improves from
+6.24 pt to 0.30 pt after preserving that ownership; smaller math retains a
+1.07 pt vertical residual. Full visual gates still need review.
+These results remain approximate. Argument controls, nested structures and wider owners remain staged,
 with their source structure preserved.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
