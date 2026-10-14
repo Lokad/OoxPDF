@@ -196,6 +196,18 @@ neighbors qualify one artifact, with four matching root smoke PDFs. Three
 public cases retain their review gates. Normal-text fractions and richer
 formatting remain separate capability work.
 
+Normal-text and mixed fraction children now retain independent math/Calibri/Arial
+faces while a parent metric owner supplies MATH scale, axis, rule, shifts and
+leading. The existing conversion cache supplies that parent; a metric-only face
+does not publish an unused PDF font. A typed font/size owner carries leading
+through the composed box, avoiding the roughly 1.8 pt baseline differences of
+the rejected glyph-only prototype. Eight Word controls qualify seven
+improvements and one exact math-face display fraction; maximum differences are
+0.11 pt horizontally and 0.06 pt vertically. Twenty-four specifically affected
+methods, 33 exact direct neighbors and four matching root smoke PDFs qualify one
+artifact. Three public cases retain their review gates. Rich formatting,
+unsupported parent/mixed mathematical metrics and nesting remain staged.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
