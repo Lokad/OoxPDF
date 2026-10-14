@@ -172,6 +172,19 @@ methods, 24 exact direct neighbors and four matching root smoke PDFs qualify one
 artifact. Two public variant cases keep their review gates; unsupported alphabets
 and Word-property inheritance remain staged.
 
+Normal-text math runs (`m:nor`) now preserve a typed absent/true/false flag.
+True retains ordinary text glyphs and authored faces while suppressing math
+italics, operator classification, glue and italic correction. Explicit false
+uses mathematical glyphs and the math face; existing absent-flag face behavior
+stays intact. Unknown, duplicate or malformed normal-text controls retain the
+complete fallback. Ten Word controls cover default/Calibri/Arial faces,
+display/inline placement, false flags and operators inside normal text. All
+improve, with position differences below 0.19 pt horizontally and 0.23 pt
+vertically. Twenty-one source/style/encoding/fallback methods and 23 exact direct
+neighbors qualify one artifact; four root smoke PDFs match without rebuilding.
+Three public cases keep their review gates. Rich normal-text formatting and
+script/fraction metric owners still need separate qualification.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
