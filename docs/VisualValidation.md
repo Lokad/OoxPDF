@@ -3493,3 +3493,28 @@ cases pass unchanged0.2 MAE/0.004 ratio/0.985 SSIM/0.99 recall gates using quali
 outputs;483 cases/11 families validate. Safe managed0.1.5 and all bounds/work/
 publication remain. Prior9a908751 CI passes2691 Windows/417 Ubuntu methods plus
 source Release/package/tools; rendering continues during the new push's CI.
+
+
+## RV06-L265: kept-first-row admitted table frame
+
+Runtime **17dab9cf** replaces duplicated first-row estimation with the existing
+table-frame result after the kept chain. Available height, grid admission,
+complete/fragment/header/rich/scaled behavior and cancellation share body layout.
+Nineteen independent Word controls qualify five improved heading/picture page
+assignments and14 exact/no regressions. Every changed role/page matches Word;
+the104pt two-row difference remains an exact inherited fallback.
+
+Forty-four embedded-font/metric checks,1162 glyphs and198 horizontal text/font/
+encoding/kerning states stay exact. A page move can remove a duplicate font
+reference; actual embedded programs and glyph maps remain identical. One frozen
+Release passes67 specific keep/frame/minimum-image/page-boundary methods and14
+prior exact PDFs. The primary regression fails the parent; fallback passes.
+Root verifies399 sources/43 fixtures/17 assets and four matching CLI smoke PDFs
+without rebuilding/repeating suites/corpora.
+
+Three new kept-picture cases pass unchanged0.2 MAE/0.004 ratio/0.985 SSIM/0.99
+recall gates. The margin case's first-page SSIM0.982089 stays needs-review against
+0.985, despite corrected page ownership;487 cases/11 families validate. Safe
+managed0.1.5, release deferral and all bounds/work/publication remain. Prior
+3bbfc05f CI passes2692 Windows/417 Ubuntu methods plus source Release/package/
+tools; rendering continues while the accepted push runs CI.
