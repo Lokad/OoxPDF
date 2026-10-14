@@ -3444,3 +3444,28 @@ No thresholds or font/size/document-ID qualifiers change. Prior128d778f CI passe
 Windows2686/portable Ubuntu417 methods plus source Release/package/tool gates;
 rendering continues during CI for the push. Safe managed0.1.5/release deferral
 and all existing bounds/cancellation/work/cache/staging/publication remain.
+
+
+## RV06-L263: minimum-leading cell picture ownership
+
+Runtime **95da5082** shares minimum-slot placement with source-affined pictures.
+Picture growth occupies minimum headroom once; line displacement, following
+paragraphs and alignment share that extent. Source ambiguity and established
+header/rich/revision/split/row-rule fallbacks remain explicit. The initial
+text-only-height prototype **ec3e32dc** was rejected after seven top/tall controls
+regressed despite passing46 methods and32 exact neighbors.
+
+Forty-five independent Word controls qualify32 improvements/13 exact/no
+regressions. Ninety font programs,1899 glyphs and285 horizontal text/font/encoding/
+kerning/page states remain protected. First baselines differ by at most0.062pt.
+The automatic tall-picture control retains its9.262pt following-body discrepancy;
+this qualification preserves that measurement fallback.
+
+One frozen Release artifact passes46 specific methods and32 prior exact PDFs.
+Root verifies399 sources/35 fixtures/17 assets and four matching CLI smoke PDFs,
+with no root rebuild or repeated suites/corpora. Four public minimum-picture
+cases pass the existing0.2 MAE/0.004 ratio/0.985 SSIM/0.99 recall gates using the
+qualified outputs;479 cases/11 families validate. The final primary regression
+fails against the pinned parent while two guard methods pass. Safe managed0.1.5,
+release deferral and all existing bounds/work/publication remain. Rendering
+continues while the accepted push runs CI; prior7ec86425 is green on both platforms.
