@@ -152,6 +152,16 @@ smoke outputs qualify one artifact. Three public cases keep their review gates.
 Other styled alphabets and inheritance from ordinary Word bold/italic run
 properties remain on explicit fallback, alongside unsupported decorations.
 
+Basic Greek upper/lowercase letters now share the same bold/bold-italic mapper.
+Eight Word controls qualify six improvements and two exact upright/italic
+controls; 36 embedded glyph outlines match the source font. Position differences
+stay below 0.13 pt horizontally and 0.28 pt vertically. Thirteen specifically
+affected alphabet, encoding, fallback, cancellation and budget methods qualify
+one artifact; ten portable math-box tests also pass on Ubuntu using those exact
+assembly bytes. Sixteen direct neighbors and four root smoke PDFs stay exact.
+Three public cases retain their review gates. Variant symbols and other styled
+alphabets retain fallback until their semantic mappings are qualified.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
