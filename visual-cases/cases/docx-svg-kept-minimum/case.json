@@ -1,0 +1,27 @@
+{
+  "id": "docx-svg-kept-minimum",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-svg-kept-minimum.docx",
+  "dpi": 96,
+  "tags": [
+    "docx",
+    "images",
+    "svg",
+    "minimum-leading",
+    "keep-next",
+    "approximate"
+  ],
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.2,
+    "maxChangedPixelRatioAtThreshold16": 0.004,
+    "minStructuralSimilarity": 0.985,
+    "minForegroundRecall": 0.99
+  },
+  "allowedUnsupportedFeatures": []
+}
