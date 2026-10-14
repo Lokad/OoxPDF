@@ -10,8 +10,10 @@ constructs retain an explicit source representation. Equations are separate from
 prose runs, preserving existing field, bookmark, note and picture indices.
 
 Painted rows report `DOCX_APPROXIMATED_EQUATION`. Inline formulas share the prose
-baseline and move following prose by their measured width. A formula that would
-require new wrapping retains the whole-row fallback. Scripts, fractions,
+baseline and move following prose by their measured width. Following prose can
+wrap at its word boundary while the complete formula stays at its fitting source
+line position. A formula that needs operator breaking or relocation retains
+the whole-row fallback. Scripts, fractions,
 table/story placements, reference/revision decorations and unsupported explicit
 line rules retain `DOCX_UNSUPPORTED_EQUATION` with part provenance
 and `Ignored` fallback. Missing fonts or glyphs also keep the whole-row fallback.
@@ -31,7 +33,12 @@ full visual gates still need review. Nine additional inline controls cover
 surrounding prose, alignment, text and math sizes, and an overfull fallback.
 Eight fitting controls improve against Word; the overfull control stays exact.
 Baseline residuals are at most 0.14 pt, while existing prose metrics leave
-horizontal residuals up to 1.13 pt. Full visual gates still need review.
+horizontal residuals up to 1.13 pt. Nine further controls qualify following-prose
+wrapping across text/math sizes, alignment and long tails. All improve against
+Word, with equation baseline residuals at most 0.14 pt. Horizontal residuals reach
+2.63 pt, and following-line spacing still needs work. Full visual gates still
+need review. A whole-formula relocation prototype was rejected because Word
+breaks those equations at mathematical operators.
 Scripts and fractions remain outside the
 first rendering slice, with their source structure preserved.
 
