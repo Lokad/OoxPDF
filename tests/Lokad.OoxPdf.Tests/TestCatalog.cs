@@ -29,6 +29,7 @@ internal static class TestCatalog
         .. FromType(ClassifyPptx, typeof(PptxTests)),
         .. FromType(ClassifyDocx, typeof(DocxTests)),
         .. FromType("docx-images", typeof(DocxImagesTests)),
+        .. FromType("docx-math", typeof(DocxMathTests)),
         .. FromType("docx-numbering", typeof(DocxNumberingTests)),
         .. FromType("docx-text", typeof(DocxTextTests)),
         .. FromType("docx-text", typeof(DocxTextWrapTests)),

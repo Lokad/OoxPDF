@@ -40,6 +40,7 @@ internal sealed partial class DocxReader
             tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
+        var equations = new List<DocxEquation>();
         var inlineTextBoxes = new List<DocxInlineTextBox>();
         var inlineReferences = new List<DocxInlineReference>();
         var commentRanges = new List<DocxCommentRange>();
@@ -66,6 +67,10 @@ internal sealed partial class DocxReader
             if (child.Name == WordprocessingNamespace + "r")
             {
                 AddParagraphRun(child, ref pageInstructionSeen, inheritedRevision);
+            }
+            else if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
+            {
+                AddEquation(child, inheritedRevision);
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
@@ -106,6 +111,10 @@ internal sealed partial class DocxReader
             if (child.Name == WordprocessingNamespace + "r")
             {
                 AddParagraphRun(child, ref pageInstructionSeen, revision);
+            }
+            else if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
+            {
+                AddEquation(child, revision);
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
@@ -294,6 +303,7 @@ internal sealed partial class DocxReader
             ContextualSpacingDefaultStyleId = paragraphProperties?.Element(WordprocessingNamespace + "pStyle") is null
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
+            Equations = equations,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
             RevisionRanges = revisionRanges,
@@ -306,6 +316,32 @@ internal sealed partial class DocxReader
             ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
             ParagraphMarkRun = retainedMark
         };
+
+        void AddEquation(XElement container, DocxRevisionInfo? revision)
+        {
+            bool display = container.Name == MathNamespace + "oMathPara";
+            XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
+            foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                equations.Add(new DocxEquation(
+                    DocxMathParser.Read(equation, ReadMathRun, cancellationToken),
+                    runs.Count, sourceRunIndex, display,
+                    (string?)properties?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val"),
+                    properties?.ToString(SaveOptions.DisableFormatting), revision));
+            }
+
+            DocxTextRun ReadMathRun(XElement run, string text)
+            {
+                XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+                string? characterStyleId = ReadCharacterStyleId(run);
+                DocxResolvedRunProperties resolved = ResolveRunProperties(runProperties, paragraphStyleId,
+                    characterStyleId, styles, tableCellStyle?.Run);
+                return CreateResolvedTextRun(text, resolved,
+                    CreateRunStyleResolution(runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run),
+                    complexScript: false, sourceRunIndex, sourceTextOffsetInRun: 0, revision, RevisionList(revision));
+            }
+        }
 
         void AddSimpleField(XElement field, DocxRevisionInfo? revision)
         {

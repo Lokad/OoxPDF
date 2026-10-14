@@ -1,0 +1,105 @@
+using System.Xml.Linq;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
+
+namespace Lokad.OoxPdf.Docx;
+
+internal static class DocxMathParser
+{
+    // The package XML limits still apply. Use an explicit traversal stack so
+    // accepted XML nesting does not also consume the managed call stack.
+    public static DocxMathRow Read(
+        XElement equation,
+        Func<XElement, string, DocxTextRun> readRun,
+        CancellationToken cancellationToken)
+    {
+        var pending = new Stack<(XElement Element, bool Expanded)>();
+        var nodes = new Dictionary<XElement, DocxMathNode>();
+        pending.Push((equation, false));
+        while (pending.TryPop(out var item))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            XElement element = item.Element;
+            string name = element.Name.LocalName;
+            if (element.Name.Namespace != MathNamespace || !IsContainer(name))
+            {
+                nodes.Add(element, ReadLeaf(element, readRun));
+                continue;
+            }
+
+            if (!item.Expanded)
+            {
+                pending.Push((element, true));
+                foreach (XElement child in ContentChildren(element).Reverse())
+                {
+                    pending.Push((child, false));
+                }
+                continue;
+            }
+
+            DocxMathNode node;
+            if (IsRow(name))
+            {
+                node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
+            }
+            else if (name == "f" && Role(element, "num") is { } numerator && Role(element, "den") is { } denominator &&
+                HasOnlyRoles(element, "num", "den"))
+            {
+                node = new DocxMathFraction(numerator, denominator, PropertyValue(element, "fPr", "type"));
+            }
+            else if (name is "sSub" or "sSup" or "sSubSup" && Role(element, "e") is { } basis &&
+                (name == "sSup" || Role(element, "sub") is not null) &&
+                (name == "sSub" || Role(element, "sup") is not null) &&
+                HasOnlyRoles(element, name == "sSub" ? ["e", "sub"] : name == "sSup" ? ["e", "sup"] : ["e", "sub", "sup"]))
+            {
+                node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"));
+            }
+            else
+            {
+                // Do not serialize already traversed subtrees again: malformed
+                // nested constructs must retain linear work and storage.
+                node = new DocxMathUnsupported(name, element.Name.NamespaceName, null,
+                    ContentChildren(element).Select(child => new DocxMathChild(
+                        child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
+            }
+            nodes.Add(element, node with { PropertiesXml = ReadProperties(element) });
+        }
+
+        return nodes[equation] as DocxMathRow ?? new DocxMathRow([nodes[equation]]);
+
+        DocxMathRow? Role(XElement element, string name)
+        {
+            XElement[] matches = element.Elements(MathNamespace + name).ToArray();
+            return matches.Length == 1 ? nodes[matches[0]] as DocxMathRow : null;
+        }
+    }
+
+    private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den";
+    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup";
+    private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
+    private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
+    private static bool HasOnlyRoles(XElement element, params string[] roles)
+    {
+        XElement[] children = ContentChildren(element).ToArray();
+        return children.Length == roles.Length && children.All(child => child.Name.Namespace == MathNamespace && roles.Contains(child.Name.LocalName));
+    }
+    private static string? PropertyValue(XElement element, string property, string value) =>
+        (string?)element.Element(MathNamespace + property)?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
+    private static string[] ReadProperties(XElement element) => element.Elements().Where(IsProperty)
+        .Select(child => child.ToString(SaveOptions.DisableFormatting)).ToArray();
+
+    private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun)
+    {
+        if (element.Name == MathNamespace + "r" && element.Elements().All(child =>
+            child.Name == MathNamespace + "t" || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr"))
+        {
+            return new DocxMathRun(
+                readRun(element, string.Concat(element.Elements(MathNamespace + "t").Select(text => text.Value))),
+                PropertyValue(element, "rPr", "sty"), PropertyValue(element, "rPr", "scr"))
+            { PropertiesXml = ReadProperties(element) };
+        }
+        return Unsupported(element);
+    }
+
+    private static DocxMathUnsupported Unsupported(XElement element) =>
+        new(element.Name.LocalName, element.Name.NamespaceName, element.ToString(SaveOptions.DisableFormatting), []);
+}

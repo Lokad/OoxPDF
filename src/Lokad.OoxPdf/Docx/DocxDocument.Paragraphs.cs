@@ -28,6 +28,7 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxCommentRange> CommentRanges { get; init; } = [];
     public IReadOnlyList<DocxRevisionRange> RevisionRanges { get; init; } = [];
     public IReadOnlyList<DocxInlineTextBox> InlineTextBoxes { get; init; } = [];
+    public IReadOnlyList<DocxEquation> Equations { get; init; } = [];
     public IReadOnlyList<DocxFieldReference> FieldReferences { get; init; } = [];
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
