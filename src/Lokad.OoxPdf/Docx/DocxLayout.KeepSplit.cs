@@ -437,7 +437,10 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         int? pageNumber,
         double paragraphSpacingScale,
-        bool scaleExactBodyAdvances)
+        bool scaleExactBodyAdvances,
+        double availableHeight,
+        bool allowAutomaticMinimumGridPlacement,
+        CancellationToken cancellationToken)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -470,7 +473,7 @@ internal sealed partial class DocxLayoutEngine
             if (next is DocxTableElement nextTable)
             {
                 height += paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale;
-                height += EstimateFirstTableRowHeight(nextTable.Table);
+                height += EstimateFirstTableRowHeight(nextTable.Table, availableHeight - height);
                 firstTableRowCount++;
             }
 
@@ -479,7 +482,7 @@ internal sealed partial class DocxLayoutEngine
 
         return new DocxKeepBlockEstimate(height, paragraphCount, firstTableRowCount);
 
-        double EstimateFirstTableRowHeight(DocxTable table)
+        double EstimateFirstTableRowHeight(DocxTable table, double remainingHeight)
         {
             DocxTableRow? row = table.Rows.FirstOrDefault();
             if (row is null)
@@ -487,15 +490,15 @@ internal sealed partial class DocxLayoutEngine
                 return 0d;
             }
 
-            DocxResolvedTableGrid grid = ResolveTableGrid(table, x: 0d, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, null);
-            double[] cellWidths = GetTableRowCellWidths(row, grid.EffectiveColumns, grid.Scale);
-            double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
-            double contentHeight = row.Cells
-                .Select((cell, columnIndex) => MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, null, paragraphSpacingScale: paragraphSpacingScale).FullHeight)
-                .DefaultIfEmpty(0d)
-                .Max();
-            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow: table.Rows.Count == 1,
-                declaredBottomMarginAdvance: ResolveAlignedMinimumRowBottomMargin(table, row, textMeasurer, paragraphSpacingScale, contentHeight));
+            // Use the same complete-frame admission and occupied row extent as
+            // body layout. Fragmented/complex tables keep that frame's fallback.
+            DocxTableLayoutFrame frame = CreateTableLayoutFrame(table,
+                tableIndex: -1, sourceBlockIndex: -1, x: 0d, availableWidth,
+                pageContentHeight: double.MaxValue / 4d, textMeasurer, defaultTabStopPoints,
+                cancellationToken, pageNumber, pageCount: null, paragraphSpacingScale,
+                adjustAlignedMinimumMargins: true, alignedMinimumAvailableHeight: Math.Max(0d, remainingHeight),
+                allowAutomaticMinimumGridPlacement: allowAutomaticMinimumGridPlacement);
+            return frame.RowHeights[0];
         }
     }
 

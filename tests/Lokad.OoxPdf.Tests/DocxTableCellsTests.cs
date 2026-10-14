@@ -1606,6 +1606,59 @@ internal static class DocxTableCellsTests
         }
     }
 
+    public static void DocxKeptMinimumPictureRowUsesTheAdmittedOccupiedFrame()
+    {
+        foreach ((double available, int page) in new[] { (68d, 2), (76d, 1), (90d, 1) })
+        {
+            var layout = CreateKeptMinimumPictureLayout(available);
+            int headingPage = Array.FindIndex(layout.Pages.ToArray(), p => p.Items.OfType<DocxTextLineLayout>()
+                .Any(line => line.Text == "Keep")) + 1;
+            int rowPage = Array.FindIndex(layout.Pages.ToArray(), p => p.Items.OfType<DocxTableRowLayout>().Any()) + 1;
+            TestAssert.Equal(page, headingPage);
+            TestAssert.Equal(page, rowPage);
+        }
+    }
+
+    public static void DocxKeptMinimumPictureRowRetainsIncompleteFrameFallbacks()
+    {
+        foreach (string variant in new[] { "header", "rich", "two-rows" })
+        {
+            var layout = CreateKeptMinimumPictureLayout(76d, variant);
+            TestAssert.True(!layout.Pages[0].Items.OfType<DocxTableRowLayout>().Any(),
+                "Unqualified or incomplete table frames preserve the existing kept-row fallback: " + variant);
+            TestAssert.True(!layout.Pages[0].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Keep"),
+                "The heading stays with the first row under fallback admission.");
+        }
+    }
+
+    private static DocxLayout CreateKeptMinimumPictureLayout(double available, string variant = "")
+    {
+        var metrics = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
+        DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Intro", 12d, 12d) with
+        {
+            SpacingBeforePoints = 0d, SpacingAfterPoints = 180d - 12d - available,
+            Spacing = DocxParagraphSpacing.Empty with { LineValue = "240", LineRuleValue = "exact" }
+        };
+        DocxParagraph heading = DocxTests.CreateDocxLayoutParagraph("Keep", 12d, 14d) with
+        {
+            LineSpacingPoints = null, SpacingBeforePoints = 0d, SpacingAfterPoints = 0d,
+            KeepRules = DocxParagraphKeepRules.Empty with { KeepNext = true }
+        };
+        DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Short" + (variant == "rich" ? "\n" : ""), 12d, 24d) with
+        {
+            SpacingBeforePoints = 0d, SpacingAfterPoints = 6d,
+            Spacing = DocxParagraphSpacing.Empty with { LineValue = "480", LineRuleValue = "atLeast" },
+            Images = [new DocxInlineImage(18d, 48d, "image/png", [], null) { SourceRunIndex = 1 }]
+        };
+        var cell = new DocxTableCell("", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)
+            { BodyElements = [new DocxParagraphElement(paragraph)] };
+        var row = new DocxTableRow([cell], null) { IsHeader = variant == "header" };
+        var table = new DocxTable(null, [120d], variant == "two-rows" ? [row, row] : [row]);
+        DocxDocument document = DocxTests.CreateLayoutTestDocument(
+            [new DocxParagraphElement(filler), new DocxParagraphElement(heading), new DocxTableElement(table)], [table]);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, metrics, CancellationToken.None);
+    }
+
     public static void DocxTableMinimumPicturesRetainIncompleteAndComplexOwnershipFallbacks()
     {
         var measurer = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());

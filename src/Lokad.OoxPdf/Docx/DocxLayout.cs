@@ -1365,11 +1365,19 @@ internal sealed partial class DocxLayoutEngine
             }
             if (textMeasurer is not null &&
                 HasPageContent() &&
-                ShouldKeepParagraphBlockTogether(paragraph) &&
-                cursorY - EstimateKeptParagraphBlock(document.BodyElements, elementIndex, width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale, scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1).Height <= Math.Max(ParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex)))
+                ShouldKeepParagraphBlockTogether(paragraph))
             {
-                AdvanceColumnOrPage();
-                RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                double keepBottom = Math.Max(ParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex));
+                DocxKeepBlockEstimate keepEstimate = EstimateKeptParagraphBlock(document.BodyElements, elementIndex,
+                    width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
+                    scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
+                    availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
+                    cancellationToken);
+                if (cursorY - keepEstimate.Height <= keepBottom)
+                {
+                    AdvanceColumnOrPage();
+                    RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                }
             }
 
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
