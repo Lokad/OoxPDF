@@ -3420,3 +3420,27 @@ as rejected evidence. Arial11, aligned-position and prior SVG residuals remain
 open. The preceding2f8e730b CI milestone passed Windows2684/Ubuntu417 methods and
 source Release/package/tool gates; rendering continues during CI for the push.
 Safe managed0.1.5/release deferral and all existing bounds/work/publication remain.
+
+
+## RV06-L262: shared cell vertical-alignment space
+
+Runtime **3abbe52a** shares padded-cell free-space ownership between text and
+drawing paths. Natural/exact slots account their baseline inset in used height;
+minimum/mixed-leading frames retain separately reserved headroom. A blanket
+inset-removal prototype was rejected after13 prior cases regressed. Thirty-six
+Word controls qualify16 improvements/20 exact guards, preserving every earlier
+public aligned-cell minimum/margin/border/grid output. Eighty-four font programs,
+2384 glyphs and594 horizontal text/font/encoding/kerning/page states remain exact.
+Seven Office PDF byte variants retain identical rasters/text geometry. Prior
+clipped text-operation differences remain historical partial scope.
+
+One frozen artifact passes94 capability methods and55 additional exact PDFs.
+Root verifies399 sources,31 fixtures and17 assets plus four matching CLI smoke
+PDFs with no rebuild or repeated suite/corpus. Strict Release has zero warnings/
+errors. Four new cases validate in475 cases/11 families: two picture gates pass,
+two text foreground-recall0.982529 cases remain needs-review against0.99.
+Minimum-leading image placement and other small typography/SVG gaps remain open.
+No thresholds or font/size/document-ID qualifiers change. Prior128d778f CI passed
+Windows2686/portable Ubuntu417 methods plus source Release/package/tool gates;
+rendering continues during CI for the push. Safe managed0.1.5/release deferral
+and all existing bounds/cancellation/work/cache/staging/publication remain.
