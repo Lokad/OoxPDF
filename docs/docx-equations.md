@@ -58,13 +58,19 @@ equation page assignments and emitted font sizes. Font MATH scaling, downward
 half-point nominal rounding and the PDF export grid are resolved separately;
 the `ssty` glyphs match independent font inspection. Glyph-to-Unicode ownership
 keeps alternate subsets distinct while retaining canonical subset identities.
-Horizontal residuals reach 0.53 pt and descender/subscript vertical residuals
+Before corner kerning, horizontal residuals reached 0.53 pt; descender/subscript vertical residuals
 previously reached 1.14 pt. The shared distinction between ordinary glyphs and
 composed or font-declared extended bases reduces that descender control to
 0.40 pt; seven descender controls improve and ten protected script/composed
 controls stay exact. Default preceding prose retains a separate spacing residual.
-These results remain approximate at unchanged visual thresholds. Math kerning,
-argument controls, inline/nested structures and wider owners remain staged,
+Shared corner kerning now reads signed font corrections at two heights. Word
+contrasts favor the greater corner sum, while the OpenType overview describes
+the minimum. This deliberate Office behavior reduces the ordinary script
+controls' maximum horizontal residual to 0.20 pt; composed boxes retain their
+previous behavior. Six new lower/upper contrasts and 624 independent font
+queries support the rule. Small raster trades remain recorded for 8 pt, default
+prose and q controls; all visual thresholds are unchanged.
+These results remain approximate. Argument controls, inline/nested structures and wider owners remain staged,
 with their source structure preserved.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
