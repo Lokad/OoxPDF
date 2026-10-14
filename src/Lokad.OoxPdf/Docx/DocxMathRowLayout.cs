@@ -13,7 +13,7 @@ internal static class DocxMathRowLayout
     private sealed record Atom(DocxMathRun Run, Rune Source, Rune Render, AtomKind Kind);
 
     public static bool TryMeasure(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
-        CancellationToken token, out DocxMathBox? box, out string? fallback)
+        CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false)
     {
         box = null;
         if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback)) { return false; }
@@ -28,8 +28,16 @@ internal static class DocxMathRowLayout
             if (resource is null) { fallback = "MissingMathFont"; return false; }
             var font = resource.Font.Font;
             double size = atom.Run.Text.FontSize;
+            if (scriptLevel != 0)
+            {
+                if (!DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, scriptLevel, out size))
+                { fallback = "MissingMathScriptScale"; return false; }
+            }
+            else if (exportFontSize) { size = OfficePdfTextEmissionProfile.FontSize(size); }
             if (!double.IsFinite(size) || size <= 0d) { fallback = "InvalidMathFontSize"; return false; }
             ushort glyph = font.MapCodePoint(atom.Render.Value);
+            if (scriptLevel != 0 && !font.TryGetMathScriptGlyph(glyph, scriptLevel, token, out glyph))
+            { fallback = "UnsupportedMathScriptGlyph"; return false; }
             if (glyph == 0) { fallback = "MissingMathGlyph"; return false; }
             if (!resource.Font.TryGetEncodedCid(glyph, out ushort cid)) { fallback = "MissingMathEncoding"; return false; }
             if (!font.TryGetMathItalicCorrection(glyph, out short italic)) { fallback = "InvalidMathGlyphMetrics"; return false; }

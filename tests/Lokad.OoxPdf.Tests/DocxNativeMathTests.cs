@@ -25,7 +25,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeMathUnsupportedStructuredRowsKeepTheirFallback()
     {
         RequireMathFont();
-        foreach ((string kind, string placement) in new[] { ("scripts", "after"), ("fraction", "inline") })
+        foreach ((string kind, string placement) in new[] { ("scripts", "inline"), ("fraction", "inline") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = Renderer().RenderBlankPages(Fixture(kind, placement), diagnostics.Add, CancellationToken.None).Single();
@@ -33,6 +33,63 @@ internal static class DocxNativeMathTests
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
             TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
         }
+    }
+
+    public static void DocxNativeDisplayScriptsPaintDistinctBaseAndScriptRoles()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(Fixture("scripts", "after"), diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("xi2", text);
+        TestAssert.Contains("Following prose.", text);
+        TestAssert.Contains(" 8.52 Tf", page.Content);
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+            "Painted source roles and script-style glyphs must report native approximate math.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "A fully painted display script cannot report ignored source content.");
+    }
+
+    public static void DocxNativeDisplayScriptsOwnTheirSelectedVariantSubsetMappings()
+    {
+        RequireMathFont();
+        PdfPage page = Renderer().RenderBlankPages(Fixture("scripts", "after"), null, CancellationToken.None).Single();
+        PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
+        foreach (int point in new[] { 0x1D456, (int)'2' })
+        {
+            ushort normal = resource.Font.Font.MapCodePoint(point);
+            TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(normal, 1, CancellationToken.None, out ushort chosen),
+                "Native script roles must resolve their source font's script-style glyph.");
+            TestAssert.True(resource.Font.TryGetEncodedCid(chosen, out ushort cid), "The selected variant must own a published subset CID.");
+            TestAssert.Equal(point, resource.Font.UnicodeByCid[cid]);
+        }
+    }
+
+    public static void DocxNativeDisplayIndividualScriptsRetainTheirDistinctMeaning()
+    {
+        RequireMathFont();
+        foreach ((string name, string expected) in new[] { ("docx-omml-script-sub12", "xi"), ("docx-omml-script-sup12", "x2") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture(name), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(expected, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
+                "Single source-script roles must report their actual native painting.");
+        }
+    }
+
+    public static void DocxNativeDisplayScriptFrameAdmitsItsFollowingProseAtTheBodyBoundary()
+    {
+        RequireMathFont();
+        DocxDocument document = NamedFixture("docx-omml-script-boundary12");
+        DocxRenderer renderer = Renderer();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("xi2", text);
+        TestAssert.Contains("Following prose.", text);
+        var tail = renderer.InspectTextEmission(document).Lines.Last(line => line.SourceBlockIndex == 7);
+        TestAssert.True(tail.Segments.All(segment => segment.BaselineY >= document.MarginBottomPoints),
+            "The shared script frame must admit following prose without crossing the source body boundary.");
     }
 
     public static void DocxNativeDisplayFractionPaintsDistinctSourceRolesAndStoredRule()

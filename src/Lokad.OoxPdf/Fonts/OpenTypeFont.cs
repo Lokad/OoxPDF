@@ -10,6 +10,7 @@ internal sealed partial class OpenTypeFont
     private readonly CmapFormat? cmap;
     private readonly ushort[] advances;
     private readonly IReadOnlyDictionary<uint, short> kerningPairs;
+    private readonly OpenTypeMathScriptStyles mathScriptStyles;
 
     private OpenTypeFont(
         byte[] bytes,
@@ -24,7 +25,8 @@ internal sealed partial class OpenTypeFont
         CmapFormat? cmap,
         ushort[] advances,
         IReadOnlyDictionary<uint, short> kerningPairs,
-        string scalerTag)
+        string scalerTag,
+        OpenTypeMathScriptStyles mathScriptStyles)
     {
         this.bytes = bytes;
         this.tables = tables;
@@ -39,6 +41,7 @@ internal sealed partial class OpenTypeFont
         this.cmap = cmap;
         this.advances = advances;
         this.kerningPairs = kerningPairs;
+        this.mathScriptStyles = mathScriptStyles;
     }
 
     public string ScalerTag { get; }
@@ -127,7 +130,10 @@ internal sealed partial class OpenTypeFont
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken);
-        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, hhea, post, cmap, advances, kerningPairs, scalerTag);
+        OpenTypeMathScriptStyles mathScripts = tables.ContainsKey("MATH") && tables.TryGetValue("GSUB", out TableRecord gsub)
+            ? OpenTypeMathScriptStyles.Read(bytes.AsMemory(gsub.Offset, gsub.Length), cancellationToken)
+            : OpenTypeMathScriptStyles.None;
+        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, hhea, post, cmap, advances, kerningPairs, scalerTag, mathScripts);
 
         }
         catch (InvalidDataException)

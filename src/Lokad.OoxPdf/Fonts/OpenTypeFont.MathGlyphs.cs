@@ -35,7 +35,7 @@ internal sealed partial class OpenTypeFont
         int coverageOffset = U16(italic, 0), count = U16(italic, 2);
         int recordsEnd = 4 + count * 4;
         if (italic.Length < recordsEnd || coverageOffset < recordsEnd || italic.Length - coverageOffset < 4) { return false; }
-        if (!TryGetMathCoverageIndex(italic.Slice(coverageOffset), glyph, out int index)) { return false; }
+        if (!TryGetCoverageIndex(italic.Slice(coverageOffset), glyph, out int index)) { return false; }
         if (index < 0) { return true; }
         if (index >= count) { return false; }
         correction = BinaryPrimitives.ReadInt16BigEndian(italic.Slice(4 + index * 4, 2));
@@ -44,9 +44,10 @@ internal sealed partial class OpenTypeFont
 
     private static ushort U16(ReadOnlySpan<byte> table, int offset) => BinaryPrimitives.ReadUInt16BigEndian(table.Slice(offset, 2));
 
-    private static bool TryGetMathCoverageIndex(ReadOnlySpan<byte> coverage, ushort glyph, out int index)
+    internal static bool TryGetCoverageIndex(ReadOnlySpan<byte> coverage, ushort glyph, out int index)
     {
         index = -1;
+        if (coverage.Length < 4) { return false; }
         int format = U16(coverage, 0), count = U16(coverage, 2);
         if (format is not (1 or 2)) { return false; }
         int stride = format == 1 ? 2 : 6;

@@ -32,26 +32,34 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources, CancellationToken token)
     {
         var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation)>();
-        var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, HashSet<int> Points)>();
+        var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
         foreach (DocxParagraphElement element in document.BodyElements.OfType<DocxParagraphElement>())
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = element.Paragraph;
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
-            if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRun> mathRuns)) { continue; }
+            if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
             bool valid = true;
-            foreach (DocxMathRun run in mathRuns)
+            foreach (DocxMathRunSource source in mathRuns)
             {
                 token.ThrowIfCancellationRequested();
+                DocxMathRun run = source.Run;
                 string family = run.ExplicitFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math";
                 FontFaceResolution resolution = resolver.Resolve(new FontRequest(family));
                 OpenTypeFont? font = LoadFont(resolution, fontCache, token);
                 if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }
                 var key = (resolution.Source.StableId, resolution.FontFaceIndex);
-                if (!groups.TryGetValue(key, out var group)) { group = (font, new HashSet<int>()); groups.Add(key, group); }
+                if (!groups.TryGetValue(key, out var group)) { group = (font, new Dictionary<ushort, int>()); groups.Add(key, group); }
                 DocxMathRowLayout.TryGetRenderCodePoints(new DocxMathRow([run]), token, out IReadOnlyList<int> points, out _);
-                group.Points.UnionWith(points);
+                foreach (int point in points)
+                {
+                    ushort glyph = font.MapCodePoint(point);
+                    if (glyph == 0 || source.ScriptLevel != 0 && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
+                    { valid = false; break; }
+                    if (!group.Glyphs.TryGetValue(glyph, out int existing) || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
+                }
+                if (!valid) { break; }
                 runKeys[run] = key;
             }
             if (valid) { candidates.Add((paragraph, equation)); }
@@ -60,7 +68,8 @@ internal sealed partial class DocxRenderer
         foreach (var group in groups)
         {
             token.ThrowIfCancellationRequested();
-            var resource = new PdfFontResource("Eq" + (fonts.Count + 1), PdfEmbeddedFont.Create(group.Value.Font, group.Value.Points, token));
+            var resource = new PdfFontResource("Eq" + (fonts.Count + 1), PdfEmbeddedFont.CreateForGlyphMappings(group.Value.Font,
+                group.Value.Glyphs.Select(pair => (pair.Key, pair.Value)), token));
             fonts.Add(group.Key, resource);
             resources.Add(resource);
         }

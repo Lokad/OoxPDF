@@ -5,7 +5,9 @@ namespace Lokad.OoxPdf.Docx;
 
 // Shared capability discovery and composition. Literal rows retain their
 // existing layout; one display fraction adds two literal child boxes and a rule.
-internal static class DocxMathLayout
+internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel);
+
+internal static partial class DocxMathLayout
 {
     public static bool TryGetLineMetrics(DocxMathBox box, CancellationToken token, out double above, out double height)
     {
@@ -27,12 +29,20 @@ internal static class DocxMathLayout
         return double.IsFinite(above) && double.IsFinite(height) && height > 0d;
     }
 
-    public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRun> runs)
+    public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
-        IReadOnlyList<DocxMathRow> rows = GetFraction(equation) is { } fraction
-            ? [fraction.Numerator, fraction.Denominator] : [equation.Content];
-        var result = new List<DocxMathRun>();
-        foreach (DocxMathRow row in rows)
+        var rows = new List<(DocxMathRow Row, int Level)>();
+        if (GetScripts(equation) is { } scripts)
+        {
+            rows.Add((scripts.Base, 0));
+            if (scripts.Subscript is { } sub) { rows.Add((sub, 1)); }
+            if (scripts.Superscript is { } sup) { rows.Add((sup, 1)); }
+        }
+        else if (GetFraction(equation) is { } fraction)
+        { rows.Add((fraction.Numerator, 0)); rows.Add((fraction.Denominator, 0)); }
+        else { rows.Add((equation.Content, 0)); }
+        var result = new List<DocxMathRunSource>();
+        foreach ((DocxMathRow row, int level) in rows)
         {
             if (!DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _)) { runs = []; return false; }
             var pending = new Stack<DocxMathNode>();
@@ -40,7 +50,7 @@ internal static class DocxMathLayout
             while (pending.TryPop(out DocxMathNode? node))
             {
                 token.ThrowIfCancellationRequested();
-                if (node is DocxMathRun run) { result.Add(run); }
+                if (node is DocxMathRun run) { result.Add(new(run, level)); }
                 else if (node is DocxMathRow sequence)
                     for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
             }
@@ -52,6 +62,8 @@ internal static class DocxMathLayout
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback)
     {
+        if (GetScripts(equation) is { } scripts)
+            return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;
@@ -105,7 +117,10 @@ internal static class DocxMathLayout
     }
 
     private static DocxMathFraction? GetFraction(DocxEquation equation) =>
-        equation.Display && equation.Content.PropertiesXml.Count == 0 && equation.Content.Children.Count == 1 &&
-        equation.Content.Children[0] is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
+        GetStandaloneChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" } fraction
             ? fraction : null;
+
+    private static DocxMathNode? GetStandaloneChild(DocxEquation equation) =>
+        equation.Display && equation.Content.PropertiesXml.Count == 0 && equation.Content.Children.Count == 1
+            ? equation.Content.Children[0] : null;
 }

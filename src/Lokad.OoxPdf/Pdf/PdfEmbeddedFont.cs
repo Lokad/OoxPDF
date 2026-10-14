@@ -50,9 +50,9 @@ internal sealed class PdfEmbeddedFont
 
     public bool UsesSubsetFontProgram => subsetFontBytes is not null;
 
-    // Subset CID assignment is a dense remap of exactly this codepoint set, so two
-    // subsets of one file are mutually unintelligible unless their sets match.
-    // Keying resources by set keeps Merge to identical sets, where the remap agrees.
+    // Subset CIDs belong to the selected glyph mapping. Canonical character
+    // mappings retain their established identity; alternate glyphs also include
+    // glyph-to-Unicode ownership so distinct remaps cannot alias resources.
     public string CodepointSetHash { get; }
 
     public string ResourceKey { get; }
@@ -132,6 +132,22 @@ internal sealed class PdfEmbeddedFont
         return CreateFromOriginalGlyphs(items[0].Font, unicodeByOriginalGlyph, cancellationToken);
     }
 
+    internal static PdfEmbeddedFont CreateForGlyphMappings(OpenTypeFont font,
+        IEnumerable<(ushort Glyph, int Unicode)> mappings, CancellationToken token)
+    {
+        OoxConversionBudget.Current?.ChargeFontWork(1);
+        var owned = new SortedDictionary<ushort, int>();
+        foreach ((ushort glyph, int unicode) in mappings)
+        {
+            token.ThrowIfCancellationRequested();
+            if (glyph == 0 || glyph >= font.GlyphCount || !Rune.IsValid(unicode))
+                throw new ArgumentException("Explicit font mappings require a valid source glyph and Unicode scalar.", nameof(mappings));
+            if (!owned.TryGetValue(glyph, out int existing) || existing != 0x20 && unicode == 0x20) { owned[glyph] = unicode; }
+        }
+        token.ThrowIfCancellationRequested();
+        return CreateFromOriginalGlyphs(font, owned, token);
+    }
+
     private static PdfEmbeddedFont CreateFromOriginalGlyphs(
         OpenTypeFont font,
         IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
@@ -168,7 +184,7 @@ internal sealed class PdfEmbeddedFont
 
         // the codepoint-set hash was computed twice per subset (once for the
         // base-font tag, once in the constructor). Compute it once here and share it.
-        string setHash = ComputeCodepointSetHash(sortedGlyphs);
+        string setHash = ComputeResourceMappingHash(font, sortedGlyphs);
         string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
         var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset);
         // R06.2: admit the retained font program at construction. Identical-merge
@@ -226,6 +242,21 @@ internal sealed class PdfEmbeddedFont
         }
 
         return Convert.ToHexString(SHA256.HashData(bytes)).Substring(0, 12);
+    }
+
+    private static string ComputeResourceMappingHash(OpenTypeFont font, SortedDictionary<ushort, int> mappings)
+    {
+        string canonical = ComputeCodepointSetHash(mappings);
+        if (mappings.All(pair => font.MapCodePoint(pair.Value) == pair.Key)) { return canonical; }
+        using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Span<byte> record = stackalloc byte[6];
+        foreach ((ushort glyph, int unicode) in mappings)
+        {
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(record, glyph);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(record.Slice(2), unicode);
+            hash.AppendData(record);
+        }
+        return canonical + "G" + Convert.ToHexString(hash.GetHashAndReset()).Substring(0, 12);
     }
 
     internal static string CreateSubsetTag(string fontHash, string codepointSetHash)

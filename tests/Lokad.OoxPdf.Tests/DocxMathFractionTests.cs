@@ -71,9 +71,9 @@ internal static class DocxMathFractionTests
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
         DocxEquation equation = Fraction();
-        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out IReadOnlyList<DocxMathRun> runs),
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out IReadOnlyList<DocxMathRunSource> runs),
             "Display fractions must discover their source runs without flattening numerator/denominator roles.");
-        TestAssert.Equal("A+BC", string.Concat(runs.Select(run => run.Text.Text)));
+        TestAssert.Equal("A+BC", string.Concat(runs.Select(source => source.Run.Text.Text)));
         TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Display = false }, CancellationToken.None, out _),
             "Unqualified inline script-size behavior keeps the whole fraction fallback.");
         DocxMathFraction fraction = (DocxMathFraction)equation.Content.Children[0];
