@@ -483,11 +483,25 @@ internal sealed partial class DocxLayoutEngine
 
         return new DocxKeepBlockEstimate(height, paragraphCount, firstTableRowCount);
 
-        double ParagraphHeight(DocxParagraph value) =>
-            mathParagraphs is not null && mathParagraphs.TryGetValue(value, out DocxPreparedMathParagraph? math) &&
-            FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale)
-                ? math.LineHeight * paragraphSpacingScale
-                : EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
+        double ParagraphHeight(DocxParagraph value)
+        {
+            double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
+            if (mathParagraphs is null || !mathParagraphs.TryGetValue(value, out DocxPreparedMathParagraph? math)) { return regular; }
+            if (math.Equation.Display)
+                return FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale) ? math.LineHeight * paragraphSpacingScale : regular;
+            double size = GetParagraphFontSize(value);
+            double firstWidth = Math.Max(1d, availableWidth - GetParagraphFirstLineTextStartOffset(value, size, textMeasurer, paragraphSpacingScale) - GetParagraphRightInset(value, paragraphSpacingScale));
+            double nextWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(value, paragraphSpacingScale) - GetParagraphRightInset(value, paragraphSpacingScale));
+            IReadOnlyList<DocxTextSpan> spans = CreateTextSpans(value.Runs, pageNumber, null);
+            DocxWrappedTextLine[] lines = WrapTextLines(spans, firstWidth, nextWidth, size, textMeasurer,
+                ScaleTabStopPositions(value.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale,
+                ShouldAllowCharacterLevelWordWrap(value), pageNumber, cancellationToken).ToArray();
+            if (CreateMidLineMath(value, math, spans, lines, firstWidth, nextWidth, size, textMeasurer, paragraphSpacingScale,
+                defaultTabStopPoints, pageNumber ?? 1) is null) { return regular; }
+            double lineHeight = ResolveLineHeightProfile(value, size, textMeasurer).LineHeight;
+            var expansion = ResolveInlineMathExpansion(math, size, lineHeight, lineHeight, paragraphSpacingScale, IsExactLineSpacing(value.EffectiveProperties));
+            return regular + expansion.Above + expansion.Below;
+        }
 
         double EstimateFirstTableRowHeight(DocxTable table, double remainingHeight)
         {

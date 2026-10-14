@@ -22,7 +22,7 @@ internal sealed partial class DocxRenderer
         if (painted.Count != 0)
         {
             sink(new OoxPdfDiagnostic("DOCX_APPROXIMATED_EQUATION", OoxPdfSeverity.Warning,
-                "Native DOCX display equations were rendered with approximate mathematical layout.", document.MainPartName,
+                "Native DOCX equations were rendered with approximate mathematical layout.", document.MainPartName,
                 SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Approximated"));
         }
     }
@@ -38,7 +38,7 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = element.Paragraph;
-            DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph);
+            DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
             if (equation is null || !DocxMathRowLayout.TryGetRenderCodePoints(equation.Content, token, out _, out _)) { continue; }
             bool valid = true;
             foreach (DocxMathRun run in equation.Content.Children.OfType<DocxMathRun>())

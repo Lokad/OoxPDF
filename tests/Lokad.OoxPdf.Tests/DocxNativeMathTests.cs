@@ -22,10 +22,10 @@ internal static class DocxNativeMathTests
         TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"), "A fully painted source part must not report ignored mathematics.");
     }
 
-    public static void DocxNativeMathUnsupportedInlineAndStructuredRowsKeepTheirFallback()
+    public static void DocxNativeMathUnsupportedStructuredRowsKeepTheirFallback()
     {
         RequireMathFont();
-        foreach ((string kind, string placement) in new[] { ("literal", "inline"), ("scripts", "after"), ("fraction", "after") })
+        foreach ((string kind, string placement) in new[] { ("scripts", "after"), ("fraction", "after") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = Renderer().RenderBlankPages(Fixture(kind, placement), diagnostics.Add, CancellationToken.None).Single();
@@ -33,6 +33,46 @@ internal static class DocxNativeMathTests
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
             TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
         }
+    }
+
+    public static void DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline()
+    {
+        RequireMathFont();
+        DocxDocument document = Fixture("literal", "inline");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("α+β=γ", text);
+        TestAssert.Contains("Before formula:", text);
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"), "Fitting inline content must report native approximate painting.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"), "Painted inline content cannot report ignored math.");
+    }
+
+    public static void DocxNativeInlineMathMovesFollowingProsePastItsMeasuredBox()
+    {
+        RequireMathFont();
+        DocxDocument document = NamedFixture("docx-omml-inline-middle12");
+        DocxRenderer renderer = Renderer();
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.Contains("α+β=γ", text);
+        TestAssert.Contains(" after formula.", text);
+        var segments = renderer.InspectTextEmission(document).Lines[0].Segments;
+        double begin = segments[0].X;
+        TestAssert.True(segments.Where(segment => !segment.IsTerminalLineSpace).Max(segment => segment.X) > begin + 120d,
+            "Prose after a source-owned formula must move beyond its mathematical box.");
+        TestAssert.True(segments.Where(segment => segment.IsTerminalLineSpace).All(segment => segment.X > begin + 200d),
+            "The paragraph terminal cannot overlap inline mathematical content or following prose.");
+    }
+
+    public static void DocxNativeInlineMathOverfullRowsRetainTheWholeIgnoredFallback()
+    {
+        RequireMathFont();
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-inline-overfull12"), diagnostics.Add, CancellationToken.None).Single();
+        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"), "Formula-driven wrapping retains an explicit fallback until qualified.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "An overfull row cannot claim painted math.");
+        TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "Fallback output cannot publish unused math fonts.");
     }
 
     public static void DocxNativeMathSettingsAndExplicitRunFacesRemainDistinct()
@@ -78,6 +118,8 @@ internal static class DocxNativeMathTests
     private static DocxRenderer Renderer() => new(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
     private static DocxDocument Fixture(string kind, string placement) => DocxTests.ReadDocx(Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", $"docx-omml-{kind}-{placement}.docx")), OoxPdfDocxMarkupMode.Final);
+    private static DocxDocument NamedFixture(string name) => DocxTests.ReadDocx(Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name + ".docx")), OoxPdfDocxMarkupMode.Final);
     private static void RequireMathFont()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

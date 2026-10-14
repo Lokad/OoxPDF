@@ -78,6 +78,7 @@ internal sealed record DocxTextLineLayout(
     public double? BodyLineBoxBaselineInsetPoints { get; init; }
     public double? BodyLineBoxHeightPoints { get; init; }
     public bool UsesUniformBodyTypographicBaseline { get; init; }
+    public double? InlineObjectEndOffsetX { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(

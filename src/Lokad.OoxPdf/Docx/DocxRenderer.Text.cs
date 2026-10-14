@@ -585,7 +585,7 @@ internal sealed partial class DocxRenderer
         DocxTextSegmentLayout terminalSegment = segments[^1];
         if (!ShouldUseWordCompatibleAllMarkupEmittedTerminalAdvance(segments, line, fontScale, useWordCompatibleTextProfile))
         {
-            return terminalSegment.X + terminalSegment.Width + xOffset;
+            return IncludeInlineObjectEnd(terminalSegment.X + terminalSegment.Width + xOffset);
         }
 
         double? emittedEndX = TryResolveWordCompatibleAllMarkupTextEmissionEndX(
@@ -596,7 +596,10 @@ internal sealed partial class DocxRenderer
             xOffset,
             useWordCompatibleTextProfile,
             cancellationToken);
-        return emittedEndX ?? terminalSegment.X + terminalSegment.Width + xOffset;
+        return IncludeInlineObjectEnd(emittedEndX ?? terminalSegment.X + terminalSegment.Width + xOffset);
+
+        double IncludeInlineObjectEnd(double textEnd) => line.InlineObjectEndOffsetX is double objectEnd
+            ? Math.Max(textEnd, line.X + objectEnd + xOffset) : textEnd;
     }
 
     private static double? TryResolveWordCompatibleAllMarkupTextEmissionEndX(
