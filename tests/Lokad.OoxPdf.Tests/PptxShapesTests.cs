@@ -1400,7 +1400,7 @@ internal static class PptxShapesTests
         TestAssert.Contains("Q", pdf);
     }
 
-    public static void PptxSyntheticCenteredShapeAutoFitWrapsBeforeRightOverflow()
+    public static void PptxSyntheticCenteredShapeAutoFitCentersVisibleTextAndPreservesTrailingSpace()
     {
         string cambria = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc");
         if (!File.Exists(cambria))
@@ -1443,11 +1443,22 @@ internal static class PptxShapesTests
 
         TestAssert.True(lines.Length >= 2, $"Expected wrapped centered shape-autofit text, got {lines.Length} line.");
         double textRight = flowFrame.TextX + flowFrame.TextWidth;
-        int[] lineLengths = lines.Select(line => line.Spans.Sum(span => span.Text.Length)).ToArray();
-        TestAssert.True(lineLengths[0] < lineLengths[1],
-            $"Centered shape-autofit wrapping should break before the almost-fitting word; got line lengths {string.Join(",", lineLengths)} with textRight={textRight.ToString("0.###", CultureInfo.InvariantCulture)}, ends={string.Join(",", lines.Select(line => line.EndX.ToString("0.###", CultureInfo.InvariantCulture)))}.");
-        TestAssert.True(lines[0].StartX > flowFrame.TextX + 5d,
-            "Expected the first centered shape-autofit line to be re-centered after wrapping instead of filling the box through tolerated overflow.");
+        // PowerPoint keeps the fitting word and its trailing space on the first
+        // line. The space may extend outside the frame; visible text stays centered.
+        foreach (PptxTextLineLayoutSnapshot line in lines)
+        {
+            double visibleEndX = line.Spans.SelectMany(span => span.Atoms)
+                .Where(atom => atom.Draw && atom.Kind is not ("Space" or "HiddenAdvance"))
+                .Max(atom => atom.X + atom.Width);
+            TestAssert.True(visibleEndX <= textRight + 0.01d,
+                $"Centered shape-autofit visible text must fit the frame; visibleEnd={visibleEndX}, textRight={textRight}.");
+            TestAssert.True(Math.Abs((line.StartX - flowFrame.TextX) - (textRight - visibleEndX)) < 0.01d,
+                "Expected equal margins around the visible centered text, excluding trailing space.");
+        }
+        PptxTextAtomLayoutSnapshot trailingSpace = lines[0].Spans.SelectMany(span => span.Atoms)
+            .Last(atom => atom.Kind == "Space");
+        TestAssert.True(Math.Abs(lines[0].EndX - (trailingSpace.X + trailingSpace.Width)) < 0.01d,
+            "Expected the wrapped line to preserve its trailing space for text emission.");
     }
 
     public static void PptxSyntheticVerticalShapeAutoFitPrefersSingleLine()
