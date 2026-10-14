@@ -220,6 +220,17 @@ root smoke PDFs qualify one artifact. Three public cases keep their review
 gates. Other unavailable non-math styles and unsupported decorations retain
 explicit fallback; the global PDF italic-emission rule is unchanged.
 
+Composed scripts and display centering now distinguish logical advance from
+occupied slanted ink. The box retains both widths, preserving fit/clipping
+extents while Word-compatible centering uses text advance. Eight composition
+controls qualify two sheared-script improvements and six exact real-face,
+fraction and tight-inline controls. Horizontal differences fall from about
+0.75–0.78 pt to below 0.17 pt on the corrected scripts. Tight inline examples
+retain their separate inherited vertical differences up to 2.56 pt. Twenty-two
+focused methods, 37 exact style/metric neighbors and four matching root smoke
+PDFs qualify one artifact; the previous default-face style controls stay exact.
+Two public script cases retain their review gates.
+
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions
 in both inline and display positions:
