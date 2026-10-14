@@ -95,10 +95,23 @@ with position differences below 0.05 pt horizontally and 0.40 pt vertically.
 Forty-four focused methods cover typed source properties, native painting and
 existing math invariants. Nineteen selected capability neighbors remain byte
 identical; four root CLI smoke outputs reuse the same qualified artifact.
-Unknown, duplicate or malformed controls and nonzero size increments retain
-the whole-equation fallback. Layout does not reparse the retained raw XML.
-These results remain approximate at unchanged visual thresholds. Nonzero
-argument sizing, nested structures and wider owners remain staged.
+Unknown, duplicate or malformed controls retain the whole-equation fallback.
+Layout does not reparse the retained raw XML. An absent argument-size value
+also uses the documented neutral default.
+
+Signed argument-size increments now adjust supported subscript/superscript
+roles within the font's text, script and script-script styles. Parent metric
+ownership remains separate. Stored glyph identities drive corner kerning,
+keeping it consistent with the selected and embedded argument glyphs. Fourteen
+independent Word controls cover signed increments, paired/individual roles,
+12/20 pt sizes, operator spacing and neutral defaults: thirteen improve and one
+stays exact. Emitted sizes match Word; horizontal residuals are below 0.11 pt,
+while enlarged paired scripts retain vertical residuals up to 1.30 pt.
+Forty-six focused methods qualify one Release artifact, with 24 exact selected
+neighbors and four matching root CLI smoke outputs. No root rebuild or corpus
+replay is required. Three new public cases keep their original review gates.
+Nonzero controls on other row roles, unsupported formatting, nested structures
+and wider owners remain staged. These results remain approximate.
 
 The six `docx-omml-*` test inputs were authored with Lokad.DocxEdit 0.2.0 at
 revision `67e303117f3e51465f3da3d4971c357c091d407c`. They contain these expressions

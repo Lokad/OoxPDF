@@ -1,7 +1,7 @@
 {
   "id": "docx-math",
   "kind": "docx",
-  "description": "Native OMML mathematical structure and approximate body display/fitting inline literal rows; display/inline fractions and scripts with following-prose wrapping and neutral argument properties; operator breaking, nested structures, nonzero argument sizing and stories remain staged.",
+  "description": "Native OMML mathematical structure and approximate body display/fitting inline literal rows; display/inline fractions and scripts with following-prose wrapping, neutral properties and signed script argument sizing; operator breaking, nested structures, other argument roles and stories remain staged.",
   "support": {
     "minStructuralSimilarity": 0.985,
     "minForegroundRecall": 0.99
