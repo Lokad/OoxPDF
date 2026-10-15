@@ -66,9 +66,15 @@ internal static partial class DocxMathLayout
             foreach (var cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
+                if (cell.Children.Count == 0)
+                {
+                    if (IsHiddenEmptyMatrixCell(matrix, cell)) { continue; }
+                    runs = []; return false;
+                }
                 if (!AddBoxArgumentRows(cell))
                 { runs = []; return false; }
             }
+            if (rows.Count == 0) { runs = []; return false; }
             controlOwner = matrix;
         }
         else if (GetScripts(equation) is { } scripts)

@@ -7,6 +7,52 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixHiddenEmptyCellsKeepSlotsRowFramesAndFirstPaintedOwner()
+    {
+        var font = MathFont(withPlaceholder: true); var resource = Resource("Sparse", font, "BC"); var empty = new DocxMathRow([]);
+        var b = new DocxMathRow([Run("B")]); var c = new DocxMathRow([Run("C")]);
+        var matrix = new DocxMathMatrix([new([empty, b, empty]), new([c, empty, empty])]) { HidePlaceholdersValue = true };
+        TestAssert.True(DocxMathLayout.TryGetRuns(Equation(matrix), CancellationToken.None, out var runs) && runs.Count == 2 &&
+            ReferenceEquals(runs[0].ControlOwner, matrix) && runs[1].ControlOwner is null,
+            "An initial empty cell cannot take over the metric-only owner from the first painted run.");
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var box, out var reason,
+            resolveControlMetrics: _ => font), reason ?? "Expected sparse grid.");
+        var grid = TestAssert.NotNull(box); double bWidth = font.GetAdvanceWidth(font.MapCodePoint('B')) * 12d / font.UnitsPerEm;
+        double cWidth = font.GetAdvanceWidth(font.MapCodePoint('C')) * 12d / font.UnitsPerEm;
+        double placeholderWidth = font.GetAdvanceWidth(font.MapCodePoint(0x2B1A)) * 12d / font.UnitsPerEm;
+        double firstWidth = Math.Max(cWidth, placeholderWidth), secondWidth = Math.Max(bWidth, placeholderWidth);
+        TestAssert.True(grid.Glyphs.Count == 2 && grid.Rules.Count == 0 && Math.Abs(grid.AdvanceWidth - firstWidth - secondWidth - placeholderWidth - 24d) < 1e-9 &&
+            Math.Abs(grid.Glyphs[0].X - firstWidth - 12d - (secondWidth - bWidth) / 2d) < 1e-9 &&
+            Math.Abs(grid.Glyphs[1].X - (firstWidth - cWidth) / 2d) < 1e-9,
+            "Hidden cells retain metric-only dotted-square widths, including an empty column and default inter-column gaps.");
+        var separated = matrix with { Rows = [new([b, c]), new([empty, empty]), new([c, b])] };
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(separated), _ => resource, CancellationToken.None, out box, out reason,
+            resolveControlMetrics: _ => font), reason ?? "Expected empty internal row.");
+        grid = TestAssert.NotNull(box);
+        TestAssert.True(grid.Glyphs.Count == 4 && Math.Abs(grid.Glyphs[0].BaselineY - grid.Glyphs[^1].BaselineY -
+            2d * DocxLineMetrics.MeasureTypographicLineHeight(font, 12d)) < 1e-9,
+            "A hidden empty row retains one control-owned row frame without publishing placeholder glyphs.");
+    }
+
+    public static void MathFontMatrixHiddenEmptyCellsPreserveVisibilityFallbackCancellationAndWork()
+    {
+        var font = MathFont(withPlaceholder: true); var resource = Resource("Sparse", font, "B"); var empty = new DocxMathRow([]); var literal = new DocxMathRow([Run("B")]);
+        var matrix = new DocxMathMatrix([new([empty, empty, literal])]) { HidePlaceholdersValue = true };
+        foreach (var invalid in new[] { matrix with { HidePlaceholdersValue = null }, matrix with { HidePlaceholdersValue = false },
+            matrix with { Rows = [new([empty, empty, empty])] },
+            matrix with { Rows = [new([empty with { PropertiesXml = ["<future/>"] }, empty, literal])] } })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _) &&
+                !DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                "Visible placeholders, unknown empty-cell properties and wholly empty grids retain complete fallback.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var missing, out _,
+            resolveControlMetrics: _ => MathFont()) && missing is null, "Missing placeholder metrics cannot invent an empty width or publish partial cells.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(matrix), cancelled.Token, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(matrix), _ => resource,
+            CancellationToken.None, out _, out _, resolveControlMetrics: _ => font));
+    }
+
     public static void MathFontMatrixStructuredCellsTranslateChildRulesAndKeepControlMetrics()
     {
         var font = MathFont(); var resource = Resource("Structured", font, "BC");
@@ -198,7 +244,7 @@ internal static class DocxMathMatrixLayoutTests
     private static DocxMathMatrix Matrix(DocxMathRun[] first, DocxMathRun[] second) => new([new(first.Select(r => new DocxMathRow([r])).ToArray()), new(second.Select(r => new DocxMathRow([r])).ToArray())]);
     private static DocxEquation Equation(DocxMathMatrix matrix) => new(new([matrix]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
     private static PdfFontResource Resource(string name, OpenTypeFont font, string text) => new(name, PdfEmbeddedFont.Create(font, text.Select(c => (int)c), CancellationToken.None));
-    private static OpenTypeFont MathFont()
+    private static OpenTypeFont MathFont(bool withPlaceholder = false)
     {
         byte[] table = new byte[224]; BinaryPrimitives.WriteUInt16BigEndian(table, 1); BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(4), 10);
         BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(10), 73); BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(12), 50);
@@ -210,6 +256,17 @@ internal static class DocxMathMatrixLayoutTests
         Set(OpenTypeMathConstant.FractionNumeratorShiftUp, 500); Set(OpenTypeMathConstant.FractionDenominatorShiftDown, 400);
         Set(OpenTypeMathConstant.StackTopDisplayStyleShiftUp, 700); Set(OpenTypeMathConstant.StackBottomDisplayStyleShiftDown, 500);
         Set(OpenTypeMathConstant.StackTopShiftUp, 500); Set(OpenTypeMathConstant.StackBottomShiftDown, 400);
-        return OpenTypeFont.Load(TestFontBuilder.CreateMathFont(table));
+        byte[] bytes = TestFontBuilder.CreateMathFont(table);
+        if (withPlaceholder)
+        {
+            var cmap = TestFontBuilder.GetTableRange(bytes, "cmap");
+            int format12 = cmap.Offset + (int)BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(cmap.Offset + 16));
+            // Replace the unused accent singleton with a dotted-square mapping
+            // to the existing B outline; production font coverage is unchanged.
+            BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 28), 0x2B1A);
+            BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 32), 0x2B1A);
+            BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 36), TestFontBuilder.LoadTestFont().MapCodePoint('B'));
+        }
+        return OpenTypeFont.Load(bytes);
     }
 }

@@ -7,6 +7,9 @@ internal static partial class DocxMathLayout
 {
     private enum MatrixColumnAlignment { Center, Left, Right }
 
+    private static bool IsHiddenEmptyMatrixCell(DocxMathMatrix matrix, DocxMathRow cell) =>
+        matrix.HidePlaceholdersValue == true && cell.Children.Count == 0 && cell.HasSupportedProperties;
+
     private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token)
     {
         if (GetSingleSupportedChild(equation) is not DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix ||
@@ -64,6 +67,7 @@ internal static partial class DocxMathLayout
         { fallback = "UnsupportedMathMatrixColumns"; return false; }
         var widths = new double[columns]; var rowAbove = new double[matrix.Rows.Count]; var rowBelow = new double[matrix.Rows.Count];
         var cells = new List<DocxMathBox[]>(matrix.Rows.Count);
+        DocxMathBox? placeholder = null;
         double height = 0d;
         for (int r = 0; r < matrix.Rows.Count; r++)
         {
@@ -72,6 +76,27 @@ internal static partial class DocxMathLayout
             for (int c = 0; c < columns; c++)
             {
                 token.ThrowIfCancellationRequested();
+                if (IsHiddenEmptyMatrixCell(matrix, matrix.Rows[r].Cells[c]))
+                {
+                    OoxConversionBudget.Current?.ChargeSceneNodes(1);
+                    if (placeholder is null)
+                    {
+                        // Word retains the dotted-square placeholder's layout
+                        // metrics when its paint is hidden. The control remains
+                        // metric-only: no glyph mapping or PDF subset is needed.
+                        ushort glyph = font.MapCodePoint(0x2B1A);
+                        if (glyph == 0 || !font.TryGetGlyphBounds(glyph, out var bounds))
+                        { fallback = "MissingMathMatrixPlaceholderMetrics"; return false; }
+                        double scale = glyphSize / font.UnitsPerEm;
+                        double placeholderWidth = font.GetAdvanceWidth(glyph) * scale;
+                        if (!double.IsFinite(placeholderWidth) || placeholderWidth <= 0d)
+                        { fallback = "InvalidMathMatrixPlaceholderMetrics"; return false; }
+                        placeholder = new(placeholderWidth, Math.Max(0d, bounds.YMax * scale), Math.Max(0d, -bounds.YMin * scale), []);
+                    }
+                    measured[c] = placeholder; widths[c] = Math.Max(widths[c], placeholder.AdvanceWidth);
+                    rowAbove[r] = Math.Max(rowAbove[r], placeholder.AboveBaseline); rowBelow[r] = Math.Max(rowBelow[r], placeholder.BelowBaseline);
+                    continue;
+                }
                 if (!TryMeasureBoxArgument(equation with { Content = matrix.Rows[r].Cells[c], ParentFontSize = size },
                     resolveFont, font, size, token, out var cell, out fallback, neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary)) ||
                     cell is null || cell.Glyphs.Count == 0)

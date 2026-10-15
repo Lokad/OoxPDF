@@ -35,6 +35,8 @@ internal static partial class DocxMathParser
                 valid &= HasKnownValueProperty(property) && (value is null ||
                     uint.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out uint number) && number == 0);
             }
+            else if (property.Name == MathNamespace + "plcHide")
+            { valid &= HasKnownValueProperty(property) && HasBooleanValue((string?)property.Attribute(MathNamespace + "val")); }
             else { valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
         }
         int columns = rows[0].Cells.Count;
@@ -51,6 +53,7 @@ internal static partial class DocxMathParser
         DocxTextRun? text = control is null ? null : readRun(control, string.Empty);
         return new(rows)
         { ColumnGroups = columnGroups, BaseJustificationValue = baseJustification, HasUnsupportedProperties = !valid,
+            HidePlaceholdersValue = ReadBoolean(owner, "plcHide"),
             ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
     }
 

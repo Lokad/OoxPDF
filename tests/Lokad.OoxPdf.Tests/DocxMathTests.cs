@@ -7,6 +7,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathMatrixPlaceholderVisibilityRetainsBooleanDefaultsAndInvalidSource()
+    {
+        DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e/><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
+        TestAssert.True(Read("").HidePlaceholdersValue is null, "An omitted placeholder property retains its visible default source role.");
+        foreach ((string? value, bool hidden) in new (string?, bool)[] { (null, true), ("1", true), ("true", true), ("on", true), ("0", false), ("false", false), ("off", false) })
+        {
+            var matrix = Read(value is null ? "<m:plcHide/>" : $"<m:plcHide m:val='{value}'/>");
+            TestAssert.True(!matrix.HasUnsupportedProperties && matrix.HidePlaceholdersValue == hidden && matrix.Rows[0].Cells[0].Children.Count == 0,
+                "Known boolean values and val-less on preserve the explicit empty cell and authored visibility.");
+            TestAssert.Contains("plcHide", matrix.PropertiesXml.Single());
+        }
+        foreach (string property in new[] { "<m:plcHide m:val='future'/>", "<m:plcHide m:val=''/>", "<m:plcHide extra='1'/>",
+            "<m:plcHide/><m:plcHide/>", "<m:plcHide>stray</m:plcHide>", "<m:plcHide><m:future/></m:plcHide>" })
+        {
+            var matrix = Read(property);
+            TestAssert.True(matrix.HasUnsupportedProperties && matrix.Rows[0].Cells.Count == 2 && matrix.PropertiesXml.Count == 1,
+                "Unknown, duplicate and malformed placeholder properties retain raw source and complete fallback.");
+        }
+    }
+
     public static void DocxMathMatrixDefaultSpacingSharesScalarSemanticsAndKeepsNondefaultFallback()
     {
         DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
