@@ -16,6 +16,26 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingLeftTabsPreserveMixedMathAcrossContainers()
+    {
+        foreach (string stop in new[] { "default18", "left72" })
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-tabs-" + stop + "-" + container + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            foreach (string field in new[] { "Start", "Middle", "End.", "Following prose." }) TestAssert.Contains(field, text);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "A tab cannot remove supported mathematics in any migrated container.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

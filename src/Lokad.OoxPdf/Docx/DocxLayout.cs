@@ -1402,7 +1402,7 @@ internal sealed partial class DocxLayoutEngine
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, paragraphFontSize,
                     Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
                     baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
-                    physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
+                    physicalTextBaselineInset: baseInset * paragraphSpacingScale, defaultTabStopPoints: defaultTabStopPoints) &&
                     measured.All(line => line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
                 {
                     firstBodyLineBaselineOffset ??= baseInset;

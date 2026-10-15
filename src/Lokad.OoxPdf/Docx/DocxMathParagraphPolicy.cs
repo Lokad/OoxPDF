@@ -59,7 +59,8 @@ internal static class DocxMathParagraphPolicy
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
         if (!HasSupportedOwner(paragraph) || paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
-            HasVisibleProse(paragraph) ||
+            HasVisibleProse(paragraph) || (paragraph.InlineContent is { } items &&
+            items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)) ||
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
         DocxEquation equation = paragraph.Equations[0];

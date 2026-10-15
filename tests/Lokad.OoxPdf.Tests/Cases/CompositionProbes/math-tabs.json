@@ -1,0 +1,106 @@
+[
+  {
+    "Id": "math-tabs-default18-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-default18-body.docx",
+    "Sha256": "2AA9B5B790B398C55B3A3C62144FDCF78EB8A3CA8C7A15D9DFC0FD0B77A76F8F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-default18-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-default18-cell.docx",
+    "Sha256": "3F81CAD80C8619E12B2846525706B6323AE7032DEB0610949B3B316216FE1186",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-default18-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-default18-header.docx",
+    "Sha256": "E52D06282101712DA5B82B89BA98323FFB9AF175389404B37A224956C329669D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-default18-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-default18-footer.docx",
+    "Sha256": "338A201D38FF314F257D3A08C65199F3CBBCC199FDF7922E75F371106F935E06",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-left72-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-left72-body.docx",
+    "Sha256": "4E0A6E0D5CC4FD5AACA397509DAB77A4269F8EE528C3637E6F20DF8740A6F27B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-left72-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-left72-cell.docx",
+    "Sha256": "6B5404198ACC574E827BA0379D9AE9E28907CA155CE651AE06882245450AFAF4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-left72-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-left72-header.docx",
+    "Sha256": "E1D2F053133C6011A01CAE6DD377C295BEF6DE225AAF3D77DF03D1071FC5E577",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-tabs-left72-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-left72-footer.docx",
+    "Sha256": "DD0482787203D3A30BA48CF29660DF4E61694284A69E8B853EA44B979C3415BE",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ]
+  }
+]

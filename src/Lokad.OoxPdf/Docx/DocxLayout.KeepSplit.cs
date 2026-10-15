@@ -495,7 +495,8 @@ internal sealed partial class DocxLayoutEngine
                     GetParagraphFirstLineTextStartOffset(value, inlineSize, textMeasurer, paragraphSpacingScale));
                 double next = Math.Max(1d, availableWidth - right - GetParagraphTextStartOffset(value, paragraphSpacingScale));
                 if (TryMeasureOrderedInlineContent(value, mathEquations, textMeasurer, inlineSize, first, next,
-                    inlineInset, inlineHeight, paragraphSpacingScale, cancellationToken, out var measured))
+                    inlineInset, inlineHeight, paragraphSpacingScale, cancellationToken, out var measured,
+                    defaultTabStopPoints: defaultTabStopPoints))
                     return measured.Sum(line => line.OccupiedHeight);
             }
             double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);

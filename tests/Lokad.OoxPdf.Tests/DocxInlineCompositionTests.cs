@@ -10,6 +10,79 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent tab controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-tabs-office-offsets.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Tabs cannot discard the supported formulas.");
+            var fields = renderer.InspectTextEmission(document).Lines.Single(line =>
+                new[] { 5, 6, 4 }.All(length => line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == length) == 1)).Segments;
+            double start = fields.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).X;
+            foreach (var (length, property) in new[] { (6, "MiddleOffset"), (4, "EndOffset") })
+            {
+                double actual = fields.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == length).X - start;
+                TestAssert.True(Math.Abs(actual - row.GetProperty(property).GetDouble()) < .2d,
+                    $"Measured tabs must retain independent Word field offsets: {input}/{mode}/{property}={actual}.");
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts()
+    {
+        var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-tabs-default18-body").Paragraphs.Single(p => p.Equations.Count != 0);
+        var equations = paragraph.Equations.ToDictionary(e => e, e => new DocxPreparedMathParagraph(e, new(18d, 10d, 4d, []), 11d, 16d));
+        var sole = paragraph with { Equations = [paragraph.Equations[0]],
+            InlineContent = [new DocxInlineEquation(paragraph.Equations[0]), paragraph.InlineContent!.OfType<DocxInlineTab>().First()] };
+        TestAssert.True(DocxMathParagraphPolicy.GetStandaloneRow(sole) is null,
+            "A visible tab is another inline owner; a lone formula must not promote to a centered display row.");
+        bool Measure(DocxParagraph source, double width, double scale, out IReadOnlyList<DocxMeasuredInlineLine>? lines) =>
+            DocxLayoutEngine.TryMeasureOrderedInlineContent(source, equations, new TrackingMeasurer(), 12d,
+                width, width, 9d, 16d, scale, default, out lines, defaultTabStopPoints: 18d);
+        TestAssert.True(Measure(paragraph, 300d, 1d, out var full), "Default tabs must measure.");
+        TestAssert.Equal(2, TestAssert.NotNull(full).Single().Fragments.Count(fragment => fragment.Source is DocxInlineTab));
+        foreach (double scale in new[] { 1d, .5d })
+        {
+            var explicitStops = paragraph with { TabStops = [new(108d, null, "left", null), new(216d, null, "left", null)] };
+            TestAssert.True(Measure(explicitStops, 300d, scale, out var positioned), "Explicit left stops must measure in scaled coordinates.");
+            double advance = 0d;
+            int stopIndex = 0;
+            foreach (var fragment in TestAssert.NotNull(positioned).Single().Fragments)
+            {
+                advance += fragment.LeadingAdvance + fragment.Advance;
+                if (fragment.Source is DocxInlineTab) TestAssert.Equal(++stopIndex * 108d * scale, advance);
+            }
+        }
+        foreach (double width in new[] { 110d, 80d })
+        {
+            TestAssert.True(Measure(paragraph, width, 1d, out var wrapped), "Default tabs must retain wrapping.");
+            TestAssert.True(TestAssert.NotNull(wrapped).Count > 1 && wrapped.All(line => line.Advance <= width), "Each wrapped row must fit.");
+            TestAssert.Equal(2, wrapped.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
+        }
+        foreach (var stop in new[] { new DocxTabStop(72d, null, "right", null), new(72d, null, "center", null),
+            new(72d, null, "decimal", null), new(72d, null, "bar", null), new(72d, null, "left", "dot") })
+            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _), "Unmigrated alignment and leaders retain explicit fallback.");
+        TestAssert.True(!Measure(paragraph with { TabStops = [new(400d, null, "left", null)] }, 100d, 1d, out _), "An out-of-frame stop retains fallback.");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph,
+            equations, new TrackingMeasurer(), 12d, 300d, 300d, 9d, 16d, 1d, cancellation.Token, out _));
+    }
+
     public static void DocxInlineCompositionPrintedMathMatchesIndependentBaselineGaps()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

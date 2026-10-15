@@ -938,7 +938,7 @@ internal sealed partial class DocxLayoutEngine
                 double size = GetParagraphFontSize(paragraph);
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
                     double.MaxValue / 4d, double.MaxValue / 4d, 0d, Math.Max(1d, size * fixedScale),
-                    fixedScale, cancellationToken, out var lines))
+                    fixedScale, cancellationToken, out var lines, defaultTabStopPoints: defaultTabStopPoints))
                 {
                     maxWidth = Math.Max(maxWidth, lines.Max(line => line.Advance));
                     continue;

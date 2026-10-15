@@ -1,0 +1,133 @@
+{
+  "Source": "Independent Word 16 PDF exports; horizontal text-field offsets relative to Start; original visual thresholds unchanged",
+  "Rows": [
+    {
+      "Id": "math-tabs-default18-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2AA9B5B790B398C55B3A3C62144FDCF78EB8A3CA8C7A15D9DFC0FD0B77A76F8F",
+      "ReferencePdfSha256": "80E507E99F818FD342C3FA6BD3D46D62CBB78DCAFE92F226ED304846EC76F077",
+      "MiddleOffset": 40.967999999999996,
+      "EndOffset": 95.57
+    },
+    {
+      "Id": "math-tabs-default18-body",
+      "Mode": "final-preserve",
+      "InputSha256": "2AA9B5B790B398C55B3A3C62144FDCF78EB8A3CA8C7A15D9DFC0FD0B77A76F8F",
+      "ReferencePdfSha256": "5232DCE45A469ED6D1AC90FB9C79322604B748D90C49869AD6B4B94454D16CC2",
+      "MiddleOffset": 53.995999999999995,
+      "EndOffset": 126.02600000000001
+    },
+    {
+      "Id": "math-tabs-default18-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3F81CAD80C8619E12B2846525706B6323AE7032DEB0610949B3B316216FE1186",
+      "ReferencePdfSha256": "62DF7B567B2B021A20ADF19997FE4EDCD9BFE92772BB64BA9C8058ECC6768879",
+      "MiddleOffset": 40.95000000000002,
+      "EndOffset": 95.56999999999996
+    },
+    {
+      "Id": "math-tabs-default18-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "3F81CAD80C8619E12B2846525706B6323AE7032DEB0610949B3B316216FE1186",
+      "ReferencePdfSha256": "8BABC3C5BF11FCCB51D8436812C328E34F96C577E5B1883BF704DA53E6EDA821",
+      "MiddleOffset": 54.02000000000004,
+      "EndOffset": 126.02000000000004
+    },
+    {
+      "Id": "math-tabs-default18-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "338A201D38FF314F257D3A08C65199F3CBBCC199FDF7922E75F371106F935E06",
+      "ReferencePdfSha256": "6AB1E28CAC55A42D3B7FFC637A5EFDBED4CC858B72A2BB1D2287F97EA2E41475",
+      "MiddleOffset": 40.967999999999996,
+      "EndOffset": 95.57
+    },
+    {
+      "Id": "math-tabs-default18-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "338A201D38FF314F257D3A08C65199F3CBBCC199FDF7922E75F371106F935E06",
+      "ReferencePdfSha256": "0F9AE0CCF25EFEFE909F277CF83638F3B62379EC5E3EF9A77DDE73577A4DE93A",
+      "MiddleOffset": 53.995999999999995,
+      "EndOffset": 126.02600000000001
+    },
+    {
+      "Id": "math-tabs-default18-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E52D06282101712DA5B82B89BA98323FFB9AF175389404B37A224956C329669D",
+      "ReferencePdfSha256": "ADAE05F047EDF3592C11E15EED1D268AFFB67E659F9A96370767DF26E03148AE",
+      "MiddleOffset": 40.967999999999996,
+      "EndOffset": 95.57
+    },
+    {
+      "Id": "math-tabs-default18-header",
+      "Mode": "final-preserve",
+      "InputSha256": "E52D06282101712DA5B82B89BA98323FFB9AF175389404B37A224956C329669D",
+      "ReferencePdfSha256": "BB546E09A23AA7B24894B3033402997D7F5556A098F0224A0BE165302084F8BF",
+      "MiddleOffset": 53.995999999999995,
+      "EndOffset": 126.02600000000001
+    },
+    {
+      "Id": "math-tabs-left72-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4E0A6E0D5CC4FD5AACA397509DAB77A4269F8EE528C3637E6F20DF8740A6F27B",
+      "ReferencePdfSha256": "F50EEC34A3BA703FEAEFD1B1136FFCA0BE223CFE6B43A04372703AECE9D353C7",
+      "MiddleOffset": 54.62,
+      "EndOffset": 109.22
+    },
+    {
+      "Id": "math-tabs-left72-body",
+      "Mode": "final-preserve",
+      "InputSha256": "4E0A6E0D5CC4FD5AACA397509DAB77A4269F8EE528C3637E6F20DF8740A6F27B",
+      "ReferencePdfSha256": "D307C79967C60235F1C995417F329AF49FE1BC775750A55B082FDF7C85D882AE",
+      "MiddleOffset": 71.99600000000001,
+      "EndOffset": 144.026
+    },
+    {
+      "Id": "math-tabs-left72-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6B5404198ACC574E827BA0379D9AE9E28907CA155CE651AE06882245450AFAF4",
+      "ReferencePdfSha256": "0CBED055BA604DA21121E3505E197A16050F26208C65479DAFD2F919245EC363",
+      "MiddleOffset": 54.599999999999994,
+      "EndOffset": 109.22999999999999
+    },
+    {
+      "Id": "math-tabs-left72-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "6B5404198ACC574E827BA0379D9AE9E28907CA155CE651AE06882245450AFAF4",
+      "ReferencePdfSha256": "487FF2912763D82E29DC726ED772DFFC065CEF451022DC809184B2B5F5BBFFE2",
+      "MiddleOffset": 72.02000000000004,
+      "EndOffset": 144.05
+    },
+    {
+      "Id": "math-tabs-left72-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DD0482787203D3A30BA48CF29660DF4E61694284A69E8B853EA44B979C3415BE",
+      "ReferencePdfSha256": "9BAA2A8CEE12D55673D2D2A98E17D494E5E160EEC1C7F16F4B685AD3DD6EDC26",
+      "MiddleOffset": 54.62,
+      "EndOffset": 109.22
+    },
+    {
+      "Id": "math-tabs-left72-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "DD0482787203D3A30BA48CF29660DF4E61694284A69E8B853EA44B979C3415BE",
+      "ReferencePdfSha256": "442E36EA709C9ED29A4CDB4B673DFFD0CFBAA43459041DF34AFB0C15BDCC777E",
+      "MiddleOffset": 71.99600000000001,
+      "EndOffset": 144.026
+    },
+    {
+      "Id": "math-tabs-left72-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E1D2F053133C6011A01CAE6DD377C295BEF6DE225AAF3D77DF03D1071FC5E577",
+      "ReferencePdfSha256": "CEB6F84A548BF2715C59B5D3CA15827EACAFC3D3FFB1353CD6E8744BFB39397E",
+      "MiddleOffset": 54.62,
+      "EndOffset": 109.22
+    },
+    {
+      "Id": "math-tabs-left72-header",
+      "Mode": "final-preserve",
+      "InputSha256": "E1D2F053133C6011A01CAE6DD377C295BEF6DE225AAF3D77DF03D1071FC5E577",
+      "ReferencePdfSha256": "69F06A2E478B28F02025061DF83508BD9B456C358B6896025388FB37166FF598",
+      "MiddleOffset": 71.99600000000001,
+      "EndOffset": 144.026
+    }
+  ]
+}

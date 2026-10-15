@@ -76,7 +76,8 @@ internal sealed partial class DocxLayoutEngine
             GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale));
         double nextWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right - GetParagraphTextStartOffset(paragraph, scale));
         return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
-            firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines);
+            firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
+            defaultTabStopPoints: context.DefaultTabStopPoints);
     }
 
     private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images) PlaceOrderedInlineLine(
@@ -105,6 +106,7 @@ internal sealed partial class DocxLayoutEngine
             else if (fragment.Source is DocxInlinePicture picture)
                 images.Add(new(picture.Image, x + offset, top - measured.BaselineInset, fragment.Advance,
                     fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story));
+            else if (fragment.Source is DocxInlineTab) text.Append('\t');
             offset += fragment.Advance;
         }
         var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
@@ -127,16 +129,23 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer measurer, double fontSize, double firstWidth, double nextWidth,
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
-        double? physicalTextBaselineInset = null)
+        double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints)
     {
         lines = null;
         if (paragraph.InlineContent is not { } items || equations is null ||
             paragraph.Equations.Count == 0 ||
-            DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count != paragraph.Equations.Count ||
-            items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)) return false;
+            DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count != paragraph.Equations.Count) return false;
+        bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
+        // Left/default tabs depend only on the preceding advance. Aligned fields,
+        // bar stops and leaders need a separate field-measurement/painting contract.
+        if (hasTabs && paragraph.TabStops.Any(stop =>
+            stop.Value is not null && !string.Equals(stop.Value, "left", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase) ||
+            stop.LeaderValue is not null && !string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase))) return false;
         if (!double.IsFinite(firstWidth) || !double.IsFinite(nextWidth) || firstWidth <= 0d || nextWidth <= 0d ||
             !double.IsFinite(scale) || scale <= 0d) return false;
         var runIndices = new Dictionary<DocxTextRun, int>(ReferenceEqualityComparer.Instance);
+        var tabStops = hasTabs ? ScaleTabStopPositions(paragraph.TabStops, scale) : [];
         for (int index = 0; index < paragraph.Runs.Count; index++)
         {
             token.ThrowIfCancellationRequested();
@@ -188,6 +197,7 @@ internal sealed partial class DocxLayoutEngine
                     if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth <= 0d || imageHeight <= 0d) return false;
                     measured.Add(new(item, imageWidth, imageHeight, imageHeight, []));
                     break;
+                case DocxInlineTab:
                 case DocxInlineBreak:
                     measured.Add(new(item, 0d, baselineInset, Math.Max(lineHeight, baselineInset), []));
                     break;
@@ -205,6 +215,22 @@ internal sealed partial class DocxLayoutEngine
         {
             token.ThrowIfCancellationRequested();
             if (measured[index].Source is DocxInlineBreak) { Flush(); index++; continue; }
+            if (measured[index].Source is DocxInlineTab)
+            {
+                double stop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale).PositionPoints;
+                double available = output.Count == 0 ? firstWidth : nextWidth;
+                if (stop > available && current.Count != 0)
+                {
+                    Flush();
+                    stop = ResolveNextTabStop(0d, tabStops, defaultTabStopPoints * scale).PositionPoints;
+                    available = nextWidth;
+                }
+                if (!double.IsFinite(stop) || stop < advance || stop > available) return false;
+                current.Add(measured[index] with { Advance = stop - advance });
+                advance = stop;
+                index++;
+                continue;
+            }
             int end = index + 1;
             bool space = IsSpace(measured[index]);
             // A formatting/run boundary is not a word-break opportunity.
@@ -346,7 +372,7 @@ internal sealed partial class DocxLayoutEngine
                     ? !math.UsesDisplayStyle && !math.Equation.Display &&
                       math.Box.AboveBaseline * scale <= physicalInset &&
                       math.Box.BelowBaseline * scale <= lineHeight - physicalInset
-                    : fragment.Source is DocxInlineText))
+                    : fragment.Source is DocxInlineText or DocxInlineTab))
             {
                 // An inline object entirely inside the ordinary text strut must
                 // not add a second font line frame. Taller objects keep their

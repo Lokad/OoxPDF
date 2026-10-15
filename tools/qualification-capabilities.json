@@ -484,5 +484,27 @@
     "DocxTableLayoutStageHonorsExactRowHeightRule",
     "DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary",
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement"
+  ],
+  "docx-mixed-math-left-tabs": [
+    "DocxInlineCompositionLeftTab",
+    "PortableRenderingLeftTabsPreserveMixedMathAcrossContainers",
+    "DocxParagraphLayoutPreservesTabsAsTabAdvances",
+    "DocxParagraphLayoutUsesAuthoredLeftTabStopsBeforeDefaultGrid",
+    "DocxParagraphLayoutUsesAuthoredRightTabStops",
+    "DocxParagraphLayoutUsesAuthoredCenterTabStops",
+    "DocxParagraphLayoutUsesAuthoredDecimalTabStops",
+    "DocxParagraphLayoutDoesNotUseBarOrClearTabsAsPositioningStops",
+    "DocxWordCompatibleAllMarkupScalesTabStopPositions",
+    "DocxInlineCompositionSourceViewOrdersEquationsPicturesTabsAndBreaks",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "DocxInlineCompositionKeepNextReservesTheMeasuredMixedFrame",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "DocxInlineCompositionBookmarkAndRunSplittingPreserveRenderedContent",
+    "DocxInlineCompositionReviewPaginationRetainsSourcePageCapacity",
+    "DocxStaticFrameMapping",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxInlineCompositionAutofitMathRespectsAdditionalInlineContent"
   ]
 }

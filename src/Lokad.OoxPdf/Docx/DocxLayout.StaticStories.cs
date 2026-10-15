@@ -346,7 +346,7 @@ internal sealed partial class DocxLayoutEngine
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
                     Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
                     sourceInset * paragraphSpacingScale, sourceHeight * factor * paragraphSpacingScale,
-                    paragraphSpacingScale, cancellationToken, out var measured))
+                    paragraphSpacingScale, cancellationToken, out var measured, defaultTabStopPoints: defaultTabStopPoints))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {
