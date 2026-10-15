@@ -57,7 +57,9 @@ and revisions retain the legacy source path. Replacing a legacy content collecti
 invalidates its borrowed view; placement-only changes preserve it. Multi-object
 measurement and common container placement remain the next migration steps.
 
-Twenty-seven selected methods pass in one invocation, and all ten portfolio PDFs
+Twenty-seven selected methods pass in one invocation; six portable source/bookmark
+methods also pass on the exact artifact in Ubuntu. Seventeen assets and four
+integration PDFs transfer without root rebuild. All ten portfolio PDFs
 retain their baseline bytes, so their Office comparisons are reused. Mixed-document
 warm allocation medians rise by approximately 11–25KB for the DOCX sources; deck
 allocation medians are unchanged. Three-iteration timings are noisy and establish
