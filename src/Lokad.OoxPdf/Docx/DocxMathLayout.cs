@@ -180,12 +180,12 @@ internal static partial class DocxMathLayout
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont = null,
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null, double? rowControlSize = null)
     {
         if (GetMatrix(equation, token) is { } matrix)
-            return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
+            return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize);
         if (GetFunction(equation) is { } function)
-            return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
+            return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize);
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
         if (GetNary(equation, token) is { } nary)

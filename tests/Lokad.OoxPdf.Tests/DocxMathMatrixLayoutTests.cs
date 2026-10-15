@@ -7,6 +7,47 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixMixedRowsRetainIndependentOwnersAndWholeFallback()
+    {
+        var font = MathFont(); var resource = Resource("Mixed", font, "BC+=");
+        var first = Matrix([Run("B"), Run("C")], [Run("C"), Run("B")]);
+        var second = first with { ControlText = new("", 20d, null, false, false, false, null, "TestFont") };
+        var prefix = Run("B+") with { NormalTextValue = false }; var suffix = Run("=C") with { NormalTextValue = false };
+        var equation = Equation(first) with { Content = new([prefix, first, second, suffix]) };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) &&
+            sources.Count(s => ReferenceEquals(s.ControlOwner, first)) == 1 && sources.Count(s => ReferenceEquals(s.ControlOwner, second)) == 1,
+            "Adjacent matrices retain independent metric-only control owners in the shared structured row.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var measured, out var reason,
+            resolveControlMetrics: _ => font), reason ?? "Expected bounded mixed matrix row.");
+        var row = TestAssert.NotNull(measured); int offset = 2;
+        foreach (var matrix in new[] { first, second })
+        {
+            TestAssert.True(DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var single, out reason,
+                resolveControlMetrics: _ => font, rowControlSize: 12d), reason ?? "Expected matrix in the shared row context.");
+            var child = TestAssert.NotNull(single); double x = row.Glyphs[offset].X - child.Glyphs[0].X;
+            TestAssert.True(child.Glyphs.Select((g, i) => (g, i)).All(pair =>
+                Math.Abs(row.Glyphs[offset + pair.i].X - pair.g.X - x) < 1e-9 && row.Glyphs[offset + pair.i].BaselineY == pair.g.BaselineY),
+                "Composition translates complete matrix boxes while the surrounding row owns their effective control size.");
+            if (matrix.ControlText is { FontSize: 20d })
+            {
+                TestAssert.True(DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var standalone, out _,
+                    resolveControlMetrics: _ => font) && TestAssert.NotNull(standalone).Glyphs[0].BaselineY != child.Glyphs[0].BaselineY,
+                    "An authored standalone control keeps its earlier geometry; row context does not mutate source formatting.");
+            }
+            offset += child.Glyphs.Count;
+        }
+        TestAssert.Equal("B+BCCBBCCB=C", string.Concat(row.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+        var invalid = equation with { Content = new([prefix, first, second with { HasUnsupportedProperties = true }, suffix]) };
+        TestAssert.True(!DocxMathLayout.TryGetRuns(invalid, CancellationToken.None, out _) &&
+            !DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var rejected, out _, resolveControlMetrics: _ => font) && rejected is null,
+            "An unsupported late matrix rejects the whole mixed row without publishing a partial prefix or first grid.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 4 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None,
+            out _, out _, resolveControlMetrics: _ => font));
+    }
+
     public static void MathFontMatrixColumnSpacingSharesSlotsAndRetainsSourceUnits()
     {
         var font = MathFont(); var resource = Resource("Spacing", font, "BC");

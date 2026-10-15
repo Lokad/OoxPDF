@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixMixedRowsRetainNeighborAndIndependentGridMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-binary", "a+abcd=b"), ("inline-binary", "a+abcd=b"),
+            ("display-ordinary", "aabcdb"), ("inline-ordinary", "aabcdb"), ("inline-adjacent12-20", "aabcdabcdb"),
+            ("inline-adjacent20-12", "aabcdabcdb"), ("display-grouped-minimum", "a+abbccccdeeee=b"), ("inline-hidden", "a+bc=b") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-mixed-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "The existing structured-row composer retains every literal neighbor and independently controlled matrix.");
+        }
+    }
+
     public static void DocxNativeMatrixColumnSpacingRetainsOrderedCellMeaning()
     {
         RequireMathFont();

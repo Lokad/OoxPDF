@@ -10,9 +10,12 @@ internal static partial class DocxMathLayout
     private static bool IsHiddenEmptyMatrixCell(DocxMathMatrix matrix, DocxMathRow cell) =>
         matrix.HidePlaceholdersValue == true && cell.Children.Count == 0 && cell.HasSupportedProperties;
 
-    private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token)
+    private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token) =>
+        GetSupportedMatrix(GetSingleSupportedChild(equation), token);
+
+    private static DocxMathMatrix? GetSupportedMatrix(DocxMathNode? node, CancellationToken token)
     {
-        if (GetSingleSupportedChild(equation) is not DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix ||
+        if (node is not DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix ||
             matrix.BaseJustificationValue is not (null or "center" or "top" or "bot") ||
             !TryResolveMatrixSpacing(matrix, 1d, out _, out _) ||
             matrix.Rows[0].Cells.Count == 0 || matrix.ControlText is { } control && !DocxMathRowLayout.HasSupportedTextFormatting(control, allowBold: false)) { return null; }
@@ -54,7 +57,7 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureMatrix(DocxEquation equation, DocxMathMatrix matrix,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
@@ -63,7 +66,7 @@ internal static partial class DocxMathLayout
             resolveControlFont is not null ? resolveControlFont(matrix)?.Font.Font : resolveFont(sources[0].Run)?.Font.Font;
         if (font is null || !font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathMatrixMetrics"; return false; }
-        double size = matrix.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
+        double size = rowControlSize ?? matrix.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathMatrixSize"; return false; }
         if (!TryResolveMatrixSpacing(matrix, size, out double minimumWidth, out double gap))
