@@ -392,3 +392,17 @@ four exact transfer smoke PDFs qualify one artifact. Four public cases retain
 their original visual thresholds. Fraction enclosures retain their measured
 source/fallback until height selection is independently qualified, alongside
 other shape/growth/separator/recursive/assembly paths.
+
+Literal delimiter fitting now selects the nearest ready-made variant, preferring
+the taller shape on an exact tie. The same bounded reader retains the original
+adequate-height selection for roots. Both reject malformed records and targets
+beyond every ready-made variant, preserving assembly fallback and cumulative work
+limits. Explicit parent metrics also own the ordinary baseline floor; independently
+sized child ink remains in the occupied box instead of adding the child's separate
+typographic line gap. Six 12/16/20 pt and descender controls improve, with vertical
+differences below 0.06 pt and horizontal differences up to 0.40 pt. One prior small
+root control also improves, while 37 other PDFs remain exact. Forty-two focused
+methods, 62 independent font queries, 34 Word/source glyph outlines and four exact
+transfer smoke PDFs qualify one artifact. Three public cases retain thresholds.
+Measured fraction enclosures need a distinct sizing profile and remain staged;
+smaller authored fraction text also shows an unqualified optical-glyph difference.
