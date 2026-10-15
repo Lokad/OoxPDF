@@ -97,6 +97,21 @@ Invoke-Case 'page-moved-nearest' @($pageOne) @($pageTwo) 1 2 '-CompareDecodedTex
 Invoke-Case 'page-moved-indexed' @($pageOne) @($pageTwo) 1 0 '-CompareDecodedText' -ByIndex
 Invoke-Case 'page-reordered' @($pageOne, $pageTwo) @($pageTwo, $pageOne) 0 0 '-CompareDecodedText'
 $visibleArgs = '-MergeSameLineOperations -IgnoreWhitespaceOnlyLines -CompareDecodedText -UseEffectiveMatrix'
+function New-ScaledMetricOp($X, $Text, $FontSize, $Advance, $Scale, $Spacing = 0d) {
+    $op = New-MetricOp $X 100 $Text $Advance
+    $op.FontSize = $FontSize
+    $op.CharacterSpacing = $Spacing
+    foreach ($pair in @(@('EffectiveA',$Scale), @('EffectiveB',0d), @('EffectiveC',0d), @('EffectiveD',$Scale))) {
+        $op | Add-Member -NotePropertyName $pair[0] -NotePropertyValue $pair[1]
+    }
+    return $op
+}
+Invoke-Case 'effective-font-and-spacing' @((New-ScaledMetricOp 10 'Alpha' 6 5 1 .2)) @((New-ScaledMetricOp 10 'Alpha' 12 10 .5 .4)) 0 0 '-UseEffectiveMatrix -CompareDecodedText'
+Invoke-Case 'effective-scaled-gap' @((New-ScaledMetricOp 10 'A' 6 5 1), (New-ScaledMetricOp 20 'B' 6 5 1)) @((New-ScaledMetricOp 10 'A' 12 10 .5), (New-ScaledMetricOp 20 'B' 12 10 .5)) 0 0 $visibleArgs
+Invoke-Case 'effective-expanded-adjacent' @((New-ScaledMetricOp 10 'A' 12 10 1), (New-ScaledMetricOp 20 'B' 12 10 1)) @((New-ScaledMetricOp 10 'A' 6 5 2), (New-ScaledMetricOp 20 'B' 6 5 2)) 0 0 $visibleArgs
+Invoke-Case 'decoded-neighbor-columns' @((New-MetricOp 10 100 'Body' 20), (New-MetricOp 400 99 'Comment' 40)) @((New-MetricOp 400 101 'Comment' 40), (New-MetricOp 10 102 'Body' 20)) 0 0 '-CompareDecodedText -PositionTolerance 3'
+Invoke-Case 'decoded-neighbor-change' @((New-MetricOp 10 100 'Body' 20), (New-MetricOp 400 99 'Comment' 40)) @((New-MetricOp 400 101 'Changed' 40), (New-MetricOp 10 102 'Body' 20)) 1 0 '-CompareDecodedText -PositionTolerance 3'
+Invoke-Case 'decoded-case-change' @((New-MetricOp 10 100 'Alpha' 20)) @((New-MetricOp 10 100 'alpha' 20)) 1 0 '-CompareDecodedText'
 Invoke-Case 'rounded-baseline-boundary' @((New-MetricOp 38 100.02 'world' 25), (New-MetricOp 35 100.04 ' ' 3), (New-MetricOp 10 100.06 'Hello' 25)) @((New-MetricOp 10 100.04 'Hello world' 53)) 0 0 $visibleArgs
 Invoke-Case 'separate-baselines' @($hello, (New-MetricOp 38 100.3 'world' 25)) @($whole) 1 1 $visibleArgs
 Invoke-Case 'blank-line-default' @($whole, $blank) @($whole) 1 1 '-MergeSameLineOperations -CompareDecodedText'
@@ -111,4 +126,4 @@ Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) 
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Text comparison adversarial checks passed (22 cases)."
+Write-Host "Text comparison adversarial checks passed (28 cases)."

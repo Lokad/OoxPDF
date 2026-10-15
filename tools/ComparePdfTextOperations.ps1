@@ -49,6 +49,28 @@ function TextY($op) {
     return [double]$op.Y
 }
 
+function TextAdvanceX($op) {
+    $scale = if ($UseEffectiveMatrix -and $null -ne $op.EffectiveA) { [double]$op.EffectiveA } else { 1d }
+    return [double]$op.EmittedAdvancePoints * $scale
+}
+
+function TextFontSize($op) {
+    if (!$UseEffectiveMatrix -or $null -eq $op.EffectiveA -or $null -eq $op.EffectiveB -or
+        $null -eq $op.EffectiveC -or $null -eq $op.EffectiveD) { return [double]$op.FontSize }
+    $a = [double]$op.EffectiveA; $b = [double]$op.EffectiveB
+    $c = [double]$op.EffectiveC; $d = [double]$op.EffectiveD
+    $baselineLength = [Math]::Sqrt($a*$a + $b*$b)
+    if ($baselineLength -eq 0d) { return [double]::NaN }
+    # Perpendicular em height excludes shear and handles rotated baselines.
+    return [double]$op.FontSize * [Math]::Abs($a*$d - $b*$c) / $baselineLength
+}
+
+function TextCharacterSpacing($op) {
+    if (!$UseEffectiveMatrix -or $null -eq $op.EffectiveA -or $null -eq $op.EffectiveB) { return [double]$op.CharacterSpacing }
+    $a = [double]$op.EffectiveA; $b = [double]$op.EffectiveB
+    return [double]$op.CharacterSpacing * [Math]::Sqrt($a*$a + $b*$b)
+}
+
 function TextContent($op) {
     if ($op.DecodedText -ne $null) {
         return [string]$op.DecodedText
@@ -81,7 +103,7 @@ function Merge-SameLineOperations($Operations) {
     foreach ($entry in $sorted) {
         $op = $entry.Operation
         $lineKey = $entry.Band
-        $opEndX = (TextX $op) + [double]$op.EmittedAdvancePoints
+        $opEndX = (TextX $op) + (TextAdvanceX $op)
         if ($null -ne $current -and $currentLineKey -eq $lineKey -and ((TextX $op) - $currentEndX) -le 1d) {
             $current.DecodedText = if ($null -eq $current.DecodedText -or $null -eq $op.DecodedText) { $null } else { [string]$current.DecodedText + [string]$op.DecodedText }
             $current.Payload = [string]$current.Payload + [string]$op.Payload
@@ -125,19 +147,30 @@ if ($MatchByPosition) {
     }
 
     $pairs = New-Object System.Collections.Generic.List[object]
-    for ($i = 0; $i -lt $candidateOps.Count; $i++) {
-        $cand = $candidateOps[$i]
+    $remainingCandidates = New-Object System.Collections.Generic.List[object]
+    function Find-ReferenceIndex($cand, [bool] $RequireSameText) {
         $bestIndex = -1
         $bestScore = [double]::PositiveInfinity
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $candidateRef = $unmatched[$j]
             if ($candidateRef.PageNumber -ne $cand.PageNumber) { continue }
+            if ($RequireSameText -and (TextContent $candidateRef) -cne (TextContent $cand)) { continue }
             $score = [Math]::Abs((TextY $cand) - (TextY $candidateRef)) * 1000d +
                 [Math]::Abs((TextX $cand) - (TextX $candidateRef))
             if ($score -lt $bestScore) {
                 $bestScore = $score
                 $bestIndex = $j
             }
+        }
+        return $bestIndex
+    }
+
+    for ($i = 0; $i -lt $candidateOps.Count; $i++) {
+        $cand = $candidateOps[$i]
+        $bestIndex = Find-ReferenceIndex $cand ([bool]$CompareDecodedText)
+        if ($CompareDecodedText -and $bestIndex -lt 0) {
+            $remainingCandidates.Add([pscustomobject]@{Index=$i;Candidate=$cand})
+            continue
         }
 
         $ref = if ($bestIndex -ge 0) { $unmatched[$bestIndex] } else { $null }
@@ -148,9 +181,19 @@ if ($MatchByPosition) {
         $pairs.Add([pscustomobject]@{ Index = $i; Reference = $ref; Candidate = $cand })
     }
 
+    # Reserve exact decoded matches before geometry fallbacks can consume a
+    # neighboring column's reference. Changed/missing content still reports.
+    foreach ($pending in $remainingCandidates) {
+        $bestIndex = Find-ReferenceIndex $pending.Candidate $false
+        $ref = if ($bestIndex -ge 0) { $unmatched[$bestIndex] } else { $null }
+        if ($bestIndex -ge 0) { $unmatched.RemoveAt($bestIndex) }
+        $pairs.Add([pscustomobject]@{Index=$pending.Index;Reference=$ref;Candidate=$pending.Candidate})
+    }
+
     foreach ($ref in $unmatched) {
         $pairs.Add([pscustomobject]@{ Index = $pairs.Count; Reference = $ref; Candidate = $null })
     }
+    $pairs = @($pairs | Sort-Object Index)
 }
 else {
     $count = [Math]::Max($referenceOps.Count, $candidateOps.Count)
@@ -173,8 +216,8 @@ foreach ($pair in $pairs) {
         $candX = if ($null -eq $cand) { $null } else { TextX $cand }
         $refY = if ($null -eq $ref) { $null } else { TextY $ref }
         $candY = if ($null -eq $cand) { $null } else { TextY $cand }
-        $refTc = if ($null -eq $ref) { $null } else { $ref.CharacterSpacing }
-        $candTc = if ($null -eq $cand) { $null } else { $cand.CharacterSpacing }
+        $refTc = if ($null -eq $ref) { $null } else { TextCharacterSpacing $ref }
+        $candTc = if ($null -eq $cand) { $null } else { TextCharacterSpacing $cand }
         $refPayload = if ($null -eq $ref) { $null } else { $ref.Payload }
         $candPayload = if ($null -eq $cand) { $null } else { $cand.Payload }
         $refText = if ($null -eq $ref -or -not $CompareDecodedText) { $null } else { TextContent $ref }
@@ -184,8 +227,10 @@ foreach ($pair in $pairs) {
             Status = "missing"
             RefPage = if ($null -eq $ref) { $null } else { $ref.PageNumber }
             CandPage = if ($null -eq $cand) { $null } else { $cand.PageNumber }
-            RefFontSize = if ($null -eq $ref) { $null } else { $ref.FontSize }
-            CandFontSize = if ($null -eq $cand) { $null } else { $cand.FontSize }
+            RefFontSize = if ($null -eq $ref) { $null } else { TextFontSize $ref }
+            CandFontSize = if ($null -eq $cand) { $null } else { TextFontSize $cand }
+            RefRawFontSize = if ($null -eq $ref) { $null } else { $ref.FontSize }
+            CandRawFontSize = if ($null -eq $cand) { $null } else { $cand.FontSize }
             DeltaFontSize = $null
             RefX = $refX
             CandX = $candX
@@ -210,13 +255,17 @@ foreach ($pair in $pairs) {
     $candY = TextY $cand
     $deltaX = Delta -left $refX -right $candX
     $deltaY = Delta -left $refY -right $candY
-    $deltaSize = Delta -left ([double]$ref.FontSize) -right ([double]$cand.FontSize)
-    $deltaTc = Delta -left ([double]$ref.CharacterSpacing) -right ([double]$cand.CharacterSpacing)
+    $refSize = TextFontSize $ref
+    $candSize = TextFontSize $cand
+    $refTc = TextCharacterSpacing $ref
+    $candTc = TextCharacterSpacing $cand
+    $deltaSize = Delta -left $refSize -right $candSize
+    $deltaTc = Delta -left $refTc -right $candTc
     $pageOk = $ref.PageNumber -eq $cand.PageNumber
     $positionOk = $pageOk -and [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
     $fontSizeOk = [Math]::Abs($deltaSize) -le $FontSizeTolerance
     $tcOk = [Math]::Abs($deltaTc) -le $CharacterSpacingTolerance
-    $decodedTextOk = -not $CompareDecodedText -or (TextContent $ref) -eq (TextContent $cand)
+    $decodedTextOk = -not $CompareDecodedText -or (TextContent $ref) -ceq (TextContent $cand)
     $status = if ($positionOk -and $fontSizeOk -and $tcOk -and $decodedTextOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
@@ -227,8 +276,10 @@ foreach ($pair in $pairs) {
         Status = $status
         RefPage = $ref.PageNumber
         CandPage = $cand.PageNumber
-        RefFontSize = $ref.FontSize
-        CandFontSize = $cand.FontSize
+        RefFontSize = $refSize
+        CandFontSize = $candSize
+        RefRawFontSize = $ref.FontSize
+        CandRawFontSize = $cand.FontSize
         DeltaFontSize = $deltaSize
         RefX = [Math]::Round($refX, 6)
         CandX = [Math]::Round($candX, 6)
@@ -236,8 +287,8 @@ foreach ($pair in $pairs) {
         RefY = [Math]::Round($refY, 6)
         CandY = [Math]::Round($candY, 6)
         DeltaY = $deltaY
-        RefTc = [Math]::Round([double]$ref.CharacterSpacing, 6)
-        CandTc = [Math]::Round([double]$cand.CharacterSpacing, 6)
+        RefTc = [Math]::Round($refTc, 6)
+        CandTc = [Math]::Round($candTc, 6)
         DeltaTc = $deltaTc
         RefPayload = $ref.Payload
         CandPayload = $cand.Payload
@@ -259,6 +310,7 @@ if ($OutputPath) {
         ReferenceSha256 = (Get-FileHash -LiteralPath $Reference).Hash
         CandidateSha256 = (Get-FileHash -LiteralPath $Candidate).Hash
         MatchByPosition = [bool]$MatchByPosition
+        MatchingMethod = if (!$MatchByPosition) { 'Indexed' } elseif ($CompareDecodedText) { 'Page-local decoded text, then nearest position for unresolved operations' } else { 'Page-local nearest position' }
         UseEffectiveMatrix = [bool]$UseEffectiveMatrix
         CompareDecodedText = [bool]$CompareDecodedText
         MergeSameLineOperations = [bool]$MergeSameLineOperations
