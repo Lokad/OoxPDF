@@ -572,3 +572,21 @@ neighbor PDFs and four matching transfer smoke PDFs qualify one artifact. Three
 public cases retain existing visual thresholds. One separately measured display
 integral growth-off case retains its unresolved sizing fallback. No font/point
 correction, glyph assembly or new quota/cache framework is introduced.
+
+
+Supported n-ary boxes now participate in bounded mixed rows through the same
+contextual eligibility used for standalone equations. Each node retains its
+document defaults, source/control ownership and complete fallback. A semantic
+large-operator edge owns incoming thin math spacing; the body's final atom owns
+outgoing spacing. The existing row composer handles both literal boundaries and
+adjacent boxes. This replaces the prototype's ordinary-atom assumption, which
+left ordinary-prefix operators too close, without font/point correction branches.
+
+Nine independent Word comparisons improve across binary/ordinary prefixes and
+adjacent sum/product/inline-integral controls. Position differences stay below
+0.14 pt horizontally and 0.24 pt vertically; all 94 glyph outlines match
+Word/source. Five binary-prefix PDFs remain exact
+after the edge change and reuse their inspections/rasters. Twenty-five focused
+methods, 22 unchanged neighboring PDFs and four matching transfer smoke PDFs
+qualify one artifact. Three public cases retain existing visual thresholds;
+unqualified display integrals and unsupported deeper/rich structures keep fallback.
