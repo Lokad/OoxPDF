@@ -9,7 +9,7 @@ internal static partial class DocxMathLayout
     private sealed record StructuredRow(IReadOnlyList<StructuredPart> Parts, DocxMathRow After);
 
     private static DocxMathNode? GetSupportedStructure(DocxMathNode node) =>
-        (DocxMathNode?)GetSupportedFraction(node) ?? GetSupportedScripts(node);
+        (DocxMathNode?)GetSupportedFraction(node) ?? (DocxMathNode?)GetSupportedScripts(node) ?? GetSupportedRadical(node);
 
     private static StructuredRow? GetStructuredRow(DocxEquation equation, CancellationToken token)
     {

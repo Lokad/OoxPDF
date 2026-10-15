@@ -1,4 +1,6 @@
 using System.Buffers.Binary;
+using System.IO.Compression;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -7,6 +9,120 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontRadicalBoxesKeepParentMetricsSelectedGlyphsAndOwnedRules()
+    {
+        var resource=RadicalResource();
+        foreach(double childSize in new[]{8d,20d})
+        {
+            DocxEquation equation=RadicalEquation(childSize);
+            TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),
+                reason??"Expected a ready-made owned radical box.");
+            DocxMathBox measured=TestAssert.NotNull(box);
+            TestAssert.Equal(4,measured.Glyphs.Count);TestAssert.Equal(1,measured.Rules.Count);
+            var root=measured.Glyphs[0];
+            TestAssert.True(root.SourceCodePoint==0x221A && root.FontSize==12d && root.OriginalGlyph==(childSize==8d?130:128),
+                "Parent metrics retain the12pt implicit root and select a larger owned glyph for taller child ink.");
+            TestAssert.True(measured.Glyphs.Skip(1).All(g=>Math.Abs(g.FontSize-OfficePdfTextEmissionProfile.FontSize(childSize))<1e-9),
+                "Radicand glyphs retain their independently authored export size.");
+            double inkTop=measured.Glyphs.Skip(1).Max(g=>700d*g.FontSize/1000d);
+            TestAssert.True(measured.Rules[0].Y-inkTop>=80d*12d/1000d-1e-9,
+                "The overbar remains above all child ink by at least the parent's display gap.");
+            TestAssert.True(DocxMathLayout.TryGetLineMetrics(measured,CancellationToken.None,out double above,out _) &&
+                Math.Abs(above-measured.AboveBaseline-120d*12d/1000d)<1e-9,
+                "An explicit parent owns one leading term even when child math glyphs are larger.");
+            var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
+            using var output=new MemoryStream();
+            PdfDocumentWriter.WriteBlank(output,[new PdfPage(200d,150d,graphics.ToString(),[resource])],CancellationToken.None);
+            TestAssert.True(output.Length>0,"Root variants and the bar retain valid glyph/encoding/resource ownership.");
+        }
+    }
+
+    public static void MathFontRadicalBoxesKeepDegreeAssemblyEncodingAndCancellationFallbacks()
+    {
+        var resource=RadicalResource();DocxEquation source=RadicalEquation(12d);
+        var radical=(DocxMathRadical)source.Content.Children[0];
+        foreach(var invalid in new[]{radical with { DegreeHidden=false },radical with { Degree=Row("B") },
+            radical with { HasUnsupportedProperties=true },radical with { Radicand=new([source.Content.Children[0]]) }})
+            TestAssert.True(!DocxMathLayout.TryMeasure(source with { Content=new([invalid]) },_=>resource,CancellationToken.None,out var box,out _) && box is null,
+                "Unsupported degree/properties/deeper structures keep the complete radical fallback.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(RadicalEquation(100d),_=>resource,CancellationToken.None,out var large,out _) && large is null,
+            "An assembly-only height cannot publish the largest inadequate ready-made glyph.");
+        var missing=new PdfFontResource("Missing",PdfEmbeddedFont.Create(resource.Font.Font,"B+C".Select(c=>(int)c),CancellationToken.None));
+        TestAssert.True(!DocxMathLayout.TryMeasure(source,_=>missing,CancellationToken.None,out var absent,out _) && absent is null,
+            "A selected variant needs its own encoded CID before publishing the box.");
+        using var cancelled=new CancellationTokenSource();cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(()=>DocxMathLayout.TryMeasure(source,_=>resource,cancelled.Token,out _,out _));
+        using(OoxConversionBudget.Scope scope=OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion=0 }))
+            TestAssert.Throws<OoxPdfLimitExceededException>(()=>DocxMathLayout.TryMeasure(source,_=>resource,CancellationToken.None,out _,out _));
+    }
+
+    public static void MathFontRadicalAliasesKeepAuthoredUnicodeInEitherSourceOrder()
+    {
+        XNamespace w="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace m="http://schemas.openxmlformats.org/officeDocument/2006/math";
+        foreach(bool rootFirst in new[]{true,false})
+        {
+            string fixture=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases","docx-omml-radical-display-large20.docx"));
+            using ZipArchive archive=ZipFile.OpenRead(fixture);
+            var parts=new Dictionary<string,byte[]>();
+            foreach(var entry in archive.Entries){using var input=entry.Open();using var data=new MemoryStream();input.CopyTo(data);parts.Add(entry.FullName,data.ToArray());}
+            XElement document=XElement.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+            XElement root=document.Descendants(m+"rad").Single();
+            XElement run=root.Element(m+"e")!.Element(m+"r")!;run.Element(m+"t")!.Value="B+C";
+            XElement props=run.Element(m+"rPr")??new XElement(m+"rPr");if(props.Parent is null)run.AddFirst(props);
+            props.RemoveNodes();props.Add(new XElement(m+"sty",new XAttribute(m+"val","p")));
+            XElement rootParagraph=root.Ancestors(w+"p").First();
+            XElement alias=new(w+"p",new XElement(m+"oMathPara",new XElement(m+"oMath",new XElement(m+"r",
+                new XElement(m+"rPr",new XElement(m+"sty",new XAttribute(m+"val","p"))),new XElement(m+"t","\u009F")))));
+            if(rootFirst)rootParagraph.AddAfterSelf(alias);else rootParagraph.AddBeforeSelf(alias);
+            parts["word/document.xml"]=System.Text.Encoding.UTF8.GetBytes(document.ToString(SaveOptions.DisableFormatting));
+            string path=TestFixtures.WriteTempPackage(".docx",parts);
+            try
+            {
+                DocxDocument source=DocxTests.ReadDocx(path,OoxPdfDocxMarkupMode.Final);
+                var renderer=new DocxRenderer(new RadicalFontResolver(RadicalFontBytes()),OoxPdfDocxMarkupMode.Final,OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+                string text=string.Concat(renderer.RenderBlankPages(source,null,CancellationToken.None).Select(DocxPageFootnoteNumberingTests.DecodeText));
+                TestAssert.True(text.Contains('\u009F'),"Authored Unicode must survive an implicit-root variant alias in either source order.");
+                TestAssert.True(!text.Contains('\u221A'),"An unresolved glyph/Unicode alias keeps root fallback instead of changing the authored source mapping.");
+            }
+            finally{File.Delete(path);}
+        }
+    }
+
+    private sealed class RadicalFontResolver(byte[] bytes):IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request)=>new(request.FamilyName,"TestFont",new FontStyleKey(HasMathTable:true),
+            new MemoryFontProgramSource("test:radical-alias",bytes),false);
+    }
+
+    private static DocxEquation RadicalEquation(double size)=>new(new([new DocxMathRadical(
+        new([new DocxMathRun(new("B+C",size,null,false,false,false,null,"TestFont"),"p",null)]),new([]),true)]),0,0,true,null,null,null)
+        { ParentFontSize=12d };
+
+    private static PdfFontResource RadicalResource()
+    {
+        OpenTypeFont font=OpenTypeFont.Load(RadicalFontBytes());
+        return new("Root",PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[]{(font.MapCodePoint('B'),(int)'B'),(font.MapCodePoint('+'),(int)'+'),(font.MapCodePoint('C'),(int)'C'),((ushort)130,0x221A),((ushort)128,0x221A)},CancellationToken.None));
+    }
+
+    private static byte[] RadicalFontBytes()
+    {
+        byte[] math=Constants();Array.Resize(ref math,254);
+        void Set(int at,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at),value);
+        Set(8,224);Set(224+2,12);Set(224+6,1);Set(224+10,18);Set(224+12,1);Set(224+14,1);Set(224+16,130);
+        Set(224+18+2,2);Set(224+18+4,130);Set(224+18+6,1000);Set(224+18+8,128);Set(224+18+10,2000);
+        foreach((OpenTypeMathConstant field,ushort value) in new[]{(OpenTypeMathConstant.RadicalVerticalGap,(ushort)50),
+            (OpenTypeMathConstant.RadicalDisplayStyleVerticalGap,(ushort)80),(OpenTypeMathConstant.RadicalRuleThickness,(ushort)40),
+            (OpenTypeMathConstant.RadicalExtraAscender,(ushort)40)})Set(18+(int)field*4,value);
+        byte[] cmap=new byte[52];
+        void U16(int at,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(cmap.AsSpan(at),value);
+        void U32(int at,uint value)=>BinaryPrimitives.WriteUInt32BigEndian(cmap.AsSpan(at),value);
+        U16(2,1);U16(4,3);U16(6,10);U32(8,12);U16(12,12);U32(16,40);U32(24,2);
+        U32(28,0x20);U32(32,0x9F);U32(36,1);U32(40,0x221A);U32(44,0x221A);U32(48,130);
+        return TestFontBuilder.ReplaceTable(TestFontBuilder.CreateMathFont(math),"cmap",cmap);
+    }
+
     public static void MathFontStructuredSequencesRetainIndependentChildrenAndRules()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));

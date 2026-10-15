@@ -5,7 +5,10 @@ namespace Lokad.OoxPdf.Docx;
 
 // Shared capability discovery and composition. Literal rows retain their
 // existing layout; one display fraction adds two literal child boxes and a rule.
-internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel);
+internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel)
+{
+    public bool OwnsRadicalGlyphs { get; init; }
+}
 
 internal static partial class DocxMathLayout
 {
@@ -23,11 +26,11 @@ internal static partial class DocxMathLayout
             above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(font, glyph.FontSize));
             below = Math.Max(below, -font.Os2.TypographicDescender * glyph.FontSize / font.UnitsPerEm);
             naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(font, glyph.FontSize));
-            if (font.TryGetMathConstants(out OpenTypeMathConstants constants))
+            if (box.ParentMetrics is null && font.TryGetMathConstants(out OpenTypeMathConstants constants))
                 leading = Math.Max(leading, constants.GetValue(OpenTypeMathConstant.MathLeading) * glyph.FontSize / font.UnitsPerEm);
         }
         if (box.ParentMetrics is { } parent && parent.Font.TryGetMathConstants(out OpenTypeMathConstants parentConstants))
-            leading = Math.Max(leading, parentConstants.GetValue(OpenTypeMathConstant.MathLeading) * parent.Size / parent.Font.UnitsPerEm);
+            leading = Math.Max(0d, parentConstants.GetValue(OpenTypeMathConstant.MathLeading) * parent.Size / parent.Font.UnitsPerEm);
         // MathLeading protects tall ink above the ordinary typographic box.
         // Apply it once to the composed box, rather than once per child/glyph.
         above = Math.Max(above, box.AboveBaseline + leading);
@@ -40,6 +43,7 @@ internal static partial class DocxMathLayout
     public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
+        bool radicalOwner = false;
         if (GetScripts(equation) is { } scripts)
         {
             if (GetFraction(equation with { Content = scripts.Base }) is { } basis)
@@ -58,6 +62,8 @@ internal static partial class DocxMathLayout
         }
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
+        else if (GetRadical(equation) is { } radical)
+        { rows.Add((radical.Radicand, 0, false)); radicalOwner = true; }
         else if (GetStructuredRow(equation, token) is { } compound)
         {
             var sources = new List<DocxMathRunSource>();
@@ -88,6 +94,7 @@ internal static partial class DocxMathLayout
                     for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
             }
         }
+        if (radicalOwner && result.Count > 0) { result[0] = result[0] with { OwnsRadicalGlyphs = true }; }
         runs = result;
         return true;
     }
@@ -97,6 +104,8 @@ internal static partial class DocxMathLayout
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
+        if (GetRadical(equation) is { } radical)
+            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback);
         if (GetStructuredRow(equation, token) is { } compound)
             return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont);
         if (GetFraction(equation) is not { } fraction)

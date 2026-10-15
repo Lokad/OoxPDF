@@ -7,6 +7,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeRadicalsPaintReadableRootsOwnedBarsAndChildSizes()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string shape,string meaning,double size) in new[]{("small8","x",8.04d),("operators12","n+1",12d),
+            ("descenders12","g+y",12d),("large20","a+b",20.04d)})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-radical-{placement}-{shape}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("√"+meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Contains(" re f",page.Content);
+            TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Qualified root boxes must report actual native source painting.");
+        }
+    }
+
     public static void DocxNativeStructuredSequencesRetainSourceOrderAndIndependentRules()
     {
         RequireMathFont();

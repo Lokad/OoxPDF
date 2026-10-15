@@ -31,9 +31,10 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
     {
-        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics)>();
+        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> RadicalFaces)>();
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
+        var radicalFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, List<OpenTypeMathGlyphVariant> Variants)>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraphElement element in document.BodyElements.OfType<DocxParagraphElement>())
         {
             token.ThrowIfCancellationRequested();
@@ -48,6 +49,7 @@ internal sealed partial class DocxRenderer
                 if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
             }
             bool valid = true;
+            List<OpenTypeFont>? radicalOwners = null;
             foreach (DocxMathRunSource source in mathRuns)
             {
                 token.ThrowIfCancellationRequested();
@@ -75,9 +77,34 @@ internal sealed partial class DocxRenderer
                     if (!group.Glyphs.TryGetValue(glyph, out int existing) || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
                 }
                 if (!valid) { break; }
+                if (source.OwnsRadicalGlyphs)
+                {
+                    if (!radicalFaces.ContainsKey(font))
+                    {
+                        ushort root = font.MapCodePoint(0x221A);
+                        var variants = new List<OpenTypeMathGlyphVariant>();
+                        double height = 0d;
+                        while (font.TryGetMathVerticalVariant(root, height, token, out var variant))
+                        { variants.Add(variant); height = variant.Advance + 1d; }
+                        if (variants.Count == 0) { valid = false; break; }
+                        radicalFaces.Add(font, (group.Glyphs, variants));
+                    }
+                    (radicalOwners ??= []).Add(font);
+                }
                 runKeys[run] = key;
             }
-            if (valid) { candidates.Add((paragraph, equation, parentMetrics)); }
+            if (valid) { candidates.Add((paragraph, equation, parentMetrics, radicalOwners ?? [])); }
+        }
+        var unavailableRadicalFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
+        foreach (var face in radicalFaces)
+        {
+            token.ThrowIfCancellationRequested();
+            // Publish implicit operators after all authored glyphs are known.
+            // A source alias needs a separate encoding owner; keep root fallback
+            // rather than changing that source character's Unicode identity.
+            if (face.Value.Variants.Any(v => face.Value.Glyphs.TryGetValue(v.Glyph, out int point) && point != 0x221A))
+            { unavailableRadicalFaces.Add(face.Key); continue; }
+            foreach (var variant in face.Value.Variants) { face.Value.Glyphs[variant.Glyph] = 0x221A; }
         }
         var fonts = new Dictionary<(string StableId, int FaceIndex), PdfFontResource>();
         foreach (var group in groups)
@@ -92,6 +119,7 @@ internal sealed partial class DocxRenderer
         foreach (var candidate in candidates)
         {
             token.ThrowIfCancellationRequested();
+            if (candidate.RadicalFaces.Any(unavailableRadicalFaces.Contains)) { continue; }
             if (!DocxMathLayout.TryMeasure(candidate.Equation,
                 run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
