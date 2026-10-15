@@ -9,6 +9,7 @@ internal sealed partial class DocxLayoutEngine
         double fontSize, IDocxTextMeasurer measurer, double scale, double defaultTabStop, int pageNumber,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         DocxMidLineMath? fitting = CreateMidLineMath(paragraph, math, spans, lines, firstWidth, continuationWidth,
             fontSize, measurer, scale, defaultTabStop, pageNumber);
         if (fitting is not null) { return fitting; }
@@ -62,10 +63,11 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static (double Above, double Below) ResolveInlineMathExpansion(
-        DocxPreparedMathParagraph math, double fontSize, double baselineLineHeight, double lineHeight, double scale, bool exact)
+        DocxPreparedMathParagraph math, double fontSize, double baselineLineHeight, double lineHeight, double scale, bool exact,
+        double? baselineInset = null)
     {
         if (exact) { return (0d, 0d); }
-        double inset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, baselineLineHeight, false);
+        double inset = baselineInset ?? DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, baselineLineHeight, false);
         return (Math.Max(0d, math.BaselineInset * scale - inset),
             Math.Max(0d, (math.LineHeight - math.BaselineInset) * scale - (lineHeight - inset)));
     }

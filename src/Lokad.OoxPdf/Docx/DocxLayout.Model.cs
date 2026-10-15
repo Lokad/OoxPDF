@@ -81,6 +81,8 @@ internal sealed record DocxTextLineLayout(
     public double? InlineObjectEndOffsetX { get; init; }
     public DocxPreparedMathParagraph? Math { get; init; }
     public double MathScale { get; init; } = 1d;
+    public bool IsInlineMath { get; init; }
+    public double InlineMathOffsetX { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(
@@ -223,6 +225,7 @@ internal sealed record DocxTableLayoutContext(
     IReadOnlyList<DocxRevisionInfo>? Revisions)
 {
     public IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? MathParagraphs { get; init; }
+    public CancellationToken CancellationToken { get; init; }
     public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
     public bool AutomaticMinimumRowPlacement { get; init; }
     public bool AutomaticTopRowContentClip { get; init; }

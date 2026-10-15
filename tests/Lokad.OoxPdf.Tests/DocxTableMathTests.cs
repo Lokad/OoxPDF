@@ -120,6 +120,72 @@ internal static class DocxTableMathTests
         }
     }
 
+    public static void DocxTableMathInlineMeasurementAndWrappingRetainSourceOwnership()
+    {
+        var (display, prepared) = Prepared(24d);
+        DocxTextRun before = new("Before ", 10d, null, false, false, false, null, "TestFont");
+        DocxTextRun after = before with { Text = " after public equation with more prose." };
+        DocxEquation equation = prepared.Equation with { Display = false, SourceRunIndex = 1 };
+        DocxParagraph paragraph = display with { Runs = [before, after], Equations = [equation] };
+        var math = prepared with { Equation = equation };
+        var cell = new DocxTableCell(string.Concat(paragraph.Runs.Select(run => run.Text)), [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var document = TableDocument(new DocxTableRow([cell], null));
+        TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
+            .Single(source => source.Equations.Count != 0)), "Inline cells share the body semantic owner policy.");
+        DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathParagraphs:
+                new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                { [paragraph] = math with { LineHeight = height } });
+        DocxLayout initial = Layout(24d), expanded = Layout(34d);
+        var a = initial.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+        var b = expanded.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+        var lines = a.Cells.Single().TextLines;
+        TestAssert.True(lines.Count > 1 && lines.Count(line => line.Math is not null) == 1 &&
+            lines[0].IsInlineMath && lines[0].InlineMathOffsetX > 0d,
+            "A complete box stays at its source boundary while its following prose wraps.");
+        string prose = string.Concat(lines.Select(line => line.Text));
+        TestAssert.True(!prose.Contains('\u200B') && new[] { "Before", "after", "public", "equation", "with", "more", "prose." }
+            .All(word => prose.Contains(word, StringComparison.Ordinal)), "Every public prose word survives without layout markers.");
+        TestAssert.True(Math.Abs(b.Height - a.Height - 10d) < .000001,
+            "Cell measurement reserves exactly the extra descent consumed by inline placement.");
+        double afterA = initial.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+        double afterB = expanded.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+        TestAssert.True(Math.Abs(afterA - afterB - 10d) < .000001, "Following body flow shares the measured row advance.");
+        TestAssert.Equal(before.Text + after.Text, string.Concat(paragraph.Runs.Select(run => run.Text)));
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), cancelled.Token,
+                mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph> { [paragraph] = math }));
+    }
+
+    public static void DocxTableMathInlineUnfitBoxesPreserveOrdinaryRowSplitting()
+    {
+        var (display, prepared) = Prepared(24d);
+        DocxTextRun run = new(string.Join(" ", Enumerable.Repeat("Public prose", 20)), 10d, null, false, false, false, null, "TestFont");
+        DocxEquation equation = prepared.Equation with { Display = false, SourceRunIndex = 1 };
+        DocxParagraph paragraph = display with { Runs = [run], Equations = [equation] };
+        var cell = new DocxTableCell(string.Concat(paragraph.Runs.Select(run => run.Text)), [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        DocxDocument source = TableDocument(new DocxTableRow([cell], 150d) { HeightRuleValue = "exact" }) with { PageHeightPoints = 100d };
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        DocxLayout plain = engine.Create(source, measurer, default);
+        DocxLayout fallback = engine.Create(source, measurer, default, mathParagraphs:
+            new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+            { [paragraph] = prepared with { Equation = equation, Box = prepared.Box with { Width = 1000d } } });
+        TestAssert.Equal(plain.Pages.Count, fallback.Pages.Count);
+        var ordinaryRows = plain.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
+        var fallbackRows = fallback.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
+        TestAssert.True(ordinaryRows.Length > 1, "This control must exercise actual row fragments across pages.");
+        TestAssert.Equal(ordinaryRows.Length, fallbackRows.Length);
+        for (int index = 0; index < ordinaryRows.Length; index++)
+        {
+            TestAssert.True(Math.Abs(ordinaryRows[index].Height - fallbackRows[index].Height) < .000001,
+                "An unpainted prepared box cannot make an otherwise splittable prose row atomic.");
+            TestAssert.True(fallbackRows[index].Cells.SelectMany(c => c.TextLines).All(line => line.Math is null),
+                "An unfit equation retains the whole fallback.");
+        }
+    }
+
     private static (DocxParagraph Paragraph, DocxPreparedMathParagraph Math) Prepared(double height)
     {
         var run = new DocxTextRun("A+B", 10d, null, false, false, false, null, "TestFont");

@@ -736,7 +736,7 @@ internal sealed partial class DocxRenderer
         int pageCount,
         CancellationToken cancellationToken)
     {
-        if (line.Math is { } math)
+        if (line.Math is { } math && !line.IsInlineMath)
         {
             PaintMath(math, line.X, line.BaselineY, line.MathScale, graphics, markupContext, cancellationToken);
             return;
@@ -756,6 +756,9 @@ internal sealed partial class DocxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             RenderTextEmissionSegment(segment, graphics, markupContext);
         }
+        if (line.IsInlineMath && line.Math is { } inlineMath)
+            PaintMath(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale,
+                graphics, markupContext, cancellationToken);
     }
 
     private static void RenderMarkupIndicators(

@@ -7,6 +7,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeTableInlineMathRetainsProseWrappingAndWholeFallbacks()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("literal", "x−y"), ("fraction", "x+2y"),
+            ("script", "αi2"), ("root", "√x+1"), ("wrap-fraction", "x+2y"), ("exact50-fraction", "x+2y") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).Single();
+            string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains(meaning, decoded);
+            foreach (string word in new[] { "Before", "inline", "after", "equation.", "After public math table." })
+                TestAssert.Contains(word == "equation." && suffix == "wrap-fraction" ? "equation" : word, decoded);
+            TestAssert.True(!decoded.Contains('\u200B') && diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Painted inline cell equations retain prose and accurate scope diagnostics.");
+        }
+        foreach (string suffix in new[] { "unfit-fallback", "multiple-fallback" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).Single();
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
+                diagnostics.All(d => d.Id != "DOCX_APPROXIMATED_EQUATION") &&
+                !page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+                "Unfit and multiple inline cell equations keep the whole fallback without publishing unused fonts.");
+        }
+    }
+
     public static void DocxNativeTableFramesRetainPageCountsAndFollowingProse()
     {
         RequireMathFont();

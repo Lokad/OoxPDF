@@ -26,7 +26,7 @@ internal static class DocxMathParagraphPolicy
                         foreach (DocxParagraph source in cell.Paragraphs)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (GetDisplayRow(source) is not null) { yield return source; }
+                            if (GetDisplayRow(source) is not null || GetInlineRow(source) is not null) { yield return source; }
                         }
                     }
                 }

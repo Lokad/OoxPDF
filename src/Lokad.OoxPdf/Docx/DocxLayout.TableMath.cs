@@ -4,6 +4,29 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    private static DocxMidLineMath? WrapTableInlineMath(DocxParagraph paragraph, IReadOnlyList<DocxTextSpan> spans,
+        ref DocxWrappedTextLine[] lines, double firstWidth, double continuationWidth, double fontSize,
+        DocxTableCellLayoutContext context)
+    {
+        context.CancellationToken.ThrowIfCancellationRequested();
+        return context.MathParagraphs is { } prepared && prepared.TryGetValue(paragraph, out var math) && !math.Equation.Display
+            ? WrapInlineMath(paragraph, math, spans, ref lines, firstWidth, continuationWidth, fontSize,
+                context.TextMeasurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints,
+                context.PageNumber ?? 1, context.CancellationToken) : null;
+    }
+
+    private static (double Above, double Below) ResolveTableInlineMathExpansion(DocxPreparedMathParagraph math,
+        DocxParagraph paragraph, IReadOnlyList<DocxParagraph> paragraphs, double fontSize, double lineHeight,
+        DocxTableCellLayoutContext context)
+    {
+        double firstInset = ResolveTableCellFirstBaselineInset(paragraphs, context.TextMeasurer);
+        double paragraphInset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
+            IsExactLineSpacing(paragraph.EffectiveProperties), paragraphs, paragraph, context.TextMeasurer);
+        double inset = firstInset + (paragraphInset - firstInset) * context.ParagraphSpacingScale;
+        return ResolveInlineMathExpansion(math, fontSize, lineHeight, lineHeight, context.ParagraphSpacingScale,
+            IsExactLineSpacing(paragraph.EffectiveProperties), baselineInset: inset);
+    }
+
     private static bool TryGetTableDisplayMath(DocxParagraph paragraph, double width, double scale,
         IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? prepared,
         [NotNullWhen(true)] out DocxPreparedMathParagraph? math)

@@ -249,10 +249,6 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? math, out double splitPitch)
         {
             splitPitch = 0d;
-            // A prepared display box is atomic until math-bearing row fragments
-            // have their own placement qualification.
-            if (math is not null &&
-                row.Cells.Any(cell => cell.Paragraphs.Any(math.ContainsKey))) { return false; }
             if (textMeasurer is null)
             {
                 return false;
@@ -270,7 +266,10 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo).Lines;
+                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, mathParagraphs: math, cancellationToken: cancellationToken).Lines;
+                // Keep only painted math boxes atomic until math-bearing row
+                // fragments have their own placement qualification.
+                if (textLines.Any(line => line.Math is not null)) { return false; }
                 if (reviewPaginationScale < 1d)
                 {
                     double correction = ResolveTableCellFirstBaselineInset(
@@ -419,7 +418,7 @@ internal sealed partial class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue,
-            table.Revisions) { MathParagraphs = mathParagraphs };
+            table.Revisions) { MathParagraphs = mathParagraphs, CancellationToken = cancellationToken };
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
         bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
@@ -434,7 +433,7 @@ internal sealed partial class DocxLayoutEngine
                 : row.Cells
                     .Select((cell, columnIndex) =>
                     {
-                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale, mathParagraphs);
+                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale, mathParagraphs, cancellationToken);
                         if (!(measured.MinimumPictureOverlap > 0d)) return measured.FullHeight;
                         return measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
                             IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
@@ -1635,7 +1634,7 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
             (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages, double cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d)
-                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathParagraphs);
+                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathParagraphs, tableContext.CancellationToken);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 (cellTextLines, cellPlacedImages) = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, cellPlacedImages, textMeasurer,
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
