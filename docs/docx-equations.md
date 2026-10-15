@@ -368,3 +368,16 @@ in both inline and display positions:
 
 The authoring tool and Word reference renderer are validation tools only.
 Neither is a dependency of the entirely safe managed OoxPdf library.
+
+Delimiter source now retains argument lists, control formatting and authored
+begin/end/separator characters, growth and shape. Omitted parentheses and
+separator defaults remain distinct from explicitly empty characters, following
+the [OOXML begin-character definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.beginchar?view=openxml-3.0.1).
+Shared control-property validation also serves roots. Malformed/unknown values,
+missing roles and nested content remain explicit; iterative parsing and
+cancellation have focused coverage. Seventeen source/fallback methods qualify
+one artifact. Eight independent Word controls yield fourteen matching source
+glyph outlines; 32 focused vertical-variant queries match fontTools. Nineteen
+PDFs remain byte-identical, including all eight delimiter fallbacks. This
+component does not yet paint scalable delimiters; placement and resource
+publication require their own Word qualification.
