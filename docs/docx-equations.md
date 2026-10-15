@@ -710,8 +710,8 @@ known/unknown content, source argument properties and authored controls retain
 their boundaries. An absent control remains distinct from an authored one;
 cell formatting stays attached to its own run. Unknown matrix properties,
 malformed/orphan row roles and unqualified shapes remain explicit, without
-repeated raw subtree serialization. Column-spacing/alignment properties remain
-raw source until independently qualified.
+repeated raw subtree serialization. Unqualified spacing/base-justification properties remain raw source; the typed
+column qualification follows below.
 
 Six Word references retain ordered cell meanings and geometry for display/inline
 2x2 grids, a 3x2 grid, a fractional cell, a larger authored control and an Arial
@@ -742,5 +742,26 @@ explicit residuals. The all-normal grid emits only its painted Arial equation
 resource. Twelve affected methods, ten exact neighboring PDFs and four exact
 transfer smoke PDFs qualify one strict Release artifact. Three public cases keep
 existing visual thresholds. Structured cells, empty placeholders, mixed rows,
-explicit column/spacing/base-justification properties and deeper grids remain in
-complete fallback until their own qualification.
+explicit spacing/base-justification properties and deeper grids remain in complete
+fallback. The explicit column-justification qualification follows below.
+
+
+Explicit matrix column declarations now retain typed count/justification groups.
+An [omitted or val-less count defaults to one](https://learn.microsoft.com/en-za/dotnet/api/documentformat.openxml.math.matrixcolumncount?view=openxml-2.10.0);
+[omitted justification defaults to center](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.matrixcolumnjustification?view=openxml-3.0.1).
+Known groups apply left, center or right alignment within the same logical slots
+used by implicit matrices. Declarations must cover the actual source columns in
+this bounded capability. Malformed, incomplete or overdeclared groups retain
+complete fallback. Schema validation retains the count as a scalar; one shared
+resolver checks it against the actual remaining columns before filling an array
+sized only from the source grid. Checked spans and cancellation preserve bounded
+work without a count-driven allocation or another quota knob.
+
+Six independent Word controls improve across explicit center/left/right,
+three-column grouped alignment, omitted/val-less defaults and a larger control.
+All 47 glyph outlines match Word/source. Text-operation residuals remain within
+0.46 pt X and 0.18 pt Y. Fifteen focused methods and 12 exact neighboring PDFs
+qualify one strict Release artifact; four exact integration PDFs verify transfer.
+Three public cases retain the existing thresholds and visible residuals.
+Earlier implicit matrices, metric-only font ownership and unsupported spacing,
+base-justification, structured/empty-cell and deeper-grid fallbacks remain intact.

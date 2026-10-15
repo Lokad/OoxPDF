@@ -142,7 +142,8 @@ supported; explicit growth fits occupied body height using ready-made variants. 
 participate in bounded mixed rows through semantic operator/body edges. Literal function names with bounded literal, delimiter,
 script or fraction arguments also render standalone or in bounded mixed rows,
 with independent control and paint fonts. Native literal matrices support nonempty
-standalone/fitting-inline grids with centered columns and default row/column spacing. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
+standalone/fitting-inline grids with centered or declared left/right/grouped columns
+and default row/column spacing. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
 
 Unsupported or ignored:
 
