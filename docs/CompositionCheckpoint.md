@@ -181,3 +181,12 @@ falls back. Font-baseline eligibility stays separate from frame-capacity
 eligibility: an ignored object cannot switch off the published prose baseline.
 The regression catches 117/120 words in an intermediate candidate and passes after
 restoring the shared line-metric owner. Neither rejected candidate is delivered.
+
+
+The accepted natural text-table frame passes 54 selected methods in one invocation
+and five portable checks under Ubuntu. All eight long-table mode outcomes preserve
+200 words and match Word's four-page totals; other numerical gates remain unmet.
+All ten fixed portfolio PDFs retain accepted bytes, including the held-out memo.
+Eighteen independent comparisons reuse PDF/reference/threshold identities. Four
+root smoke PDFs match after transferring 17 assets without rebuild or suite replay.
+The two rejected intermediate revisions remain retained as development evidence.
