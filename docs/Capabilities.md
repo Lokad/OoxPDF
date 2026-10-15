@@ -147,6 +147,10 @@ standalone/fitting-inline grids with centered or declared left/right/grouped col
 top/center/bottom base justification and default row/column spacing (including
 explicit default declarations). Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
 
+Explicitly hidden empty matrix cells retain metric-only placeholder geometry,
+including empty rows and columns; visible-placeholder and wholly empty grids
+retain fallback.
+
 Unsupported or ignored:
 
 - Full Word-style tracked-change balloon content and collision-aware markup margin pagination.

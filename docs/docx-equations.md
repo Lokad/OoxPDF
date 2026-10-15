@@ -826,3 +826,23 @@ inherited unchanged from the structured-cell qualification. A separate six-contr
 assessment confirms row-clearance differences across row positions and matched
 paint/control scales; its exact clearance metric remains unresolved, so no fitted
 constant or conditional correction is introduced.
+
+Matrices with explicitly hidden empty cells now retain the
+[`plcHide` boolean and its val-less-on default](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.hideplaceholder?view=openxml-3.0.1).
+Word comparisons show that hidden placeholders still reserve the control font's
+U+2B1A dotted-square metrics. Empty slots reuse that advance and extent without
+painting a glyph or preparing a PDF font resource. Empty rows retain the shared
+control frame; empty columns retain their slots and gaps. Each empty slot charges
+the existing cumulative work budget. Missing placeholder metrics, unknown cell
+properties, wholly empty grids and visible-placeholder profiles retain complete
+fallback. No additional cache, quota or native code is introduced.
+
+Six Word controls improve across diagonal gaps, empty rows/columns, a larger
+control and all-Arial paint. Text-operation residuals remain within 0.34 pt X and
+0.12 pt Y; all 17 painted glyph outlines match Word/source. The rejected zero-width,
+extent-free prototype displaced text by up to 12.89 pt X and 7.20 pt Y. Twenty-four
+focused methods and 12 exact neighbors, including two visible-placeholder fallback
+guards, qualify one strict Release artifact. Four exact integration PDFs verify
+transfer; three public cases retain existing visual thresholds. The all-Arial
+grid continues to publish only its painted font. Earlier structured-row and optical
+residuals remain unchanged.
