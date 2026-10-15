@@ -196,6 +196,7 @@ internal static class DocxMathRowLayout
     };
     internal static int Glue(AtomKind left, AtomKind right) =>
         left == AtomKind.Open || right == AtomKind.Close ? 0 :
+        left == AtomKind.LargeOperator && right == AtomKind.Punctuation ? 0 :
         left == AtomKind.Relation || right == AtomKind.Relation ? 5 :
         left == AtomKind.Binary || right == AtomKind.Binary ? 4 :
         left == AtomKind.LargeOperator || right == AtomKind.LargeOperator ? 3 :

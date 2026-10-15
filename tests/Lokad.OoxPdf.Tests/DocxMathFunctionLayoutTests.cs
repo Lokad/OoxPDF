@@ -7,6 +7,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFunctionLayoutTests
 {
+    public static void MathFontFunctionApplicationEndsShareSpacingAndKeepPunctuationAdjacent()
+    {
+        var font = OpenTypeFont.Load(MathFontBytes()); var resource = Resource("Application", font, "sinBC+=(),");
+        foreach (string kind in new[] { "literal", "normal", "fraction" })
+        {
+            var basis = new DocxMathRow([Run("B", normal: kind == "normal")]);
+            var argument = kind == "fraction" ? new DocxMathRow([new DocxMathFraction(basis, new([Run("C")]), "bar")]) : basis;
+            var function = Function(new([Run("sin")]), argument); var equation = Equation(function);
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var single, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected bounded application.");
+            var alone = TestAssert.NotNull(single);
+            foreach ((string suffix, double gap) in new[] { ("C", 2d), ("+C", 12d * 4d / 18d), ("=C", 12d * 5d / 18d),
+                ("(C)", 2d), (")", 0d), (",", 0d) })
+            {
+                var row = equation with { Content = new([function, Run(suffix)]) };
+                TestAssert.True(DocxMathLayout.TryMeasure(row, _ => resource, CancellationToken.None, out var composed, out reason,
+                    resolveControlMetrics: _ => font), reason ?? "Expected application boundary.");
+                var box = TestAssert.NotNull(composed);
+                TestAssert.True(Math.Abs(box.Glyphs[alone.Glyphs.Count].X - alone.AdvanceWidth - gap) < 1e-9,
+                    "A complete application supplies thin outgoing spacing, preserving binary/relation priority and closing/punctuation adjacency.");
+                TestAssert.True(box.Glyphs.Take(alone.Glyphs.Count).SequenceEqual(alone.Glyphs) && box.Rules.SequenceEqual(alone.Rules),
+                    "Application boundary semantics cannot alter the independently measured name, argument or fraction rule.");
+            }
+        }
+    }
+
     public static void MathFontDelimitedSubformulasSharePaintedThresholdAndSemanticGlue()
     {
         foreach (ushort minimum in new ushort[] { 0, 1500, 2500 })

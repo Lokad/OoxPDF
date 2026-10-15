@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeFunctionBoundariesRetainNeighborsAndPunctuationMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("literal-ordinary", "sinxb"), ("literal-binary", "sinx+b"),
+            ("literal-relation", "sinx=b"), ("normal-ordinary", "logxb"), ("fraction-ordinary", "sinxkb"),
+            ("matrix-fenced-ordinary", "det(abcd)b"), ("literal-open", "sinx(b)"), ("literal-close", "sinx)"),
+            ("literal-punctuation", "sinx,"), ("normal-punctuation", "logx,"), ("fraction-punctuation", "sinxk,"), ("matrix-fenced-punctuation", "det(abcd),") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-boundary-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Outgoing application spacing retains every argument, neighbor and punctuation glyph.");
+        }
+    }
+
     public static void DocxNativeFunctionMatrixArgumentsRetainNameCellsAndMetricOnlyOwners()
     {
         RequireMathFont();
