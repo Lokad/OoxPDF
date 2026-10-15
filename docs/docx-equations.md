@@ -646,3 +646,35 @@ Eighteen focused methods, 17 exact standalone/mixed-row neighboring PDFs and fou
 exact transfer smoke PDFs qualify one strict Release artifact. Three public cases
 retain the existing visual thresholds. Structured names and deeper application
 arguments still use complete fallback, with cancellation and work limits intact.
+
+
+Delimiters now admit one bounded fraction or no-bar stack in each argument,
+alongside literal arguments. Discovery reuses the existing fraction roles and
+script levels, and measurement delegates to the shared argument box. The child
+box supplies its complete enclosure height; literal arguments retain their
+symmetric axis frame. The enclosing owner takes the maximum requirement across
+arguments. Per-node control paint, translated child bars, separators, fixed
+growth, source order and complete fallback remain intact. Wider nested fraction
+children and unsupported properties/shapes still use fallback; no font or size
+eligibility branch is added.
+
+Eleven independent Word comparisons improve in similarity and foreground recall,
+covering both modes, parentheses/brackets, stacks, child/parent size contrasts
+and a function with a fenced fractional argument. The earlier literal-axis
+prototype chose an oversized display parenthesis; the complete-box profile
+corrects that case. All 57 matching outlines out of 69 and the 12 mismatches are
+recorded individually. Three cross-size cases retain delimiter-variant or optical
+glyph differences, with baseline residuals up to 4.47 pt; the composed function
+also retains about 2 pt of application-spacing difference. These are explicit
+approximate results, not full Office parity. The minimum delimited-expression
+constant in the [OpenType MATH definition](https://learn.microsoft.com/en-us/typography/opentype/spec/math)
+does not by itself establish Word's remaining cross-size selection rule; no
+unverified minimum or size-based correction is applied.
+
+Twenty-one focused methods and 17 exact neighboring PDFs qualify one strict
+Release artifact; four exact smoke PDFs verify its transfer. Four public cases
+retain existing thresholds, including the low-fidelity larger-parent contrast.
+An older literal-only regression was updated to keep testing unsupported deeper
+nesting after fractions became eligible. Its failed report remains separate from
+the final qualification. Safe managed code, cancellation/work bounds, bounded
+staging and atomic publication remain unchanged.
