@@ -207,3 +207,12 @@ one point; review-mode vertical differences reach about 3.4pt, reflecting retain
 layout residuals. No fitted destination correction or visual-threshold change is
 introduced. A normal-math variant exercises all four targets with the pinned
 portable font, independently of installed Windows fonts.
+
+
+Navigation qualification passes 33 selected methods in one invocation and all
+four actual portable renderers under Ubuntu. Each compound mode now exports four
+links, matching Word's target count. The corresponding PNGs, text operations and
+graphics operations retain parent bytes. All ten fixed portfolio PDFs are exact;
+17 assets and four integration PDFs transfer without rebuild or suite replay.
+Coordinate residuals and failed visual gates remain explicit; mixed-inline source
+annotation binding is still open.
