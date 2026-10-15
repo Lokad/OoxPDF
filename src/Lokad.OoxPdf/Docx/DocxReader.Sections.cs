@@ -149,6 +149,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? revision, int sourceRunIndex = -1)
     {
         var images = new List<DocxInlineImage>();
+        Dictionary<XElement, (int Offset, int Order)>? positions = null;
         foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
         {
             DocxInlineImage? image = ReadDrawingImage(inline, package, relationships, revision);
@@ -157,7 +158,9 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            images.Add(image with { SourceRunIndex = sourceRunIndex });
+            var position = GetPosition(inline);
+            images.Add(image with { SourceRunIndex = sourceRunIndex,
+                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
         }
 
         foreach (XElement shape in run.Descendants(VmlNamespace + "shape"))
@@ -168,10 +171,29 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            images.Add(image with { SourceRunIndex = sourceRunIndex });
+            var position = GetPosition(shape);
+            images.Add(image with { SourceRunIndex = sourceRunIndex,
+                SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
         }
 
         return images;
+
+        (int Offset, int Order) GetPosition(XElement target)
+        {
+            if (positions is null)
+            {
+                positions = new Dictionary<XElement, (int Offset, int Order)>();
+                int textOffset = 0, order = 0;
+                foreach (XElement child in run.Elements())
+                {
+                    foreach (XElement source in child.DescendantsAndSelf().Where(element =>
+                        element.Name == WordprocessingDrawingNamespace + "inline" || element.Name == VmlNamespace + "shape"))
+                        positions[source] = (textOffset, order++);
+                    textOffset += ReadRunTextChild(child).Length;
+                }
+            }
+            return positions[target];
+        }
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.

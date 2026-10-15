@@ -47,3 +47,18 @@ Reusable commands:
 Cold CLI wall time includes process startup. Calling-thread allocation and stage
 measurements belong to the separate allocation probe; no speedup is claimed.
 Retained local baseline evidence is under `artifacts/composition-c1/`.
+
+
+The next component retains ordered text, image, equation, tab and break items for
+math-bearing source paragraphs. Inline equation offsets and visible-prose policy
+consume this view. Original object identities and image positions within a run
+are preserved; zero-width annotations stay metadata. Fields, references, textboxes
+and revisions retain the legacy source path. Replacing a legacy content collection
+invalidates its borrowed view; placement-only changes preserve it. Multi-object
+measurement and common container placement remain the next migration steps.
+
+Twenty-seven selected methods pass in one invocation, and all ten portfolio PDFs
+retain their baseline bytes, so their Office comparisons are reused. Mixed-document
+warm allocation medians rise by approximately 11–25KB for the DOCX sources; deck
+allocation medians are unchanged. Three-iteration timings are noisy and establish
+no speedup. These measurements precede any repeated-layout optimization.

@@ -29,6 +29,24 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxRevisionRange> RevisionRanges { get; init; } = [];
     public IReadOnlyList<DocxInlineTextBox> InlineTextBoxes { get; init; } = [];
     public IReadOnlyList<DocxEquation> Equations { get; init; } = [];
+    private IReadOnlyList<DocxInlineItem>? inlineContent;
+    private IReadOnlyList<DocxTextRun>? inlineContentRuns;
+    private IReadOnlyList<DocxInlineImage>? inlineContentImages;
+    private IReadOnlyList<DocxEquation>? inlineContentEquations;
+    public IReadOnlyList<DocxInlineItem>? InlineContent
+    {
+        // Transformed legacy paragraphs must rebuild this source view. Do not
+        // read stale text/style objects after a coordinator replaces a collection.
+        get => ReferenceEquals(inlineContentRuns, Runs) && ReferenceEquals(inlineContentImages, Images) &&
+            ReferenceEquals(inlineContentEquations, Equations) ? inlineContent : null;
+        init
+        {
+            inlineContent = value;
+            inlineContentRuns = Runs;
+            inlineContentImages = Images;
+            inlineContentEquations = Equations;
+        }
+    }
     public IReadOnlyList<DocxFieldReference> FieldReferences { get; init; } = [];
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
@@ -642,6 +660,8 @@ internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, 
     // RV05: source run affinity for ordered inline atoms. Images read from a run
     // carry that run index; -1 means the position was not recorded.
     public int SourceRunIndex { get; init; } = -1;
+    public int SourceTextOffsetInRun { get; init; }
+    public int SourceOrderInRun { get; init; }
 }
 
 internal readonly record struct DocxPictureCrop(double Left, double Top, double Right, double Bottom)

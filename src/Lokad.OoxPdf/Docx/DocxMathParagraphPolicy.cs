@@ -56,7 +56,7 @@ internal static class DocxMathParagraphPolicy
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
         if (!HasSupportedOwner(paragraph) ||
-            paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)) ||
+            HasVisibleProse(paragraph) ||
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
         DocxEquation equation = paragraph.Equations[0];
@@ -81,8 +81,11 @@ internal static class DocxMathParagraphPolicy
         HasSupportedOwner(paragraph) && !paragraph.Equations[0].Display &&
         paragraph.Spacing.LineRuleValue is null or "auto" &&
         paragraph.Runs.All(run => !run.Text.Contains('\t') && !run.Text.Contains('\n')) &&
-        paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text))
+        HasVisibleProse(paragraph)
             ? paragraph.Equations[0] : null;
+
+    private static bool HasVisibleProse(DocxParagraph paragraph) => paragraph.InlineContent is { } items
+        ? DocxInlineContent.HasVisibleText(items) : paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text));
 
     private static bool HasSupportedOwner(DocxParagraph paragraph) =>
         paragraph.Equations.Count == 1 && paragraph.Equations[0].Revision is null && paragraph.Revisions.Count == 0 &&

@@ -21,7 +21,7 @@ internal sealed partial class DocxLayoutEngine
         // Word can break a literal formula at mathematical operators. Until
         // that contract is supported, only wrap following prose: the complete
         // formula must still fit at its original source-owned line position.
-        var source = FindMathSourceLine(math.Equation, spans, lines);
+        var source = FindMathSourceLine(paragraph, math.Equation, spans, lines);
         if (source is null) { return null; }
         int sourceLine = source.Value.LineIndex;
         double before = MeasureTextSpansForLayout(SliceTextSpans(lines[sourceLine].Spans, 0, source.Value.CharOffset),
@@ -76,7 +76,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> spans, DocxWrappedTextLine[] lines, double firstWidth, double continuationWidth,
         double fontSize, IDocxTextMeasurer measurer, double scale, double defaultTabStop, int pageNumber)
     {
-        var source = FindMathSourceLine(math.Equation, spans, lines);
+        var source = FindMathSourceLine(paragraph, math.Equation, spans, lines);
         if (source is null) { return null; }
         int index = source.Value.LineIndex;
         double maximum = index == 0 ? firstWidth : continuationWidth;
@@ -87,10 +87,12 @@ internal sealed partial class DocxLayoutEngine
             ? new DocxMidLineMath(math, index, source.Value.CharOffset, width) : null;
     }
 
-    private static (int LineIndex, int CharOffset)? FindMathSourceLine(DocxEquation equation,
+    private static (int LineIndex, int CharOffset)? FindMathSourceLine(DocxParagraph paragraph, DocxEquation equation,
         IReadOnlyList<DocxTextSpan> spans, DocxWrappedTextLine[] lines)
     {
-        int position = spans.Where(span => span.SourceTextRunIndex < equation.SourceRunIndex).Sum(span => span.Text.Length);
+        int position;
+        if (paragraph.InlineContent is not { } items || !DocxInlineContent.TryGetEquationTextOffset(items, equation, out position))
+            position = spans.Where(span => span.SourceTextRunIndex < equation.SourceRunIndex).Sum(span => span.Text.Length);
         int start = 0;
         for (int index = 0; index < lines.Length; index++)
         {

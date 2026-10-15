@@ -24,5 +24,23 @@
     "DocxNativeTableInlineMath",
     "DocxNativeStaticMathRetainsStoryFlow",
     "DocxNativeMathSettingsAndExplicitRunFaces"
+  ],
+  "docx-inline-source": [
+    "DocxReaderPreservesBookmarkAnchors",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxInlineComposition",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeInlineMath",
+    "DocxNativeTableInlineMath",
+    "DocxNativeStaticMathRetainsStoryFlow",
+    "DocxNativeMathSettingsAndExplicitRunFaces",
+    "DocxInlineImageCarriesSourceRunAffinity",
+    "DocxInlineImageEmitsBetweenSurroundingText",
+    "DocxTableCellInlineImageEmitsBetweenSurroundingText",
+    "DocxHeaderInlineImageEmitsBetweenSurroundingText",
+    "DocxParagraphLayoutPreservesTabsAsTabAdvances"
   ]
 }

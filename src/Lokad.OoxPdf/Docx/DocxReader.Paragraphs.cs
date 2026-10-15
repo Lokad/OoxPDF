@@ -41,6 +41,7 @@ internal sealed partial class DocxReader
         var runs = new List<DocxTextRun>();
         var images = new List<DocxInlineImage>();
         var equations = new List<DocxEquation>();
+        List<DocxInlineItem>? inlineItems = null;
         var inlineTextBoxes = new List<DocxInlineTextBox>();
         var inlineReferences = new List<DocxInlineReference>();
         var commentRanges = new List<DocxCommentRange>();
@@ -304,6 +305,10 @@ internal sealed partial class DocxReader
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
             Equations = equations,
+            // Fields/references/textboxes and revisions retain their existing
+            // source reconstruction until those owners migrate explicitly.
+            InlineContent = fieldReferences.Count == 0 && inlineReferences.Count == 0 &&
+                inlineTextBoxes.Count == 0 && paragraphRevisions.Count == 0 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
             RevisionRanges = revisionRanges,
@@ -319,6 +324,7 @@ internal sealed partial class DocxReader
 
         void AddEquation(XElement container, DocxRevisionInfo? revision)
         {
+            inlineItems ??= DocxInlineContent.FromPrefix(runs, images, cancellationToken);
             bool display = container.Name == MathNamespace + "oMathPara";
             XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
             foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
@@ -334,6 +340,7 @@ internal sealed partial class DocxReader
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
                     LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings
                 });
+                inlineItems.Add(new DocxInlineEquation(equations[^1]));
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)
@@ -446,6 +453,8 @@ internal sealed partial class DocxReader
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
         {
+            int firstRun = runs.Count;
+            int firstImage = images.Count;
             int currentSourceRunIndex = sourceRunIndex++;
             string text = ReadRunText(run);
             string? fieldInstruction = run
@@ -543,6 +552,8 @@ internal sealed partial class DocxReader
 
             images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
             inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
+            if (inlineItems is not null)
+                DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
         }
 
         void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)
