@@ -590,3 +590,19 @@ after the edge change and reuse their inspections/rasters. Twenty-five focused
 methods, 22 unchanged neighboring PDFs and four matching transfer smoke PDFs
 qualify one artifact. Three public cases retain existing visual thresholds;
 unqualified display integrals and unsupported deeper/rich structures keep fallback.
+
+
+Function application source now retains typed function-name and argument roles,
+control formatting/family and nested supported/unknown content. Function-name
+roles require their owning function; malformed or duplicate roles preserve
+traversed source without repeated raw subtree serialization. The parser reuses
+shared control/property validation and handles 2,048 nested functions iteratively
+with cancellation. This follows the [OOXML function-name definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.functionname?view=openxml-3.0.1).
+
+Six independent Word references cover literal, delimiter, scripted and fraction
+arguments, a larger control and an independently declared normal-text name font.
+Twenty-one focused source methods and 20 unchanged source/native neighboring PDFs
+qualify one artifact, with four exact transfer smoke PDFs. This source component
+keeps function rendering in complete fallback; native application spacing and
+metric ownership require their own qualification. No visual threshold or existing
+renderer eligibility is relaxed.
