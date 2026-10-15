@@ -7,6 +7,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMixedNaryRowsKeepPrefixAndAdjacentControlMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] {
+            ("display-sum-binary", "a+\u2211xni=1=b"), ("display-product-binary", "a+\u220Fxni=1=b"),
+            ("inline-sum-binary", "a+\u2211xni=1=b"), ("inline-product-binary", "a+\u220Fxni=1=b"), ("inline-integral-binary", "a+\u222Bx10=b"),
+            ("display-sum-ordinary", "a\u2211xni=1=b"), ("inline-sum-ordinary", "a\u2211xni=1=b"),
+            ("display-adjacent-product", "a\u2211xni=1\u220Fxni=1=b"), ("inline-adjacent-integral", "a\u2211xni=1\u222Bx10=b") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-nary-row-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Mixed rows retain all literal, body/limit and per-node operator source meaning.");
+        }
+    }
+
     public static void DocxNativeNaryGrowthPreservesOffAndFitsExplicitTallBodies()
     {
         RequireMathFont();

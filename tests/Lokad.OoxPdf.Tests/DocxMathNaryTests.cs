@@ -8,6 +8,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathNaryTests
 {
+    public static void MathFontMixedNaryRowsKeepSemanticEdgesControlsAndCompleteFallback()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211));
+        var resource = new PdfFontResource("MixedOperators", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), ((ushort)130, 0x2211), (font.MapCodePoint('B'), (int)'B'),
+                (font.MapCodePoint('C'), (int)'C'), (font.MapCodePoint('='), (int)'=') }, CancellationToken.None));
+        var first = Nary("\u2211");
+        var second = first with { Body = Row("C"), ControlText = first.ControlText! with { ColorHex = "008000" } };
+        var equation = Equation(first) with { Content = new([Row("B"), first, second, Row("=C")]) };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) &&
+            sources.Count(s => s.ControlOwner is not null) == 2 && sources.Any(s => ReferenceEquals(s.ControlOwner, first)) &&
+            sources.Any(s => ReferenceEquals(s.ControlOwner, second)), "Contextual n-ary nodes retain separate controls within one bounded mixed row.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected mixed operators.");
+        var measured = TestAssert.NotNull(box); var ops = measured.Glyphs.Where(g => g.SourceCodePoint == 0x2211).ToArray();
+        var firstBody = measured.Glyphs[2]; var secondBody = measured.Glyphs[6]; var relation = measured.Glyphs[9];
+        TestAssert.Equal("B\u2211BCB\u2211CCB=C", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+        TestAssert.True(Math.Abs(ops[0].X - measured.Glyphs[0].Advance - 2d) < 1e-9 &&
+            Math.Abs(ops[1].X - firstBody.X - firstBody.Advance - 2d) < 1e-9,
+            "Ordinary-to-operator and adjacent-group boundaries each consume one thin math space.");
+        TestAssert.True(Math.Abs(relation.X - secondBody.X - secondBody.Advance - 10d / 3d) < 1e-9 &&
+            ops[0].Color.Red == 255 && ops[1].Color.Green == 128,
+            "The body's final atom owns outgoing relation glue while each control retains its own color.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([Row("B"), first, second with { Body = Row("D") }]) },
+            _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
+            "A missing later body CID cannot publish preceding literals or another n-ary box.");
+        foreach (var invalid in new[] { second with { LimitLocationValue = "unknown" }, second with { CharacterValue = "\u222B" } })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([Row("B"), first, invalid]) }, CancellationToken.None, out _),
+                "Contextual mixed eligibility preserves malformed placement and unresolved display-integral fallback.");
+    }
+
     public static void MathFontNaryDocumentLimitSettingsRetainValuesMalformedSourceAndCancellation()
     {
         foreach (string? value in new string?[] { null, "", "subSup", "undOvr" })

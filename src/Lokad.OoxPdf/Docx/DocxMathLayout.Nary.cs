@@ -11,7 +11,10 @@ internal static partial class DocxMathLayout
     // limits beside the operator, as Office does for undOvr.
     // Integral sizing retains its independently measured fallback.
     private static DocxMathNary? GetNary(DocxEquation equation, CancellationToken token) =>
-        GetSingleSupportedChild(equation) is DocxMathNary
+        GetSupportedNary(GetSingleSupportedChild(equation), equation, token);
+
+    private static DocxMathNary? GetSupportedNary(DocxMathNode? node, DocxEquation equation, CancellationToken token) =>
+        node is DocxMathNary
         { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F" or "\u222B", LimitLocationValue: null or "undOvr" or "subSup" } nary &&
         (!equation.Display || nary.CharacterValue != "\u222B") &&
         NaryLimitLocation(equation, nary) is "undOvr" or "subSup" &&
@@ -121,7 +124,8 @@ internal static partial class DocxMathLayout
             lower is not null && lowerX < 0d || upper is not null && upperX < 0d)
         { fallback = "InvalidMathNaryExtent"; return false; }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) };
+        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
+            Edges = new(DocxMathRowLayout.AtomKind.LargeOperator, body.Edges?.Last ?? DocxMathRowLayout.AtomKind.Ordinary, false) };
         fallback = null;
         return true;
 
