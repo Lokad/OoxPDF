@@ -9,13 +9,15 @@ namespace Lokad.OoxPdf.Docx;
 // explicit fallback until they have their own independently qualified boxes.
 internal static class DocxMathRowLayout
 {
-    private enum AtomKind { Ordinary, Binary, Relation, Open, Close, Punctuation }
+    internal enum AtomKind { Ordinary, Binary, Relation, Open, Close, Punctuation }
+    internal readonly record struct Neighbors(AtomKind? Before = null, AtomKind? After = null);
+    internal sealed record RowEdges(AtomKind First, AtomKind Last, bool FirstNormalText);
     private sealed record Atom(DocxMathRun Run, Rune Source, Rune Render, AtomKind Kind);
 
     public static bool TryMeasure(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, int scriptLevel = 0, bool exportFontSize = false,
         bool allowArgumentSize = false, double? operatorSpacingFontSize = null,
-        Lokad.OoxPdf.Fonts.OpenTypeFont? scriptMetricsFont = null)
+        Lokad.OoxPdf.Fonts.OpenTypeFont? scriptMetricsFont = null, Neighbors neighbors = default)
     {
         box = null;
         token.ThrowIfCancellationRequested();
@@ -24,7 +26,7 @@ internal static class DocxMathRowLayout
         if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
         double x = 0d, above = 0d, below = 0d, previousCorrection = 0d, slantedInkRight = 0d;
-        AtomKind previous = AtomKind.Open;
+        AtomKind previous = neighbors.Before ?? AtomKind.Open, firstKind = AtomKind.Ordinary;
         for (int i = 0; i < atoms.Count; i++)
         {
             token.ThrowIfCancellationRequested();
@@ -53,9 +55,12 @@ internal static class DocxMathRowLayout
             { above = Math.Max(above, bounds.YMax * scale); below = Math.Max(below, -bounds.YMin * scale); }
             else if (!Rune.IsWhiteSpace(atom.Render)) { fallback = "MissingMathGlyphBounds"; return false; }
             AtomKind kind = atom.Kind;
-            if (kind == AtomKind.Binary && (i == 0 || previous is AtomKind.Open or AtomKind.Binary or AtomKind.Relation or AtomKind.Punctuation ||
-                i + 1 == atoms.Count || atoms[i + 1].Kind is AtomKind.Close or AtomKind.Relation or AtomKind.Punctuation))
+            AtomKind? next = i + 1 == atoms.Count ? neighbors.After : atoms[i + 1].Kind;
+            if (kind == AtomKind.Binary && (i == 0 && neighbors.Before is null ||
+                previous is AtomKind.Open or AtomKind.Binary or AtomKind.Relation or AtomKind.Punctuation ||
+                next is null or AtomKind.Close or AtomKind.Relation or AtomKind.Punctuation))
             { kind = AtomKind.Ordinary; }
+            if (i == 0) { firstKind = kind; }
             if (i != 0)
             {
                 // Italic correction belongs to the previous glyph; operator glue
@@ -74,12 +79,14 @@ internal static class DocxMathRowLayout
             previousCorrection = atom.Run.NormalText ? 0d : italic * scale;
             previous = kind;
         }
-        x += previousCorrection;
+        if (neighbors.After is not AtomKind.Ordinary) { x += previousCorrection; }
         double advanceWidth = x;
         x = Math.Max(x, slantedInkRight);
         if (!double.IsFinite(x) || !double.IsFinite(above) || !double.IsFinite(below) || x < 0d)
         { fallback = "InvalidMathExtent"; return false; }
-        box = new DocxMathBox(x, above, below, glyphs) { LogicalAdvance = advanceWidth == x ? null : advanceWidth };
+        box = new DocxMathBox(x, above, below, glyphs)
+        { LogicalAdvance = advanceWidth == x ? null : advanceWidth,
+            Edges = atoms.Count == 0 ? null : new(firstKind, previous, atoms[0].Run.NormalText) };
         fallback = null;
         return true;
     }
@@ -184,7 +191,7 @@ internal static class DocxMathRowLayout
         ',' or ';' => AtomKind.Punctuation,
         _ => AtomKind.Ordinary
     };
-    private static int Glue(AtomKind left, AtomKind right) =>
+    internal static int Glue(AtomKind left, AtomKind right) =>
         left == AtomKind.Open || right == AtomKind.Close ? 0 :
         left == AtomKind.Relation || right == AtomKind.Relation ? 5 :
         left == AtomKind.Binary || right == AtomKind.Binary ? 4 :

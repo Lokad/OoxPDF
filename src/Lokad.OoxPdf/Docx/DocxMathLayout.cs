@@ -58,6 +58,14 @@ internal static partial class DocxMathLayout
         }
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
+        else if (GetFractionRow(equation, token) is { } compound)
+        {
+            rows.Add((compound.Before, 0, false));
+            int level = equation.Display ? 0 : 1;
+            rows.Add((compound.Fraction.Numerator, level, false));
+            rows.Add((compound.Fraction.Denominator, level, false));
+            rows.Add((compound.After, 0, false));
+        }
         else { rows.Add((equation.Content, 0, false)); }
         var result = new List<DocxMathRunSource>();
         foreach ((DocxMathRow row, int level, bool allowArgumentSize) in rows)
@@ -82,6 +90,8 @@ internal static partial class DocxMathLayout
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
+        if (GetFractionRow(equation, token) is { } compound)
+            return TryMeasureFractionRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;
@@ -161,12 +171,16 @@ internal static partial class DocxMathLayout
         }
     }
 
-    private static DocxMathFraction? GetFraction(DocxEquation equation) =>
-        GetSingleSupportedChild(equation) is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" or "noBar" } fraction
+    private static DocxMathFraction? GetFraction(DocxEquation equation) => GetSupportedFraction(GetSingleSupportedChild(equation));
+
+    private static DocxMathFraction? GetSupportedFraction(DocxMathNode? node) =>
+        node is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" or "noBar" } fraction
             ? fraction : null;
 
-    public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs) =>
-        GetFraction(equation) is not null && runs.Any(source => source.Run.NormalText);
+    public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
+        CancellationToken token = default) =>
+        (GetFraction(equation) is not null || GetFractionRow(equation, token) is not null) &&
+        runs.Any(source => source.Run.NormalText);
 
     private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
         equation.Content.HasSupportedProperties && equation.Content.Children.Count == 1

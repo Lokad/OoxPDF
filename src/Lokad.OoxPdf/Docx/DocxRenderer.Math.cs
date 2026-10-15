@@ -41,7 +41,7 @@ internal sealed partial class DocxRenderer
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
             if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
             OpenTypeFont? parentMetrics = null;
-            if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns))
+            if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
             {
                 FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
                 parentMetrics = LoadFont(parent, fontCache, token);

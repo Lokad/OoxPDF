@@ -18,6 +18,7 @@ internal sealed record DocxMathBox(
     public double? LogicalAdvance { get; init; }
     public double AdvanceWidth => LogicalAdvance ?? Width;
     public DocxMathMetricOwner? ParentMetrics { get; init; }
+    public DocxMathRowLayout.RowEdges? Edges { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
 }
 

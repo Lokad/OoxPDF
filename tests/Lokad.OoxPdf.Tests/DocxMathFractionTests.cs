@@ -7,6 +7,50 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontFractionRowsShareBinaryBoundarySpacingAndRetainSourceOrder()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxEquation child = Fraction();
+        var fraction = (DocxMathFraction)child.Content.Children[0];
+        DocxMathRow before = Row("A+"), after = Row("+B");
+        var source = child with { Content = new([before, fraction, after]), ParentFontSize = 12d };
+        TestAssert.True(DocxMathLayout.TryMeasure(child, _ => resource, CancellationToken.None, out var basis, out _), "Expected existing fraction.");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(before, _ => resource, CancellationToken.None, out var first, out _), "Expected standalone prefix.");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(after, _ => resource, CancellationToken.None, out var last, out _), "Expected standalone suffix.");
+        TestAssert.True(DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out var box, out var reason),
+            reason ?? "Existing source atoms and one fraction must form a shared row.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.Equal("A+A+BC+B", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+        DocxMathBox firstBox = TestAssert.NotNull(first), fractionBox = TestAssert.NotNull(basis), lastBox = TestAssert.NotNull(last);
+        double standalone = firstBox.AdvanceWidth + fractionBox.AdvanceWidth + lastBox.AdvanceWidth;
+        TestAssert.True(Math.Abs(measured.AdvanceWidth - standalone - 16d * 12d / 18d) < 1e-9,
+            "A binary operator around an ordinary fraction receives the shared four-unit glue on both sides, without unary boundary reclassification.");
+        TestAssert.Equal(1, measured.Rules.Count);
+        TestAssert.True(measured.Rules[0].X > firstBox.AdvanceWidth && measured.Rules[0].Width == fractionBox.Rules[0].Width,
+            "The child rule keeps its width while moving with its source-owned row position.");
+        var graphics = new PdfGraphicsBuilder();
+        DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], CancellationToken.None);
+        TestAssert.True(output.Length > 0, "Shared row encodings/resources must remain valid.");
+    }
+
+    public static void MathFontFractionRowsKeepMultipleStructureFallbackCancellationAndWorkBounds()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxEquation source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children[0];
+        source = source with { Content = new([Row("A+"), fraction]) };
+        var multiple = source with { Content = new([Row("A+"), fraction, fraction]) };
+        TestAssert.True(!DocxMathLayout.TryGetRuns(multiple, CancellationToken.None, out _) &&
+            !DocxMathLayout.TryMeasure(multiple, _ => resource, CancellationToken.None, out var box, out _) && box is null,
+            "Multiple unsupported structured children cannot publish partial formula text.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out _, out _));
+    }
+
     public static void MathFontFractionScriptBasesRetainChildRulesRolesAndSelectedStyles()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
