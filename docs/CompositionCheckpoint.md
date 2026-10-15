@@ -604,3 +604,33 @@ without root build or suite replay. The compound-document allocation baseline
 was separately refreshed at the preceding 0fa503ac artifact; it does not establish
 a repeated-layout cost or a speedup. Superseded compiled snapshots were archived
 and hash-verified, retiring another 133.8MB while preserving inputs and evidence.
+
+Isolated cell equations now scale the transition from the nominal cell baseline,
+sharing the ordinary text rule. Equation-only cells use the existing nominal
+paragraph fallback from their source size. Static stories with already physical
+tops retain their mapping. No font/size/document-shape qualification is added.
+
+Six new source controls cover literal/fraction/root content, alone in a cell or
+between text paragraphs, in both presets. Review literal/fraction glyph-baseline
+errors fall from about 2.6pt to at most 0.137pt; root/fraction retains about 0.59pt.
+Final PDFs retain bytes, and all six review comparisons improve. Four independent
+native baseline controls pass; the prior library fails by 2.682pt. Twenty-three
+selected methods pass once in one invocation and three portable methods pass on
+Ubuntu. The portable cell controls use normal-text fractions; the pinned face does
+not cover the original mathematical italic Greek fixture.
+
+Six portfolio PDFs retain bytes; all review comparisons improve and fractional
+baseline differences are at most 0.704pt. All ten content screens and normalized
+review pairs resolve. Eight DOCX numerical gates still fail and both decks pass.
+Seventeen assets/four exact smoke PDFs transfer without root qualification build
+or suite replay. One accidental root prototype build was corrected by restoring
+all seventeen qualified assets by hash. The record distinguishes that incident
+from the frozen qualification.
+
+Visual inspection also confirms an existing composition defect in the new
+zero-after-spacing controls: a table top border crosses preceding descenders,
+where Word leaves a gap. The table frame's eligibility and coordinate ownership
+remain the next bounded task. The baseline correction improves the equation and
+preserves frame geometry; it does not claim to resolve that overlap or establish
+complete clipping fidelity. Source-backed geometry, independent references and
+original numerical failures remain retained.
