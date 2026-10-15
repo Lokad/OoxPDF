@@ -297,3 +297,27 @@ All ten fixed portfolio PDFs remain exact. Eighteen independent comparisons reus
 verified identities. Seventeen assets and four integration PDFs transfer without
 root rebuild or suite replay. C1 remains open; legacy single-inline marker paths
 and broader composition/geometry concerns remain to be addressed in bounded slices.
+
+
+Single-equation prose paragraphs now keep one qualified layout owner whether or
+not their unchanged-format text carries a hyperlink. Native literal/fraction/
+script regressions and a pinned-font compound-letter regression demonstrate that
+annotations no longer change measurement or placement. Body and cell bookmarks
+consume actual placed math geometry, including the body's separate equation item,
+with source/block identity retained instead of resolving to following prose.
+Independent two-story targets differ from Word by at most 1.45pt X and 0.94pt Y.
+
+Blanket migration to the shared whole-object wrapper was evaluated and rejected.
+Word breaks the overfull literal at an operator; whole-formula relocation adds a
+line and reduces recall from 0.375 to 0.329. Both old relocation fallback assertions
+failed. That prototype is retained separately and is not delivered. Operator
+breaking remains a distinct capability required before retiring the legacy marker
+path; the accepted annotation fix preserves both fallbacks.
+
+Qualification passes 82 selected methods in one invocation and nine portable
+rendering/inspection checks on Ubuntu. The eight DOCX portfolio outputs retain
+page totals and show small recall/MAE improvements; both decks retain bytes.
+All eight DOCX numerical gates still fail. Ten final PDFs match the compared
+prototype, so independent comparisons reuse their verified identities. Seventeen
+assets and four smoke PDFs transfer without root rebuild or suite replay; the
+smoke includes exact parent output from the overfull fallback control.
