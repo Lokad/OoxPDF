@@ -58,6 +58,11 @@ internal static partial class DocxMathParser
             {
                 node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"));
             }
+            else if (name == "nary" && Role(element, "e") is { } body && Role(element, "sub") is { } lower &&
+                Role(element, "sup") is { } upper && HasOnlyRoles(element, "sub", "sup", "e"))
+            {
+                node = ReadNary(element, body, lower, upper, readRun, cancellationToken);
+            }
             else if (name == "d" && ContentChildren(element).Any() &&
                 ContentChildren(element).All(child => child.Name == MathNamespace + "e" && nodes[child] is DocxMathRow))
             {
@@ -111,7 +116,7 @@ internal static partial class DocxMathParser
         string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
             "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
-    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d";
+    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)

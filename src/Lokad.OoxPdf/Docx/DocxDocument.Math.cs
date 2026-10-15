@@ -66,6 +66,17 @@ internal sealed record DocxMathDelimiter(IReadOnlyList<DocxMathRow> Arguments) :
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }
 }
+internal sealed record DocxMathNary(DocxMathRow Body, DocxMathRow Subscript, DocxMathRow Superscript) : DocxMathNode, IDocxMathControl
+{
+    public string? CharacterValue { get; init; }
+    public string? LimitLocationValue { get; init; }
+    public bool? GrowValue { get; init; }
+    public bool? SubscriptHiddenValue { get; init; }
+    public bool? SuperscriptHiddenValue { get; init; }
+    public bool HasUnsupportedProperties { get; init; }
+    public DocxTextRun? ControlText { get; init; }
+    public string? ControlFontFamily { get; init; }
+}
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
 internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,
     IReadOnlyList<DocxMathChild> Children) : DocxMathNode;

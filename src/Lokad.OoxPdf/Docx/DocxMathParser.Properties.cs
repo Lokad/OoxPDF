@@ -25,41 +25,78 @@ internal static partial class DocxMathParser
     private static DocxMathDelimiter ReadDelimiter(XElement element, IReadOnlyList<DocxMathRow> arguments,
         Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
     {
-        XElement[] properties = element.Elements().Where(IsProperty).ToArray();
-        XElement? owner = element.Element(MathNamespace + "dPr");
-        XElement[] children = owner?.Elements().ToArray() ?? [];
+        bool valid = ReadPropertyOwner(element, "dPr", out XElement? owner, out XElement[] children);
         XElement? control = owner?.Element(MathNamespace + "ctrlPr");
         DocxTextRun text = readRun(control ?? element, string.Empty);
-        bool valid = element.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(element) &&
-            properties.Length <= 1 && properties.All(p => p.Name == MathNamespace + "dPr" &&
-                p.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(p)) &&
-            children.Select(p => p.Name).Distinct().Count() == children.Length;
         foreach (XElement property in children)
         {
             token.ThrowIfCancellationRequested();
             if (property.Name == MathNamespace + "ctrlPr") { valid &= HasKnownControl(property); continue; }
             string? value = (string?)property.Attribute(MathNamespace + "val");
-            valid &= property.Name.Namespace == MathNamespace && !property.HasElements &&
-                string.IsNullOrWhiteSpace(property.Value) &&
-                property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == MathNamespace + "val") &&
+            valid &= HasKnownValueProperty(property) &&
                 (property.Name.LocalName switch
                 {
-                    "begChr" or "endChr" or "sepChr" => value is null || value.Length <= 2 && value.EnumerateRunes().Count() <= 1,
-                    "grow" => value is null || OoxBoolean.IsTrue(value) || OoxBoolean.IsOff(value),
+                    "begChr" or "endChr" or "sepChr" => HasCharacterValue(value),
+                    "grow" => HasBooleanValue(value),
                     "shp" => value is null or "centered" or "match",
                     _ => false
                 });
         }
-        string? Character(string name) => owner?.Element(MathNamespace + name) is { } character
-            ? (string?)character.Attribute(MathNamespace + "val") ?? string.Empty : null;
-        XElement? grow = owner?.Element(MathNamespace + "grow");
         return new(arguments)
         {
-            BeginCharacterValue = Character("begChr"), EndCharacterValue = Character("endChr"),
-            SeparatorCharacterValue = Character("sepChr"),
-            GrowValue = grow is null ? null : OoxBoolean.ParseElement(grow, false, valueAttributeName: MathNamespace + "val"),
+            BeginCharacterValue = ReadCharacter(owner, "begChr"), EndCharacterValue = ReadCharacter(owner, "endChr"),
+            SeparatorCharacterValue = ReadCharacter(owner, "sepChr"), GrowValue = ReadBoolean(owner, "grow"),
             ShapeValue = (string?)owner?.Element(MathNamespace + "shp")?.Attribute(MathNamespace + "val"),
             HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = ControlFontFamily(control, text)
         };
     }
+
+    private static DocxMathNary ReadNary(XElement element, DocxMathRow body, DocxMathRow lower, DocxMathRow upper,
+        Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
+    {
+        bool valid = ReadPropertyOwner(element, "naryPr", out XElement? owner, out XElement[] children);
+        XElement? control = owner?.Element(MathNamespace + "ctrlPr");
+        DocxTextRun text = readRun(control ?? element, string.Empty);
+        foreach (XElement property in children)
+        {
+            token.ThrowIfCancellationRequested();
+            if (property.Name == MathNamespace + "ctrlPr") { valid &= HasKnownControl(property); continue; }
+            string? value = (string?)property.Attribute(MathNamespace + "val");
+            valid &= HasKnownValueProperty(property) && (property.Name.LocalName switch
+            {
+                "chr" => HasCharacterValue(value),
+                "grow" or "subHide" or "supHide" => HasBooleanValue(value),
+                "limLoc" => value is null or "subSup" or "undOvr",
+                _ => false
+            });
+        }
+        return new(body, lower, upper)
+        {
+            CharacterValue = ReadCharacter(owner, "chr"), GrowValue = ReadBoolean(owner, "grow"),
+            SubscriptHiddenValue = ReadBoolean(owner, "subHide"), SuperscriptHiddenValue = ReadBoolean(owner, "supHide"),
+            LimitLocationValue = owner?.Element(MathNamespace + "limLoc") is { } location
+                ? (string?)location.Attribute(MathNamespace + "val") ?? "undOvr" : null,
+            HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = ControlFontFamily(control, text)
+        };
+    }
+
+    private static bool ReadPropertyOwner(XElement element, string name, out XElement? owner, out XElement[] children)
+    {
+        XElement[] properties = element.Elements().Where(IsProperty).ToArray();
+        owner = element.Element(MathNamespace + name);children = owner?.Elements().ToArray() ?? [];
+        return element.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(element) &&
+            properties.Length <= 1 && properties.All(p => p.Name == MathNamespace + name &&
+                p.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(p)) &&
+            children.Select(p => p.Name).Distinct().Count() == children.Length;
+    }
+
+    private static bool HasKnownValueProperty(XElement property) => property.Name.Namespace == MathNamespace &&
+        !property.HasElements && string.IsNullOrWhiteSpace(property.Value) &&
+        property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == MathNamespace + "val");
+    private static bool HasCharacterValue(string? value) => value is null || value.Length <= 2 && value.EnumerateRunes().Count() <= 1;
+    private static bool HasBooleanValue(string? value) => value is null || OoxBoolean.IsTrue(value) || OoxBoolean.IsOff(value);
+    private static string? ReadCharacter(XElement? owner, string name) => owner?.Element(MathNamespace + name) is { } character
+        ? (string?)character.Attribute(MathNamespace + "val") ?? string.Empty : null;
+    private static bool? ReadBoolean(XElement? owner, string name) => owner?.Element(MathNamespace + name) is { } value
+        ? OoxBoolean.ParseElement(value, false, valueAttributeName: MathNamespace + "val") : null;
 }

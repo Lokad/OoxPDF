@@ -7,6 +7,77 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathNaryPinnedControlsRetainOperatorBodyLimitsAndPlacement()
+    {
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string kind,string character,string lower,string upper,string location) in new[]{
+            ("integral-subSup","\u222B","0","1","subSup"),("sum-undOvr","\u2211","i=1","n","undOvr"),
+            ("product-undOvr","\u220F","i=1","n","undOvr"),("sum-subSup","\u2211","i=1","n","subSup")})
+        {
+            string input=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases",$"docx-omml-nary-{placement}-{kind}.docx"));
+            var equation=DocxTests.ReadDocx(input,OoxPdfDocxMarkupMode.Final).Paragraphs.SelectMany(p=>p.Equations).Single();
+            var nary=(DocxMathNary)equation.Content.Children.Single();
+            TestAssert.True(!nary.HasUnsupportedProperties,"Known n-ary source roles retain their authored properties.");
+            TestAssert.Equal(character,nary.CharacterValue);TestAssert.Equal(location,nary.LimitLocationValue);
+            TestAssert.Equal(lower,RowText(nary.Subscript));TestAssert.Equal(upper,RowText(nary.Superscript));TestAssert.Equal("x",RowText(nary.Body));
+            TestAssert.True(nary.ControlText is { FontSize:12d } && nary.GrowValue is null,"Inherited controls and omitted growth retain distinct source ownership.");
+            TestAssert.True(!DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _),"Typed n-ary source cannot claim operator painting before placement is qualified.");
+        }
+    }
+
+    public static void DocxMathNarySourceDistinguishesOmittedValuesAndAuthoredDefaults()
+    {
+        foreach((string properties,string? character,string? location,bool? grow,bool? lowerHidden,bool? upperHidden) in
+            new (string,string?,string?,bool?,bool?,bool?)[]{("",null,null,null,null,null),("<m:naryPr/>",null,null,null,null,null),
+            ("<m:naryPr><m:chr/><m:limLoc/><m:grow/><m:subHide/><m:supHide m:val='0'/></m:naryPr>","","undOvr",true,true,false),
+            ("<m:naryPr><m:chr m:val='\u2211'/><m:limLoc m:val='subSup'/><m:grow m:val='0'/><m:subHide m:val='0'/><m:supHide/></m:naryPr>","\u2211","subSup",false,false,true)})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:nary>"+properties+
+                "<m:sub/><m:sup/><m:e><m:r><m:t>x</m:t></m:r></m:e></m:nary></m:oMath>"));
+            var nary=(DocxMathNary)row.Children.Single();
+            TestAssert.True(!nary.HasUnsupportedProperties,"Known defaults retain their authored/omitted distinction.");
+            TestAssert.Equal(character,nary.CharacterValue);TestAssert.Equal(location,nary.LimitLocationValue);TestAssert.Equal(grow,nary.GrowValue);
+            TestAssert.Equal(lowerHidden,nary.SubscriptHiddenValue);TestAssert.Equal(upperHidden,nary.SuperscriptHiddenValue);
+        }
+    }
+
+    public static void DocxMathNaryMalformedPropertiesAndMissingRolesRetainSource()
+    {
+        foreach(string properties in new[]{"<m:naryPr/><m:naryPr/>","<m:naryPr extra='1'/>","<m:naryPr>stray</m:naryPr>",
+            "<m:naryPr><m:chr/><m:chr/></m:naryPr>","<m:naryPr><m:chr m:val='ab'/></m:naryPr>",
+            "<m:naryPr><m:grow m:val='bad'/></m:naryPr>","<m:naryPr><m:subHide m:val='bad'/></m:naryPr>",
+            "<m:naryPr><m:supHide><m:r/></m:supHide></m:naryPr>","<m:naryPr><m:limLoc m:val='bad'/></m:naryPr>",
+            "<m:naryPr><m:chr extra='1'/></m:naryPr>","<m:naryPr><w:chr/></m:naryPr>",
+            "<m:naryPr><m:unknown/></m:naryPr>","<m:naryPr><m:ctrlPr><w:ins/></m:ctrlPr></m:naryPr>"})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:nary>"+properties+
+                "<m:sub><m:r><m:t>lower</m:t></m:r></m:sub><m:sup/><m:e><m:r><m:t>body</m:t></m:r></m:e></m:nary></m:oMath>"));
+            var nary=(DocxMathNary)row.Children.Single();
+            TestAssert.True(nary.HasUnsupportedProperties,"Unknown/malformed n-ary values retain explicit unsupported ownership.");
+            TestAssert.Equal("body",RowText(nary.Body));TestAssert.Equal("lower",RowText(nary.Subscript));
+        }
+        foreach(string roles in new[]{"<m:e/>","<m:sub/><m:sub/><m:sup/><m:e/>"})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:nary>"+roles+"</m:nary></m:oMath>"));
+            TestAssert.True(row.Children.Single() is DocxMathUnsupported { ElementName:"nary",SourceXml:null },
+                "Missing/duplicate roles preserve traversed source without overlapping raw subtree copies.");
+        }
+    }
+
+    public static void DocxMathNaryDeepTraversalAndCancellationRemainIterative()
+    {
+        XElement nested=new(MathNamespace+"r",new XElement(MathNamespace+"t","x"));
+        for(int i=0;i<2048;i++)nested=new(MathNamespace+"nary",new XElement(MathNamespace+"sub"),new XElement(MathNamespace+"sup"),new XElement(MathNamespace+"e",nested));
+        XElement equation=new(MathNamespace+"oMath",nested);DocxMathNode node=Parse(equation).Children.Single();int count=0;
+        while(node is DocxMathNary nary){count++;node=nary.Body.Children.Single();}
+        TestAssert.Equal(2048,count);
+        using var cancelled=new CancellationTokenSource();cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(()=>Parse(equation,cancelled.Token));
+        using var duringRead=new CancellationTokenSource();
+        TestAssert.Throws<OperationCanceledException>(()=>DocxMathParser.Read(equation,(_,text)=>
+            { duringRead.Cancel();return PlainRun(text); },duringRead.Token));
+    }
+
     public static void DocxMathDelimiterSourceDistinguishesOmittedAndEmptyCharacters()
     {
         foreach((string properties,string begin,string end,string separator) in new[]{
