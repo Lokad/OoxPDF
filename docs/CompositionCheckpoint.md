@@ -467,3 +467,20 @@ An ink-only inline-frame prototype worsened review portfolio MAE by up to 1.904
 and recall by 0.0434. That measurement rule was rejected and reverted before
 delivery; the accepted operator change retains the prior frames. The rejected
 artifact and comparisons remain available as negative evidence.
+
+Broken-literal content is now independently exercised in a cell, header and
+footer, in both modes. All five glyphs and following prose survive; native
+bookmarks/run splitting and pinned-font placement regressions pass. The production
+library and its source tree remain identical to the accepted operator artifact:
+only two new methods run in one invocation, plus the new Ubuntu method. The
+earlier forty-method/fourteen-Ubuntu qualification and portfolio outputs are
+reused by identity. Seventeen assets/four exact smoke PDFs transfer without root
+rebuild, suite replay or repeated portfolio conversions.
+
+The six new Office controls still fail their original visual gates. Final-mode
+second-line differences are 2.334pt in the cell and 2.452pt in the header; the
+footer's first line is 7.322pt high. Reader fallback currently supplies 278/240
+when no line spacing resolves, while these sources use a single-line pitch in
+Word. That discrepancy is confirmed; paragraph-mark metric ownership is a
+hypothesis to test, not an accepted cause. Preserve older independent unstyled
+controls while isolating document defaults, style inheritance and mark formatting.
