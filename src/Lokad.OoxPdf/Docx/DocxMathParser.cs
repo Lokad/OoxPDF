@@ -43,6 +43,19 @@ internal static partial class DocxMathParser
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())
                 { ArgumentProperties = ReadArgumentProperties(element) };
             }
+            else if (name == "mr" && element.Parent?.Name == MathNamespace + "m" && ContentChildren(element).Any() &&
+                ContentChildren(element).All(child => child.Name == MathNamespace + "e" && nodes[child] is DocxMathRow))
+            {
+                node = new DocxMathMatrixRow(ContentChildren(element).Select(child => (DocxMathRow)nodes[child]).ToArray())
+                { HasUnsupportedProperties = element.Attributes().Any(a => !a.IsNamespaceDeclaration) ||
+                    !HasOnlyWhitespaceText(element) || element.Elements().Any(IsProperty) };
+            }
+            else if (name == "m" && ContentChildren(element).Any() &&
+                ContentChildren(element).All(child => child.Name == MathNamespace + "mr" && nodes[child] is DocxMathMatrixRow))
+            {
+                node = ReadMatrix(element, ContentChildren(element).Select(child => (DocxMathMatrixRow)nodes[child]).ToArray(),
+                    readRun, cancellationToken);
+            }
             else if (name == "f" && Role(element, "num") is { } numerator && Role(element, "den") is { } denominator &&
                 HasOnlyRoles(element, "num", "den"))
             {
@@ -122,7 +135,7 @@ internal static partial class DocxMathParser
         string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
             "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
-    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func";
+    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m" or "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)

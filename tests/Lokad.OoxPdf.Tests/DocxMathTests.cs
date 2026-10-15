@@ -7,6 +7,97 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathMatrixPinnedControlsRetainRowsCellsAndAuthoredOwners()
+    {
+        foreach ((string suffix, int rows) in new[] { ("display-literal", 2), ("inline-literal", 2), ("display-three-rows", 3),
+            ("display-fraction-cell", 2), ("inline-control20", 2), ("inline-normal-cell", 2) })
+        {
+            string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-omml-matrix-" + suffix + ".docx"));
+            var equation = DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final).Paragraphs.SelectMany(p => p.Equations).Single();
+            var matrix = (DocxMathMatrix)equation.Content.Children.Single();
+            TestAssert.True(!matrix.HasUnsupportedProperties && matrix.Rows.Count == rows && matrix.Rows.All(r => r.Cells.Count == 2),
+                "Known source matrices retain explicit ordered row and cell owners.");
+            var first = matrix.Rows[0].Cells[0].Children.Single();
+            if (suffix == "display-fraction-cell") TestAssert.True(first is DocxMathFraction { Numerator.Children.Count: 1, Denominator.Children.Count: 1 },
+                "Nested known cell structure remains typed rather than concatenated into matrix text.");
+            else TestAssert.True(first is DocxMathRun, "Literal cell source remains a run.");
+            if (suffix == "inline-normal-cell") TestAssert.True(first is DocxMathRun { NormalTextValue: true, ExplicitFontFamily: "Arial" },
+                "Normal-text cell fonts remain independent from matrix metric ownership.");
+            if (suffix == "inline-control20") TestAssert.Equal(20d, TestAssert.NotNull(matrix.ControlText).FontSize);
+            else TestAssert.True(matrix.ControlText is null, "Absent controls remain distinct from authored controls; the future default owner is the first character.");
+            TestAssert.Equal("b", RowText(matrix.Rows[0].Cells[1]));
+            TestAssert.Equal(suffix == "display-three-rows" ? "f" : "d", RowText(matrix.Rows[^1].Cells[^1]));
+        }
+    }
+
+    public static void DocxMathMatrixPropertiesReuseControlValidationAndResolvedMetadata()
+    {
+        string cell = "<m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr>";
+        var xml = XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:m><m:mPr><m:ctrlPr><w:rPr><w:rFonts w:ascii='Known'/><w:sz w:val='40'/></w:rPr></m:ctrlPr></m:mPr>{cell}</m:m></m:oMath>");
+        var source = DocxMathParser.Read(xml, (element, text) => element.Name == MathNamespace + "ctrlPr"
+            ? new(text, 20d, "CC0000", false, false, false, null, "Known") : PlainRun(text), CancellationToken.None);
+        var matrix = (DocxMathMatrix)source.Children.Single();
+        TestAssert.True(!matrix.HasUnsupportedProperties && matrix.ControlText is { FontSize: 20d, ColorHex: "CC0000" } && matrix.ControlFontFamily == "Known",
+            "The existing shared control validator retains caller-resolved source formatting.");
+        TestAssert.Contains("mPr", matrix.PropertiesXml.Single());
+        foreach (string properties in new[] { "<m:mPr/><m:mPr/>", "<m:mPr extra='1'/>", "<m:mPr>stray</m:mPr>",
+            "<m:mPr><m:future/></m:mPr>", "<m:mPr><m:ctrlPr/><m:ctrlPr/></m:mPr>", "<m:mPr><m:ctrlPr><w:ins/></m:ctrlPr></m:mPr>",
+            "<m:mPr><m:ctrlPr><w:rPr><w:unknown/></w:rPr></m:ctrlPr></m:mPr>",
+            "<m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val='1'/><m:mcJc m:val='left'/></m:mcPr></m:mc></m:mcs></m:mPr>" })
+        {
+            var parsed = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:m>{properties}{cell}</m:m></m:oMath>")).Children.Single();
+            TestAssert.True(parsed.HasUnsupportedProperties && parsed.PropertiesXml.Count > 0 && RowText(parsed.Rows.Single().Cells.Single()) == "x",
+                "Duplicate, malformed and unqualified matrix properties preserve both raw properties and cell source.");
+        }
+    }
+
+    public static void DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource()
+    {
+        foreach (string contents in new[] { "", "<m:mr/>", "<m:e/>", "<m:mr><m:e/></m:mr><m:future/>", "<m:mr><m:r><m:t>x</m:t></m:r></m:mr>" })
+            TestAssert.True(Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m>{contents}</m:m></m:oMath>")).Children.Single()
+                is DocxMathUnsupported { ElementName: "m", SourceXml: null }, "Malformed roles retain traversed nodes without repeatedly serializing raw subtrees.");
+        var orphan = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:oMath>"));
+        TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "mr", SourceXml: null, Children.Count: 1 },
+            "A matrix row requires its matrix owner and cannot become an ordinary renderable sequence.");
+        foreach (string attributes in new[] { " extra='1'", "" })
+        {
+            string extra = attributes.Length == 0 ? "stray" : "";
+            var parsed = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr{attributes}>{extra}<m:e/></m:mr></m:m></m:oMath>")).Children.Single();
+            TestAssert.True(parsed.HasUnsupportedProperties && parsed.Rows.Single().HasUnsupportedProperties,
+                "Unexpected row attributes/text remain explicit while retaining known cells.");
+        }
+        var cell = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr><m:e extra='1'/></m:mr></m:m></m:oMath>")).Children.Single();
+        TestAssert.True(cell.HasUnsupportedProperties, "Unexpected cell role attributes cannot silently claim known matrix semantics.");
+    }
+
+    public static void DocxMathMatrixEmptyRaggedAndUnknownCellsKeepTheirBoundaries()
+    {
+        var matrix = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr><m:e/><m:e><m:future><m:r><m:t>x</m:t></m:r></m:future></m:e></m:mr><m:mr><m:e/></m:mr></m:m></m:oMath>")).Children.Single();
+        TestAssert.True(matrix.HasUnsupportedProperties && matrix.Rows.Count == 2 && matrix.Rows[0].Cells.Count == 2 && matrix.Rows[1].Cells.Count == 1,
+            "Unequal row widths remain explicitly unqualified without dropping or padding source cells.");
+        TestAssert.True(matrix.Rows[0].Cells[0].Children.Count == 0 && matrix.Rows[0].Cells[1].Children.Single()
+            is DocxMathUnsupported { ElementName: "future", SourceXml: not null }, "Empty slots and unknown nested leaf content retain their distinct owners.");
+        var empty = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr><m:e/><m:e/></m:mr></m:m></m:oMath>")).Children.Single();
+        TestAssert.True(!empty.HasUnsupportedProperties && empty.Rows.Single().Cells.All(c => c.Children.Count == 0),
+            "Empty matrix arguments are source slots, not missing rows or cells.");
+        var argument = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mr><m:e><m:argPr><m:argSz m:val='-1'/></m:argPr><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
+        TestAssert.True(argument.Rows.Single().Cells.Single().ArgumentProperties is { Size: -1, HasUnsupportedProperties: false },
+            "Cell arguments reuse existing typed argument-property retention without deciding future grid sizing.");
+    }
+
+    public static void DocxMathMatrixDeepTraversalAndCancellationRemainIterative()
+    {
+        XElement nested = new(MathNamespace + "r", new XElement(MathNamespace + "t", "x"));
+        for (int i = 0; i < 2048; i++) nested = new(MathNamespace + "m", new XElement(MathNamespace + "mr", new XElement(MathNamespace + "e", nested)));
+        XElement equation = new(MathNamespace + "oMath", nested); DocxMathNode node = Parse(equation).Children.Single(); int count = 0;
+        while (node is DocxMathMatrix matrix) { count++; node = matrix.Rows.Single().Cells.Single().Children.Single(); }
+        TestAssert.Equal(2048, count);
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => Parse(equation, cancelled.Token));
+        using var duringRead = new CancellationTokenSource();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParser.Read(equation, (_, text) => { duringRead.Cancel(); return PlainRun(text); }, duringRead.Token));
+    }
+
     public static void DocxMathFunctionPinnedControlsRetainNameArgumentAndControlOwners()
     {
         foreach ((string suffix, string name, string kind) in new[] { ("display-sin-literal", "sin", "literal"),
