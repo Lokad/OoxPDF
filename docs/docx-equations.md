@@ -489,3 +489,24 @@ including whitespace or deeper structures, retain source and complete fallback.
 This follows the same preservation principle as stored hidden root degrees.
 Document-default limit settings, integral sizing, richer structures and assemblies
 remain staged.
+
+
+Document limit defaults now have one immutable source owner shared by equations.
+An authored node location takes precedence; otherwise sums/products consult
+the document's naryLim setting, whose omitted/present-without-value default is
+undOvr. Inline equations retain the independently established side-limit rule.
+Integral settings are retained separately while integral rendering stays staged.
+Malformed or duplicate defaults preserve source and complete fallback when used;
+an explicit node does not depend on an unused invalid document setting. The
+existing scalar-property validator is shared with node parsing. These defaults
+follow the [n-ary setting definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.narylimitlocation?view=openxml-3.0.1)
+and [integral setting definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.integrallimitlocation?view=openxml-3.0.1).
+
+Eight independent Word controls qualify precedence and omitted/default values:
+six gain native output and two explicit placements remain byte-for-byte unchanged.
+Position differences stay below 0.16 pt horizontally and 0.24 pt vertically;
+all 48 glyph outlines match Word/source. Twenty-six focused methods, 30 exact
+neighbor PDFs and four exact transfer smoke PDFs qualify one artifact. Three
+public cases retain existing visual thresholds. Default operator characters,
+integral sizing, stored hidden content, richer structures and assemblies remain
+staged with explicit fallback.
