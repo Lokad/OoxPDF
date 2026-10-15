@@ -524,5 +524,14 @@
     "PortableRenderingLeftTabsPreserveMixedMathAcrossContainers",
     "DocxTableCellTextLinesMemoSharesSplitCells",
     "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment"
+  ],
+  "docx-inline-comment-line-frame": [
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "PortableRenderingCommentsPreserveMixedMathematics",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
+    "DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers",
+    "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker"
   ]
 }

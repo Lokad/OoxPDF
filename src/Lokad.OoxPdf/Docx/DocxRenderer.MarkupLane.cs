@@ -225,8 +225,10 @@ internal sealed partial class DocxRenderer
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
                 double above = 0d, below = 0d;
+                // Office's selection height follows the line's content frame;
+                // source endpoints constrain its horizontal extent only.
                 foreach (var extent in line.InlineSourceExtents)
-                    if (extent.IsMath && extent.ItemIndex >= range.StartInlineItemIndex && extent.ItemIndex < range.EndInlineItemIndex)
+                    if (extent.IsMath)
                     { above = Math.Max(above, extent.AboveBaseline); below = Math.Max(below, extent.BelowBaseline); }
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below);
             }

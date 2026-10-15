@@ -60,6 +60,7 @@ internal static class DocxInlineCompositionTests
             TestAssert.Skip("Installed Cambria Math is required for the independent comment geometry controls.");
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
         using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-comments-office-bounds.json")));
+        var heights = new Dictionary<string, double>();
         foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
@@ -71,9 +72,15 @@ internal static class DocxInlineCompositionTests
                 @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
                 .Cast<System.Text.RegularExpressions.Match>().Select(match => (
                     X: double.Parse(match.Groups["x"].Value, System.Globalization.CultureInfo.InvariantCulture),
-                    Width: double.Parse(match.Groups["w"].Value, System.Globalization.CultureInfo.InvariantCulture)))
+                    Width: double.Parse(match.Groups["w"].Value, System.Globalization.CultureInfo.InvariantCulture),
+                    Height: double.Parse(match.Groups["h"].Value, System.Globalization.CultureInfo.InvariantCulture)))
                 .Where(fill => fill.X < 400d).ToArray();
             TestAssert.Equal(1, fills.Length);
+            string container = Path.GetFileNameWithoutExtension(input).Split('-')[^1];
+            if (heights.TryGetValue(container, out double height))
+                TestAssert.True(Math.Abs(height - fills[0].Height) < .001d,
+                    "Independent Word controls retain one line selection height when only the annotated source range changes.");
+            else heights.Add(container, fills[0].Height);
             var line = renderer.InspectTextEmission(document).Lines.Single(line =>
                 line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5) == 1 &&
                 line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 6) == 1);
