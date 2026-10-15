@@ -237,8 +237,9 @@ and an explicit body line break. Word exports eight destinations in both modes;
 the parent exports none. The candidate restores all eight without changing the
 control's raster, text operations or graphics operations.
 
-This is navigation recovery, not equation-geometry parity. Word spreads adjacent
-formulas much farther apart in the control: target differences reach 218.5pt
+This is navigation recovery, not equation-geometry parity. Word centers adjacent
+formulas as a display group with larger fraction typography; the candidate still
+uses left-aligned inline math. Target differences reach 218.5pt
 horizontally in Final and 165.9pt in review mode; vertical differences reach about
 8pt. Both numerical visual gates still fail. Investigate the common math-only
 paragraph layout before subpoint refinements; do not fit navigation offsets to
