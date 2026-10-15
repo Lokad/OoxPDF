@@ -67,4 +67,4 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
     MeasurementScope='Cold CLI process wall time includes startup; allocation and stage baselines are separate'
     Rows=$rows
 } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $output 'outcomes.json') -Encoding utf8
-Write-Output "$($rows.Count) portfolio mode outcomes recorded; content and visual status remain separate."
+Write-Output "$($rows.Count) pinned document/mode outcomes recorded; content and visual status remain separate."
