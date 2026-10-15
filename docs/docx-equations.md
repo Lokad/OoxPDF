@@ -433,3 +433,15 @@ in geometry evidence. Forty-one focused methods, 36 unchanged neighbor PDFs and
 four matching transfer smoke PDFs qualify one artifact. Three public cases retain
 the existing thresholds. Fractions, other shapes/separator glyph profiles and
 arbitrary recursive arguments remain staged.
+
+N-ary source now retains integral/sum/product characters, bodies, lower/upper
+arguments, growth, hidden limits, limit placement and control formatting. Shared
+scalar/control validation preserves unknown or malformed values and distinguishes
+omitted placement from the authored default for a present `limLoc`, following
+the [OOXML limit-location definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.limitlocation?view=openxml-3.0.1).
+Iterative parsing and cancellation have focused coverage. Twenty-one source and
+fallback methods qualify one artifact; 23 source/control PDFs remain unchanged.
+Eight Word operator outlines match source variants and six targeted selections
+match the bounded reader. The display integral uses a taller variant than the
+font's display minimum alone selects, so that sizing profile remains unresolved.
+This source component does not yet paint n-ary operators or claim limit placement.
