@@ -7,6 +7,33 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathMatrixDefaultSpacingSharesScalarSemanticsAndKeepsNondefaultFallback()
+    {
+        DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
+        foreach (string name in new[] { "cGpRule", "cGp", "cSp", "rSpRule", "rSp" })
+        {
+            foreach (string? value in new string?[] { null, "0", "00", "+0", " 0 " })
+            {
+                string property = value is null ? $"<m:{name}/>" : $"<m:{name} m:val='{value}'/>";
+                var matrix = Read(property);
+                TestAssert.True(!matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x",
+                    "Equivalent zero scalar spellings and val-less defaults share existing spacing semantics.");
+                TestAssert.Contains(name, matrix.PropertiesXml.Single());
+            }
+            foreach (string bad in new[] { $"<m:{name} m:val='1'/>", $"<m:{name} m:val='-1'/>", $"<m:{name} m:val='4294967296'/>",
+                $"<m:{name} m:val=''/>", $"<m:{name} m:val='future'/>", $"<m:{name} extra='1'/>", $"<m:{name}><m:future/></m:{name}>",
+                $"<m:{name}>stray</m:{name}>", $"<m:{name}/><m:{name}/>", $"<x:{name} xmlns:x='urn:future'/>" })
+            {
+                var matrix = Read(bad);
+                TestAssert.True(matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x" && matrix.PropertiesXml.Count == 1,
+                    "Nondefault, malformed, duplicate and foreign declarations retain raw source and complete fallback.");
+            }
+        }
+        var combined = Read("<m:cGpRule/><m:cGp m:val='0'/><m:cSp/><m:rSpRule m:val='0'/><m:rSp/>");
+        TestAssert.True(!combined.HasUnsupportedProperties && combined.PropertiesXml.Count == 1,
+            "All default declarations can coexist without introducing a second layout profile.");
+    }
+
     public static void DocxMathMatrixBaseJustificationRetainsDefaultsAndInvalidSource()
     {
         DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();

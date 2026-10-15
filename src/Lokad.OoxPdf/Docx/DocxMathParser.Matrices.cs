@@ -27,6 +27,14 @@ internal static partial class DocxMathParser
                 baseJustification = (string?)property.Attribute(MathNamespace + "val");
                 valid &= HasKnownValueProperty(property) && baseJustification is null or "center" or "top" or "bot";
             }
+            else if (property.Name.LocalName is "cGpRule" or "cGp" or "cSp" or "rSpRule" or "rSp")
+            {
+                // All five omitted/val-less scalar defaults are zero. Only the
+                // existing default spacing profile is admitted here.
+                string? value = (string?)property.Attribute(MathNamespace + "val");
+                valid &= HasKnownValueProperty(property) && (value is null ||
+                    uint.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out uint number) && number == 0);
+            }
             else { valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
         }
         int columns = rows[0].Cells.Count;

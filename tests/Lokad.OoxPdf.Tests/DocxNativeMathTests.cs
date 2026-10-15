@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixDefaultSpacingKeepsExistingGridMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-literal-zero", "abcd"), ("inline-literal-empty", "abcd"),
+            ("base-display-bot-three-rows-zero", "abcdef"), ("columns-display-grouped-empty", "abbccccdeeee"),
+            ("structured-display-stack-zero", "akbcd"), ("structured-inline-fraction-top-control20-empty", "akbcd") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-spacing-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Explicit default spacing admits the same literal, column, base and structured grid capabilities.");
+        }
+    }
+
     public static void DocxNativeMatrixStructuredCellsRetainChildMeaningAndRules()
     {
         RequireMathFont();
