@@ -495,7 +495,7 @@ Document limit defaults now have one immutable source owner shared by equations.
 An authored node location takes precedence; otherwise sums/products consult
 the document's naryLim setting, whose omitted/present-without-value default is
 undOvr. Inline equations retain the independently established side-limit rule.
-Integral settings are retained separately while integral rendering stays staged.
+Integral settings are retained separately; display integral rendering remains staged.
 Malformed or duplicate defaults preserve source and complete fallback when used;
 an explicit node does not depend on an unused invalid document setting. The
 existing scalar-property validator is shared with node parsing. These defaults
@@ -525,3 +525,16 @@ neighbors (including fraction/script roots) and four matching transfer smoke
 PDFs qualify one artifact. Three public cases retain existing visual thresholds.
 Arbitrary deeper/rich bodies, integral sizing, default operator characters and
 assemblies remain staged; full visual parity is not established.
+
+
+Inline integrals now reuse the n-ary boxes with font-owned extended-shape and
+italic metrics. Extended operators use the shared occupied-base script shifts;
+italic correction lets the lower limit precede the upper limit. Integral document
+defaults remain separate from sum/product defaults, with explicit node precedence.
+Eight independent Word controls improve across 8/12/16/20 pt sizes, explicit
+stacked requests, document defaults and fraction/script bodies. All 35 glyph
+outlines match Word/source; position differences reach 0.12 pt horizontally and
+0.37 pt vertically. Twenty-four focused methods, 29 unchanged neighbor PDFs and
+four matching transfer smoke PDFs qualify one artifact. Three public cases keep
+the existing visual thresholds. Display integral sizing remains unresolved and
+retains complete fallback; no font/point correction is used to enable it.

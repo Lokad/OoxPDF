@@ -136,7 +136,8 @@ Partial or approximated:
 - Multi-column sections flow explicit breaks with first-pass exclusion geometry while continuous balancing stays approximate.
 - Markup modes keep the authored PDF media box and text-column geometry; no expanded review-pane margin is created.
 - Native OMML body equations support approximate standalone display and fitting inline rows, including literal/fraction/stack/script sequences, square/nth roots using ready-made variants, a single fraction/stack or supported script box used as a radicand, a fraction/stack script base, and centered growing or fixed delimiters around literal argument lists with supported or empty separators, and display/fitting inline sums/products with explicit stacked or side literal limits, including genuinely empty hidden arguments and document-default limit placement.
-Sum/product bodies can also contain one fraction/stack or supported script box. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
+Sum/product bodies can also contain one fraction/stack or supported script box. Inline integrals support the same
+bounded bodies, using extended-shape and italic metrics for their side limits. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
 
 Unsupported or ignored:
 
