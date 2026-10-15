@@ -189,7 +189,7 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, out double splitPitch))
+                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathParagraphs, out double splitPitch))
             {
                 // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments keep
                 // whole lines that fit (floor capacity); the boundary is floored to whole
@@ -245,12 +245,13 @@ internal sealed partial class DocxLayoutEngine
         }
 
 
-        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight, out double splitPitch)
+        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight,
+            IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? math, out double splitPitch)
         {
             splitPitch = 0d;
             // A prepared display box is atomic until math-bearing row fragments
             // have their own placement qualification.
-            if (resolveFrame().Context.MathParagraphs is { } math &&
+            if (math is not null &&
                 row.Cells.Any(cell => cell.Paragraphs.Any(math.ContainsKey))) { return false; }
             if (textMeasurer is null)
             {
