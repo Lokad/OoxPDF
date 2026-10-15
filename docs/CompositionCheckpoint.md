@@ -546,3 +546,36 @@ retains the already-passed library/test hashes, so qualification is reused. Its
 small portfolio outputs were rechecked once and all twelve comparisons reused by
 PDF/reference/threshold identity. This extra check resolves the concrete coherence
 failure rather than adding routine qualification work.
+
+Printed inline mathematics now separates baseline placement from its qualified
+occupied frame. The ordinary body path compared scaled mathematical extents with
+an unscaled local text inset; the ordered path omitted the first-body baseline
+anchor transition used by ordinary text. Both now place the local baseline in the
+same physical scale and retain the source frame's minimum occupied height. Label
+leading, glyph drawing and container fallbacks remain. No font/size/document-shape
+qualification is added. Earlier experiments that also reduced occupied height
+regressed three review documents and were rejected.
+
+Ten source controls (literal/fraction/root, 12/18-point leading anchors, single or
+multiple formulas) have twenty independent Word mode references. Mathematical
+baseline gaps pass the 0.4pt placement bound; all twenty preserve simple math text.
+A pinned-font transformation test proves that adding a fitting second formula
+preserves its baseline and following advance. It fails on the previous library
+with a 1.360pt review displacement. Twenty-three selected methods pass once in one
+invocation, plus two affected Ubuntu methods.
+
+Six portfolio PDFs retain bytes. Each review document's page-one MAE improves by
+about 0.348; all 676 normalized page-local text pairs resolve, and maximum review
+start Y difference falls from 3.166pt to 2.223pt. All ten source/Office content
+screens pass. The numbered body neighbor keeps its visual metrics. All eight
+DOCX numerical gates still fail; both decks pass. Seventeen assets/four exact
+smoke PDFs transfer without root build or suite replay. Cached comparisons reuse
+checked PDF/reference/threshold identities.
+
+A broader following-line assertion revealed an existing literal automatic advance
+discrepancy (2.219pt in one review control). It is retained as an unresolved
+measurement issue; the accepted baseline correction preserves occupied height.
+Current accepted-build checks also supersede older broken-literal story residuals:
+Final cell/header/footer prose baselines differ from Word by at most 0.364pt after
+the reader correction. These findings do not establish complete ink/clipping or
+reading-order fidelity.
