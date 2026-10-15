@@ -886,3 +886,22 @@ methods, 12 exact neighboring PDFs and four exact integration PDFs qualify one
 strict Release artifact. Three public cases retain existing thresholds. Unknown
 late matrices reject the complete row; cancellation, cumulative work and the
 existing fit/page/publication bounds remain shared.
+
+Bounded matrices can now be enclosed by existing ready-made delimiters. Ordered
+control owners preserve both the outer painted marks and the inner metric-only
+matrix without duplicating source runs. The existing conversion-owned font loader,
+bounded caches and deferred operator-glyph publication remain shared. Literal and
+fraction arguments keep their previous behavior; arbitrary deeper delimiter
+nesting remains in complete fallback. Matrices expose their complete occupied
+height through the same enclosure property already used by fractions.
+
+Seven independent Word controls improve across round/square fences, three rows,
+hidden cells, Arial paint and inner/outer control-size contrasts. The outline audit
+matches all 28 cell glyphs and four of 14 enclosing marks (32/42 total). Complete
+enclosure height improves four mark outlines and reduces the largest Y residual
+from 6.50 pt to 3.23 pt; ten optical fence choices remain different. Text positions
+stay within 0.69 pt X, with explicit vertical residuals. No fitted font/size rule is
+added. Thirty-eight control/encoding methods, 14 exact neighboring PDFs and four
+exact integration PDFs qualify one strict Release artifact. Three public cases
+retain existing thresholds. An all-Arial grid publishes its painted cell and fence
+fonts while the inner metric control adds no extra PDF resource.

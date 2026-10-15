@@ -151,6 +151,10 @@ Explicitly hidden empty matrix cells retain metric-only placeholder geometry,
 including empty rows and columns; visible-placeholder and wholly empty grids
 retain fallback.
 
+Bounded matrices also render inside ready-made round/square delimiters, retaining
+independent metric and paint owners. Fence variant and vertical-layout residuals
+remain explicit; arbitrary deeper delimiter nesting retains fallback.
+
 Unsupported or ignored:
 
 - Full Word-style tracked-change balloon content and collision-aware markup margin pagination.
