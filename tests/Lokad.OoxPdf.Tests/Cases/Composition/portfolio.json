@@ -1,0 +1,128 @@
+[
+  {
+    "Id": "report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/report.docx",
+    "Sha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ]
+  },
+  {
+    "Id": "letter",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/letter.docx",
+    "Sha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Engineering review letter",
+      "Acceptance of the revised delivery schedule",
+      "Review section 4.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ]
+  },
+  {
+    "Id": "specification",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/specification.docx",
+    "Sha256": "89907FD078C01576171B70051341239BA6B8189C835BDD73094B94B32AF903E5",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Replenishment calculation specification",
+      "Calculation inputs and acceptance criteria",
+      "Review section 20.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ]
+  },
+  {
+    "Id": "technical-memo",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/technical-memo.docx",
+    "Sha256": "B8460512898E52EEF64FB2F54833DA7F41A0101CD833D70F06B34CA72A8367B8",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Technical decision memorandum",
+      "Capacity planning assumptions",
+      "Review section 8.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ]
+  },
+  {
+    "Id": "briefing-deck",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-composite-chart-port.pptx",
+    "Sha256": "F76A755BF2B6D129F678726C1612DDE05CCD5BC64FEA65C2EAA0158AB9E477A3",
+    "HeldOut": false,
+    "Features": [
+      "text",
+      "shapes",
+      "table-or-chart"
+    ]
+  },
+  {
+    "Id": "held-out-deck",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-composite-table-port.pptx",
+    "Sha256": "03AB111D34D4D96BA6975E864A8EE756FDB89E2AF4AA7155180B85E0DEB83ACB",
+    "HeldOut": true,
+    "Features": [
+      "text",
+      "shapes",
+      "table-or-chart"
+    ]
+  }
+]
