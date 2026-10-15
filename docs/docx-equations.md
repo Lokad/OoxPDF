@@ -806,3 +806,23 @@ prototype displaced the fraction children by 4.67 pt. These measurements qualify
 bounded approximate support and retain the row-spacing concern for investigation;
 they do not establish full matrix parity. No font/size/document-specific correction
 branch is added.
+
+Explicit default matrix spacing declarations now share the omitted-property
+profile. The parser accepts val-less or zero `cGpRule`, `cGp`, `cSp`, `rSpRule`
+and `rSp` through the same scalar validation. This follows the documented
+[column-gap default](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.columngap?view=openxml-3.0.1),
+[zero minimum column width](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.columnspacing?view=openxml-3.0.1)
+and [default row-spacing rule](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.rowspacingrule?view=openxml-3.0.1).
+Nondefault values, malformed leaves, duplicates and foreign declarations retain
+raw source and complete fallback. No layout profile or quota is added.
+
+Six independent Word controls have identical math text operations to their
+omitted-property equivalents. Candidate PDFs reproduce the previously qualified
+literal, grouped-column, base-aligned and structured grids byte for byte.
+Thirteen source/native methods and eight exact neighbors qualify one artifact;
+four exact integration PDFs verify transfer. Three public cases retain existing
+thresholds. The 34/36 outline result and larger-control row displacement are
+inherited unchanged from the structured-cell qualification. A separate six-control
+assessment confirms row-clearance differences across row positions and matched
+paint/control scales; its exact clearance metric remains unresolved, so no fitted
+constant or conditional correction is introduced.
