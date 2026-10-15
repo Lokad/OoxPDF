@@ -1,0 +1,19 @@
+[
+  {
+    "Id": "math-cell-spacing-fixed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-cell-spacing-fixed.docx",
+    "Sha256": "316A6919EB735860D0D9761B3398B2605088190AB8B3AF3808A82A9F042E3661",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "After spacing None points",
+      "After spacing empty points",
+      "After spacing 0 points",
+      "After spacing 6 points",
+      "After spacing 12 points",
+      "After spacing 24 points"
+    ]
+  }
+]

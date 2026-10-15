@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "math-cell-spacing-normal",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-cell-spacing-normal.docx",
+    "Sha256": "0E62CBA767C0204053624CC9F9C217C5759B733AEA2D77AA0EDEC1A0168BCA5F",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "After spacing 0 points",
+      "After spacing 6 points",
+      "After spacing 12 points",
+      "After spacing 24 points"
+    ]
+  }
+]

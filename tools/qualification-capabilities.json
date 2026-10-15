@@ -313,5 +313,21 @@
     "DocxWordCompatibleBalloonBodiesUseOfficeMeasuredWidth",
     "DocxWordCompatibleThreadPrintMatchesParentOnlyWithoutDroppingMetadata",
     "DocxWordCompatibleAllMarkupKeepsReplyMetadataWithoutPrintedSeparators"
+  ],
+  "docx-math-intrinsic-width": [
+    "PortableRendering",
+    "DocxInlineCompositionAutofit",
+    "DocxAutofit",
+    "DocxReviewAutofit",
+    "DocxOriginalAutofit",
+    "DocxTableLayoutStageDistributesAutoLayoutByContentWidth",
+    "DocxTableLayoutStageKeepsFixedLayoutGridWidths",
+    "DocxTableLayoutStageKeepsAutoPreferredCellWidths",
+    "DocxTableLayoutStageUsesFirstRowCellPreferredWidths",
+    "DocxTableLayoutStageUsesLaterRowCellPreferredWidths",
+    "DocxTableLayoutStageUsesPercentageCellPreferredWidths",
+    "DocxTableLayoutStageScalesGridToPreferredWidth",
+    "DocxTableLayoutStageScalesGridToPercentagePreferredWidth",
+    "DocxTableMath"
   ]
 }

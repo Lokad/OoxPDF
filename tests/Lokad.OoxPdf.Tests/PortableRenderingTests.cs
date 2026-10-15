@@ -41,6 +41,23 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingAutofitKeepsMathematicalCellContent()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var document = DocxTests.ReadDocx(Case("PortableFonts/math-cell-spacing-normal.docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(4, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != document.MainPartName),
+                "Autofit must account for prepared math instead of narrowing its column until supported body content disappears.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingCommentLabelsPreserveExplicitInitials()
     {
         var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-labels.docx"), OoxPdfDocxMarkupMode.AllMarkup);

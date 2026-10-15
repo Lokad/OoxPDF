@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "math-cell-spacing",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-cell-spacing.docx",
+    "Sha256": "4B49D619A5B77F94FF7B8CE0777062561FE7F9E2C3DD5FA96770BB3B47A47078",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "After spacing 0 points",
+      "After spacing 6 points",
+      "After spacing 12 points",
+      "After spacing 24 points"
+    ]
+  }
+]

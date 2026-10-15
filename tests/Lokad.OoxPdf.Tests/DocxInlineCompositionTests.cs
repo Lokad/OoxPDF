@@ -8,6 +8,43 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionAutofitMathRespectsAdditionalInlineContent()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the intrinsic-width control.");
+        const string fixture = "CompositionProbes/math-cell-spacing";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var source = ReadMutation(fixture, mode, false, false);
+            double originalWidth = renderer.InspectLayout(source).Pages.Single().TableRows[0].Cells[1].Width;
+            foreach (bool duplicate in new[] { false, true })
+            {
+                var document = ReadMutation(fixture, mode, false, false, (part, w, m) =>
+                {
+                    foreach (var math in part.Descendants(m + "oMath").ToArray())
+                    {
+                        if (duplicate) math.AddAfterSelf(new XElement(math));
+                        else
+                        {
+                            math.AddBeforeSelf(new XElement(w + "r", new XElement(w + "t", "Ratio ")));
+                            math.AddAfterSelf(new XElement(w + "r", new XElement(w + "t", " remains visible.")));
+                        }
+                    }
+                });
+                double width = renderer.InspectLayout(document).Pages.Single().TableRows[0].Cells[1].Width;
+                TestAssert.True(width > originalWidth, "Additional measured inline content must contribute to autofit width.");
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+                TestAssert.Equal(duplicate ? 8 : 4, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != document.MainPartName),
+                    "Adding prose or another formula cannot discard supported cell equations.");
+            }
+        }
+    }
+
     public static void DocxInlineCompositionSingleMathLinksTargetMeasuredFormula()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

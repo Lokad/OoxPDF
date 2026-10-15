@@ -388,7 +388,7 @@ internal sealed partial class DocxLayoutEngine
         bool allowAutomaticMinimumGridPlacement = false,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
-        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels);
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels, mathEquations, cancellationToken);
         var tableContext = new DocxTableLayoutContext(
             tableIndex,
             sourceBlockIndex,
@@ -470,7 +470,7 @@ internal sealed partial class DocxLayoutEngine
         return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
     }
 
-    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null)
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, CancellationToken cancellationToken = default)
     {
         // W6-a1: fixed table geometry joins scaled space (fixed lengths times the layout
         // scale) so the uniform shift-composition maps frames like body text. Percent and
@@ -622,7 +622,9 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber,
                     pageCount,
                     fixedScale,
-                    commentMarkerLabels);
+                    commentMarkerLabels,
+                    mathEquations,
+                    cancellationToken);
                 if (autoContentColumns is not null)
                 {
                     // A preferred autofit width can be smaller than the words it
@@ -661,7 +663,9 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double fixedScale,
-        IReadOnlyDictionary<string, string>? commentMarkerLabels)
+        IReadOnlyDictionary<string, string>? commentMarkerLabels,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
+        CancellationToken cancellationToken)
     {
         if (textMeasurer is null)
         {
@@ -711,7 +715,7 @@ internal sealed partial class DocxLayoutEngine
             for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
-                double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels);
+                double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
                 hasDeletedContent |= cellDeletedTotal > 0d;
                 columnMaxima[cellIndex] = Math.Max(columnMaxima[cellIndex], cellVisibleMax + cellDeletedTotal);
@@ -756,7 +760,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
                 {
-                    double? minimum = MeasureTableCellMinContentWidth(row.Cells[cellIndex], textMeasurer, pageNumber, pageCount, fixedScale, commentMarkerLabels);
+                    double? minimum = MeasureTableCellMinContentWidth(row.Cells[cellIndex], textMeasurer, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
                     if (minimum is null || minimum.Value > columnMaxima[cellIndex] + 0.000001d)
                     {
                         qualified = false;
@@ -804,7 +808,9 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double fixedScale,
-        IReadOnlyDictionary<string, string>? markerLabels)
+        IReadOnlyDictionary<string, string>? markerLabels,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
+        CancellationToken cancellationToken)
     {
         double minimum = 0d;
         foreach (DocxBodyElement element in GetTableCellLayoutBodyElements(cell))
@@ -851,6 +857,12 @@ internal sealed partial class DocxLayoutEngine
                 start = index + 1;
             }
             MeasureWord(text.Length, false);
+            foreach (DocxEquation equation in paragraph.Equations)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (mathEquations is not null && mathEquations.TryGetValue(equation, out var math))
+                    minimum = Math.Max(minimum, math.Box.AdvanceWidth * fixedScale);
+            }
             foreach (DocxInlineImage image in paragraph.Images)
             {
                 minimum = Math.Max(minimum, Math.Max(0d, image.WidthPoints) * fixedScale);
@@ -880,7 +892,9 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double fixedScale,
-        IReadOnlyDictionary<string, string>? commentMarkerLabels)
+        IReadOnlyDictionary<string, string>? commentMarkerLabels,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
+        CancellationToken cancellationToken)
     {
         double maxWidth = 0d;
         foreach (DocxBodyElement bodyElement in GetTableCellLayoutBodyElements(cell))
@@ -891,6 +905,19 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            if (paragraph.Equations.Count != 0 && mathEquations is not null)
+            {
+                // Intrinsic maxima consume the same ordered advances as wrapping,
+                // including mixed text, pictures and equations at authored breaks.
+                double size = GetParagraphFontSize(paragraph);
+                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
+                    double.MaxValue / 4d, double.MaxValue / 4d, 0d, Math.Max(1d, size * fixedScale),
+                    fixedScale, cancellationToken, out var lines))
+                {
+                    maxWidth = Math.Max(maxWidth, lines.Max(line => line.Advance));
+                    continue;
+                }
+            }
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             if (textSpans.Count != 0)
             {
