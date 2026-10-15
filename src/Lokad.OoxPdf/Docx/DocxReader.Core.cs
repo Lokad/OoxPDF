@@ -98,6 +98,24 @@ internal sealed partial class DocxReader
         IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
+        IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
+        {
+            var parts = new[] { new DocxEquationPartSource(documentPart.Name, equationSourceCount, bodyElements) }
+                .Concat(storyCache.EnumerateEquationParts(cancellationToken)).ToArray();
+            // Sink-less readers retain story-only equation warnings from the
+            // already parsed story cache, without enabling unrelated probes.
+            var probedParts = equationDiagnostics.Select(d => d.PartName).ToHashSet(StringComparer.Ordinal);
+            foreach (DocxEquationPartSource part in parts)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (part.SourceCount == 0 || !probedParts.Add(part.PartName)) { continue; }
+                equationDiagnostics.Add(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_EQUATION", OoxPdfSeverity.Warning,
+                    "Unsupported DOCX feature 'equation' was detected and ignored or approximated.", part.PartName,
+                    SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Ignored"));
+            }
+            return parts;
+        }
+
         if (pageSize is null)
         {
             return new DocxDocument(
@@ -117,7 +135,7 @@ internal sealed partial class DocxReader
             {
                 FontCatalog = fontCatalog,
                 MainPartName = documentPart.Name,
-                EquationSourceCount = equationSourceCount,
+                EquationParts = ReadEquationParts(),
                 EquationDiagnostics = equationDiagnostics,
                 StyleCatalog = ToStyleCatalog(styles),
                 HeaderParagraphsByType = headersByType,
@@ -165,7 +183,7 @@ internal sealed partial class DocxReader
         {
             FontCatalog = fontCatalog,
             MainPartName = documentPart.Name,
-            EquationSourceCount = equationSourceCount,
+            EquationParts = ReadEquationParts(),
             EquationDiagnostics = equationDiagnostics,
             StyleCatalog = ToStyleCatalog(styles),
             HeaderParagraphsByType = headersByType,

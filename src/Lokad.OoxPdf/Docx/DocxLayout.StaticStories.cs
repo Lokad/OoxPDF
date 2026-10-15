@@ -26,7 +26,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         IDocxTextMeasurer? unscaledTextMeasurer,
         CancellationToken cancellationToken,
-        bool header)
+        bool header,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -54,7 +55,7 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints,
             paragraphSpacingScale,
             unscaledLineMetrics,
-            cancellationToken);
+            cancellationToken, mathParagraphs);
         if (!HasVisibleStaticContent(layout))
         {
             return null;
@@ -78,28 +79,35 @@ internal sealed partial class DocxLayoutEngine
         DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
         if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
         {
-            double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
-            // Static first baselines join the hhea-ascender opt-in (Word 16.0 header
-            // grid: Tahoma sits 0.56 low with hheaAsc 1.0005); providers without hhea
-            // metrics keep legacy.
-            double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
-            double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
-            if (firstFooterLine.LineHeightSource == DocxLineHeightSource.ExactLineSpacing)
+            if (firstFooterLine.Math is { } math)
             {
-                firstFooterOffset = ResolveDeclaredStaticBaselineOffset(firstFooterLine.LineHeightSource, firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, 0d);
+                footerContentTop = firstFooterLine.BaselineY + math.BaselineInset * firstFooterLine.MathScale;
             }
-            else if (firstFooterLine.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
-                unscaledLineMetrics is IDocxStaticTextMetricsProvider footerMetrics)
+            else
             {
-                double descender = firstFooterParagraph.Runs.Select(run => footerMetrics.MeasureWindowsDescender(run, run.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
-                firstFooterOffset = ResolveDeclaredStaticBaselineOffset(firstFooterLine.LineHeightSource, firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, descender);
-            }
-            else if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
-            {
-                firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
-            }
+                double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
+                // Static first baselines join the hhea-ascender opt-in (Word 16.0 header
+                // grid: Tahoma sits 0.56 low with hheaAsc 1.0005); providers without hhea
+                // metrics keep legacy.
+                double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
+                double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
+                if (firstFooterLine.LineHeightSource == DocxLineHeightSource.ExactLineSpacing)
+                {
+                    firstFooterOffset = ResolveDeclaredStaticBaselineOffset(firstFooterLine.LineHeightSource, firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, 0d);
+                }
+                else if (firstFooterLine.LineHeightSource == DocxLineHeightSource.AtLeastLineSpacing &&
+                    unscaledLineMetrics is IDocxStaticTextMetricsProvider footerMetrics)
+                {
+                    double descender = firstFooterParagraph.Runs.Select(run => footerMetrics.MeasureWindowsDescender(run, run.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
+                    firstFooterOffset = ResolveDeclaredStaticBaselineOffset(firstFooterLine.LineHeightSource, firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, descender);
+                }
+                else if (HasNoSpacingElement(firstFooterParagraph.EffectiveProperties) && Math.Abs(firstFooterSize - 11d) < 0.000000001d)
+                {
+                    firstFooterOffset += UntokenedParagraphBaselineExtraPoints;
+                }
 
-            footerContentTop = firstFooterLine.BaselineY + firstFooterOffset;
+                footerContentTop = firstFooterLine.BaselineY + firstFooterOffset;
+            }
         }
 
         foreach (DocxInlineImageLayout image in footerLayout.InlineImages)
@@ -117,7 +125,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         IDocxTextMeasurer? unscaledTextMeasurer,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -159,7 +168,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken);
+                    cancellationToken, mathParagraphs);
             DocxStaticStoryLayoutResult footerLayout = CreateStaticStoryLayout(
                     selectedFooter,
                     page.MarginLeft,
@@ -173,7 +182,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken);
+                    cancellationToken, mathParagraphs);
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is
@@ -224,7 +233,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         IDocxLineMetricsProvider? unscaledLineMetrics,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
@@ -304,6 +314,20 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            if (TryGetStandaloneMath(paragraph, width, paragraphSpacingScale, mathParagraphs, out var math))
+            {
+                lines.Add(CreateStandaloneMathLine(paragraph, math, x, width, cursorY,
+                    paragraphSpacingScale, paragraphIndex, spacingProfile) with
+                {
+                    Story = DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
+                    SingleLineHeight = math.LineHeight
+                });
+                cursorY -= math.LineHeight * paragraphSpacingScale;
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                paragraphIndex++;
+                continue;
+            }
             DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs);
             int sourceLineIndex = 0;
             var placedStaticImages = new List<DocxInlineImage>();

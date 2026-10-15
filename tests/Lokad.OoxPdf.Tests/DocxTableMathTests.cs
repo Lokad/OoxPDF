@@ -212,6 +212,41 @@ internal static class DocxTableMathTests
         }
     }
 
+    public static void DocxStaticMathFramesSharePreparedAdvanceAndFooterBlockTranslation()
+    {
+        var (paragraph, math) = Prepared(20d);
+        DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("Following static prose.", 10d, 10d);
+        var sources = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph, following] };
+        foreach (bool header in new[] { true, false })
+        {
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            {
+                HeaderDistancePoints = 12d, FooterDistancePoints = 12d,
+                HeaderParagraphsByType = header ? sources : new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : sources
+            };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
+            DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathParagraphs:
+                    new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph] = math with { LineHeight = height } });
+            DocxLayout initial = Layout(20d), expanded = Layout(30d);
+            var a = initial.Pages.Single().StaticTextLines; var z = expanded.Pages.Single().StaticTextLines;
+            TestAssert.Equal(2, a.Count); TestAssert.Equal(2, z.Count);
+            TestAssert.True(a[0].Math is { } prepared && ReferenceEquals(prepared.Equation, math.Equation) && a[0].Story is not null,
+                "Static math retains the original prepared source and selected story carrier.");
+            if (header)
+                TestAssert.True(Math.Abs(a[1].BaselineY - z[1].BaselineY - 10d) < .000001 &&
+                    Math.Abs(initial.HeaderContentBottomByPage[0] - expanded.HeaderContentBottomByPage[0] - 10d) < .000001,
+                    "Header math reserves the same extra advance in following prose and the body keep-out edge.");
+            else
+                TestAssert.True(Math.Abs(a[1].BaselineY - z[1].BaselineY) < .000001 &&
+                    Math.Abs(z[0].BaselineY - a[0].BaselineY - 10d) < .000001 &&
+                    Math.Abs(expanded.FooterContentTopByPage[0] - initial.FooterContentTopByPage[0] - 10d) < .000001,
+                    "Footer translation anchors its following prose while growing math and the body keep-out edge upward.");
+        }
+    }
+
     private static (DocxParagraph Paragraph, DocxPreparedMathParagraph Math) Prepared(double height)
     {
         var run = new DocxTextRun("A+B", 10d, null, false, false, false, null, "TestFont");

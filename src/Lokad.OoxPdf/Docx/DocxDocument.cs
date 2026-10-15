@@ -16,7 +16,7 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxTable> FallbackTables)
 {
     public string MainPartName { get; init; } = "/word/document.xml";
-    public int EquationSourceCount { get; init; }
+    public IReadOnlyList<DocxEquationPartSource> EquationParts { get; init; } = [];
     public IReadOnlyList<Diagnostics.OoxPdfDiagnostic> EquationDiagnostics { get; init; } = [];
     public DocxFontCatalog FontCatalog { get; init; } = DocxFontCatalog.Empty;
     public DocxStyleCatalog StyleCatalog { get; init; } = DocxStyleCatalog.Empty;

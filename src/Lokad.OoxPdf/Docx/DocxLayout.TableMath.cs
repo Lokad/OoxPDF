@@ -27,7 +27,7 @@ internal sealed partial class DocxLayoutEngine
             IsExactLineSpacing(paragraph.EffectiveProperties), baselineInset: inset);
     }
 
-    private static bool TryGetTableStandaloneMath(DocxParagraph paragraph, double width, double scale,
+    private static bool TryGetStandaloneMath(DocxParagraph paragraph, double width, double scale,
         IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? prepared,
         [NotNullWhen(true)] out DocxPreparedMathParagraph? math)
     {
@@ -37,7 +37,7 @@ internal sealed partial class DocxLayoutEngine
         math = candidate; return true;
     }
 
-    private static DocxTextLineLayout CreateTableMathLine(DocxParagraph paragraph, DocxPreparedMathParagraph math,
+    private static DocxTextLineLayout CreateStandaloneMathLine(DocxParagraph paragraph, DocxPreparedMathParagraph math,
         double x, double textWidth, double top, double scale, int paragraphIndex, DocxParagraphSpacingProfile spacing)
     {
         double inset = GetParagraphTextStartOffset(paragraph, scale);

@@ -13,16 +13,34 @@ internal sealed partial class DocxRenderer
         var painted = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
         foreach (DocxEquation equation in placed)
         { token.ThrowIfCancellationRequested(); painted.Add(equation); }
+        var paintedByPart = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (DocxEquationPartSource part in document.EquationParts)
+        {
+            token.ThrowIfCancellationRequested();
+            var seen = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(part.BodyElements))
+            foreach (DocxEquation equation in paragraph.Equations)
+            {
+                token.ThrowIfCancellationRequested();
+                if (painted.Contains(equation)) { seen.Add(equation); }
+            }
+            if (seen.Count > 0) { paintedByPart[part.PartName] = seen.Count; }
+        }
+        var sourcesByPart = document.EquationParts.ToDictionary(part => part.PartName, StringComparer.Ordinal);
         foreach (OoxPdfDiagnostic source in document.EquationDiagnostics)
         {
             token.ThrowIfCancellationRequested();
-            if (source.PartName == document.MainPartName && painted.Count > 0 && painted.Count == document.EquationSourceCount) { continue; }
+            if (source.PartName is { } sourcePart && sourcesByPart.TryGetValue(sourcePart, out var part) &&
+                paintedByPart.TryGetValue(sourcePart, out int count) && count == part.SourceCount) { continue; }
             sink(source);
         }
-        if (painted.Count != 0)
+        var paintedParts = new HashSet<string>(paintedByPart.Keys, StringComparer.Ordinal);
+        if (paintedByPart.Values.Sum() < painted.Count) { paintedParts.Add(document.MainPartName); }
+        foreach (string part in paintedParts)
         {
+            token.ThrowIfCancellationRequested();
             sink(new OoxPdfDiagnostic("DOCX_APPROXIMATED_EQUATION", OoxPdfSeverity.Warning,
-                "Native DOCX equations were rendered with approximate mathematical layout.", document.MainPartName,
+                "Native DOCX equations were rendered with approximate mathematical layout.", part,
                 SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Approximated"));
         }
     }
@@ -34,6 +52,7 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (item is DocxEquationLayout equation) { yield return equation.Math.Equation; }
+            else if (item is DocxTextLineLayout { Math: { } math }) { yield return math.Equation; }
             else if (item is DocxTableRowLayout row) { rows.Push(row); }
         }
         while (rows.TryPop(out var row))
@@ -72,7 +91,8 @@ internal sealed partial class DocxRenderer
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
-        foreach (DocxParagraph paragraph in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token))
+        foreach (DocxParagraph paragraph in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token)
+            .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)))
         {
             token.ThrowIfCancellationRequested();
             DocxEquation? standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph);

@@ -34,6 +34,22 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
+    public static IEnumerable<DocxParagraph> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
+    {
+        var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        foreach (DocxEquationPartSource part in document.EquationParts)
+        {
+            token.ThrowIfCancellationRequested();
+            if (part.PartName == document.MainPartName) { continue; }
+            foreach (DocxParagraphElement element in part.BodyElements.OfType<DocxParagraphElement>())
+            {
+                token.ThrowIfCancellationRequested();
+                if (GetStandaloneRow(element.Paragraph) is not null && seen.Add(element.Paragraph))
+                    yield return element.Paragraph;
+            }
+        }
+    }
+
     // Office promotes a sole visible equation to centered display layout, even
     // when its source is inline. Preserve the source record and select that
     // style only for measurement; mixed prose retains its inline ownership.

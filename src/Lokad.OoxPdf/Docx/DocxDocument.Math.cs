@@ -2,6 +2,8 @@ namespace Lokad.OoxPdf.Docx;
 
 // Boundaries refer to the existing prose indices. Mathematics does not become
 // a prose run or change ownership of fields, notes, bookmarks or pictures.
+internal sealed record DocxEquationPartSource(string PartName, int SourceCount, IReadOnlyList<DocxBodyElement> BodyElements);
+
 internal sealed record DocxEquation(
     DocxMathRow Content,
     int TextRunIndex,

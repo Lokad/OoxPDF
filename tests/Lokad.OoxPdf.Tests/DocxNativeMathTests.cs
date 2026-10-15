@@ -7,6 +7,55 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxStaticMathSourcesRetainPartCountsAndSharedIdentityWithoutAReaderSink()
+    {
+        DocxDocument document = NamedFixture("docx-omml-static-guard-shared-variants");
+        var part = document.EquationParts.Single(p => p.PartName == "/word/header1.xml");
+        TestAssert.Equal(1, part.SourceCount);
+        var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).ToArray();
+        TestAssert.Equal(1, candidates.Length);
+        TestAssert.True(ReferenceEquals(candidates[0], document.HeaderParagraphsByType["default"][0]) &&
+            ReferenceEquals(candidates[0], document.HeaderParagraphsByType["first"][0]),
+            "Repeated story variants share one parsed paragraph and one preparation owner.");
+        TestAssert.True(document.EquationDiagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == part.PartName),
+            "A later renderer retains the source warning even when reading had no diagnostic sink and no body equation.");
+        DocxDocument mixed = NamedFixture("docx-omml-static-guard-mixed-fallback");
+        TestAssert.Equal(0, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(mixed, default).Count());
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, cancelled.Token).ToArray());
+    }
+
+    public static void DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope()
+    {
+        RequireMathFont();
+        foreach (string owner in new[] { "header", "footer" })
+        foreach ((string shape, string meaning) in new[] { ("literal", "x−y"), ("fraction", "x+2y"), ("script", "αi2"), ("root", "√x+1") })
+        {
+            DocxDocument document = NamedFixture("docx-omml-static-" + owner + "-" + shape);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, default).Single();
+            string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains(meaning, decoded);
+            TestAssert.Contains("Following public " + owner + " prose.", decoded);
+            TestAssert.Contains("Before public math table.", decoded);
+            TestAssert.True(diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION" && d.PartName == "/word/" + owner + "1.xml") == 1 &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Complete story math diagnoses its own part rather than the main document.");
+        }
+        foreach ((string kind, int approximated, int ignored, int pages) in new[]
+            { ("partial", 1, 1, 1), ("mixed-fallback", 0, 1, 1), ("shared-variants", 1, 0, 2), ("body-and-header", 2, 0, 1) })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var output = Renderer().RenderBlankPages(NamedFixture("docx-omml-static-guard-" + kind), diagnostics.Add, default).ToArray();
+            TestAssert.Equal(pages, output.Length);
+            TestAssert.Equal(approximated, diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION"));
+            TestAssert.Equal(ignored, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"));
+            if (kind == "mixed-fallback") TestAssert.True(output.All(page => !page.Fonts.Any(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
+                "An unsupported static owner cannot publish unused mathematical fonts.");
+            if (kind == "shared-variants") TestAssert.True(output.All(page => DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC).Contains("x+2y", StringComparison.Ordinal)),
+                "The shared original equation paints on both selected pages while part diagnostics are deduplicated.");
+        }
+    }
+
     public static void DocxNativeIsolatedInlineMathUsesOfficeDisplayStyleWithoutChangingSource()
     {
         RequireMathFont();

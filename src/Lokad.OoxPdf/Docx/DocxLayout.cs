@@ -1880,7 +1880,7 @@ internal sealed partial class DocxLayoutEngine
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
-                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true);
+                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathParagraphs: mathParagraphs);
                 continuationHeaderByPage[headerKey] = headerLayout;
             }
 
@@ -1944,7 +1944,7 @@ internal sealed partial class DocxLayoutEngine
             if (!continuationFooterTopByPage.TryGetValue(key, out double top))
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
-                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false);
+                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathParagraphs: mathParagraphs);
                 top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
                     (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider));
                 continuationFooterTopByPage[key] = top;
@@ -1952,7 +1952,7 @@ internal sealed partial class DocxLayoutEngine
             return Math.Max(templatePage.MarginBottom, top);
         }
         DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut).ToArray();
-        var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken);
+        var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathParagraphs);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;
         return new DocxLayout(
