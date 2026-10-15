@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using System.Xml.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -156,6 +158,41 @@ internal static class PortableRenderingTests
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != document.MainPartName),
                 "Autofit must account for prepared math instead of narrowing its column until supported body content disappears.");
             CheckWrittenPages(pages);
+        }
+    }
+
+    public static void PortableRenderingFittingMathPreservesOrdinaryLineAdvance()
+    {
+        string source = Case("CompositionProbes/math-printed-frame-literal-anchor12.docx");
+        using var plainBytes = new MemoryStream();
+        using (var input = ZipFile.OpenRead(source))
+        using (var output = new ZipArchive(plainBytes, ZipArchiveMode.Create, leaveOpen: true))
+            foreach (var entry in input.Entries)
+            {
+                using var data = entry.Open();
+                using var target = output.CreateEntry(entry.FullName).Open();
+                if (entry.FullName != "word/document.xml") data.CopyTo(target);
+                else
+                {
+                    var xml = XDocument.Load(data);
+                    XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+                    XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+                    foreach (var equation in xml.Descendants(m + "oMath").ToArray())
+                        equation.ReplaceWith(new XElement(w + "r", new XElement(w + "t", "reference")));
+                    xml.Save(target);
+                }
+            }
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            plainBytes.Position = 0;
+            var plain = new DocxReader().Read(OoxPackage.Open(plainBytes, default), null, default, markupMode: mode);
+            var math = DocxTests.ReadDocx(source, mode);
+            double Following(DocxDocument document) => renderer.InspectLayout(document).Pages.Single().Items
+                .Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == 2).Y;
+            TestAssert.True(Math.Abs(Following(plain) - Following(math)) < .01d,
+                "Mathematical ink inside the ordinary line box must not displace the following paragraph.");
         }
     }
 

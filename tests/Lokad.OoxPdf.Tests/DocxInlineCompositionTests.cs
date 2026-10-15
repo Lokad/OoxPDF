@@ -27,9 +27,12 @@ internal static class DocxInlineCompositionTests
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var items = renderer.InspectLayout(DocxTests.ReadDocx(source, mode)).Pages.Single().Items;
             double Baseline(int block) => items.Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == block).Y;
-            double delta = Baseline(0) - Baseline(1) - row.GetProperty("LeadingToMath").GetDouble();
-            TestAssert.True(Math.Abs(delta) < .4d,
-                $"Printed placement must retain independent Word baseline gaps: {id}/{mode} delta={delta}.");
+            foreach (var (block, property) in new[] { (1, "LeadingToMath"), (2, "LeadingToFollowing") })
+            {
+                double delta = Baseline(0) - Baseline(block) - row.GetProperty(property).GetDouble();
+                TestAssert.True(Math.Abs(delta) < .4d,
+                    $"Printed placement and advance must retain independent Word gaps: {id}/{mode}/{property} delta={delta}.");
+            }
         }
     }
 

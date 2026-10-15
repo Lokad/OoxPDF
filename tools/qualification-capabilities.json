@@ -437,5 +437,24 @@
     "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
     "PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots",
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
+  ],
+  "docx-inline-text-frame": [
+    "DocxInlineCompositionPrintedMathMatchesIndependentBaselineGaps",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "DocxInlineCompositionSingle",
+    "DocxInlineCompositionLiteral",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxInlineCompositionNumberedMath",
+    "DocxNativeInline",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeDisplayAutomaticSpacing",
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
+    "PortableRenderingFittingMathPreservesOrdinaryLineAdvance",
+    "DocxInlineCompositionKeepNextReservesTheMeasuredMixedFrame",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "DocxInlineCompositionReviewPaginationRetainsSourcePageCapacity"
   ]
 }

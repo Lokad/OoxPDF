@@ -1401,7 +1401,8 @@ internal sealed partial class DocxLayoutEngine
                 }
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, paragraphFontSize,
                     Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
-                    baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var measured) &&
+                    baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
+                    physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
                     measured.All(line => line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
                 {
                     firstBodyLineBaselineOffset ??= baseInset;
@@ -1416,7 +1417,7 @@ internal sealed partial class DocxLayoutEngine
                                 objectInset = Math.Max(objectInset, fragment.BaselineInset);
                         // Placement shares the ordinary body's scaled local inset
                         // and page anchor. The measured occupied height stays intact.
-                        double labelLeading = line.BaselineInset - Math.Max(baseInset, objectInset);
+                        double labelLeading = line.BaselineInset - Math.Max(line.TextBaselineInset, objectInset);
                         line = line with { BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading };
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom() &&
                             (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))

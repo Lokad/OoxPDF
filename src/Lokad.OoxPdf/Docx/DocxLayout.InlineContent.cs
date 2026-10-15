@@ -16,6 +16,7 @@ internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFr
     double Advance, double BaselineInset, double OccupiedHeight)
 {
     public bool IsDisplayGroup { get; init; }
+    public double TextBaselineInset { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> ListLabelSegments { get; init; } = [];
 }
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
@@ -125,7 +126,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
         IDocxTextMeasurer measurer, double fontSize, double firstWidth, double nextWidth,
         double baselineInset, double lineHeight, double scale, CancellationToken token,
-        [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines)
+        [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
+        double? physicalTextBaselineInset = null)
     {
         lines = null;
         if (paragraph.InlineContent is not { } items || equations is null ||
@@ -337,6 +339,26 @@ internal sealed partial class DocxLayoutEngine
                 current.All(fragment => fragment.Math is { UsesDisplayStyle: true } ||
                     fragment.Source is DocxInlineText text &&
                     text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
+            double textInset = baselineInset;
+            if (physicalTextBaselineInset is { } physicalInset && !displayGroup &&
+                current.Any(fragment => fragment.Math is not null) &&
+                current.All(fragment => fragment.Math is { } math
+                    ? !math.UsesDisplayStyle && !math.Equation.Display &&
+                      math.Box.AboveBaseline * scale <= physicalInset &&
+                      math.Box.BelowBaseline * scale <= lineHeight - physicalInset
+                    : fragment.Source is DocxInlineText))
+            {
+                // An inline object entirely inside the ordinary text strut must
+                // not add a second font line frame. Taller objects keep their
+                // independently qualified occupied extent.
+                textInset = physicalInset;
+                above = physicalInset;
+                below = Math.Max(0d, lineHeight - physicalInset);
+                for (int index = 0; index < current.Count; index++)
+                    if (current[index].Math is { } math)
+                        current[index] = current[index] with { BaselineInset = math.Box.AboveBaseline * scale,
+                            OccupiedHeight = (math.Box.AboveBaseline + math.Box.BelowBaseline) * scale };
+            }
             IReadOnlyList<DocxTextSegmentLayout> labelSegments = [];
             if (output.Count == 0 && paragraph.ListLabel is { } label)
             {
@@ -347,7 +369,7 @@ internal sealed partial class DocxLayoutEngine
                 above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             }
             output.Add(new(current.ToArray(), advance, above, above + below)
-                { IsDisplayGroup = displayGroup, ListLabelSegments = labelSegments });
+                { IsDisplayGroup = displayGroup, ListLabelSegments = labelSegments, TextBaselineInset = textInset });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }
     }
