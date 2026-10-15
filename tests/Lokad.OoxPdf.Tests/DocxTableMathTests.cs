@@ -247,6 +247,71 @@ internal static class DocxTableMathTests
         }
     }
 
+    public static void DocxStaticFrameMappingKeepsFooterAnchoredAndUsesOneHeaderAdvance()
+    {
+        const double scale = .75d;
+        var (paragraph, prepared) = Prepared(20d);
+        DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("Following static prose.", 10d, 10d) with { LineSpacingPoints = null };
+        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph, following] };
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        foreach (bool header in new[] { true, false })
+        {
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            {
+                HeaderDistancePoints = 12d, FooterDistancePoints = 12d,
+                HeaderParagraphsByType = header ? paragraphs : new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : paragraphs
+            };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
+            DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
+                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, scale, scale), default, measurer,
+                    mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                    { [paragraph] = prepared with { LineHeight = height } });
+            DocxLayout a = Layout(20d), z = Layout(30d);
+            var first = a.Pages.Single().StaticTextLines; var expanded = z.Pages.Single().StaticTextLines;
+            TestAssert.True(first.Count == 2 && first.All(line => line.StaticStoryUsesPhysicalY) &&
+                first[0].Math is { } math && ReferenceEquals(math.Equation, prepared.Equation),
+                "A complete natural static source maps one original prepared equation and its prose.");
+            if (header)
+                TestAssert.True(Math.Abs(first[1].BaselineY - expanded[1].BaselineY - 7.5d) < .000001 &&
+                    Math.Abs(a.HeaderContentBottomByPage[0] - z.HeaderContentBottomByPage[0] - 7.5d) < .000001,
+                    "The same seven-and-a-half-point growth moves following prose and the body keep-out edge.");
+            else
+                TestAssert.True(Math.Abs(first[1].BaselineY - expanded[1].BaselineY) < .000001 &&
+                    Math.Abs(expanded[0].BaselineY - first[0].BaselineY - 7.5d) < .000001 &&
+                    Math.Abs(z.FooterContentTopByPage[0] - a.FooterContentTopByPage[0] - 7.5d) < .000001,
+                    "Footer growth moves upward, preserving its trailing prose and source-bound frame edge.");
+        }
+    }
+
+    public static void DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks()
+    {
+        var (paragraph, prepared) = Prepared(20d);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        foreach (string guard in new[] { "field", "declared", "table-first", "missing-metrics", "unprepared-math" })
+        {
+            DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph(guard == "field" ? "{PAGE}" : "Public footer.", 10d, 10d);
+            if (guard != "declared") footer = footer with { LineSpacingPoints = null };
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            {
+                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] },
+                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [footer] }
+            };
+            var cell = new DocxTableCell("Public cell.", [footer], null, null, null, null, [], DocxTableCellMargins.Empty);
+            DocxDocument document = guard == "table-first" ? TableDocument(new DocxTableRow([cell], null)) :
+                DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []);
+            document = document with { PageSettings = settings };
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
+                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, .75d, .75d), default,
+                    guard == "missing-metrics" ? null : measurer,
+                    mathParagraphs: guard == "unprepared-math" ? null :
+                        new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph] = prepared });
+            TestAssert.True(layout.Pages.SelectMany(page => page.StaticTextLines).All(line => !line.StaticStoryUsesPhysicalY),
+                "Fields, declared frames, table-first bodies and unresolved metrics/math keep their existing coordinate owner.");
+        }
+    }
+
     private static (DocxParagraph Paragraph, DocxPreparedMathParagraph Math) Prepared(double height)
     {
         var run = new DocxTextRun("A+B", 10d, null, false, false, false, null, "TestFont");

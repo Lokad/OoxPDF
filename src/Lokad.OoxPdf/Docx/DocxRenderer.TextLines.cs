@@ -321,7 +321,9 @@ internal sealed partial class DocxRenderer
 
     private static DocxTextLineLayout AdjustStaticTextLine(DocxTextLineLayout line, DocxMarkupContext? markupContext)
     {
-        double adjustment = markupContext?.WordCompatibleStaticTextYAdjustmentPoints ?? 0d;
+        double adjustment = line.StaticStoryUsesPhysicalY
+            ? markupContext?.WordCompatibleTextYOffset ?? 0d
+            : markupContext?.WordCompatibleStaticTextYAdjustmentPoints ?? 0d;
         return adjustment == 0d ? line : TranslateTextLine(line, 0d, adjustment);
     }
 

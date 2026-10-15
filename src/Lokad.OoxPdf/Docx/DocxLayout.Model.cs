@@ -83,6 +83,7 @@ internal sealed record DocxTextLineLayout(
     public double MathScale { get; init; } = 1d;
     public bool IsInlineMath { get; init; }
     public double InlineMathOffsetX { get; init; }
+    public bool StaticStoryUsesPhysicalY { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(

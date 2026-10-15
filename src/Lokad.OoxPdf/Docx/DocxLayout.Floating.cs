@@ -1104,5 +1104,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTableRowLayout> TableRows,
         IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes,
         double EndCursorY,
-        double EndPendingAfterSpacing);
+        double EndPendingAfterSpacing)
+    {
+        public double? MappedFooterContentTop { get; init; }
+    }
 }

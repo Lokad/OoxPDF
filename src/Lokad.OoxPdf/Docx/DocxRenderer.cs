@@ -965,6 +965,18 @@ internal sealed partial class DocxRenderer
         }
 
         bool hasBalloons = markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document);
+        if (page.StaticTextLines.Any(line => line.StaticStoryUsesPhysicalY) && firstBodyBaselineY is { } bodyBaseline)
+        {
+            double headerDisplacement = layout.HeaderContentBottomByPage.TryGetValue(0, out double headerBottom)
+                ? Math.Max(0d, page.Height - page.MarginTop - headerBottom) : 0d;
+            return markupContext with
+            {
+                WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext,
+                    bodyBaseline + headerDisplacement, page.Height, hasBalloons),
+                WordCompatibleStaticTextYAdjustmentPoints = 0d
+            };
+        }
+
         double legacyOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height, hasBalloons);
         // Word independently scales the first body and header origins. Their
         // continuation pitches are already scaled by layout. A higher header

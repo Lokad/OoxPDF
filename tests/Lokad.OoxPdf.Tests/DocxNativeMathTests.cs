@@ -7,6 +7,33 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots()
+    {
+        RequireMathFont();
+        foreach ((string fixture, double firstBody, double followingStatic) in new[]
+        {
+            ("docx-static-frame-plain-header-comment11", 672.22d, 687.77d),
+            ("docx-static-frame-plain-header-comment18", 666.17d, 681.72d),
+            ("docx-static-math-frame-header-comment", 661.37d, 676.92d),
+            ("docx-static-frame-plain-footer-comment11", 676.20d, 138.79d),
+            ("docx-static-frame-plain-footer-comment18", 676.20d, 138.79d),
+            ("docx-static-math-frame-footer-comment", 676.20d, 138.79d)
+        })
+        {
+            DocxDocument document = NamedFixture(fixture);
+            var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var emission = renderer.InspectTextEmission(document);
+            var body = emission.Lines.First(line => !line.IsStaticStory && line.SourceBlockIndex == 0);
+            var following = emission.Lines.Single(line => line.IsStaticStory && line.SourceParagraphIndex == 1);
+            TestAssert.True(Math.Abs(body.Segments[0].BaselineY - firstBody) < .08d,
+                "Header overflow uses the source frame once; an already scaled displacement cannot select the body pin.");
+            TestAssert.True(Math.Abs(following.Segments[0].BaselineY - followingStatic) < .23d &&
+                following.Segments[0].BaselineY > 0d,
+                "Independent Word slots keep complete footer blocks on the page across prose sizes and math.");
+        }
+    }
+
     public static void DocxStaticMathSourcesRetainPartCountsAndSharedIdentityWithoutAReaderSink()
     {
         DocxDocument document = NamedFixture("docx-omml-static-guard-shared-variants");

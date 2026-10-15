@@ -42,8 +42,8 @@ internal sealed partial class DocxLayoutEngine
             header ? templatePage.PageSettings.HeaderParagraphsByType : templatePage.PageSettings.FooterParagraphsByType,
             templatePage.PageSettings,
             pageNumber);
-        DocxStaticStoryLayoutResult layout = CreateStaticStoryLayout(
-            selectedStory,
+        DocxStaticStoryLayoutResult layout = CreatePageStaticStoryLayout(
+            templatePage, selectedStory,
             templatePage.MarginLeft,
             bodyWidth,
             header ? templatePage.Height - ResolveHeaderDistance(templatePage) : ResolveFooterDistance(templatePage),
@@ -55,7 +55,7 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints,
             paragraphSpacingScale,
             unscaledLineMetrics,
-            cancellationToken, mathParagraphs);
+            cancellationToken, mathParagraphs, unscaledTextMeasurer);
         if (!HasVisibleStaticContent(layout))
         {
             return null;
@@ -75,6 +75,7 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveStaticFooterContentTop(DocxStaticStoryLayoutResult footerLayout,
         IDocxLineMetricsProvider? unscaledLineMetrics)
     {
+        if (footerLayout.MappedFooterContentTop is { } mappedTop) { return mappedTop; }
         double footerContentTop = double.NegativeInfinity;
         DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
         if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
@@ -155,8 +156,8 @@ internal sealed partial class DocxLayoutEngine
                 page.PageSettings.FooterParagraphsByType,
                 page.PageSettings,
                 pageNumber);
-            DocxStaticStoryLayoutResult headerLayout = CreateStaticStoryLayout(
-                    selectedHeader,
+            DocxStaticStoryLayoutResult headerLayout = CreatePageStaticStoryLayout(
+                    page, selectedHeader,
                     page.MarginLeft,
                     bodyWidth,
                     page.Height - ResolveHeaderDistance(page),
@@ -168,9 +169,9 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathParagraphs);
-            DocxStaticStoryLayoutResult footerLayout = CreateStaticStoryLayout(
-                    selectedFooter,
+                    cancellationToken, mathParagraphs, unscaledTextMeasurer);
+            DocxStaticStoryLayoutResult footerLayout = CreatePageStaticStoryLayout(
+                    page, selectedFooter,
                     page.MarginLeft,
                     bodyWidth,
                     ResolveFooterDistance(page),
@@ -182,7 +183,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathParagraphs);
+                    cancellationToken, mathParagraphs, unscaledTextMeasurer);
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is
