@@ -1,0 +1,12 @@
+docxpatch 1
+
+op replace-paragraph
+target M.P0001
+text Public piecewise function.
+end
+
+op insert-equation
+target M.P0001
+placement after
+latex \mathrm{x-y}
+end

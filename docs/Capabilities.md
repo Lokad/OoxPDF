@@ -64,6 +64,12 @@ Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and 
 
 ## DOCX
 
+Mathematical runs select the minus glyph for an authored ASCII hyphen across
+supported math styles; normal-text runs retain their hyphens. Bounded two-row
+piecewise cases reuse matrix/delimiter layout with condition text and supported
+fraction/script cells. Independent Word controls retain explicit fence, baseline
+and raster residuals; wider nesting and stories remain staged.
+
 Body inline picture paragraphs use their occupied image height and the existing
 collapsed paragraph spacing. The keep-with-next estimate uses the same advance;
 an extra fixed gap no longer separates consecutive pictures or moves a fitting

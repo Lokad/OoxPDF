@@ -17,6 +17,11 @@ The fraction is replaced through its result alias. Crop edits address one image
 placement independently. The SVG has opaque, public geometric shapes and no
 raster preview. Regeneration can change ZIP metadata and document hashes.
 
+Additional recipes cover two-row piecewise cases with condition text and
+fraction/script cells, plus unary/binary/upright minus, explicit Unicode minus
+and normal-text hyphen contrasts. Source hyphens stay in the DOCX; mathematical
+runs select the minus glyph while normal text retains its punctuation.
+
 The committed DOCX files sit in the parent Cases folder. Independent Word/PDFium
 comparisons use the same visual thresholds as existing math and SVG cases.
 Passing producer validation or preserving media bytes does not establish visual

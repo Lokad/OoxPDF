@@ -1,0 +1,12 @@
+docxpatch 1
+
+op replace-paragraph
+target M.P0001
+text Public piecewise function.
+end
+
+op insert-equation
+target M.P0001
+placement after
+latex \begin{cases}\frac{x+1}{y}&\text{if }y\neq0\\0&\text{otherwise}\end{cases}
+end
