@@ -47,6 +47,20 @@ internal sealed record DocxMathRadical(DocxMathRow Radicand, DocxMathRow Degree,
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }
 }
+internal sealed record DocxMathDelimiter(IReadOnlyList<DocxMathRow> Arguments) : DocxMathNode
+{
+    public string? BeginCharacterValue { get; init; }
+    public string? EndCharacterValue { get; init; }
+    public string? SeparatorCharacterValue { get; init; }
+    public string BeginCharacter => BeginCharacterValue ?? "(";
+    public string EndCharacter => EndCharacterValue ?? ")";
+    public string SeparatorCharacter => SeparatorCharacterValue ?? "|";
+    public bool? GrowValue { get; init; }
+    public string? ShapeValue { get; init; }
+    public bool HasUnsupportedProperties { get; init; }
+    public DocxTextRun? ControlText { get; init; }
+    public string? ControlFontFamily { get; init; }
+}
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
 internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,
     IReadOnlyList<DocxMathChild> Children) : DocxMathNode;

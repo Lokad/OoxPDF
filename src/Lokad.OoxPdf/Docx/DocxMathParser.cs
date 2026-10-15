@@ -3,7 +3,7 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
 
-internal static class DocxMathParser
+internal static partial class DocxMathParser
 {
     // The package XML limits still apply. Use an explicit traversal stack so
     // accepted XML nesting does not also consume the managed call stack.
@@ -58,6 +58,11 @@ internal static class DocxMathParser
             {
                 node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"));
             }
+            else if (name == "d" && ContentChildren(element).Any() &&
+                ContentChildren(element).All(child => child.Name == MathNamespace + "e" && nodes[child] is DocxMathRow))
+            {
+                node = ReadDelimiter(element, element.Elements(MathNamespace + "e").Select(child => (DocxMathRow)nodes[child]).ToArray(), readRun, cancellationToken);
+            }
             else if (name == "rad" && Role(element, "e") is { } radicand && Role(element, "deg") is { } degree &&
                 HasOnlyRoles(element, "deg", "e"))
             {
@@ -71,21 +76,14 @@ internal static class DocxMathParser
                     p.Attributes().All(a => a.IsNamespaceDeclaration) &&
                     string.IsNullOrWhiteSpace(string.Concat(p.Nodes().OfType<XText>().Select(t => t.Value))) &&
                     p.Elements().All(child => child.Name == MathNamespace + "degHide" || child.Name == MathNamespace + "ctrlPr")) &&
-                    controls.Length <= 1 && controls.All(c => c.Attributes().All(a => a.IsNamespaceDeclaration) &&
-                        string.IsNullOrWhiteSpace(string.Concat(c.Nodes().OfType<XText>().Select(t => t.Value))) &&
-                        c.Elements().Count() <= 1 && c.Elements().All(p => p.Name == WordprocessingNamespace + "rPr" &&
-                            p.Attributes().All(a => a.IsNamespaceDeclaration) &&
-                            string.IsNullOrWhiteSpace(string.Concat(p.Nodes().OfType<XText>().Select(t => t.Value))) &&
-                            p.Elements().All(HasKnownControlProperty))) &&
+                    controls.Length <= 1 && controls.All(HasKnownControl) &&
                     visibility.Length <= 1 && visibility.All(v => !v.HasElements && string.IsNullOrWhiteSpace(v.Value) &&
                         v.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == MathNamespace + "val")) &&
                     (value is null || Lokad.OoxPdf.Ooxml.OoxBoolean.IsTrue(value) || Lokad.OoxPdf.Ooxml.OoxBoolean.IsOff(value));
                 node = new DocxMathRadical(radicand, degree, visibility.Length == 0 ? null :
                     Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(visibility[0], false, valueAttributeName: MathNamespace + "val"))
                     { HasUnsupportedProperties = !valid, ControlText = controlText,
-                        ControlFontFamily = control?.Element(WordprocessingNamespace + "rPr") is { } runProperties &&
-                            (runProperties.Element(WordprocessingNamespace + "rFonts") is not null ||
-                             runProperties.Element(WordprocessingNamespace + "rStyle") is not null) ? controlText.FontFamily : null };
+                        ControlFontFamily = ControlFontFamily(control, controlText) };
             }
             else
             {
@@ -113,7 +111,7 @@ internal static class DocxMathParser
         string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
             "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
-    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad";
+    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)

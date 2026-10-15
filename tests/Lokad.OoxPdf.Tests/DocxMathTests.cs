@@ -7,6 +7,98 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathDelimiterSourceDistinguishesOmittedAndEmptyCharacters()
+    {
+        foreach((string properties,string begin,string end,string separator) in new[]{
+            ("","(",")","|"),("<m:dPr/>","(",")","|"),
+            ("<m:dPr><m:begChr/><m:endChr m:val=''/><m:sepChr/></m:dPr>","","",""),
+            ("<m:dPr><m:begChr m:val='['/><m:endChr m:val=']'/><m:sepChr m:val=';'/><m:grow m:val='0'/><m:shp m:val='match'/></m:dPr>","[","]",";"),
+            ("<m:dPr><m:begChr m:val='\U0001F676'/></m:dPr>","\U0001F676",")","|")})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:d>"+properties+
+                "<m:e><m:r><m:t>a</m:t></m:r></m:e><m:e><m:r><m:t>b</m:t></m:r></m:e></m:d></m:oMath>"));
+            var delimiter=(DocxMathDelimiter)row.Children.Single();
+            TestAssert.True(!delimiter.HasUnsupportedProperties,"Known delimiter source values retain their distinct defaults and explicit empty values.");
+            TestAssert.Equal(begin,delimiter.BeginCharacter);TestAssert.Equal(end,delimiter.EndCharacter);TestAssert.Equal(separator,delimiter.SeparatorCharacter);
+            if(properties.Contains("grow",StringComparison.Ordinal))
+            { TestAssert.Equal((bool?)false,delimiter.GrowValue);TestAssert.Equal("match",delimiter.ShapeValue); }
+            TestAssert.Equal(2,delimiter.Arguments.Count);TestAssert.Equal("a",RowText(delimiter.Arguments[0]));TestAssert.Equal("b",RowText(delimiter.Arguments[1]));
+            TestAssert.True(!DocxMathLayout.TryGetRuns(new(row,0,0,true,null,null,null),CancellationToken.None,out _),
+                "Typed delimiter source alone cannot claim native painting before its box is qualified.");
+        }
+    }
+
+    public static void DocxMathDelimiterMalformedPropertiesAndMissingArgumentsStayExplicit()
+    {
+        foreach(string properties in new[]{"<m:dPr/><m:dPr/>","<m:dPr extra='1'/>","<m:dPr>stray</m:dPr>",
+            "<m:dPr><m:begChr/><m:begChr/></m:dPr>","<m:dPr><m:begChr m:val='ab'/></m:dPr>",
+            "<m:dPr><m:grow m:val='bad'/></m:dPr>","<m:dPr><m:shp m:val='bad'/></m:dPr>",
+            "<m:dPr><m:begChr extra='1'/></m:dPr>","<m:dPr><m:begChr><m:r/></m:begChr></m:dPr>",
+            "<m:dPr><m:unknown/></m:dPr>","<m:dPr><w:begChr/></m:dPr>",
+            "<m:dPr><m:ctrlPr><w:rPr><w:unknown/></w:rPr></m:ctrlPr></m:dPr>",
+            "<m:dPr><m:ctrlPr/><m:ctrlPr/></m:dPr>","stray<m:dPr/>"})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:d>"+
+                properties+"<m:e><m:r><m:t>kept</m:t></m:r></m:e></m:d></m:oMath>"));
+            var delimiter=(DocxMathDelimiter)row.Children.Single();
+            TestAssert.True(delimiter.HasUnsupportedProperties,"Unknown, duplicate, malformed and revision-bearing values cannot become silently supported delimiters.");
+            TestAssert.Equal("kept",RowText(delimiter.Arguments.Single()));
+        }
+        foreach(string content in new[]{"<m:dPr/>","<m:e/><m:r><m:t>kept</m:t></m:r>"})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:d>"+content+"</m:d></m:oMath>"));
+            TestAssert.True(row.Children.Single() is DocxMathUnsupported { ElementName:"d",SourceXml:null },
+                "Missing/unknown roles retain traversed children without repeated raw subtree serialization.");
+        }
+    }
+
+    public static void DocxMathDelimiterDeepTraversalAndCancellationRemainBounded()
+    {
+        XElement nested=new(MathNamespace+"r",new XElement(MathNamespace+"t","x"));
+        for(int i=0;i<2048;i++)nested=new(MathNamespace+"d",new XElement(MathNamespace+"e",nested));
+        XElement equation=new(MathNamespace+"oMath",nested);DocxMathNode node=Parse(equation).Children.Single();int count=0;
+        while(node is DocxMathDelimiter delimiter){count++;node=delimiter.Arguments.Single().Children.Single();}
+        TestAssert.Equal(2048,count);
+        using var cancelled=new CancellationTokenSource();cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(()=>Parse(equation,cancelled.Token));
+        using var duringRead=new CancellationTokenSource();
+        TestAssert.Throws<OperationCanceledException>(()=>DocxMathParser.Read(equation,(_,text)=>
+            { duringRead.Cancel();return PlainRun(text); },duringRead.Token));
+    }
+
+    public static void DocxMathDelimiterControlFormattingUsesTheSharedReader()
+    {
+        XElement document=XElement.Parse($"<w:document xmlns:w='{WordprocessingNamespace}' xmlns:m='{MathNamespace}'><w:body><w:p>"+
+            "<m:oMath><m:d><m:dPr><m:ctrlPr><w:rPr><w:rFonts w:ascii='Arial'/><w:sz w:val='36'/><w:color w:val='008000'/></w:rPr></m:ctrlPr></m:dPr>"+
+            "<m:e><m:r><w:rPr><w:sz w:val='24'/></w:rPr><m:t>x</m:t></m:r></m:e></m:d></m:oMath></w:p></w:body></w:document>");
+        string input=WriteDocument(document);
+        try
+        {
+            var delimiter=(DocxMathDelimiter)DocxTests.ReadDocx(input,OoxPdfDocxMarkupMode.Final).Paragraphs.Single().Equations.Single().Content.Children.Single();
+            var control=TestAssert.NotNull(delimiter.ControlText);
+            TestAssert.True(!delimiter.HasUnsupportedProperties,"Known control formatting shares the existing root/run eligibility.");
+            TestAssert.Equal(18d,control.FontSize);TestAssert.Equal("008000",control.ColorHex);TestAssert.Equal("Arial",delimiter.ControlFontFamily);
+            TestAssert.Equal(12d,((DocxMathRun)delimiter.Arguments.Single().Children.Single()).Text.FontSize);
+        }
+        finally{File.Delete(input);}
+    }
+
+    public static void DocxMathDelimiterPinnedControlsRetainArgumentsAndCharacters()
+    {
+        foreach(string placement in new[]{"display","inline"})
+        foreach(string kind in new[]{"parentheses","brackets","one-sided","fraction"})
+        {
+            string input=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases",$"docx-omml-delimiter-{placement}-{kind}.docx"));
+            var equation=DocxTests.ReadDocx(input,OoxPdfDocxMarkupMode.Final).Paragraphs.SelectMany(p=>p.Equations).Single();
+            var delimiter=(DocxMathDelimiter)equation.Content.Children.Single();
+            TestAssert.True(!delimiter.HasUnsupportedProperties && delimiter.Arguments.Count==1,"Pinned valid controls retain typed delimiter roles.");
+            TestAssert.Equal(kind=="brackets"?"[":kind=="one-sided"?"{":"(",delimiter.BeginCharacter);
+            TestAssert.Equal(kind=="brackets"?"]":kind=="one-sided"?"":")",delimiter.EndCharacter);
+            TestAssert.True(kind=="fraction"?delimiter.Arguments[0].Children.Single() is DocxMathFraction:RowText(delimiter.Arguments[0])=="n+1",
+                "Source typing retains the original mathematical argument instead of flattening a nested fraction.");
+        }
+    }
+
     public static void DocxMathRadicalAuthoredControlPropertiesUseExistingRunResolution()
     {
         foreach(string placement in new[]{"display","inline"})
