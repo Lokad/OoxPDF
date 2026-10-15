@@ -8,6 +8,10 @@
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $scratch = Join-Path $repoRoot "artifacts/text-compare-probe"
+$scratchFullPath = [IO.Path]::GetFullPath($scratch)
+if (!$scratchFullPath.StartsWith((Resolve-Path -LiteralPath $repoRoot).Path + [IO.Path]::DirectorySeparatorChar + 'artifacts' + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Unexpected comparison-probe cleanup target'
+}
 if (Test-Path -LiteralPath $scratch) {
     Remove-Item -LiteralPath $scratch -Recurse -Force
 }
@@ -24,14 +28,25 @@ function New-Op($X, $Y, $Text, $EffX = $null, $EffY = $null) {
 }
 
 $failures = @()
-function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidate, [int] $ExpectedExit, [int] $ExpectedMissing, [string] $ExtraArgs = "") {
+function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidate, [int] $ExpectedExit, [int] $ExpectedMissing, [string] $ExtraArgs = "", [switch] $ByIndex) {
     $refPath = Write-Ops ($Name + "-ref") $Reference
     $candPath = Write-Ops ($Name + "-cand") $Candidate
     $outPath = Join-Path $scratch ($Name + "-out.txt")
+    $reportPath = Join-Path $scratch ($Name + '-report.json')
     $tool = Join-Path $repoRoot "tools/ComparePdfTextOperations.ps1"
-    $toolArgs = @("-NoProfile", "-File", $tool, "-Reference", $refPath, "-Candidate", $candPath, "-MatchByPosition") + @($ExtraArgs -split " " | Where-Object { $_ -ne "" })
+    $toolArgs = @("-NoProfile", "-File", $tool, "-Reference", $refPath, "-Candidate", $candPath)
+    if (!$ByIndex) { $toolArgs += '-MatchByPosition' }
+    $toolArgs += @($ExtraArgs -split " " | Where-Object { $_ -ne "" })
+    $toolArgs += @('-OutputPath', $reportPath)
     $proc = Start-Process pwsh -ArgumentList $toolArgs -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outPath
     $code = $proc.ExitCode
+    $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+    if ($report.ReferenceSha256 -ne (Get-FileHash -LiteralPath $refPath).Hash -or
+        $report.CandidateSha256 -ne (Get-FileHash -LiteralPath $candPath).Hash -or
+        @($report.Rows | Where-Object Status -ne 'ok').Count -ne $report.FailureCount -or
+        ($report.FailureCount -eq 0) -ne ($code -eq 0)) {
+        throw ('Structured comparison report differs: ' + $Name)
+    }
     $missing = @(Get-Content -LiteralPath $outPath | Where-Object { $_ -match "^\s*\d+\s+missing\b" }).Count
     if ($code -ne $ExpectedExit -or $missing -ne $ExpectedMissing) {
         $script:failures += ("{0}: exit={1} (want {2}), missing={3} (want {4})" -f $Name, $code, $ExpectedExit, $missing, $ExpectedMissing)
@@ -75,7 +90,15 @@ $space = New-MetricOp 35 100 ' ' 3
 $world = New-MetricOp 38 100 'world' 25
 $blank = New-MetricOp 10 80 ' ' 3
 $whole = New-MetricOp 10 100 'Hello world' 53
+$pageOne = New-MetricOp 10 100 'Page-owned content' 80
+$pageTwo = $pageOne.PSObject.Copy()
+$pageTwo.PageNumber = 2
+Invoke-Case 'page-moved-nearest' @($pageOne) @($pageTwo) 1 2 '-CompareDecodedText'
+Invoke-Case 'page-moved-indexed' @($pageOne) @($pageTwo) 1 0 '-CompareDecodedText' -ByIndex
+Invoke-Case 'page-reordered' @($pageOne, $pageTwo) @($pageTwo, $pageOne) 0 0 '-CompareDecodedText'
 $visibleArgs = '-MergeSameLineOperations -IgnoreWhitespaceOnlyLines -CompareDecodedText -UseEffectiveMatrix'
+Invoke-Case 'rounded-baseline-boundary' @((New-MetricOp 38 100.02 'world' 25), (New-MetricOp 35 100.04 ' ' 3), (New-MetricOp 10 100.06 'Hello' 25)) @((New-MetricOp 10 100.04 'Hello world' 53)) 0 0 $visibleArgs
+Invoke-Case 'separate-baselines' @($hello, (New-MetricOp 38 100.3 'world' 25)) @($whole) 1 1 $visibleArgs
 Invoke-Case 'blank-line-default' @($whole, $blank) @($whole) 1 1 '-MergeSameLineOperations -CompareDecodedText'
 Invoke-Case 'blank-line-geometry' @($hello, $space, $world, $blank) @($whole) 0 0 $visibleArgs
 Invoke-Case 'blank-line-moved' @($whole, $blank) @((New-MetricOp 10 99 'Hello world' 53)) 1 0 $visibleArgs
@@ -88,4 +111,4 @@ Invoke-Case 'blank-line-partly-unknown' @($unknown, (New-MetricOp 13 80 ' ' 3)) 
 if ($failures.Count -ne 0) {
     throw ("Text comparison adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Text comparison adversarial checks passed (20 cases)."
+Write-Host "Text comparison adversarial checks passed (22 cases)."

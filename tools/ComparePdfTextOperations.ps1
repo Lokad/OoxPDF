@@ -19,10 +19,13 @@ param(
 
     [switch] $MergeSameLineOperations,
 
-    [switch] $IgnoreWhitespaceOnlyLines
+    [switch] $IgnoreWhitespaceOnlyLines,
+
+    [string] $OutputPath
 )
 
 $ErrorActionPreference = "Stop"
+if ($OutputPath -and (Test-Path -LiteralPath $OutputPath)) { throw 'Select a fresh structured report path' }
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
@@ -55,13 +58,29 @@ function TextContent($op) {
 }
 
 function Merge-SameLineOperations($Operations) {
-    $sorted = @($Operations | Sort-Object -Property @{ Expression = { [int]$_.PageNumber }; Ascending = $true }, @{ Expression = { [Math]::Round((TextY $_), 1) }; Ascending = $true }, @{ Expression = { (TextX $_) }; Ascending = $true })
+    $ordered = @($Operations | Sort-Object -Property @{ Expression = { [int]$_.PageNumber }; Ascending = $true }, @{ Expression = { TextY $_ }; Ascending = $true })
+    $banded = New-Object System.Collections.Generic.List[object]
+    $bandIndex = -1
+    $bandPage = $null
+    $bandY = 0d
+    foreach ($op in $ordered) {
+        # Keep the former 0.1pt grouping scale without rounding-edge splits.
+        # Anchor each band once: small successive shifts cannot chain lines.
+        if ($bandIndex -lt 0 -or $op.PageNumber -ne $bandPage -or [Math]::Abs((TextY $op) - $bandY) -gt 0.1d) {
+            $bandIndex++
+            $bandPage = $op.PageNumber
+            $bandY = TextY $op
+        }
+        $banded.Add([pscustomobject]@{ Band=$bandIndex; Operation=$op })
+    }
+    $sorted = @($banded | Sort-Object Band, @{ Expression = { TextX $_.Operation }; Ascending = $true })
     $merged = New-Object System.Collections.Generic.List[object]
     $current = $null
     $currentLineKey = $null
     $currentEndX = 0d
-    foreach ($op in $sorted) {
-        $lineKey = [string]$op.PageNumber + "|" + [Math]::Round((TextY $op), 1)
+    foreach ($entry in $sorted) {
+        $op = $entry.Operation
+        $lineKey = $entry.Band
         $opEndX = (TextX $op) + [double]$op.EmittedAdvancePoints
         if ($null -ne $current -and $currentLineKey -eq $lineKey -and ((TextX $op) - $currentEndX) -le 1d) {
             $current.DecodedText = if ($null -eq $current.DecodedText -or $null -eq $op.DecodedText) { $null } else { [string]$current.DecodedText + [string]$op.DecodedText }
@@ -112,6 +131,7 @@ if ($MatchByPosition) {
         $bestScore = [double]::PositiveInfinity
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $candidateRef = $unmatched[$j]
+            if ($candidateRef.PageNumber -ne $cand.PageNumber) { continue }
             $score = [Math]::Abs((TextY $cand) - (TextY $candidateRef)) * 1000d +
                 [Math]::Abs((TextX $cand) - (TextX $candidateRef))
             if ($score -lt $bestScore) {
@@ -162,6 +182,11 @@ foreach ($pair in $pairs) {
         $rows.Add([pscustomobject]@{
             Index = $i
             Status = "missing"
+            RefPage = if ($null -eq $ref) { $null } else { $ref.PageNumber }
+            CandPage = if ($null -eq $cand) { $null } else { $cand.PageNumber }
+            RefFontSize = if ($null -eq $ref) { $null } else { $ref.FontSize }
+            CandFontSize = if ($null -eq $cand) { $null } else { $cand.FontSize }
+            DeltaFontSize = $null
             RefX = $refX
             CandX = $candX
             DeltaX = $null
@@ -187,7 +212,8 @@ foreach ($pair in $pairs) {
     $deltaY = Delta -left $refY -right $candY
     $deltaSize = Delta -left ([double]$ref.FontSize) -right ([double]$cand.FontSize)
     $deltaTc = Delta -left ([double]$ref.CharacterSpacing) -right ([double]$cand.CharacterSpacing)
-    $positionOk = [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
+    $pageOk = $ref.PageNumber -eq $cand.PageNumber
+    $positionOk = $pageOk -and [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
     $fontSizeOk = [Math]::Abs($deltaSize) -le $FontSizeTolerance
     $tcOk = [Math]::Abs($deltaTc) -le $CharacterSpacingTolerance
     $decodedTextOk = -not $CompareDecodedText -or (TextContent $ref) -eq (TextContent $cand)
@@ -199,6 +225,11 @@ foreach ($pair in $pairs) {
     $rows.Add([pscustomobject]@{
         Index = $i
         Status = $status
+        RefPage = $ref.PageNumber
+        CandPage = $cand.PageNumber
+        RefFontSize = $ref.FontSize
+        CandFontSize = $cand.FontSize
+        DeltaFontSize = $deltaSize
         RefX = [Math]::Round($refX, 6)
         CandX = [Math]::Round($candX, 6)
         DeltaX = $deltaX
@@ -215,6 +246,32 @@ foreach ($pair in $pairs) {
     })
 }
 
+if ($OutputPath) {
+    $reportParent = Split-Path -Parent ([IO.Path]::GetFullPath($OutputPath))
+    New-Item -ItemType Directory -Force -Path $reportParent | Out-Null
+    [ordered]@{
+        ToolSha256 = (Get-FileHash -LiteralPath $PSCommandPath).Hash
+        HelperSha256 = [ordered]@{
+            JsonArray = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'JsonArray.ps1')).Hash
+            CompareMath = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'CompareMath.ps1')).Hash
+            PdfTextGeometry = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1')).Hash
+        }
+        ReferenceSha256 = (Get-FileHash -LiteralPath $Reference).Hash
+        CandidateSha256 = (Get-FileHash -LiteralPath $Candidate).Hash
+        MatchByPosition = [bool]$MatchByPosition
+        UseEffectiveMatrix = [bool]$UseEffectiveMatrix
+        CompareDecodedText = [bool]$CompareDecodedText
+        MergeSameLineOperations = [bool]$MergeSameLineOperations
+        IgnoreWhitespaceOnlyLines = [bool]$IgnoreWhitespaceOnlyLines
+        PositionTolerance = $PositionTolerance
+        FontSizeTolerance = $FontSizeTolerance
+        CharacterSpacingTolerance = $CharacterSpacingTolerance
+        ReferenceCount = $referenceOps.Count
+        CandidateCount = $candidateOps.Count
+        FailureCount = $failures
+        Rows = $rows.ToArray()
+    } | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath $OutputPath -Encoding utf8
+}
 $rows | Format-Table -AutoSize
 Write-Host "Text operation count: reference=$($referenceOps.Count), candidate=$($candidateOps.Count), deltas=$failures"
 if ($MatchByPosition) {
