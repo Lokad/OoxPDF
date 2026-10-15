@@ -473,3 +473,19 @@ stacked operators) and four exact transfer smoke PDFs qualify one artifact.
 Three public cases retain existing visual thresholds. Hidden limits, omitted
 document defaults, integral sizing, rich/deeper structures and assemblies
 remain staged with complete fallback.
+
+
+Hidden sum/product limits are omitted only when their supported literal argument
+is truly empty. The remaining body/limits retain shared measurement and font
+ownership. Six Word comparisons improve across lower, upper and both-hidden
+display/inline cases. Position differences reach 0.12 pt horizontally and 0.47 pt
+vertically; existing visual thresholds remain unchanged. Eighteen focused methods,
+22 unchanged neighbor PDFs, six Word comparisons and four exact transfer smoke
+PDFs qualify one artifact. Three public cases retain explicit visual residuals.
+
+Six additional Word controls show that stored nonempty hidden arguments are
+reassigned into visible equation roles rather than discarded. Those arguments,
+including whitespace or deeper structures, retain source and complete fallback.
+This follows the same preservation principle as stored hidden root degrees.
+Document-default limit settings, integral sizing, richer structures and assemblies
+remain staged.
