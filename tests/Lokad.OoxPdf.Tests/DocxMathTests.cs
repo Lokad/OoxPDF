@@ -78,8 +78,7 @@ internal static class DocxMathTests
             TestAssert.Equal("3",((DocxMathRun)radical.Degree.Children[0]).Text.Text);
             TestAssert.Equal("x+1",((DocxMathRun)radical.Radicand.Children[0]).Text.Text);
             var equation=new DocxEquation(row,0,0,true,null,null,null);
-            TestAssert.True(!DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _),
-                "Typed source alone cannot claim visible radical rendering before its box is independently qualified.");
+            TestAssert.Equal(!unsupported && hidden!=true,DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _));
         }
     }
 

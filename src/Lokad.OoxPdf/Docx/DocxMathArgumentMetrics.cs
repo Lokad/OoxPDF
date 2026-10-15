@@ -5,15 +5,16 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxMathArgumentMetrics
 {
-    public static bool TryGetScriptLevel(DocxMathRow argument, out int level)
+    public static bool TryGetScriptLevel(DocxMathRow argument, out int level, int startingLevel = 1)
     {
-        level = 1;
+        level = startingLevel;
+        if (startingLevel is < 0 or > 2) { return false; }
         if (!argument.HasSupportedProperties && !argument.HasKnownArgumentProperties) { return false; }
         int increment = argument.ArgumentProperties?.Size ?? 0;
         if (increment is < -2 or > 2) { return false; }
         // Source increments adjust the role's starting style, bounded to the
         // font's text/script/script-script sizes. Other row roles stay neutral.
-        level = Math.Clamp(1 - increment, 0, 2);
+        level = Math.Clamp(startingLevel - increment, 0, 2);
         return true;
     }
 

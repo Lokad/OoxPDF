@@ -63,7 +63,15 @@ internal static partial class DocxMathLayout
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetRadical(equation) is { } radical)
-        { rows.Add((radical.Radicand, 0, false)); radicalOwner = radical; }
+        {
+            rows.Add((radical.Radicand, 0, false)); radicalOwner = radical;
+            if (radical.DegreeHidden != true)
+            {
+                if (!DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out int level, startingLevel: 2))
+                { runs = []; return false; }
+                rows.Add((radical.Degree, level, true));
+            }
+        }
         else if (GetStructuredRow(equation, token) is { } compound)
         {
             var sources = new List<DocxMathRunSource>();

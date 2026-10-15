@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeRootDegreesPaintLiteralMeaningAndScriptScriptSize()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string tag,string degree) in new[]{("cube","3"),("letter","n"),("expression","n+1"),("large-control","3")})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-degree-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("√n+1"+degree,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Contains(" 6.96 Tf",page.Content);
+            TestAssert.Equal(1,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "A visible degree must be painted along with the owned root and bar.");
+        }
+    }
+
     public static void DocxNativeAuthoredRootControlsKeepMeaningSizeAndColor()
     {
         RequireMathFont();

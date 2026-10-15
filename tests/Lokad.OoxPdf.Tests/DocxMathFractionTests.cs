@@ -9,6 +9,46 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontRadicalDegreesUseRoleSizingKernsAndInkExtents()
+    {
+        byte[] bytes=RadicalFontBytes();
+        var range=TestFontBuilder.GetTableRange(bytes,"MATH");
+        byte[] math=bytes.AsSpan(range.Offset,range.Length).ToArray();
+        BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18+(int)OpenTypeMathConstant.RadicalKernBeforeDegree*4),100);
+        BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18+(int)OpenTypeMathConstant.RadicalKernAfterDegree*4),-250);
+        bytes=TestFontBuilder.ReplaceTable(bytes,"MATH",math);
+        OpenTypeFont font=OpenTypeFont.Load(bytes);
+        var resource=new PdfFontResource("Degree",PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[]{(font.MapCodePoint('B'),(int)'B'),(font.MapCodePoint('+'),(int)'+'),(font.MapCodePoint('C'),(int)'C'),((ushort)130,0x221A),((ushort)128,0x221A)},CancellationToken.None));
+        DocxEquation source=RadicalEquation(12d);
+        var root=(DocxMathRadical)source.Content.Children[0];
+        foreach(bool? visible in new bool?[]{false,null})
+        {
+            var radical=root with { DegreeHidden=visible,Degree=Row("B+C") };
+            var equation=source with { Content=new([radical]) };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var runs) &&
+                runs.Count==2 && runs[0].ScriptLevel==0 && runs[0].RadicalOwner==radical && runs[1].ScriptLevel==2,
+                "The degree has script-script role sizing while the radicand retains the implicit root owner.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),
+                reason??"A literal visible degree must compose with the owned root.");
+            DocxMathBox measured=TestAssert.NotNull(box);
+            var degree=measured.Glyphs.Skip(4).ToArray();
+            TestAssert.True(degree.Length==3 && degree.All(g=>g.FontSize==6d),
+                "The synthetic font's50% script-script constant owns degree size independently of its73% script scale.");
+            TestAssert.True(degree.All(g=>g.BaselineY>measured.Glyphs[0].BaselineY) &&
+                measured.AboveBaseline>=degree.Max(g=>g.BaselineY+700d*g.FontSize/1000d),
+                "Raised degree ink is included in the composed extent.");
+            TestAssert.True(measured.Glyphs[0].X>=degree[0].X && measured.Rules[0].X==measured.Glyphs[1].X,
+                "Degree kerns shift root, radicand and overbar together.");
+            TestAssert.True(Math.Abs(degree[0].X-1.2d)<1e-9 &&
+                Math.Abs(measured.Glyphs[0].X-(degree[0].X+degree.Sum(g=>g.Advance)-3d))<1e-9,
+                "Signed kerns use parent design units, retaining their overlap rather than child-size scaling.");
+            var larger=radical with { Degree=radical.Degree with { ArgumentProperties=new(1,false) } };
+            TestAssert.True(DocxMathLayout.TryGetRuns(source with { Content=new([larger]) },CancellationToken.None,out var adjusted) &&
+                adjusted[1].ScriptLevel==1,"Signed argument sizing adjusts the role's starting level through the shared rule.");
+        }
+    }
+
     public static void MathFontRadicalAuthoredControlsKeepPerNodeFontsSizesAndChildMetrics()
     {
         var small=RadicalResource();var large=RadicalResource();
@@ -157,6 +197,7 @@ internal static class DocxMathFractionTests
     {
         byte[] math=Constants();Array.Resize(ref math,254);
         void Set(int at,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at),value);
+        Set(12,50);Set(222,65);
         Set(8,224);Set(224+2,12);Set(224+6,1);Set(224+10,18);Set(224+12,1);Set(224+14,1);Set(224+16,130);
         Set(224+18+2,2);Set(224+18+4,130);Set(224+18+6,1000);Set(224+18+8,128);Set(224+18+10,2000);
         foreach((OpenTypeMathConstant field,ushort value) in new[]{(OpenTypeMathConstant.RadicalVerticalGap,(ushort)50),
