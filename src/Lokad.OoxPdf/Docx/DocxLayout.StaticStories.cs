@@ -357,7 +357,7 @@ internal sealed partial class DocxLayoutEngine
                         double align = paragraph.Alignment switch
                         { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
                             DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
-                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, cursorY,
+                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY,
                             size, paragraphSpacingScale, pageNumber, null, paragraphIndex, index,
                             DocxStoryId.HeaderOrFooter(isHeader, story.VariantType));
                         lines.Add(placed.Line with { SingleLineHeight = sourceHeight,

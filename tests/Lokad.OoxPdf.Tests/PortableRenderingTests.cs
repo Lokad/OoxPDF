@@ -41,17 +41,34 @@ internal static class PortableRenderingTests
         }
     }
 
-    public static void PortableRenderingMathBookmarksPreserveFourStoryDestinations()
+    public static void PortableRenderingMathBookmarksPreserveFourStoryDestinations() =>
+        CheckMathNavigation("PortableFonts/math-navigation-normal.docx", 4);
+
+    public static void PortableRenderingMixedMathBookmarksPreserveEightStoryDestinations() =>
+        CheckMathNavigation("PortableFonts/inline-math-navigation-normal.docx", 8);
+
+    private static void CheckMathNavigation(string fixture, int count)
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var document = DocxTests.ReadDocx(Case("PortableFonts/math-navigation-normal.docx"), mode);
+            var document = DocxTests.ReadDocx(Case(fixture), mode);
             var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var pages = renderer.RenderBlankPages(document, null, default).ToArray();
-            TestAssert.Equal(4, pages.Sum(page => page.Annotations.Count(annotation => annotation.Destination is { PageIndex: 0, Top: > 0d })));
-            TestAssert.Equal(4, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+            var destinations = pages.SelectMany(page => page.Annotations).Where(annotation => annotation.Destination is not null)
+                .Select(annotation => annotation.Destination!.Value).ToArray();
+            TestAssert.Equal(count, destinations.Length);
+            TestAssert.True(destinations.All(destination => destination.PageIndex == 0 && destination.Top > 0d), "All eight targets must resolve on their emitted page.");
+            TestAssert.Equal(count, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
                 .Split("x+2y", StringSplitOptions.None).Length - 1);
+            if (count == 8)
+            {
+                TestAssert.True(destinations[0].Top > destinations[1].Top, "The explicit break must move the second body target down.");
+                for (int index = 2; index < count; index += 2)
+                    TestAssert.True(destinations[index + 1].Left > destinations[index].Left,
+                        "Adjacent formulas must retain separate source targets in each story.");
+                TestAssert.Equal(1, pages.Sum(page => page.Images.Count));
+            }
             CheckWrittenPages(pages);
         }
     }

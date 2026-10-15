@@ -66,7 +66,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images) PlaceOrderedInlineLine(
         DocxParagraph paragraph, DocxMeasuredInlineLine measured,
-        double x, double top, double fontSize, double scale, int pageIndex,
+        double x, double frameOriginX, double top, double fontSize, double scale, int pageIndex,
         int? sourceBlock, int? sourceParagraph, int sourceLine, DocxStoryId story)
     {
         var segments = new List<DocxTextSegmentLayout>();
@@ -99,7 +99,7 @@ internal sealed partial class DocxLayoutEngine
             LineSpacingFactorFloorApplied: null, PendingAfterSpacing: null, ParagraphBeforeSpacing: null,
             ParagraphAfterSpacing: null, ContextualSpacingSuppressed: null, SourceParagraph: paragraph,
             LineHeightSource: null, EmitsTerminalParagraphMark: false)
-        { InlineMath = equations, MathScale = scale, InlineObjectEndOffsetX = measured.Advance,
+        { FrameOriginOffsetX = frameOriginX - x, InlineMath = equations, MathScale = scale, InlineObjectEndOffsetX = measured.Advance,
             InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight) };
         return (line, images);
     }

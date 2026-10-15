@@ -91,7 +91,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs);
+                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, inlineItems?.Count);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
@@ -119,7 +119,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs);
+                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, inlineItems?.Count);
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
@@ -324,7 +324,19 @@ internal sealed partial class DocxReader
 
         void AddEquation(XElement container, DocxRevisionInfo? revision)
         {
-            inlineItems ??= DocxInlineContent.FromPrefix(runs, images, cancellationToken);
+            if (inlineItems is null)
+            {
+                inlineItems = DocxInlineContent.FromPrefix(runs, images, cancellationToken);
+                // Anchors immediately before the first formula have no text run
+                // to identify their target. Capture their ordered boundary once.
+                for (int index = 0; index < bookmarkAnchors.Count; index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var anchor = bookmarkAnchors[index];
+                    if (anchor.SourceRunIndex == sourceRunIndex && anchor.TextRunIndex == runs.Count)
+                        bookmarkAnchors[index] = anchor with { InlineItemIndex = inlineItems.Count };
+                }
+            }
             bool display = container.Name == MathNamespace + "oMathPara";
             XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
             foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
@@ -975,14 +987,15 @@ internal sealed partial class DocxReader
         XElement bookmarkStart,
         List<DocxBookmarkAnchor> bookmarkAnchors,
         int sourceRunIndex,
-        List<DocxTextRun> runs)
+        List<DocxTextRun> runs,
+        int? inlineItemIndex)
     {
         bookmarkAnchors.Add(new DocxBookmarkAnchor(
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "name"),
             sourceRunIndex,
             runs.Count,
-            RelativeRunTextOffset(runs, sourceRunIndex)));
+            RelativeRunTextOffset(runs, sourceRunIndex)) { InlineItemIndex = inlineItemIndex });
     }
 
     // RV06: comment and bookmark markers sit between runs while consumers resolve offsets

@@ -1407,7 +1407,7 @@ internal sealed partial class DocxLayoutEngine
                         double align = effective.Alignment switch
                         { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
                             DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
-                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, cursorY,
+                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY,
                             paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
                         currentItems.Add(placed.Line with
                         {

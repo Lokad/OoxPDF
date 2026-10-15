@@ -8,6 +8,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets()
+    {
+        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "CompositionProbes", "inline-math-navigation.docx"));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(path, mode);
+            var paragraphs = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
+                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default))
+                .Where(paragraph => paragraph.Equations.Count == 2).ToArray();
+            TestAssert.Equal(4, paragraphs.Length);
+            foreach (var paragraph in paragraphs)
+            {
+                TestAssert.Equal(2, paragraph.BookmarkAnchors.Count);
+                for (int index = 0; index < 2; index++)
+                {
+                    var bookmark = paragraph.BookmarkAnchors[index];
+                    TestAssert.True(bookmark.InlineItemIndex is >= 0 &&
+                        paragraph.InlineContent![bookmark.InlineItemIndex.Value] is DocxInlineEquation item &&
+                        ReferenceEquals(item.Equation, paragraph.Equations[index]),
+                        "Each bookmark must retain its own formula even when run-relative positions coincide.");
+                }
+            }
+        }
+    }
+
     public static void DocxInlineCompositionCompoundMathBookmarksRetainFourStoryDestinations()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

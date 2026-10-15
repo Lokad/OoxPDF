@@ -121,7 +121,12 @@ internal sealed record DocxBookmarkAnchor(
     string? Name,
     int SourceRunIndex,
     int TextRunIndex,
-    int TextOffset);
+    int TextOffset)
+{
+    // Position in the retained ordered source, before the next inline item.
+    // Null preserves the legacy run-relative fallback for unmigrated paragraphs.
+    public int? InlineItemIndex { get; init; }
+}
 
 internal sealed record DocxInlineReference(
     DocxRelatedStoryKind Kind,

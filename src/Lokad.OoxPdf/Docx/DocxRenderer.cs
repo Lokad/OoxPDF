@@ -1260,16 +1260,26 @@ internal sealed partial class DocxRenderer
                     IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, pageTextEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken)
                         .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
                         .ToArray();
-                    if (segments.Count == 0)
-                    {
-                        continue;
-                    }
-
                     foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (string.IsNullOrEmpty(bookmark.Name) || destinations.ContainsKey(bookmark.Name))
                         {
+                            continue;
+                        }
+
+                        if (line.InlineFrame is { } inlineFrame && paragraph.InlineContent is { } sourceItems &&
+                            bookmark.InlineItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
+                            sourceItems[itemIndex] is DocxInlineEquation sourceEquation)
+                        {
+                            // A source-bound formula must wait for its own placed
+                            // line, including a line with no prose segments.
+                            var placement = line.InlineMath.FirstOrDefault(value =>
+                                ReferenceEquals(value.Math.Equation, sourceEquation.Equation));
+                            if (placement is not null && line.FrameOriginOffsetX is { } inlineOrigin)
+                                destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
+                                    line.X + inlineOrigin + placement.OffsetX + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                    line.BaselineY + inlineFrame.BaselineInset - textEmissionBaselineOffset, Zoom: null));
                             continue;
                         }
 
