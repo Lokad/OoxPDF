@@ -15,6 +15,48 @@ if (@($libraryCopies | Sort-Object -Unique).Count -ne 1) {
 }
 $revision = git -C $repo rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot pin source revision' }
+$inputRoot = 'tests/Lokad.OoxPdf.Tests/Cases'
+$inputTree = git -C $repo rev-parse ("HEAD:" + $inputRoot)
+if ($LASTEXITCODE -ne 0) { throw 'Cannot pin public input tree' }
+$commonDirectory = git -C $repo rev-parse --path-format=absolute --git-common-dir
+if ($LASTEXITCODE -ne 0) { throw 'Cannot locate shared Git workspace' }
+$snapshot = Join-Path (Split-Path $commonDirectory) ('artifacts/qualification-inputs/' + $inputTree)
+$inputs = [ordered]@{}
+foreach ($name in @(git -C $repo ls-files $inputRoot)) {
+    $inputs[$name] = (Get-FileHash -LiteralPath (Join-Path $repo $name)).Hash
+}
+if ($LASTEXITCODE -ne 0 -or !$inputs.Count) { throw 'Public inputs are unavailable' }
+# Publish one complete fixture snapshot per Git tree, shared across worktrees.
+# Subsequent freezes still hash every input; reuse never trusts a directory name.
+$reusedInputs = Test-Path -LiteralPath $snapshot
+if (!$reusedInputs) {
+    $staging = $snapshot + '.staging-' + [Guid]::NewGuid().ToString('N')
+    New-Item -ItemType Directory -Path $staging -Force | Out-Null
+    foreach ($name in $inputs.Keys) {
+        $target = Join-Path $staging $name
+        New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target
+        if ((Get-FileHash -LiteralPath $target).Hash -ne $inputs[$name]) { throw 'Public input changed during snapshot' }
+        (Get-Item -LiteralPath $target).IsReadOnly = $true
+    }
+    [ordered]@{Tree=$inputTree;Inputs=$inputs} | ConvertTo-Json -Depth 5 |
+        Set-Content -LiteralPath (Join-Path $staging 'identity.json') -Encoding utf8
+    # Directory.Move cannot accidentally nest staging inside a concurrent snapshot.
+    try { [IO.Directory]::Move($staging, $snapshot) }
+    catch { if (!(Test-Path -LiteralPath $snapshot)) { throw } }
+}
+$inputIdentity = Join-Path $snapshot 'identity.json'
+$inputPin = Get-Content -LiteralPath $inputIdentity -Raw | ConvertFrom-Json -AsHashtable
+if ($inputPin.Tree -ne $inputTree -or $inputPin.Inputs.Count -ne $inputs.Count -or
+    @(Get-ChildItem -LiteralPath (Join-Path $snapshot $inputRoot) -File -Recurse -Force).Count -ne $inputs.Count) {
+    throw 'Shared public input identity differs'
+}
+foreach ($name in $inputs.Keys) {
+    if ($inputPin.Inputs[$name] -ne $inputs[$name] -or
+        (Get-FileHash -LiteralPath (Join-Path $snapshot $name)).Hash -ne $inputs[$name]) {
+        throw 'Shared public input differs'
+    }
+}
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $assets = [ordered]@{}
@@ -32,19 +74,15 @@ foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.Oo
         $assets[$name] = $hash
     }
 }
-$inputs = [ordered]@{}
-foreach ($name in @(git -C $repo ls-files tests/Lokad.OoxPdf.Tests/Cases)) {
-    $source = Join-Path $repo $name
-    $target = Join-Path $output $name
-    New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
-    $hash = (Get-FileHash -LiteralPath $source).Hash
-    Copy-Item -LiteralPath $source -Destination $target
-    if ((Get-FileHash -LiteralPath $target).Hash -ne $hash) { throw 'Frozen public input differs' }
-    $inputs[$name] = $hash
-}
+$inputLink = Join-Path $output $inputRoot
+New-Item -ItemType Directory -Path (Split-Path $inputLink) -Force | Out-Null
+$linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
+New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inputRoot) | Out-Null
 [ordered]@{
     Revision=$revision;Rebuilt=$false;Assets=$assets;Inputs=$inputs
+    InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
+    InputSnapshotIdentitySha256=(Get-FileHash -LiteralPath $inputIdentity).Hash
     LibrarySha256=(Get-FileHash -LiteralPath (Join-Path $output 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll')).Hash
     TestAssemblySha256=(Get-FileHash -LiteralPath (Join-Path $output 'tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll')).Hash
 } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'identity.json') -Encoding utf8
-Write-Output "Frozen $($assets.Count) assets and $($inputs.Count) public fixture files at $revision."
+Write-Output "Frozen $($assets.Count) assets at $revision; $($inputs.Count) public inputs verified in shared snapshot (reused: $reusedInputs)."

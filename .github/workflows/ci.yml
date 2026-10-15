@@ -61,6 +61,8 @@ jobs:
           & ./tools/TestPackageSmoke.ps1 @fontArguments
       - name: Text comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestTextOperationComparison.ps1
+      - name: Qualification fixture snapshot checks
+        run: pwsh -NoProfile -File tools/TestQualificationFreeze.ps1
       - name: Markup text geometry checks
         run: pwsh -NoProfile -File tools/TestMarkupTextGeometry.ps1
       - name: Markup annotation checks
