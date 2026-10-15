@@ -139,6 +139,7 @@ internal sealed partial record DocxLayoutSnapshot(
         return item switch
         {
             DocxTextLineLayout text => text.SourceBlockIndex,
+            DocxEquationLayout equation => equation.SourceBlockIndex,
             DocxInlineImageLayout image => image.SourceBlockIndex,
             DocxTableRowLayout row => row.Table.SourceBlockIndex,
             DocxInlineTextBoxLayout box => box.SourceBlockIndex,
@@ -151,6 +152,8 @@ internal sealed partial record DocxLayoutSnapshot(
         return item switch
         {
             DocxTextLineLayout text => (text.BaselineY, text.FontSize),
+            DocxEquationLayout equation => (equation.BaselineY - equation.Math.Box.BelowBaseline * equation.Scale,
+                (equation.Math.Box.AboveBaseline + equation.Math.Box.BelowBaseline) * equation.Scale),
             DocxInlineImageLayout image => (image.Y, image.Height),
             DocxTableRowLayout row => (row.Y, row.Height),
             DocxInlineTextBoxLayout box => (box.BoxTop, box.BoxHeight),
@@ -316,7 +319,8 @@ internal sealed partial record DocxLayoutSnapshot(
         bool hasInlineImage = false;
         foreach (DocxLayoutItemSnapshot item in items)
         {
-            hasTextLine |= item.Kind == "TextLine";
+            // Equation-only paragraphs retain paragraph source ownership without invented text.
+            hasTextLine |= item.Kind is "TextLine" or "Equation";
             hasTableRow |= item.Kind == "TableRow";
             hasInlineImage |= item.Kind == "InlineImage";
         }
@@ -618,6 +622,34 @@ internal sealed partial record DocxLayoutSnapshot(
                 MoveToRevisionCount: CountRevisions(text.SourceParagraph, DocxRevisionKind.MoveTo),
                 OtherRevisionCount: CountOtherRevisions(text.SourceParagraph),
                 CommentReferenceCount: CountCommentReferences(text.SourceParagraph)),
+            // Math uses its structural box (not glyph ink): Y is the lower edge,
+            // and the baseline is explicit. Occupied line height remains separate.
+            DocxEquationLayout equation => new DocxLayoutItemSnapshot(
+                "Equation",
+                equation.X,
+                equation.BaselineY - equation.Math.Box.BelowBaseline * equation.Scale,
+                equation.Math.Box.AdvanceWidth * equation.Scale,
+                (equation.Math.Box.AboveBaseline + equation.Math.Box.BelowBaseline) * equation.Scale,
+                TextLength: 0,
+                CellCount: 0,
+                columnIndex,
+                equation.SourceBlockIndex,
+                SourceParagraphIndex: 0,
+                SourceLineIndex: 0,
+                LineHeightPoints: equation.Math.LineHeight * equation.Scale,
+                AppliedBeforeSpacingPoints: null,
+                SingleLineHeightPoints: null,
+                ListLabelSingleLineHeightPoints: null,
+                BodyWindowsLineHeightPoints: null,
+                ListLabelWindowsLineHeightPoints: null,
+                EffectiveLineSpacingFactor: null,
+                LineSpacingFactorFloorApplied: null,
+                IsFirstParagraphLine: null,
+                PendingAfterSpacingPoints: null,
+                ParagraphBeforeSpacingPoints: null,
+                ParagraphAfterSpacingPoints: null,
+                ContextualSpacingSuppressed: null,
+                StoryVariantType: null, TextLines: null, ParagraphStyleId: null, ParagraphStyleFound: null, ParagraphStyleDepth: null, HasDocumentDefaultParagraphProperties: null, HasDirectParagraphProperties: null, HasTableStyleParagraphProperties: null, CharacterStyleTextSegmentCount: null, DirectRunPropertyTextSegmentCount: null, ParagraphStyleRunPropertyTextSegmentCount: null, TableStyleRunPropertyTextSegmentCount: null, DocumentDefaultRunPropertyTextSegmentCount: null, LineHeightSource: null, RevisionCount: 0, InsertionRevisionCount: 0, DeletionRevisionCount: 0, MoveFromRevisionCount: 0, MoveToRevisionCount: 0, OtherRevisionCount: 0, CommentReferenceCount: 0) { BaselineYPoints = equation.BaselineY },
             DocxInlineImageLayout image => new DocxLayoutItemSnapshot(
                 "InlineImage",
                 image.X,
@@ -795,6 +827,7 @@ internal sealed partial record DocxLayoutSnapshot(
         return item switch
         {
             DocxTextLineLayout text => (text.X, text.Width),
+            DocxEquationLayout equation => (equation.X, equation.Math.Box.AdvanceWidth * equation.Scale),
             DocxInlineImageLayout image => (image.X, image.Width),
             DocxTableRowLayout row => (row.Table.TableX, row.Table.ResolvedTableWidth),
             DocxInlineTextBoxLayout box => (box.BoxX, box.BoxWidth),

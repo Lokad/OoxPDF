@@ -260,7 +260,11 @@ internal sealed record DocxLayoutItemSnapshot(
     int MoveFromRevisionCount,
     int MoveToRevisionCount,
     int OtherRevisionCount,
-    int CommentReferenceCount);
+    int CommentReferenceCount)
+{
+    // Present for standalone equation frames; X/Y/Width/Height bound the structural box.
+    public double? BaselineYPoints { get; init; }
+}
 
 internal sealed record DocxTableRowSnapshot(
     int TableIndex,

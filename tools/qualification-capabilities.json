@@ -187,5 +187,12 @@
     "DocxNativeScaledStaticFrames",
     "DocxTableMath",
     "PortableRendering"
+  ],
+  "docx-equation-inspection": [
+    "PortableRenderingEquationInspection",
+    "DocxLayoutSnapshot",
+    "DocxLayoutSnapshotReportsPrivateSafeSourceLineIndexes",
+    "DocxNativeIsolatedInlineMath",
+    "DocxInlineCompositionEquationOnlyBookmark"
   ]
 }

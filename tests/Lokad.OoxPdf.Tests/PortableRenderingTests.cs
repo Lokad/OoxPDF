@@ -14,6 +14,33 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingEquationInspectionPreservesGeometryAndSource()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("PortableFonts/math-navigation-normal.docx"), mode);
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var snapshot = renderer.InspectLayout(document);
+            var page = snapshot.Pages.Single();
+            var equation = page.Items.SingleOrDefault(item => item.Kind == "Equation");
+            TestAssert.True(equation is not null, "A painted standalone equation must have an inspectable layout frame.");
+            TestAssert.True(equation!.Width > 0d && equation.Height > 0d && equation.LineHeightPoints > 0d &&
+                double.IsFinite(equation.X) && double.IsFinite(equation.Y), "Equation geometry must be finite and measurable.");
+            TestAssert.True(equation.X >= 0d && equation.X + equation.Width <= page.Width &&
+                equation.Y > 0d && equation.Y + equation.Height < page.Height, "The equation frame must lie on its page.");
+            TestAssert.True(equation.BaselineYPoints >= equation.Y &&
+                equation.BaselineYPoints <= equation.Y + equation.Height, "Inspection must distinguish baseline from box edges.");
+            TestAssert.True(equation.SourceBlockIndex is not null && equation.ColumnIndex == 0,
+                "Equation inspection must retain source and column ownership.");
+            var source = snapshot.SourceBlocks.Single(block => block.SourceBlockIndex == equation.SourceBlockIndex);
+            TestAssert.Equal("Paragraph", source.Kind);
+            TestAssert.True(source.VerticalTop > source.VerticalBottom && source.ItemCount == 1,
+                "The source block must include the equation's nonempty frame.");
+            TestAssert.True(page.Items.All(item => item.Kind != "Unknown"), "This supported document must have no unknown layout items.");
+        }
+    }
+
     public static void PortableRenderingMathBookmarksPreserveFourStoryDestinations()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
