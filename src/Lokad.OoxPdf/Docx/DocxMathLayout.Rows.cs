@@ -38,7 +38,8 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureStructuredRow(DocxEquation equation, StructuredRow row,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont,
-        Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
+        Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
     {
         box = null;
         var glyphs = new List<DocxMathGlyphPlacement>();
@@ -54,7 +55,7 @@ internal static partial class DocxMathLayout
             if (!TryGetRuns(childEquation, token, out var childRuns) || childRuns.Count == 0)
             { fallback = "UnsupportedMathStructuredRow"; return false; }
             double parentSize = equation.ParentFontSize ?? childRuns[0].Run.Text.FontSize;
-            if (!TryMeasure(childEquation, resolveFont, token, out var structure, out fallback, parentMetricsFont, resolveControlFont) || structure is null)
+            if (!TryMeasure(childEquation, resolveFont, token, out var structure, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics) || structure is null)
             { fallback ??= "UnsupportedMathStructuredRow"; return false; }
             var first = structure.Edges?.First ?? DocxMathRowLayout.AtomKind.Ordinary;
             if (!DocxMathRowLayout.TryMeasure(part.Before, resolveFont, token, out var before, out fallback,

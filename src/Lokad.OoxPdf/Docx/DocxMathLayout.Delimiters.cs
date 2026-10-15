@@ -80,7 +80,10 @@ internal static partial class DocxMathLayout
         if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) };
+        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
+            Edges = new(delimiter.BeginCharacter.Length > 0 ? DocxMathRowLayout.AtomKind.Open : children[0].Edges?.First ?? DocxMathRowLayout.AtomKind.Ordinary,
+                delimiter.EndCharacter.Length > 0 ? DocxMathRowLayout.AtomKind.Close : children[^1].Edges?.Last ?? DocxMathRowLayout.AtomKind.Ordinary,
+                delimiter.BeginCharacter.Length == 0 && children[0].Edges?.FirstNormalText == true) };
         fallback = null;
         return true;
 

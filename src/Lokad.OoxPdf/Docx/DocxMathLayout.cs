@@ -37,6 +37,12 @@ internal static partial class DocxMathLayout
             // unrelated typographic line gap above that occupied frame.
             above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(parent.Font,
                 OfficePdfTextEmissionProfile.FontSize(parent.Size)));
+            if (parent.IncludeTypographicFrame)
+            {
+                double parentGlyphSize = OfficePdfTextEmissionProfile.FontSize(parent.Size);
+                below = Math.Max(below, -parent.Font.Os2.TypographicDescender * parentGlyphSize / parent.Font.UnitsPerEm);
+                naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(parent.Font, parentGlyphSize));
+            }
             if (parent.Font.TryGetMathConstants(out OpenTypeMathConstants parentConstants))
                 leading = Math.Max(0d, parentConstants.GetValue(OpenTypeMathConstant.MathLeading) * parent.Size / parent.Font.UnitsPerEm);
         }
@@ -51,6 +57,7 @@ internal static partial class DocxMathLayout
 
     public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
+        if (GetFunction(equation) is { } function) { return TryGetFunctionRuns(equation, function, token, out runs); }
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
         IDocxMathControl? controlOwner = null;
         if (GetScripts(equation) is { } scripts)
@@ -155,8 +162,11 @@ internal static partial class DocxMathLayout
 
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont = null,
-        Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null)
+        Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null)
     {
+        if (GetFunction(equation) is { } function)
+            return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
         if (GetNary(equation, token) is { } nary)
@@ -166,7 +176,7 @@ internal static partial class DocxMathLayout
         if (GetRadical(equation) is { } radical)
             return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetStructuredRow(equation, token) is { } compound)
-            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont);
+            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;

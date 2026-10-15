@@ -7,6 +7,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeFunctionsRetainNamesAndBoundedArgumentMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-sin-literal", "sinx"), ("inline-sin-delimiter", "sin(n+1)"),
+            ("display-log-script", "logx2"), ("inline-cos-control20", "cosx"), ("display-sin-fraction", "sinxk"),
+            ("inline-log-normal-name", "logx"), ("inline-log-normal-both", "logx") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Known function names and bounded arguments retain actual native glyph/rule painting.");
+            if (suffix == "inline-log-normal-both")
+            {
+                var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(fonts.Length == 1 && fonts[0].Font.Font.FamilyName.Contains("Arial", StringComparison.OrdinalIgnoreCase),
+                    "A metric-only Cambria owner cannot publish an unused whole-font resource when every visible glyph uses Arial.");
+            }
+        }
+    }
+
     public static void DocxNativeMixedNaryRowsKeepPrefixAndAdjacentControlMeaning()
     {
         RequireMathFont();

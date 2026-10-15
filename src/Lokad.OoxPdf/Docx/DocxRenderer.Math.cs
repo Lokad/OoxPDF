@@ -57,50 +57,56 @@ internal sealed partial class DocxRenderer
                 token.ThrowIfCancellationRequested();
                 if (source.ControlOwner is { } control)
                 {
+                    IReadOnlyList<int> controlPoints = DocxMathLayout.GetControlCodePoints(control);
                     if (!controlKeys.TryGetValue(control, out var controlKey))
                     {
                         FontFaceResolution controlFace = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
                         OpenTypeFont? controlFont = LoadFont(controlFace, fontCache, token);
-                        if (controlFont is null || !controlFont.HasTrueTypeOutlines || !controlFont.TryGetMathConstants(out _))
+                        if (controlFont is null || (controlPoints.Count != 0 && !controlFont.HasTrueTypeOutlines) || !controlFont.TryGetMathConstants(out _))
                         { valid = false; break; }
                         controlKey = (controlFace.Source.StableId, controlFace.FontFaceIndex);
-                        if (!groups.TryGetValue(controlKey, out var controlGroup))
-                        { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
-                        if (!controlFaces.TryGetValue(controlFont, out var face))
+                        // Metric-only controls retain the conversion-owned font
+                        // without preparing an unused PDF subset or glyph map.
+                        if (controlPoints.Count != 0)
                         {
-                            face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new HashSet<int>());
-                            controlFaces.Add(controlFont, face);
-                        }
-                        foreach (int point in DocxMathLayout.GetControlCodePoints(control))
-                        {
-                            if (control is DocxMathDelimiter { GrowValue: false })
+                            if (!groups.TryGetValue(controlKey, out var controlGroup))
+                            { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
+                            if (!controlFaces.TryGetValue(controlFont, out var face))
                             {
-                                ushort canonical = controlFont.MapCodePoint(point);
-                                if (canonical == 0) { valid = false; break; }
-                                if (!TryRegisterOperatorGlyph(face.Operators, canonical, point))
-                                    unavailableControlFaces.Add(controlFont);
-                                // This registers only the authored base glyph;
-                                // a later growing control still prepares variants.
-                                continue;
+                                face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new HashSet<int>());
+                                controlFaces.Add(controlFont, face);
                             }
-                            if (face.Characters.Contains(point)) { continue; }
-                            ushort glyph = controlFont.MapCodePoint(point);
-                            double height = 0d;
-                            bool found = false;
-                            while (controlFont.TryGetMathVerticalVariant(glyph, height, token, out var variant))
+                            foreach (int point in controlPoints)
                             {
-                                found = true;
-                                if (!TryRegisterOperatorGlyph(face.Operators, variant.Glyph, point))
-                                    unavailableControlFaces.Add(controlFont);
-                                height = variant.Advance + 1d;
+                                if (control is DocxMathDelimiter { GrowValue: false })
+                                {
+                                    ushort canonical = controlFont.MapCodePoint(point);
+                                    if (canonical == 0) { valid = false; break; }
+                                    if (!TryRegisterOperatorGlyph(face.Operators, canonical, point))
+                                        unavailableControlFaces.Add(controlFont);
+                                    // This registers only the authored base glyph;
+                                    // a later growing control still prepares variants.
+                                    continue;
+                                }
+                                if (face.Characters.Contains(point)) { continue; }
+                                ushort glyph = controlFont.MapCodePoint(point);
+                                double height = 0d;
+                                bool found = false;
+                                while (controlFont.TryGetMathVerticalVariant(glyph, height, token, out var variant))
+                                {
+                                    found = true;
+                                    if (!TryRegisterOperatorGlyph(face.Operators, variant.Glyph, point))
+                                        unavailableControlFaces.Add(controlFont);
+                                    height = variant.Advance + 1d;
+                                }
+                                if (!found) { valid = false; break; }
+                                face.Characters.Add(point);
                             }
-                            if (!found) { valid = false; break; }
-                            face.Characters.Add(point);
+                            if (!valid) { break; }
                         }
-                        if (!valid) { break; }
                         controlKeys.Add(control, controlKey);
                     }
-                    (controlOwners ??= []).Add(groups[controlKey].Font);
+                    if (controlPoints.Count != 0) { (controlOwners ??= []).Add(groups[controlKey].Font); }
                 }
                 DocxMathRun run = source.Run;
                 string family = run.NormalText
@@ -157,7 +163,8 @@ internal sealed partial class DocxRenderer
             if (candidate.ControlFaces.Any(unavailableControlFaces.Contains)) { continue; }
             if (!DocxMathLayout.TryMeasure(candidate.Equation,
                 run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics,
-                control => controlKeys.TryGetValue(control, out var controlKey) ? fonts[controlKey] : null) ||
+                control => controlKeys.TryGetValue(control, out var controlKey) && fonts.TryGetValue(controlKey, out var resource) ? resource : null,
+                control => controlKeys.TryGetValue(control, out var controlKey) && fontCache.TryGetValue(controlKey, out var metricFont) ? metricFont : null) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
             double lineSpacingFactor = 1d;
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
