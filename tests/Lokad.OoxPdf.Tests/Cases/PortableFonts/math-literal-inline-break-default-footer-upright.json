@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-literal-inline-break-default-footer-upright",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-literal-inline-break-default-footer-upright.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "C603F16A2EFD1159EA16D42A9485910F25056870D77C25898584E5BC0D82F489",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

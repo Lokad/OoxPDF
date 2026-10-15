@@ -405,5 +405,9 @@
     "DocxTableMath",
     "DocxMathNeutralArgumentProperties",
     "DocxInlineCompositionNumberedMath"
+  ],
+  "docx-broken-literal-placement": [
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement"
   ]
 }

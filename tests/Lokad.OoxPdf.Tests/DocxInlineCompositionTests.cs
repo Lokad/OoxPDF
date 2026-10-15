@@ -8,6 +8,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the broken-literal placement control.");
+        foreach (string story in new[] { "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-literal-inline-break-default-" + story, mode, true, true,
+                partOverride: story == "cell" ? null : "word/" + story + "-math-break.xml");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
+                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Following prose.", text);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Placement and source annotations cannot remove the broken literal.");
+        }
+    }
+
     public static void DocxInlineCompositionLiteralBreakKeepsParenthesizedAndUnaryFallbacks()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
