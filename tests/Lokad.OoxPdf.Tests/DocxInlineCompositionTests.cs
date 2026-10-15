@@ -764,6 +764,7 @@ internal static class DocxInlineCompositionTests
         string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".docx");
         File.Copy(source, path);
+        new FileInfo(path).IsReadOnly = false; // Only the temporary mutation copy is writable.
         try
         {
             using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
