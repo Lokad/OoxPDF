@@ -456,5 +456,19 @@
     "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
     "DocxInlineCompositionReviewPaginationRetainsSourcePageCapacity"
+  ],
+  "docx-cell-math-baseline": [
+    "DocxTableMath",
+    "DocxTableZeroExactHeight",
+    "DocxTablePageContent",
+    "DocxReviewTablePagination",
+    "DocxStaticMath",
+    "DocxStaticFrameMapping",
+    "DocxNativeTableInlineMath",
+    "DocxInlineCompositionMathTableTailAdmissionMatchesWordBoundaryControls",
+    "DocxInlineCompositionAutofitMathRespectsAdditionalInlineContent",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "PortableRenderingIsolatedFractionPreservesCellTextAndFrame",
+    "PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail"
   ]
 }

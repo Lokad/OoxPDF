@@ -1,0 +1,38 @@
+[
+  {
+    "Id": "math-printed-frame-literal-anchor12-cell-flow",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-literal-anchor12-cell-flow.docx",
+    "Sha256": "9CC754D9DF43BC148E7AA23C53F30A03B81D82D2EA97B3E69161ED3283DBB9B5",
+    "SourceSha256": "16CFF81A67E2EBC2DDE05873CE789C8FB79901563F8EB0A51D09F9846894F18D",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Observed series.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-fraction-anchor12-cell-flow",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-fraction-anchor12-cell-flow.docx",
+    "Sha256": "6CBCCA5C4B060FD75EA03FB4A531B3CAB651E46A5F0EEC486AD6B20544C058B7",
+    "SourceSha256": "DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Observed series.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-root-fraction-anchor12-cell-flow",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-root-fraction-anchor12-cell-flow.docx",
+    "Sha256": "8F1E1C05453E74F3C969E1E89E8EAD39D858AA7D05617872A1FEF296FF653173",
+    "SourceSha256": "54DF93237B68A46DA4AE66455848EC9B01E729CFEC63BDA380102628923DDBF3",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Observed series.",
+      "Following prose."
+    ]
+  }
+]

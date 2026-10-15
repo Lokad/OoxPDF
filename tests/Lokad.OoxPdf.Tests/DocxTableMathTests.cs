@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Security.Cryptography;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -7,6 +9,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
+    public static void DocxTableMathStandaloneMatchesIndependentCellBaselineTransitions()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent cell baseline controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-cell-frame-office-baselines.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            string source = Path.Combine(cases, id + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var page = renderer.InspectLayout(DocxTests.ReadDocx(source, mode)).Pages.Single();
+            double leading = page.Items.Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0).Y;
+            double rightCellX = page.TableRows.Single().Cells[1].X;
+            double equation = page.Items.Single(item => item.Kind == "TableRow").TextLines!
+                .Single(line => line.X > rightCellX && line.SourceParagraphIndex == row.GetProperty("ParagraphIndex").GetInt32()).Y;
+            double delta = leading - equation - row.GetProperty("LeadingToMathBaseline").GetDouble();
+            TestAssert.True(Math.Abs(delta) < .4d,
+                $"An isolated equation must share the cell's baseline transition: {id}/{mode} delta={delta}.");
+        }
+    }
+
     public static void DocxTableMathCandidatesShareStandalonePolicyAndKeepUnsupportedOwners()
     {
         var (paragraph, _) = Prepared(20d);

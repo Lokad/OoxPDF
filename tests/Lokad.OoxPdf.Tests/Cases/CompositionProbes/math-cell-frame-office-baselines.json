@@ -1,0 +1,37 @@
+{
+  "Scope": "Independent Word 16 literal mathematical baseline; other structures retain separate glyph/visual evidence",
+  "Rows": [
+    {
+      "Id": "math-printed-frame-literal-anchor12-cell-sole",
+      "Mode": "final-preserve",
+      "InputSha256": "4AC3EEB3777185816A6008294B1599C8C47D2EBFBF3B46A7A4A825A40FE1763A",
+      "ReferencePdfSha256": "640AD1D4925199950A94B6E55BB11DCAC4DAB8239845EF836B1D0E1CA0656EFC",
+      "LeadingToMathBaseline": 19.2,
+      "ParagraphIndex": 0
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor12-cell-sole",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4AC3EEB3777185816A6008294B1599C8C47D2EBFBF3B46A7A4A825A40FE1763A",
+      "ReferencePdfSha256": "DE98A7E8BED096DD409E271034FB9E92A3C1B0F80BC835E569645F2BAF980AC2",
+      "LeadingToMathBaseline": 14.57,
+      "ParagraphIndex": 0
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor12-cell-flow",
+      "Mode": "final-preserve",
+      "InputSha256": "9CC754D9DF43BC148E7AA23C53F30A03B81D82D2EA97B3E69161ED3283DBB9B5",
+      "ReferencePdfSha256": "EBB137B8267C81065BF3B19E0CD66383550437749094B9B97FCC781B2B32E60E",
+      "LeadingToMathBaseline": 33.84,
+      "ParagraphIndex": 1
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor12-cell-flow",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9CC754D9DF43BC148E7AA23C53F30A03B81D82D2EA97B3E69161ED3283DBB9B5",
+      "ReferencePdfSha256": "035090DFA332076822043A0E009387E40EB4E5E5B12B06D30CA56B486CB2321C",
+      "LeadingToMathBaseline": 25.68,
+      "ParagraphIndex": 1
+    }
+  ]
+}

@@ -48,7 +48,8 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static DocxTextLineLayout CreateStandaloneMathLine(DocxParagraph paragraph, DocxPreparedMathParagraph math,
-        double x, double textWidth, double top, double scale, int paragraphIndex, DocxParagraphSpacingProfile spacing)
+        double x, double textWidth, double top, double scale, int paragraphIndex, DocxParagraphSpacingProfile spacing,
+        double baselineAnchor = 0d)
     {
         double inset = GetParagraphTextStartOffset(paragraph, scale);
         double width = textWidth - inset - GetParagraphRightInset(paragraph, scale);
@@ -57,9 +58,12 @@ internal sealed partial class DocxLayoutEngine
         { "left" => 0d, "right" => width - boxWidth, _ => (width - boxWidth) / 2d };
         double size = math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph);
         var style = paragraph.ParagraphMarkRun ?? new DocxTextRun(string.Empty, size, null, false, false, false, null, null);
+        // An explicit nominal anchor scales only the transition to the math
+        // baseline. Callers with an already physical top keep the zero default.
+        double baseline = top - baselineAnchor * (1d - scale) - math.BaselineInset * scale;
         return new DocxTextLineLayout(
             string.Concat(math.Box.Glyphs.Select(glyph => new System.Text.Rune(glyph.RenderCodePoint).ToString())),
-            style, size, x + inset + alignment, top - math.BaselineInset * scale, boxWidth, [],
+            style, size, x + inset + alignment, baseline, boxWidth, [],
             SourceBlockIndex: null, SourceParagraphIndex: paragraphIndex, SourceLineIndex: 0,
             Story: DocxStoryId.TableCell(), LineHeight: math.LineHeight * scale,
             AppliedBeforeSpacing: spacing.AppliedBeforeSpacing, IsFirstParagraphLine: true, EndsWithIntraTokenBreak: false,

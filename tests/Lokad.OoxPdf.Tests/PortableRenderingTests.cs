@@ -161,6 +161,32 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingIsolatedFractionPreservesCellTextAndFrame()
+    {
+        foreach (string context in new[] { "sole", "flow" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-printed-frame-fraction-anchor12-cell-" + context + ".docx"), mode);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(1, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            if (context == "flow")
+            {
+                TestAssert.Contains("Cell preface.", text);
+                TestAssert.Contains("Cell afterword.", text);
+            }
+            var page = renderer.InspectLayout(document).Pages.Single();
+            var cell = page.TableRows.Single().Cells[1];
+            var equation = page.Items.Single(item => item.Kind == "TableRow").TextLines!
+                .Single(line => line.X > cell.X && line.SourceParagraphIndex == (context == "flow" ? 1 : 0));
+            TestAssert.True(equation.Y >= cell.Y && equation.Y <= cell.Y + cell.Height,
+                "A placed mathematical baseline must stay inside its admitted cell frame.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingFittingMathPreservesOrdinaryLineAdvance()
     {
         string source = Case("CompositionProbes/math-printed-frame-literal-anchor12.docx");

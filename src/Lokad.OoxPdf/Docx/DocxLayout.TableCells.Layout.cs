@@ -495,8 +495,14 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             if (TryGetStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathEquations, out var math))
             {
+                // Equation-only cells have no text-run anchor. Preserve the
+                // nominal paragraph baseline fallback from the source size.
+                double mathBaselineAnchor = cellFirstBaselineInset > 0d ? cellFirstBaselineInset
+                    : DocxLineMetrics.ResolveBodyBaselineOffset(math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph),
+                        math.LineHeight, false);
                 lines.Add(CreateStandaloneMathLine(paragraph, math, cellX + paddingLeft, textWidth,
-                    cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile));
+                    cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile,
+                    mathBaselineAnchor));
                 cursorY -= math.LineHeight * context.ParagraphSpacingScale;
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
                 previousParagraph = paragraph;
