@@ -8,6 +8,52 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionCompoundMathBookmarksRetainFourStoryDestinations()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the compound navigation control.");
+        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "CompositionProbes", "math-navigation.docx"));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+            var destinations = pages.SelectMany(page => page.Annotations).Where(a => a.Destination is not null)
+                .Select(a => a.Destination!.Value).ToArray();
+            TestAssert.Equal(4, destinations.Length);
+            TestAssert.True(destinations.All(d => d.PageIndex == 0 && d.Left is >= 0d and < 612d && d.Top is > 0d and < 792d),
+                "Each mathematical story target must resolve inside its emitted page frame.");
+            TestAssert.Equal(4, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("x+2y", StringSplitOptions.None).Length - 1);
+        }
+    }
+
+    public static void DocxInlineCompositionEquationOnlyBookmarkResolvesInternalNavigation()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the navigation control.");
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string fixture in new[] { "docx-omml-isolated-inline-body-fraction-left", "docx-omml-isolated-inline-cell-fraction-left",
+            "docx-omml-static-header-fraction", "docx-omml-static-footer-fraction" })
+        {
+            var source = ReadMutation(fixture, mode, true, false);
+            var link = DocxTests.CreateDocxLayoutParagraph("Jump to calculation", 11d, 14d) with
+            {
+                Hyperlinks = [new DocxHyperlinkSpan(null, "PublicCalculation", null, null, null, null, null, 0, 1, 0, 1, 19)]
+            };
+            var document = source with { BodyElements = [new DocxParagraphElement(link), .. source.BodyElements] };
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var annotation = pages.SelectMany(page => page.Annotations).SingleOrDefault(a => a.Destination is not null);
+            TestAssert.True(annotation.Destination is { PageIndex: >= 0, Top: > 0d },
+                "A painted equation-only bookmark must retain its internal link destination: " + fixture + "/" + mode);
+            TestAssert.True(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Contains("x+2y", StringComparison.Ordinal), "Navigation must not remove the mathematical content.");
+        }
+    }
+
     public static void DocxInlineCompositionReviewStaticStoriesPreserveSharedBodyCapacity()
     {
         foreach (string kind in new[] { "body", "header", "footer" })

@@ -18,3 +18,8 @@ It does not establish Office typography or replace independent visual gates.
 mathematical italic alphabet; authored normal math exercises its supported glyphs
 and MATH metrics. The fixed portfolio is unchanged. Document/font source hashes
 and the exact transformation are retained in `provenance.json`.
+
+`math-navigation-normal.docx` derives from the public compound math/navigation
+probe by the same normal-math transformation across body, cell, header and footer
+runs. Its adjacent JSON pins both source and result. The portable navigation
+check verifies four internal destinations and mathematical painting in both modes.

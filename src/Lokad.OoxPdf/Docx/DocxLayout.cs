@@ -1374,7 +1374,8 @@ internal sealed partial class DocxLayoutEngine
                     double alignment = math.Equation.AlignmentValue switch
                     { "left" => 0d, "right" => areaWidth - boxWidth, _ => (areaWidth - boxWidth) / 2d };
                     currentItems.Add(new DocxEquationLayout(math, x + leftInset + alignment,
-                        cursorY - math.BaselineInset * paragraphSpacingScale, paragraphSpacingScale, elementIndex, paragraph));
+                        cursorY - math.BaselineInset * paragraphSpacingScale, paragraphSpacingScale, elementIndex, paragraph)
+                        { FrameOriginOffsetX = -leftInset - alignment });
                     activeColumnHasContent = true;
                     cursorY -= advance;
                     pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -1630,7 +1631,7 @@ internal sealed partial class DocxLayoutEngine
                         // bounds until separately probed.
                         FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null)
                     {
-                        BodyColumnOriginOffsetX = x - lineShape.X,
+                        FrameOriginOffsetX = x - lineShape.X,
                         InlineObjectEndOffsetX = lineMath is null ? null : lineMath.X + inlineMath!.Width - lineShape.X,
                         UsesUniformBodyTypographicBaseline = typographicBaselineInset is not null,
                         BodyLineBoxBaselineInsetPoints = lineHeightProfile.Source is DocxLineHeightSource.ExactLineSpacing or DocxLineHeightSource.BodySingleLineAuto

@@ -190,3 +190,20 @@ All ten fixed portfolio PDFs retain accepted bytes, including the held-out memo.
 Eighteen independent comparisons reuse PDF/reference/threshold identities. Four
 root smoke PDFs match after transferring 17 assets without rebuild or suite replay.
 The two rejected intermediate revisions remain retained as development evidence.
+
+
+Equation-only bookmark navigation now consumes measured paragraph-frame origins
+and tops across body, cell, header and footer stories. Those paragraphs do not
+manufacture text segments for navigation. The same relative frame origin survives
+alignment, translation and static-story scaling; existing text destinations keep
+their qualified viewport rule. Mixed-inline/multiple-equation source annotation
+binding remains a separate migration.
+
+A compound public fixture has four links and four equation-only story targets,
+with an explicit review comment. Word exports all four destinations in both modes;
+the parent drops them. Candidate text and graphics inspection reports match the
+parent byte-for-byte in both modes. Default destination differences are below
+one point; review-mode vertical differences reach about 3.4pt, reflecting retained
+layout residuals. No fitted destination correction or visual-threshold change is
+introduced. A normal-math variant exercises all four targets with the pinned
+portable font, independently of installed Windows fonts.

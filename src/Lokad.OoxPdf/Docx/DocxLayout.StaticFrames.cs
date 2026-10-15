@@ -43,6 +43,7 @@ internal sealed partial class DocxLayoutEngine
                 X = x + (line.X - x) * scale,
                 BaselineY = center + (line.BaselineY - center) * scale,
                 Width = line.Width * scale,
+                FrameOriginOffsetX = line.FrameOriginOffsetX * scale,
                 Segments = line.Segments.Select(segment =>
                 {
                     token.ThrowIfCancellationRequested();

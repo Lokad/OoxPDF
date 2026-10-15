@@ -36,6 +36,9 @@ internal sealed record DocxLayoutPage(
 // fragmentation (wrapped lines, row fragments), never the renderer.
 internal abstract record DocxLayoutItem
 {
+    // Relative to the item's X: translations preserve its containing content
+    // frame, independently of indentation and mathematical/text alignment.
+    public double? FrameOriginOffsetX { get; init; }
     // One shared vertical-frame owner for all items in a mapped static story.
     public bool StaticStoryUsesPhysicalY { get; init; }
 }
@@ -76,9 +79,6 @@ internal sealed record DocxTextLineLayout(
     bool EmitsTerminalParagraphMark,
     double? FirstLineInsetPoints = null) : DocxLayoutItem
 {
-    // Relative to X so page translations preserve the containing column's origin.
-    // Only ordinary body lines carry this reference-qualified bookmark geometry.
-    public double? BodyColumnOriginOffsetX { get; init; }
     // Printed line-box geometry relative to the emitted body baseline. Exact
     // heights are authored distances; automatic heights already contain metric scaling.
     public double? BodyLineBoxBaselineInsetPoints { get; init; }

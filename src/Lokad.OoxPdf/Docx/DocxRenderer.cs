@@ -1233,6 +1233,7 @@ internal sealed partial class DocxRenderer
         IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations()
         {
             var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
+            const double viewportContextPoints = 3d;
             for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1246,6 +1247,13 @@ internal sealed partial class DocxRenderer
                     if (line.SourceParagraph is not { } paragraph ||
                         paragraph.BookmarkAnchors.Count == 0)
                     {
+                        continue;
+                    }
+
+                    if (line.Math is { } math && !line.IsInlineMath && line.FrameOriginOffsetX is { } frameOffset)
+                    {
+                        AddMathTargets(paragraph, line.X + frameOffset,
+                            line.BaselineY + math.BaselineInset * line.MathScale, pageIndex, pageTextEmissionXOffset);
                         continue;
                     }
 
@@ -1273,9 +1281,9 @@ internal sealed partial class DocxRenderer
                         // Word 16 bookmark controls: indentation/alignment do not move the
                         // viewport origin, while a prefix before a mid-line bookmark does.
                         // The three design-point context scales with the review print scale.
-                        if (line.Story?.Kind == DocxStoryKind.Body && line.BodyColumnOriginOffsetX is { } columnOffsetX)
+                        if (line.Story?.Kind == DocxStoryKind.Body && line.FrameOriginOffsetX is { } columnOffsetX)
                         {
-                            targetX += columnOffsetX - 3d * textEmissionFontScale;
+                            targetX += columnOffsetX - viewportContextPoints * textEmissionFontScale;
                         }
 
                         // RV01: fallback segments use diagnosed constants for bookmark targets.
@@ -1303,9 +1311,32 @@ internal sealed partial class DocxRenderer
                             Zoom: null);
                     }
                 }
+                // Whole body equations have their own measured layout records;
+                // they do not manufacture prose segments for navigation.
+                if (fontResources.MathEquations.Count != 0)
+                foreach (var equation in page.Items.OfType<DocxEquationLayout>())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (equation.FrameOriginOffsetX is { } frameOffset)
+                        AddMathTargets(equation.SourceParagraph, equation.X + frameOffset,
+                            equation.BaselineY + equation.Math.BaselineInset * equation.Scale,
+                            pageIndex, pageTextEmissionXOffset);
+                }
             }
 
             return destinations;
+
+            void AddMathTargets(DocxParagraph paragraph, double originX, double top, int pageIndex, double xOffset)
+            {
+                foreach (var bookmark in paragraph.BookmarkAnchors)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!string.IsNullOrEmpty(bookmark.Name))
+                        destinations.TryAdd(bookmark.Name, new PdfLinkDestination(pageIndex,
+                            originX + xOffset - viewportContextPoints * textEmissionFontScale,
+                            top - textEmissionBaselineOffset, Zoom: null));
+                }
+            }
         }
 
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)

@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "math-navigation",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-navigation.docx",
+    "Sha256": "34F2CE8E3FC2612244DD4F114277318B1EB337A7835738D1CB813D10D2F13ACC",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Go to body calculation",
+      "Go to cell calculation",
+      "Go to header calculation",
+      "Go to footer calculation"
+    ]
+  }
+]

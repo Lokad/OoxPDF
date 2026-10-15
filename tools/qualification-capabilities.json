@@ -165,5 +165,27 @@
     "DocxTableAnchoredFootnoteSharesBodyPages",
     "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
     "DocxTableNoteBeforeSpacing"
+  ],
+  "docx-math-bookmark-navigation": [
+    "DocxReaderPreservesBookmarkAnchors",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxInlineCompositionEquationOnlyBookmark",
+    "DocxInlineCompositionCompoundMathBookmarks",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxScaledTypographicBookmarkViewport",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
+    "DocxRendererEmitsTableCellInternalHyperlinkDestinations",
+    "DocxRendererEmitsPlacedFootnoteInternalHyperlinkDestinations",
+    "DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeStaticMathRetainsStoryFlow",
+    "DocxStaticFrameMapping",
+    "DocxNativeAlignedStaticFrames",
+    "DocxNativeScaledStaticFrames",
+    "DocxTableMath",
+    "PortableRendering"
   ]
 }

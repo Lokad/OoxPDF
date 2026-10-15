@@ -1,0 +1,6 @@
+{
+  "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-navigation-normal.docx",
+  "Sha256": "14BF04F5CEB19E066C12259685F6DBB03CD372868831EED5FBA08E5313FE45D4",
+  "SourceSha256": "34F2CE8E3FC2612244DD4F114277318B1EB337A7835738D1CB813D10D2F13ACC",
+  "Transformation": "Add m:rPr/m:nor m:val=1 to every mathematical run for the pinned portable face."
+}
