@@ -9,6 +9,59 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontRadicalNormalFractionChildrenKeepIndependentFontAndRuleColors()
+    {
+        var parent=RadicalResource();
+        var text=new PdfFontResource("Text",PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),"B+C".Select(c=>(int)c),CancellationToken.None));
+        DocxMathRow Child(string value)=>new([new DocxMathRun(new(value,8d,"FF0000",false,false,false,null,"TestFont"),null,null) { NormalTextValue=true }]);
+        var fraction=new DocxMathFraction(Child("B+C"),Child("C"),"bar");
+        var root=new DocxMathRadical(new([fraction]),new([]),true) { ControlText=new("",12d,"000000",false,false,false,null,"TestFont") };
+        var equation=new DocxEquation(new([root]),0,0,false,null,null,null) { ParentFontSize=12d };
+        TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var box,out var reason,
+            resolveRadicalFont:_=>parent),reason??"The root supplies existing fraction parent metrics without adopting its child text face.");
+        var measured=TestAssert.NotNull(box);
+        TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs.Skip(1).All(g=>g.Font==text),
+            "Normal fraction children retain their independently encoded physical face.");
+        TestAssert.True(measured.Rules.Count==2 && measured.Rules[0].Color==default && measured.Rules[1].Color.Red==255,
+            "The root overbar and child fraction rule retain their independently authored color owners.");
+        var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
+        using var output=new MemoryStream();PdfDocumentWriter.WriteBlank(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])],CancellationToken.None);
+        TestAssert.True(output.Length>0,"The composed resources and nested rules remain valid PDF content.");
+    }
+
+    public static void MathFontRadicalFractionArgumentsRetainChildBoxesRulesAndBoundedDiscovery()
+    {
+        var resource=RadicalResource();
+        DocxMathRow Child(string value)=>new([new DocxMathRun(new(value,8d,null,false,false,false,null,"TestFont"),"p",null)]);
+        foreach(bool display in new[]{true,false})
+        foreach(string kind in new[]{"bar","noBar"})
+        {
+            var fraction=new DocxMathFraction(Child("B+C"),Child("C"),kind);
+            DocxEquation child=RadicalEquation(8d) with { Display=display,Content=new([fraction]) };
+            var root=(DocxMathRadical)RadicalEquation(8d).Content.Children[0];
+            var equation=child with { Content=new([root with { Radicand=child.Content }]) };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var runs) && runs.Count==2 &&
+                runs.All(r=>r.ScriptLevel==(display?0:1)),"Root fraction children share the existing argument-role discovery.");
+            TestAssert.True(DocxMathLayout.TryMeasure(child,_=>resource,CancellationToken.None,out var childBox,out _),"Expected existing fraction/stack child.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),reason??"Expected a ready-made root enclosing the child box.");
+            var measured=TestAssert.NotNull(box);var original=TestAssert.NotNull(childBox);
+            TestAssert.Equal(original.Rules.Count+1,measured.Rules.Count);
+            for(int i=0;i<original.Glyphs.Count;i++)
+            {
+                var expected=original.Glyphs[i];var actual=measured.Glyphs[i+1];
+                TestAssert.True(actual.OriginalGlyph==expected.OriginalGlyph && actual.FontSize==expected.FontSize &&
+                    actual.BaselineY==expected.BaselineY && Math.Abs(actual.X-expected.X-measured.Rules[0].X)<1e-9,
+                    "Enclosing a box cannot recompute its glyphs, script style or baseline offsets.");
+            }
+            if(kind=="bar")TestAssert.True(measured.Rules[1].Y==original.Rules[0].Y &&
+                measured.Rules[1].Width==original.Rules[0].Width && measured.Rules[1].X==original.Rules[0].X+measured.Rules[0].X,
+                "The child's fraction rule moves with its box and keeps its own geometry.");
+            var deeper=fraction with { Numerator=new([fraction]) };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content=new([root with { Radicand=new([deeper]) }]) },
+                CancellationToken.None,out _),"This bounded child role cannot recurse into arbitrary nested fractions.");
+        }
+    }
+
     public static void MathFontRadicalDegreesUseRoleSizingKernsAndInkExtents()
     {
         byte[] bytes=RadicalFontBytes();

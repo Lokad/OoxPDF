@@ -46,13 +46,7 @@ internal static partial class DocxMathLayout
         DocxMathRadical? radicalOwner = null;
         if (GetScripts(equation) is { } scripts)
         {
-            if (GetFraction(equation with { Content = scripts.Base }) is { } basis)
-            {
-                int level = equation.Display ? 0 : 1;
-                rows.Add((basis.Numerator, level, false));
-                rows.Add((basis.Denominator, level, false));
-            }
-            else { rows.Add((scripts.Base, 0, false)); }
+            AddArgumentRows(scripts.Base);
             foreach (DocxMathRow? argument in new[] { scripts.Subscript, scripts.Superscript })
             {
                 if (argument is null) { continue; }
@@ -64,7 +58,7 @@ internal static partial class DocxMathLayout
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetRadical(equation) is { } radical)
         {
-            rows.Add((radical.Radicand, 0, false)); radicalOwner = radical;
+            AddArgumentRows(radical.Radicand); radicalOwner = radical;
             if (radical.DegreeHidden != true)
             {
                 if (!DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out int level, startingLevel: 2))
@@ -105,6 +99,19 @@ internal static partial class DocxMathLayout
         if (radicalOwner is not null && result.Count > 0) { result[0] = result[0] with { RadicalOwner = radicalOwner }; }
         runs = result;
         return true;
+
+        void AddArgumentRows(DocxMathRow argument)
+        {
+            // These two roles admit a literal row or one fraction/stack with
+            // literal children. Discovery never recursively expands structures.
+            if (GetFraction(equation with { Content = argument }) is { } fraction)
+            {
+                int level = equation.Display ? 0 : 1;
+                rows.Add((fraction.Numerator, level, false));
+                rows.Add((fraction.Denominator, level, false));
+            }
+            else { rows.Add((argument, 0, false)); }
+        }
     }
 
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,

@@ -28,8 +28,12 @@ internal static partial class DocxMathLayout
         double size = radical.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "MixedMathRadicalMetrics"; return false; }
-        if (!DocxMathRowLayout.TryMeasure(radical.Radicand, resolveFont, token, out var child, out fallback,
-            exportFontSize: true, operatorSpacingFontSize: size) || child is null || child.Glyphs.Count == 0)
+        DocxEquation radicandEquation = equation with { Content = radical.Radicand, ParentFontSize = size };
+        bool measuredChild = GetFraction(radicandEquation) is not null
+            ? TryMeasure(radicandEquation, resolveFont, token, out var child, out fallback, parentMetricsFont: font)
+            : DocxMathRowLayout.TryMeasure(radical.Radicand, resolveFont, token, out child, out fallback,
+                exportFontSize: true, operatorSpacingFontSize: size);
+        if (!measuredChild || child is null || child.Glyphs.Count == 0)
         { fallback ??= "EmptyMathRadical"; return false; }
         double scale = size / font.UnitsPerEm;
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), glyphScale = glyphSize / font.UnitsPerEm;
@@ -82,9 +86,13 @@ internal static partial class DocxMathLayout
         if (degree is not null)
             foreach (var glyph in degree.Glyphs)
             { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + degreeX, BaselineY = glyph.BaselineY + degreeY }); }
+        var rules = new List<DocxMathRulePlacement>(child.Rules.Count + 1)
+            { new(childX, child.AboveBaseline + gap, child.AdvanceWidth, rule, color) };
+        foreach (var childRule in child.Rules)
+        { token.ThrowIfCancellationRequested(); rules.Add(childRule with { X = childRule.X + childX }); }
         box = new(width, above, below, glyphs)
         { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size),
-            Rules = [new(childX, child.AboveBaseline + gap, child.AdvanceWidth, rule, color)] };
+            Rules = rules };
         fallback = null;
         return true;
     }

@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeRootFractionsKeepMeaningAndIndependentChildRules()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach(string kind in new[]{"bar","noBar"})
+        foreach(string degree in new[]{"square","cube"})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-fraction-{placement}-{kind}-{degree}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("√n+1k"+(degree=="cube"?"3":""),DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(kind=="bar"?2:1,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "A qualified child fraction/stack retains native root painting and its own rule count.");
+        }
+    }
+
     public static void DocxNativeRootDegreesPaintLiteralMeaningAndScriptScriptSize()
     {
         RequireMathFont();
