@@ -40,6 +40,40 @@ internal static class TestRunner
         bool list = args.Contains("--list", StringComparer.Ordinal);
         string? group = ReadOption(args, "--group");
         string? name = ReadOption(args, "--test");
+        string? testSetPath = ReadOption(args, "--test-set");
+        HashSet<string>? exactNames = null;
+        if (args.Contains("--test-set", StringComparer.Ordinal))
+        {
+            if (testSetPath is null || testSetPath.StartsWith("--", StringComparison.Ordinal) ||
+                group is not null || name is not null)
+            {
+                Console.WriteLine("--test-set requires a JSON array file and cannot be combined with --group or --test.");
+                return 1;
+            }
+            try
+            {
+                string[]? requested = System.Text.Json.JsonSerializer.Deserialize<string[]>(File.ReadAllText(testSetPath));
+                if (requested is null || requested.Length == 0 || requested.Any(string.IsNullOrWhiteSpace))
+                {
+                    Console.WriteLine("The exact test set must contain nonempty method names.");
+                    return 1;
+                }
+                exactNames = new HashSet<string>(requested, StringComparer.Ordinal);
+                foreach (string requestedName in exactNames)
+                {
+                    if (testCases.Count(testCase => testCase.Action.Method.Name == requestedName) != 1)
+                    {
+                        Console.WriteLine($"Unknown or ambiguous exact test name '{requestedName}'.");
+                        return 1;
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            {
+                Console.WriteLine("Cannot read exact test set: " + ex.Message);
+                return 1;
+            }
+        }
 
         if (group is not null &&
             !testCases.Any(testCase => string.Equals(testCase.Group, group, StringComparison.Ordinal)))
@@ -66,13 +100,17 @@ internal static class TestRunner
         foreach (TestCase testCase in testCases)
         {
             Action test = testCase.Action;
-            bool isSlow = SlowTests.Contains(test.Method.Name);
             if (group is not null && !string.Equals(testCase.Group, group, StringComparison.Ordinal))
             {
                 continue;
             }
 
             if (name is not null && !test.Method.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (exactNames is not null && !exactNames.Contains(test.Method.Name))
             {
                 continue;
             }
@@ -87,19 +125,10 @@ internal static class TestRunner
         }
 
         var results = new List<TestResult>();
-        foreach (TestCase testCase in testCases)
+        foreach (TestCase testCase in selected)
         {
             Action test = testCase.Action;
             bool isSlow = SlowTests.Contains(test.Method.Name);
-            if (group is not null && !string.Equals(testCase.Group, group, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (name is not null && !test.Method.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
 
             if (list)
             {

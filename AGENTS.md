@@ -29,7 +29,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 
 ## Tools
 
-- `tools/RunDocxAffectedTests.ps1`: qualify explicit capability selectors once per method for one frozen assembly; use `-AllDocx` at broader milestones.
+- `tools/RunDocxAffectedTests.ps1`: run a manifest capability (`-Capability`) or specific selectors as one exact method set on a frozen assembly; use `-AllDocx` at broader milestones.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
@@ -80,7 +80,8 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspector.
 - `tools/Lokad.OoxPdf.PptxInspect`: dependency-free PPTX text/glyph-run inspector.
 
-Unit tests can be filtered by capability group with `--group`, for example:
+Use `--test-set <file.json>` for a JSON array of exact method names in one run.
+Unit tests can also be filtered by capability group with `--group`, for example:
 `dotnet run --project tests/Lokad.OoxPdf.Tests -- --group pptx-typography --skip-slow`.
 
 ## Private Mode

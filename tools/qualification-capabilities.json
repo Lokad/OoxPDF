@@ -1,0 +1,15 @@
+{
+  "docx-bookmark-ownership": [
+    "DocxReaderPreservesBookmarkAnchors",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations"
+  ],
+  "docx-static-frame": [
+    "DocxStaticHeader",
+    "DocxStaticFrameMapping",
+    "DocxNativeAlignedStaticFrames",
+    "DocxNativeScaledStaticFrames"
+  ]
+}
