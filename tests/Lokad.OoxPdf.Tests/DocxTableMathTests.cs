@@ -13,7 +13,8 @@ internal static class DocxTableMathTests
         var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var row = new DocxTableRow([cell], null);
         DocxDocument Document(DocxTableRow candidate) => TableDocument(candidate);
-        TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(row), CancellationToken.None).Single()),
+        TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(row), CancellationToken.None)
+            .Single(source => source.Equations.Count != 0)),
             "Automatic cell display uses the same source paragraph identity as prepared math.");
         foreach (DocxTableRow unsupported in new[]
         {
@@ -24,7 +25,8 @@ internal static class DocxTableMathTests
             row with { Cells = [cell with { Paragraphs = [paragraph with { Equations = [paragraph.Equations[0] with { Display = false }] }] }] },
             row with { Cells = [cell with { BodyElements = [new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, null, null)] }] }
         })
-            TestAssert.Equal(0, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(unsupported), CancellationToken.None).Count());
+            TestAssert.Equal(0, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(unsupported), CancellationToken.None)
+                .Count(source => source.Equations.Count != 0));
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() =>
             DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(row), cancelled.Token).ToArray());
@@ -48,7 +50,8 @@ internal static class DocxTableMathTests
             "The row must reserve the same extra math advance that cell placement consumes.");
         var originalLines = a.Cells.Single().TextLines;
         var expandedLines = b.Cells.Single().TextLines;
-        TestAssert.True(ReferenceEquals(originalLines[0].Math, math) && originalLines[0].Segments.Count == 0,
+        TestAssert.True(originalLines[0].Math is { } prepared && ReferenceEquals(prepared.Box, math.Box) &&
+            prepared.LineHeight == 20d && originalLines[0].Segments.Count == 0,
             "A math line carries the prepared box, not a duplicate prose encoding.");
         TestAssert.True(Math.Abs(originalLines[0].BaselineY - expandedLines[0].BaselineY) < .000001 &&
             Math.Abs(originalLines[1].BaselineY - expandedLines[1].BaselineY - 10d) < .000001,
