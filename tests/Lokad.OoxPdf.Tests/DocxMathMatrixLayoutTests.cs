@@ -7,6 +7,47 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixFencesRetainBothControlOwnersAndBoundedArgumentRoles()
+    {
+        var outerFont = MathFont(); var innerFont = MathFont(); var plain = TestFontBuilder.LoadTestFont();
+        var painted = Resource("Cells", plain, "BC"); var marks = Resource("Marks", outerFont, "()");
+        var matrix = Matrix([Run("B"), Run("C")], [Run("C"), Run("B")]) with { ControlText = new("", 20d, null, false, false, false, null, "TestFont") };
+        var delimiter = new DocxMathDelimiter([new([matrix])]) { GrowValue = false,
+            ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
+        var equation = Equation(matrix) with { Content = new([delimiter]) };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 4 &&
+            sources[0].ControlOwners.Count == 2 && ReferenceEquals(sources[0].ControlOwners[0], delimiter) &&
+            ReferenceEquals(sources[0].ControlOwners[1], matrix) && sources.Skip(1).All(s => s.ControlOwners.Count == 0),
+            "One source run retains ordered outer painted and inner metric-only owners without duplicating painted cell sources.");
+        TestAssert.True(DocxMathLayout.GetControlCodePoints(delimiter).Count == 2 && DocxMathLayout.GetControlCodePoints(matrix).Count == 0,
+            "Only the enclosing marks require glyph mappings.");
+        bool innerResolved = false;
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => painted, CancellationToken.None, out var box, out var reason,
+            resolveControlFont: control => ReferenceEquals(control, delimiter) ? marks : null,
+            resolveControlMetrics: control => { innerResolved |= ReferenceEquals(control, matrix); return ReferenceEquals(control, matrix) ? innerFont : null; }),
+            reason ?? "Expected bounded fenced grid.");
+        var fenced = TestAssert.NotNull(box);
+        TestAssert.True(innerResolved && fenced.Glyphs.Count == 6 && fenced.Glyphs[0].Color.Red == 255 &&
+            ReferenceEquals(fenced.Glyphs[0].Font, marks) && ReferenceEquals(fenced.Glyphs[^1].Font, marks) &&
+            fenced.Glyphs.Skip(1).Take(4).All(g => ReferenceEquals(g.Font, painted)),
+            "Separate control metrics and painted font resources survive the same bounded argument box.");
+        var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(fenced, graphics, 20d, 80d, CancellationToken.None);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output, [new PdfPage(300d, 200d, graphics.ToString(), [marks, painted])], CancellationToken.None);
+        TestAssert.True(output.Length > 0, "The inner metric font needs no PDF resource or unused subset.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => painted, CancellationToken.None, out var absent, out _,
+            resolveControlFont: _ => marks, resolveControlMetrics: _ => null) && absent is null,
+            "A missing nested metric owner cannot publish enclosing marks or partial cells.");
+        var deeper = delimiter with { Arguments = [new([delimiter])] };
+        TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([deeper]) }, CancellationToken.None, out _),
+            "General delimiter recursion stays outside this bounded matrix argument grammar.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => painted, CancellationToken.None,
+            out _, out _, resolveControlFont: _ => marks, resolveControlMetrics: _ => innerFont));
+    }
+
     public static void MathFontMatrixMixedRowsRetainIndependentOwnersAndWholeFallback()
     {
         var font = MathFont(); var resource = Resource("Mixed", font, "BC+=");

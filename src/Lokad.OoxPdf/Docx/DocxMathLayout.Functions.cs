@@ -25,7 +25,7 @@ internal static partial class DocxMathLayout
         if (!TryGetRuns(equation with { Content = function.Name }, token, out var nameRuns) || nameRuns.Count == 0 ||
             !TryGetRuns(argument, token, out var argumentRuns) || argumentRuns.Count == 0) { return false; }
         var result = new List<DocxMathRunSource>(nameRuns.Count + argumentRuns.Count);
-        result.AddRange(nameRuns); result[0] = result[0] with { ControlOwner = function };
+        result.AddRange(nameRuns); result[0] = result[0] with { ControlOwners = [function] };
         result.AddRange(argumentRuns); runs = result;
         return true;
     }

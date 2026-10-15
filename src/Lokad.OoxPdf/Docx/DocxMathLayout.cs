@@ -3,11 +3,12 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Docx;
 
-// Shared capability discovery and composition. Literal rows retain their
-// existing layout; one display fraction adds two literal child boxes and a rule.
+// Shared discovery retains painted source runs and ordered control owners.
+// Nested metric-only controls do not duplicate source runs or PDF resources.
 internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel)
 {
-    public IDocxMathControl? ControlOwner { get; init; }
+    public IReadOnlyList<IDocxMathControl> ControlOwners { get; init; } = [];
+    public IDocxMathControl? ControlOwner => ControlOwners.Count == 0 ? null : ControlOwners[0];
 }
 
 internal static partial class DocxMathLayout
@@ -58,6 +59,7 @@ internal static partial class DocxMathLayout
     public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
         if (GetFunction(equation) is { } function) { return TryGetFunctionRuns(equation, function, token, out runs); }
+        if (GetDelimiter(equation) is { } delimiter) { return TryGetDelimiterRuns(equation, delimiter, token, out runs); }
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
         IDocxMathControl? controlOwner = null;
         if (GetMatrix(equation, token) is { } matrix)
@@ -93,11 +95,6 @@ internal static partial class DocxMathLayout
                 rows.Add((argument, level, true));
             }
             controlOwner = nary;
-        }
-        else if (GetDelimiter(equation) is { } delimiter)
-        {
-            foreach (var argument in delimiter.Arguments) { token.ThrowIfCancellationRequested(); AddArgumentRows(argument); }
-            controlOwner = delimiter;
         }
         else if (GetRadical(equation) is { } radical)
         {
@@ -140,7 +137,7 @@ internal static partial class DocxMathLayout
                     for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
             }
         }
-        if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwner = controlOwner }; }
+        if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwners = [controlOwner] }; }
         runs = result;
         return true;
 
@@ -191,7 +188,7 @@ internal static partial class DocxMathLayout
         if (GetNary(equation, token) is { } nary)
             return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetDelimiter(equation) is { } delimiter)
-            return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont);
+            return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetRadical(equation) is { } radical)
             return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetStructuredRow(equation, token) is { } compound)

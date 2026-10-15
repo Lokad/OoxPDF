@@ -22,6 +22,26 @@ internal static partial class DocxMathLayout
     private static bool IsCharacter(string value) => value.Length == 0 ||
         Rune.TryGetRuneAt(value, 0, out Rune rune) && rune.Utf16SequenceLength == value.Length;
 
+    private static bool TryGetDelimiterRuns(DocxEquation equation, DocxMathDelimiter delimiter, CancellationToken token,
+        out IReadOnlyList<DocxMathRunSource> runs)
+    {
+        var result = new List<DocxMathRunSource>();
+        foreach (var argument in delimiter.Arguments)
+        {
+            token.ThrowIfCancellationRequested(); var child = equation with { Content = argument };
+            // Admission stays bounded to earlier literal/fraction roles and one
+            // supported matrix. A delimiter or unknown deeper owner cannot
+            // recursively rediscover itself through the general composer.
+            if (GetFraction(child) is null && GetMatrix(child, token) is null &&
+                !DocxMathRowLayout.TryGetRenderCodePoints(argument, token, out _, out _) ||
+                !TryGetRuns(child, token, out var sources) || sources.Count == 0)
+            { runs = []; return false; }
+            result.AddRange(sources);
+        }
+        result[0] = result[0] with { ControlOwners = [delimiter, .. result[0].ControlOwners] };
+        runs = result; return true;
+    }
+
     public static IReadOnlyList<int> GetControlCodePoints(IDocxMathControl control) => control switch
     {
         DocxMathRadical => [0x221A],
@@ -34,7 +54,8 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureDelimiter(DocxEquation equation, DocxMathDelimiter delimiter,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
-        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
+        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
@@ -52,7 +73,7 @@ internal static partial class DocxMathLayout
         {
             token.ThrowIfCancellationRequested();
             if (!TryMeasureBoxArgument(equation with { Content = argument }, resolveFont, font, size, token,
-                out var child, out fallback) || child is null || child.Glyphs.Count == 0)
+                out var child, out fallback, resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) || child is null || child.Glyphs.Count == 0)
             { fallback ??= "UnsupportedMathDelimiterArgument"; return false; }
             children.Add(child);above = Math.Max(above, child.AboveBaseline);below = Math.Max(below, child.BelowBaseline);
         }

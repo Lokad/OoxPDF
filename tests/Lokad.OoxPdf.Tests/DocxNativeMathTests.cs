@@ -7,6 +7,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixFencesRetainNestedControlsAndIndependentPaintFonts()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-round", "(abcd)"), ("inline-brackets", "[abcd]"),
+            ("display-three-rows", "(abcdef)"), ("inline-hidden", "(bc)"), ("inline-all-normal", "(abcd)"),
+            ("inline-matrix-control20", "(abcd)"), ("display-fence-control20", "(abcd)") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-fenced-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Bounded fenced grids preserve all source cells and both nested controls.");
+            if (suffix == "inline-all-normal")
+            {
+                var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(fonts.Length == 2 && fonts.Any(f => f.Font.Font.FamilyName.Contains("Arial", StringComparison.OrdinalIgnoreCase)) &&
+                    fonts.Any(f => f.Font.Font.FamilyName.Contains("Cambria", StringComparison.OrdinalIgnoreCase)),
+                    "Normal cells and painted fences publish their independent faces; the inner metric control adds no third resource.");
+            }
+        }
+    }
+
     public static void DocxNativeMatrixMixedRowsRetainNeighborAndIndependentGridMeaning()
     {
         RequireMathFont();

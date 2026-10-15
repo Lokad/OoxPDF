@@ -55,8 +55,9 @@ internal sealed partial class DocxRenderer
             foreach (DocxMathRunSource source in mathRuns)
             {
                 token.ThrowIfCancellationRequested();
-                if (source.ControlOwner is { } control)
+                foreach (IDocxMathControl control in source.ControlOwners)
                 {
+                    token.ThrowIfCancellationRequested();
                     IReadOnlyList<int> controlPoints = DocxMathLayout.GetControlCodePoints(control);
                     if (!controlKeys.TryGetValue(control, out var controlKey))
                     {
@@ -108,6 +109,7 @@ internal sealed partial class DocxRenderer
                     }
                     if (controlPoints.Count != 0) { (controlOwners ??= []).Add(groups[controlKey].Font); }
                 }
+                if (!valid) { break; }
                 DocxMathRun run = source.Run;
                 string family = run.NormalText
                     ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
