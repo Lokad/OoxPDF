@@ -921,3 +921,22 @@ residual, and a mixed-row contrast retains 2.74 pt X. Twenty-three focused metho
 12 exact neighbors and four exact transfer PDFs qualify one strict Release
 artifact. Three public cases keep existing thresholds. An all-normal application
 publishes only its painted Arial resource despite two mathematical metric owners.
+
+Complete function applications now own their outgoing operator spacing, rather
+than inheriting the last atom of their argument. Independent Word controls show
+thin spacing before ordinary or opening neighbors, unchanged binary/relation
+priority, and adjacency before closing marks or punctuation. The existing shared
+operator/punctuation pair supplies the latter rule. Names, argument boxes and
+fraction rules retain their independently measured internal geometry. No font,
+size, document or argument-shape qualifier is added.
+
+Twelve new Word controls and one retained matrix-function holdout qualify six
+improvements and seven byte-identical guards. Literal/normal/fraction ordinary
+boundaries improve from roughly 1–2 pt X to below 0.07 pt; the existing mixed
+matrix-function holdout improves from 2.74 pt to 0.74 pt. The audit matches 81/85
+outlines; four inherited enclosing-mark variants remain different. Seventeen
+application/shared-row methods, 12 exact neighboring PDFs and four exact transfer
+PDFs qualify one strict Release artifact. Three public cases retain thresholds
+and explicit visual residuals. A separate uniform cell italic-correction prototype
+was rejected after larger-control and mixed-row regressions; its evidence is
+retained and accepted cell widths are unchanged.
