@@ -1,0 +1,165 @@
+{
+  "Scope": "Independent Word 16 prose baseline gaps; visual thresholds remain separate",
+  "Rows": [
+    {
+      "Id": "math-printed-frame-literal-anchor12",
+      "Mode": "final-preserve",
+      "InputSha256": "D49B2848C1B0D631D1E6CC75DE14464C7BF1C697347137CED90F389A8837FD29",
+      "ReferencePdfSha256": "E9D5D2BE00AA116E6768746AF610B0F79D7A3455009782036C75AA239D749F75",
+      "LeadingToMath": 14.64,
+      "LeadingToFollowing": 29.28
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D49B2848C1B0D631D1E6CC75DE14464C7BF1C697347137CED90F389A8837FD29",
+      "ReferencePdfSha256": "8F7522FA16C6A0F851AF456A993EC1F2211E09D5C2B28D7EDAF0BD2EA95B78F0",
+      "LeadingToMath": 11.12,
+      "LeadingToFollowing": 22.2
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor18",
+      "Mode": "final-preserve",
+      "InputSha256": "FB96989F9CFB663A8B798CD252950A33B68FC1C0DC58F015EB9A9B8BFA9052C0",
+      "ReferencePdfSha256": "D4C36A718FB00E821EC85ECC7E94CD0622CF9238DFE33239CDC5970CE30CE459",
+      "LeadingToMath": 16.2,
+      "LeadingToFollowing": 30.84
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor18",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FB96989F9CFB663A8B798CD252950A33B68FC1C0DC58F015EB9A9B8BFA9052C0",
+      "ReferencePdfSha256": "A1B721691C774EA8FF7009D071FD52F4572AE32DA7748657FD2599BF0B43C16C",
+      "LeadingToMath": 12.29,
+      "LeadingToFollowing": 23.4
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12",
+      "Mode": "final-preserve",
+      "InputSha256": "550AF73A1229E8CC071FF04C20A8B82871D143F22E3A214CE6DE9525540E9305",
+      "ReferencePdfSha256": "FF85206EC1CADFDF2182F87FE525C61AB311AA8122917B0B7FB1B9FF3E8C6BCA",
+      "LeadingToMath": 18.0,
+      "LeadingToFollowing": 35.52
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "550AF73A1229E8CC071FF04C20A8B82871D143F22E3A214CE6DE9525540E9305",
+      "ReferencePdfSha256": "117DE2B4DBE787C531835E11FEE4E49CAC730E11CA03F71BCB3D6784E10429E9",
+      "LeadingToMath": 13.66,
+      "LeadingToFollowing": 26.96
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor18",
+      "Mode": "final-preserve",
+      "InputSha256": "53CEC522B37F248ACCFE4292125BA4233CF069A48FAAABD36C296852E17D605A",
+      "ReferencePdfSha256": "3A5747D03B3419E26F6923B922F86F6613BE03502983AD6B182E4BD7F166476C",
+      "LeadingToMath": 19.56,
+      "LeadingToFollowing": 37.08
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor18",
+      "Mode": "all-word-compatible",
+      "InputSha256": "53CEC522B37F248ACCFE4292125BA4233CF069A48FAAABD36C296852E17D605A",
+      "ReferencePdfSha256": "32350C29A59F6133F673AA19EFF5D14986BB602E3FFA7FAAE0C66CECE79C4D59",
+      "LeadingToMath": 14.83,
+      "LeadingToFollowing": 28.13
+    },
+    {
+      "Id": "math-printed-frame-root-fraction-anchor12",
+      "Mode": "final-preserve",
+      "InputSha256": "F17179473AF081304B39B197B55D85D585D6D78988918DE14FA7F321ADFBE08F",
+      "ReferencePdfSha256": "6B4C46346AAC4C69D9F75331E381EC83BD11AE34A32814BE5F274C8035A78585",
+      "LeadingToMath": 23.04,
+      "LeadingToFollowing": 43.92
+    },
+    {
+      "Id": "math-printed-frame-root-fraction-anchor12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F17179473AF081304B39B197B55D85D585D6D78988918DE14FA7F321ADFBE08F",
+      "ReferencePdfSha256": "249993620CBC1ABA08B6A69EF7CD8116D3255A90AE105CCC5E4561A21C1D91FF",
+      "LeadingToMath": 17.48,
+      "LeadingToFollowing": 33.32
+    },
+    {
+      "Id": "math-printed-frame-root-fraction-anchor18",
+      "Mode": "final-preserve",
+      "InputSha256": "B730C9C21D1A99AC2148FA457EA242CC95B9A9FD7067E554FBF944F2EB284946",
+      "ReferencePdfSha256": "44F6F3C620507BBF0632F0F184628D22081C8E72C850EEE97D2E5895D5923FCC",
+      "LeadingToMath": 24.6,
+      "LeadingToFollowing": 45.48
+    },
+    {
+      "Id": "math-printed-frame-root-fraction-anchor18",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B730C9C21D1A99AC2148FA457EA242CC95B9A9FD7067E554FBF944F2EB284946",
+      "ReferencePdfSha256": "2B368432CEFE6DD39A80C95377C0C34BA30930FC0A73D0A347C6C50A5725EFFF",
+      "LeadingToMath": 18.67,
+      "LeadingToFollowing": 34.49
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor12-multiple",
+      "Mode": "final-preserve",
+      "InputSha256": "553D9355CB8504EA6B95B1E503AF15535B5C52725823F085B56168B4D864C0A5",
+      "ReferencePdfSha256": "5AC88ECBDE65E1F72920BABE3BC59450FCC4B8C69BAA60271C984E0027CADBFB",
+      "LeadingToMath": 14.64,
+      "LeadingToFollowing": 29.28
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor12-multiple",
+      "Mode": "all-word-compatible",
+      "InputSha256": "553D9355CB8504EA6B95B1E503AF15535B5C52725823F085B56168B4D864C0A5",
+      "ReferencePdfSha256": "3F21772AA3DC9CAE77A3C5FCB3488996925CC141160D87FB8C5C8DAA8E1ECACC",
+      "LeadingToMath": 11.12,
+      "LeadingToFollowing": 22.2
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor18-multiple",
+      "Mode": "final-preserve",
+      "InputSha256": "12D6B9EEFF1BA12E84B3868A160ED74CE2EF44B9AF942E98860E14171D393490",
+      "ReferencePdfSha256": "89838B3713424BA5819A42A1C95D7F834FB8D24CA761AE20D42E5B781BFBF431",
+      "LeadingToMath": 16.2,
+      "LeadingToFollowing": 30.84
+    },
+    {
+      "Id": "math-printed-frame-literal-anchor18-multiple",
+      "Mode": "all-word-compatible",
+      "InputSha256": "12D6B9EEFF1BA12E84B3868A160ED74CE2EF44B9AF942E98860E14171D393490",
+      "ReferencePdfSha256": "75ACF5084B2E98B138924631DEA88B5F12DFD68CA3C4FFD023CC2E690A9CCEC3",
+      "LeadingToMath": 12.29,
+      "LeadingToFollowing": 23.4
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-multiple",
+      "Mode": "final-preserve",
+      "InputSha256": "EA7FB764C259DEA27489D7BBDA18BE64CC1AC37C6C091656715B6FC7897C0AFC",
+      "ReferencePdfSha256": "079140AE91FD204C0D21EB335380165BE4EBB363172436FB4E1777464A275340",
+      "LeadingToMath": 18.0,
+      "LeadingToFollowing": 35.52
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-multiple",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EA7FB764C259DEA27489D7BBDA18BE64CC1AC37C6C091656715B6FC7897C0AFC",
+      "ReferencePdfSha256": "AD82C6AAC75DB0552163E0B764AC1D24F9CF01EF2F9CE82B52A491142A2895E4",
+      "LeadingToMath": 13.66,
+      "LeadingToFollowing": 26.96
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor18-multiple",
+      "Mode": "final-preserve",
+      "InputSha256": "B463FCCD90A97C4BC505FAE19FFDD33C228586C113F5D2B5B7388B57629B0773",
+      "ReferencePdfSha256": "E13A5DB3C11A45DDFBEB004E1D16AB987F8C8480A5C9963B1492B783309506AC",
+      "LeadingToMath": 19.56,
+      "LeadingToFollowing": 37.08
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor18-multiple",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B463FCCD90A97C4BC505FAE19FFDD33C228586C113F5D2B5B7388B57629B0773",
+      "ReferencePdfSha256": "655C36E94D1649797EBB21FF6034F3FE1FD1915CDACC7299DF0996CD591C74C1",
+      "LeadingToMath": 14.83,
+      "LeadingToFollowing": 28.13
+    }
+  ]
+}

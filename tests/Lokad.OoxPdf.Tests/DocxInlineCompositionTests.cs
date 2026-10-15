@@ -1,5 +1,7 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -8,6 +10,29 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionPrintedMathMatchesIndependentBaselineGaps()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent printed-frame controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-printed-frame-office-baselines.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            string source = Path.Combine(cases, id + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var items = renderer.InspectLayout(DocxTests.ReadDocx(source, mode)).Pages.Single().Items;
+            double Baseline(int block) => items.Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == block).Y;
+            double delta = Baseline(0) - Baseline(1) - row.GetProperty("LeadingToMath").GetDouble();
+            TestAssert.True(Math.Abs(delta) < .4d,
+                $"Printed placement must retain independent Word baseline gaps: {id}/{mode} delta={delta}.");
+        }
+    }
+
     public static void DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

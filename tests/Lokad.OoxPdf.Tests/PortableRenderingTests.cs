@@ -159,6 +159,27 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance()
+    {
+        foreach (string kind in new[] { "literal", "fraction" })
+        foreach (int anchor in new[] { 12, 18 })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            string name = "CompositionProbes/math-printed-frame-" + kind + "-anchor" + anchor;
+            var single = renderer.InspectLayout(DocxTests.ReadDocx(Case(name + ".docx"), mode)).Pages.Single();
+            var multiple = renderer.InspectLayout(DocxTests.ReadDocx(Case(name + "-multiple.docx"), mode)).Pages.Single();
+            foreach (int block in new[] { 1, 2 })
+            {
+                var before = single.Items.Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == block);
+                var after = multiple.Items.Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == block);
+                TestAssert.True(Math.Abs(before.Y - after.Y) < .01d,
+                    $"Repeating a fitting formula must preserve its baseline and following advance: {kind}/{anchor}/{mode}/block{block} delta={after.Y - before.Y}.");
+            }
+        }
+    }
+
     public static void PortableRenderingCommentsPreserveAuthoredWhitespace() =>
         CheckCommentAuthoredWhitespace(new PinnedResolver());
 

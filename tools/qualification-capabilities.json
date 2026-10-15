@@ -423,5 +423,19 @@
     "DocxWordCompatibleMixedStoryCommentsRetainBodyAnchor",
     "DocxWordCompatibleHiddenBodyCommentsKeepNominalTextPlacement",
     "PortableRenderingCommentLabelsPreserveExplicitInitials"
+  ],
+  "docx-math-printed-baseline": [
+    "DocxInlineCompositionPrintedMathMatchesIndependentBaselineGaps",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "DocxInlineCompositionSingle",
+    "DocxInlineCompositionLiteral",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxInlineCompositionNumberedMath",
+    "DocxNativeInline",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeDisplayAutomaticSpacing",
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
   ]
 }

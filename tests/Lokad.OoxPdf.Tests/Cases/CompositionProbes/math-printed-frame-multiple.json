@@ -1,0 +1,50 @@
+[
+  {
+    "Id": "math-printed-frame-literal-anchor12-multiple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-literal-anchor12-multiple.docx",
+    "Sha256": "553D9355CB8504EA6B95B1E503AF15535B5C52725823F085B56168B4D864C0A5",
+    "SourceSha256": "16CFF81A67E2EBC2DDE05873CE789C8FB79901563F8EB0A51D09F9846894F18D",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-literal-anchor18-multiple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-literal-anchor18-multiple.docx",
+    "Sha256": "12D6B9EEFF1BA12E84B3868A160ED74CE2EF44B9AF942E98860E14171D393490",
+    "SourceSha256": "16CFF81A67E2EBC2DDE05873CE789C8FB79901563F8EB0A51D09F9846894F18D",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-fraction-anchor12-multiple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-fraction-anchor12-multiple.docx",
+    "Sha256": "EA7FB764C259DEA27489D7BBDA18BE64CC1AC37C6C091656715B6FC7897C0AFC",
+    "SourceSha256": "DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-fraction-anchor18-multiple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-fraction-anchor18-multiple.docx",
+    "Sha256": "B463FCCD90A97C4BC505FAE19FFDD33C228586C113F5D2B5B7388B57629B0773",
+    "SourceSha256": "DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  }
+]

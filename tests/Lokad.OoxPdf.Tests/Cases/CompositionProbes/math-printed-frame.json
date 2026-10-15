@@ -1,0 +1,74 @@
+[
+  {
+    "Id": "math-printed-frame-literal-anchor12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-literal-anchor12.docx",
+    "Sha256": "D49B2848C1B0D631D1E6CC75DE14464C7BF1C697347137CED90F389A8837FD29",
+    "SourceSha256": "16CFF81A67E2EBC2DDE05873CE789C8FB79901563F8EB0A51D09F9846894F18D",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-literal-anchor18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-literal-anchor18.docx",
+    "Sha256": "FB96989F9CFB663A8B798CD252950A33B68FC1C0DC58F015EB9A9B8BFA9052C0",
+    "SourceSha256": "16CFF81A67E2EBC2DDE05873CE789C8FB79901563F8EB0A51D09F9846894F18D",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-fraction-anchor12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-fraction-anchor12.docx",
+    "Sha256": "550AF73A1229E8CC071FF04C20A8B82871D143F22E3A214CE6DE9525540E9305",
+    "SourceSha256": "DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-fraction-anchor18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-fraction-anchor18.docx",
+    "Sha256": "53CEC522B37F248ACCFE4292125BA4233CF069A48FAAABD36C296852E17D605A",
+    "SourceSha256": "DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-root-fraction-anchor12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-root-fraction-anchor12.docx",
+    "Sha256": "F17179473AF081304B39B197B55D85D585D6D78988918DE14FA7F321ADFBE08F",
+    "SourceSha256": "54DF93237B68A46DA4AE66455848EC9B01E729CFEC63BDA380102628923DDBF3",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-root-fraction-anchor18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-root-fraction-anchor18.docx",
+    "Sha256": "B730C9C21D1A99AC2148FA457EA242CC95B9A9FD7067E554FBF944F2EB284946",
+    "SourceSha256": "54DF93237B68A46DA4AE66455848EC9B01E729CFEC63BDA380102628923DDBF3",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  }
+]

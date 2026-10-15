@@ -1392,23 +1392,39 @@ internal sealed partial class DocxLayoutEngine
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
-                double baseInset = ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
+                double baseInset = DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer)
+                    ?? ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
+                double anchorInset = 0d;
+                if (scaleBaselineOffsetTransitions)
+                {
+                    anchorInset = (firstBodyLineBaselineOffset ?? baseInset) * (1d - paragraphSpacingScale);
+                }
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, paragraphFontSize,
                     Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
                     baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var measured) &&
                     measured.All(line => line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
                 {
+                    firstBodyLineBaselineOffset ??= baseInset;
+                    firstDocumentBodyBaselineOffset ??= baseInset;
                     for (int index = 0; index < measured.Count; index++)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var line = measured[index];
+                        double objectInset = 0d;
+                        foreach (var fragment in line.Fragments)
+                            if (fragment.Math is not null || fragment.Source is DocxInlinePicture)
+                                objectInset = Math.Max(objectInset, fragment.BaselineInset);
+                        // Placement shares the ordinary body's scaled local inset
+                        // and page anchor. The measured occupied height stays intact.
+                        double labelLeading = line.BaselineInset - Math.Max(baseInset, objectInset);
+                        line = line with { BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading };
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom() &&
                             (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
                             AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
                         double inset = index == 0 ? firstInset : nextInset;
                         double available = Math.Max(1d, width - inset - rightInset);
                         double align = ResolveOrderedInlineAlignment(line, effective.Alignment, available);
-                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY,
+                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY - anchorInset,
                             paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
                         currentItems.Add(placed.Line with
                         {
@@ -1471,7 +1487,9 @@ internal sealed partial class DocxLayoutEngine
                     if (inlineMath?.LineIndex == lineIndex && !IsExactLineSpacing(effective))
                     {
                         var expansion = ResolveInlineMathExpansion(inlineMath.Math, paragraphFontSize, baselineLineHeight,
-                            lineHeight, paragraphSpacingScale, exact: false);
+                            lineHeight, paragraphSpacingScale, exact: false,
+                            placementBaselineInset: (typographicBaselineInset ?? ResolveOrderedBodyBaselineInset(
+                                paragraph, paragraphFontSize, baselineLineHeight, textMeasurer)) * paragraphSpacingScale);
                         extraAbove = Math.Max(extraAbove, expansion.Above);
                         extraBelow = expansion.Below;
                     }

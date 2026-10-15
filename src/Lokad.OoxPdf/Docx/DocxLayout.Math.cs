@@ -64,12 +64,22 @@ internal sealed partial class DocxLayoutEngine
 
     private static (double Above, double Below) ResolveInlineMathExpansion(
         DocxPreparedMathParagraph math, double fontSize, double baselineLineHeight, double lineHeight, double scale, bool exact,
-        double? baselineInset = null)
+        double? baselineInset = null, double? placementBaselineInset = null)
     {
         if (exact) { return (0d, 0d); }
         double inset = baselineInset ?? DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, baselineLineHeight, false);
-        return (Math.Max(0d, math.BaselineInset * scale - inset),
-            Math.Max(0d, (math.LineHeight - math.BaselineInset) * scale - (lineHeight - inset)));
+        double above = Math.Max(0d, math.BaselineInset * scale - inset);
+        double below = Math.Max(0d, (math.LineHeight - math.BaselineInset) * scale - (lineHeight - inset));
+        if (placementBaselineInset is not { } placementInset) return (above, below);
+
+        // Printed body placement uses a scaled local inset plus the shared page
+        // anchor. Keep the independently qualified occupied font frame as a
+        // minimum: moving the baseline must not collapse its reserved leading.
+        double occupiedExpansion = above + below;
+        above = Math.Max(0d, math.BaselineInset * scale - placementInset);
+        below = Math.Max(Math.Max(0d, (math.LineHeight - math.BaselineInset) * scale - (lineHeight - placementInset)),
+            occupiedExpansion - above);
+        return (above, below);
     }
 
     private static DocxMidLineMath? CreateMidLineMath(DocxParagraph paragraph, DocxPreparedMathParagraph math,
