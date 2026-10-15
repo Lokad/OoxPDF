@@ -119,3 +119,13 @@ and painted continuation lines when combining printed capacity with the older
 fragment baseline path. That prototype is retained as rejected development
 evidence; table baseline/membership ownership needs its own bounded correction.
 Following body paragraphs still use paragraph capacity after a table fallback.
+
+
+The paragraph-frame artifact passes 46 selected methods in one invocation and
+three portable rendering methods on Ubuntu. All ten portfolio mode outcomes have
+matching page totals, expected prose and no ignored-equation diagnostic. The
+held-out memo recovers its second AllMarkup page. Four default DOCX PDFs and both
+decks remain byte-identical. Four integration PDFs match after transferring the
+17 qualified assets without a root build or repeated suite. All eight DOCX raster
+gates still fail. Fourteen of sixteen comparisons reuse exact candidate/reference
+PDF and threshold identities; only two need new raster comparisons.
