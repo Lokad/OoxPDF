@@ -71,7 +71,7 @@ internal static partial class DocxMathLayout
         {
             if (character.Length == 0) { return true; }
             int point = Rune.GetRuneAt(character, 0).Value;
-            if (!font.TryGetMathVerticalVariant(font.MapCodePoint(point), height / scale, token, out var variant) ||
+            if (!font.TryGetNearestMathVerticalVariant(font.MapCodePoint(point), height / scale, token, out var variant) ||
                 !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(variant.Glyph, out ushort cid))
             { return false; }
             double baseline = axis - (bounds.YMax + bounds.YMin) / 2d * scale;

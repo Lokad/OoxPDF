@@ -7,6 +7,34 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeDelimiterHeightContrastsKeepParentFramesAndChildMeaning()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string kind,string meaning,double size) in new[]{("literal16","(n+1)",15.96d),("literal20","(n+1)",20.04d),("descender12","(g+y)",12d)})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-height-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains(meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Measured height/descender contrasts retain native delimiter painting and authored child sizes.");
+            if(placement=="display" && kind!="descender12")
+            {
+                var font=page.Fonts.Single(f=>f.ResourceName.StartsWith("Eq",StringComparison.Ordinal));
+                TestAssert.True(font.Font.TryGetEncodedCid(font.Font.Font.MapCodePoint(0x1D45B),out ushort cid),"Expected the authored n glyph.");
+                var operation=System.Text.RegularExpressions.Regex.Match(page.Content,
+                    @"1 0 0 1 [-\d.]+ ([-\d.]+) Tm\s*<"+cid.ToString("X4",System.Globalization.CultureInfo.InvariantCulture)+@"> Tj");
+                var frame=System.Text.RegularExpressions.Regex.Match(page.Content,@"q\s*1 0 0 1 [-\d.]+ ([-\d.]+) cm");
+                TestAssert.True(operation.Success && frame.Success,"Expected the stored math glyph and frame baseline.");
+                double baseline=double.Parse(operation.Groups[1].Value,System.Globalization.CultureInfo.InvariantCulture)+
+                    double.Parse(frame.Groups[1].Value,System.Globalization.CultureInfo.InvariantCulture);
+                TestAssert.True(Math.Abs(baseline-(kind=="literal16"?707.5d:704.74d))<0.1d,
+                    "The independently measured Word baseline must not include a larger child's typographic line gap.");
+            }
+        }
+    }
+
     public static void DocxNativeLiteralDelimitersKeepVisibleCharactersAndEmptySides()
     {
         RequireMathFont();

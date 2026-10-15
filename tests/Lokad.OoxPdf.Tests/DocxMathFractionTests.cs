@@ -9,6 +9,24 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontDelimiterParentOwnsBaselineFloorWhileLargerChildrenKeepInk()
+    {
+        var parent=OpenTypeFont.Load(DelimiterFontBytes());
+        var resource=new PdfFontResource("Parent",PdfEmbeddedFont.CreateForGlyphMappings(parent,
+            new[]{((ushort)9,40),((ushort)10,41),((ushort)128,40),((ushort)127,41),(parent.MapCodePoint('B'),(int)'B')},CancellationToken.None));
+        var child=new DocxMathRow([new DocxMathRun(new("B",20d,null,false,false,false,null,"TestFont"),"p",null)]);
+        var delimiter=new DocxMathDelimiter([child]) { ControlText=new("",12d,null,false,false,false,null,"TestFont") };
+        var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+        TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),reason??"Expected a larger independently sized child.");
+        var measured=TestAssert.NotNull(box);
+        TestAssert.True(DocxMathLayout.TryGetLineMetrics(measured,CancellationToken.None,out double above,out _),"Expected a valid owned line frame.");
+        TestAssert.True(Math.Abs(above-measured.AboveBaseline-120d*12d/1000d)<1e-9,
+            "The parent baseline floor plus one parent leading term encloses the actual child ink without adding a larger child's typographic line gap.");
+        TestAssert.True(parent.TryGetGlyphBounds(parent.MapCodePoint('B'),out var bounds) &&
+            Math.Abs(measured.Glyphs[1].FontSize-20.04d)<1e-9 && measured.AboveBaseline>=bounds.YMax*measured.Glyphs[1].FontSize/parent.UnitsPerEm-1e-9,
+            "Parent frame ownership must not shrink or discard independently authored large child ink.");
+    }
+
     public static void MathFontDelimiterBoxesKeepPerNodeFontsEmptySidesAndCompleteFallback()
     {
         var font=OpenTypeFont.Load(DelimiterFontBytes());

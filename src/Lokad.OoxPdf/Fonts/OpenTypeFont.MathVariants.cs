@@ -7,7 +7,13 @@ internal sealed partial class OpenTypeFont
     // Select a ready-made vertical variant from the owning immutable font.
     // Assemblies and device corrections remain separate, unsupported features.
     public bool TryGetMathVerticalVariant(ushort glyph, double minimumHeight, CancellationToken token,
-        out OpenTypeMathGlyphVariant variant)
+        out OpenTypeMathGlyphVariant variant) => TrySelectMathVerticalVariant(glyph, minimumHeight, token, nearest: false, out variant);
+
+    public bool TryGetNearestMathVerticalVariant(ushort glyph, double height, CancellationToken token,
+        out OpenTypeMathGlyphVariant variant) => TrySelectMathVerticalVariant(glyph, height, token, nearest: true, out variant);
+
+    private bool TrySelectMathVerticalVariant(ushort glyph, double minimumHeight, CancellationToken token,
+        bool nearest, out OpenTypeMathGlyphVariant variant)
     {
         variant = default;
         token.ThrowIfCancellationRequested();
@@ -30,17 +36,24 @@ internal sealed partial class OpenTypeFont
         int count = U16(construction, 2);
         if (construction.Length - 4 < count * 4) { return false; }
         if (count > 0) { OoxConversionBudget.Current?.ChargeFontWork(1); }
-        bool found = false;
+        bool found = false, adequate = false;
         OpenTypeMathGlyphVariant selected = default;
         for (int i = 0; i < count; i++)
         {
             token.ThrowIfCancellationRequested();
             ushort candidate = U16(construction, 4 + i * 4), advance = U16(construction, 6 + i * 4);
             if (candidate == 0 || candidate >= GlyphCount || advance == 0) { return false; }
-            if (advance >= minimumHeight && (!found || advance < selected.Advance))
+            adequate |= advance >= minimumHeight;
+            bool take = nearest
+                ? !found || Math.Abs(advance - minimumHeight) < Math.Abs(selected.Advance - minimumHeight) ||
+                    Math.Abs(advance - minimumHeight) == Math.Abs(selected.Advance - minimumHeight) && advance > selected.Advance
+                : advance >= minimumHeight && (!found || advance < selected.Advance);
+            if (take)
             { selected = new(candidate, advance); found = true; }
         }
-        if (found) { variant = selected; }
-        return found;
+        // A nearer smaller shape is useful for delimiter fitting, but a target
+        // beyond every ready-made variant still needs an unsupported assembly.
+        if (found && adequate) { variant = selected; return true; }
+        return false;
     }
 }

@@ -5,6 +5,35 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathFontTests
 {
+    public static void MathFontVerticalNearestVariantsUseDistanceTallerTiesAndAssemblyFallback()
+    {
+        foreach(bool range in new[]{true,false})
+        {
+            var font=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(VariantTable(range)));
+            foreach((double height,ushort glyph,ushort advance) in new (double,ushort,ushort)[]{
+                (0,34,500),(749.99,34,500),(750,36,1000),(1000,36,1000),(1250,35,1500),(1500,35,1500)})
+            {
+                TestAssert.True(font.TryGetNearestMathVerticalVariant(34,height,CancellationToken.None,out var selected),"Expected a ready-made nearest variant.");
+                TestAssert.Equal(new OpenTypeMathGlyphVariant(glyph,advance),selected);
+            }
+            foreach(double height in new[]{-1d,1500.01d,double.NaN,double.PositiveInfinity})
+                TestAssert.True(!font.TryGetNearestMathVerticalVariant(34,height,CancellationToken.None,out var selected) && selected==default,
+                    "Nearest fitting cannot publish a largest inadequate variant when only an assembly can reach the target.");
+        }
+        byte[] malformed=VariantTable(false);BinaryPrimitives.WriteUInt16BigEndian(malformed.AsSpan(40),ushort.MaxValue);
+        var bad=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(malformed));
+        TestAssert.True(!bad.TryGetNearestMathVerticalVariant(34,500d,CancellationToken.None,out var absent) && absent==default,
+            "A malformed later record discards even an exact earlier nearest candidate.");
+        var valid=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(VariantTable(false)));
+        using var cancelled=new CancellationTokenSource();cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(()=>valid.TryGetNearestMathVerticalVariant(34,500d,cancelled.Token,out _));
+        using(OoxConversionBudget.Scope scope=OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion=1 }))
+        {
+            TestAssert.True(valid.TryGetNearestMathVerticalVariant(34,500d,CancellationToken.None,out _),"One bounded query is available.");
+            TestAssert.Throws<OoxPdfLimitExceededException>(()=>valid.TryGetMathVerticalVariant(34,500d,CancellationToken.None,out _));
+        }
+    }
+
     public static void MathFontVerticalVariantsChooseTheSmallestAdequateOwnedGlyph()
     {
         foreach (bool rangeCoverage in new[] { false, true })

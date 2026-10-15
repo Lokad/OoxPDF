@@ -23,14 +23,23 @@ internal static partial class DocxMathLayout
         {
             token.ThrowIfCancellationRequested();
             var font = glyph.Font.Font.Font;
-            above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(font, glyph.FontSize));
+            if (box.ParentMetrics is null)
+                above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(font, glyph.FontSize));
             below = Math.Max(below, -font.Os2.TypographicDescender * glyph.FontSize / font.UnitsPerEm);
             naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(font, glyph.FontSize));
             if (box.ParentMetrics is null && font.TryGetMathConstants(out OpenTypeMathConstants constants))
                 leading = Math.Max(leading, constants.GetValue(OpenTypeMathConstant.MathLeading) * glyph.FontSize / font.UnitsPerEm);
         }
-        if (box.ParentMetrics is { } parent && parent.Font.TryGetMathConstants(out OpenTypeMathConstants parentConstants))
-            leading = Math.Max(0d, parentConstants.GetValue(OpenTypeMathConstant.MathLeading) * parent.Size / parent.Font.UnitsPerEm);
+        if (box.ParentMetrics is { } parent)
+        {
+            // An explicit control owns the ordinary baseline floor. Child ink
+            // remains in the box extent; a larger child font must not add its
+            // unrelated typographic line gap above that occupied frame.
+            above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(parent.Font,
+                OfficePdfTextEmissionProfile.FontSize(parent.Size)));
+            if (parent.Font.TryGetMathConstants(out OpenTypeMathConstants parentConstants))
+                leading = Math.Max(0d, parentConstants.GetValue(OpenTypeMathConstant.MathLeading) * parent.Size / parent.Font.UnitsPerEm);
+        }
         // MathLeading protects tall ink above the ordinary typographic box.
         // Apply it once to the composed box, rather than once per child/glyph.
         above = Math.Max(above, box.AboveBaseline + leading);
