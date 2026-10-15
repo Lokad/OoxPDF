@@ -10,6 +10,39 @@ internal static class ToolBudgetTests
     private static readonly Lazy<string> VisualDiffAssemblyPath = new(() => BuildTool("tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj", "Lokad.OoxPdf.VisualDiff.dll"));
     private static readonly Lazy<string> RasterizerAssemblyPath = new(() => BuildTool("tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj", "Lokad.OoxPdf.PdfiumRasterizer.dll"));
 
+    public static void InspectToUnicodeSequentialSurrogatePairsRetainDistinctMathLetters()
+    {
+        var map = ReadToUnicode("1 beginbfrange\n<073D> <0740> <D835DC4E>\nendbfrange");
+        TestAssert.Equal("\U0001D44E", map[0x073D]); TestAssert.Equal("\U0001D44F", map[0x073E]);
+        TestAssert.Equal("\U0001D450", map[0x073F]); TestAssert.Equal("\U0001D451", map[0x0740]);
+        TestAssert.Equal("abcd", string.Concat(Enumerable.Range(0x073D, 4).Select(i => map[i])).Normalize(NormalizationForm.FormKC));
+    }
+
+    public static void InspectToUnicodeRangeStringsAndExplicitArraysKeepIndependentTargets()
+    {
+        var map = ReadToUnicode("2 beginbfrange\n<0001> <0003> <00660069>\n<0004> <0005> [<D835DC4E> <0061>]\nendbfrange");
+        TestAssert.Equal("fi", map[1]); TestAssert.Equal("fj", map[2]); TestAssert.Equal("fk", map[3]);
+        TestAssert.Equal("\U0001D44E", map[4]); TestAssert.Equal("a", map[5]);
+    }
+
+    public static void InspectToUnicodeBmpRangesAndDirectAstralMappingsRemainExact()
+    {
+        var map = ReadToUnicode("1 beginbfchar\n<0004> <D83DDE00>\nendbfchar\n1 beginbfrange\n<0001> <0003> <0041>\nendbfrange");
+        TestAssert.Equal("A", map[1]); TestAssert.Equal("B", map[2]); TestAssert.Equal("C", map[3]);
+        TestAssert.Equal("\U0001F600", map[4]);
+    }
+
+    private static IReadOnlyDictionary<int, string> ReadToUnicode(string cmap)
+    {
+        // Local qualification can reuse a frozen Release tool; CI keeps the
+        // existing shared tool-build path when no explicit assembly is pinned.
+        string path = Environment.GetEnvironmentVariable("OOXPDF_TEST_PDF_INSPECTOR") ?? InspectAssemblyPath.Value;
+        var assembly = System.Reflection.Assembly.LoadFrom(path);
+        var type = assembly.GetType("PdfToUnicodeMap") ?? throw new InvalidOperationException("Missing inspector CMap decoder.");
+        var parse = type.GetMethod("Parse") ?? throw new InvalidOperationException("Missing inspector CMap parser.");
+        return (IReadOnlyDictionary<int, string>)(parse.Invoke(null, [cmap]) ?? throw new InvalidOperationException("Missing decoded CMap."));
+    }
+
     public static void InspectAggregateDecodedBudgetSkipsBeyondQuota()
     {
         // R21: three individually legal 10 KB streams exceed a 15 KB aggregate quota.

@@ -2075,7 +2075,9 @@ internal static class PdfToUnicodeMap
         if (bytes.Length >= 2)
         {
             int last = ((bytes[bytes.Length - 2] << 8) | bytes[bytes.Length - 1]) + offset;
-            if (last >= 0 && last <= 0xFFFF && (last < 0xD800 || last > 0xDFFF))
+            // A multi-unit target may end in the low half of a valid UTF-16
+            // surrogate pair. Increment it before decoding the complete string.
+            if (last >= 0 && last <= 0xFFFF)
             {
                 byte[] stepped = (byte[])bytes.Clone();
                 stepped[stepped.Length - 2] = (byte)(last >> 8);
