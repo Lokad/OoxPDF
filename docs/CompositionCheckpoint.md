@@ -710,3 +710,34 @@ CLI conversion through the fixture link pass, the latter reproducing the accepte
 PDF exactly. No library rebuild or qualification replay was needed. Evidence:
 `artifacts/composition-c1/shared-fixture-evidence.json`. Historical fixture copies
 and the previously rejected retirement targets remain untouched.
+
+
+Ordinary default/left tabs now coexist with supported equations through the
+ordered measurement path. The existing shared tab-stop resolver consumes preceding
+text/math/image advances; body, cells, direct headers/footers, keep estimates and
+autofit receive the document's default interval. Tab positions scale once. Right,
+center, decimal, bar/leader and out-of-frame stop semantics keep explicit fallbacks.
+Visible tabs prevent sole-formula display promotion. No font/size/document-ID
+qualification is added.
+
+Eight public source controls exercise an 18pt default interval and authored 72pt
+left stops in four containers, separately in both presets. The prior library
+omits both formulas in all sixteen outcomes; native and portable regressions
+reproduce it. The accepted build retains both formulas, prose and one-page
+placement. Independent Word relative field offsets differ by at most 0.052pt.
+Review cell baselines remain about 2.5pt high; reviewed body/cell/header/footer
+crops show visible unclipped formula content. All sixteen original numerical
+control gates remain failed; this change establishes composition, not exact
+typography.
+
+Frozen 32f59eae / root b42436cb passes 23 selected methods in one invocation and
+three Ubuntu methods. Source ordering, wrapping, scaled stops, cancellation and
+explicit fallback controls pass. A read-only fixture workflow issue initially
+blocked seven mutation neighbors: the helper copied the source attribute onto its
+temporary DOCX. Only the temporary copy is now writable; the final artifact reuses
+the verified 1,237-file shared snapshot. Failed preliminary evidence is retained.
+All sixteen accepted control PDFs match the prototype and reuse pinned Office
+comparisons. The portfolio has no authored inline tabs, so its complete previous
+qualification is retained; letter and held-out memo review smokes retain bytes.
+Seventeen assets/four integration PDFs transfer without a root rebuild or suite
+replay. Evidence: `artifacts/composition-c1/math-left-tabs-evidence.json`.
