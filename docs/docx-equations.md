@@ -710,8 +710,8 @@ known/unknown content, source argument properties and authored controls retain
 their boundaries. An absent control remains distinct from an authored one;
 cell formatting stays attached to its own run. Unknown matrix properties,
 malformed/orphan row roles and unqualified shapes remain explicit, without
-repeated raw subtree serialization. Unqualified spacing/base-justification properties remain raw source; the typed
-column qualification follows below.
+repeated raw subtree serialization. Unqualified spacing properties remain raw
+source; the typed column and base-justification qualifications follow below.
 
 Six Word references retain ordered cell meanings and geometry for display/inline
 2x2 grids, a 3x2 grid, a fractional cell, a larger authored control and an Arial
@@ -742,8 +742,8 @@ explicit residuals. The all-normal grid emits only its painted Arial equation
 resource. Twelve affected methods, ten exact neighboring PDFs and four exact
 transfer smoke PDFs qualify one strict Release artifact. Three public cases keep
 existing visual thresholds. Structured cells, empty placeholders, mixed rows,
-explicit spacing/base-justification properties and deeper grids remain in complete
-fallback. The explicit column-justification qualification follows below.
+explicit spacing properties and deeper grids remain in complete fallback. The
+column and base-justification qualifications follow below.
 
 
 Explicit matrix column declarations now retain typed count/justification groups.
@@ -764,4 +764,21 @@ All 47 glyph outlines match Word/source. Text-operation residuals remain within
 qualify one strict Release artifact; four exact integration PDFs verify transfer.
 Three public cases retain the existing thresholds and visible residuals.
 Earlier implicit matrices, metric-only font ownership and unsupported spacing,
-base-justification, structured/empty-cell and deeper-grid fallbacks remain intact.
+structured/empty-cell and deeper-grid fallbacks remain intact.
+
+Matrix base justification now accepts the documented
+[`top`, `center` and `bot` values](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.basejustification.val?view=openxml-3.0.1).
+Omitted and val-less declarations retain the centered default. Independent Word
+controls support anchoring the first row baseline for top alignment and the last
+row baseline for bottom alignment. Center alignment retains the existing grid
+frame centered on the mathematical axis. The same row geometry and column slots
+serve all three origins, without font, size or document-specific corrections.
+Malformed, duplicate and unknown declarations preserve source and full fallback.
+
+Eight Word controls improve across display/inline top and bottom alignment,
+explicit/val-less center defaults, a larger control and a three-row grid. All 34
+glyph outlines match Word/source; text positions remain within 0.37 pt X and
+0.18 pt Y. Fifteen matrix-specific methods qualify one strict Release artifact,
+with 12 exact neighboring PDFs and four exact integration PDFs at transfer.
+Three public cases retain the existing visual thresholds and residuals. Spacing,
+structured/empty cells, mixed rows and deeper grids remain staged.
