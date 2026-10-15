@@ -62,7 +62,7 @@ The reader retains radicand, degree and degree-visibility roles; an empty hidden
 degree admits the first root slice. The parent owns the root size, operator glue
 and leading, while radicand glyphs keep their authored sizes. Ready-made vertical
 variants and a stored overbar use the font's MATH gap/rule metrics. Assemblies,
-visible degrees, richer nesting and unsupported metric/font owners retain fallback.
+richer nesting and unsupported metric/font owners retain fallback.
 Eight Word controls across 8/12/20 pt radicands improve; all candidate root outlines
 match Word/source variants, and 25 prior capability PDFs remain byte-identical.
 Larger-child errors drop from about 4.1 pt to below 0.7 pt after parent ownership
@@ -93,6 +93,21 @@ upright under italic control flags, matching Word. All ten candidate outlines
 match Word's selected source variants; 22 prior PDFs remain byte-identical.
 Position differences reach 0.27 pt horizontally and 1.93 pt vertically for
 enlarged controls. Existing visual thresholds remain unchanged.
+
+Visible literal root degrees now use the shared argument-size rule with a
+script-script starting level. Parent MATH kerns retain degree/root overlap and
+the raise percentage positions degree ink against the selected root. Radicand,
+root and overbar move together; degree ink contributes to occupied extents.
+Eight independent Word controls improve. Six standard controls differ by at
+most 0.16 pt horizontally and 0.14 pt vertically; enlarged controls retain up
+to 1.54 pt horizontal and 1.93 pt vertical differences and different optical
+degree glyphs. All eight root outlines and ten standard degree outlines match
+Word/source fingerprints. Twenty-nine focused methods and 22 byte-identical
+neighbors qualify one artifact, transferred with four matching CLI PDFs.
+Stored hidden degrees retain source and fallback: Word moves their text into
+the radicand in the measured controls, requiring separate qualification.
+Four public cases retain the existing visual thresholds.
+
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
