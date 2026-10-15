@@ -64,6 +64,11 @@ Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and 
 
 ## DOCX
 
+Placed table rows mark their actual page frame as occupied, including after a
+page transition. Following prose moves to the next page when its line no longer
+fits; it cannot use an earlier page's item count to bypass the bottom margin.
+Independent plain-table and large-equation controls restore Word's page counts.
+
 Standalone display equations in automatic body-table rows reuse prepared math
 boxes through cell measurement, placement, clipping and keep estimation. Word
 controls cover literals, fractions, scripts, adjacent cells and surrounding prose;

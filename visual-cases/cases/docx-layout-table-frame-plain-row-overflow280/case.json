@@ -1,0 +1,25 @@
+{
+  "id": "docx-layout-table-frame-plain-row-overflow280",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-omml-table-frame-plain-row-overflow280.docx",
+  "dpi": 144,
+  "tags": [
+    "docx",
+    "table",
+    "page-flow",
+    "needs-review"
+  ],
+  "docxMarkup": "all",
+  "docxMarkupGeometry": "word-compatible",
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.2,
+    "maxChangedPixelRatioAtThreshold16": 0.004,
+    "minStructuralSimilarity": 0.985,
+    "minForegroundRecall": 0.99
+  },
+  "allowedUnsupportedFeatures": []
+}
