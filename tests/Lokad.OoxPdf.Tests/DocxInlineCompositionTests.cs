@@ -8,6 +8,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionReviewStaticStoriesPreserveSharedBodyCapacity()
+    {
+        foreach (string kind in new[] { "body", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+                "ReviewBodyFrames", kind + ".docx"));
+            var document = DocxTests.ReadDocx(path, mode);
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Contains("Following body", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
+        }
+    }
+
+    public static void DocxInlineCompositionReviewPaginationRetainsSourcePageCapacity()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Office fonts are required for this independent Word control.");
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(ReadMutation("Composition/report", mode, false, false), null, default).ToArray();
+            // Independent Word exports keep these sections on the same source
+            // pages in both modes, including the header, table, image and note.
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Contains("Review section 8.", DocxPageFootnoteNumberingTests.DecodeText(pages[0]));
+            TestAssert.Contains("Review section 9.", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
+        }
+    }
+
     public static void DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns()
     {
         var document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false, (source, w, m) =>

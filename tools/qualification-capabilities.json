@@ -70,5 +70,21 @@
     "DocxStaticMath",
     "DocxStaticStoryInlineImagesShareTheTextBaseline",
     "DocxFooterInlineImageReservesItsVisibleHeight"
+  ],
+  "docx-review-body-frame": [
+    "DocxInlineComposition",
+    "DocxWordCompatibleExact",
+    "DocxWordCompatiblePlainHeader",
+    "DocxWordCompatibleMixedStoryComments",
+    "DocxLayoutLineMetricScale",
+    "DocxSimpleSectionPagination",
+    "DocxHeaderFootnoteFrames",
+    "DocxContinuedFootnoteCapacity",
+    "DocxLayoutReservesPageFootnote",
+    "DocxFootnoteStoryLaysOut",
+    "DocxTablePageContent",
+    "DocxReviewTable",
+    "DocxReviewWrappedTable",
+    "PortableRendering"
   ]
 }

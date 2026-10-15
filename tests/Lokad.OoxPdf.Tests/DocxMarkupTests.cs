@@ -409,9 +409,9 @@ internal static class DocxMarkupTests
             })
             {
                 DocxLayoutSnapshot protectedLayout = renderer.InspectLayout(WithRules(rules));
-                // Explicit keep policies retain the established page-capacity path;
-                // the Office-qualified implicit/off widow case must not widen it.
-                TestAssert.Equal(1, protectedLayout.Pages.Count);
+                // The table retains its established atomic fallback. Following
+                // body prose uses the shared printed paragraph capacity.
+                TestAssert.Equal(2, protectedLayout.Pages.Count);
                 TestAssert.Equal(1, protectedLayout.Pages[0].TableRows.Count);
                 TestAssert.Equal(1, protectedLayout.Pages[0].TableRows[0].FragmentCount);
                 TestAssert.Equal(fragments.Sum(fragment => fragment.TextLineCount),

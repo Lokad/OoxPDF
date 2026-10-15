@@ -103,3 +103,19 @@ pinned DejaVu Sans font, license and provenance under `Cases/PortableFonts`.
 The dedicated DOCX fixture authors normal mathematical text because this font
 lacks the portfolio's default mathematical italic alphabet. Ubuntu CI runs this
 group alongside its existing portable groups. Windows retains the full suite.
+
+
+The next paragraph-frame correction compares already scaled advances with the
+printed body capacity for single-column review output. Headers, footers and
+other document features no longer select a larger paragraph capacity. Three
+independent exact-height controls preserve two Word pages in both modes with no
+static story, a header or a footer. The composed report also keeps Word's break
+between review sections 8 and 9. Default report output remains byte-identical.
+Visual gates remain unmet; matching pagination alone does not establish fidelity.
+
+Table fragment capacity and its existing keep/widow fallbacks remain separately
+qualified. A broader prototype exposed disagreement between measured membership
+and painted continuation lines when combining printed capacity with the older
+fragment baseline path. That prototype is retained as rejected development
+evidence; table baseline/membership ownership needs its own bounded correction.
+Following body paragraphs still use paragraph capacity after a table fallback.

@@ -330,22 +330,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
         bool plainPageStartFrame = requestedGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && reservePrintScale == 1d &&
             DocxPlainBodyFrame.IsEligible(document);
-        bool hasSimpleScaledBodyFrame =
-            scaleBaselineOffsetTransitions && paragraphSpacingScale < 1d &&
-            document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0 &&
-            document.HeaderParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count == 0 &&
-            document.HeaderBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count == 0 &&
-            document.HeaderFloatingDrawingsByType.Count == 0 && document.FooterFloatingDrawingsByType.Count == 0 &&
-            document.PageSettings.HeaderParagraphsByType.Count == 0 &&
-            document.PageSettings.FooterParagraphsByType.Count == 0 &&
-            document.PageSettings.HeaderBodyElementsByType.Count == 0 &&
-            document.PageSettings.FooterBodyElementsByType.Count == 0 &&
-            document.PageSettings.HeaderFloatingDrawingsByType.Count == 0 &&
-            document.PageSettings.FooterFloatingDrawingsByType.Count == 0 &&
-            !document.RelatedStories.Any(story => story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) &&
-            !document.BodyElements.Any(element => element is DocxTableElement or DocxSectionBreakElement ||
-                element is DocxParagraphElement bodyParagraph &&
-                (bodyParagraph.Paragraph.Images.Count != 0 || bodyParagraph.Paragraph.InlineTextBoxes.Count != 0));
+        bool UsesPrintedBodyFrame() => scaleBaselineOffsetTransitions &&
+            paragraphSpacingScale < 1d && page.ColumnFrames.Count <= 1;
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null;
         var relatedStoryLayoutsByBodyWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var footnoteReserveHeightByBodyWidth = new Dictionary<double, IReadOnlyDictionary<int, double>>();
@@ -451,6 +437,19 @@ internal sealed partial class DocxLayoutEngine
             // footer top raises the body frame just like a footnote reserve does; the
             // higher of the two keep-out zones binds.
             return page.MarginBottom + Math.Max(currentPageFootnoteReserveHeight, ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
+        }
+
+        double CurrentParagraphFrameBottom()
+        {
+            double bottom = CurrentFrameBottom();
+            if (!UsesPrintedBodyFrame()) return bottom;
+            // Paragraph advances already occupy printed points below the source
+            // top. Static stories cannot enlarge paragraph capacity.
+            // Table fragments retain their separately qualified capacity until
+            // their baseline/membership rules share the same measured frame.
+            double printedBottom = page.Height - page.MarginTop -
+                (page.Height - page.MarginTop - page.MarginBottom) * paragraphSpacingScale;
+            return Math.Max(bottom, printedBottom + currentPageFootnoteReserveHeight);
         }
 
         DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()
@@ -1347,25 +1346,11 @@ internal sealed partial class DocxLayoutEngine
             // Consume its printed height independently; scaling that baseline box again
             // would displace the exact paragraph while fixing its following text.
             double lineHeight = scalesExactBodyAdvance ? baselineLineHeight * paragraphSpacingScale : baselineLineHeight;
-            double ParagraphFrameBottom()
-            {
-                double bottom = CurrentFrameBottom();
-                if (!scalesExactBodyAdvance || !hasSimpleScaledBodyFrame)
-                {
-                    return bottom;
-                }
-
-                // Advances occupy printed points below the authored top cursor.
-                // Reserve only the printed body height, matching Word pagination.
-                double printedBottom = page.Height - page.MarginTop -
-                    (page.Height - page.MarginTop - page.MarginBottom) * paragraphSpacingScale;
-                return Math.Max(bottom, printedBottom);
-            }
             if (textMeasurer is not null &&
                 HasPageContent() &&
                 ShouldKeepParagraphBlockTogether(paragraph))
             {
-                double keepBottom = Math.Max(ParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex));
+                double keepBottom = Math.Max(CurrentParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex));
                 DocxKeepBlockEstimate keepEstimate = EstimateKeptParagraphBlock(document.BodyElements, elementIndex,
                     width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
                     scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
@@ -1384,9 +1369,9 @@ internal sealed partial class DocxLayoutEngine
                 math.LineHeight * paragraphSpacingScale <= page.Height - page.MarginTop - page.MarginBottom)
             {
                 double advance = math.LineHeight * paragraphSpacingScale;
-                if (cursorY - advance < ParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(advance)))
+                if (cursorY - advance < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(advance)))
                 { AdvanceForOverflowingItem(advance, elementIndex); }
-                if (cursorY - advance >= ParagraphFrameBottom())
+                if (cursorY - advance >= CurrentParagraphFrameBottom())
                 {
                     double leftInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                     double areaWidth = width - leftInset - GetParagraphRightInset(paragraph, paragraphSpacingScale);
@@ -1418,7 +1403,7 @@ internal sealed partial class DocxLayoutEngine
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var line = measured[index];
-                        if (cursorY - line.OccupiedHeight < ParagraphFrameBottom() &&
+                        if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom() &&
                             (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
                             AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
                         double inset = index == 0 ? firstInset : nextInset;
@@ -1466,7 +1451,7 @@ internal sealed partial class DocxLayoutEngine
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
                     : null;
-                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, ParagraphFrameBottom(), HasCurrentColumnContent()))
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, CurrentParagraphFrameBottom(), HasCurrentColumnContent()))
                 {
                     AdvanceColumnOrPage();
                     RegisterInFlightFootnotesForSourceBlock(elementIndex);
@@ -1498,7 +1483,7 @@ internal sealed partial class DocxLayoutEngine
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
                     }
 
-                    if (cursorY - extraAbove - extraBelow - lineHeight < ParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + extraBelow + lineHeight)))
+                    if (cursorY - extraAbove - extraBelow - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + extraBelow + lineHeight)))
                     {
                         AdvanceForOverflowingItem(extraAbove + extraBelow + lineHeight, elementIndex);
                     }
@@ -1542,7 +1527,7 @@ internal sealed partial class DocxLayoutEngine
                     // An exact paragraph starting a printed continuation page
                     // retains the document's body origin; choosing its tall box
                     // as a new anchor would leave the first line too low.
-                    firstBodyLineBaselineOffset ??= hasSimpleScaledBodyFrame && scalesExactBodyAdvance
+                    firstBodyLineBaselineOffset ??= UsesPrintedBodyFrame() && scalesExactBodyAdvance
                         ? firstDocumentBodyBaselineOffset ?? rawBaselineOffset : rawBaselineOffset;
                     firstDocumentBodyBaselineOffset ??= rawBaselineOffset;
                     if (scaleBaselineOffsetTransitions && firstBodyLineBaselineOffset is { } firstOffset)
@@ -1756,7 +1741,7 @@ internal sealed partial class DocxLayoutEngine
                     // other overflowing item instead of painting below the margin; fit
                     // accounting stays zero-consumption so the following break still
                     // fits on the fresh page.
-                    bool breakSpillTurnedPage = cursorY - breakSpillAfterSpacing - lineHeight < ParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight));
+                    bool breakSpillTurnedPage = cursorY - breakSpillAfterSpacing - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight));
                     if (breakSpillTurnedPage)
                     {
                         AdvanceForOverflowingItem(lineHeight, elementIndex);
@@ -1834,7 +1819,7 @@ internal sealed partial class DocxLayoutEngine
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
             {
-                if (cursorY - lineHeight < ParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight)))
+                if (cursorY - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight)))
                 {
                     AdvanceForOverflowingItem(lineHeight, elementIndex);
                 }

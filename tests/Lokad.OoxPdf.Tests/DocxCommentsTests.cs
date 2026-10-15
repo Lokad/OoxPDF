@@ -119,27 +119,31 @@ internal static class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleExactBodyFrameRetainsHeaderFallback()
+    public static void DocxWordCompatibleExactBodyFrameSharesStaticStoryCapacity()
     {
-        // The new printed frame is admitted independently for simple body-only
-        // documents; a header retains the previous overflow boundary.
-        DocxDocument source = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true) with
+        // Independent body/header/footer Word controls retain two source pages.
+        // Zero-overflow static content cannot enlarge printed body capacity.
+        foreach (string kind in new[] { "body", "header", "footer" })
         {
-            MarginTopPoints = 72d, MarginBottomPoints = 72d
-        };
-        DocxParagraph Exact(string text, double height) => DocxTests.CreateDocxLayoutParagraph(text, 12d, height) with
-        {
-            Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }
-        };
-        DocxDocument document = source with
-        {
-            BodyElements = [source.BodyElements[0], new DocxParagraphElement(Exact("Public filler", 510d)),
-                new DocxParagraphElement(Exact("Plain spacer", 72d)),
-                new DocxParagraphElement(Exact("Following body", 90d))]
-        };
-        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        TestAssert.Equal(1, renderer.InspectLayout(document).Pages.Count);
+            DocxDocument source = CreateStoryVisibilityDocument(kind == "body" ? "header" : kind, inTable: false, bodyComment: true) with
+            {
+                MarginTopPoints = 72d, MarginBottomPoints = 72d
+            };
+            if (kind == "body") source = source with { PageSettings = DocxPageSettings.Empty };
+            DocxParagraph Exact(string text, double height) => DocxTests.CreateDocxLayoutParagraph(text, 12d, height) with
+            {
+                Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact" }
+            };
+            DocxDocument document = source with
+            {
+                BodyElements = [source.BodyElements[0], new DocxParagraphElement(Exact("Public filler", 510d)),
+                    new DocxParagraphElement(Exact("Plain spacer", 72d)),
+                    new DocxParagraphElement(Exact("Following body", 90d))]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            TestAssert.Equal(2, renderer.InspectLayout(document).Pages.Count);
+        }
     }
 
     public static void DocxWordCompatibleBalloonsUseRoundedCorners()

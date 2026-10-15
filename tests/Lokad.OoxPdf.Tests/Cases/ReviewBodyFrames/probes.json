@@ -1,0 +1,44 @@
+[
+  {
+    "Id": "body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewBodyFrames/body.docx",
+    "Sha256": "2EA1917F4383FB7E380500B7DE757CCD7B23B309254BF4067F24076D50A0A30D",
+    "SourceSha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "ExpectedText": [
+      "Public review anchor",
+      "Public filler",
+      "Plain spacer",
+      "Following body"
+    ],
+    "ExpectedEquationCount": 0,
+    "HeldOut": false
+  },
+  {
+    "Id": "header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewBodyFrames/header.docx",
+    "Sha256": "753A794C5904DBD551488737A2EFA1DD34CF27DCA9EE68F55BC6143BA17B587A",
+    "SourceSha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "ExpectedText": [
+      "Public review anchor",
+      "Public filler",
+      "Plain spacer",
+      "Following body"
+    ],
+    "ExpectedEquationCount": 0,
+    "HeldOut": false
+  },
+  {
+    "Id": "footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewBodyFrames/footer.docx",
+    "Sha256": "957B824EA47EE06186C2D39A082AEBDF4CFC64DE2F05921312338E2A7792FE95",
+    "SourceSha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "ExpectedText": [
+      "Public review anchor",
+      "Public filler",
+      "Plain spacer",
+      "Following body"
+    ],
+    "ExpectedEquationCount": 0,
+    "HeldOut": false
+  }
+]
