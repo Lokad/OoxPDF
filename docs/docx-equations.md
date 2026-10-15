@@ -56,6 +56,15 @@ PDFs remain byte-identical. The same frozen DLLs pass 32 selected portable math
 checks on Linux without rebuilding. Existing visual gates and unsupported deeper/
 rich structures remain explicit; this does not qualify multiple separate equation
 elements in a paragraph or additional stories.
+
+Square-root source and font support are staged for the next layout slice. The
+reader retains radicand, degree and degree-visibility roles, including malformed
+property fallbacks. A bounds-checked vertical-variant reader selects ready-made
+glyphs from the owning font and keeps assembly-only sizes unsupported. Its 851
+selection queries match independent fontTools values; eight Word controls use
+source-matching root outlines. This component preserves existing PDF output and
+does not yet paint radicals. Root placement, rule geometry and degree rendering
+need separate qualification.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
