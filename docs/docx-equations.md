@@ -1029,3 +1029,15 @@ actual 120 pt controls and scaled SVG fallbacks preserve PDF identities. Declare
 field/image/table/rich stories, incomplete metrics/math and table-first or multiple
 column body ownership retain existing paths. Visual thresholds remain unchanged;
 remaining comment typography and paint differences stay explicit.
+
+
+Natural static text now shares its content eligibility independently of left,
+center or right alignment. The body/plain-paragraph policy retains its existing
+left-alignment requirement; justified and richer static owners retain fallback.
+Four of eleven independent Word controls improve, seven retain exact PDFs, and
+24/24 mathematical outlines match. One Release artifact passes 59 focused tests,
+35 frozen output identity checks and four root transfer smoke checks. This closes
+the aligned static-frame slice; it does not establish broad mixed-content support.
+Adding a bookmark around a supported equation still suppresses it in both default
+and Word-compatible modes. Composition and document-level outcomes take priority
+over further small static typography corrections.
