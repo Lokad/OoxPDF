@@ -708,7 +708,7 @@ OMML parser, following the [matrix object definition](https://learn.microsoft.co
 Matrices have no implicit delimiters. Empty cells, unequal row widths, nested
 known/unknown content, source argument properties and authored controls retain
 their boundaries. An absent control remains distinct from an authored one;
-the default control derives from the first character. Unknown matrix properties,
+cell formatting stays attached to its own run. Unknown matrix properties,
 malformed/orphan row roles and unqualified shapes remain explicit, without
 repeated raw subtree serialization. Column-spacing/alignment properties remain
 raw source until independently qualified.
@@ -719,5 +719,28 @@ normal-text cell. All 31 embedded glyph outlines match their source fonts. The
 separate inspector's corrected UTF-16 range decoding supplies these text reports;
 the Office PDFs and geometry remain unchanged. Sixteen source-capability methods,
 14 exact source/native PDFs and four matching transfer PDFs qualify one strict
-Release artifact. Native matrix grid painting remains in complete fallback in
-this source component; no new visual case or grid-fidelity claim is made.
+Release artifact. At this source checkpoint native matrix grid painting retained complete fallback;
+the subsequent literal-grid qualification follows below.
+
+
+Native standalone/fitting-inline matrices now paint nonempty literal cells in
+centered columns. The [default column gap is one em](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.columngap?view=openxml-3.0.1).
+The existing argument boxes retain logical widths, fonts and colors; the control
+font owns ordinary row frames, occupied cell ink can expand them, and the whole
+grid centers on the mathematical axis. `MathLeading` is applied once to the
+composed formula. Metric-only controls reuse the existing conversion font owner
+without preparing an unused PDF resource. An omitted control uses the surrounding
+equation size while each painted cell retains its authored size. The rejected
+first-visible-character/frame prototype displaced a mixed-size contrast by
+10.61 pt; shared control ownership corrects it without a font/size whitelist.
+
+Seven independent Word controls improve in similarity and foreground recall,
+including 2x2/3x2 grids, explicit larger controls, an independently larger first
+cell and mixed/all-Arial paint. All 34 glyph outlines match Word/source. Text
+operations remain within 0.37 pt X and 0.18 pt Y; full visual results retain
+explicit residuals. The all-normal grid emits only its painted Arial equation
+resource. Twelve affected methods, ten exact neighboring PDFs and four exact
+transfer smoke PDFs qualify one strict Release artifact. Three public cases keep
+existing visual thresholds. Structured cells, empty placeholders, mixed rows,
+explicit column/spacing/base-justification properties and deeper grids remain in
+complete fallback until their own qualification.
