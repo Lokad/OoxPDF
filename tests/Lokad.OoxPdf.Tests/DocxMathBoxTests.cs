@@ -23,6 +23,10 @@ internal static class DocxMathBoxTests
                 "Normal-text punctuation retains its authored identity.");
             TestAssert.Equal((int)'-', normalPoints.Single());
         }
+        var missingMinus = Resource(TestFontBuilder.LoadTestFont(), "-A");
+        TestAssert.True(!DocxMathRowLayout.TryMeasure(Plain("-A"), _ => missingMinus, CancellationToken.None,
+            out var box, out var fallback) && box is null && fallback == "MissingMathGlyph",
+            "A font without mathematical minus must retain fallback instead of painting its short hyphen.");
     }
 
     public static void DocxMathBoxSeparatesSyntheticSlantInkFromItsLogicalAdvance()
@@ -198,15 +202,15 @@ internal static class DocxMathBoxTests
 
     public static void DocxMathBoxUnarySignsAndRelationsUseSemanticSpacing()
     {
-        var font = Resource(TestFontBuilder.LoadTestFont(), "A+B=-");
+        var font = Resource(TestFontBuilder.LoadTestFont(), "A+B=");
         DocxMathBox Measure(string text)
         {
             TestAssert.True(DocxMathRowLayout.TryMeasure(Plain(text), _ => font, CancellationToken.None, out DocxMathBox? box, out _), "Expected a literal row.");
             return TestAssert.NotNull(box);
         }
-        DocxMathBox unary = Measure("-A"), binary = Measure("A-A"), relation = Measure("A=A"), afterRelation = Measure("A=-A");
-        double hyphenAdvance = unary.Glyphs[0].Advance;
-        TestAssert.True(Math.Abs(unary.Glyphs[1].X - hyphenAdvance) < 1e-9, "An initial unary sign has no binary-operator glue.");
+        DocxMathBox unary = Measure("+A"), binary = Measure("A+A"), relation = Measure("A=A"), afterRelation = Measure("A=+A");
+        double signAdvance = unary.Glyphs[0].Advance;
+        TestAssert.True(Math.Abs(unary.Glyphs[1].X - signAdvance) < 1e-9, "An initial unary sign has no binary-operator glue.");
         double binaryGap = binary.Glyphs[1].X - binary.Glyphs[0].Advance;
         double relationGap = relation.Glyphs[1].X - relation.Glyphs[0].Advance;
         TestAssert.True(binaryGap > 0d && relationGap > binaryGap, "Relation spacing must exceed binary spacing.");
