@@ -15,7 +15,7 @@ internal static class DocxMathParagraphPolicy
                 foreach (DocxTableRow row in table.Table.Rows)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (!DocxLayoutEngine.HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) || row.Revisions.Count != 0)
+                    if (!row.HasSupportedHeight || row.Revisions.Count != 0)
                         continue;
                     foreach (DocxTableCell cell in row.Cells)
                     {

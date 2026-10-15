@@ -25,7 +25,7 @@ internal static class DocxNativeMathTests
         }
     }
 
-    public static void DocxNativeTableDisplayMathRetainsCellsProseAndFixedRowFallback()
+    public static void DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips()
     {
         RequireMathFont();
         foreach ((string suffix, string meaning) in new[] { ("literal", "x−y"), ("fraction", "x+2y"),
@@ -42,11 +42,33 @@ internal static class DocxNativeMathTests
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Painted table equations replace their ignored-source warning while retaining approximate scope.");
         }
-        var fallback = new List<OoxPdfDiagnostic>();
-        PdfPage fixedRow = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-display-fixed-row-guard"), fallback.Add, CancellationToken.None).Single();
-        TestAssert.True(fallback.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
-            !fixedRow.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
-            "A fixed row retains source fallback without preparing unused math fonts.");
+        var fixedDiagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage fixedRow = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-display-fixed-row-guard"), fixedDiagnostics.Add, CancellationToken.None).Single();
+        TestAssert.True(fixedDiagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && fixedDiagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION") &&
+            fixedRow.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "A known fixed frame paints through its existing clip instead of dropping the equation.");
+    }
+
+    public static void DocxNativeDeclaredTableMathSharesHeightAlignmentAndSourceFallbacks()
+    {
+        RequireMathFont();
+        foreach (string suffix in new[] { "exact50-top", "exact50-center", "exact50-bottom", "minimum20-top",
+            "minimum50-center", "minimum50-bottom", "default-minimum50", "exact0-top", "minimum0-top" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-declared-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("x+2y", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Resolved declared frames retain their native equation through shared measurement, alignment and clipping.");
+        }
+        foreach (string suffix in new[] { "unknown-rule", "negative-height", "missing-height" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-table-declared-guard-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
+                !page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+                "Unknown, invalid or unresolved row frames retain source fallback without unused math fonts.");
+        }
     }
 
     public static void DocxNativeCasesRetainMathematicalMinusAndNormalHyphenMeaning()

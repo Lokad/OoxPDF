@@ -1015,7 +1015,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         if (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) &&
-            row.HeightPoints is { } exactHeight)
+            row.HeightPoints is { } exactHeight && exactHeight != 0d)
         {
             double exact = Math.Max(1d, exactHeight * fixedScale) + declaredBottomMarginAdvance;
             if (isLastRow)

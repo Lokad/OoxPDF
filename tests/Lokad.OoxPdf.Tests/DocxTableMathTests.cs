@@ -13,12 +13,21 @@ internal static class DocxTableMathTests
         var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
         var row = new DocxTableRow([cell], null);
         DocxDocument Document(DocxTableRow candidate) => TableDocument(candidate);
-        TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(row), CancellationToken.None)
-            .Single(source => source.Equations.Count != 0)),
-            "Automatic cell display uses the same source paragraph identity as prepared math.");
+        foreach (DocxTableRow supported in new[] { row,
+            row with { HeightPoints = 12d, HeightRuleValue = "exact" },
+            row with { HeightPoints = 50d, HeightRuleValue = "atLeast" },
+            row with { HeightPoints = 50d, HeightValue = "1000" },
+            row with { HeightPoints = 0d, HeightRuleValue = "exact" } })
+            TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(supported), CancellationToken.None)
+                .Single(source => source.Equations.Count != 0)),
+                "Resolved cell frames retain the same source paragraph identity as prepared math.");
         foreach (DocxTableRow unsupported in new[]
         {
-            row with { HeightPoints = 12d, HeightRuleValue = "exact" },
+            row with { HeightPoints = 12d, HeightRuleValue = "unknown" },
+            row with { HeightPoints = -12d, HeightRuleValue = "exact" },
+            row with { HeightPoints = double.PositiveInfinity, HeightRuleValue = "exact" },
+            row with { HeightValue = "bad", HeightRuleValue = "exact" },
+            row with { HeightRuleValue = "exact" },
             row with { Cells = [cell with { HasVerticalMerge = true }] },
             row with { Cells = [cell with { FitText = true }] },
             row with { Cells = [cell with { TextDirectionValue = "tbRl" }] },
@@ -30,6 +39,31 @@ internal static class DocxTableMathTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() =>
             DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(row), cancelled.Token).ToArray());
+    }
+
+    public static void DocxTableZeroExactHeightRetainsTheNaturalContentFrame()
+    {
+        foreach (bool bordered in new[] { false, true })
+        {
+            DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell.", 10d, 12d);
+            var cell = new DocxTableCell("Public cell.", [paragraph], null, null, null, null,
+                bordered ? [new DocxTableCellBorder("bottom", "single", "243042", "4")] : [], DocxTableCellMargins.Empty);
+            DocxLayout Layout(string rule)
+            {
+                DocxDocument source = TableDocument(new DocxTableRow([cell], 0d) { HeightRuleValue = rule });
+                return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                    .Create(source, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            }
+            DocxLayout exact = Layout("exact"), minimum = Layout("atLeast");
+            var exactRow = exact.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+            var naturalRow = minimum.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.True(exactRow.Height >= 12d && Math.Abs(exactRow.Height - naturalRow.Height) < .000001,
+                "Zero exact height uses natural content, including its visible border, rather than a one-point clip.");
+            double afterExact = exact.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+            double afterNatural = minimum.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+            TestAssert.True(Math.Abs(afterExact - afterNatural) < .000001,
+                "Following flow must use the same natural zero-height frame.");
+        }
     }
 
     public static void DocxTableMathMeasurementMemoAndFollowingFlowUseOneBoxAdvance()
