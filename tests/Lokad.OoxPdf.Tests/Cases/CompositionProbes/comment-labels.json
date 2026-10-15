@@ -1,0 +1,18 @@
+[
+  {
+    "Id": "comment-labels",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-labels.docx",
+    "Sha256": "DC0944B0E45012F9B4B4BDDEAA1874C9A896AA5D4AD1BA3BA673E49E8825C148",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public comment anchor 1.",
+      "Public comment anchor 2.",
+      "Public comment anchor 3.",
+      "Public comment anchor 4.",
+      "Public comment anchor 5."
+    ]
+  }
+]

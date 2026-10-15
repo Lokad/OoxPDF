@@ -299,5 +299,19 @@
     "DocxNativeInlineFraction",
     "DocxNativeInlineScript",
     "DocxNativeMathUsesItsOccupiedBodyFrame"
+  ],
+  "docx-comment-initials": [
+    "PortableRendering",
+    "DocxAllMarkupRendererDrawsCommentBalloons",
+    "DocxWordCompatibleAllMarkupOmitsInlineCommentMarkerLabels",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxCommentAuthorPalette",
+    "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors",
+    "DocxBalloonTitleFace",
+    "DocxWordCompatibleBalloonBodyStartsAtDrawnTitleEnd",
+    "DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles",
+    "DocxWordCompatibleBalloonBodiesUseOfficeMeasuredWidth",
+    "DocxWordCompatibleThreadPrintMatchesParentOnlyWithoutDroppingMetadata",
+    "DocxWordCompatibleAllMarkupKeepsReplyMetadataWithoutPrintedSeparators"
   ]
 }

@@ -41,6 +41,19 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingCommentLabelsPreserveExplicitInitials()
+    {
+        var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-labels.docx"), OoxPdfDocxMarkupMode.AllMarkup);
+        var pages = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).ToArray();
+        string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+        foreach (string label in new[] { "[1]", "[2]", "[RV3]", "[4]", "[QA5]" })
+            TestAssert.Contains("Commented " + label + ":", text);
+        TestAssert.True(!text.Contains("Public reviewer", StringComparison.Ordinal) && !text.Contains("Alternate author", StringComparison.Ordinal),
+            "Word-compatible captions consume explicit initials and encounter-order numbers, without substituting author names.");
+        CheckWrittenPages(pages);
+    }
+
     public static void PortableRenderingSingleMathAnnotationsPreserveFrames()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

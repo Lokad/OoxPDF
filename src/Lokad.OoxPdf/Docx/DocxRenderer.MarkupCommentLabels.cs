@@ -67,9 +67,9 @@ internal sealed partial class DocxRenderer
                 {
                     continue;
                 }
-                string? initials = FirstNonEmpty(story.CommentMetadata?.Initials, story.CommentMetadata?.Author);
+                string? initials = FirstNonEmpty(story.CommentMetadata?.Initials);
                 string number = (labels.Count + 1).ToString(CultureInfo.InvariantCulture);
-                labels.Add(id, "[" + (initials ?? "Comment ") + number + "]");
+                labels.Add(id, "[" + (initials ?? string.Empty) + number + "]");
             }
         }
         return labels.Count == 0 ? null : labels;
@@ -82,7 +82,7 @@ internal sealed partial class DocxRenderer
             return "Commented " + label + ": ";
         }
         DocxCommentMetadata? metadata = story?.CommentMetadata;
-        string? initials = FirstNonEmpty(metadata?.Initials, metadata?.Author);
+        string? initials = FirstNonEmpty(metadata?.Initials);
         string? id = FirstNonEmpty(fallbackId);
         if (initials is not null && id is not null)
         {
@@ -96,7 +96,7 @@ internal sealed partial class DocxRenderer
 
         return id is null
             ? "Commented: "
-            : "Commented [Comment " + id + "]: ";
+            : "Commented [" + id + "]: ";
     }
 
     internal static string BuildCommentBalloonPreview(DocxRelatedStoryLayout? storyLayout)
