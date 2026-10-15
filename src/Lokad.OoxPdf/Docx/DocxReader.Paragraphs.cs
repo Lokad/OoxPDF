@@ -27,7 +27,10 @@ internal sealed partial class DocxReader
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
-        string? paragraphStyleId = ReadParagraphStyleId(paragraphProperties);
+        string? authoredParagraphStyleId = ReadParagraphStyleId(paragraphProperties);
+        string? paragraphStyleId = authoredParagraphStyleId;
+        if (paragraphProperties?.Element(WordprocessingNamespace + "pStyle") is null)
+            paragraphStyleId ??= styles.DeclaredDefaultParagraphStyleId;
         DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
             paragraphProperties,
             paragraphStyleId,
@@ -35,7 +38,7 @@ internal sealed partial class DocxReader
             tableCellStyle?.Paragraph);
         DocxParagraphStyleResolution styleResolution = CreateParagraphStyleResolution(
             paragraphProperties,
-            paragraphStyleId,
+            authoredParagraphStyleId,
             styles,
             tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
@@ -244,7 +247,8 @@ internal sealed partial class DocxReader
         }
 
         double paragraphFontSize = runs.Count == 0 ? DocxDefaults.FontSizePoints : runs.Max(run => run.FontSize);
-        double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ?? ResolveDefaultAutoLineSpacingFactor(resolvedParagraph);
+        double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ??
+            (styles.HasParagraphDefaultOwner ? 1d : WordImplicitNormalAutoLineSpacingFactor);
         double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
 
         DocxTextRun? firstCommentRun = retainBalloonParagraphMark
@@ -283,7 +287,7 @@ internal sealed partial class DocxReader
         return new DocxParagraph(
             runs,
             images,
-            paragraphStyleId,
+            authoredParagraphStyleId,
             resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
             resolvedParagraph.AlignmentValue,
             ResolveSpacingBeforePoints(resolvedParagraph, paragraphLineHeight),

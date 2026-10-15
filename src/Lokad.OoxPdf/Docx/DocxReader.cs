@@ -21,11 +21,10 @@ namespace Lokad.OoxPdf.Docx;
 //   Assembly: Core.Read tail builds the DocxDocument from stage outputs.
 internal sealed partial class DocxReader
 {
-    // Word default auto spacing is 278/240, not 1.15 (w15-w20 pitch probes: style-less
-    // 11pt Arial body pitches 14.64 with after 0, so factor about 1.1573 on single 12.65;
-    // Normal styles resolve w:line 278 exactly; explicit w:line values pass through untouched).
-    private const double WordUntokenedAutoLineSpacingFactor = 278d / 240d;
-    private const double WordSpacingTokenAutoLineSpacingFactor = 278d / 240d;
+    // Preserve Word's implicit Normal fallback when document paragraph defaults
+    // are absent. A declared default owner supplies single spacing instead;
+    // explicit/inherited line tokens resolve before either fallback.
+    private const double WordImplicitNormalAutoLineSpacingFactor = 278d / 240d;
 
 
     private sealed class DocxComplexFieldState

@@ -14,6 +14,33 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var gaps = new Dictionary<string, double>();
+            foreach (string scope in new[] { "bare", "paragraph-defaults", "paragraph-defaults-empty", "normal-278-paragraph-defaults" })
+            {
+                var document = DocxTests.ReadDocx(Case("CompositionProbes/line-spacing-owner-" + scope + ".docx"), mode);
+                var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                    ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                var lines = renderer.InspectLayout(document).Pages.SelectMany(page => page.Items)
+                    .Where(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0).ToArray();
+                TestAssert.True(lines.Length >= 2, "The source paragraph must wrap to expose its inherited line slot.");
+                gaps.Add(scope, lines[0].Y - lines[1].Y);
+                var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+                string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+                foreach (int index in Enumerable.Range(1, 6)) TestAssert.Contains("Case " + index + ".", text);
+                CheckWrittenPages(pages);
+            }
+            TestAssert.True(Math.Abs(gaps["paragraph-defaults"] - gaps["paragraph-defaults-empty"]) < 0.000001d,
+                "An empty default owner has the same line inheritance as an owner with only side spacing.");
+            TestAssert.True(Math.Abs(gaps["bare"] - gaps["normal-278-paragraph-defaults"]) < 0.000001d,
+                "An explicit inherited Normal line value must override the document-default fallback.");
+            TestAssert.True(gaps["paragraph-defaults"] < gaps["bare"], "Source-owned single spacing must not silently inherit implicit Normal leading.");
+        }
+    }
+
     public static void PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement()
     {
         foreach (string story in new[] { "cell", "header", "footer" })

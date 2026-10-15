@@ -58,7 +58,7 @@ $catalog = @(foreach ($line in Get-Content -LiteralPath $catalogPath) {
 if (!$catalog.Count -or @($catalog.Name | Sort-Object -Unique).Count -ne $catalog.Count) {
     throw 'Test catalogue is empty or ambiguous'
 }
-$filters = if ($AllDocx) { @('Docx', 'Balloon') }
+$filters = if ($AllDocx) { @('Docx', 'Balloon', 'PortableRendering') }
 elseif ($Capability) {
     $manifest = Get-Content -LiteralPath $SelectionManifest -Raw | ConvertFrom-Json -AsHashtable
     @(foreach ($key in $Capability) {

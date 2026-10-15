@@ -29,14 +29,6 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static double ResolveDefaultAutoLineSpacingFactor(DocxResolvedParagraphProperties paragraph)
-    {
-        return DocxParagraphSpacing.HasBeforeSpacingSide(paragraph.Spacing) || DocxParagraphSpacing.HasAfterSpacingSide(paragraph.Spacing)
-            ? WordSpacingTokenAutoLineSpacingFactor
-            : WordUntokenedAutoLineSpacingFactor;
-    }
-
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static double ResolveSpacingAfterPoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
     {
         if (paragraph.SpacingAfterPoints is { } points)

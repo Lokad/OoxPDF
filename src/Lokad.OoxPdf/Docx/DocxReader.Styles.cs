@@ -84,6 +84,9 @@ internal sealed partial class DocxReader
             : null;
         return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles, resolvedTableStyles, defaultTableStyleId, defaultTableStyle)
         {
+            HasParagraphDefaultOwner = stylesXml.Root?.Element(WordprocessingNamespace + "docDefaults")?
+                .Element(WordprocessingNamespace + "pPrDefault")?.Element(WordprocessingNamespace + "pPr") is not null,
+            DeclaredDefaultParagraphStyleId = defaultParagraphStyleIds.Count == 1 ? defaultParagraphStyleIds[0] : null,
             // Word supplies Normal when no paragraph default is declared.
             // This identity is separate from property inheritance.
             ContextualSpacingDefaultStyleId = defaultParagraphStyleIds.Count switch
@@ -549,6 +552,8 @@ internal sealed partial class DocxReader
         string? DefaultTableStyleId,
         DocxTableStyle? DefaultTableStyle)
     {
+        public bool HasParagraphDefaultOwner { get; init; }
+        public string? DeclaredDefaultParagraphStyleId { get; init; }
         public string? ContextualSpacingDefaultStyleId { get; init; }
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),

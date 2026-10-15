@@ -12,6 +12,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCoreTests
 {
+    public static void DocxReaderDocumentDefaultOwnerControlsUnspecifiedLineSpacing()
+    {
+        foreach (string scope in new[] { "bare", "defaults", "normal-unset", "normal-278", "paragraph-defaults", "paragraph-defaults-empty", "normal-278-paragraph-defaults" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+                "CompositionProbes", "line-spacing-owner-" + scope + ".docx"));
+            var document = DocxTests.ReadDocx(path, mode);
+            double expected = scope is "paragraph-defaults" or "paragraph-defaults-empty" ? 1d : 278d / 240d;
+            TestAssert.Equal(6, document.Paragraphs.Count);
+            TestAssert.True(document.Paragraphs.All(paragraph => paragraph.LineSpacingFactor == expected),
+                "Declared document defaults, including an empty owner, supply single spacing; inherited explicit line values and implicit Normal retain their own spacing.");
+        }
+    }
+
     public static void DocxReaderTextWhitespaceMatchesOffice()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
