@@ -84,3 +84,14 @@ Display combinations, tabs, fields, revisions, list labels and rich source owner
 retain explicit fallbacks. The older single-equation marker path remains until a
 separate measured migration preserves its Office comparisons. This is a bounded
 migration, not completion of the composed-document checkpoint.
+
+
+The mixed-content Release artifact passes 59 capability and neighboring methods
+in one invocation with no skips. Eight DOCX portfolio outcomes now retain all
+expected prose and have no ignored-equation diagnostic. The development report's
+native checks verify all six equations and an actual image drawing in both modes;
+sixteen placement/mode checks verify two equations and one image drawing each.
+All 22 placement PDFs match their independently compared prototypes exactly, so
+the Office comparisons are reused. Both deck PDFs also retain their baseline bytes.
+All eight DOCX portfolio visual comparisons still fail; the report and memo retain
+their AllMarkup page-count mismatch. These residuals block checkpoint completion.
