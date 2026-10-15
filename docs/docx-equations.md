@@ -456,6 +456,20 @@ reach 0.62 pt horizontally and 0.32 pt vertically. All four operator outlines an
 uses different optical child glyphs in Word; that residual remains recorded,
 without adding a font/size correction branch. Fifteen focused methods, 21 exact
 neighbor PDFs and four transfer smoke PDFs qualify one artifact. Two public cases
-retain existing visual thresholds and explicit needs-review status. Side limits,
-integral sizing, omitted document defaults, hidden limits, richer arguments and
+retain existing visual thresholds and explicit needs-review status. Integral sizing, omitted document defaults, hidden limits, richer arguments and
 assemblies remain staged with complete fallback.
+
+
+Sum/product side limits share argument sizing, constant validation and baseline
+shifts with ordinary script boxes. Inline equations use side limits even when
+the source requests undOvr, matching the retained Word controls. Display versus
+inline trailing body spacing is an inferred Office profile supported by six
+independent controls, including larger-control and larger-body contrasts.
+All six comparisons improve; position differences reach 0.64 pt horizontally
+and 0.24 pt vertically. Larger-control optical child glyph differences remain
+explicit, with no added font/size rule. Twenty-four focused methods, 29 exact
+neighbor PDFs (including ordinary scripts, fraction bases, cramped roots and
+stacked operators) and four exact transfer smoke PDFs qualify one artifact.
+Three public cases retain existing visual thresholds. Hidden limits, omitted
+document defaults, integral sizing, rich/deeper structures and assemblies
+remain staged with complete fallback.
