@@ -694,3 +694,19 @@ visual residuals. Wider rich/related/floating stories and OMML remain on the
 roadmap. The next maintenance step reuses unchanged immutable fixture snapshots;
 subsequent rendering work returns to supported-content composition rather than
 fitting the held-out portfolio or lowering visual thresholds.
+
+
+Qualification freezes now share a read-only public fixture snapshot keyed by its
+Git Cases tree across artifacts and linked worktrees. Every freeze still checks
+all source/snapshot SHA values and file counts, then links its runner's Cases
+directory to that snapshot. Changed input trees remain separate. Seven focused
+checks pass on Windows and Ubuntu, including dirty inputs, corrupt snapshot and
+mixed-library rejection, and linked-worktree reuse. CI runs the same small tool
+checks; no library suite is added.
+
+Applied artifact `frozen-shared-inputs` verifies 1,227 fixtures and preserves the
+previously qualified 2ad7208a library bytes. One runner integration method and one
+CLI conversion through the fixture link pass, the latter reproducing the accepted
+PDF exactly. No library rebuild or qualification replay was needed. Evidence:
+`artifacts/composition-c1/shared-fixture-evidence.json`. Historical fixture copies
+and the previously rejected retirement targets remain untouched.
