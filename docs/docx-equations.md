@@ -108,6 +108,18 @@ Stored hidden degrees retain source and fallback: Word moves their text into
 the radicand in the measured controls, requiring separate qualification.
 Four public cases retain the existing visual thresholds.
 
+A single fraction or no-bar stack can also serve as a square/nth-root radicand.
+Shared bounded argument discovery supplies the same display/inline child styles
+as a fraction/stack script base. The root reuses the measured child box, moving
+its glyphs and rules together, while the root owns its overbar and parent
+leading. Normal-text children keep independent font resources and rule colors.
+Eight Word controls improve with differences below 0.17 pt horizontally and
+0.53 pt vertically. All eight root outlines and four visible degree outlines
+match Word/source. Forty-five focused methods, 24 unchanged neighbor PDFs and
+four exact transfer smoke PDFs qualify one artifact. Four public cases retain
+the existing thresholds. Assembly-only heights, richer or arbitrary recursive
+radicands and unsupported degree/control formatting retain fallback.
+
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
