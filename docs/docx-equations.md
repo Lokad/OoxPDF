@@ -955,3 +955,20 @@ PDFs qualify one strict Release artifact. Three public cases retain thresholds
 and explicit visual residuals. A separate uniform cell italic-correction prototype
 was rejected after larger-control and mixed-row regressions; its evidence is
 retained and accepted cell widths are unchanged.
+
+One supported inline equation in a plain body-table cell now reuses the body
+wrapper and prepared box. The source run boundary owns its position; following
+prose can wrap while the equation remains complete. Cell measurement and placement
+share occupied width and vertical expansion, including existing declared-row
+alignment and clipping. Unfit boxes retain ordinary prose pagination; only painted
+math boxes keep their row atomic. Multiple equations, rich cell owners and wider
+story/fragment support remain staged.
+
+Six independent Word controls cover literal, fraction, script and root content,
+following-prose wrapping and a centered exact-height row. All six improve and all
+22 math glyph outlines match; positions remain within 0.064 pt X / 0.352 pt Y.
+Visual SSIM ranges from 0.898 to 0.981, so existing strict thresholds remain under
+review. Twenty-three focused methods, 23 exact neighboring/fallback PDFs and four
+exact transfer PDFs qualify one strict Release artifact. All three added test
+methods appear explicitly in the selected-method audit. No root rebuild, repeated
+suite or Office/raster replay is needed to transfer the artifact.

@@ -77,8 +77,11 @@ and minimum frames add 13 Word controls and 40 matching math outlines, within
 0.05 pt X / 0.18 pt Y. Small exact frames retain their authored clipping; zero
 exact height uses the natural content frame for both math and plain cells.
 Visual gates remain explicit needs-review. Unknown, negative or unresolved heights,
-vertical merges, nested cell content, fit text, vertical text, revisions and inline
-cell equations keep fallback.
+vertical merges, nested cell content, fit text, vertical text and revisions keep
+fallback. One fitting inline equation in plain cell prose reuses the body source-
+boundary wrapper and complete box; following prose can wrap. Six Word controls
+improve, with 22/22 matching outlines and residuals below 0.064 pt X / 0.352 pt Y.
+Unfit boxes and multiple cell equations retain the whole fallback.
 Math-bearing rows remain atomic; oversized-row and wider pagination are unqualified.
 
 Mathematical runs select the minus glyph for an authored ASCII hyphen across
