@@ -82,8 +82,17 @@ Calibri/Arial and authored child colors: six improve and two remain exact.
 Root glyphs and bars keep inherited black while children keep their own color
 and face. Thirty-three prior PDFs remain byte-identical; position differences
 reach 0.12 pt horizontally and 0.46 pt vertically, with unchanged visual gates.
-Authored radical control properties beyond the current inherited formatting
-remain on explicit fallback.
+Neutral and supported authored radical control properties now retain typed
+size/color/font ownership through the existing run-property reader. Each root
+resolves its own implicit font resource, including sibling roots with different
+controls. Shared formatting rules keep unknown, revision-bearing, decorative and
+bold control formatting on explicit fallback. Ten independent Word controls
+across display/inline placement, 8/12/20 pt controls, green color and italic flags
+improve against the previous ignored output. Mathematical root glyphs remain
+upright under italic control flags, matching Word. All ten candidate outlines
+match Word's selected source variants; 22 prior PDFs remain byte-identical.
+Position differences reach 0.27 pt horizontally and 1.93 pt vertically for
+enlarged controls. Existing visual thresholds remain unchanged.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
