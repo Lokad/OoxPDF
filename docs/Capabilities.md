@@ -141,7 +141,8 @@ bounded bodies, using extended-shape and italic metrics for their side limits. A
 supported; explicit growth fits occupied body height using ready-made variants. These n-ary boxes also
 participate in bounded mixed rows through semantic operator/body edges. Literal function names with bounded literal, delimiter,
 script or fraction arguments also render standalone or in bounded mixed rows,
-with independent control and paint fonts. Native matrices support nonempty literal
+with independent control and paint fonts. Bounded matrices are also supported
+as function arguments. Native matrices support nonempty literal
 or bounded fraction/stack/script cells in
 standalone/fitting-inline grids or bounded mixed rows, with centered or declared left/right/grouped columns,
 top/center/bottom base justification, default row spacing and authored column

@@ -905,3 +905,19 @@ added. Thirty-eight control/encoding methods, 14 exact neighboring PDFs and four
 exact integration PDFs qualify one strict Release artifact. Three public cases
 retain existing thresholds. An all-Arial grid publishes its painted cell and fence
 fonts while the inner metric control adds no extra PDF resource.
+
+Function arguments now admit the already-supported bounded matrix through the
+same discovery and argument measurement. Name and matrix controls retain separate
+metric owners; names, cell fonts and hidden slots keep their existing paint
+semantics. Surrounding function/row context supplies the effective matrix control
+size. Unknown or deeper function arguments remain in complete fallback.
+
+Eight Word controls qualify seven improvements and one byte-identical existing
+fenced-function guard, covering normal Arial paint, grouped columns, hidden cells
+and inner/outer/mixed-row control contrasts. The outline audit matches 63/65
+glyphs; the two inherited fence variants remain different. Ordinary controls stay
+within 0.40 pt X and 0.35 pt Y. The larger function control retains a 3.15 pt Y
+residual, and a mixed-row contrast retains 2.74 pt X. Twenty-three focused methods,
+12 exact neighbors and four exact transfer PDFs qualify one strict Release
+artifact. Three public cases keep existing thresholds. An all-normal application
+publishes only its painted Arial resource despite two mathematical metric owners.
