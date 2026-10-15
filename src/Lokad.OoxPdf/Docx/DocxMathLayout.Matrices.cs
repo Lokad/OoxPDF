@@ -161,7 +161,8 @@ internal static partial class DocxMathLayout
             top -= rowAbove[r] + rowBelow[r];
         }
         box = new(width, inkAbove, inkBelow, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), Rules = rules };
+        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), Rules = rules,
+            EnclosureHeight = inkAbove + inkBelow };
         fallback = null;
         return true;
     }
