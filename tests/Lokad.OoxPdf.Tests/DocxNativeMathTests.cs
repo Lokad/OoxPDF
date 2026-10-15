@@ -7,6 +7,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeAlignedStaticFramesRetainOfficeBodyAndFooterSlots()
+    {
+        RequireMathFont();
+        foreach ((string suffix, double bodyY, double followingY) in new[]
+        {
+            ("header-center11", 672.22d, 687.77d), ("header-right18", 666.17d, 681.72d),
+            ("footer-center11", 676.20d, 138.79d), ("footer-right18", 676.20d, 138.79d)
+        })
+        {
+            var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var emission = renderer.InspectTextEmission(NamedFixture("docx-static-frame-source-" + suffix));
+            var body = emission.Lines.First(line => !line.IsStaticStory && line.SourceBlockIndex == 0);
+            var following = emission.Lines.Single(line => line.IsStaticStory && line.SourceParagraphIndex == 1);
+            TestAssert.True(Math.Abs(body.Segments[0].BaselineY - bodyY) < .08d &&
+                Math.Abs(following.Segments[0].BaselineY - followingY) < .23d,
+                "Natural static alignment shares source-frame origins; body and footer retain independent Word slots.");
+        }
+    }
+
     public static void DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots()
     {
         RequireMathFont();

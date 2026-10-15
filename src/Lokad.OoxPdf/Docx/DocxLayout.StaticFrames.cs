@@ -78,7 +78,8 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (!TryGetStandaloneMath(paragraph, width, 1d, mathParagraphs, out _)) { return false; }
             }
-            else if (!IsPlainStaticParagraph(paragraph)) { return false; }
+            else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
+                !HasNaturalStaticParagraphContent(paragraph)) { return false; }
         }
         return true;
     }

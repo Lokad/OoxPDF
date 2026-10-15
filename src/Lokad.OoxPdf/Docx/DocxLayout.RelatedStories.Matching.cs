@@ -293,7 +293,10 @@ internal sealed partial class DocxLayoutEngine
             ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) : 0d;
 
     private static bool IsPlainStaticParagraph(DocxParagraph paragraph) =>
-        DocxPlainBodyFrame.IsPlainParagraph(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
+        paragraph.Alignment == DocxTextAlignment.Left && HasNaturalStaticParagraphContent(paragraph);
+
+    private static bool HasNaturalStaticParagraphContent(DocxParagraph paragraph) =>
+        DocxPlainBodyFrame.HasPlainTextContent(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
         paragraph.InlineReferences.Count == 0 && paragraph.Runs.All(run => run.FieldKind is null);
 
     private static bool HasPlainStaticNoteStories(DocxDocument document, DocxLayoutPage page,

@@ -312,6 +312,31 @@ internal static class DocxTableMathTests
         }
     }
 
+    public static void DocxStaticFrameMappingSeparatesAlignmentFromPlainContentOwnership()
+    {
+        DocxParagraph source = DocxTests.CreateDocxLayoutParagraph("Public static prose.", 10d, 10d) with { LineSpacingPoints = null };
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        var positions = new List<double>();
+        foreach (DocxTextAlignment alignment in new[] { DocxTextAlignment.Left, DocxTextAlignment.Center, DocxTextAlignment.Right, DocxTextAlignment.Justified })
+        {
+            DocxParagraph paragraph = source with { Alignment = alignment };
+            TestAssert.True(DocxPlainBodyFrame.HasPlainTextContent(paragraph), "Alignment does not change plain content ownership.");
+            TestAssert.Equal(alignment == DocxTextAlignment.Left, DocxPlainBodyFrame.IsPlainParagraph(paragraph));
+            DocxPageSettings settings = DocxPageSettings.Empty with
+            { HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] } };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
+                .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, .75d, .75d), default, measurer);
+            var line = layout.Pages.Single().StaticTextLines.Single();
+            TestAssert.Equal(alignment != DocxTextAlignment.Justified, line.StaticStoryUsesPhysicalY);
+            if (alignment != DocxTextAlignment.Justified) positions.Add(line.X);
+            TestAssert.Equal(alignment, paragraph.Alignment);
+        }
+        TestAssert.True(positions[0] < positions[1] && positions[1] < positions[2],
+            "Already supported left/center/right placement shares one source rule while body/note eligibility remains left-only.");
+    }
+
     private static (DocxParagraph Paragraph, DocxPreparedMathParagraph Math) Prepared(double height)
     {
         var run = new DocxTextRun("A+B", 10d, null, false, false, false, null, "TestFont");
