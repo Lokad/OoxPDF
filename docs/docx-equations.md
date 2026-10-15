@@ -538,3 +538,17 @@ outlines match Word/source; position differences reach 0.12 pt horizontally and
 four matching transfer smoke PDFs qualify one artifact. Three public cases keep
 the existing visual thresholds. Display integral sizing remains unresolved and
 retains complete fallback; no font/point correction is used to enable it.
+
+
+Centered literal delimiter boxes now participate in bounded mixed rows, sharing
+one eligibility rule with standalone delimiters. Surrounding literals, multiple
+arguments and fixed/growing controls retain source order, child sizes/colors,
+per-node controls and the existing parent spacing/line frame. Missing encoding
+in a later control keeps the entire row in fallback. Six Word comparisons
+improve across display/inline single, multiple-argument and mixed-growth rows.
+Position differences reach 0.67 pt horizontally and 0.06 pt vertically; all
+74 glyph outlines match Word/source.
+Twenty-three focused methods, 26 unchanged neighboring PDFs and four matching
+transfer smoke PDFs qualify one artifact. Three public cases retain existing
+visual thresholds. Nested delimiter arguments, unqualified shape/growth profiles
+and arbitrary deeper structures remain staged with complete fallback.
