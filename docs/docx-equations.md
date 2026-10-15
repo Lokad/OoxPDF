@@ -552,3 +552,23 @@ Twenty-three focused methods, 26 unchanged neighboring PDFs and four matching
 transfer smoke PDFs qualify one artifact. Three public cases retain existing
 visual thresholds. Nested delimiter arguments, unqualified shape/growth profiles
 and arbitrary deeper structures remain staged with complete fallback.
+
+
+N-ary growth now distinguishes an omitted/off property from explicit on. Unlike
+delimiters, omitted n-ary growth defaults to off, following the
+[OOXML growth definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.growoperators?view=openxml-3.0.1).
+Off keeps the normal display minimum or inline base selection. Explicit on fits
+the body's occupied height through the bounded ready-made variant reader, in
+display and inline equations. It does not use a delimiter's symmetric extension
+around the math axis; independent contrasts reject that model. Heights beyond
+available variants and missing selected encoding retain complete fallback.
+
+Thirteen qualified Word controls cover source flags and 24/36/48 pt taller-body
+contrasts. Six previously omitted controls gain output, five wrong-height cases
+are repaired and two adequate operators stay byte-for-byte unchanged. All 90
+glyph outlines and 11 independent font queries match. Position differences reach
+0.91 pt horizontally and 0.24 pt vertically. Twenty-six focused methods, 33 exact
+neighbor PDFs and four matching transfer smoke PDFs qualify one artifact. Three
+public cases retain existing visual thresholds. One separately measured display
+integral growth-off case retains its unresolved sizing fallback. No font/point
+correction, glyph assembly or new quota/cache framework is introduced.
