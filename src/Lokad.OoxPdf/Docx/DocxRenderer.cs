@@ -277,7 +277,6 @@ internal sealed partial class DocxRenderer
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
         bool useWordCompatibleTextProfile = UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext);
-        bool suppressCommentReferenceSpacer = ShouldSuppressWordCompatibleCommentReferenceSpacer(effectiveMarkupContext);
         var lines = new List<DocxTextEmissionLineSnapshot>();
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, CancellationToken.None);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
@@ -313,7 +312,6 @@ internal sealed partial class DocxRenderer
                     textEmissionFontScale,
                     textEmissionBaselineOffset,
                     textEmissionXOffset,
-                    suppressCommentReferenceSpacer,
                     useWordCompatibleTextProfile));
             }
 
@@ -352,7 +350,6 @@ internal sealed partial class DocxRenderer
                     textEmissionFontScale,
                     textEmissionBaselineOffset,
                     textEmissionXOffset,
-                    suppressCommentReferenceSpacer,
                     useWordCompatibleTextProfile));
             }
         }
@@ -1032,11 +1029,6 @@ internal sealed partial class DocxRenderer
             markupContext.ExpandsMarkupMargin;
     }
 
-    private static bool ShouldSuppressWordCompatibleCommentReferenceSpacer(DocxMarkupContext markupContext)
-    {
-        return UsesWordCompatibleAllMarkupTextProfile(markupContext);
-    }
-
     internal static double ResolveLayoutLineMetricScale(DocxMarkupContext markupContext)
     {
         // Office dense pitch (13.18 at 12pt single spacing) equals per-doc-scale metrics,
@@ -1095,7 +1087,6 @@ internal sealed partial class DocxRenderer
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
         bool useWordCompatibleTextProfile = UsesWordCompatibleAllMarkupTextProfile(markupContext);
-        bool suppressCommentReferenceSpacer = ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext);
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         IReadOnlyDictionary<string, PdfLinkDestination> bookmarkDestinations = CreateBookmarkDestinations();
         IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), PdfLinkDestination> noteDestinations =
@@ -1259,7 +1250,7 @@ internal sealed partial class DocxRenderer
                         continue;
                     }
 
-                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, pageTextEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken)
+                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, pageTextEmissionXOffset, useWordCompatibleTextProfile, cancellationToken)
                         .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
                         .ToArray();
                     foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
@@ -1434,7 +1425,7 @@ internal sealed partial class DocxRenderer
                     ? BodyHyperlinkRectHorizontalPadPoints * textEmissionFontScale
                     : HyperlinkRectHorizontalPadEm * line.FontSize;
                 var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX, double Top, double BaseBl, double BaseFs)>();
-                foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile, cancellationToken))
+                foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (segment.IsTerminalLineSpace || segment.SourceTextRunIndex < 0 || segment.Width <= 0d)

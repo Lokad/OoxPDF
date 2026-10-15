@@ -159,6 +159,26 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingCommentsPreserveAuthoredWhitespace() =>
+        CheckCommentAuthoredWhitespace(new PinnedResolver());
+
+    internal static void CheckCommentAuthoredWhitespace(IFontResolver? resolver)
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-authored-whitespace.docx"), mode);
+            var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            foreach (string expected in new[] { "Reviewed check. Supporting note1", "Earlier annotation. Separate words",
+                "Same run. Following text", "Multiple spaces.  Two spaces", "Nonbreaking gap.\u00a0Following word",
+                "After break. Continued words" })
+                TestAssert.Contains(expected.Replace('\u00a0', ' '), text.Replace('\u00a0', ' '));
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingCommentLabelsPreserveExplicitInitials()
     {
         var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-labels.docx"), OoxPdfDocxMarkupMode.AllMarkup);

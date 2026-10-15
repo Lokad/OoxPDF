@@ -2166,7 +2166,7 @@ internal static class DocxTests
         return CountOccurrences(pdf, "> Tj") + CountOccurrences(pdf, "] TJ");
     }
 
-    internal static bool HasCommentReferenceSpacerTextOperation(DocxTextEmissionSnapshot snapshot)
+    internal static bool HasAuthoredWhitespaceTextOperation(DocxTextEmissionSnapshot snapshot)
     {
         return snapshot.Lines
             .Where(line => line.CommentReferenceCount != 0)

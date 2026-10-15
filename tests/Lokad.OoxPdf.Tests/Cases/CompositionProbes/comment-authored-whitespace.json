@@ -1,0 +1,13 @@
+[
+  {
+    "Id": "comment-authored-whitespace",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-authored-whitespace.docx",
+    "Sha256": "7F809D17478499BC144A1B7A704998839C34AE7F4573C4F9D87928643BFD4D79",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Reviewed check.",
+      "Supporting note",
+      "Continued words"
+    ]
+  }
+]

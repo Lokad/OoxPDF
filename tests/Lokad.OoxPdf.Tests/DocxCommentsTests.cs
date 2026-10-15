@@ -1845,7 +1845,10 @@ internal static class DocxCommentsTests
                 $"Word-compatible all-markup should anchor comment connectors near the layout comment range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
     }
 
-    public static void DocxWordCompatibleAllMarkupSuppressesCommentReferenceSpacerTextOperation()
+    public static void DocxCommentsPreserveAuthoredWhitespace() =>
+        PortableRenderingTests.CheckCommentAuthoredWhitespace(null);
+
+    public static void DocxWordCompatibleAllMarkupPreservesAuthoredWhitespaceTextOperation()
     {
         DocxParagraph paragraph = new(
             [
@@ -1904,11 +1907,11 @@ internal static class DocxCommentsTests
             .InspectTextEmission(document);
 
         TestAssert.True(
-            DocxTests.HasCommentReferenceSpacerTextOperation(preserve),
-            "The fixture should expose a standalone comment-reference spacer before Word-compatible filtering.");
+            DocxTests.HasAuthoredWhitespaceTextOperation(preserve),
+            "The fixture should expose the authored leading space as a standalone text operation.");
         TestAssert.True(
-            !DocxTests.HasCommentReferenceSpacerTextOperation(wordCompatible),
-            "Word-compatible all-markup should keep the visual gap without emitting a separate spacer text operation.");
+            DocxTests.HasAuthoredWhitespaceTextOperation(wordCompatible),
+            "Word-compatible all-markup must retain authored whitespace in addition to the positioned gap.");
         double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
         TestAssert.True(
             Math.Abs(DocxTests.FirstTextEmissionX(wordCompatible) - DocxTests.FirstTextEmissionX(preserve) * printScale) < 0.5d,

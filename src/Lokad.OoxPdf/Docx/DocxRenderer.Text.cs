@@ -214,7 +214,6 @@ internal sealed partial class DocxRenderer
         double fontScale,
         double baselineOffsetY,
         double xOffset,
-        bool suppressCommentReferenceSpacer,
         bool useWordCompatibleTextProfile,
         CancellationToken cancellationToken = default)
     {
@@ -241,25 +240,10 @@ internal sealed partial class DocxRenderer
             double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale);
             double baselineY = GetSegmentBaselineY(segment, line.BaselineY) - baselineOffsetY;
             int partSourceTextOffset = segment.SourceTextOffsetInRun;
-            bool ShouldSuppressCommentReferenceSpacerPart(DocxTextEmissionPart part)
-            {
-            return suppressCommentReferenceSpacer &&
-                segment.Role != DocxTextSegmentRole.BreakSpill &&
-                part.Width > 0d &&
-                !string.IsNullOrEmpty(part.Text) &&
-                string.IsNullOrWhiteSpace(part.Text) &&
-                line.SourceParagraph?.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) == true;
-            }
-
             foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
             {
                 int currentPartSourceTextOffset = partSourceTextOffset;
                 partSourceTextOffset += part.Text.Length;
-                if (ShouldSuppressCommentReferenceSpacerPart(part))
-                {
-                    continue;
-                }
-
                 DocxTextRun emissionStyleRun = ResolveWordCompatibleAllMarkupEmissionStyleRun(
                     segment.StyleRun,
                     segment.Role,
@@ -750,7 +734,6 @@ internal sealed partial class DocxRenderer
             ResolveTextEmissionFontScale(markupContext),
             ResolveTextEmissionBaselineOffset(markupContext),
             ResolveTextEmissionXOffset(markupContext),
-            ShouldSuppressWordCompatibleCommentReferenceSpacer(markupContext),
             UsesWordCompatibleAllMarkupTextProfile(markupContext), cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();

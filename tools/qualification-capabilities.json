@@ -409,5 +409,19 @@
   "docx-broken-literal-placement": [
     "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
     "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement"
+  ],
+  "docx-comment-authored-whitespace": [
+    "DocxCommentsPreserveAuthoredWhitespace",
+    "PortableRenderingCommentsPreserveAuthoredWhitespace",
+    "DocxWordCompatibleAllMarkupPreservesAuthoredWhitespaceTextOperation",
+    "DocxTextEmissionPlanner",
+    "DocxWordCompatibleAllMarkupOmitsInlineCommentMarkerLabels",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
+    "DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers",
+    "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
+    "DocxWordCompatibleMixedStoryCommentsRetainBodyAnchor",
+    "DocxWordCompatibleHiddenBodyCommentsKeepNominalTextPlacement",
+    "PortableRenderingCommentLabelsPreserveExplicitInitials"
   ]
 }

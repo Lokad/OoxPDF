@@ -113,9 +113,7 @@ internal enum DocxTextSegmentRole
     Text,
     ListLabel,
     ListSeparator,
-    // RV06: break-adjacent spacing rows. Office emits these spaces on comment
-    // paragraphs too, so emission must exempt them from the comment-reference
-    // spacer suppression that drops ordinary whitespace-only parts there.
+    // Break-adjacent spacing rows retain their placement identity.
     BreakSpill
 }
 

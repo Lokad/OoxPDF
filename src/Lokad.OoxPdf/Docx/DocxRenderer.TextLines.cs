@@ -498,10 +498,9 @@ internal sealed partial class DocxRenderer
         double fontScale,
         double baselineOffsetY,
         double xOffset,
-        bool suppressCommentReferenceSpacer,
         bool useWordCompatibleTextProfile)
     {
-        DocxTextEmissionSegmentSnapshot[] segments = CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, fontScale, baselineOffsetY, xOffset, suppressCommentReferenceSpacer, useWordCompatibleTextProfile)
+        DocxTextEmissionSegmentSnapshot[] segments = CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, fontScale, baselineOffsetY, xOffset, useWordCompatibleTextProfile)
             .Select(segment => ToTextEmissionSegmentSnapshot(segment, line))
             .ToArray();
         return new DocxTextEmissionLineSnapshot(

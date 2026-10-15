@@ -59,7 +59,7 @@ internal sealed partial class DocxRenderer
             if (references.Length == 0) continue;
             IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources,
                 pageNumber, pageCount, scale, yOffset, xOffset,
-                ShouldSuppressWordCompatibleCommentReferenceSpacer(pageContext), wordProfile, cancellationToken);
+                wordProfile, cancellationToken);
             foreach (DocxInlineReference reference in references)
             {
                 if (!destinations.TryGetValue((reference.Kind, reference.Id!), out PdfLinkDestination destination)) continue;
