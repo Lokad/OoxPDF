@@ -7,6 +7,29 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathMatrixBaseJustificationRetainsDefaultsAndInvalidSource()
+    {
+        DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
+        foreach (string? value in new string?[] { null, "center", "top", "bot" })
+        {
+            string property = value is null ? "<m:baseJc/>" : $"<m:baseJc m:val='{value}'/>";
+            var matrix = Read(property);
+            TestAssert.True(!matrix.HasUnsupportedProperties && matrix.BaseJustificationValue == value,
+                "Known base values and val-less defaults remain typed without conflating source with painted cell formatting.");
+            TestAssert.Contains("baseJc", matrix.PropertiesXml.Single());
+        }
+        TestAssert.True(Read("").BaseJustificationValue is null && !Read("").HasUnsupportedProperties,
+            "Omitted base justification retains the centered default.");
+        foreach (string bad in new[] { "<m:baseJc m:val='bottom'/>", "<m:baseJc m:val=''/>", "<m:baseJc m:val='future'/>",
+            "<m:baseJc extra='1'/>", "<m:baseJc>stray</m:baseJc>", "<m:baseJc><m:future/></m:baseJc>", "<m:baseJc/><m:baseJc/>" })
+        {
+            var matrix = Read(bad);
+            TestAssert.True(matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x",
+                "Malformed and duplicate base declarations preserve every cell and complete fallback.");
+            TestAssert.Contains("baseJc", matrix.PropertiesXml.Single());
+        }
+    }
+
     public static void DocxMathMatrixColumnGroupsRetainTypedCountsDefaultsAndUnknownSource()
     {
         string cells = "<m:mr><m:e><m:r><m:t>a</m:t></m:r></m:e><m:e><m:r><m:t>b</m:t></m:r></m:e><m:e><m:r><m:t>c</m:t></m:r></m:e></m:mr>";

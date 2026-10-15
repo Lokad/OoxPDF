@@ -10,6 +10,7 @@ internal static partial class DocxMathLayout
     private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token)
     {
         if (GetSingleSupportedChild(equation) is not DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix ||
+            matrix.BaseJustificationValue is not (null or "center" or "top" or "bot") ||
             matrix.Rows[0].Cells.Count == 0 || matrix.ControlText is { } control && !DocxMathRowLayout.HasSupportedTextFormatting(control, allowBold: false)) { return null; }
         foreach (var row in matrix.Rows)
         {
@@ -88,7 +89,15 @@ internal static partial class DocxMathLayout
         if (!double.IsFinite(height) || height <= 0d || !double.IsFinite(advance) || advance <= 0d || !double.IsFinite(axis))
         { fallback = "InvalidMathMatrixExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>();
-        double top = axis + height / 2d, width = advance, inkAbove = 0d, inkBelow = 0d;
+        // Top/bottom alignment anchors the corresponding row baseline. Center
+        // alignment keeps the complete row frame centered on the math axis.
+        double top = matrix.BaseJustificationValue switch
+        {
+            "top" => rowAbove[0],
+            "bot" => height - rowBelow[^1],
+            _ => axis + height / 2d
+        };
+        double width = advance, inkAbove = 0d, inkBelow = 0d;
         for (int r = 0; r < cells.Count; r++)
         {
             double baseline = top - rowAbove[r], x = 0d;

@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixBaseJustificationPreservesOrderedCellMeaning()
+    {
+        RequireMathFont();
+        foreach (string suffix in new[] { "display-top-literal", "display-bot-literal", "inline-top-literal", "inline-bot-literal",
+            "inline-center-literal", "inline-empty-literal", "inline-top-control20", "display-bot-three-rows" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-base-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(suffix.EndsWith("three-rows", StringComparison.Ordinal) ? "abcdef" : "abcd",
+                DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Known baseline alignment retains all native rows and cell meanings.");
+        }
+    }
+
     public static void DocxNativeMatrixColumnDeclarationsPreserveGroupedCellMeaning()
     {
         RequireMathFont();

@@ -87,6 +87,7 @@ internal sealed record DocxMathMatrixColumn(int? CountValue, string? Justificati
 internal sealed record DocxMathMatrix(IReadOnlyList<DocxMathMatrixRow> Rows) : DocxMathNode, IDocxMathControl
 {
     public IReadOnlyList<DocxMathMatrixColumn>? ColumnGroups { get; init; }
+    public string? BaseJustificationValue { get; init; }
     public bool HasUnsupportedProperties { get; init; }
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }

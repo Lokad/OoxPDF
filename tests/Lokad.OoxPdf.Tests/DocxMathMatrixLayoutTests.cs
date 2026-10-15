@@ -7,6 +7,35 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixBaseJustificationAnchorsRowsWithoutChangingSlots()
+    {
+        var font = MathFont(); var resource = Resource("Aligned", font, "BC");
+        var matrix = Matrix([Run("B"), Run("CC")], [Run("BBB"), Run("C")]);
+        matrix = matrix with { Rows = [matrix.Rows[0], matrix.Rows[1], matrix.Rows[0]],
+            ColumnGroups = [new(1, "left", false), new(1, "right", false)] };
+        DocxMathBox Measure(string? alignment)
+        {
+            TestAssert.True(DocxMathLayout.TryMeasure(Equation(matrix with { BaseJustificationValue = alignment }), _ => resource,
+                CancellationToken.None, out var box, out var reason, resolveControlMetrics: _ => font), reason ?? "Expected matrix baseline alignment.");
+            return TestAssert.NotNull(box);
+        }
+        var center = Measure(null); var explicitCenter = Measure("center"); var top = Measure("top"); var bottom = Measure("bot");
+        TestAssert.True(Math.Abs(top.Glyphs[0].BaselineY) < 1e-9 && Math.Abs(bottom.Glyphs[^1].BaselineY) < 1e-9,
+            "Top and bottom anchor the first and last row baselines, including grids with more than two rows.");
+        foreach (var aligned in new[] { explicitCenter, top, bottom })
+        {
+            double shift = aligned.Glyphs[0].BaselineY - center.Glyphs[0].BaselineY;
+            TestAssert.True(aligned.Width == center.Width && aligned.AdvanceWidth == center.AdvanceWidth &&
+                aligned.Glyphs.Zip(center.Glyphs).All(pair => pair.First.X == pair.Second.X &&
+                    Math.Abs(pair.First.BaselineY - pair.Second.BaselineY - shift) < 1e-9),
+                "Base justification translates the complete grid while preserving row distances, grouped column slots and logical width.");
+        }
+        TestAssert.True(explicitCenter.Glyphs.SequenceEqual(center.Glyphs), "Explicit and omitted center retain identical geometry.");
+        foreach (string invalid in new[] { "bottom", "future", "" })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(matrix with { BaseJustificationValue = invalid }), CancellationToken.None, out _),
+                "Unknown typed base values retain complete fallback rather than silently centering.");
+    }
+
     public static void MathFontMatrixColumnGroupsShareSlotsAndBoundDeclaredCounts()
     {
         var font = MathFont(); var resource = Resource("Columns", font, "BC");

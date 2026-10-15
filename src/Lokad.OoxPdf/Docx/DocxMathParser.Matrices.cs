@@ -10,6 +10,7 @@ internal static partial class DocxMathParser
     {
         bool valid = ReadPropertyOwner(element, "mPr", out XElement? owner, out XElement[] properties);
         IReadOnlyList<DocxMathMatrixColumn>? columnGroups = null;
+        string? baseJustification = null;
         foreach (XElement property in properties)
         {
             token.ThrowIfCancellationRequested();
@@ -20,6 +21,11 @@ internal static partial class DocxMathParser
                 foreach (XElement column in property.Elements())
                 { token.ThrowIfCancellationRequested(); var group = ReadMatrixColumn(column, token); groups.Add(group); valid &= !group.HasUnsupportedProperties; }
                 columnGroups = groups;
+            }
+            else if (property.Name == MathNamespace + "baseJc")
+            {
+                baseJustification = (string?)property.Attribute(MathNamespace + "val");
+                valid &= HasKnownValueProperty(property) && baseJustification is null or "center" or "top" or "bot";
             }
             else { valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
         }
@@ -36,7 +42,8 @@ internal static partial class DocxMathParser
         // Keep absent/authored controls distinct from painted cell formatting.
         DocxTextRun? text = control is null ? null : readRun(control, string.Empty);
         return new(rows)
-        { ColumnGroups = columnGroups, HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
+        { ColumnGroups = columnGroups, BaseJustificationValue = baseJustification, HasUnsupportedProperties = !valid,
+            ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
     }
 
     private static DocxMathMatrixColumn ReadMatrixColumn(XElement element, CancellationToken token)
