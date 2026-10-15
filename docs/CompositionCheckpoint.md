@@ -512,3 +512,16 @@ assets/four exact smoke PDFs transfer without a root build or suite replay. The
 broader selection is a deliberate shared-contract milestone, not the selection
 policy for routine local changes. Existing limits, cancellation, safe managed code
 and visual thresholds remain intact.
+
+PDF text comparisons now transform advances, character spacing and font height
+consistently with effective coordinates. Page-local exact decoded matching reserves
+content before geometric fallback, and decoded comparison is case-sensitive.
+Twenty-eight adversarial controls pass, including scaled/sheared/rotated text,
+adjacent columns and case changes. Existing tolerances and raster gates remain.
+Cached inspection pairs all 676 normalized portfolio operations with no conversion
+or library build: Final maxima are 0.877pt X / 0.981pt Y; review maxima are
+0.484pt X / 3.166pt Y. These supersede the earlier unresolved segmentation counts.
+Raw whitespace differences remain explicit: review output loses an authored space
+after a comment reference in all four documents. This confirmed composition defect
+is the next bounded correction; normalized matching does not establish exact text
+or visible ink fidelity.
