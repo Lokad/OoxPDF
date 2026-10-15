@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeFixedDelimitersRetainAuthoredGrowthAndChildSizes()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string kind,double childSize,double controlSize) in new[]{("literal12",12d,12d),("literal20",20.04d,12d),("control20",12d,20.04d)})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-fixed-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("(n+1)",DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            foreach(double size in new[]{childSize,controlSize})TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "An authored growth-off flag must retain actual native delimiter painting.");
+        }
+    }
+
     public static void DocxNativeDelimiterHeightContrastsKeepParentFramesAndChildMeaning()
     {
         RequireMathFont();

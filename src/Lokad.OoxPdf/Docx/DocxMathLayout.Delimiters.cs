@@ -10,7 +10,7 @@ internal static partial class DocxMathLayout
 {
     private static DocxMathDelimiter? GetDelimiter(DocxEquation equation) =>
         GetSingleSupportedChild(equation) is DocxMathDelimiter { HasUnsupportedProperties: false, Arguments.Count: 1,
-            GrowValue: not false, ShapeValue: null or "centered" } delimiter &&
+            ShapeValue: null or "centered" } delimiter &&
         (delimiter.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(delimiter.ControlText, allowBold: false)) &&
         IsCharacter(delimiter.BeginCharacter) && IsCharacter(delimiter.EndCharacter) &&
         delimiter.BeginCharacter.Length + delimiter.EndCharacter.Length > 0 ? delimiter : null;
@@ -70,15 +70,21 @@ internal static partial class DocxMathLayout
         bool AppendDelimiter(string character)
         {
             if (character.Length == 0) { return true; }
+            token.ThrowIfCancellationRequested();
             int point = Rune.GetRuneAt(character, 0).Value;
-            if (!font.TryGetNearestMathVerticalVariant(font.MapCodePoint(point), height / scale, token, out var variant) ||
-                !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(variant.Glyph, out ushort cid))
+            ushort glyph = font.MapCodePoint(point);
+            if (delimiter.GrowValue != false)
+            {
+                if (!font.TryGetNearestMathVerticalVariant(glyph, height / scale, token, out var variant)) { return false; }
+                glyph = variant.Glyph;
+            }
+            if (glyph == 0 || !font.TryGetGlyphBounds(glyph, out var bounds) || !resource.Font.TryGetEncodedCid(glyph, out ushort cid))
             { return false; }
             double baseline = axis - (bounds.YMax + bounds.YMin) / 2d * scale;
-            double glyphAdvance = font.GetAdvanceWidth(variant.Glyph) * scale;
+            double glyphAdvance = font.GetAdvanceWidth(glyph) * scale;
             OoxConversionBudget.Current?.ChargeSceneNodes(1);
             glyphs.Add(new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize,
-                advance, baseline, glyphAdvance, color) { OriginalGlyph = variant.Glyph });
+                advance, baseline, glyphAdvance, color) { OriginalGlyph = glyph });
             width = Math.Max(width, advance + bounds.XMax * scale);
             above = Math.Max(above, baseline + bounds.YMax * scale);
             below = Math.Max(below, -baseline - bounds.YMin * scale);

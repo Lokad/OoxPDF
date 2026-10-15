@@ -73,6 +73,16 @@ internal sealed partial class DocxRenderer
                         }
                         foreach (int point in DocxMathLayout.GetControlCodePoints(control))
                         {
+                            if (control is DocxMathDelimiter { GrowValue: false })
+                            {
+                                ushort canonical = controlFont.MapCodePoint(point);
+                                if (canonical == 0) { valid = false; break; }
+                                if (!TryRegisterOperatorGlyph(face.Operators, canonical, point))
+                                    unavailableControlFaces.Add(controlFont);
+                                // This registers only the authored base glyph;
+                                // a later growing control still prepares variants.
+                                continue;
+                            }
                             if (face.Characters.Contains(point)) { continue; }
                             ushort glyph = controlFont.MapCodePoint(point);
                             double height = 0d;
@@ -80,9 +90,8 @@ internal sealed partial class DocxRenderer
                             while (controlFont.TryGetMathVerticalVariant(glyph, height, token, out var variant))
                             {
                                 found = true;
-                                if (face.Operators.TryGetValue(variant.Glyph, out int previous) && previous != point)
-                                { unavailableControlFaces.Add(controlFont); }
-                                else { face.Operators[variant.Glyph] = point; }
+                                if (!TryRegisterOperatorGlyph(face.Operators, variant.Glyph, point))
+                                    unavailableControlFaces.Add(controlFont);
                                 height = variant.Advance + 1d;
                             }
                             if (!found) { valid = false; break; }
@@ -157,5 +166,12 @@ internal sealed partial class DocxRenderer
             layouts.Add(candidate.Paragraph, new(candidate.Equation, box, above, lineHeight));
         }
         return layouts;
+    }
+
+    private static bool TryRegisterOperatorGlyph(Dictionary<ushort, int> glyphs, ushort glyph, int point)
+    {
+        if (glyphs.TryGetValue(glyph, out int previous) && previous != point) { return false; }
+        glyphs[glyph] = point;
+        return true;
     }
 }

@@ -9,6 +9,73 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontMixedGrowthControlsPrepareCanonicalAndVariantGlyphsInEitherOrder()
+    {
+        XNamespace w="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace m="http://schemas.openxmlformats.org/officeDocument/2006/math";
+        foreach(bool fixedFirst in new[]{true,false})
+        foreach(bool noVariants in new[]{false,true})
+        {
+            if(noVariants && !fixedFirst)continue;
+            string fixture=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases","docx-omml-delimiter-display-parentheses.docx"));
+            using ZipArchive archive=ZipFile.OpenRead(fixture);var parts=new Dictionary<string,byte[]>();
+            foreach(var entry in archive.Entries){using var input=entry.Open();using var data=new MemoryStream();input.CopyTo(data);parts.Add(entry.FullName,data.ToArray());}
+            XElement document=XElement.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+            XElement delimiter=document.Descendants(m+"d").Single();XElement run=delimiter.Element(m+"e")!.Element(m+"r")!;
+            run.Element(m+"t")!.Value="B+C";run.Element(m+"rPr")?.Remove();
+            run.AddFirst(new XElement(m+"rPr",new XElement(m+"sty",new XAttribute(m+"val","p"))));
+            XElement wordProperties=run.Element(w+"rPr")??new XElement(w+"rPr");if(wordProperties.Parent is null)run.AddFirst(wordProperties);
+            wordProperties.Element(w+"sz")?.Remove();wordProperties.Add(new XElement(w+"sz",new XAttribute(w+"val","40")));
+            XElement paragraph=delimiter.Ancestors(w+"p").First();XElement second=new(paragraph);
+            XElement fixedDelimiter=fixedFirst?delimiter:second.Descendants(m+"d").Single();
+            fixedDelimiter.AddFirst(new XElement(m+"dPr",new XElement(m+"grow",new XAttribute(m+"val","0"))));
+            if(!noVariants)paragraph.AddAfterSelf(second);
+            parts["word/document.xml"]=System.Text.Encoding.UTF8.GetBytes(document.ToString(SaveOptions.DisableFormatting));
+            string path=TestFixtures.WriteTempPackage(".docx",parts);
+            try
+            {
+                var source=DocxTests.ReadDocx(path,OoxPdfDocxMarkupMode.Final);
+                var renderer=new DocxRenderer(new RadicalFontResolver(noVariants?TestFontBuilder.CreateMathFont(Constants()):DelimiterFontBytes()),
+                    OoxPdfDocxMarkupMode.Final,OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+                string text=string.Concat(renderer.RenderBlankPages(source,null,CancellationToken.None).Select(DocxPageFootnoteNumberingTests.DecodeText));
+                TestAssert.Equal(noVariants?1:2,text.Split("(B+C)",StringSplitOptions.None).Length-1);
+            }
+            finally{File.Delete(path);}
+        }
+    }
+
+    public static void MathFontFixedDelimitersKeepCanonicalGlyphsLargeChildInkAndEncodingFallback()
+    {
+        var font=OpenTypeFont.Load(DelimiterFontBytes());
+        var resource=new PdfFontResource("Fixed",PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[]{((ushort)9,40),((ushort)10,41),((ushort)128,40),((ushort)127,41),(font.MapCodePoint('B'),(int)'B')},CancellationToken.None));
+        DocxMathDelimiter Delimiter(double size)=>new([new([new DocxMathRun(new("B",size,null,false,false,false,null,"TestFont"),"p",null)])])
+            { GrowValue=false,ControlText=new("",12d,null,false,false,false,null,"TestFont") };
+        foreach(double size in new[]{20d,100d})
+        {
+            var delimiter=Delimiter(size);var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+            TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),
+                reason??"A non-growing character does not request an assembly around a larger authored child.");
+            var measured=TestAssert.NotNull(box);
+            TestAssert.True(measured.Glyphs[0].OriginalGlyph==9 && measured.Glyphs[^1].OriginalGlyph==10 &&
+                measured.Glyphs[0].FontSize==12d && Math.Abs(measured.Glyphs[1].FontSize-OfficePdfTextEmissionProfile.FontSize(size))<1e-9,
+                "Growth-off keeps canonical delimiter glyphs/control size while preserving the child's independent size.");
+            TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint('B'),out var bounds) &&
+                measured.AboveBaseline>=bounds.YMax*measured.Glyphs[1].FontSize/font.UnitsPerEm-1e-9,
+                "Fixed delimiters cannot shrink the occupied child ink frame.");
+            if(size==20d)
+            {
+                TestAssert.True(DocxMathLayout.TryMeasure(equation with { Content=new([delimiter with { GrowValue=true }]) },_=>resource,
+                    CancellationToken.None,out var growing,out _) && TestAssert.NotNull(growing).Glyphs[0].OriginalGlyph==128,
+                    "The same content retains the independently qualified growing variant path.");
+                var missing=new PdfFontResource("MissingCanonical",PdfEmbeddedFont.CreateForGlyphMappings(font,
+                    new[]{((ushort)128,40),((ushort)127,41),(font.MapCodePoint('B'),(int)'B')},CancellationToken.None));
+                TestAssert.True(!DocxMathLayout.TryMeasure(equation,_=>missing,CancellationToken.None,out var absent,out _) && absent is null,
+                    "An available larger variant cannot substitute for a missing authored canonical CID.");
+            }
+        }
+    }
+
     public static void MathFontDelimiterParentOwnsBaselineFloorWhileLargerChildrenKeepInk()
     {
         var parent=OpenTypeFont.Load(DelimiterFontBytes());
@@ -51,7 +118,7 @@ internal static class DocxMathFractionTests
         var missing=new PdfFontResource("Missing",PdfEmbeddedFont.CreateForGlyphMappings(font,new[]{((ushort)9,40),((ushort)128,40)},CancellationToken.None));
         TestAssert.True(!DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var absent,out _,resolveControlFont:_=>missing) && absent is null,
             "A missing closing CID cannot publish an opening-only box.");
-        foreach(var invalid in new[]{delimiter with { GrowValue=false },delimiter with { ShapeValue="match" },
+        foreach(var invalid in new[]{delimiter with { HasUnsupportedProperties=true },delimiter with { ShapeValue="match" },
             delimiter with { Arguments=[child,child] },delimiter with { Arguments=[new([delimiter])] }})
             TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content=new([invalid]) },_=>text,CancellationToken.None,out var rejected,out _,
                 resolveControlFont:_=>parent) && rejected is null,"Unqualified shape/growth/argument roles retain complete fallback.");
@@ -64,6 +131,7 @@ internal static class DocxMathFractionTests
     {
         XNamespace w="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         XNamespace m="http://schemas.openxmlformats.org/officeDocument/2006/math";
+        foreach(bool fixedSize in new[]{false,true})
         foreach(bool delimiterFirst in new[]{true,false})
         {
             string fixture=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases","docx-omml-delimiter-display-parentheses.docx"));
@@ -71,6 +139,7 @@ internal static class DocxMathFractionTests
             foreach(var entry in archive.Entries){using var input=entry.Open();using var data=new MemoryStream();input.CopyTo(data);parts.Add(entry.FullName,data.ToArray());}
             XElement document=XElement.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
             XElement delimiter=document.Descendants(m+"d").Single();XElement run=delimiter.Element(m+"e")!.Element(m+"r")!;
+            if(fixedSize)delimiter.AddFirst(new XElement(m+"dPr",new XElement(m+"grow",new XAttribute(m+"val","0"))));
             run.Element(m+"t")!.Value="B+C";run.Element(m+"rPr")?.Remove();
             run.AddFirst(new XElement(m+"rPr",new XElement(m+"sty",new XAttribute(m+"val","p"))));
             XElement wordProperties=run.Element(w+"rPr")??new XElement(w+"rPr");if(wordProperties.Parent is null)run.AddFirst(wordProperties);
@@ -86,7 +155,9 @@ internal static class DocxMathFractionTests
                 var source=DocxTests.ReadDocx(path,OoxPdfDocxMarkupMode.Final);
                 var renderer=new DocxRenderer(new RadicalFontResolver(DelimiterFontBytes()),OoxPdfDocxMarkupMode.Final,OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
                 string text=string.Concat(renderer.RenderBlankPages(source,null,CancellationToken.None).Select(DocxPageFootnoteNumberingTests.DecodeText));
-                TestAssert.True(text.Contains('\u009F') && !text.Contains('('),"Deferred publication preserves authored Unicode and complete delimiter fallback in either source order.");
+                TestAssert.True(text.Contains('\u009F'),"Deferred publication preserves authored Unicode in either source order.");
+                TestAssert.True(fixedSize?text.Contains("(B+C)",StringComparison.Ordinal):!text.Contains('('),
+                    "A fixed delimiter uses its canonical glyph; only the growing control needs fallback for an authored variant alias.");
             }
             finally{File.Delete(path);}
         }
