@@ -1379,7 +1379,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             if (mathParagraphs is not null && mathParagraphs.TryGetValue(paragraph, out DocxPreparedMathParagraph? math) &&
-                math.Equation.Display &&
+                DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null &&
                 FitsMathDisplayWidth(paragraph, math, width, paragraphSpacingScale) &&
                 math.LineHeight * paragraphSpacingScale <= page.Height - page.MarginTop - page.MarginBottom)
             {

@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
-    public static void DocxTableMathCandidatesShareDisplayPolicyAndKeepUnsupportedOwners()
+    public static void DocxTableMathCandidatesShareStandalonePolicyAndKeepUnsupportedOwners()
     {
         var (paragraph, _) = Prepared(20d);
         var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
@@ -31,7 +31,6 @@ internal static class DocxTableMathTests
             row with { Cells = [cell with { HasVerticalMerge = true }] },
             row with { Cells = [cell with { FitText = true }] },
             row with { Cells = [cell with { TextDirectionValue = "tbRl" }] },
-            row with { Cells = [cell with { Paragraphs = [paragraph with { Equations = [paragraph.Equations[0] with { Display = false }] }] }] },
             row with { Cells = [cell with { BodyElements = [new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, null, null)] }] }
         })
             TestAssert.Equal(0, DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(unsupported), CancellationToken.None)
@@ -39,6 +38,33 @@ internal static class DocxTableMathTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() =>
             DocxMathParagraphPolicy.EnumeratePreparationCandidates(Document(row), cancelled.Token).ToArray());
+    }
+
+    public static void DocxTableMathIsolatedInlineSharesStandaloneAdvanceAndSourceIdentity()
+    {
+        var (display, prepared) = Prepared(24d);
+        DocxEquation equation = prepared.Equation with { Display = false };
+        DocxParagraph paragraph = display with { Equations = [equation] };
+        TestAssert.True(ReferenceEquals(equation, DocxMathParagraphPolicy.GetStandaloneRow(paragraph)) &&
+            DocxMathParagraphPolicy.GetInlineRow(paragraph) is null, "A sole equation has one standalone owner.");
+        foreach (DocxTextAlignment alignment in new[] { DocxTextAlignment.Left, DocxTextAlignment.Center, DocxTextAlignment.Right })
+        {
+            DocxParagraph source = paragraph with { Alignment = alignment };
+            var cell = new DocxTableCell(string.Empty, [source], null, null, null, null, [], DocxTableCellMargins.Empty);
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(TableDocument(new DocxTableRow([cell], null)), new DocxTests.FamilyWidthTextMeasurer(), default,
+                    mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                    { [source] = prepared with { Equation = equation } });
+            var row = layout.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
+            var line = row.Cells.Single().TextLines.Single();
+            TestAssert.True(line.Math is { } math && ReferenceEquals(math.Equation, equation) && !math.Equation.Display &&
+                !line.IsInlineMath && line.Segments.Count == 0 && line.X > row.Cells[0].X + 20d,
+                "Office centers isolated inline math in the existing standalone frame, independent of paragraph alignment.");
+            TestAssert.True(row.Height >= 24d, "The measured cell reserves the complete standalone advance.");
+        }
+        TestAssert.True(DocxMathParagraphPolicy.GetStandaloneRow(paragraph with { Equations = [equation, equation] }) is null &&
+            DocxMathParagraphPolicy.GetStandaloneRow(paragraph with { Runs = [new DocxTextRun("Public", 10d, null, false, false, false, null, null)] }) is null,
+            "Multiple equations and visible prose retain their separate semantic ownership.");
     }
 
     public static void DocxTableZeroExactHeightRetainsTheNaturalContentFrame()

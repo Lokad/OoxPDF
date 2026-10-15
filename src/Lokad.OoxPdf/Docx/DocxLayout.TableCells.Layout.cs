@@ -162,7 +162,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            if (TryGetTableDisplayMath(paragraph, textWidth, paragraphSpacingScale, mathParagraphs, out var math))
+            if (TryGetTableStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathParagraphs, out var math))
             {
                 contentHeight += math.LineHeight * paragraphSpacingScale;
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -473,7 +473,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, context.ParagraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            if (TryGetTableDisplayMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathParagraphs, out var math))
+            if (TryGetTableStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathParagraphs, out var math))
             {
                 lines.Add(CreateTableMathLine(paragraph, math, cellX + paddingLeft, textWidth,
                     cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile));

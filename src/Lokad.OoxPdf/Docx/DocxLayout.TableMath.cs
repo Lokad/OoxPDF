@@ -27,13 +27,13 @@ internal sealed partial class DocxLayoutEngine
             IsExactLineSpacing(paragraph.EffectiveProperties), baselineInset: inset);
     }
 
-    private static bool TryGetTableDisplayMath(DocxParagraph paragraph, double width, double scale,
+    private static bool TryGetTableStandaloneMath(DocxParagraph paragraph, double width, double scale,
         IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? prepared,
         [NotNullWhen(true)] out DocxPreparedMathParagraph? math)
     {
         math = null;
         if (prepared is null || !prepared.TryGetValue(paragraph, out var candidate) ||
-            !candidate.Equation.Display || !FitsMathDisplayWidth(paragraph, candidate, width, scale)) { return false; }
+            DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is null || !FitsMathDisplayWidth(paragraph, candidate, width, scale)) { return false; }
         math = candidate; return true;
     }
 

@@ -26,7 +26,7 @@ internal static class DocxMathParagraphPolicy
                         foreach (DocxParagraph source in cell.Paragraphs)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (GetDisplayRow(source) is not null || GetInlineRow(source) is not null) { yield return source; }
+                            if (GetStandaloneRow(source) is not null || GetInlineRow(source) is not null) { yield return source; }
                         }
                     }
                 }
@@ -34,12 +34,12 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    // Initial semantic capability: a standalone, automatic display row. Mixed
-    // prose, revision/reference decorations and explicit line rules keep their
-    // existing fallback until those owning paths receive separate qualification.
-    public static DocxEquation? GetDisplayRow(DocxParagraph paragraph)
+    // Office promotes a sole visible equation to centered display layout, even
+    // when its source is inline. Preserve the source record and select that
+    // style only for measurement; mixed prose retains its inline ownership.
+    public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
-        if (!HasSupportedOwner(paragraph) || !paragraph.Equations[0].Display ||
+        if (!HasSupportedOwner(paragraph) ||
             paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)) ||
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }

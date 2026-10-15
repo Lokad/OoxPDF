@@ -487,7 +487,7 @@ internal sealed partial class DocxLayoutEngine
         {
             double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
             if (mathParagraphs is null || !mathParagraphs.TryGetValue(value, out DocxPreparedMathParagraph? math)) { return regular; }
-            if (math.Equation.Display)
+            if (DocxMathParagraphPolicy.GetStandaloneRow(value) is not null)
                 return FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale) ? math.LineHeight * paragraphSpacingScale : regular;
             double size = GetParagraphFontSize(value);
             double firstWidth = Math.Max(1d, availableWidth - GetParagraphFirstLineTextStartOffset(value, size, textMeasurer, paragraphSpacingScale) - GetParagraphRightInset(value, paragraphSpacingScale));

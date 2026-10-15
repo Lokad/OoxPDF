@@ -7,6 +7,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeIsolatedInlineMathUsesOfficeDisplayStyleWithoutChangingSource()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("body-literal", "x−y"), ("body-fraction-left", "x+2y"),
+            ("body-fraction-center", "x+2y"), ("body-fraction-right", "x+2y"), ("body-script", "αi2"),
+            ("body-root", "√x+1"), ("cell-fraction-left", "x+2y"), ("cell-fraction-right", "x+2y") })
+        {
+            DocxDocument document = NamedFixture("docx-omml-isolated-inline-" + suffix);
+            DocxParagraph paragraph = suffix.StartsWith("cell", StringComparison.Ordinal)
+                ? document.Tables.Single().Rows.Single().Cells.Single().Paragraphs.Single()
+                : document.Paragraphs.Single(p => p.Equations.Count != 0);
+            DocxEquation original = paragraph.Equations.Single();
+            TestAssert.True(!original.Display && ReferenceEquals(original, DocxMathParagraphPolicy.GetStandaloneRow(paragraph)),
+                "An isolated inline source owns standalone Office layout without rewriting its metadata.");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, default).Single();
+            string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains(meaning, decoded);
+            TestAssert.Contains("Before public math table.", decoded);
+            TestAssert.Contains("After public math table.", decoded);
+            TestAssert.True(!original.Display && ReferenceEquals(original, paragraph.Equations.Single()) &&
+                diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Painted standalone content retains source identity and accurate scope diagnostics.");
+        }
+    }
+
     public static void DocxNativeTableInlineMathRetainsProseWrappingAndWholeFallbacks()
     {
         RequireMathFont();
@@ -1507,11 +1533,11 @@ internal static class DocxNativeMathTests
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"), "Unavailable math fonts retain ignored-source diagnostics.");
         TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "A missing math face cannot claim embedded equation output.");
         DocxParagraph paragraph = document.Paragraphs.Single(value => value.Equations.Count != 0);
-        TestAssert.NotNull(DocxMathParagraphPolicy.GetDisplayRow(paragraph));
-        TestAssert.True(DocxMathParagraphPolicy.GetDisplayRow(paragraph with
+        TestAssert.NotNull(DocxMathParagraphPolicy.GetStandaloneRow(paragraph));
+        TestAssert.True(DocxMathParagraphPolicy.GetStandaloneRow(paragraph with
         { Spacing = paragraph.Spacing with { LineValue = "480", LineRuleValue = "exact" } }) is null,
             "Unqualified explicit math line rules must keep their existing fallback.");
-        TestAssert.True(DocxMathParagraphPolicy.GetDisplayRow(paragraph with
+        TestAssert.True(DocxMathParagraphPolicy.GetStandaloneRow(paragraph with
         { InlineReferences = [new DocxInlineReference(DocxRelatedStoryKind.Footnote, "1", null, "1", 0, 0, 0)] }) is null,
             "References require their own semantic owner before math painting is admitted.");
     }

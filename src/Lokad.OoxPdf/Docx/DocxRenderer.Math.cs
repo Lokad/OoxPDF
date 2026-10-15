@@ -66,7 +66,7 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
     {
-        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> ControlFaces)>();
+        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, DocxEquation SourceEquation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> ControlFaces)>();
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
@@ -75,8 +75,12 @@ internal sealed partial class DocxRenderer
         foreach (DocxParagraph paragraph in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token))
         {
             token.ThrowIfCancellationRequested();
-            DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
-            if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
+            DocxEquation? standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph);
+            DocxEquation? sourceEquation = standalone ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
+            if (sourceEquation is null) { continue; }
+            DocxEquation equation = standalone is { Display: false } isolated
+                ? isolated with { Display = true } : sourceEquation;
+            if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
             OpenTypeFont? parentMetrics = null;
             List<OpenTypeFont>? controlOwners = null;
             if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
@@ -170,7 +174,7 @@ internal sealed partial class DocxRenderer
                 if (!valid) { break; }
                 runKeys[run] = key;
             }
-            if (valid) { candidates.Add((paragraph, equation, parentMetrics, controlOwners ?? [])); }
+            if (valid) { candidates.Add((paragraph, equation, sourceEquation, parentMetrics, controlOwners ?? [])); }
         }
         foreach (var face in controlFaces)
         {
@@ -206,7 +210,7 @@ internal sealed partial class DocxRenderer
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
                 { continue; }
             if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight, lineSpacingFactor)) { continue; }
-            layouts.Add(candidate.Paragraph, new(candidate.Equation, box, above, lineHeight));
+            layouts.Add(candidate.Paragraph, new(candidate.SourceEquation, box, above, lineHeight));
         }
         return layouts;
     }
