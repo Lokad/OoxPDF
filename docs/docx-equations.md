@@ -75,6 +75,15 @@ synthetic test reproduces a prototype Unicode collision and verifies that either
 source order preserves the authored character, retaining root fallback when an
 encoding owner would conflict. This is a confirmed subset-mapping defect in the
 rejected prototype; shared font-cache memory corruption remains unverified.
+Root control properties now retain their inherited source formatting. The
+configured math parent supplies the implicit glyph and rule independently of a
+normal-text radicand's physical font. Eight Word controls cover math/normal text,
+Calibri/Arial and authored child colors: six improve and two remain exact.
+Root glyphs and bars keep inherited black while children keep their own color
+and face. Thirty-three prior PDFs remain byte-identical; position differences
+reach 0.12 pt horizontally and 0.46 pt vertically, with unchanged visual gates.
+Authored radical control properties beyond the current inherited formatting
+remain on explicit fallback.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
