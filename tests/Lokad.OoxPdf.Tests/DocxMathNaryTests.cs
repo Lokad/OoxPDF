@@ -91,6 +91,34 @@ internal static class DocxMathNaryTests
     }
 
     private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    public static void MathFontNaryEmptyHiddenLimitsKeepVisibleRolesAndRejectStoredContent()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211));
+        var resource = new PdfFontResource("Hidden", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), ((ushort)130, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        foreach (bool display in new[] { true, false })
+        foreach (bool lowerHidden in new[] { true, false })
+        foreach (bool upperHidden in new[] { true, false })
+        {
+            var nary = Nary("\u2211") with { SubscriptHiddenValue = lowerHidden, SuperscriptHiddenValue = upperHidden,
+                Subscript = lowerHidden ? new([]) : Row("B"), Superscript = upperHidden ? new([]) : Row("C") };
+            var equation = Equation(nary) with { Display = display };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) &&
+                sources.Count == 3 - (lowerHidden ? 1 : 0) - (upperHidden ? 1 : 0),
+                "Only genuinely empty hidden arguments are excluded from font discovery.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected empty hidden limits.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.Equal("\u2211B" + (upperHidden ? "" : "C") + (lowerHidden ? "" : "B"),
+                string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+            foreach (var stored in new[] { nary with { SubscriptHiddenValue = true, Subscript = Row("B") },
+                nary with { SuperscriptHiddenValue = true, Superscript = Row(" ") },
+                nary with { SubscriptHiddenValue = true, Subscript = new([nary]) } })
+                TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([stored]) }, _ => resource,
+                    CancellationToken.None, out var absent, out _) && absent is null,
+                    "Stored nonempty, whitespace or structured hidden content cannot be silently discarded.");
+        }
+    }
+
     private static DocxMathNary Nary(string character) => new(Row("B"), Row("B"), Row("C"))
         { CharacterValue = character, LimitLocationValue = "undOvr", ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
     private static DocxMathRow Row(string value) => new([new DocxMathRun(new(value, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);

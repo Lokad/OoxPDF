@@ -7,6 +7,41 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeEmptyHiddenNaryLimitsRetainRemainingBodyAndArguments()
+    {
+        RequireMathFont();
+        foreach (string mode in new[] { "display", "inline" })
+        foreach ((string kind, string character, string hidden, string meaning) in new[] {
+            ("sum", "\u2211", "lower", "xn"), ("product", "\u220F", "upper", "xi=1"), ("sum", "\u2211", "both", "x") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nary-hidden-empty-{mode}-{kind}-{hidden}"), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(character + meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Empty hidden arguments retain native operator, body and visible limit painting.");
+        }
+    }
+
+    public static void DocxNativeStoredHiddenNaryArgumentsRetainCompleteSourceFallback()
+    {
+        RequireMathFont();
+        foreach (string mode in new[] { "display", "inline" })
+        foreach (string kind in new[] { "sum-lower", "product-upper", "sum-both" })
+        {
+            var source = NamedFixture($"docx-omml-nary-hidden-{mode}-{kind}");
+            var equation = source.Paragraphs.SelectMany(p => p.Equations).Single();
+            var nary = (DocxMathNary)equation.Content.Children.Single();
+            TestAssert.True(nary.Subscript.Children.Count > 0 && nary.Superscript.Children.Count > 0 &&
+                !DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out _), "Stored hidden arguments stay in typed source without claiming omission is correct.");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = Renderer().RenderBlankPages(source, diagnostics.Add, CancellationToken.None).ToArray();
+            TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
+                "A stored hidden argument cannot produce partial equation font resources.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_APPROXIMATED_EQUATION"),
+                "Word's reassigned stored text needs its own profile; no partial native painting is published.");
+        }
+    }
+
     public static void DocxNativeSideNaryOperatorsKeepExplicitAndInlineLimitPlacement()
     {
         RequireMathFont();

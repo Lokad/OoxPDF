@@ -10,11 +10,18 @@ internal static partial class DocxMathLayout
     // Explicit locations are independent of document-level defaults. Inline
     // equations place limits beside the operator, as Office does for undOvr.
     // Integral sizing retains its independently measured fallback.
-    private static DocxMathNary? GetNary(DocxEquation equation) =>
+    private static DocxMathNary? GetNary(DocxEquation equation, CancellationToken token) =>
         GetSingleSupportedChild(equation) is DocxMathNary
         { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F", LimitLocationValue: "undOvr" or "subSup",
-            GrowValue: not false, SubscriptHiddenValue: not true, SuperscriptHiddenValue: not true } nary &&
+            GrowValue: not false } nary &&
+        (nary.SubscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Subscript, token)) &&
+        (nary.SuperscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Superscript, token)) &&
         (nary.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(nary.ControlText, allowBold: false)) ? nary : null;
+
+    // Word reassigns stored nonempty hidden arguments into visible roles.
+    // Only a truly empty supported literal argument may be omitted here.
+    private static bool IsEmptyLiteralArgument(DocxMathRow row, CancellationToken token) =>
+        DocxMathRowLayout.TryGetRenderCodePoints(row, token, out var points, out _, allowArgumentSize: true) && points.Count == 0;
 
     private static bool TryMeasureNary(DocxEquation equation, DocxMathNary nary,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
@@ -38,10 +45,14 @@ internal static partial class DocxMathLayout
         if (!(equation.Display && nary.LimitLocationValue == "undOvr") && !HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathNaryScriptConstants"; return false; }
         if (!DocxMathRowLayout.TryMeasure(nary.Body, resolveFont, token, out var body, out fallback,
-                exportFontSize: true, operatorSpacingFontSize: size) || body is null || body.Glyphs.Count == 0 ||
-            !TryMeasureScriptArgument(nary.Subscript, resolveFont, font, token, out var lower, out fallback) || lower is null || lower.Glyphs.Count == 0 ||
-            !TryMeasureScriptArgument(nary.Superscript, resolveFont, font, token, out var upper, out fallback) || upper is null || upper.Glyphs.Count == 0)
-        { fallback ??= "UnsupportedMathNaryArgument"; return false; }
+                exportFontSize: true, operatorSpacingFontSize: size) || body is null || body.Glyphs.Count == 0)
+        { fallback ??= "UnsupportedMathNaryBody"; return false; }
+        DocxMathBox? lower = null, upper = null;
+        if (nary.SubscriptHiddenValue != true &&
+            (!TryMeasureScriptArgument(nary.Subscript, resolveFont, font, token, out lower, out fallback) || lower is null || lower.Glyphs.Count == 0) ||
+            nary.SuperscriptHiddenValue != true &&
+            (!TryMeasureScriptArgument(nary.Superscript, resolveFont, font, token, out upper, out fallback) || upper is null || upper.Glyphs.Count == 0))
+        { fallback ??= "UnsupportedMathNaryLimit"; return false; }
         int point = char.ConvertToUtf32(nary.CharacterValue!, 0);
         ushort canonical = font.MapCodePoint(point);
         if (!font.TryGetMathVerticalVariant(canonical, equation.Display ? constants.DisplayOperatorMinHeight : 0d, token, out var variant) ||
@@ -55,14 +66,14 @@ internal static partial class DocxMathLayout
         double groupAdvance, operatorX = 0d, upperX, lowerX, upperY, lowerY, bodyX;
         if (stacked)
         {
-            groupAdvance = Math.Max(operatorAdvance, Math.Max(lower.AdvanceWidth, upper.AdvanceWidth));
+            groupAdvance = Math.Max(operatorAdvance, Math.Max((lower?.AdvanceWidth ?? 0d), (upper?.AdvanceWidth ?? 0d)));
             operatorX = (groupAdvance - operatorAdvance) / 2d;
-            upperX = (groupAdvance - upper.AdvanceWidth) / 2d;
-            lowerX = (groupAdvance - lower.AdvanceWidth) / 2d;
+            upperX = (groupAdvance - (upper?.AdvanceWidth ?? 0d)) / 2d;
+            lowerX = (groupAdvance - (lower?.AdvanceWidth ?? 0d)) / 2d;
             upperY = baseline + bounds.YMax * scale + Math.Max(Value(OpenTypeMathConstant.UpperLimitBaselineRiseMin),
-                Value(OpenTypeMathConstant.UpperLimitGapMin) + upper.BelowBaseline);
+                Value(OpenTypeMathConstant.UpperLimitGapMin) + (upper?.BelowBaseline ?? 0d));
             lowerY = baseline + bounds.YMin * scale - Math.Max(Value(OpenTypeMathConstant.LowerLimitBaselineDropMin),
-                Value(OpenTypeMathConstant.LowerLimitGapMin) + lower.AboveBaseline);
+                Value(OpenTypeMathConstant.LowerLimitGapMin) + (lower?.AboveBaseline ?? 0d));
             bodyX = groupAdvance + size / 6d;
         }
         else
@@ -72,7 +83,7 @@ internal static partial class DocxMathLayout
                 out double up, out double down);
             upperY = baseline + up; lowerY = baseline - down;
             upperX = lowerX = operatorAdvance;
-            groupAdvance = operatorAdvance + Math.Max(lower.AdvanceWidth, upper.AdvanceWidth);
+            groupAdvance = operatorAdvance + Math.Max((lower?.AdvanceWidth ?? 0d), (upper?.AdvanceWidth ?? 0d));
             // Word's inline large-operator group retains a trailing thin space;
             // explicit display side limits abut the body after the script box.
             bodyX = groupAdvance + (equation.Display ? 0d : size / 6d);
@@ -87,8 +98,8 @@ internal static partial class DocxMathLayout
             glyphSize, operatorX, baseline, operatorAdvance, color) { OriginalGlyph = variant.Glyph } };
         var rules = new List<DocxMathRulePlacement>();
         Append(body, bodyX, 0d);
-        Append(upper, upperX, upperY);
-        Append(lower, lowerX, lowerY);
+        if (upper is not null) { Append(upper, upperX, upperY); }
+        if (lower is not null) { Append(lower, lowerX, lowerY); }
         if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d)
         { fallback = "InvalidMathNaryExtent"; return false; }
         box = new(width, above, below, glyphs)
