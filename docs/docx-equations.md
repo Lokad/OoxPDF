@@ -57,14 +57,24 @@ checks on Linux without rebuilding. Existing visual gates and unsupported deeper
 rich structures remain explicit; this does not qualify multiple separate equation
 elements in a paragraph or additional stories.
 
-Square-root source and font support are staged for the next layout slice. The
-reader retains radicand, degree and degree-visibility roles, including malformed
-property fallbacks. A bounds-checked vertical-variant reader selects ready-made
-glyphs from the owning font and keeps assembly-only sizes unsupported. Its 851
-selection queries match independent fontTools values; eight Word controls use
-source-matching root outlines. This component preserves existing PDF output and
-does not yet paint radicals. Root placement, rule geometry and degree rendering
-need separate qualification.
+Literal square roots now use the same measured boxes and body/sequence placement.
+The reader retains radicand, degree and degree-visibility roles; an empty hidden
+degree admits the first root slice. The parent owns the root size, operator glue
+and leading, while radicand glyphs keep their authored sizes. Ready-made vertical
+variants and a stored overbar use the font's MATH gap/rule metrics. Assemblies,
+visible degrees, richer nesting and unsupported metric/font owners retain fallback.
+Eight Word controls across 8/12/20 pt radicands improve; all candidate root outlines
+match Word/source variants, and 25 prior capability PDFs remain byte-identical.
+Larger-child errors drop from about 4.1 pt to below 0.7 pt after parent ownership
+is preserved. Small-root placement still differs by up to 1.34 pt; full visual
+gates remain under review with unchanged thresholds. The variant reader's 851
+queries match independent fontTools values.
+
+Implicit root mappings publish after authored glyph mappings are known. A focused
+synthetic test reproduces a prototype Unicode collision and verifies that either
+source order preserves the authored character, retaining root fallback when an
+encoding owner would conflict. This is a confirmed subset-mapping defect in the
+rejected prototype; shared font-cache memory corruption remains unverified.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
