@@ -9,6 +9,49 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontDelimiterFractionsKeepCompositeHeightRulesAndCompleteFallback()
+    {
+        var font = OpenTypeFont.Load(DelimiterFontBytes(separator: true));
+        var mappings = new[] { ((ushort)9, 40), ((ushort)10, 41), ((ushort)93, 124), ((ushort)128, 40), ((ushort)127, 41), ((ushort)126, 124),
+            (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') };
+        var resource = new PdfFontResource("Fractions", PdfEmbeddedFont.CreateForGlyphMappings(font, mappings, CancellationToken.None));
+        DocxMathRow Literal(string text) => new([new DocxMathRun(new(text, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
+        foreach (bool display in new[] { false, true })
+        foreach (bool stack in new[] { false, true })
+        {
+            var fraction = new DocxMathFraction(Literal("B"), Literal("C"), stack ? "noBar" : "bar");
+            var delimiter = new DocxMathDelimiter([new([fraction]), Literal("B")])
+                { GrowValue = false, ControlText = new("", 12d, "008000", false, false, false, null, "TestFont") };
+            var equation = new DocxEquation(new([delimiter]), 0, 0, display, null, null, null) { ParentFontSize = 12d };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 3 &&
+                sources[0].ScriptLevel == (display ? 0 : 1) && sources[1].ScriptLevel == sources[0].ScriptLevel &&
+                sources[2].ScriptLevel == 0 && ReferenceEquals(sources[0].ControlOwner, delimiter),
+                "Composite and literal arguments retain separate source levels and one delimiter control owner.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason),
+                reason ?? "Expected bounded fixed composite arguments.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.Equal("(BC|B)", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+            TestAssert.True(measured.Rules.Count == (stack ? 0 : 1) && measured.Rules.All(r => r.X >= measured.Glyphs[0].Advance && r.Color.Blue == 255),
+                "An inner bar translates with its fraction and retains child paint independently of the delimiter control.");
+            TestAssert.True(measured.Glyphs.Where(g => g.SourceCodePoint is '(' or ')' or '|').All(g => g.Color.Green == 128),
+                "Both outer marks and the separator retain their control color.");
+            var missing = new PdfFontResource("MissingEnd", PdfEmbeddedFont.CreateForGlyphMappings(font, mappings.Where(m => m.Item1 != 10), CancellationToken.None));
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => missing, CancellationToken.None, out var absent, out _) && absent is null,
+                "A missing closing encoding cannot publish a fraction bar or partial argument list.");
+            var deeper = equation with { Content = new([delimiter with { Arguments = [new([fraction with { Numerator = new([delimiter]) }])] }]) };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(deeper, CancellationToken.None, out _), "Fraction children remain literal and discovery does not expand arbitrary nesting.");
+        }
+        var growing = new DocxEquation(new([new DocxMathDelimiter([new([new DocxMathFraction(Literal("B"), Literal("C"), "bar")])])]),
+            0, 0, true, null, null, null) { ParentFontSize = 12d };
+        TestAssert.True(DocxMathLayout.TryMeasure(growing, _ => resource, CancellationToken.None, out var grown, out var growthReason) &&
+            TestAssert.NotNull(grown).Glyphs[0].OriginalGlyph == 128,
+            growthReason ?? "A fraction's complete enclosure height must fit its ready-made variant without an extra symmetric-axis expansion.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(growing, _ => resource, cancelled.Token, out _, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(growing, _ => resource, CancellationToken.None, out _, out _));
+    }
+
     public static void MathFontMixedDelimiterRowsKeepControlOwnersGrowthAndCompleteFallback()
     {
         var font = OpenTypeFont.Load(DelimiterFontBytes());

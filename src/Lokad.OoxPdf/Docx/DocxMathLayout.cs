@@ -79,7 +79,7 @@ internal static partial class DocxMathLayout
         }
         else if (GetDelimiter(equation) is { } delimiter)
         {
-            foreach (var argument in delimiter.Arguments) { token.ThrowIfCancellationRequested(); rows.Add((argument, 0, false)); }
+            foreach (var argument in delimiter.Arguments) { token.ThrowIfCancellationRequested(); AddArgumentRows(argument); }
             controlOwner = delimiter;
         }
         else if (GetRadical(equation) is { } radical)
@@ -241,6 +241,7 @@ internal static partial class DocxMathLayout
         if (!stack) { OoxConversionBudget.Current?.ChargeSceneNodes(1); }
         box = new DocxMathBox(width, above, below, glyphs)
         { Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, first.Color)],
+            EnclosureHeight = above + below,
             ParentMetrics = sources.Any(source => source.Run.NormalText) ? new(metricOwner, parentSize) : null };
         fallback = null;
         return true;

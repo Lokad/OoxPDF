@@ -20,6 +20,9 @@ internal sealed record DocxMathBox(
     // Enclosing operators include a script argument's nominal descent without
     // changing the ink frame already used for paragraph flow and painting.
     public double? EnclosureBelowBaseline { get; init; }
+    // A composite fraction/stack already owns its upper/lower clearances.
+    // A delimiter uses that complete height; literals derive an axis frame.
+    public double? EnclosureHeight { get; init; }
     public DocxMathMetricOwner? ParentMetrics { get; init; }
     public DocxMathRowLayout.RowEdges? Edges { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];

@@ -51,14 +51,15 @@ internal static partial class DocxMathLayout
         foreach (var argument in delimiter.Arguments)
         {
             token.ThrowIfCancellationRequested();
-            if (!DocxMathRowLayout.TryMeasure(argument, resolveFont, token, out var child, out fallback,
-                exportFontSize: true, operatorSpacingFontSize: size) || child is null || child.Glyphs.Count == 0)
+            if (!TryMeasureBoxArgument(equation with { Content = argument }, resolveFont, font, size, token,
+                out var child, out fallback) || child is null || child.Glyphs.Count == 0)
             { fallback ??= "UnsupportedMathDelimiterArgument"; return false; }
             children.Add(child);above = Math.Max(above, child.AboveBaseline);below = Math.Max(below, child.BelowBaseline);
         }
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), scale = glyphSize / font.UnitsPerEm;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * size / font.UnitsPerEm;
-        double height = 2d * Math.Max(above - axis, below + axis);
+        double height = children.Max(child => child.EnclosureHeight ??
+            2d * Math.Max(child.AboveBaseline - axis, child.BelowBaseline + axis));
         if (!double.IsFinite(height) || height <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
         RgbColor color = children[0].Glyphs[0].Color;

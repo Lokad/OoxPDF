@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeFractionDelimitersRetainChildRulesAndSourceMeaning()
+    {
+        RequireMathFont();
+        foreach (string mode in new[] { "display", "inline" })
+        foreach (string suffix in new[] { "", "-brackets", "-stack", "-child20", "-parent20" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-{mode}-fraction{suffix}"), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(suffix == "-brackets" ? "[n+1k]" : "(n+1k)", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Bounded fractions/stacks retain readable grouped native source instead of disappearing with the enclosing delimiter.");
+        }
+        var composed = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-inline-sin-delimiter-fraction"), null, CancellationToken.None).Single();
+        TestAssert.Contains("sin(n+1k)", DocxPageFootnoteNumberingTests.DecodeText(composed).Normalize(NormalizationForm.FormKC));
+    }
+
     public static void DocxNativeMixedFunctionsKeepContextAndAdjacentSourceMeaning()
     {
         RequireMathFont();
