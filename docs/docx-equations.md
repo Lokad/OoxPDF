@@ -781,4 +781,28 @@ glyph outlines match Word/source; text positions remain within 0.37 pt X and
 0.18 pt Y. Fifteen matrix-specific methods qualify one strict Release artifact,
 with 12 exact neighboring PDFs and four exact integration PDFs at transfer.
 Three public cases retain the existing visual thresholds and residuals. Spacing,
-structured/empty cells, mixed rows and deeper grids remain staged.
+empty cells, mixed rows and deeper grids remain staged. Structured cells have the
+separate bounded qualification below.
+
+Matrices now reuse the existing argument-box grammar for one fraction/stack or
+supported script cell. Ordered source discovery and one metric-only matrix owner
+remain shared. Each cell's glyphs and fraction rules move together into the same
+logical column slot; child ink can expand a row. Fraction constants use the
+matrix control size while painted children retain their own authored sizes and
+display/script roles. Literal cells retain their earlier geometry exactly.
+Unsupported nesting, unknown cell roles and late missing glyphs retain complete
+fallback without publishing a partial grid or isolated rules.
+
+Seven independent Word controls improve, including the previously retained
+fractional-cell reference; that reference's Office PDF, corrected inspection and
+raster evidence are reused by exact PDF identity. Twenty-two matrix/shared-child
+methods and 12 exact neighboring PDFs qualify one strict Release artifact;
+four exact integration PDFs verify transfer. Three public cases keep the existing
+thresholds. The outline audit matches 35 of 37 glyphs; two optical fraction-child
+glyphs in the larger-control contrast remain different. Ordinary-size text positions remain within 0.57 pt X and
+0.83 pt Y. A larger-control fraction aligns its children within 0.08 pt Y but
+retains a 4.28 pt following-row residual. The rejected independent child-metric
+prototype displaced the fraction children by 4.67 pt. These measurements qualify
+bounded approximate support and retain the row-spacing concern for investigation;
+they do not establish full matrix parity. No font/size/document-specific correction
+branch is added.
