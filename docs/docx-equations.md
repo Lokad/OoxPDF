@@ -866,3 +866,23 @@ positions remain within 0.37 pt X and 0.18 pt Y. Twenty-seven focused methods,
 artifact. Three public cases retain existing thresholds. Scalar source values
 never determine buffer lengths; invalid rules/amounts, unsupported unit strings,
 nondefault row spacing and earlier unqualified structures retain full fallback.
+
+Matrices now participate in the existing bounded mixed-row composer. One
+node-level admission guard serves standalone and mixed use, retaining the same
+cell, spacing, placeholder and nesting rules. Ordinary, binary and relation
+neighbors use the existing atom spacing. Adjacent grids retain independent source
+controls and painted fonts. Independent Word contrasts show that the surrounding
+row owns the effective control size for matrices and functions. That context now
+passes through the shared measurement entry point, removing the composer's
+function-specific dispatch. Standalone authored controls keep their earlier
+geometry. The rejected standalone-frame-in-row prototype displaced an adjacent
+matrix contrast by 10.43 pt Y; shared row context corrects both control orders.
+
+Eight Word controls improve across display/inline ordinary and operator rows,
+adjacent control orders, grouped minimum-width columns and hidden cells. All 70
+glyph outlines match Word/source. Residuals remain within 1.68 pt X and 0.35 pt Y;
+full visual gates retain explicit differences. Twenty-four matrix/shared-row
+methods, 12 exact neighboring PDFs and four exact integration PDFs qualify one
+strict Release artifact. Three public cases retain existing thresholds. Unknown
+late matrices reject the complete row; cancellation, cumulative work and the
+existing fit/page/publication bounds remain shared.

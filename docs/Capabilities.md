@@ -143,7 +143,7 @@ participate in bounded mixed rows through semantic operator/body edges. Literal 
 script or fraction arguments also render standalone or in bounded mixed rows,
 with independent control and paint fonts. Native matrices support nonempty literal
 or bounded fraction/stack/script cells in
-standalone/fitting-inline grids with centered or declared left/right/grouped columns,
+standalone/fitting-inline grids or bounded mixed rows, with centered or declared left/right/grouped columns,
 top/center/bottom base justification, default row spacing and authored column
 widths/gaps (including explicit defaults). Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
 
