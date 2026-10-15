@@ -1814,7 +1814,10 @@ internal static class DocxHeaderFooterTests
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, 0.76d).Create(document, scaled, CancellationToken.None, raw);
         DocxTextLineLayout[] headerLines = layout.Pages[0].StaticTextLines.Where(line => line.Story?.Kind == DocxStoryKind.Header).ToArray();
         TestAssert.Equal(2, headerLines.Length);
-        TestAssert.Equal(170.6, Math.Round(headerLines[0].BaselineY, 4));
+        // The natural frame exposes printed coordinates: source baseline170.6
+        // maps about the200pt page center at scale0.76. Its pitch is unchanged.
+        TestAssert.True(headerLines.All(line => line.StaticStoryUsesPhysicalY), "The complete natural story owns its printed origin.");
+        TestAssert.Equal(153.656, Math.Round(headerLines[0].BaselineY, 4));
         TestAssert.Equal(8.8033, Math.Round(headerLines[0].BaselineY - headerLines[1].BaselineY, 4));
     }
 
