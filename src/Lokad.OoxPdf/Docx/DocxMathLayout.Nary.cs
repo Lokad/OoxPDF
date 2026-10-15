@@ -48,8 +48,8 @@ internal static partial class DocxMathLayout
             if (constants.GetValue(field) < 0) { fallback = "InvalidMathNaryConstants"; return false; }
         if (!(equation.Display && NaryLimitLocation(equation, nary) == "undOvr") && !HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathNaryScriptConstants"; return false; }
-        if (!DocxMathRowLayout.TryMeasure(nary.Body, resolveFont, token, out var body, out fallback,
-                exportFontSize: true, operatorSpacingFontSize: size) || body is null || body.Glyphs.Count == 0)
+        if (!TryMeasureBoxArgument(equation with { Content = nary.Body }, resolveFont, font, size, token,
+                out var body, out fallback) || body is null || body.Glyphs.Count == 0)
         { fallback ??= "UnsupportedMathNaryBody"; return false; }
         DocxMathBox? lower = null, upper = null;
         if (nary.SubscriptHiddenValue != true &&

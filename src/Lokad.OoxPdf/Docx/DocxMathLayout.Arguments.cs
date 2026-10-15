@@ -1,0 +1,16 @@
+using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Pdf;
+
+namespace Lokad.OoxPdf.Docx;
+
+internal static partial class DocxMathLayout
+{
+    // Discovery admits literals, one fraction/stack or a supported script box.
+    // Its literal child checks bound composition before any measurement recurs.
+    private static bool TryMeasureBoxArgument(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
+        OpenTypeFont metricFont, double spacingSize, CancellationToken token, out DocxMathBox? child, out string? fallback) =>
+        GetFraction(equation) is not null || GetScripts(equation) is not null
+            ? TryMeasure(equation, resolveFont, token, out child, out fallback, parentMetricsFont: metricFont)
+            : DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out child, out fallback,
+                exportFontSize: true, operatorSpacingFontSize: spacingSize);
+}

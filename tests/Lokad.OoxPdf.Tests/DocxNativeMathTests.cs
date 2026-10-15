@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNaryStructuredBodiesRetainFractionStackAndScriptMeaning()
+    {
+        RequireMathFont();
+        foreach (string mode in new[] { "display", "inline" })
+        foreach ((string kind, string body, string character, string meaning) in new[] {
+            ("sum", "fraction", "\u2211", "xk"), ("product", "stack", "\u220F", "xk"), ("sum", "script", "\u2211", "xi2") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nary-body-{mode}-{kind}-{body}"), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(character + meaning + "ni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Bounded body boxes retain native operator, inner mathematical meaning and both outer limits.");
+        }
+    }
+
     public static void DocxNativeNaryDocumentDefaultsKeepSharedOwnerAndExplicitPrecedence()
     {
         RequireMathFont();

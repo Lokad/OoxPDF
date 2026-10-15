@@ -145,6 +145,42 @@ internal static class DocxMathNaryTests
     }
 
     private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    public static void MathFontNaryStructuredBodiesShareBoundedArgumentsRulesAndCompleteFallback()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211, withFractions: true));
+        var resource = new PdfFontResource("Body", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), ((ushort)130, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        foreach (bool display in new[] { true, false })
+        foreach (string kind in new[] { "bar", "noBar", "script" })
+        {
+            DocxMathNode body = kind == "script" ? new DocxMathScripts(Row("B"), Row("C"), Row("B")) :
+                new DocxMathFraction(Row("B"), Row("C"), kind);
+            var nary = Nary("\u2211") with { Body = new([body]) };
+            var equation = Equation(nary) with { Display = display };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) &&
+                sources.Count == (kind == "script" ? 5 : 4) && ReferenceEquals(sources[0].ControlOwner, nary),
+                "Structured bodies retain bounded child roles under one operator owner.");
+            if (kind != "script") TestAssert.True(sources.Take(2).All(s => s.ScriptLevel == (display ? 0 : 1)),
+                "Fraction/stack body arguments keep their display or inline style.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected bounded native body.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.Equal(kind == "script" ? "\u2211BCBCB" : "\u2211BCCB",
+                string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+            TestAssert.Equal(kind == "bar" ? 1 : 0, measured.Rules.Count);
+            TestAssert.True(measured.Glyphs[0].Color.Red == 255 && measured.Glyphs.Skip(1).All(g => g.Color.Blue == 255) &&
+                measured.Rules.All(r => r.Color.Blue == 255 && r.X > measured.Glyphs[0].X),
+                "Inner fraction rules and child colors remain independent of operator color and placement.");
+            var missing = nary with { Body = new([new DocxMathFraction(Row("D"), Row("C"), "bar")]) };
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([missing]) }, _ => resource,
+                CancellationToken.None, out var absent, out _) && absent is null,
+                "A missing inner-body CID cannot publish a partial operator or outer limits.");
+            foreach (var deeper in new DocxMathNode[] { new DocxMathFraction(new([body]), Row("C"), "bar"),
+                new DocxMathScripts(new([new DocxMathScripts(Row("B"), Row("C"), null)]), Row("C"), null) })
+                TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([nary with { Body = new([deeper]) }]) },
+                    CancellationToken.None, out _), "The shared argument grammar cannot recursively admit arbitrary deeper bodies.");
+        }
+    }
+
     public static void MathFontNaryEmptyHiddenLimitsKeepVisibleRolesAndRejectStoredContent()
     {
         var font = OpenTypeFont.Load(FontBytes(0x2211));
@@ -177,7 +213,7 @@ internal static class DocxMathNaryTests
         { CharacterValue = character, LimitLocationValue = "undOvr", ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
     private static DocxMathRow Row(string value) => new([new DocxMathRun(new(value, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
 
-    private static byte[] FontBytes(int point, bool invalidScriptConstants = false)
+    private static byte[] FontBytes(int point, bool invalidScriptConstants = false, bool withFractions = false)
     {
         byte[] math = new byte[254];
         void Put(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at), value);
@@ -186,6 +222,17 @@ internal static class DocxMathNaryTests
             OpenTypeMathConstant.UpperLimitBaselineRiseMin, OpenTypeMathConstant.LowerLimitGapMin, OpenTypeMathConstant.LowerLimitBaselineDropMin })
             Put(18 + (int)field * 4, 250);
         if (invalidScriptConstants) BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18 + (int)OpenTypeMathConstant.SuperscriptShiftUp * 4), -1);
+        if (withFractions)
+        {
+            foreach (var field in new[] { OpenTypeMathConstant.FractionNumeratorDisplayStyleShiftUp, OpenTypeMathConstant.StackTopDisplayStyleShiftUp }) Put(18 + (int)field * 4, 700);
+            foreach (var field in new[] { OpenTypeMathConstant.FractionDenominatorDisplayStyleShiftDown, OpenTypeMathConstant.StackBottomDisplayStyleShiftDown,
+                OpenTypeMathConstant.FractionNumeratorShiftUp, OpenTypeMathConstant.StackTopShiftUp }) Put(18 + (int)field * 4, 500);
+            foreach (var field in new[] { OpenTypeMathConstant.FractionDenominatorShiftDown, OpenTypeMathConstant.StackBottomShiftDown }) Put(18 + (int)field * 4, 400);
+            foreach (var field in new[] { OpenTypeMathConstant.FractionNumDisplayStyleGapMin, OpenTypeMathConstant.FractionDenomDisplayStyleGapMin,
+                OpenTypeMathConstant.FractionNumeratorGapMin, OpenTypeMathConstant.FractionDenominatorGapMin, OpenTypeMathConstant.StackGapMin,
+                OpenTypeMathConstant.StackDisplayStyleGapMin }) Put(18 + (int)field * 4, 100);
+            Put(18 + (int)OpenTypeMathConstant.FractionRuleThickness * 4, 40);
+        }
         Put(8, 224); Put(226, 12); Put(230, 1); Put(234, 18); Put(236, 1); Put(238, 1); Put(240, 130);
         Put(244, 2); Put(246, 130); Put(248, 1000); Put(250, 128); Put(252, 2000);
         byte[] cmap = new byte[52];

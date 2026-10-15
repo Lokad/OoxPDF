@@ -31,10 +31,7 @@ internal static partial class DocxMathLayout
         DocxEquation radicandEquation = equation with { Content = radical.Radicand, ParentFontSize = size, Cramped = true };
         // Discovery admits existing bounded fraction/script boxes; their own
         // literal-role checks prevent arbitrary recursive radicands.
-        bool measuredChild = GetFraction(radicandEquation) is not null || GetScripts(radicandEquation) is not null
-            ? TryMeasure(radicandEquation, resolveFont, token, out var child, out fallback, parentMetricsFont: font)
-            : DocxMathRowLayout.TryMeasure(radical.Radicand, resolveFont, token, out child, out fallback,
-                exportFontSize: true, operatorSpacingFontSize: size);
+        bool measuredChild = TryMeasureBoxArgument(radicandEquation, resolveFont, font, size, token, out var child, out fallback);
         if (!measuredChild || child is null || child.Glyphs.Count == 0)
         { fallback ??= "EmptyMathRadical"; return false; }
         double scale = size / font.UnitsPerEm;

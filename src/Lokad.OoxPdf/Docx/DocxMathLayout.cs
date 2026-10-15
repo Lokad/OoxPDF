@@ -61,7 +61,7 @@ internal static partial class DocxMathLayout
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetNary(equation, token) is { } nary)
         {
-            rows.Add((nary.Body, 0, false));
+            if (!AddBoxArgumentRows(nary.Body)) { runs = []; return false; }
             foreach (var (argument, hidden) in new[] { (nary.Subscript, nary.SubscriptHiddenValue), (nary.Superscript, nary.SuperscriptHiddenValue) })
             {
                 if (hidden == true) { continue; }
@@ -77,9 +77,7 @@ internal static partial class DocxMathLayout
         }
         else if (GetRadical(equation) is { } radical)
         {
-            if (GetScripts(equation with { Content = radical.Radicand }) is { } childScripts)
-            { if (!AddScriptRows(childScripts)) { runs = []; return false; } }
-            else { AddArgumentRows(radical.Radicand); }
+            if (!AddBoxArgumentRows(radical.Radicand)) { runs = []; return false; }
             controlOwner = radical;
             if (radical.DegreeHidden != true)
             {
@@ -122,6 +120,13 @@ internal static partial class DocxMathLayout
         runs = result;
         return true;
 
+        bool AddBoxArgumentRows(DocxMathRow argument)
+        {
+            if (GetScripts(equation with { Content = argument }) is { } childScripts) { return AddScriptRows(childScripts); }
+            AddArgumentRows(argument);
+            return true;
+        }
+
         bool AddScriptRows(DocxMathScripts script)
         {
             AddArgumentRows(script.Base);
@@ -136,7 +141,7 @@ internal static partial class DocxMathLayout
 
         void AddArgumentRows(DocxMathRow argument)
         {
-            // These two roles admit a literal row or one fraction/stack with
+            // These argument roles admit a literal row or one fraction/stack with
             // literal children. Discovery never recursively expands structures.
             if (GetFraction(equation with { Content = argument }) is { } fraction)
             {
