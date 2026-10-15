@@ -354,3 +354,25 @@ math screen now passes all ten outcomes: 4,234 source prose tokens, no token/mat
 deficits or unresolved source features. This does not establish image/ink/clipping
 or reading-order fidelity. Seventeen assets/four smoke PDFs transfer without root
 rebuild or suite replay. C1 remains open for geometry and composed-content limits.
+
+
+Autofit column measurement now consumes prepared equation advances. Its minimum
+protects each whole box; its maximum reuses the ordered inline measurement used
+for wrapping, including prose, pictures, formulas and authored breaks. Fixed,
+preferred-width and span fallbacks retain their existing paths. Cancellation flows
+through the new measurement work; no font/size/document-specific rule is added.
+
+An independent four-row control exposed a 10.7pt equation column and four omitted
+fractions. All four now paint; added-prose and duplicated-formula transformations
+also preserve their four/eight expressions and increase preferred width. Native
+foreground recall improves from 0.275 to 0.851; other visual gates still fail. An
+unreferenced template header continues to report an ignored equation, separately
+from the visible body loss fixed here. Fixed-grid spacing controls show ordinary
+full-row heights are close to Word; the held-out page-boundary discrepancy remains.
+
+Thirty-two selected methods pass in one invocation and eleven portable checks
+pass on Ubuntu. All ten portfolio PDFs remain exact and their content audit has
+no deficits. Twelve independent comparisons reuse verified identities. Seventeen
+assets/four smoke PDFs transfer without root rebuild or suite replay. The next
+rendering investigation is independently controlled trailing-spacing admission
+at a page boundary; the held-out memo remains an acceptance check.
