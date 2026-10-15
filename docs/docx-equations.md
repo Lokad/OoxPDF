@@ -614,7 +614,7 @@ argument fonts/colors keep their own paint. Metric-only controls reuse the
 conversion font owner without preparing an unused PDF subset or resource. An
 opening delimiter suppresses application glue, using the same semantic edge that
 also improves ordinary-prefix delimiter rows. Unsupported or deeper names and
-arguments retain complete fallback; functions inside mixed rows remain staged.
+arguments retain complete fallback. The mixed-row qualification follows below.
 
 Nine independent Word controls improve in both similarity and foreground recall,
 including two ordinary-prefix delimiter contrasts and an all-normal Arial
@@ -625,3 +625,24 @@ Release artifact; four exact smoke PDFs verify its transfer without rebuilding o
 repeating the suite. Three public cases preserve existing thresholds and explicit
 visual residuals. The all-normal function emits only the painted Arial equation
 font, while its metric control remains separate from PDF resource ownership.
+
+
+Functions now share standalone and mixed-row eligibility through the existing row
+composer. Ordinary/binary prefixes, outgoing relations and adjacent controls keep
+semantic atom spacing and source order. In a mixed row the surrounding parent
+size owns application spacing and the invisible control frame; standalone
+functions retain their authored control size. Independent paint sizes, fonts and
+colors remain intact. The rejected standalone-frame prototype displaced three
+20 pt control contrasts by 7.62 pt; the parent-context rule corrects those cases
+in both adjacent-control orders without a font or size whitelist.
+
+Twelve independent Word controls improve in similarity and foreground recall;
+all 116 glyph outlines match Word/source. Nine 12 pt surrounding-row controls
+remain within 0.11 pt horizontally and 0.057 pt vertically. Three 16/20 pt parent
+contrasts validate the context rule but retain an existing surrounding-prose
+horizontal offset up to 1.37 pt and vertical differences up to 0.095 pt. These
+residuals remain visible and do not trigger a size-specific correction.
+Eighteen focused methods, 17 exact standalone/mixed-row neighboring PDFs and four
+exact transfer smoke PDFs qualify one strict Release artifact. Three public cases
+retain the existing visual thresholds. Structured names and deeper application
+arguments still use complete fallback, with cancellation and work limits intact.

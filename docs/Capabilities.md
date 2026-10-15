@@ -140,7 +140,8 @@ Sum/product bodies can also contain one fraction/stack or supported script box. 
 bounded bodies, using extended-shape and italic metrics for their side limits. Authored n-ary growth-off is
 supported; explicit growth fits occupied body height using ready-made variants. These n-ary boxes also
 participate in bounded mixed rows through semantic operator/body edges. Literal function names with bounded literal, delimiter,
-script or fraction arguments also render with independent control and paint fonts. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
+script or fraction arguments also render standalone or in bounded mixed rows,
+with independent control and paint fonts. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
 
 Unsupported or ignored:
 
