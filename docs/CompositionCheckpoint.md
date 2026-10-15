@@ -420,3 +420,20 @@ pass on Ubuntu. All ten portfolio PDFs retain bytes; eighteen independent Office
 comparisons reuse verified identities. Global/page-local prose and simple-math
 screens pass. Seventeen assets/four exact smoke PDFs transfer without rebuilding
 or repeating the suite. The portfolio DOCX gates remain failed; decks remain passed.
+
+Geometry triage now preserves PDF page ownership in both nearest-position and
+indexed text comparisons. Page-moved content previously passed both modes. A
+second adversarial control exposed rounding-edge splits of collinear runs; anchored
+0.1pt baseline bands now keep those runs in X order without chaining distinct
+lines. Twenty-two adversarial cases pass. Optional structured reports retain input,
+tool/helper hashes, matching options, tolerances, pages, text and measured deltas.
+Existing raster thresholds are unchanged.
+
+Cached portfolio inspection required no conversion or library build. All 334
+Final merged pairs match normalized text and page, with maximum start differences
+of 0.877pt X and 0.981pt Y. Review outcomes retain 28/33 unresolved operation pairs
+per document, including differing mathematical operation segmentation; these are
+not inferred content omissions. Exact review pairs reach 3.152pt Y. Global and
+page-local content screens remain separate evidence; neither proves complete ink
+or clipping fidelity. Sub-point Final refinements remain lower priority than
+confirmed composition loss and the overfull operator-breaking contract.
