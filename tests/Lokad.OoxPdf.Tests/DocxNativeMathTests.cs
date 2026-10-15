@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeInlineIntegralsRetainLiteralSizedAndStructuredBodyMeaning()
+    {
+        RequireMathFont();
+        foreach ((string name, string meaning) in new[] { ("docx-omml-nary-inline-integral-subSup", "x"),
+            ("docx-omml-integral-inline-size8", "x"), ("docx-omml-integral-inline-size16", "x"), ("docx-omml-integral-inline-size20", "x"),
+            ("docx-omml-integral-inline-stacked-request", "x"), ("docx-omml-integral-inline-document-default", "x"),
+            ("docx-omml-integral-inline-fraction-body", "xk"), ("docx-omml-integral-inline-script-body", "xi2") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture(name), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains("\u222B" + meaning + "10", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Qualified inline integrals retain their native operator, body and both limits across font sizes and location requests.");
+        }
+    }
+
     public static void DocxNativeNaryStructuredBodiesRetainFractionStackAndScriptMeaning()
     {
         RequireMathFont();

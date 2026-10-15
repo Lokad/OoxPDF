@@ -145,6 +145,28 @@ internal static class DocxMathNaryTests
     }
 
     private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    public static void MathFontInlineIntegralUsesExtendedShapeItalicCorrectionAndIndependentDefaults()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x222B, extendedOperator: true));
+        var resource = new PdfFontResource("Integral", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)130, 0x222B), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        var nary = Nary("\u222B") with { LimitLocationValue = null };
+        var equation = Equation(nary) with { Display = false, LimitSettings = new("bad", "undOvr", true, false, []) };
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected qualified inline integral.");
+        var measured = TestAssert.NotNull(box); var op = measured.Glyphs[0]; var upper = measured.Glyphs[2]; var lower = measured.Glyphs[3];
+        TestAssert.True(op.OriginalGlyph == 130 && Math.Abs(upper.X - lower.X - 2.4d) < 1e-9,
+            "A font-owned italic correction lets the lower integral limit precede the upper limit without a point-size branch.");
+        TestAssert.True(upper.BaselineY - op.BaselineY >= 8d,
+            "The extended-shape flag activates the occupied-base drop rule for an inline integral.");
+        TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Display = true }, CancellationToken.None, out _),
+            "Display integral sizing retains its independently measured unresolved fallback.");
+        var invalid = equation with { LimitSettings = new("undOvr", "bad", false, true, []) };
+        TestAssert.True(!DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
+            "Integral defaults retain independent ownership rather than consulting an unrelated n-ary setting.");
+        TestAssert.True(DocxMathLayout.TryMeasure(invalid with { Content = new([nary with { LimitLocationValue = "subSup" }]) },
+            _ => resource, CancellationToken.None, out _, out _), "Explicit placement overrides unused invalid integral defaults.");
+    }
+
     public static void MathFontNaryStructuredBodiesShareBoundedArgumentsRulesAndCompleteFallback()
     {
         var font = OpenTypeFont.Load(FontBytes(0x2211, withFractions: true));
@@ -213,7 +235,7 @@ internal static class DocxMathNaryTests
         { CharacterValue = character, LimitLocationValue = "undOvr", ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
     private static DocxMathRow Row(string value) => new([new DocxMathRun(new(value, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
 
-    private static byte[] FontBytes(int point, bool invalidScriptConstants = false, bool withFractions = false)
+    private static byte[] FontBytes(int point, bool invalidScriptConstants = false, bool withFractions = false, bool extendedOperator = false)
     {
         byte[] math = new byte[254];
         void Put(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at), value);
@@ -235,6 +257,12 @@ internal static class DocxMathNaryTests
         }
         Put(8, 224); Put(226, 12); Put(230, 1); Put(234, 18); Put(236, 1); Put(238, 1); Put(240, 130);
         Put(244, 2); Put(246, 130); Put(248, 1000); Put(250, 128); Put(252, 2000);
+        if (extendedOperator)
+        {
+            Array.Resize(ref math, 282); Put(6, 254);
+            Put(254, 14); Put(258, 8); Put(262, 1); Put(264, 1); Put(266, 130);
+            Put(268, 8); Put(270, 1); Put(272, 200); Put(276, 1); Put(278, 1); Put(280, 130);
+        }
         byte[] cmap = new byte[52];
         void U16(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(cmap.AsSpan(at), value);
         void U32(int at, uint value) => BinaryPrimitives.WriteUInt32BigEndian(cmap.AsSpan(at), value);

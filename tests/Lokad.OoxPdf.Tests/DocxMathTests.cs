@@ -21,7 +21,7 @@ internal static class DocxMathTests
             TestAssert.Equal(character,nary.CharacterValue);TestAssert.Equal(location,nary.LimitLocationValue);
             TestAssert.Equal(lower,RowText(nary.Subscript));TestAssert.Equal(upper,RowText(nary.Superscript));TestAssert.Equal("x",RowText(nary.Body));
             TestAssert.True(nary.ControlText is { FontSize:12d } && nary.GrowValue is null,"Inherited controls and omitted growth retain distinct source ownership.");
-            TestAssert.Equal(kind != "integral-subSup", DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _));
+            TestAssert.Equal(placement == "inline" || kind != "integral-subSup", DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _));
         }
     }
 

@@ -12,15 +12,18 @@ internal static partial class DocxMathLayout
     // Integral sizing retains its independently measured fallback.
     private static DocxMathNary? GetNary(DocxEquation equation, CancellationToken token) =>
         GetSingleSupportedChild(equation) is DocxMathNary
-        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F", LimitLocationValue: null or "undOvr" or "subSup",
+        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F" or "\u222B", LimitLocationValue: null or "undOvr" or "subSup",
             GrowValue: not false } nary &&
+        (!equation.Display || nary.CharacterValue != "\u222B") &&
         NaryLimitLocation(equation, nary) is "undOvr" or "subSup" &&
         (nary.SubscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Subscript, token)) &&
         (nary.SuperscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Superscript, token)) &&
         (nary.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(nary.ControlText, allowBold: false)) ? nary : null;
 
     private static string? NaryLimitLocation(DocxEquation equation, DocxMathNary nary) =>
-        nary.LimitLocationValue ?? (equation.LimitSettings.UnsupportedNary ? null : equation.LimitSettings.NaryValue ?? "undOvr");
+        nary.LimitLocationValue ?? (nary.CharacterValue == "\u222B"
+            ? equation.LimitSettings.UnsupportedIntegral ? null : equation.LimitSettings.IntegralValue ?? "subSup"
+            : equation.LimitSettings.UnsupportedNary ? null : equation.LimitSettings.NaryValue ?? "undOvr");
 
     // Word reassigns stored nonempty hidden arguments into visible roles.
     // Only a truly empty supported literal argument may be omitted here.
@@ -83,11 +86,16 @@ internal static partial class DocxMathLayout
         else
         {
             var basis = new DocxMathBox(operatorAdvance, Math.Max(0d, bounds.YMax * scale), Math.Max(0d, -bounds.YMin * scale), []);
-            GetScriptShifts(constants, size / font.UnitsPerEm, basis, lower, upper, equation.Display, equation.Cramped,
+            if (!font.TryIsMathExtendedShape(variant.Glyph, out bool extended) ||
+                !font.TryGetMathItalicCorrection(variant.Glyph, out short correction))
+            { fallback = "InvalidMathNaryScriptMetrics"; return false; }
+            GetScriptShifts(constants, size / font.UnitsPerEm, basis, lower, upper, extended, equation.Cramped,
                 out double up, out double down);
             upperY = baseline + up; lowerY = baseline - down;
-            upperX = lowerX = operatorAdvance;
-            groupAdvance = operatorAdvance + Math.Max((lower?.AdvanceWidth ?? 0d), (upper?.AdvanceWidth ?? 0d));
+            upperX = operatorAdvance;
+            lowerX = operatorAdvance - correction * scale;
+            groupAdvance = Math.Max(operatorAdvance, Math.Max(lower is null ? 0d : lowerX + lower.AdvanceWidth,
+                upper is null ? 0d : upperX + upper.AdvanceWidth));
             // Word's inline large-operator group retains a trailing thin space;
             // explicit display side limits abut the body after the script box.
             bodyX = groupAdvance + (equation.Display ? 0d : size / 6d);
@@ -104,7 +112,8 @@ internal static partial class DocxMathLayout
         Append(body, bodyX, 0d);
         if (upper is not null) { Append(upper, upperX, upperY); }
         if (lower is not null) { Append(lower, lowerX, lowerY); }
-        if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d)
+        if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d ||
+            lower is not null && lowerX < 0d || upper is not null && upperX < 0d)
         { fallback = "InvalidMathNaryExtent"; return false; }
         box = new(width, above, below, glyphs)
         { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) };
