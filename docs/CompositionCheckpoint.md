@@ -216,3 +216,13 @@ graphics operations retain parent bytes. All ten fixed portfolio PDFs are exact;
 17 assets and four integration PDFs transfer without rebuild or suite replay.
 Coordinate residuals and failed visual gates remain explicit; mixed-inline source
 annotation binding is still open.
+
+
+Standalone body equations now appear as `Equation` in layout inspection, with
+source block and column ownership, structural box bounds, explicit baseline and
+occupied line height. Previously they appeared as `Unknown` with zero geometry.
+These measurements describe layout frames, not glyph ink. The inspection-only
+change passes 14 selected methods in one invocation and the pinned-font regression
+on Ubuntu, where both DOCX modes are exercised. Four integration PDFs retain their
+previous bytes after transferring 17 qualified assets without a root rebuild or
+suite replay. No visual-fidelity improvement is claimed for this telemetry fix.
