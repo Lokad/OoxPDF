@@ -659,3 +659,38 @@ build or suite replay. The generic measurement tool now calls custom-manifest
 results pinned document/mode outcomes, distinguishing them from full portfolio
 qualification. The remaining C1 task is the finite document severity and visible
 clipping/overlap review, retaining independent thresholds and unresolved evidence.
+
+
+The finite C1 portfolio severity review is complete. All sixteen candidate/Office
+page pairs were inspected, using comparison-chain report hashes and exact PDF
+identities. No missing visible content or serious pagination, overlap or clipping
+defect was observed in these documents. Global and page-local prose/simple-math
+screens remain clear, and both source PNG colors retain visible patches in all
+eight DOCX outcomes. This is bounded visual evidence, not a proof of arbitrary
+reading order, glyph ink bounds or unsupported combinations.
+
+| Document | Final / review pages | Content / serious placement | Residual outcome |
+|---|---|---|---|
+| Report | 2 / 2 | No omission or serious defect observed | Typography/table spacing; review pane and connector geometry |
+| Letter | 1 / 1 | No omission or serious defect observed | Typography/table spacing; review pane and connector geometry |
+| Specification | 2 / 2 | No omission or serious defect observed | Typography/table spacing; review pane and connector geometry |
+| Held-out technical memo | 2 / 2 | No omission or serious defect observed | Table/baseline spacing; review pane and connector geometry |
+| Briefing deck | 1 | No omission or serious defect observed | Numerical gate passes |
+| Held-out deck | 1 | No omission or serious defect observed | Numerical gate passes |
+
+All eight DOCX numerical visual gates remain failed under their original
+thresholds; neither manual review nor the bounded reliability checkpoint relabels
+them. Review pane background extent is visibly different even where content is
+clear. The held-out documents remain acceptance checks, outside derivation.
+Detailed per-outcome severity, page raster hashes and comparison provenance are
+retained in `artifacts/composition-c1/c1-portfolio-severity.json`. The source PNG
+patch refresh is `portfolio-image-patches-current-frame.json`. Latest production
+2ad7208a retains the 07b20914 full portfolio through the documented one-paragraph
+predicate equivalence and exact integration smokes; no corpus reconversion was
+needed for this review. CI 38820298013 (root 66d66fc1) is green on both platforms.
+
+C1's bounded mixed-content reliability checkpoint is accepted with these explicit
+visual residuals. Wider rich/related/floating stories and OMML remain on the
+roadmap. The next maintenance step reuses unchanged immutable fixture snapshots;
+subsequent rendering work returns to supported-content composition rather than
+fitting the held-out portfolio or lowering visual thresholds.
