@@ -754,3 +754,38 @@ remain. No previously rejected retirement target was retried. The workspace is
 4.606GB / 257,880 files with no scan errors; proof and compaction maps are under
 `artifacts/workspace-maintenance/`, and the complete check is
 `artifacts/workspace-footprint-after-archive-compaction.json`.
+
+
+Equation/comment composition now keeps ordered source boundaries and measured
+visible extents. Comment ranges attach as metadata; prose, formula-only, between-
+formula and mixed selections preserve equations in body paragraphs and cells.
+Highlights and connectors use placed source geometry, including the formula's
+visible content rather than its padded layout advance. Adjacent prose owns the
+inter-object whitespace. The line owns selection height independently of range
+endpoints. Legacy annotation geometry remains on its existing path. Note/field/
+revision and broader story combinations retain staged fallbacks.
+
+Eight public sources have independent Word exports in both presets. Twelve
+initial parent outcomes omitted both equations; native and portable regressions
+fail on that prior library. The accepted base retains mathematical/prose content
+in sixteen outcomes and passes eight independent selection-width checks, with
+maximum horizontal error 0.080pt. Bookmarks and unchanged-format run splitting
+retain source ranges. The sole-formula policy also retains display ownership.
+Eight review crops show visible equations, prose and comment captions; cell
+baselines, selection height, connectors and balloon/pane cosmetics remain
+approximate. All sixteen original numerical visual gates remain failed.
+
+Base artifact 535a5d8e / root c5130a51 passes fifty selected methods in one
+invocation and four Ubuntu methods. Follow-up 6ff2f99e / root 9478690f corrects
+line-owned highlight height; its regression fails on the base artifact. Eight
+affected methods pass once in one invocation, plus one Ubuntu method. Only the
+four prose/between source documents are reconverted for that follow-up (eight
+mode outcomes); all four Final PDFs and their comparisons retain identity. Other
+base qualification remains retained, rather than reporting a new complete run.
+The 1,247-input snapshot is reused. Seventeen assets/four exact PDF smokes transfer
+without a root rebuild or suite replay.
+
+The fixed portfolio has no paragraphs combining comments and equations; retain
+its prior full qualification and severity review, with exact letter and held-out
+memo review integration PDFs. The held-out document remains outside derivation.
+Evidence: `artifacts/composition-c1/math-comments-evidence.json`.

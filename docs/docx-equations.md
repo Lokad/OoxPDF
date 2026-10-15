@@ -17,6 +17,17 @@ and inline pictures now use shared ordered-fragment measurement and placement in
 body, cell and direct header/footer paragraphs. Wider display combinations and
 unfit objects retain fallback. Painted math-bearing rows are atomic, with wider fragmentation still
 unqualified.
+Ordinary default/left tabs now share measured text/math/image advances across
+these containers. Right/center/decimal tabs, leaders and out-of-frame stops retain
+explicit fallback. Closed comment ranges can coexist with supported inline math
+in body paragraphs and cells: source boundaries survive bookmarks and unchanged-
+format run splitting. Highlights and connectors consume placed source extents,
+including formula bounds; selection height belongs to the line. Final output
+retains the equations while hiding comments. Note references, fields, revisions
+and wider related/floating-story combinations remain staged. Independent Word
+controls preserve the original visual thresholds; significant typography and
+annotation-height residuals remain.
+
 The earlier body qualifications below retain their scope and residuals.
 
 Native OMML rendering is in progress. A first native slice paints standalone
