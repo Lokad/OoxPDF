@@ -813,8 +813,9 @@ and `rSp` through the same scalar validation. This follows the documented
 [column-gap default](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.columngap?view=openxml-3.0.1),
 [zero minimum column width](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.columnspacing?view=openxml-3.0.1)
 and [default row-spacing rule](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.rowspacingrule?view=openxml-3.0.1).
-Nondefault values, malformed leaves, duplicates and foreign declarations retain
-raw source and complete fallback. No layout profile or quota is added.
+At this checkpoint nondefault values retained fallback; the column-spacing
+qualification below extends that profile. Malformed leaves, duplicates and
+foreign declarations retain raw source and complete fallback. No quota is added.
 
 Six independent Word controls have identical math text operations to their
 omitted-property equivalents. Candidate PDFs reproduce the previously qualified
@@ -846,3 +847,22 @@ guards, qualify one strict Release artifact. Four exact integration PDFs verify
 transfer; three public cases retain existing visual thresholds. The all-Arial
 grid continues to publish only its painted font. Earlier structured-row and optical
 residuals remain unchanged.
+
+Authored matrix column spacing now uses the documented
+[`cGpRule` units](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.columngaprule?view=openxml-3.0.1):
+single/1.5/double em gaps, exact twips, or multiples of half an em. The gap amount
+is ignored under the three standard rules, as specified. Numeric `cSp` minimum
+widths retain twips independently of control font size. One resolver applies
+these values to the existing logical column slots. The formula's logical extent
+ends at its last argument, including a hidden placeholder box, while unused
+trailing slot padding affects neither centering nor following-prose placement.
+The rejected complete-slot extent displaced a centered minimum-width probe by
+4.15 pt. No size or document-specific correction is needed.
+
+Seven Word controls improve across minimum widths, every gap form, zero gap,
+grouped justification and a larger control. All 36 glyph outlines match; text
+positions remain within 0.37 pt X and 0.18 pt Y. Twenty-seven focused methods,
+12 exact neighbors and four exact integration PDFs qualify one strict Release
+artifact. Three public cases retain existing thresholds. Scalar source values
+never determine buffer lengths; invalid rules/amounts, unsupported unit strings,
+nondefault row spacing and earlier unqualified structures retain full fallback.
