@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Docx;
 // existing layout; one display fraction adds two literal child boxes and a rule.
 internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel)
 {
-    public DocxMathRadical? RadicalOwner { get; init; }
+    public IDocxMathControl? ControlOwner { get; init; }
 }
 
 internal static partial class DocxMathLayout
@@ -43,19 +43,21 @@ internal static partial class DocxMathLayout
     public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
-        DocxMathRadical? radicalOwner = null;
+        IDocxMathControl? controlOwner = null;
         if (GetScripts(equation) is { } scripts)
         {
             if (!AddScriptRows(scripts)) { runs = []; return false; }
         }
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
+        else if (GetDelimiter(equation) is { } delimiter)
+        { rows.Add((delimiter.Arguments[0], 0, false)); controlOwner = delimiter; }
         else if (GetRadical(equation) is { } radical)
         {
             if (GetScripts(equation with { Content = radical.Radicand }) is { } childScripts)
             { if (!AddScriptRows(childScripts)) { runs = []; return false; } }
             else { AddArgumentRows(radical.Radicand); }
-            radicalOwner = radical;
+            controlOwner = radical;
             if (radical.DegreeHidden != true)
             {
                 if (!DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out int level, startingLevel: 2))
@@ -93,7 +95,7 @@ internal static partial class DocxMathLayout
                     for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
             }
         }
-        if (radicalOwner is not null && result.Count > 0) { result[0] = result[0] with { RadicalOwner = radicalOwner }; }
+        if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwner = controlOwner }; }
         runs = result;
         return true;
 
@@ -125,14 +127,16 @@ internal static partial class DocxMathLayout
 
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont = null,
-        Func<DocxMathRadical, PdfFontResource?>? resolveRadicalFont = null)
+        Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null)
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
+        if (GetDelimiter(equation) is { } delimiter)
+            return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetRadical(equation) is { } radical)
-            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveRadicalFont);
+            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetStructuredRow(equation, token) is { } compound)
-            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveRadicalFont);
+            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;

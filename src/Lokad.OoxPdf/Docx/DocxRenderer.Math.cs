@@ -31,11 +31,12 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
     {
-        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> RadicalFaces)>();
+        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> ControlFaces)>();
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
-        var radicalFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, List<OpenTypeMathGlyphVariant> Variants)>(ReferenceEqualityComparer.Instance);
-        var radicalKeys = new Dictionary<DocxMathRadical, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
+        var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
+        var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
+        var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraphElement element in document.BodyElements.OfType<DocxParagraphElement>())
         {
             token.ThrowIfCancellationRequested();
@@ -43,7 +44,7 @@ internal sealed partial class DocxRenderer
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
             if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
             OpenTypeFont? parentMetrics = null;
-            List<OpenTypeFont>? radicalOwners = null;
+            List<OpenTypeFont>? controlOwners = null;
             if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
             {
                 FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
@@ -54,29 +55,43 @@ internal sealed partial class DocxRenderer
             foreach (DocxMathRunSource source in mathRuns)
             {
                 token.ThrowIfCancellationRequested();
-                if (source.RadicalOwner is { } radical)
+                if (source.ControlOwner is { } control)
                 {
-                    if (!radicalKeys.TryGetValue(radical, out var rootKey))
+                    if (!controlKeys.TryGetValue(control, out var controlKey))
                     {
-                        FontFaceResolution rootFace = resolver.Resolve(new FontRequest(radical.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
-                        OpenTypeFont? rootFont = LoadFont(rootFace, fontCache, token);
-                        if (rootFont is null || !rootFont.HasTrueTypeOutlines || !rootFont.TryGetMathConstants(out _))
+                        FontFaceResolution controlFace = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
+                        OpenTypeFont? controlFont = LoadFont(controlFace, fontCache, token);
+                        if (controlFont is null || !controlFont.HasTrueTypeOutlines || !controlFont.TryGetMathConstants(out _))
                         { valid = false; break; }
-                        rootKey = (rootFace.Source.StableId, rootFace.FontFaceIndex);
-                        if (!groups.TryGetValue(rootKey, out var rootGroup)) { rootGroup = (rootFont, new Dictionary<ushort, int>()); groups.Add(rootKey, rootGroup); }
-                        if (!radicalFaces.ContainsKey(rootFont))
+                        controlKey = (controlFace.Source.StableId, controlFace.FontFaceIndex);
+                        if (!groups.TryGetValue(controlKey, out var controlGroup))
+                        { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
+                        if (!controlFaces.TryGetValue(controlFont, out var face))
                         {
-                            ushort root = rootFont.MapCodePoint(0x221A);
-                            var variants = new List<OpenTypeMathGlyphVariant>();
-                            double height = 0d;
-                            while (rootFont.TryGetMathVerticalVariant(root, height, token, out var variant))
-                            { variants.Add(variant); height = variant.Advance + 1d; }
-                            if (variants.Count == 0) { valid = false; break; }
-                            radicalFaces.Add(rootFont, (rootGroup.Glyphs, variants));
+                            face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new HashSet<int>());
+                            controlFaces.Add(controlFont, face);
                         }
-                        radicalKeys.Add(radical, rootKey);
+                        foreach (int point in DocxMathLayout.GetControlCodePoints(control))
+                        {
+                            if (face.Characters.Contains(point)) { continue; }
+                            ushort glyph = controlFont.MapCodePoint(point);
+                            double height = 0d;
+                            bool found = false;
+                            while (controlFont.TryGetMathVerticalVariant(glyph, height, token, out var variant))
+                            {
+                                found = true;
+                                if (face.Operators.TryGetValue(variant.Glyph, out int previous) && previous != point)
+                                { unavailableControlFaces.Add(controlFont); }
+                                else { face.Operators[variant.Glyph] = point; }
+                                height = variant.Advance + 1d;
+                            }
+                            if (!found) { valid = false; break; }
+                            face.Characters.Add(point);
+                        }
+                        if (!valid) { break; }
+                        controlKeys.Add(control, controlKey);
                     }
-                    (radicalOwners ??= []).Add(groups[rootKey].Font);
+                    (controlOwners ??= []).Add(groups[controlKey].Font);
                 }
                 DocxMathRun run = source.Run;
                 string family = run.NormalText
@@ -104,18 +119,18 @@ internal sealed partial class DocxRenderer
                 if (!valid) { break; }
                 runKeys[run] = key;
             }
-            if (valid) { candidates.Add((paragraph, equation, parentMetrics, radicalOwners ?? [])); }
+            if (valid) { candidates.Add((paragraph, equation, parentMetrics, controlOwners ?? [])); }
         }
-        var unavailableRadicalFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
-        foreach (var face in radicalFaces)
+        foreach (var face in controlFaces)
         {
             token.ThrowIfCancellationRequested();
             // Publish implicit operators after all authored glyphs are known.
-            // A source alias needs a separate encoding owner; keep root fallback
+            // A source alias needs a separate encoding owner; keep control fallback
             // rather than changing that source character's Unicode identity.
-            if (face.Value.Variants.Any(v => face.Value.Glyphs.TryGetValue(v.Glyph, out int point) && point != 0x221A))
-            { unavailableRadicalFaces.Add(face.Key); continue; }
-            foreach (var variant in face.Value.Variants) { face.Value.Glyphs[variant.Glyph] = 0x221A; }
+            if (face.Value.Operators.Any(v => face.Value.Glyphs.TryGetValue(v.Key, out int point) && point != v.Value))
+            { unavailableControlFaces.Add(face.Key); continue; }
+            if (unavailableControlFaces.Contains(face.Key)) { continue; }
+            foreach (var glyph in face.Value.Operators) { face.Value.Glyphs[glyph.Key] = glyph.Value; }
         }
         var fonts = new Dictionary<(string StableId, int FaceIndex), PdfFontResource>();
         foreach (var group in groups)
@@ -130,10 +145,10 @@ internal sealed partial class DocxRenderer
         foreach (var candidate in candidates)
         {
             token.ThrowIfCancellationRequested();
-            if (candidate.RadicalFaces.Any(unavailableRadicalFaces.Contains)) { continue; }
+            if (candidate.ControlFaces.Any(unavailableControlFaces.Contains)) { continue; }
             if (!DocxMathLayout.TryMeasure(candidate.Equation,
                 run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics,
-                radical => radicalKeys.TryGetValue(radical, out var rootKey) ? fonts[rootKey] : null) ||
+                control => controlKeys.TryGetValue(control, out var controlKey) ? fonts[controlKey] : null) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
             double lineSpacingFactor = 1d;
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))

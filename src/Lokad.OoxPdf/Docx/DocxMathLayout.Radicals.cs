@@ -16,12 +16,12 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureRadical(DocxEquation equation, DocxMathRadical radical,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
-        out DocxMathBox? box, out string? fallback, Func<DocxMathRadical, PdfFontResource?>? resolveRadicalFont)
+        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
         { fallback = "UnsupportedMathRadicalSource"; return false; }
-        PdfFontResource? resource = resolveRadicalFont is null ? resolveFont(sources[0].Run) : resolveRadicalFont(radical);
+        PdfFontResource? resource = resolveControlFont is null ? resolveFont(sources[0].Run) : resolveControlFont(radical);
         if (resource is null || !resource.Font.Font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathRadicalConstants"; return false; }
         OpenTypeFont font = resource.Font.Font;

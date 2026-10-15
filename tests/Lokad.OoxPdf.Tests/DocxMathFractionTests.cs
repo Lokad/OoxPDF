@@ -9,6 +9,83 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontDelimiterBoxesKeepPerNodeFontsEmptySidesAndCompleteFallback()
+    {
+        var font=OpenTypeFont.Load(DelimiterFontBytes());
+        var parent=new PdfFontResource("Delimiter",PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[]{((ushort)9,40),((ushort)10,41),((ushort)128,40),((ushort)127,41)},CancellationToken.None));
+        var text=new PdfFontResource("Child",PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),"B+C".Select(c=>(int)c),CancellationToken.None));
+        var child=new DocxMathRow([new DocxMathRun(new("B+C",12d,"FF0000",false,false,false,null,"TestFont"),null,null) { NormalTextValue=true }]);
+        var delimiter=new DocxMathDelimiter([child]) { ControlText=new("",12d,"008000",false,false,false,null,"TestFont") };
+        var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var runs) && ReferenceEquals(runs[0].ControlOwner,delimiter),
+            "The first child discovers its own implicit operator owner without taking over child text fonts.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var box,out var reason,resolveControlFont:_=>parent),
+            reason??"Expected independent delimiter glyph and child text resources.");
+        var measured=TestAssert.NotNull(box);
+        TestAssert.Equal("(B+C)",string.Concat(measured.Glyphs.Select(g=>char.ConvertFromUtf32(g.SourceCodePoint))));
+        TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs[^1].Font==parent &&
+            measured.Glyphs.Skip(1).Take(3).All(g=>g.Font==text && g.Color.Red==255),"Child faces and colors remain independently owned.");
+        TestAssert.True(measured.Glyphs[0].Color.Green==128 && measured.Rules.Count==0,"Delimiter control color does not add a root/fraction rule.");
+        var oneSided=delimiter with { EndCharacterValue="" };
+        TestAssert.True(DocxMathLayout.TryMeasure(equation with { Content=new([oneSided]) },_=>text,CancellationToken.None,out var one,out _,
+            resolveControlFont:_=>parent) && TestAssert.NotNull(one).Glyphs.Count==4,"An explicitly empty side emits no placeholder glyph or extra advance.");
+        var missing=new PdfFontResource("Missing",PdfEmbeddedFont.CreateForGlyphMappings(font,new[]{((ushort)9,40),((ushort)128,40)},CancellationToken.None));
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var absent,out _,resolveControlFont:_=>missing) && absent is null,
+            "A missing closing CID cannot publish an opening-only box.");
+        foreach(var invalid in new[]{delimiter with { GrowValue=false },delimiter with { ShapeValue="match" },
+            delimiter with { Arguments=[child,child] },delimiter with { Arguments=[new([delimiter])] }})
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content=new([invalid]) },_=>text,CancellationToken.None,out var rejected,out _,
+                resolveControlFont:_=>parent) && rejected is null,"Unqualified shape/growth/argument roles retain complete fallback.");
+        var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
+        using var output=new MemoryStream();PdfDocumentWriter.WriteBlank(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])],CancellationToken.None);
+        TestAssert.True(output.Length>0,"Delimiter resources and encoding remain valid native PDF content.");
+    }
+
+    public static void MathFontDelimiterAliasesKeepAuthoredUnicodeInEitherSourceOrder()
+    {
+        XNamespace w="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace m="http://schemas.openxmlformats.org/officeDocument/2006/math";
+        foreach(bool delimiterFirst in new[]{true,false})
+        {
+            string fixture=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases","docx-omml-delimiter-display-parentheses.docx"));
+            using ZipArchive archive=ZipFile.OpenRead(fixture);var parts=new Dictionary<string,byte[]>();
+            foreach(var entry in archive.Entries){using var input=entry.Open();using var data=new MemoryStream();input.CopyTo(data);parts.Add(entry.FullName,data.ToArray());}
+            XElement document=XElement.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+            XElement delimiter=document.Descendants(m+"d").Single();XElement run=delimiter.Element(m+"e")!.Element(m+"r")!;
+            run.Element(m+"t")!.Value="B+C";run.Element(m+"rPr")?.Remove();
+            run.AddFirst(new XElement(m+"rPr",new XElement(m+"sty",new XAttribute(m+"val","p"))));
+            XElement wordProperties=run.Element(w+"rPr")??new XElement(w+"rPr");if(wordProperties.Parent is null)run.AddFirst(wordProperties);
+            wordProperties.Element(w+"sz")?.Remove();wordProperties.Add(new XElement(w+"sz",new XAttribute(w+"val","40")));
+            XElement paragraph=delimiter.Ancestors(w+"p").First();
+            XElement alias=new(w+"p",new XElement(m+"oMathPara",new XElement(m+"oMath",new XElement(m+"r",
+                new XElement(m+"rPr",new XElement(m+"sty",new XAttribute(m+"val","p"))),new XElement(m+"t","\u009F")))));
+            if(delimiterFirst)paragraph.AddAfterSelf(alias);else paragraph.AddBeforeSelf(alias);
+            parts["word/document.xml"]=System.Text.Encoding.UTF8.GetBytes(document.ToString(SaveOptions.DisableFormatting));
+            string path=TestFixtures.WriteTempPackage(".docx",parts);
+            try
+            {
+                var source=DocxTests.ReadDocx(path,OoxPdfDocxMarkupMode.Final);
+                var renderer=new DocxRenderer(new RadicalFontResolver(DelimiterFontBytes()),OoxPdfDocxMarkupMode.Final,OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+                string text=string.Concat(renderer.RenderBlankPages(source,null,CancellationToken.None).Select(DocxPageFootnoteNumberingTests.DecodeText));
+                TestAssert.True(text.Contains('\u009F') && !text.Contains('('),"Deferred publication preserves authored Unicode and complete delimiter fallback in either source order.");
+            }
+            finally{File.Delete(path);}
+        }
+    }
+
+    private static byte[] DelimiterFontBytes()
+    {
+        byte[] math=Constants();Array.Resize(ref math,268);
+        void Set(int at,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at),value);
+        Set(8,224);Set(226,14);Set(230,2);Set(234,22);Set(236,34);
+        Set(238,1);Set(240,2);Set(242,9);Set(244,10);
+        Set(248,2);Set(250,9);Set(252,1000);Set(254,128);Set(256,2000);
+        Set(258,0);Set(260,2);Set(262,10);Set(264,1000);Set(266,127);
+        Array.Resize(ref math,270);Set(268,2000);
+        return TestFontBuilder.CreateMathFont(math);
+    }
+
     public static void MathFontRadicalScriptArgumentsReuseCrampedBoxesAndSeparateEnclosureDescent()
     {
         byte[] bytes=RadicalFontBytes();var range=TestFontBuilder.GetTableRange(bytes,"MATH");
@@ -51,7 +128,7 @@ internal static class DocxMathFractionTests
         var root=new DocxMathRadical(new([fraction]),new([]),true) { ControlText=new("",12d,"000000",false,false,false,null,"TestFont") };
         var equation=new DocxEquation(new([root]),0,0,false,null,null,null) { ParentFontSize=12d };
         TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var box,out var reason,
-            resolveRadicalFont:_=>parent),reason??"The root supplies existing fraction parent metrics without adopting its child text face.");
+            resolveControlFont:_=>parent),reason??"The root supplies existing fraction parent metrics without adopting its child text face.");
         var measured=TestAssert.NotNull(box);
         TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs.Skip(1).All(g=>g.Font==text),
             "Normal fraction children retain their independently encoded physical face.");
@@ -113,7 +190,7 @@ internal static class DocxMathFractionTests
             var radical=root with { DegreeHidden=visible,Degree=Row("B+C") };
             var equation=source with { Content=new([radical]) };
             TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var runs) &&
-                runs.Count==2 && runs[0].ScriptLevel==0 && runs[0].RadicalOwner==radical && runs[1].ScriptLevel==2,
+                runs.Count==2 && runs[0].ScriptLevel==0 && ReferenceEquals(runs[0].ControlOwner,radical) && runs[1].ScriptLevel==2,
                 "The degree has script-script role sizing while the radicand retains the implicit root owner.");
             TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),
                 reason??"A literal visible degree must compose with the owned root.");
@@ -143,7 +220,7 @@ internal static class DocxMathFractionTests
         var b=original with { ControlText=new("",20d,"000000",false,false,false,null,"TestFont"),ControlFontFamily="Large" };
         var source=RadicalEquation(12d) with { Content=new([a,Row("+"),b]) };
         TestAssert.True(DocxMathLayout.TryMeasure(source,_=>small,CancellationToken.None,out var box,out var reason,
-            resolveRadicalFont:root=>ReferenceEquals(root,a)?small:large),reason??"Independent control nodes own their own implicit font resources.");
+            resolveControlFont:root=>ReferenceEquals(root,a)?small:large),reason??"Independent control nodes own their own implicit font resources.");
         DocxMathBox measured=TestAssert.NotNull(box);var roots=measured.Glyphs.Where(g=>g.SourceCodePoint==0x221A).ToArray();
         TestAssert.True(roots.Length==2 && roots[0].Font==small && roots[1].Font==large &&
             Math.Abs(roots[0].FontSize-8.04d)<1e-9 && Math.Abs(roots[1].FontSize-20.04d)<1e-9,
@@ -151,7 +228,7 @@ internal static class DocxMathFractionTests
         TestAssert.True(roots.All(g=>g.TextShear==0d) && measured.Glyphs.Where(g=>g.SourceCodePoint!=0x221A).All(g=>g.FontSize==12d),
             "Italic control flags do not shear mathematical root symbols or rescale authored children.");
         TestAssert.True(!DocxMathLayout.TryMeasure(source,_=>small,CancellationToken.None,out var missing,out _,
-            resolveRadicalFont:root=>ReferenceEquals(root,a)?small:null) && missing is null,
+            resolveControlFont:root=>ReferenceEquals(root,a)?small:null) && missing is null,
             "A missing explicit glyph owner cannot silently adopt a sibling or first child resource.");
         foreach(var control in new[]{a.ControlText! with { Underline=true },a.ControlText! with { Hidden=true },a.ControlText! with { Bold=true }})
             TestAssert.True(!DocxMathLayout.TryMeasure(source with { Content=new([a with { ControlText=control }]) },_=>small,

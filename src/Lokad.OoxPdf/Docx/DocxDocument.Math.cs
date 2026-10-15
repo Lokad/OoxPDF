@@ -41,13 +41,18 @@ internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denom
     public bool HasUnsupportedProperties { get; init; }
 }
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
-internal sealed record DocxMathRadical(DocxMathRow Radicand, DocxMathRow Degree, bool? DegreeHidden) : DocxMathNode
+internal interface IDocxMathControl
+{
+    DocxTextRun? ControlText { get; }
+    string? ControlFontFamily { get; }
+}
+internal sealed record DocxMathRadical(DocxMathRow Radicand, DocxMathRow Degree, bool? DegreeHidden) : DocxMathNode, IDocxMathControl
 {
     public bool HasUnsupportedProperties { get; init; }
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }
 }
-internal sealed record DocxMathDelimiter(IReadOnlyList<DocxMathRow> Arguments) : DocxMathNode
+internal sealed record DocxMathDelimiter(IReadOnlyList<DocxMathRow> Arguments) : DocxMathNode, IDocxMathControl
 {
     public string? BeginCharacterValue { get; init; }
     public string? EndCharacterValue { get; init; }

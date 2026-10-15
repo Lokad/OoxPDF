@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeLiteralDelimitersKeepVisibleCharactersAndEmptySides()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string kind,string meaning) in new[]{("parentheses","(n+1)"),("brackets","[n+1]"),("one-sided","{n+1")})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains(meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Qualified literal delimiters retain actual native glyph painting.");
+            TestAssert.Equal(0,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
+        }
+    }
+
     public static void DocxNativeRootScriptsRetainMeaningCrampedSizesAndOwnedBars()
     {
         RequireMathFont();
