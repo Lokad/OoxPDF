@@ -141,3 +141,13 @@ fallbacks, authored heights and rich-cell fallbacks remain explicit. Focused
 coverage checks all words and baselines inside fragment bounds across lengths and
 widow settings; emitted text alone does not establish unclipped visual parity.
 The independent controls retain numerical visual and pagination failures.
+
+
+The table-fragment artifact passes 43 exact methods in one invocation; the three
+portable renderers and the word-preservation regression also pass in Ubuntu.
+All ten fixed portfolio PDFs retain their accepted bytes. Four independent table
+control PDFs match their compared prototype identities. Seventeen assets and four
+root integration PDFs transfer without rebuild or repeated suite. Native controls
+retain pagination/visual failures and three unresolved Office clip matches per
+review source; candidate clips are classified. This fixes content loss within the
+bounded natural-cell path and leaves broader frame/fidelity work explicit.
