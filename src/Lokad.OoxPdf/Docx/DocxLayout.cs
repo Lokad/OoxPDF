@@ -1262,7 +1262,8 @@ internal sealed partial class DocxLayoutEngine
                         commentMarkerLabels: commentMarkerLabels,
                         adjustAlignedMinimumMargins: true,
                         alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom(),
-                        allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1);
+                        allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
+                        mathParagraphs: mathParagraphs);
                     // An admitted complete three-row table fits at its original
                     // origin. Later rows must not recheck its full height against
                     // the remaining space after preceding rows have advanced.

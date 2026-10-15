@@ -519,7 +519,8 @@ internal sealed partial class DocxLayoutEngine
                 pageContentHeight: double.MaxValue / 4d, textMeasurer, defaultTabStopPoints,
                 cancellationToken, pageNumber, pageCount: null, paragraphSpacingScale,
                 adjustAlignedMinimumMargins: true, alignedMinimumAvailableHeight: Math.Max(0d, remainingHeight),
-                allowAutomaticMinimumGridPlacement: allowAutomaticMinimumGridPlacement);
+                allowAutomaticMinimumGridPlacement: allowAutomaticMinimumGridPlacement,
+                mathParagraphs: mathParagraphs);
             return frame.RowHeights[0];
         }
     }

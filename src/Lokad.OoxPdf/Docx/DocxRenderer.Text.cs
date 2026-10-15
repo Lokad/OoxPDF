@@ -736,6 +736,11 @@ internal sealed partial class DocxRenderer
         int pageCount,
         CancellationToken cancellationToken)
     {
+        if (line.Math is { } math)
+        {
+            PaintMath(math, line.X, line.BaselineY, line.MathScale, graphics, markupContext, cancellationToken);
+            return;
+        }
         RenderMarkupIndicators(line, graphics, fontResources, markupContext);
         foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(
             line,

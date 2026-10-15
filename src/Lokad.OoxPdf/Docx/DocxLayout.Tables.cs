@@ -248,6 +248,10 @@ internal sealed partial class DocxLayoutEngine
         bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight, out double splitPitch)
         {
             splitPitch = 0d;
+            // A prepared display box is atomic until math-bearing row fragments
+            // have their own placement qualification.
+            if (resolveFrame().Context.MathParagraphs is { } math &&
+                row.Cells.Any(cell => cell.Paragraphs.Any(math.ContainsKey))) { return false; }
             if (textMeasurer is null)
             {
                 return false;
@@ -394,7 +398,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<string, string>? commentMarkerLabels = null,
         bool adjustAlignedMinimumMargins = false,
         double? alignedMinimumAvailableHeight = null,
-        bool allowAutomaticMinimumGridPlacement = false)
+        bool allowAutomaticMinimumGridPlacement = false,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels);
         var tableContext = new DocxTableLayoutContext(
@@ -413,7 +418,7 @@ internal sealed partial class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue,
-            table.Revisions);
+            table.Revisions) { MathParagraphs = mathParagraphs };
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
         bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
@@ -428,7 +433,7 @@ internal sealed partial class DocxLayoutEngine
                 : row.Cells
                     .Select((cell, columnIndex) =>
                     {
-                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale);
+                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale, mathParagraphs);
                         if (!(measured.MinimumPictureOverlap > 0d)) return measured.FullHeight;
                         return measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
                             IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
@@ -1629,7 +1634,7 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
             (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages, double cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d)
-                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex);
+                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathParagraphs);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 (cellTextLines, cellPlacedImages) = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, cellPlacedImages, textMeasurer,
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,

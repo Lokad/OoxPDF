@@ -7,6 +7,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeTableDisplayMathRetainsCellsProseAndFixedRowFallback()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("literal", "x−y"), ("fraction", "x+2y"),
+            ("script", "αi2"), ("two-columns", "x+2y"), ("paragraph-flow", "x+2y") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-display-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains(meaning, decoded);
+            TestAssert.Contains("Before public math table.", decoded);
+            TestAssert.Contains("After public math table.", decoded);
+            if (suffix == "two-columns") { TestAssert.Contains("Public adjacent cell.", decoded); }
+            if (suffix == "paragraph-flow") { TestAssert.Contains("Before cell equation.", decoded); TestAssert.Contains("After cell equation.", decoded); }
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Painted table equations replace their ignored-source warning while retaining approximate scope.");
+        }
+        var fallback = new List<OoxPdfDiagnostic>();
+        PdfPage fixedRow = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-display-fixed-row-guard"), fallback.Add, CancellationToken.None).Single();
+        TestAssert.True(fallback.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
+            !fixedRow.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "A fixed row retains source fallback without preparing unused math fonts.");
+    }
+
     public static void DocxNativeCasesRetainMathematicalMinusAndNormalHyphenMeaning()
     {
         RequireMathFont();

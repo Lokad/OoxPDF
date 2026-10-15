@@ -1061,7 +1061,7 @@ internal sealed partial class DocxRenderer
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
-        ReportEquationDiagnostics(document, layout.Pages.SelectMany(page => page.Items).OfType<DocxEquationLayout>(), diagnosticSink, cancellationToken);
+        ReportEquationDiagnostics(document, EnumeratePaintedEquations(layout.Pages.SelectMany(page => page.Items), cancellationToken), diagnosticSink, cancellationToken);
         // RV06: comment balloons and range washes wear first-seen author colors;
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.
@@ -1584,12 +1584,7 @@ internal sealed partial class DocxRenderer
                 RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken);
                 break;
             case DocxEquationLayout equation:
-                graphics.SaveState();
-                graphics.Transform(equation.Scale, 0d, 0d, equation.Scale,
-                    equation.X + ResolveTextEmissionXOffset(markupContext),
-                    equation.BaselineY - ResolveTextEmissionBaselineOffset(markupContext));
-                DocxMathBoxPainter.Paint(equation.Math.Box, graphics, 0d, 0d, cancellationToken);
-                graphics.RestoreState();
+                PaintMath(equation.Math, equation.X, equation.BaselineY, equation.Scale, graphics, markupContext, cancellationToken);
                 break;
             case DocxInlineImageLayout image:
                 double imageXOffset = ResolveTextEmissionXOffset(markupContext);

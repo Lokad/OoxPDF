@@ -79,6 +79,8 @@ internal sealed record DocxTextLineLayout(
     public double? BodyLineBoxHeightPoints { get; init; }
     public bool UsesUniformBodyTypographicBaseline { get; init; }
     public double? InlineObjectEndOffsetX { get; init; }
+    public DocxPreparedMathParagraph? Math { get; init; }
+    public double MathScale { get; init; } = 1d;
 }
 
 internal sealed record DocxTextSegmentLayout(
@@ -220,6 +222,7 @@ internal sealed record DocxTableLayoutContext(
     string? LayoutValue,
     IReadOnlyList<DocxRevisionInfo>? Revisions)
 {
+    public IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? MathParagraphs { get; init; }
     public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
     public bool AutomaticMinimumRowPlacement { get; init; }
     public bool AutomaticTopRowContentClip { get; init; }

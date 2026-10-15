@@ -23,7 +23,8 @@ internal sealed partial class DocxLayoutEngine
         double ParagraphSpacingScale,
         int? PageNumber,
         int? PageCount,
-        DocxTableCellTextLinesMemo? CellMemo);
+        DocxTableCellTextLinesMemo? CellMemo,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? MathParagraphs = null);
 
     // Word hangs the full top-border width above cell content (border probes 2026-09-06: top-term deltas 0.96/1.08/0.58 vs widths 1.0/1.0/0.5); horizontal edges keep the half-width content inset.
     // W6-a1: fixed table geometry joins scaled space; fixedScale reuses the layout
@@ -82,7 +83,8 @@ internal sealed partial class DocxLayoutEngine
         double? rowTopPadding,
         int? pageNumber,
         int? pageCount,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         var measureContext = new DocxTableCellLayoutContext(
             TextMeasurer: textMeasurer,
@@ -90,7 +92,8 @@ internal sealed partial class DocxLayoutEngine
             ParagraphSpacingScale: paragraphSpacingScale,
             PageNumber: pageNumber,
             PageCount: pageCount,
-            CellMemo: null);
+            CellMemo: null,
+            MathParagraphs: mathParagraphs);
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (bodyElements.Count == 0)
         {
@@ -156,6 +159,15 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            if (TryGetTableDisplayMath(paragraph, textWidth, paragraphSpacingScale, mathParagraphs, out var math))
+            {
+                contentHeight += math.LineHeight * paragraphSpacingScale;
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = false;
+                previousParagraphHasTextLines = false;
+                continue;
+            }
             double fontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
             double lineHeight = lineHeightProfile.LineHeight;
@@ -271,7 +283,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        int pageIndex = 0)
+        int pageIndex = 0,
+        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
     {
         if (textMeasurer is null)
         {
@@ -284,7 +297,8 @@ internal sealed partial class DocxLayoutEngine
             ParagraphSpacingScale: paragraphSpacingScale,
             PageNumber: pageNumber,
             PageCount: pageCount,
-            CellMemo: cellMemo);
+            CellMemo: cellMemo,
+            MathParagraphs: mathParagraphs);
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         if (paragraphs.Count == 0)
@@ -447,6 +461,16 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, context.ParagraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            if (TryGetTableDisplayMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathParagraphs, out var math))
+            {
+                lines.Add(CreateTableMathLine(paragraph, math, cellX + paddingLeft, textWidth,
+                    cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile));
+                cursorY -= math.LineHeight * context.ParagraphSpacingScale;
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                paragraphIndex++;
+                continue;
+            }
             double fontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, measurer);
             double lineHeight = lineHeightProfile.LineHeight;

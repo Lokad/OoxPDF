@@ -4,6 +4,36 @@ internal sealed record DocxPreparedMathParagraph(DocxEquation Equation, DocxMath
 
 internal static class DocxMathParagraphPolicy
 {
+    public static IEnumerable<DocxParagraph> EnumeratePreparationCandidates(DocxDocument document, CancellationToken token)
+    {
+        foreach (DocxBodyElement element in document.BodyElements)
+        {
+            token.ThrowIfCancellationRequested();
+            if (element is DocxParagraphElement paragraph) { yield return paragraph.Paragraph; }
+            else if (element is DocxTableElement table)
+            {
+                foreach (DocxTableRow row in table.Table.Rows)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (!DocxLayoutEngine.HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) || row.Revisions.Count != 0)
+                        continue;
+                    foreach (DocxTableCell cell in row.Cells)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (cell.HasVerticalMerge || cell.FitText || cell.Revisions.Count != 0 ||
+                            cell.TextDirectionValue is not (null or "lrTb") ||
+                            cell.BodyElements.Any(child => child is not DocxParagraphElement)) { continue; }
+                        foreach (DocxParagraph source in cell.Paragraphs)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (GetDisplayRow(source) is not null) { yield return source; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Initial semantic capability: a standalone, automatic display row. Mixed
     // prose, revision/reference decorations and explicit line rules keep their
     // existing fallback until those owning paths receive separate qualification.

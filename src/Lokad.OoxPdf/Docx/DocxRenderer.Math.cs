@@ -6,13 +6,13 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static void ReportEquationDiagnostics(DocxDocument document, IEnumerable<DocxEquationLayout> placed,
+    private static void ReportEquationDiagnostics(DocxDocument document, IEnumerable<DocxEquation> placed,
         Action<OoxPdfDiagnostic>? sink, CancellationToken token)
     {
         if (sink is null) { return; }
         var painted = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-        foreach (DocxEquationLayout item in placed)
-        { token.ThrowIfCancellationRequested(); painted.Add(item.Math.Equation); }
+        foreach (DocxEquation equation in placed)
+        { token.ThrowIfCancellationRequested(); painted.Add(equation); }
         foreach (OoxPdfDiagnostic source in document.EquationDiagnostics)
         {
             token.ThrowIfCancellationRequested();
@@ -27,6 +27,41 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    private static IEnumerable<DocxEquation> EnumeratePaintedEquations(IEnumerable<DocxLayoutItem> items, CancellationToken token)
+    {
+        var rows = new Stack<DocxTableRowLayout>();
+        foreach (DocxLayoutItem item in items)
+        {
+            token.ThrowIfCancellationRequested();
+            if (item is DocxEquationLayout equation) { yield return equation.Math.Equation; }
+            else if (item is DocxTableRowLayout row) { rows.Push(row); }
+        }
+        while (rows.TryPop(out var row))
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (DocxTableCellLayout cell in row.Cells)
+            {
+                foreach (DocxTextLineLayout line in cell.TextLines)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (line.Math is { } math) { yield return math.Equation; }
+                }
+                foreach (DocxTableRowLayout nested in cell.NestedRows) { token.ThrowIfCancellationRequested(); rows.Push(nested); }
+            }
+        }
+    }
+
+    private static void PaintMath(DocxPreparedMathParagraph math, double x, double baseline, double scale,
+        PdfGraphicsBuilder graphics, DocxMarkupContext context, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        graphics.SaveState();
+        graphics.Transform(scale, 0d, 0d, scale, x + ResolveTextEmissionXOffset(context),
+            baseline - ResolveTextEmissionBaselineOffset(context));
+        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token);
+        graphics.RestoreState();
+    }
+
     private static IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph> PrepareMathParagraphs(
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
@@ -37,10 +72,9 @@ internal sealed partial class DocxRenderer
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
-        foreach (DocxParagraphElement element in document.BodyElements.OfType<DocxParagraphElement>())
+        foreach (DocxParagraph paragraph in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token))
         {
             token.ThrowIfCancellationRequested();
-            DocxParagraph paragraph = element.Paragraph;
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
             if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
             OpenTypeFont? parentMetrics = null;
