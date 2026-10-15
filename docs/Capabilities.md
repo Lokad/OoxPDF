@@ -87,6 +87,13 @@ layout and full-size fraction children while retaining its source inline flag.
 Eight Word controls improve with 30/30 matching outlines, within 0.155 pt X /
 0.340 pt Y; existing visual thresholds remain explicit.
 Math-bearing rows remain atomic; oversized-row and wider pagination are unqualified.
+Standalone equations in plain direct header/footer paragraphs share prepared
+boxes, static height/body-frame ownership and footer block translation. Eight
+Word controls improve with 28/28 matching outlines and residuals within 0.155 pt X /
+0.430 pt Y. Complete and partial equation warnings retain the source part; repeated
+story references share original identity. Mixed-inline/multiple/table/rich static
+owners and wider scaled/overflow story layout remain staged.
+
 
 Mathematical runs select the minus glyph for an authored ASCII hyphen across
 supported math styles; normal-text runs retain their hyphens. Bounded two-row

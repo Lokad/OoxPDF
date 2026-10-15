@@ -991,3 +991,24 @@ retain unchanged visual thresholds and explicit residuals. The prior inline-cell
 artifact also passes nine portable methods on its exact DLLs; eight additional
 cell alignment/indent/prose-owner contrasts match 32/32 outlines without another
 renderer guard.
+
+Standalone equations now paint in plain direct header/footer paragraphs through
+the same prepared boxes and shared paint path. Static layout reserves their
+occupied height, moves following prose, updates body frame limits and translates
+footer content as one bottom-anchored block. Repeated first/default references
+share one parsed equation. Mixed-inline, multiple, table and richer static owners
+retain explicit fallback pending their own placement qualification.
+
+Source part counts and original body-element references come from the existing
+per-read story cache. Complete painting clears that part's ignored warning and
+adds an approximate warning with its own part name. Partial painting retains
+both warnings. A reader without a diagnostic sink still retains header/footer-only
+source warnings from the parsed cache, without enabling unrelated feature probes.
+
+Eight independent Word controls cover literal/fraction/script/root content with
+following static and body prose. All improve, and all 28 math outlines match.
+Math differences stay within 0.155 pt X / 0.430 pt Y; following header/body prose
+is within 0.19 pt and footer prose within 0.11 pt vertically. Forty affected
+methods, 33 exact neighboring PDFs (including SVG headers/footers and mixed-source
+fallback) and four exact integration PDFs qualify one Release artifact. Three
+public cases retain unchanged visual thresholds and explicit remaining gates.
