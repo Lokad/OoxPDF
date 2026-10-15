@@ -79,5 +79,11 @@ internal sealed record DocxMathNary(DocxMathRow Body, DocxMathRow Subscript, Doc
     public string? ControlFontFamily { get; init; }
 }
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
+internal sealed record DocxMathFunction(DocxMathRow Name, DocxMathRow Argument) : DocxMathNode, IDocxMathControl
+{
+    public bool HasUnsupportedProperties { get; init; }
+    public DocxTextRun? ControlText { get; init; }
+    public string? ControlFontFamily { get; init; }
+}
 internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,
     IReadOnlyList<DocxMathChild> Children) : DocxMathNode;

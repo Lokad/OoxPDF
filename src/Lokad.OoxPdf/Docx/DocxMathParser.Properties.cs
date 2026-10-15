@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathParser
 {
+    private static DocxMathFunction ReadFunction(XElement element, DocxMathRow name, DocxMathRow argument,
+        Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
+    {
+        bool valid = ReadPropertyOwner(element, "funcPr", out XElement? owner, out XElement[] children);
+        foreach (var property in children)
+        { token.ThrowIfCancellationRequested(); valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
+        foreach (var role in ContentChildren(element))
+        { token.ThrowIfCancellationRequested(); valid &= role.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(role); }
+        XElement? control = owner?.Element(MathNamespace + "ctrlPr");
+        DocxTextRun text = readRun(control ?? element, string.Empty);
+        return new(name, argument)
+        { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = ControlFontFamily(control, text) };
+    }
+
     private static bool HasKnownControl(XElement control) =>
         control.Attributes().All(a => a.IsNamespaceDeclaration) &&
         HasOnlyWhitespaceText(control) && control.Elements().Count() <= 1 &&

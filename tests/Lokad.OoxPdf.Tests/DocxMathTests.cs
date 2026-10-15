@@ -7,6 +7,83 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathFunctionPinnedControlsRetainNameArgumentAndControlOwners()
+    {
+        foreach ((string suffix, string name, string kind) in new[] { ("display-sin-literal", "sin", "literal"),
+            ("inline-sin-delimiter", "sin", "delimiter"), ("display-log-script", "log", "script"),
+            ("inline-cos-control20", "cos", "control20"), ("display-sin-fraction", "sin", "fraction"), ("inline-log-normal-name", "log", "normal-name") })
+        {
+            string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-omml-function-" + suffix + ".docx"));
+            var equation = DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final).Paragraphs.SelectMany(p => p.Equations).Single();
+            var function = (DocxMathFunction)equation.Content.Children.Single();
+            TestAssert.True(!function.HasUnsupportedProperties, "Known function roles and controls retain their own source ownership.");
+            TestAssert.Equal(name, RowText(function.Name));
+            TestAssert.Equal(kind == "control20" ? 20d : 12d, TestAssert.NotNull(function.ControlText).FontSize);
+            TestAssert.True(function.Name.Children.Cast<DocxMathRun>().All(r => r.MathStyleValue == "p"), "Function-name runs retain their authored upright style.");
+            var argument = function.Argument.Children.Single();
+            TestAssert.True(kind switch { "delimiter" => argument is DocxMathDelimiter, "script" => argument is DocxMathScripts,
+                "fraction" => argument is DocxMathFraction, _ => argument is DocxMathRun }, "Arguments retain bounded typed structure without flattening into names.");
+            if (kind == "normal-name") TestAssert.True(function.Name.Children.Single() is DocxMathRun { NormalTextValue: true, ExplicitFontFamily: "Arial" },
+                "Normal-text function names preserve their independent font declaration.");
+        }
+    }
+
+    public static void DocxMathFunctionKnownControlsReuseSourceValidationAndCallbackMetadata()
+    {
+        var xml = XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:func><m:funcPr><m:ctrlPr><w:rPr><w:rFonts w:ascii='Known'/><w:sz w:val='40'/><w:color w:val='CC0000'/></w:rPr></m:ctrlPr></m:funcPr><m:fName><m:r><m:t>custom</m:t></m:r></m:fName><m:e><m:r><m:t>x</m:t></m:r></m:e></m:func></m:oMath>");
+        var row = DocxMathParser.Read(xml, (_, text) => new(text, 20d, "CC0000", false, false, false, null, "Known"), CancellationToken.None);
+        var function = (DocxMathFunction)row.Children.Single();
+        TestAssert.True(!function.HasUnsupportedProperties && function.ControlText is { FontSize: 20d, ColorHex: "CC0000" } && function.ControlFontFamily == "Known",
+            "Shared control validation retains callback-resolved formatting and explicit family without a function-name whitelist.");
+        TestAssert.Equal("custom", RowText(function.Name)); TestAssert.Equal("x", RowText(function.Argument));
+        TestAssert.Contains("funcPr", function.PropertiesXml.Single());
+    }
+
+    public static void DocxMathFunctionMalformedPropertiesRolesAndUnknownChildrenStayExplicit()
+    {
+        foreach (string properties in new[] { "<m:funcPr/><m:funcPr/>", "<m:funcPr extra='1'/>", "<m:funcPr>stray</m:funcPr>",
+            "<m:funcPr><m:unknown/></m:funcPr>", "<m:funcPr><m:ctrlPr/><m:ctrlPr/></m:funcPr>",
+            "<m:funcPr><m:ctrlPr><w:ins/></m:ctrlPr></m:funcPr>", "<m:funcPr><m:ctrlPr><w:rPr><w:unknown/></w:rPr></m:ctrlPr></m:funcPr>" })
+        {
+            var row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:func>" + properties +
+                "<m:fName><m:r><m:t>sin</m:t></m:r></m:fName><m:e><m:r><m:t>x</m:t></m:r></m:e></m:func></m:oMath>"));
+            var function = (DocxMathFunction)row.Children.Single();
+            TestAssert.True(function.HasUnsupportedProperties && function.PropertiesXml.Count > 0, "Unknown or duplicate function properties stay explicit.");
+            TestAssert.Equal("sin", RowText(function.Name)); TestAssert.Equal("x", RowText(function.Argument));
+        }
+        foreach (string roles in new[] { "<m:e/>", "<m:fName/>", "<m:fName/><m:fName/><m:e/>", "<m:fName/><m:e/><m:future/>" })
+            TestAssert.True(Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:func>" + roles + "</m:func></m:oMath>")).Children.Single()
+                is DocxMathUnsupported { ElementName: "func", SourceXml: null }, "Malformed roles preserve traversed children without repeated raw subtree serialization.");
+        var malformedRole = (DocxMathFunction)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:func><m:fName extra='1'/><m:e/></m:func></m:oMath>")).Children.Single();
+        TestAssert.True(malformedRole.HasUnsupportedProperties, "Unqualified role attributes cannot silently claim known function semantics.");
+    }
+
+    public static void DocxMathFunctionNamesRequireTheirOwnerAndPreserveUnknownNestedContent()
+    {
+        var orphan = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:fName><m:r><m:t>sin</m:t></m:r></m:fName></m:oMath>"));
+        TestAssert.True(orphan.Children.Single() is DocxMathUnsupported { ElementName: "fName", SourceXml: null, Children.Count: 1 },
+            "An orphan function-name role retains its source instead of becoming an ordinary renderable row.");
+        var row = Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:func><m:fName><m:limLow><m:e><m:r><m:t>lim</m:t></m:r></m:e><m:lim><m:r><m:t>n</m:t></m:r></m:lim></m:limLow></m:fName><m:e><m:r><m:t>x</m:t></m:r></m:e></m:func></m:oMath>"));
+        var function = (DocxMathFunction)row.Children.Single();
+        TestAssert.True(function.Name.Children.Single() is DocxMathUnsupported { ElementName: "limLow", SourceXml: not null },
+            "Unqualified function-name structures retain their original leaf source.");
+        TestAssert.Equal("x", RowText(function.Argument));
+    }
+
+    public static void DocxMathFunctionDeepTraversalAndCancellationRemainIterative()
+    {
+        XElement nested = new(MathNamespace + "r", new XElement(MathNamespace + "t", "x"));
+        for (int i = 0; i < 2048; i++) nested = new(MathNamespace + "func",
+            new XElement(MathNamespace + "fName", new XElement(MathNamespace + "r", new XElement(MathNamespace + "t", "f"))), new XElement(MathNamespace + "e", nested));
+        XElement equation = new(MathNamespace + "oMath", nested); DocxMathNode node = Parse(equation).Children.Single(); int count = 0;
+        while (node is DocxMathFunction function) { count++; node = function.Argument.Children.Single(); }
+        TestAssert.Equal(2048, count);
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => Parse(equation, cancelled.Token));
+        using var duringRead = new CancellationTokenSource();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParser.Read(equation, (_, text) => { duringRead.Cancel(); return PlainRun(text); }, duringRead.Token));
+    }
+
     public static void DocxMathNaryPinnedControlsRetainOperatorBodyLimitsAndPlacement()
     {
         foreach(string placement in new[]{"display","inline"})

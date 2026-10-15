@@ -37,7 +37,8 @@ internal static partial class DocxMathParser
             }
 
             DocxMathNode node;
-            if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad"))
+            if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
+                (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
             {
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())
                 { ArgumentProperties = ReadArgumentProperties(element) };
@@ -57,6 +58,11 @@ internal static partial class DocxMathParser
                 HasOnlyRoles(element, name == "sSub" ? ["e", "sub"] : name == "sSup" ? ["e", "sup"] : ["e", "sub", "sup"]))
             {
                 node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"));
+            }
+            else if (name == "func" && Role(element, "fName") is { } functionName && Role(element, "e") is { } argument &&
+                HasOnlyRoles(element, "fName", "e"))
+            {
+                node = ReadFunction(element, functionName, argument, readRun, cancellationToken);
             }
             else if (name == "nary" && Role(element, "e") is { } body && Role(element, "sub") is { } lower &&
                 Role(element, "sup") is { } upper && HasOnlyRoles(element, "sub", "sup", "e"))
@@ -110,13 +116,13 @@ internal static partial class DocxMathParser
         }
     }
 
-    private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den" or "deg";
+    private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den" or "deg" or "fName";
     private static bool HasKnownControlProperty(XElement property) =>
         property.Name.Namespace == WordprocessingNamespace && !property.HasElements &&
         string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
             "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
-    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary";
+    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
