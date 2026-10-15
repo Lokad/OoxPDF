@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "line-spacing-owner-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/line-spacing-owner-defaults.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "EC2056DD3D4E2D1DB6D2F07BA44F6E23D308EED88E11A8E5470FD03800E2DF9B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Case 1.",
+      "Case 6.",
+      "independently measured line starts remain explicit."
+    ]
+  }
+]

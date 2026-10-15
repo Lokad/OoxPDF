@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--story", choices=("body", "cell", "header", "footer"), default="body")
+parser.add_argument("--line", type=int, choices=(240, 278, 480))
+parser.add_argument("--plain", action="store_true")
 args = parser.parse_args()
 
 repo = Path(__file__).resolve().parents[1]
@@ -20,9 +22,10 @@ w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 m = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
 ET.register_namespace("w", w[1:-1])
 ET.register_namespace("m", m[1:-1])
-for setting in (("default", "before", "after", "repeat") if args.story == "body" else ("default",)):
+for setting in (("default", "before", "after", "repeat") if args.story == "body" and args.line is None else ("default",)):
     for upright in (False, True):
-        identifier = "math-literal-inline-break-" + setting + ("-" + args.story if args.story != "body" else "") + ("-upright" if upright else "")
+        identifier = "math-literal-inline-break-" + setting + ("-" + args.story if args.story != "body" else "")
+        identifier += ("-plain" if args.plain else "") + ("-line" + str(args.line) if args.line is not None else "") + ("-upright" if upright else "")
         output = cases / ("PortableFonts" if upright else "CompositionProbes") / (identifier + ".docx")
         manifest = output.with_suffix(".json")
         if output.exists():
@@ -43,6 +46,23 @@ for setting in (("default", "before", "after", "repeat") if args.story == "body"
                     ET.SubElement(ET.SubElement(run, m + "rPr"), m + "sty", {m + "val": "p"})
                 data = ET.tostring(document, encoding="utf-8", xml_declaration=True)
             entries[name] = data
+        if args.plain:
+            document = ET.fromstring(entries["word/document.xml"])
+            for paragraph in document.iter(w + "p"):
+                for child in list(paragraph):
+                    if child.tag == m + "oMath":
+                        replacement = ET.Element(w + "r")
+                        ET.SubElement(replacement, w + "t").text = "calculation"
+                        paragraph.insert(list(paragraph).index(child), replacement)
+                        paragraph.remove(child)
+            entries["word/document.xml"] = ET.tostring(document, encoding="utf-8", xml_declaration=True)
+        if args.line is not None:
+            styles = ET.fromstring(entries["word/styles.xml"])
+            spacing = styles.find(".//" + w + "pPrDefault/" + w + "pPr/" + w + "spacing")
+            assert spacing is not None
+            spacing.set(w + "line", str(args.line))
+            spacing.set(w + "lineRule", "auto")
+            entries["word/styles.xml"] = ET.tostring(styles, encoding="utf-8", xml_declaration=True)
         if args.story != "body":
             document = ET.fromstring(entries["word/document.xml"])
             body = document.find(w + "body")
@@ -83,6 +103,6 @@ for setting in (("default", "before", "after", "repeat") if args.story == "body"
         manifest.write_text(json.dumps([{
             "Id": identifier, "Input": output.relative_to(repo).as_posix(), "SourceSha256": source_sha,
             "Sha256": hashlib.sha256(output.read_bytes()).hexdigest().upper(),
-            "HeldOut": False, "ExpectedEquationCount": 1, "ExpectedInlineImageCount": 0,
+            "HeldOut": False, "ExpectedEquationCount": 0 if args.plain else 1, "ExpectedInlineImageCount": 0,
             "ExpectedText": ["Before formula:", "after formula.", "Following prose."]
         }], indent=2) + "\n", encoding="utf-8")

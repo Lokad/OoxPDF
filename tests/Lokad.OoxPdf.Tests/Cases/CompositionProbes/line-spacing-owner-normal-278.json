@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "line-spacing-owner-normal-278",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/line-spacing-owner-normal-278.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "23CEBE0E324C212B45DFF993BAB9EE7BDBC9192DB3058BE77E014542004A458C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Case 1.",
+      "Case 6.",
+      "independently measured line starts remain explicit."
+    ]
+  }
+]

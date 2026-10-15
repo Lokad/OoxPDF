@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-literal-inline-break-default-cell-plain",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-literal-inline-break-default-cell-plain.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "FBDE5C57DBCCF90C7F38E3CCCCC39C184A58DEF8742478E3F0E3C517ABDD6EA7",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

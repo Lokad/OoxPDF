@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "line-spacing-owner-bare",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/line-spacing-owner-bare.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "0EE62DC47963ECA93A68B3A18566B54924918C83558479DA91B20422A9195897",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Case 1.",
+      "Case 6.",
+      "independently measured line starts remain explicit."
+    ]
+  }
+]
