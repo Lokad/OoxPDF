@@ -120,6 +120,21 @@ four exact transfer smoke PDFs qualify one artifact. Four public cases retain
 the existing thresholds. Assembly-only heights, richer or arbitrary recursive
 radicands and unsupported degree/control formatting retain fallback.
 
+Supported subscript/superscript boxes can serve as radicands. Their arguments
+retain existing glyph selection and kerning; the root supplies cramped context
+for the font's superscript shift. A script box separately retains its nominal
+subscript descent for enclosing operators, preserving the ink frame used by
+ordinary paragraph flow. This inferred Office sizing profile is supported by
+twelve independent controls, including descenders, paired scripts and 20 pt
+sources. The initial ink-only prototype had two visual regressions and is
+retained as rejected evidence. Cramped spacing and enclosure descent make all
+twelve improve without font/point/document guards. Horizontal differences stay
+below 0.12 pt; vertical differences reach 2.74 pt in the enlarged inline case.
+All 46 compared glyph outlines match Word/source. Forty-two focused methods,
+27 unchanged neighbor PDFs and four exact CLI transfer smoke PDFs qualify one
+artifact. Four public cases retain their original visual thresholds; arbitrary
+recursive/rich radicands and assembly-only heights remain explicit fallbacks.
+
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
