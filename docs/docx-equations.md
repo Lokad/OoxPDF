@@ -444,4 +444,18 @@ fallback methods qualify one artifact; 23 source/control PDFs remain unchanged.
 Eight Word operator outlines match source variants and six targeted selections
 match the bounded reader. The display integral uses a taller variant than the
 font's display minimum alone selects, so that sizing profile remains unresolved.
-This source component does not yet paint n-ary operators or claim limit placement.
+The source component alone does not establish native operator placement.
+
+
+Display sums and products now paint literal bodies and explicit stacked limits
+using ready-made MATH variants, existing script rows and the shared control-font
+owner. Child sizes, fonts and colors stay independent. Four Word controls improve,
+including independent control/body size contrasts; glyph-position differences
+reach 0.62 pt horizontally and 0.32 pt vertically. All four operator outlines and
+20 of 24 total glyph outlines match Word/source. A 20 pt control with 12 pt limits
+uses different optical child glyphs in Word; that residual remains recorded,
+without adding a font/size correction branch. Fifteen focused methods, 21 exact
+neighbor PDFs and four transfer smoke PDFs qualify one artifact. Two public cases
+retain existing visual thresholds and explicit needs-review status. Side limits,
+integral sizing, omitted document defaults, hidden limits, richer arguments and
+assemblies remain staged with complete fallback.
