@@ -376,8 +376,19 @@ the [OOXML begin-character definition](https://learn.microsoft.com/en-us/dotnet/
 Shared control-property validation also serves roots. Malformed/unknown values,
 missing roles and nested content remain explicit; iterative parsing and
 cancellation have focused coverage. Seventeen source/fallback methods qualify
-one artifact. Eight independent Word controls yield fourteen matching source
-glyph outlines; 32 focused vertical-variant queries match fontTools. Nineteen
-PDFs remain byte-identical, including all eight delimiter fallbacks. This
-component does not yet paint scalable delimiters; placement and resource
-publication require their own Word qualification.
+one source artifact. Eight independent Word controls yield fourteen matching
+source glyph outlines; 32 focused vertical-variant queries match fontTools.
+
+Centered growing delimiters now paint one literal argument in standalone
+display or fitting inline body equations. Parenthesis, bracket and one-sided
+brace controls use ready-made variants centered on the parent MATH axis, while
+child glyphs retain their own font and color. Roots and delimiters share one
+per-node implicit font owner and deferred glyph publication. Alias tests in both
+source orders preserve authored Unicode; an unresolved alias or missing closing
+CID retains complete fallback. Six Word controls improve with differences below
+0.15 pt horizontally and 0.07 pt vertically; all 28 compared glyph outlines
+match Word/source. Thirty-four focused methods, 26 unchanged neighbor PDFs and
+four exact transfer smoke PDFs qualify one artifact. Four public cases retain
+their original visual thresholds. Fraction enclosures retain their measured
+source/fallback until height selection is independently qualified, alongside
+other shape/growth/separator/recursive/assembly paths.
