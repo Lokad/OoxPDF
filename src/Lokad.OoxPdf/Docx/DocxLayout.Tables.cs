@@ -102,7 +102,7 @@ internal sealed partial class DocxLayoutEngine
             }
             var cells = new DocxTableCellLayout[row.Cells.Count];
             bool fragmentInsetsAlreadyPrinted = row.FragmentCount > 1 &&
-                row.Cells.All(cell => HasNaturalReviewTableCellMetrics(cell.VisualCell));
+                row.Cells.All(cell => HasNaturalReviewCellLineMetrics(cell.VisualCell));
             for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
             {
                 DocxTableCellLayout cell = row.Cells[cellIndex];
@@ -148,10 +148,10 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewPaginationScale = 1d)
+        double reviewFragmentScale = 1d)
     {
-        if (!double.IsFinite(reviewPaginationScale) || reviewPaginationScale <= 0d || reviewPaginationScale >= 1d ||
-            !CanUseReviewTablePageCapacity(table)) reviewPaginationScale = 1d;
+        if (!double.IsFinite(reviewFragmentScale) || reviewFragmentScale <= 0d || reviewFragmentScale >= 1d ||
+            !CanUsePrintedReviewTextTableFrame(table)) reviewFragmentScale = 1d;
         IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows = table.Rows
             .Select((row, rowIndex) => (row, rowIndex))
             .TakeWhile(entry => entry.row.IsHeader)
@@ -164,9 +164,9 @@ internal sealed partial class DocxLayoutEngine
             DocxTableRow row = table.Rows[rowIndex];
             IReadOnlyList<double> rowHeights = frame.RowHeights;
             double rowHeight = rowHeights[rowIndex];
-            // Review rows already use printed line pitches. Compare those rows
-            // against the printed body-frame height, not the nominal paper frame.
-            double flowBottom = marginBottom + frame.PageContentHeight * (1d - reviewPaginationScale);
+            // The containing body frame already supplies printed capacity;
+            // fragment baseline projection must not scale it a second time.
+            double flowBottom = marginBottom;
             double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
             if (!row.CantSplit &&
                 TryResolveExplicitTableCellPageBreakBoundaries(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, getPageNumber(), pageCount: null, out IReadOnlyList<double> explicitBreakBoundaries, paragraphSpacingScale: paragraphSpacingScale))
@@ -192,13 +192,12 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathEquations, out double splitPitch))
+                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathEquations, out double splitPitch, out double firstFragmentHeight))
             {
                 // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments keep
                 // whole lines that fit (floor capacity); the boundary is floored to whole
                 // line pitches so a fractional remainder never squeezes an extra line in.
-                double firstFragmentHeight = FloorTableRowFragmentHeightToPitch(remainingPageHeight, splitPitch);
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, firstFragmentHeight, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo, reviewPaginationScale);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, firstFragmentHeight, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo, reviewFragmentScale);
                 markBoundaryContent();
                 continue;
             }
@@ -249,9 +248,10 @@ internal sealed partial class DocxLayoutEngine
 
 
         bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight,
-            IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math, out double splitPitch)
+            IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math, out double splitPitch, out double selectedFirstHeight)
         {
             splitPitch = 0d;
+            selectedFirstHeight = 0d;
             if (textMeasurer is null)
             {
                 return false;
@@ -289,94 +289,81 @@ internal sealed partial class DocxLayoutEngine
             // below the last baseline but above the row bottom still keeps whole lines.
             splitPitch = ResolveTableRowSplitPitch(splitLineBaselines);
             double flooredFirstFragmentHeight = FloorTableRowFragmentHeightToPitch(firstFragmentHeight, splitPitch);
-            double fragmentBottomY = rowHeight - flooredFirstFragmentHeight;
-
-            foreach ((IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> textLines) in laidOutCells)
+            // One earlier boundary can leave two continuation lines. Recheck
+            // every cell after choosing it; otherwise retain the whole-row fallback.
+            for (int attempt = 0; attempt < 2; attempt++)
             {
-                bool HasTableCellKeepRuleBoundaryViolation()
+                cancellationToken.ThrowIfCancellationRequested();
+                double fragmentBottomY = rowHeight - flooredFirstFragmentHeight;
+                double earlierHeight = flooredFirstFragmentHeight;
+                bool hasContentOnBothSides = false;
+                foreach ((IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> textLines) in laidOutCells)
                 {
-                    if (textLines.Count == 0)
-                    {
-                        return false;
-                    }
-            
+                    cancellationToken.ThrowIfCancellationRequested();
                     foreach (IGrouping<int?, DocxTextLineLayout> group in textLines.GroupBy(line => line.SourceParagraphIndex))
                     {
-                        if (group.Key is not { } paragraphIndex ||
-                            paragraphIndex < 0 ||
-                            paragraphIndex >= paragraphs.Count)
-                        {
-                            continue;
-                        }
-            
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (group.Key is not { } paragraphIndex || paragraphIndex < 0 || paragraphIndex >= paragraphs.Count) continue;
                         DocxParagraphKeepRules keepRules = paragraphs[paragraphIndex].EffectiveProperties.KeepRules;
-                        int firstFragmentLineCount = group.Count(line => line.BaselineY >= fragmentBottomY);
-                        int continuationLineCount = group.Count(line => line.BaselineY < fragmentBottomY);
-                        bool splitsParagraph = firstFragmentLineCount != 0 && continuationLineCount != 0;
-                        if (splitsParagraph &&
-                            (keepRules.KeepNext == true ||
-                                keepRules.KeepLines == true ||
-                                ((keepRules.WidowControl == true ||
-                                    reviewPaginationScale == 1d && keepRules.WidowControl is null) &&
-                                    (firstFragmentLineCount == 1 || continuationLineCount == 1))))
+                        int firstCount = group.Count(line => line.BaselineY >= fragmentBottomY);
+                        int continuationCount = group.Count(line => line.BaselineY < fragmentBottomY);
+                        if (firstCount != 0 && continuationCount != 0)
                         {
-                            return true;
+                            if (keepRules.KeepNext == true || keepRules.KeepLines == true) return false;
+                            bool widow = keepRules.WidowControl ?? (reviewFragmentScale == 1d);
+                            if (widow && firstCount == 1) return false;
+                            if (widow && continuationCount == 1)
+                            {
+                                if (attempt != 0 || firstCount < 2) return false;
+                                double lastBaseline = double.PositiveInfinity, secondLastBaseline = double.PositiveInfinity;
+                                foreach (var line in group)
+                                {
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    if (line.BaselineY < lastBaseline)
+                                    { secondLastBaseline = lastBaseline; lastBaseline = line.BaselineY; }
+                                    else secondLastBaseline = Math.Min(secondLastBaseline, line.BaselineY);
+                                }
+                                earlierHeight = Math.Min(earlierHeight,
+                                    FloorTableRowFragmentHeightToPitch(rowHeight - secondLastBaseline - .001d, splitPitch));
+                            }
                         }
-            
-                        bool IsNextTableCellParagraphInContinuation()
-                        {
-                            int nextParagraphIndex = paragraphIndex + 1;
-                            return textLines.Any(line => line.SourceParagraphIndex == nextParagraphIndex) &&
-                                textLines
-                                    .Where(line => line.SourceParagraphIndex == nextParagraphIndex)
-                                    .All(line => line.BaselineY < fragmentBottomY);
-                        }
-
-                        if (keepRules.KeepNext == true &&
-                            firstFragmentLineCount != 0 &&
-                            continuationLineCount == 0 &&
-                            IsNextTableCellParagraphInContinuation())
-                        {
-                            return true;
-                        }
+                        if (keepRules.KeepNext == true && firstCount != 0 && continuationCount == 0 &&
+                            textLines.Any(line => line.SourceParagraphIndex == paragraphIndex + 1) &&
+                            textLines.Where(line => line.SourceParagraphIndex == paragraphIndex + 1)
+                                .All(line => line.BaselineY < fragmentBottomY)) return false;
                     }
-            
-                    return false;
+                    hasContentOnBothSides |=
+                        textLines.Any(line => flooredFirstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY) &&
+                        textLines.Any(line => line.BaselineY < fragmentBottomY);
                 }
-
-                if (HasTableCellKeepRuleBoundaryViolation())
+                if (earlierHeight < flooredFirstFragmentHeight)
                 {
-                    return false;
+                    if (!double.IsFinite(earlierHeight) || earlierHeight <= 0d) return false;
+                    flooredFirstFragmentHeight = earlierHeight;
+                    continue;
                 }
-
-                bool hasLineInFirstFragment = textLines.Any(line => flooredFirstFragmentHeight >= line.LineHeight && line.BaselineY >= fragmentBottomY);
-                bool hasLineInContinuation = textLines.Any(line => line.BaselineY < fragmentBottomY);
-                if (hasLineInFirstFragment && hasLineInContinuation)
-                {
-                    return true;
-                }
+                selectedFirstHeight = flooredFirstFragmentHeight;
+                return hasContentOnBothSides;
             }
 
             return false;
         }
     }
 
-    private static bool CanUseReviewTablePageCapacity(DocxTable table)
+    private static bool CanUsePrintedReviewTextTableFrame(DocxTable table)
     {
-        // Independent Word controls qualify plain automatic rows with implicit
-        // or disabled widow control. Keep authored pagination and complex cell
-        // content on the existing path until their own references qualify them.
+        // Natural row metrics share printed body capacity; widow control
+        // selects a line boundary. Authored keep/row policies and rich content
+        // retain explicit fallbacks until their placement is qualified.
         foreach (DocxTableRow row in table.Rows)
         {
             if (row.IsHeader || row.CantSplit || row.HeightRuleValue is not null || row.HeightPoints is not null)
                 return false;
             foreach (DocxTableCell cell in row.Cells)
             {
-                if (!HasNaturalReviewTableCellMetrics(cell)) return false;
+                if (!HasNaturalReviewCellLineMetrics(cell)) return false;
                 DocxParagraph paragraph = ((DocxParagraphElement)GetTableCellLayoutBodyElements(cell)[0]).Paragraph;
-                if (paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true ||
-                    paragraph.KeepRules.WidowControl == true)
-                    return false;
+                if (paragraph.Equations.Count != 0 || paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true) return false;
             }
         }
         return true;
@@ -1128,7 +1115,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         double splitPitch,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewPaginationScale = 1d)
+        double reviewFragmentScale = 1d)
     {
         AddSplitTableRowLayout(
             table,
@@ -1147,7 +1134,7 @@ internal sealed partial class DocxLayoutEngine
             paragraphSpacingScale,
             splitPitch,
             cellMemo,
-            reviewPaginationScale);
+            reviewFragmentScale);
     }
 
     private static void AddSplitTableRowLayout(
@@ -1167,7 +1154,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         double splitPitch,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewPaginationScale = 1d)
+        double reviewFragmentScale = 1d)
     {
         DocxTableLayoutFrame initialFrame = resolveFrame();
         IReadOnlyList<double> initialRowHeights = initialFrame.RowHeights;
@@ -1178,8 +1165,8 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double continuationContentHeight = row.IsHeader
-            ? initialFrame.PageContentHeight * reviewPaginationScale
-            : Math.Max(1d, initialFrame.PageContentHeight * reviewPaginationScale - SumRepeatedTableHeaderRowsHeight());
+            ? initialFrame.PageContentHeight
+            : Math.Max(1d, initialFrame.PageContentHeight - SumRepeatedTableHeaderRowsHeight());
         IReadOnlyList<double> fragmentHeights = ComputeTableRowFragmentHeights(rowHeight, fragmentBoundariesFromRowTop, continuationContentHeight, splitPitch);
         double consumedHeight = 0d;
         for (int fragmentIndex = 0; fragmentIndex < fragmentHeights.Count; fragmentIndex++)

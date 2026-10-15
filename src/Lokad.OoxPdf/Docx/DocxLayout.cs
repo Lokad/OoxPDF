@@ -1208,15 +1208,10 @@ internal sealed partial class DocxLayoutEngine
                 int itemCountBeforeTable = currentItems.Count;
                 int currentTableIndex = tableIndex++;
                 bool tableActiveFrameHasContent = false;
-                double reviewPaginationScale = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
-                    page.PageSettings.HeaderParagraphsByType.Values.All(paragraphs => paragraphs.Count == 0) &&
-                    page.PageSettings.FooterParagraphsByType.Values.All(paragraphs => paragraphs.Count == 0) &&
-                    page.PageSettings.HeaderBodyElementsByType.Values.All(elements => elements.Count == 0) &&
-                    page.PageSettings.FooterBodyElementsByType.Values.All(elements => elements.Count == 0) &&
-                    page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
-                    page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
-                    document.RelatedStories.All(story => story.Kind == DocxRelatedStoryKind.Comment) &&
-                    CanUseReviewTablePageCapacity(bodyTable) ? paragraphSpacingScale : 1d;
+                bool usesPrintedTableFrame = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
+                    CanUsePrintedReviewTextTableFrame(bodyTable);
+                double CurrentTableFrameBottom() => usesPrintedTableFrame ? CurrentParagraphFrameBottom() : CurrentFrameBottom();
+                double reviewFragmentScale = usesPrintedTableFrame ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
                     tableActiveFrameHasContent = true;
@@ -1230,7 +1225,7 @@ internal sealed partial class DocxLayoutEngine
                         tableActiveFrameHasContent = false;
                     }
                     : FinishPage;
-                Action advanceTableBoundary = reviewPaginationScale < 1d && textMeasurer is not null
+                Action advanceTableBoundary = reviewFragmentScale < 1d && textMeasurer is not null
                     ? () =>
                     {
                         ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
@@ -1252,7 +1247,7 @@ internal sealed partial class DocxLayoutEngine
                         elementIndex,
                         x,
                         width,
-                        page.Height - page.MarginTop - CurrentFrameBottom(),
+                        page.Height - page.MarginTop - CurrentTableFrameBottom(),
                         textMeasurer,
                         defaultTabStopPoints,
                         cancellationToken,
@@ -1261,7 +1256,7 @@ internal sealed partial class DocxLayoutEngine
                         paragraphSpacingScale: paragraphSpacingScale,
                         commentMarkerLabels: commentMarkerLabels,
                         adjustAlignedMinimumMargins: true,
-                        alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom(),
+                        alignedMinimumAvailableHeight: cursorY - CurrentTableFrameBottom(),
                         allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
                         mathEquations: mathEquations);
                     // An admitted complete three-row table fits at its original
@@ -1273,14 +1268,14 @@ internal sealed partial class DocxLayoutEngine
                     return frame;
                 }
 
-                LayoutTable(bodyTable, CurrentFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
-                    reviewPaginationScale: reviewPaginationScale);
+                LayoutTable(bodyTable, CurrentTableFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
+                    reviewFragmentScale: reviewFragmentScale);
                 if (scaleBaselineOffsetTransitions &&
-                    (completedPagesBeforeTable == pages.Count || reviewPaginationScale < 1d) && textMeasurer is not null)
+                    (completedPagesBeforeTable == pages.Count || reviewFragmentScale < 1d) && textMeasurer is not null)
                 {
                     ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
                         textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
-                        allowPageBoundaryFragments: reviewPaginationScale < 1d);
+                        allowPageBoundaryFragments: reviewFragmentScale < 1d);
                 }
                 continue;
             }

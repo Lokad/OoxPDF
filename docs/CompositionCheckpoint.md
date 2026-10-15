@@ -151,3 +151,33 @@ root integration PDFs transfer without rebuild or repeated suite. Native control
 retain pagination/visual failures and three unresolved Office clip matches per
 review source; candidate clips are classified. This fixes content loss within the
 bounded natural-cell path and leaves broader frame/fidelity work explicit.
+
+
+Natural automatic text-only body-table rows now receive the same printed capacity as body
+paragraphs. The containing frame supplies this height once; fragment projection
+scales baseline geometry separately. Headers, footers and unrelated document
+stories no longer choose a larger table frame. Authored row heights, repeated
+headers, explicit row/paragraph keeps and rich cells retain staged fallbacks.
+
+Widow-protected splitting can choose one earlier whole-line boundary and recheck
+every cell, retaining at least two continuation lines. This bounded retry honors
+cancellation; invalid boundaries retain the whole-row fallback. The shared line
+measurements determine both admission and painting. Two-cell checks ensure an
+unprotected first cell cannot bypass the next cell's widow rule or lose content.
+Pinned long-table controls also cover plain headers and footers in both modes.
+
+
+The held-out memo rejected an initial broader frame candidate: it moved a
+mathematical row to the next page, whereas Word keeps that row with its heading.
+Text-metric eligibility now explicitly excludes equations as well as pictures
+and textboxes; mixed-object rows retain their established frame and painting.
+This semantic ownership boundary applies to every source and is not keyed to the
+memo, a font, a size or a fitted threshold. Wider object-height ownership remains
+unqualified. Held-out comparisons remain acceptance checks, not fitting inputs.
+
+
+A transformation regression also retains all prose when unsupported mathematics
+falls back. Font-baseline eligibility stays separate from frame-capacity
+eligibility: an ignored object cannot switch off the published prose baseline.
+The regression catches 117/120 words in an intermediate candidate and passes after
+restoring the shared line-metric owner. Neither rejected candidate is delivered.

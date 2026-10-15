@@ -12,10 +12,58 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewTablePrintedCapacityPreservesWordPagesAndStaticStoryCombinations()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "calibri.ttf")))
+            TestAssert.Skip("Installed Calibri is required for the independent Word page controls.");
+        foreach (string name in new[] { "table-widow-on", "table-widow-off", "table-widow-off-header", "table-widow-off-footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ReviewBodyFrames", name + ".docx"));
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+            TestAssert.Equal(4, pages.Length);
+            TestAssert.Equal(200, Regex.Matches(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), "AAA").Count);
+        }
+    }
+
+    public static void DocxReviewTableWidowBoundaryChecksEveryCell()
+    {
+        var source = CreateReviewPaginationDocument(includeFollowingRow: false);
+        var original = source.Tables.Single();
+        var cell = original.Rows.Single().Cells.Single();
+        DocxTableCell CreateCell(string word, bool widow)
+        {
+            string text = string.Join(' ', Enumerable.Repeat(word, 76));
+            var paragraph = cell.Paragraphs.Single() with
+            {
+                Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }],
+                KeepRules = DocxParagraphKeepRules.Empty with { WidowControl = widow }
+            };
+            return cell with { Text = text, Paragraphs = [paragraph] };
+        }
+        var table = new DocxTable("fixed", [160d, 160d],
+            [original.Rows.Single() with { Cells = [CreateCell("AAA", false), CreateCell("DDD", true)] }]);
+        var document = source with
+        {
+            BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]], FallbackTables = [table]
+        };
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var rows = renderer.InspectLayout(document).Pages.SelectMany(page => page.TableRows).ToArray();
+        TestAssert.True(rows.Length == 2 && rows.All(row => row.Cells[1].TextLineCount >= 2),
+            "A valid first cell cannot bypass widow protection in the next cell.");
+        string painted = string.Concat(renderer.RenderBlankPages(document, null, default).Select(DocxPageFootnoteNumberingTests.DecodeText));
+        TestAssert.Equal(76, Regex.Matches(painted, "AAA").Count);
+        TestAssert.Equal(76, Regex.Matches(painted, "DDD").Count);
+    }
+
     public static void DocxReviewTableFragmentsPreserveAllWordsWithExplicitWidowControl()
     {
         foreach (int words in new[] { 84, 120, 160, 200 })
         foreach (bool widow in new[] { false, true })
+        foreach (bool unsupportedMath in new[] { false, true })
         {
             var source = CreateReviewPaginationDocument(includeFollowingRow: false);
             var table = source.Tables.Single();
@@ -24,7 +72,9 @@ internal static class DocxMarkupTests
             var paragraph = cell.Paragraphs.Single() with
             {
                 Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }],
-                KeepRules = DocxParagraphKeepRules.Empty with { WidowControl = widow }
+                KeepRules = DocxParagraphKeepRules.Empty with { WidowControl = widow },
+                Equations = unsupportedMath ? [new DocxEquation(new DocxMathRow([])
+                    { PropertiesXml = ["<unsupported-math/>"] }, 0, 0, false, null, null, null)] : []
             };
             table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Text = text, Paragraphs = [paragraph] }] }] };
             var document = source with
@@ -36,7 +86,7 @@ internal static class DocxMarkupTests
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var pages = renderer.RenderBlankPages(document, null, default).ToArray();
             int painted = Regex.Matches(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), "AAA").Count;
-            TestAssert.True(painted == words, $"Fragmented content must survive explicit widow={widow}: expected {words} words, painted {painted}.");
+            TestAssert.True(painted == words, $"Fragmented content must survive explicit widow={widow}, unsupportedMath={unsupportedMath}: expected {words} words, painted {painted}.");
             var layout = renderer.InspectLayout(document);
             foreach (var fragment in layout.Pages.SelectMany(page => page.TableRows).Where(row => row.FragmentCount > 1))
             foreach (var placedCell in fragment.Cells)
@@ -443,13 +493,15 @@ internal static class DocxMarkupTests
             })
             {
                 DocxLayoutSnapshot protectedLayout = renderer.InspectLayout(WithRules(rules));
-                // The table retains its established atomic fallback. Following
-                // body prose uses the shared printed paragraph capacity.
                 TestAssert.Equal(2, protectedLayout.Pages.Count);
-                TestAssert.Equal(1, protectedLayout.Pages[0].TableRows.Count);
-                TestAssert.Equal(1, protectedLayout.Pages[0].TableRows[0].FragmentCount);
-                TestAssert.Equal(fragments.Sum(fragment => fragment.TextLineCount),
-                    protectedLayout.Pages[0].TableRows[0].TextLineCount);
+                var protectedRows = protectedLayout.Pages.SelectMany(page => page.TableRows).ToArray();
+                if (rules.WidowControl == true)
+                    TestAssert.True(protectedRows.Length == 2 && protectedRows.All(row => row.TextLineCount >= 2),
+                        "The earlier shared boundary must leave at least two lines in each widow-protected fragment.");
+                else
+                    TestAssert.True(protectedRows.Length == 1 && protectedRows[0].FragmentCount == 1,
+                        "Explicit keep policies retain their atomic row fallback.");
+                TestAssert.Equal(fragments.Sum(fragment => fragment.TextLineCount), protectedRows.Sum(row => row.TextLineCount));
             }
 
             DocxDocument WithRules(DocxParagraphKeepRules rules)

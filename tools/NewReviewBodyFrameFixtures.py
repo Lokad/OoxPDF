@@ -19,7 +19,8 @@ ET.register_namespace("r", r[1:-1])
 manifest = output / "probes.json"
 existing = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else []
 rows = []
-for story in ["body", "header", "footer", "table-widow-on", "table-widow-off"]:
+for story in ["body", "header", "footer", "table-widow-on", "table-widow-off", "table-widow-off-header", "table-widow-off-footer"]:
+    static_story = story.rsplit("-", 1)[-1] if story.startswith("table-") else story
     path = output / (story + ".docx")
     if path.exists():
         pin = next(row for row in existing if row["Id"] == story)
@@ -35,7 +36,7 @@ for story in ["body", "header", "footer", "table-widow-on", "table-widow-off"]:
                 body = doc.find(w + "body")
                 section = body.find(w + "sectPr")
                 for child in list(section):
-                    if child.tag in [w + "headerReference", w + "footerReference"] and child.tag != w + story + "Reference":
+                    if child.tag in [w + "headerReference", w + "footerReference"] and child.tag != w + static_story + "Reference":
                         section.remove(child)
                 body.clear()
                 for label, height in [("Public review anchor", 14), ("Public filler", 510), ("Plain spacer", 72), ("Following body", 90)]:
@@ -79,7 +80,7 @@ for story in ["body", "header", "footer", "table-widow-on", "table-widow-off"]:
                 doc = ET.fromstring(data)
                 for rel in list(doc):
                     kind = rel.get("Type", "").rsplit("/", 1)[-1]
-                    if kind in ["footnotes", "header", "footer"] and kind != story:
+                    if kind in ["footnotes", "header", "footer"] and kind != static_story:
                         doc.remove(rel)
                 data = ET.tostring(doc, encoding="utf-8", xml_declaration=True)
             target.writestr(entry, data)

@@ -15,9 +15,11 @@ internal sealed partial class DocxLayoutEngine
     // independently of paragraph keep/widow policy or page-capacity eligibility.
     private static double ResolveTableRowFragmentBaselineScale(DocxTableRow row, double scale, int fragmentCount) =>
         fragmentCount > 1 && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) &&
-        row.Cells.All(HasNaturalReviewTableCellMetrics) ? scale : 1d;
+        row.Cells.All(HasNaturalReviewCellLineMetrics) ? scale : 1d;
 
-    private static bool HasNaturalReviewTableCellMetrics(DocxTableCell cell)
+    // These font-inset metrics also own prose when unsupported mathematics
+    // falls back. Capacity eligibility separately excludes object-height owners.
+    private static bool HasNaturalReviewCellLineMetrics(DocxTableCell cell)
     {
         IReadOnlyList<DocxBodyElement> elements = GetTableCellLayoutBodyElements(cell);
         return elements.Count == 1 && elements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
