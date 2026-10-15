@@ -1,0 +1,21 @@
+[
+  {
+    "Id": "inline-math-navigation-normal-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/inline-math-navigation-normal-header.docx",
+    "Sha256": "7A8BEDE3766C7307BF3A4D25FD4D53EE02D71B617027BF27F798F0426BFC263D",
+    "SourceSha256": "34F2CE8E3FC2612244DD4F114277318B1EB337A7835738D1CB813D10D2F13ACC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Go to body calculation 1",
+      "Go to body calculation 2",
+      "Go to cell calculation 1",
+      "Go to cell calculation 2",
+      "Go to header calculation 1",
+      "Go to header calculation 2",
+      "Go to footer calculation 1",
+      "Go to footer calculation 2"
+    ]
+  }
+]

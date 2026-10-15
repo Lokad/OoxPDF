@@ -100,11 +100,13 @@ internal sealed partial class DocxRenderer
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)))
         {
             token.ThrowIfCancellationRequested();
-            bool display = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null ||
-                DocxMathParagraphPolicy.IsMathOnlyDisplayGroup(paragraph);
-            foreach (DocxEquation sourceEquation in DocxMathParagraphPolicy.GetPreparationEquations(paragraph))
+            var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph);
+            if (sourceEquations.Count == 0) { continue; }
+            bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
+            var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);
+            foreach (DocxEquation sourceEquation in sourceEquations)
             {
-                DocxEquation equation = display && !sourceEquation.Display
+                DocxEquation equation = (standalone || displayRows.Contains(sourceEquation)) && !sourceEquation.Display
                     ? sourceEquation with { Display = true } : sourceEquation;
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
                 OpenTypeFont? parentMetrics = null;
@@ -237,7 +239,8 @@ internal sealed partial class DocxRenderer
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
                 { continue; }
             if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight, lineSpacingFactor)) { continue; }
-            layouts.Add(candidate.SourceEquation, new(candidate.SourceEquation, box, above, lineHeight));
+            layouts.Add(candidate.SourceEquation, new(candidate.SourceEquation, box, above, lineHeight)
+                { UsesDisplayStyle = candidate.Equation.Display });
         }
         return layouts;
     }

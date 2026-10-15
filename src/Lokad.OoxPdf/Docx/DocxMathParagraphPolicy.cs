@@ -1,6 +1,9 @@
 namespace Lokad.OoxPdf.Docx;
 
-internal sealed record DocxPreparedMathParagraph(DocxEquation Equation, DocxMathBox Box, double BaselineInset, double LineHeight);
+internal sealed record DocxPreparedMathParagraph(DocxEquation Equation, DocxMathBox Box, double BaselineInset, double LineHeight)
+{
+    public bool UsesDisplayStyle { get; init; }
+}
 
 internal static class DocxMathParagraphPolicy
 {
@@ -87,16 +90,53 @@ internal static class DocxMathParagraphPolicy
     private static bool HasVisibleProse(DocxParagraph paragraph) => paragraph.InlineContent is { } items
         ? DocxInlineContent.HasVisibleText(items) : paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text));
 
-    // Multiple adjacent formulas form one display group when no other visible
-    // inline object owns the row. Mixed rows retain their inline measurements.
-    public static bool IsMathOnlyDisplayGroup(DocxParagraph paragraph) =>
-        HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count > 1 &&
-        paragraph.Images.Count == 0 && paragraph.Hyperlinks.Count == 0 &&
-        paragraph.InlineContent is { } items &&
-        items.All(item => item is DocxInlineEquation ||
-            item is DocxInlineText text && text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace()) &&
-        paragraph.Equations.All(equation => !equation.Display) &&
-        TryGetDisplayLineSpacingFactor(paragraph, out _);
+    // Authored breaks delimit source rows. Only rows without another visible
+    // inline owner promote their formulas; soft wrapping never changes style.
+    public static IReadOnlySet<DocxEquation> GetDisplaySourceEquations(DocxParagraph paragraph,
+        CancellationToken token)
+    {
+        var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
+        if (!HasSupportedSourceOwner(paragraph) || paragraph.Hyperlinks.Count != 0 ||
+            paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
+            return display;
+        var row = new List<DocxEquation>();
+        bool hasOtherContent = false;
+        foreach (var item in items)
+        {
+            token.ThrowIfCancellationRequested();
+            switch (item)
+            {
+                case DocxInlineText text when text.Run.EffectiveProperties.Hidden ||
+                    text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace():
+                case DocxInlineTab tab when tab.Run.EffectiveProperties.Hidden:
+                case DocxInlineBreak lineBreak when lineBreak.Run.EffectiveProperties.Hidden:
+                    break;
+                case DocxInlineEquation math:
+                    row.Add(math.Equation);
+                    break;
+                case DocxInlineBreak:
+                    CompleteRow();
+                    break;
+                default:
+                    hasOtherContent = true;
+                    break;
+            }
+        }
+        CompleteRow();
+        return display;
+
+        void CompleteRow()
+        {
+            if (!hasOtherContent)
+                foreach (var equation in row)
+                {
+                    token.ThrowIfCancellationRequested();
+                    display.Add(equation);
+                }
+            row.Clear();
+            hasOtherContent = false;
+        }
+    }
 
     public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 || paragraph.Hyperlinks.Count != 0;

@@ -1,0 +1,21 @@
+[
+  {
+    "Id": "inline-math-navigation-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/inline-math-navigation-cell.docx",
+    "Sha256": "1A91FFBA16D253B7282CCA3E29F2AE675572747FCDBA6332CE9BFF8F9A4A951C",
+    "SourceSha256": "34F2CE8E3FC2612244DD4F114277318B1EB337A7835738D1CB813D10D2F13ACC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Go to body calculation 1",
+      "Go to body calculation 2",
+      "Go to cell calculation 1",
+      "Go to cell calculation 2",
+      "Go to header calculation 1",
+      "Go to header calculation 2",
+      "Go to footer calculation 1",
+      "Go to footer calculation 2"
+    ]
+  }
+]

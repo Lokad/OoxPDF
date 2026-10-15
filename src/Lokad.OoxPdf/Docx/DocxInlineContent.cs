@@ -67,7 +67,8 @@ internal static class DocxInlineContent
     }
 
     public static bool HasVisibleText(IReadOnlyList<DocxInlineItem> items) => items.Any(item =>
-        item is DocxInlineText text && !text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
+        item is DocxInlineText text && !text.Run.EffectiveProperties.Hidden &&
+        !text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
 
     public static bool TryGetEquationTextOffset(IReadOnlyList<DocxInlineItem> items, DocxEquation equation,
         out int offset)

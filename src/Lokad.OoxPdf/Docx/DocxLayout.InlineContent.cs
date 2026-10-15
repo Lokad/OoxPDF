@@ -192,7 +192,6 @@ internal sealed partial class DocxLayoutEngine
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;
 
-        bool displayGroup = DocxMathParagraphPolicy.IsMathOnlyDisplayGroup(paragraph);
         var output = new List<DocxMeasuredInlineLine>();
         var current = new List<DocxMeasuredInlineFragment>();
         double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
@@ -291,6 +290,10 @@ internal sealed partial class DocxLayoutEngine
                 var removed = current[^1];
                 advance -= removed.Advance + removed.LeadingAdvance; current.RemoveAt(current.Count - 1);
             }
+            bool displayGroup = current.Any(fragment => fragment.Math is not null) &&
+                current.All(fragment => fragment.Math is { UsesDisplayStyle: true } ||
+                    fragment.Source is DocxInlineText text &&
+                    text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
             output.Add(new(current.ToArray(), advance, above, above + below) { IsDisplayGroup = displayGroup });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }

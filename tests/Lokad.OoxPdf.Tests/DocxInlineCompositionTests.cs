@@ -8,6 +8,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionHiddenRunPreservesMathGeometry()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the visible geometry control.");
+        const string fixture = "docx-omml-isolated-inline-body-fraction-left";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadMutation(fixture, mode, false, false);
+            var hidden = ReadMutation(fixture, mode, false, false, (document, w, m) =>
+                document.Descendants(m + "oMath").Single().AddBeforeSelf(new XElement(w + "r",
+                    new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(w + "t", "Invisible prose"))));
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var before = renderer.InspectLayout(source).Pages.Single().Items.Single(item => item.Kind == "Equation");
+            var after = renderer.InspectLayout(hidden).Pages.Single().Items.Single(item => item.Kind == "Equation");
+            TestAssert.True(before.X == after.X && before.Y == after.Y && before.Width == after.Width && before.Height == after.Height,
+                "Invisible source prose must not alter mathematical style, alignment or occupied geometry.");
+            var pages = renderer.RenderBlankPages(hidden, null, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            TestAssert.True(!text.Contains("Invisible", StringComparison.Ordinal), "Hidden prose cannot paint.");
+            TestAssert.Equal(1, text.Normalize(NormalizationForm.FormKC).Split("x+2y", StringSplitOptions.None).Length - 1);
+        }
+    }
+
     public static void DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

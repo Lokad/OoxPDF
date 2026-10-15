@@ -41,6 +41,31 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories()
+    {
+        string[] stories = ["body", "cell", "header", "footer"];
+        for (int story = 0; story < stories.Length; story++)
+        {
+            string suffix = story == 0 ? "" : "-" + stories[story];
+            string fixture = "PortableFonts/inline-math-navigation-normal" + suffix + ".docx";
+            foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+            {
+                var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                    ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                double width = renderer.InspectLayout(DocxTests.ReadDocx(Case("PortableFonts/math-navigation-normal.docx"), mode))
+                    .Pages.Single().Items.Single(item => item.Kind == "Equation").Width;
+                var page = renderer.InspectLayout(DocxTests.ReadDocx(Case(fixture), mode)).Pages.Single();
+                var items = page.Items.Concat(page.Items.SelectMany(item => item.TextLines ?? []))
+                    .Concat(page.StaticItems);
+                var brokenRow = items.Single(item => item.Kind.EndsWith("TextLine", StringComparison.Ordinal) &&
+                    item.TextLength == 0 && item.SourceLineIndex == 1);
+                TestAssert.True(Math.Abs(brokenRow.Width - width) < 0.000001d,
+                    "A formula isolated by an authored break must retain its display measurement across containers.");
+            }
+            CheckMathNavigation(fixture, 8, story);
+        }
+    }
+
     public static void PortableRenderingMathOnlyGroupsPreserveDisplayMeasurementAndAlignment()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -70,7 +95,7 @@ internal static class PortableRenderingTests
     public static void PortableRenderingMixedMathBookmarksPreserveEightStoryDestinations() =>
         CheckMathNavigation("PortableFonts/inline-math-navigation-normal.docx", 8);
 
-    private static void CheckMathNavigation(string fixture, int count)
+    private static void CheckMathNavigation(string fixture, int count, int brokenPair = 0)
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
@@ -86,10 +111,15 @@ internal static class PortableRenderingTests
                 .Split("x+2y", StringSplitOptions.None).Length - 1);
             if (count == 8)
             {
-                TestAssert.True(destinations[0].Top > destinations[1].Top, "The explicit break must move the second body target down.");
-                for (int index = 2; index < count; index += 2)
-                    TestAssert.True(destinations[index + 1].Left > destinations[index].Left,
-                        "Adjacent formulas must retain separate source targets in each story.");
+                for (int index = 0; index < count; index += 2)
+                {
+                    if (index == 2 * brokenPair)
+                        TestAssert.True(destinations[index].Top > destinations[index + 1].Top,
+                            "The explicit break must move its second mathematical target down.");
+                    else
+                        TestAssert.True(destinations[index + 1].Left > destinations[index].Left,
+                            "Adjacent formulas must retain separate source targets in each story.");
+                }
                 TestAssert.Equal(1, pages.Sum(page => page.Images.Count));
             }
             CheckWrittenPages(pages);

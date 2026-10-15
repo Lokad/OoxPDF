@@ -1,4 +1,5 @@
 """Pin multiple-equation bookmark controls, including an image and a line break."""
+import argparse
 from copy import deepcopy
 import hashlib
 import json
@@ -6,6 +7,10 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import xml.etree.ElementTree as ET
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--mixed-story", choices=["body", "cell", "header", "footer"], default="body")
+args = parser.parse_args()
+suffix = "" if args.mixed_story == "body" else "-" + args.mixed_story
 repo = Path(__file__).resolve().parents[1]
 cases = repo / "tests/Lokad.OoxPdf.Tests/Cases"
 source = cases / "CompositionProbes/math-navigation.docx"
@@ -17,10 +22,14 @@ ET.register_namespace("w", w[1:-1])
 ET.register_namespace("m", m[1:-1])
 with ZipFile(cases / "Composition/report.docx") as report:
     picture = next(ET.fromstring(report.read("word/document.xml")).iter(w + "drawing"))
+    r = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+    embed = picture.find(".//*[@" + r + "embed]").get(r + "embed")
+    image_target = next(item.get("Target") for item in ET.fromstring(report.read("word/_rels/document.xml.rels"))
+                        if item.get("Id") == embed)
 
 for portable in (False, True):
-    output = cases / ("PortableFonts/inline-math-navigation-normal.docx" if portable else
-                      "CompositionProbes/inline-math-navigation.docx")
+    output = cases / (f"PortableFonts/inline-math-navigation-normal{suffix}.docx" if portable else
+                      f"CompositionProbes/inline-math-navigation{suffix}.docx")
     manifest = output.with_suffix(".json")
     if output.exists():
         pin = json.loads(manifest.read_text(encoding="utf-8"))[0]
@@ -44,9 +53,13 @@ for portable in (False, True):
                             w + "id": str(identifier * 10 + index), w + "name": name + str(index)})
                         paragraph.append(deepcopy(formula))
                         ET.SubElement(paragraph, w + "bookmarkEnd", {w + "id": str(identifier * 10 + index)})
-                        if index == 1 and name == "MathBody":
+                        if index == 1 and name == "Math" + args.mixed_story.capitalize():
                             paragraph.append(ET.Element(w + "r"))
-                            paragraph[-1].append(deepcopy(picture))
+                            drawing = deepcopy(picture)
+                            if args.mixed_story in ("header", "footer"):
+                                r = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+                                drawing.find(".//*[@" + r + "embed]").set(r + "embed", "rIdCompositionImage")
+                            paragraph[-1].append(drawing)
                             ET.SubElement(ET.SubElement(paragraph, w + "r"), w + "br")
                 for paragraph in list(doc.iter(w + "p")):
                     link = paragraph.find(w + "hyperlink")
@@ -70,8 +83,17 @@ for portable in (False, True):
                         ET.SubElement(props, m + "nor", {m + "val": "1"})
                 data = ET.tostring(doc, encoding="utf-8", xml_declaration=True)
             result.writestr(entry, data)
+        if args.mixed_story in ("header", "footer"):
+            rel = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+            root = ET.Element(rel + "Relationships")
+            ET.SubElement(root, rel + "Relationship", {
+                "Id": "rIdCompositionImage", "Type": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+                "Target": image_target})
+            name = "word/_rels/" + args.mixed_story + "1.xml.rels"
+            assert name not in parent.namelist(), "Preserve existing part relationships before extending this authoring control"
+            result.writestr(name, ET.tostring(root, encoding="utf-8", xml_declaration=True))
     manifest.write_text(json.dumps([{
-        "Id": "inline-math-navigation-normal" if portable else "inline-math-navigation",
+        "Id": ("inline-math-navigation-normal" if portable else "inline-math-navigation") + suffix,
         "Input": output.relative_to(repo).as_posix(),
         "Sha256": hashlib.sha256(output.read_bytes()).hexdigest().upper(),
         "SourceSha256": source_sha, "HeldOut": False,
