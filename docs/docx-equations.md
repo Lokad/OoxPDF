@@ -1,5 +1,16 @@
 # Native DOCX equations
 
+Standalone display equations also paint in automatic body-table rows. Cell
+measurement, line placement, clipping and keep estimation reuse the prepared
+math boxes and conversion-owned fonts. Five independent Word controls cover
+literals, fractions, scripts, adjacent cells and surrounding prose: all 18 math
+outlines match, with at most 0.10 pt horizontal and 0.34 pt vertical differences.
+The visual thresholds remain unchanged and unmet. A fixed-height row retains
+its exact ignored-equation output. Vertical merges, nested/nonparagraph cell
+content, fit/vertical text, revisions and inline cell equations retain fallback;
+math-bearing rows are atomic, with oversized-row pagination still unqualified.
+The earlier body qualifications below retain their scope and residuals.
+
 Native OMML rendering is in progress. A first native slice paints standalone
 literal display rows in the DOCX body, with left, center or right alignment,
 and fitting inline literal rows alongside prose. It also paints one display
