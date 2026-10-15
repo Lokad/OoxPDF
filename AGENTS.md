@@ -29,6 +29,8 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 
 ## Tools
 
+- `tools/AuditCompositionContent.py`: screen frozen public portfolio prose and simple math against Office; retain unresolved extraction and visual failures.
+
 - `tools/RunDocxAffectedTests.ps1`: run a manifest capability (`-Capability`) or specific selectors as one exact method set on a frozen assembly; use `-AllDocx` at broader milestones.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/CheckVisualCase.ps1`: run a public visual case.

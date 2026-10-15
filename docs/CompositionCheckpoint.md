@@ -321,3 +321,20 @@ All eight DOCX numerical gates still fail. Ten final PDFs match the compared
 prototype, so independent comparisons reuse their verified identities. Seventeen
 assets and four smoke PDFs transfer without root rebuild or suite replay; the
 smoke includes exact parent output from the overfull fallback control.
+
+
+`tools/AuditCompositionContent.py` screens complete public source prose and simple
+literal/fraction expressions against the measured candidate and cached Office
+PDFs. It pins frozen inputs/library, PDF/comparison identities and inspector
+outputs. Referenced headers/footers repeat per reference page; only referenced
+notes and mode-appropriate comments contribute. Complex source features remain
+explicitly unresolved. This is a token-presence screen, not reading-order, image,
+ink, clipping or geometry proof; numerical visual gates remain independent.
+
+The first audit reuses frozen `1845342c` without conversions or library builds.
+All ten source-prose/simple-math screens pass. Four review-mode Office token
+screens flag the generated comment caption: Word prints `Commented [1]:`, while
+the candidate substitutes `Commented [Public reviewer1]:` when initials are absent.
+This is a confirmed caption difference, not missing body prose. It remains open.
+The same audit functions identify exactly two missing `AAA` tokens in retained
+198/200-word table output and no source-prose deficit after the accepted correction.
