@@ -95,3 +95,11 @@ All 22 placement PDFs match their independently compared prototypes exactly, so
 the Office comparisons are reused. Both deck PDFs also retain their baseline bytes.
 All eight DOCX portfolio visual comparisons still fail; the report and memo retain
 their AllMarkup page-count mismatch. These residuals block checkpoint completion.
+
+
+The `rendering-portable` console group adds three small actual-rendering checks:
+DOCX mixed content in both modes and a PPTX composite chart. All use the same
+pinned DejaVu Sans font, license and provenance under `Cases/PortableFonts`.
+The dedicated DOCX fixture authors normal mathematical text because this font
+lacks the portfolio's default mathematical italic alphabet. Ubuntu CI runs this
+group alongside its existing portable groups. Windows retains the full suite.

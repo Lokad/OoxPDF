@@ -2,7 +2,7 @@ name: ci
 
 # Both platforms build the complete solution and run portable validation tools.
 # Windows also runs the full console suite, text-content gate, and PDFium probe.
-# Ubuntu intentionally uses the portable console groups: the remaining rendering
+# Ubuntu runs pinned-font DOCX/PPTX rendering and portable console groups. Other rendering
 # suites depend on Windows fonts, and the tracked PDFium binary is win-x64.
 # Neither job needs Office/COM, a reference cache, or private cases.
 on:
@@ -43,7 +43,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           New-Item -ItemType Directory -Force artifacts/ci-tests | Out-Null
-          foreach ($group in @('api', 'ooxml', 'pdf', 'imaging', 'fonts')) {
+          foreach ($group in @('api', 'ooxml', 'pdf', 'imaging', 'fonts', 'rendering-portable')) {
             dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

@@ -1,0 +1,16 @@
+{
+  "Font": {
+    "File": "DejaVuSans.ttf",
+    "Sha256": "AE7B7855E115A5966D8B1B3F80F254CCC117EC86F9965E202EE2940453837280",
+    "SourcePackage": "Debian fonts-dejavu-core 2.37-8",
+    "License": "LICENSE.txt"
+  },
+  "Document": {
+    "File": "letter-normal-math.docx",
+    "Sha256": "B0A4F1E95BEDFC2CAFFA911830B3269F6008333A08710CB869AD350FE1087FEA",
+    "Source": "../Composition/letter.docx",
+    "SourceSha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "Transformation": "Add m:rPr/m:nor m:val=1 to each OMML m:r, preserving all other package parts and content.",
+    "Scope": "Explicit normal mathematical text: pinned DejaVu Sans lacks the portfolio default mathematical italic alphabet."
+  }
+}
