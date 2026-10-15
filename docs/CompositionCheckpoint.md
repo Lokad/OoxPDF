@@ -226,3 +226,27 @@ change passes 14 selected methods in one invocation and the pinned-font regressi
 on Ubuntu, where both DOCX modes are exercised. Four integration PDFs retain their
 previous bytes after transferring 17 qualified assets without a root rebuild or
 suite replay. No visual-fidelity improvement is claimed for this telemetry fix.
+
+
+Bookmarks at formulas in the ordered mixed-content path now retain an inline
+source boundary. Navigation waits for that formula's actual placed line, including
+lines with no prose segments. The shared paragraph frame supplies the origin in
+body, cell and static stories; existing run-relative fallback remains available.
+A new control combines two formulas in each of those four stories, an inline image
+and an explicit body line break. Word exports eight destinations in both modes;
+the parent exports none. The candidate restores all eight without changing the
+control's raster, text operations or graphics operations.
+
+This is navigation recovery, not equation-geometry parity. Word spreads adjacent
+formulas much farther apart in the control: target differences reach 218.5pt
+horizontally in Final and 165.9pt in review mode; vertical differences reach about
+8pt. Both numerical visual gates still fail. Investigate the common math-only
+paragraph layout before subpoint refinements; do not fit navigation offsets to
+Word while painting formulas elsewhere.
+
+The accepted batch passes 60 selected methods in one invocation and six portable
+rendering/inspection checks on Ubuntu. All ten fixed portfolio PDFs are exact,
+so their independent comparisons reuse verified identities. Seventeen assets and
+four integration PDFs transfer without a root rebuild or suite replay. A new
+metadata test initially omitted the separate static-story source enumerator; its
+correction changes no production code. C1 remains open.
