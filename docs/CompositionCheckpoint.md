@@ -24,7 +24,11 @@ remain explicit and thresholds are unchanged.
 The first correction removes bookmarks from math exclusion policy: source
 annotations have no measured or painted extent. Transformation regressions cover
 standalone and inline body equations, a cell and direct header/footer paragraphs,
-in both modes, including unchanged-format prose run splitting. Multiple formulas,
+in both modes, including unchanged-format prose run splitting. Nineteen capability and neighbor methods pass in one invocation; the new
+regressions fail on the previous library. Seventeen frozen assets transfer with
+four identical integration smoke PDFs and no root rebuild. Independent bookmarked
+Word controls still fail foreground/SSIM gates; no complete visual pass is claimed.
+Multiple formulas,
 image combinations and equation-only bookmark navigation still require the shared
 inline/fragment work; this correction does not complete the checkpoint.
 
