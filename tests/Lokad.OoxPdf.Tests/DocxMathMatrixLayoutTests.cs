@@ -7,6 +7,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixColumnSpacingSharesSlotsAndRetainsSourceUnits()
+    {
+        var font = MathFont(); var resource = Resource("Spacing", font, "BC");
+        var matrix = Matrix([Run("B"), Run("CC")], [Run("BBB"), Run("C")]) with { ColumnGroups = [new(1, "left", false), new(1, "right", false)] };
+        double b = font.GetAdvanceWidth(font.MapCodePoint('B')) * 12d / font.UnitsPerEm;
+        double c = font.GetAdvanceWidth(font.MapCodePoint('C')) * 12d / font.UnitsPerEm;
+        foreach (double size in new[] { 12d, 20d })
+        foreach (uint rule in new uint[] { 0, 1, 2, 3, 4 })
+        {
+            uint amount = rule == 3 ? 120u : rule == 4 ? 3u : 777u;
+            var declared = matrix with { MinimumColumnWidthTwips = 480, ColumnGapRuleValue = rule, ColumnGapValue = amount,
+                ControlText = new("", size, null, false, false, false, null, "TestFont") };
+            TestAssert.True(DocxMathLayout.TryMeasure(Equation(declared), _ => resource, CancellationToken.None, out var box, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected authored column spacing.");
+            double gap = rule == 3 ? 6d : rule == 4 ? size * 1.5d : size * (1d + rule / 2d);
+            double first = Math.Max(24d, 3d * b), second = Math.Max(24d, 2d * c); var grid = TestAssert.NotNull(box);
+            TestAssert.True(Math.Abs(grid.AdvanceWidth - first - second - gap) < 1e-9 && grid.Glyphs[0].X == 0d &&
+                Math.Abs(grid.Glyphs[1].X - first - gap - second + 2d * c) < 1e-9 &&
+                Math.Abs(grid.Glyphs[^1].X - first - gap - second + c) < 1e-9,
+                "Point-based minimum widths and exact gaps stay fixed while em gaps follow the control size; grouped columns share those slots.");
+        }
+        var zero = matrix with { ColumnGapRuleValue = 3, ColumnGapValue = 0 };
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(zero), _ => resource, CancellationToken.None, out var touching, out _, resolveControlMetrics: _ => font) &&
+            Math.Abs(TestAssert.NotNull(touching).AdvanceWidth - 3d * b - 2d * c) < 1e-9, "An exact zero gap retains adjacent logical columns.");
+        var centered = matrix with { MinimumColumnWidthTwips = 480, ColumnGroups = null };
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(centered), _ => resource, CancellationToken.None, out var centeredBox, out _, resolveControlMetrics: _ => font) &&
+            Math.Abs(TestAssert.NotNull(centeredBox).AdvanceWidth - Math.Max(24d, 3d * b) - 12d - (Math.Max(24d, 2d * c) + 2d * c) / 2d) < 1e-9,
+            "A widened centered final slot contributes its logical argument edge while unused trailing padding cannot displace the centered formula.");
+        foreach (var invalid in new[] { matrix with { ColumnGapRuleValue = 5 }, matrix with { ColumnGapValue = 65536 } })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _), "Invalid typed spacing cannot silently select the default profile.");
+        var wide = matrix with { MinimumColumnWidthTwips = uint.MaxValue };
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(wide), _ => resource, CancellationToken.None, out var enormous, out _, resolveControlMetrics: _ => font) &&
+            TestAssert.NotNull(enormous).Glyphs.Count == 7 && double.IsFinite(TestAssert.NotNull(enormous).AdvanceWidth),
+            "A format-valid large width changes only scalar geometry; it cannot allocate additional slots or glyphs.");
+    }
+
     public static void MathFontMatrixHiddenEmptyCellsKeepSlotsRowFramesAndFirstPaintedOwner()
     {
         var font = MathFont(withPlaceholder: true); var resource = Resource("Sparse", font, "BC"); var empty = new DocxMathRow([]);

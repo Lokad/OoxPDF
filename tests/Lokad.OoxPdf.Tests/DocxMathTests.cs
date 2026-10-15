@@ -7,6 +7,24 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathMatrixColumnSpacingRetainsTypedUnitsAndBoundedScalars()
+    {
+        DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
+        var matrix = Read("<m:cSp m:val='480'/><m:cGpRule m:val='3'/><m:cGp m:val='120'/>");
+        TestAssert.True(!matrix.HasUnsupportedProperties && matrix.MinimumColumnWidthTwips == 480 && matrix.ColumnGapRuleValue == 3 && matrix.ColumnGapValue == 120,
+            "Minimum width retains twips separately from the rule-dependent gap amount.");
+        var largest = Read("<m:cSp m:val='4294967295'/><m:cGpRule m:val='4'/><m:cGp m:val='65535'/>");
+        TestAssert.True(!largest.HasUnsupportedProperties && largest.MinimumColumnWidthTwips == uint.MaxValue && largest.ColumnGapValue == ushort.MaxValue && largest.Rows[0].Cells.Count == 1,
+            "Format-valid large spacing values remain scalars and never expand the source grid.");
+        foreach (string property in new[] { "<m:cGpRule m:val='5'/>", "<m:cGp m:val='65536'/>", "<m:cSp m:val='4294967296'/>",
+            "<m:cSp m:val='12pt'/>", "<m:cGp m:val='-1'/>", "<m:cGpRule/><m:cGpRule/>", "<m:rSpRule m:val='1'/>" })
+        {
+            var rejected = Read(property);
+            TestAssert.True(rejected.HasUnsupportedProperties && rejected.PropertiesXml.Count == 1 && RowText(rejected.Rows[0].Cells[0]) == "x",
+                "Unsupported units, invalid/duplicate scalars and unqualified row spacing retain raw source and full fallback.");
+        }
+    }
+
     public static void DocxMathMatrixPlaceholderVisibilityRetainsBooleanDefaultsAndInvalidSource()
     {
         DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e/><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
@@ -27,7 +45,7 @@ internal static class DocxMathTests
         }
     }
 
-    public static void DocxMathMatrixDefaultSpacingSharesScalarSemanticsAndKeepsNondefaultFallback()
+    public static void DocxMathMatrixDefaultSpacingSharesScalarSemanticsAndKeepsMalformedRowFallback()
     {
         DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
         foreach (string name in new[] { "cGpRule", "cGp", "cSp", "rSpRule", "rSp" })
@@ -40,13 +58,14 @@ internal static class DocxMathTests
                     "Equivalent zero scalar spellings and val-less defaults share existing spacing semantics.");
                 TestAssert.Contains(name, matrix.PropertiesXml.Single());
             }
-            foreach (string bad in new[] { $"<m:{name} m:val='1'/>", $"<m:{name} m:val='-1'/>", $"<m:{name} m:val='4294967296'/>",
+            string unsupported = name switch { "rSp" or "rSpRule" => "1", "cGpRule" => "5", "cGp" => "65536", _ => "12pt" };
+            foreach (string bad in new[] { $"<m:{name} m:val='{unsupported}'/>", $"<m:{name} m:val='-1'/>", $"<m:{name} m:val='4294967296'/>",
                 $"<m:{name} m:val=''/>", $"<m:{name} m:val='future'/>", $"<m:{name} extra='1'/>", $"<m:{name}><m:future/></m:{name}>",
                 $"<m:{name}>stray</m:{name}>", $"<m:{name}/><m:{name}/>", $"<x:{name} xmlns:x='urn:future'/>" })
             {
                 var matrix = Read(bad);
                 TestAssert.True(matrix.HasUnsupportedProperties && RowText(matrix.Rows.Single().Cells.Single()) == "x" && matrix.PropertiesXml.Count == 1,
-                    "Nondefault, malformed, duplicate and foreign declarations retain raw source and complete fallback.");
+                    "Unsupported row values/units, malformed, duplicate and foreign declarations retain raw source and complete fallback.");
             }
         }
         var combined = Read("<m:cGpRule/><m:cGp m:val='0'/><m:cSp/><m:rSpRule m:val='0'/><m:rSp/>");

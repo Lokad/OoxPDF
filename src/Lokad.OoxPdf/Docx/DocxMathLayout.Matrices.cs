@@ -14,6 +14,7 @@ internal static partial class DocxMathLayout
     {
         if (GetSingleSupportedChild(equation) is not DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix ||
             matrix.BaseJustificationValue is not (null or "center" or "top" or "bot") ||
+            !TryResolveMatrixSpacing(matrix, 1d, out _, out _) ||
             matrix.Rows[0].Cells.Count == 0 || matrix.ControlText is { } control && !DocxMathRowLayout.HasSupportedTextFormatting(control, allowBold: false)) { return null; }
         foreach (var row in matrix.Rows)
         {
@@ -21,6 +22,14 @@ internal static partial class DocxMathLayout
             if (row.HasUnsupportedProperties || row.PropertiesXml.Count != 0 || row.Cells.Count != matrix.Rows[0].Cells.Count) { return null; }
         }
         return TryResolveMatrixColumns(matrix.ColumnGroups, matrix.Rows[0].Cells.Count, [], token) ? matrix : null;
+    }
+
+    private static bool TryResolveMatrixSpacing(DocxMathMatrix matrix, double size, out double minimumWidth, out double gap)
+    {
+        uint rule = matrix.ColumnGapRuleValue ?? 0, amount = matrix.ColumnGapValue ?? 0;
+        minimumWidth = (matrix.MinimumColumnWidthTwips ?? 0) / 20d;
+        gap = rule switch { 0 or 1 or 2 => size * (1d + rule / 2d), 3 => amount / 20d, 4 => amount * size / 2d, _ => double.NaN };
+        return rule <= 4 && amount <= ushort.MaxValue && double.IsFinite(size) && size > 0d && double.IsFinite(gap) && gap >= 0d;
     }
 
     private static bool TryResolveMatrixColumns(IReadOnlyList<DocxMathMatrixColumn>? groups, int columns, Span<MatrixColumnAlignment> destination, CancellationToken token)
@@ -57,6 +66,8 @@ internal static partial class DocxMathLayout
         double size = matrix.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathMatrixSize"; return false; }
+        if (!TryResolveMatrixSpacing(matrix, size, out double minimumWidth, out double gap))
+        { fallback = "InvalidMathMatrixSpacing"; return false; }
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size);
         double baselineFloor = DocxLineMetrics.MeasureTypographicBaselineInset(font, glyphSize);
         double descentFloor = DocxLineMetrics.MeasureTypographicLineHeight(font, glyphSize) - baselineFloor;
@@ -66,6 +77,7 @@ internal static partial class DocxMathLayout
         if (!TryResolveMatrixColumns(matrix.ColumnGroups, columns, alignments, token))
         { fallback = "UnsupportedMathMatrixColumns"; return false; }
         var widths = new double[columns]; var rowAbove = new double[matrix.Rows.Count]; var rowBelow = new double[matrix.Rows.Count];
+        Array.Fill(widths, minimumWidth);
         var cells = new List<DocxMathBox[]>(matrix.Rows.Count);
         DocxMathBox? placeholder = null;
         double height = 0d;
@@ -109,9 +121,9 @@ internal static partial class DocxMathLayout
             }
             cells.Add(measured); height += rowAbove[r] + rowBelow[r];
         }
-        double advance = widths.Sum() + (columns - 1d) * size;
+        double frameWidth = widths.Sum() + (columns - 1d) * gap;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * size / font.UnitsPerEm;
-        if (!double.IsFinite(height) || height <= 0d || !double.IsFinite(advance) || advance <= 0d || !double.IsFinite(axis))
+        if (!double.IsFinite(height) || height <= 0d || !double.IsFinite(frameWidth) || frameWidth <= 0d || !double.IsFinite(axis))
         { fallback = "InvalidMathMatrixExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(); var rules = new List<DocxMathRulePlacement>();
         // Top/bottom alignment anchors the corresponding row baseline. Center
@@ -122,7 +134,7 @@ internal static partial class DocxMathLayout
             "bot" => height - rowBelow[^1],
             _ => axis + height / 2d
         };
-        double width = advance, inkAbove = 0d, inkBelow = 0d;
+        double advance = 0d, width = 0d, inkAbove = 0d, inkBelow = 0d;
         for (int r = 0; r < cells.Count; r++)
         {
             double baseline = top - rowAbove[r], x = 0d;
@@ -131,13 +143,17 @@ internal static partial class DocxMathLayout
                 token.ThrowIfCancellationRequested(); var child = cells[r][c];
                 double spare = widths[c] - child.AdvanceWidth;
                 double cellX = x + (alignments[c] switch { MatrixColumnAlignment.Left => 0d, MatrixColumnAlignment.Right => spare, _ => spare / 2d });
+                // Slots control alignment and the next column origin. The
+                // formula ends at its last argument's logical edge, including
+                // hidden placeholder boxes, rather than unused trailing padding.
+                advance = Math.Max(advance, cellX + child.AdvanceWidth);
                 width = Math.Max(width, cellX + child.Width); inkAbove = Math.Max(inkAbove, baseline + child.AboveBaseline);
                 inkBelow = Math.Max(inkBelow, child.BelowBaseline - baseline);
                 foreach (var glyph in child.Glyphs)
                 { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + cellX, BaselineY = glyph.BaselineY + baseline }); }
                 foreach (var rule in child.Rules)
                 { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + cellX, Y = rule.Y + baseline }); }
-                x += widths[c] + size;
+                x += widths[c] + gap;
             }
             top -= rowAbove[r] + rowBelow[r];
         }

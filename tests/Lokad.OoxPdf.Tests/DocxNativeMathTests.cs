@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixColumnSpacingRetainsOrderedCellMeaning()
+    {
+        RequireMathFont();
+        foreach (string suffix in new[] { "display-minimum24", "inline-onehalf", "inline-exact6", "display-multiple2em",
+            "inline-zero-gap-minimum12", "display-grouped-minimum18", "inline-double-control20" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-gap-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(suffix.Contains("grouped", StringComparison.Ordinal) ? "abbccccdeeee" : "abcd",
+                DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Authored minimum widths and documented gap units retain complete ordered native cells.");
+        }
+    }
+
     public static void DocxNativeMatrixHiddenEmptyCellsRetainSparseMeaningAndVisibilityFallback()
     {
         RequireMathFont();

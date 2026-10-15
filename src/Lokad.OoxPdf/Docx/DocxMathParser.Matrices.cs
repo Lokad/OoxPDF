@@ -11,6 +11,7 @@ internal static partial class DocxMathParser
         bool valid = ReadPropertyOwner(element, "mPr", out XElement? owner, out XElement[] properties);
         IReadOnlyList<DocxMathMatrixColumn>? columnGroups = null;
         string? baseJustification = null;
+        uint? minimumWidth = null, gapRule = null, gapValue = null;
         foreach (XElement property in properties)
         {
             token.ThrowIfCancellationRequested();
@@ -29,11 +30,18 @@ internal static partial class DocxMathParser
             }
             else if (property.Name.LocalName is "cGpRule" or "cGp" or "cSp" or "rSpRule" or "rSp")
             {
-                // All five omitted/val-less scalar defaults are zero. Only the
-                // existing default spacing profile is admitted here.
                 string? value = (string?)property.Attribute(MathNamespace + "val");
+                uint number = 0;
                 valid &= HasKnownValueProperty(property) && (value is null ||
-                    uint.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out uint number) && number == 0);
+                    uint.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out number));
+                uint? parsed = value is null ? null : number;
+                switch (property.Name.LocalName)
+                {
+                    case "cSp": minimumWidth = parsed; break;
+                    case "cGp": gapValue = parsed; valid &= number <= ushort.MaxValue; break;
+                    case "cGpRule": gapRule = parsed; valid &= number <= 4; break;
+                    default: valid &= number == 0; break; // Nondefault row spacing remains unqualified.
+                }
             }
             else if (property.Name == MathNamespace + "plcHide")
             { valid &= HasKnownValueProperty(property) && HasBooleanValue((string?)property.Attribute(MathNamespace + "val")); }
@@ -54,6 +62,7 @@ internal static partial class DocxMathParser
         return new(rows)
         { ColumnGroups = columnGroups, BaseJustificationValue = baseJustification, HasUnsupportedProperties = !valid,
             HidePlaceholdersValue = ReadBoolean(owner, "plcHide"),
+            MinimumColumnWidthTwips = minimumWidth, ColumnGapRuleValue = gapRule, ColumnGapValue = gapValue,
             ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
     }
 

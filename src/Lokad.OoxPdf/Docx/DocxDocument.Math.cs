@@ -89,6 +89,9 @@ internal sealed record DocxMathMatrix(IReadOnlyList<DocxMathMatrixRow> Rows) : D
     public IReadOnlyList<DocxMathMatrixColumn>? ColumnGroups { get; init; }
     public string? BaseJustificationValue { get; init; }
     public bool? HidePlaceholdersValue { get; init; }
+    public uint? MinimumColumnWidthTwips { get; init; }
+    public uint? ColumnGapRuleValue { get; init; }
+    public uint? ColumnGapValue { get; init; }
     public bool HasUnsupportedProperties { get; init; }
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }
