@@ -406,3 +406,17 @@ methods, 62 independent font queries, 34 Word/source glyph outlines and four exa
 transfer smoke PDFs qualify one artifact. Three public cases retain thresholds.
 Measured fraction enclosures need a distinct sizing profile and remain staged;
 smaller authored fraction text also shows an unqualified optical-glyph difference.
+
+Authored non-growing delimiters use canonical base glyphs at the control's size,
+while children retain their own size and occupied ink. These controls register
+only the glyphs they use, avoiding unnecessary stretch work and fallback on an
+unused variant alias. Growing controls still prepare their own variants in either
+source order; a fixed control also works when a MATH face has no variant table.
+A rejected prototype's unnecessary omission is reproduced in a focused alias
+test; authored Unicode remains preserved. Six independent Word controls improve
+across display/inline placement and 12/20 pt child/control sizes. Differences
+reach 0.46 pt horizontally and 0.07 pt vertically; all 30 glyph outlines match
+Word/source. Thirty-nine focused methods, 30 exact neighboring PDFs and four
+matching transfer smoke PDFs qualify one artifact. Three public cases retain
+the existing visual thresholds. Fraction/shape/separator/recursive profiles remain
+staged, and font-cache memory corruption remains unverified.
