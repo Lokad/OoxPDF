@@ -5,6 +5,27 @@ specific expansion, retention and output boundaries. Host capacity also includes
 runtime/JIT, resolver ownership, concurrent conversions, input/output owners and
 headroom. Office and PDFium validation processes are outside library measurements.
 
+## Mixed-document portfolio, 2026-10-15
+
+The six fixed public/synthetic documents in the [composition portfolio](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json) combine supported features. The four DOCX inputs are measured separately in Final/preserved layout and AllMarkup/Word-compatible modes; the two decks retain absolute-position rendering. Source and output hashes are pinned. This is a compound-document baseline, not a speedup claim.
+
+Measured frozen library `0aeff058` (version 0.1.5), SHA-256 `4A43DBFD579A19FFA35A9EC596692D77D0142C5866736CC2B3782E120D5F2C45`, Windows 10.0.26200, .NET 10.0.13, 64-bit workstation GC, 28 logical CPUs. One process per mode measures one cold conversion, one warmup and three warm samples per input in manifest order. Later inputs share static caches. Allocations cover the calling thread; hashing and report writing are excluded. Cold timing includes runtime/JIT effects. Three warm samples do not establish a stable performance ranking.
+
+| Document | Final warm allocation (MB) | Review warm allocation (MB) | Final warm time (ms) | Review warm time (ms) |
+|---|---:|---:|---:|---:|
+| report | 47.33 | 51.92 | 106.2 | 88.9 |
+| letter | 44.90 | 49.45 | 45.2 | 60.1 |
+| specification | 49.79 | 54.59 | 45.1 | 77.1 |
+| technical-memo | 46.36 | 50.72 | 44.3 | 69.3 |
+| Briefing deck | 10.64 | — | 14.5 | — |
+| Held-out deck | 28.91 | — | 29.7 | — |
+
+MB is decimal. Every repeated output is stable and matches the accepted CLI PDF. Warm stage probes also reproduce the same complete PDF in all ten mode outcomes. For DOCX, warm rendering allocates 43.7–48.1 MB in Final and 48.1–52.7 MB in review mode; package opening uses about 0.15 MB, reading 0.60–0.94 MB and serialization 0.47–0.84 MB. The render phase includes font preparation, layout and painting. It does not identify repeated layout as the dominant cause.
+
+The coordinator can repeat work for note kerning/numbering, footnote reservation and static-story displacement. Identify their actual costs and dependencies before introducing measured-fragment reuse. Existing table-cell memoization remains the model for bounded reuse when placement changes. No heap accounting framework or additional production quotas are introduced.
+
+Use the existing allocation probe with `--docx-review` for the review preset, including stage, isolated and concurrent runs; `MeasureAllocation.ps1 -DocxReview` forwards it. The default remains Final/preserved layout. Reports record both modes and the loaded library hash. Measure against a qualified runtime, keeping tool builds separate from the library. Retained local reports and mode-propagation checks are under `artifacts/composition-c1/current-portfolio-*-allocations.json`.
+
 ## Linux forced-break workload, 2026-10-05
 
 Measured renderer/tool revision: `cef195d77e4e8b116002dd8dcdb985eed4e30fd8`,

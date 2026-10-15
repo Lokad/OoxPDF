@@ -20,6 +20,7 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
 {
     Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--resident-window bytes] <input...> | --self-test | --font-breadth <n,...> --out <report.json>");
     Console.WriteLine("  Measures one cold plus N warm conversions per input and writes a JSON report.");
+    Console.WriteLine("  --docx-review measures AllMarkup / WordCompatibleAllMarkup; the default is Final / PreserveDocumentLayout.");
     Console.WriteLine("  --output-mode buffer (default) keeps converter output in a MemoryStream;");
     Console.WriteLine("  --output-mode file writes converter output to a temp file (no output buffering attributed).");
     Console.WriteLine("  --output-mode forward-only writes to a file through a strict non-seekable caller stream.");
@@ -55,6 +56,7 @@ string? reportPath = ReadOption("--out");
 int warmup = ReadOption("--warmup") is null ? 1 : ReadIntOption("--warmup") ?? -1;
 int iterations = ReadOption("--iterations") is null ? 3 : ReadIntOption("--iterations") ?? -1;
 bool measureStages = args.Any(arg => string.Equals(arg, "--stages", StringComparison.Ordinal));
+bool docxReview = args.Contains("--docx-review", StringComparer.Ordinal);
 bool isolate = args.Any(arg => string.Equals(arg, "--isolate", StringComparison.Ordinal))
     && !args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal));
 string outputMode = ReadOption("--output-mode") ?? "buffer";
@@ -84,7 +86,7 @@ if (isolate)
         Console.Error.WriteLine("--isolate and --concurrency cannot be combined.");
         return 2;
     }
-    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode, residentWindowBytes, probeFont);
+    return RunIsolated(reportPath, inputs, warmup, iterations, measureStages, outputMode, residentWindowBytes, probeFont, docxReview);
 }
 
 if (ReadOption("--concurrency") is string concurrencySpec)
@@ -95,7 +97,7 @@ if (ReadOption("--concurrency") is string concurrencySpec)
         return 2;
     }
 
-    return RunConcurrency(reportPath, inputs, outputMode, residentWindowBytes, concurrency, probeFont);
+    return RunConcurrency(reportPath, inputs, outputMode, residentWindowBytes, concurrency, probeFont, docxReview);
 }
 
 var reports = new List<object>();
@@ -117,7 +119,7 @@ foreach (string input in inputs)
         string? peakNote = args.Any(arg => string.Equals(arg, "--isolated-child", StringComparison.Ordinal))
             ? "single-input isolated child process: peak is per-input"
             : null;
-        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote, residentWindowBytes, probeFont));
+        reports.Add(MeasureInput(Path.GetFileName(input), inputBytes, warmup, iterations, measureStages, outputMode, peakNote, residentWindowBytes, probeFont, docxReview));
     }
     catch (Exception ex)
     {
@@ -126,13 +128,13 @@ foreach (string input in inputs)
     }
 }
 
-var report = BuildReport(reports, outputMode, isolation: "in-process (cold is process-first; later inputs reuse static caches; process peak is a lifetime high-water mark)", probeFont);
+var report = BuildReport(reports, outputMode, isolation: "in-process (cold is process-first; later inputs reuse static caches; process peak is a lifetime high-water mark)", probeFont, docxReview);
 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
 File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine($"Wrote {reportPath} ({reports.Count} inputs).");
 return 0;
 
-static object BuildReport(List<object> reports, string outputMode, string isolation, ProbeFont? probeFont = null)
+static object BuildReport(List<object> reports, string outputMode, string isolation, ProbeFont? probeFont = null, bool docxReview = false)
 {
     return new
     {
@@ -150,6 +152,9 @@ static object BuildReport(List<object> reports, string outputMode, string isolat
         os = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
         processorCount = Environment.ProcessorCount,
         sourceRevision = GetSourceRevision(),
+        librarySha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(OoxPdfConverter).Assembly.Location))),
+        docxMarkupMode = docxReview ? "AllMarkup" : "Final",
+        docxMarkupGeometryMode = docxReview ? "WordCompatibleAllMarkup" : "PreserveDocumentLayout",
         outputMode,
         isolation,
         allocationScope = "calling-thread (GC.GetAllocatedBytesForCurrentThread); hashing, page-count checks, and report serialization run outside the counters; I/O buffers and background loaders outside this thread are not attributed",
@@ -182,7 +187,7 @@ static object DescribeFontInventory(ProbeFont? probeFont)
     }
 }
 
-static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode, long residentWindowBytes, ProbeFont? probeFont)
+static int RunIsolated(string reportPath, string[] inputs, int warmup, int iterations, bool measureStages, string outputMode, long residentWindowBytes, ProbeFont? probeFont, bool docxReview)
 {
     // cold inputs run independently in fresh child processes so static
     // caches cannot leak across inputs and each child reports its own process peak.
@@ -230,6 +235,7 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
             psi.ArgumentList.Add("--font-file");
             psi.ArgumentList.Add(probeFont.Path);
         }
+        if (docxReview) psi.ArgumentList.Add("--docx-review");
         psi.ArgumentList.Add("--isolated-child");
         psi.ArgumentList.Add(input);
         try
@@ -276,7 +282,7 @@ static int RunIsolated(string reportPath, string[] inputs, int warmup, int itera
         }
     }
 
-    object report = BuildReport(merged, outputMode, isolation: "per-input child processes (independent cold conversions; per-input peakWorkingSetBytes is that child's process peak)", probeFont);
+    object report = BuildReport(merged, outputMode, isolation: "per-input child processes (independent cold conversions; per-input peakWorkingSetBytes is that child's process peak)", probeFont, docxReview);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
     File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine($"Wrote {reportPath} ({merged.Count} inputs, isolated).");
@@ -329,7 +335,7 @@ long? ReadLongOption(string name)
     return value;
 }
 
-static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null, long residentWindowBytes = 67108864L, ProbeFont? probeFont = null)
+static object MeasureInput(string name, byte[] inputBytes, int warmup, int iterations, bool measureStages, string outputMode, string? peakNoteOverride = null, long residentWindowBytes = 67108864L, ProbeFont? probeFont = null, bool docxReview = false)
 {
     string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
         : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
@@ -342,6 +348,8 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
     {
         InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
         FontResolver = probeFont,
+        DocxMarkupMode = docxReview ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final,
+        DocxMarkupGeometryMode = docxReview ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,
         ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = residentWindowBytes },
     };
     (object cold, string coldSha, int coldLength, int coldPages) = MeasureOnce(inputBytes, options, inputExtension: kind == "docx" ? ".docx" : ".pptx", outputMode, recordOutput: true);
@@ -384,7 +392,7 @@ static object MeasureInput(string name, byte[] inputBytes, int warmup, int itera
         residentWindowBytes,
         cold,
         warm = warm.ToArray(),
-        stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0], outputMode, probeFont) : null,
+        stages = measureStages ? MeasureStages(kind, inputBytes, outputShas[0], outputMode, probeFont, docxReview) : null,
         peakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64,
         peakWorkingSetNote = peakNoteOverride ?? "process lifetime high-water mark, including earlier inputs and stage probes; pass --isolate for per-input peaks",
     };
@@ -424,11 +432,11 @@ static (T Value, object Metrics) MeasureStep<T>(Func<T> produce, string scope)
 // whole-pipeline measurements, so shared static caches are warm; the whole
 // control stays the cold/warm reference. Prerequisite objects are left for
 // GC like the converter itself (no disposal).
-static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha, string outputMode, ProbeFont? probeFont)
+static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha, string outputMode, ProbeFont? probeFont, bool docxReview)
 {
     bool isDocx = string.Equals(kind, "docx", StringComparison.OrdinalIgnoreCase);
-    var markupMode = OoxPdfDocxMarkupMode.Final;
-    var geometryMode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+    var markupMode = docxReview ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+    var geometryMode = docxReview ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
 
     OoxPackage BuildPackage() => OoxPackage.Open(new MemoryStream(inputBytes, writable: false), CancellationToken.None);
     (_, object openMetrics) = MeasureStep(() => BuildPackage(), "exclusive: package open only");
@@ -1017,7 +1025,7 @@ static byte[] BuildBreadthDocx(int breadth)
 // input and warms caches, then N conversions run concurrently on thread-pool
 // threads with independent options and scopes; a batch sampler records process
 // peaks over the whole batch while per-task walls expose overlap efficiency.
-static int RunConcurrency(string reportPath, string[] inputs, string outputMode, long residentWindowBytes, int concurrency, ProbeFont? probeFont)
+static int RunConcurrency(string reportPath, string[] inputs, string outputMode, long residentWindowBytes, int concurrency, ProbeFont? probeFont, bool docxReview)
 {
     var reports = new List<object>();
     foreach (string input in inputs)
@@ -1035,7 +1043,7 @@ static int RunConcurrency(string reportPath, string[] inputs, string outputMode,
 
         try
         {
-            reports.Add(MeasureConcurrencyInput(Path.GetFileName(input), inputBytes, outputMode, residentWindowBytes, concurrency, probeFont));
+            reports.Add(MeasureConcurrencyInput(Path.GetFileName(input), inputBytes, outputMode, residentWindowBytes, concurrency, probeFont, docxReview));
         }
         catch (Exception ex)
         {
@@ -1044,13 +1052,13 @@ static int RunConcurrency(string reportPath, string[] inputs, string outputMode,
         }
     }
 
-    object report = BuildReport(reports, outputMode, isolation: "concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + " parallel in-process conversions sharing static caches; batch peaks cover the whole batch", probeFont);
+    object report = BuildReport(reports, outputMode, isolation: "concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + " parallel in-process conversions sharing static caches; batch peaks cover the whole batch", probeFont, docxReview);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(reportPath)) ?? ".");
     File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine("Wrote " + reportPath + " (" + reports.Count + " inputs, concurrency " + concurrency.ToString(System.Globalization.CultureInfo.InvariantCulture) + ").");
     return 0;
 }
-static object MeasureConcurrencyInput(string name, byte[] inputBytes, string outputMode, long residentWindowBytes, int concurrency, ProbeFont? probeFont = null)
+static object MeasureConcurrencyInput(string name, byte[] inputBytes, string outputMode, long residentWindowBytes, int concurrency, ProbeFont? probeFont = null, bool docxReview = false)
 {
     string kind = name.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "pptx"
         : name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "docx" : "unknown";
@@ -1061,6 +1069,8 @@ static object MeasureConcurrencyInput(string name, byte[] inputBytes, string out
         {
             InputKind = kind == "docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
             FontResolver = probeFont,
+            DocxMarkupMode = docxReview ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final,
+            DocxMarkupGeometryMode = docxReview ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,
             ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = residentWindowBytes },
         };
     }

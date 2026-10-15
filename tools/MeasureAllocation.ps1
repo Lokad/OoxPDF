@@ -17,6 +17,8 @@ param(
 
     [switch] $Stages,
 
+    [switch] $DocxReview,
+
     [switch] $SelfTest,
 
     [ValidateSet("buffer", "file", "forward-only")]
@@ -91,6 +93,7 @@ if ($Stages) {
 if ($Isolate) {
     $probeArgs += "--isolate"
 }
+if ($DocxReview) { $probeArgs += "--docx-review" }
 $probeArgs += $inputs
 & dotnet $probeDll $probeArgs
 if ($LASTEXITCODE -ne 0) {
