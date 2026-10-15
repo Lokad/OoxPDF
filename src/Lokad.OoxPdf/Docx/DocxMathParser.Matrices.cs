@@ -21,8 +21,7 @@ internal static partial class DocxMathParser
             valid &= cell.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(cell);
         }
         XElement? control = owner?.Element(MathNamespace + "ctrlPr");
-        // Absence is distinct: the matrix's default control derives from its
-        // first character. Preserve authored control resolution separately.
+        // Keep absent/authored controls distinct from painted cell formatting.
         DocxTextRun? text = control is null ? null : readRun(control, string.Empty);
         return new(rows)
         { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };

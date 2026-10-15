@@ -7,6 +7,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeLiteralMatricesKeepOrderedCellsAndIndependentFonts()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-literal", "abcd"), ("inline-literal", "abcd"),
+            ("display-three-rows", "abcdef"), ("inline-control20", "abcd"), ("inline-normal-cell", "valuebcd"),
+            ("inline-first20", "abcd"), ("inline-all-normal", "abcd") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Literal matrix grids retain ordered native cell glyphs without flattening or implicitly adding delimiters.");
+            if (suffix == "inline-all-normal")
+            {
+                var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(fonts.Length == 1 && fonts[0].Font.Font.FamilyName.Contains("Arial", StringComparison.OrdinalIgnoreCase),
+                    "An all-normal grid publishes only its painted Arial font; its mathematical control remains metric-only.");
+            }
+        }
+    }
+
     public static void DocxNativeDelimitedSubformulasPreserveFunctionAndOrdinaryMeaning()
     {
         RequireMathFont();

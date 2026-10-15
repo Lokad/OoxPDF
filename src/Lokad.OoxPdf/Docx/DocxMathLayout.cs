@@ -60,7 +60,19 @@ internal static partial class DocxMathLayout
         if (GetFunction(equation) is { } function) { return TryGetFunctionRuns(equation, function, token, out runs); }
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
         IDocxMathControl? controlOwner = null;
-        if (GetScripts(equation) is { } scripts)
+        if (GetMatrix(equation) is { } matrix)
+        {
+            foreach (var row in matrix.Rows)
+            foreach (var cell in row.Cells)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!DocxMathRowLayout.TryGetRenderCodePoints(cell, token, out var points, out _) || points.Count == 0)
+                { runs = []; return false; }
+                rows.Add((cell, 0, false));
+            }
+            controlOwner = matrix;
+        }
+        else if (GetScripts(equation) is { } scripts)
         {
             if (!AddScriptRows(scripts)) { runs = []; return false; }
         }
@@ -165,6 +177,8 @@ internal static partial class DocxMathLayout
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
         Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null)
     {
+        if (GetMatrix(equation) is { } matrix)
+            return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetFunction(equation) is { } function)
             return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetScripts(equation) is { } scripts)

@@ -36,6 +36,7 @@ internal static class TestCatalog
         .. FromType("fonts", typeof(DocxMathFractionTests)),
         .. FromType("fonts", typeof(DocxMathNaryTests)),
         .. FromType("fonts", typeof(DocxMathFunctionLayoutTests)),
+        .. FromType("fonts", typeof(DocxMathMatrixLayoutTests)),
         .. FromType("fonts", typeof(MathScriptStyleTests)),
         .. FromType("docx-numbering", typeof(DocxNumberingTests)),
         .. FromType("docx-text", typeof(DocxTextTests)),

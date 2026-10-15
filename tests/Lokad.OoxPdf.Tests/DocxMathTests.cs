@@ -24,7 +24,7 @@ internal static class DocxMathTests
             if (suffix == "inline-normal-cell") TestAssert.True(first is DocxMathRun { NormalTextValue: true, ExplicitFontFamily: "Arial" },
                 "Normal-text cell fonts remain independent from matrix metric ownership.");
             if (suffix == "inline-control20") TestAssert.Equal(20d, TestAssert.NotNull(matrix.ControlText).FontSize);
-            else TestAssert.True(matrix.ControlText is null, "Absent controls remain distinct from authored controls; the future default owner is the first character.");
+            else TestAssert.True(matrix.ControlText is null, "Absent controls remain distinct from authored controls and independently formatted cell runs.");
             TestAssert.Equal("b", RowText(matrix.Rows[0].Cells[1]));
             TestAssert.Equal(suffix == "display-three-rows" ? "f" : "d", RowText(matrix.Rows[^1].Cells[^1]));
         }
