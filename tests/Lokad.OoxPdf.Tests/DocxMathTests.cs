@@ -7,6 +7,65 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathRadicalPinnedControlsRetainLiteralSourceRoles()
+    {
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string shape,string text,int size) in new[]{("small","x",8),("operators","n+1",12),("descenders","g+y",12),("large","a+b",20)})
+        {
+            string input=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases",$"docx-omml-radical-{placement}-{shape}{size}.docx"));
+            DocxDocument document=DocxTests.ReadDocx(input,OoxPdfDocxMarkupMode.Final);
+            DocxEquation equation=document.Paragraphs.SelectMany(p=>p.Equations).Single();
+            var radical=(DocxMathRadical)equation.Content.Children[0];
+            TestAssert.True(radical.DegreeHidden==true && !radical.HasUnsupportedProperties && radical.Degree.Children.Count==0,
+                "The authored square root keeps an explicit empty, hidden degree role.");
+            var run=(DocxMathRun)radical.Radicand.Children[0];
+            TestAssert.Equal(text,run.Text.Text);TestAssert.Equal((double)size,run.Text.FontSize);
+            TestAssert.Equal(placement=="display",equation.Display);
+        }
+    }
+
+    public static void DocxMathRadicalSourceRetainsDegreeVisibilityAndMalformedProperties()
+    {
+        foreach((string properties,bool? hidden,bool unsupported) in new (string,bool?,bool)[]
+        {
+            ("",null,false),("<m:radPr/>",null,false),
+            ("<m:radPr><m:degHide/></m:radPr>",true,false),
+            ("<m:radPr><m:degHide m:val='1'/></m:radPr>",true,false),
+            ("<m:radPr><m:degHide m:val='0'/></m:radPr>",false,false),
+            ("<m:radPr><m:degHide m:val='bad'/></m:radPr>",false,true),
+            ("<m:radPr><m:degHide/><m:degHide/></m:radPr>",true,true),
+            ("<m:radPr><m:ctrlPr/></m:radPr>",null,true),
+            ("<m:radPr/><m:radPr/>",null,true)
+        })
+        {
+            DocxMathRow row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:rad>"+properties+
+                "<m:deg><m:r><m:t>3</m:t></m:r></m:deg><m:e><m:r><m:t>x+1</m:t></m:r></m:e></m:rad></m:oMath>"));
+            var radical=(DocxMathRadical)row.Children[0];
+            TestAssert.Equal(hidden,radical.DegreeHidden);TestAssert.Equal(unsupported,radical.HasUnsupportedProperties);
+            TestAssert.Equal("3",((DocxMathRun)radical.Degree.Children[0]).Text.Text);
+            TestAssert.Equal("x+1",((DocxMathRun)radical.Radicand.Children[0]).Text.Text);
+            var equation=new DocxEquation(row,0,0,true,null,null,null);
+            TestAssert.True(!DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _),
+                "Typed source alone cannot claim visible radical rendering before its box is independently qualified.");
+        }
+    }
+
+    public static void DocxMathRadicalParsingKeepsMissingRolesAndDeepTraversalExplicit()
+    {
+        DocxMathRow malformed=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:rad><m:e><m:r><m:t>x</m:t></m:r></m:e></m:rad></m:oMath>"));
+        TestAssert.True(malformed.Children[0] is DocxMathUnsupported { ElementName:"rad",Children.Count:1 },
+            "Missing degree roles retain the original unsupported structure rather than fabricate source defaults.");
+        DocxMathRow orphan=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:deg><m:r><m:t>x</m:t></m:r></m:deg></m:oMath>"));
+        TestAssert.True(orphan.Children[0] is DocxMathUnsupported { ElementName:"deg" },
+            "A degree argument cannot become an ordinary renderable row without its radical owner.");
+        XElement nested=new(MathNamespace+"r",new XElement(MathNamespace+"t","x"));
+        for(int i=0;i<2000;i++)nested=new(MathNamespace+"rad",new XElement(MathNamespace+"deg"),new XElement(MathNamespace+"e",nested));
+        DocxMathRow row=Parse(new XElement(MathNamespace+"oMath",nested));
+        int depth=0;DocxMathNode node=row.Children[0];
+        while(node is DocxMathRadical radical){depth++;node=radical.Radicand.Children[0];}
+        TestAssert.Equal(2000,depth);
+    }
+
     public static void DocxMathNormalTextPropertiesRetainTypedDefaultsAndMalformedFallback()
     {
         foreach ((string property, bool? expected, bool unsupported) in new (string, bool?, bool)[]
@@ -175,7 +234,9 @@ internal static class DocxMathTests
         TestAssert.True(row.Children.All(node => node is DocxMathUnsupported), "Incomplete constructs must remain explicit fallbacks.");
         var root = (DocxMathUnsupported)row.Children[0];
         TestAssert.Equal("rad", root.ElementName);
-        TestAssert.Contains("root", TestAssert.NotNull(root.SourceXml));
+        TestAssert.True(root.SourceXml is null, "Traversed radical children must not be serialized again into overlapping raw subtrees.");
+        TestAssert.Equal("e",root.Children.Single().ElementName);
+        TestAssert.Equal("root",RowText((DocxMathRow)root.Children.Single().Content));
         var missingDenominator = (DocxMathUnsupported)row.Children[1];
         TestAssert.Equal("num", missingDenominator.Children.Single().ElementName);
         TestAssert.Equal("one", RowText((DocxMathRow)missingDenominator.Children.Single().Content));

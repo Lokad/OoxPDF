@@ -5,6 +5,72 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathFontTests
 {
+    public static void MathFontVerticalVariantsChooseTheSmallestAdequateOwnedGlyph()
+    {
+        foreach (bool rangeCoverage in new[] { false, true })
+        {
+            var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(VariantTable(rangeCoverage)));
+            foreach ((double height, ushort glyph, ushort advance) in new (double, ushort, ushort)[]
+                { (0d,34,500), (500d,34,500), (500.01d,36,1000), (1000d,36,1000), (1000.01d,35,1500), (1500d,35,1500) })
+            {
+                TestAssert.True(font.TryGetMathVerticalVariant(34,height,CancellationToken.None,out var selected), "Expected a ready-made vertical variant.");
+                TestAssert.Equal(new OpenTypeMathGlyphVariant(glyph,advance),selected);
+            }
+            foreach (double height in new[] { -1d,1500.01d,double.NaN,double.PositiveInfinity })
+                TestAssert.True(!font.TryGetMathVerticalVariant(34,height,CancellationToken.None,out var selected) && selected==default,
+                    "Invalid sizes and heights requiring an assembly cannot publish a ready-made glyph.");
+            TestAssert.True(!font.TryGetMathVerticalVariant(35,0d,CancellationToken.None,out _), "Uncovered glyphs retain explicit fallback.");
+        }
+    }
+
+    public static void MathFontVerticalVariantsRejectTruncationOffsetsAndInvalidLaterRecords()
+    {
+        byte[] table=VariantTable(false);
+        for(int length=0;length<table.Length;length++)
+        {
+            var font=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(table[..length]));
+            TestAssert.True(!font.TryGetMathVerticalVariant(34,0d,CancellationToken.None,out var selected) && selected==default,
+                "A truncated MATH subtable cannot publish a partial variant selection.");
+            TestAssert.Equal((ushort)34,font.MapCodePoint('A'));
+        }
+        foreach((int offset,ushort value) in new (int,ushort)[]
+            { (2,1),(8,ushort.MaxValue),(12,1),(16,ushort.MaxValue),(20,1),(22,3),(30,ushort.MaxValue),(40,ushort.MaxValue),(42,0) })
+        {
+            byte[] malformed=(byte[])table.Clone();BinaryPrimitives.WriteUInt16BigEndian(malformed.AsSpan(offset),value);
+            var font=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(malformed));
+            TestAssert.True(!font.TryGetMathVerticalVariant(34,0d,CancellationToken.None,out var selected) && selected==default,
+                "Malformed offsets, coverage and later records must discard earlier candidate glyphs.");
+            TestAssert.Equal((ushort)34,font.MapCodePoint('A'));
+        }
+    }
+
+    public static void MathFontVerticalVariantsKeepCancellationAndCumulativeFontWork()
+    {
+        var font=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(VariantTable(false)));
+        using var cancelled=new CancellationTokenSource();cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(()=>font.TryGetMathVerticalVariant(34,0d,cancelled.Token,out _));
+        using(OoxConversionBudget.Scope scope=OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion=1 }))
+        {
+            TestAssert.True(font.TryGetMathVerticalVariant(34,0d,CancellationToken.None,out _),"One bounded font-selection operation is available.");
+            TestAssert.Throws<OoxPdfLimitExceededException>(()=>font.TryGetMathVerticalVariant(34,500d,CancellationToken.None,out _));
+        }
+        TestAssert.True(!TestFontBuilder.LoadTestFont().TryGetMathVerticalVariant(34,0d,CancellationToken.None,out _),
+            "An ordinary face remains usable without optional MATH variants.");
+    }
+
+    private static byte[] VariantTable(bool range)
+    {
+        int construction=12+(range?10:6);
+        byte[] bytes=new byte[10+construction+16];
+        void Set(int offset,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset),value);
+        Set(0,1);Set(8,10);Set(12,12);Set(16,1);Set(20,(ushort)construction);
+        Set(22,(ushort)(range?2:1));Set(24,1);Set(26,34);
+        if(range){Set(28,34);Set(30,0);}
+        int at=10+construction;Set(at+2,3);
+        Set(at+4,34);Set(at+6,500);Set(at+8,35);Set(at+10,1500);Set(at+12,36);Set(at+14,1000);
+        return bytes;
+    }
+
     public static void MathFontConstantsReadEveryRecordInDesignUnits()
     {
         byte[] table = CreateTable(10);

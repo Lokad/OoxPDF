@@ -37,7 +37,7 @@ internal static class DocxMathParser
             }
 
             DocxMathNode node;
-            if (IsRow(name))
+            if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad"))
             {
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())
                 { ArgumentProperties = ReadArgumentProperties(element) };
@@ -57,6 +57,23 @@ internal static class DocxMathParser
                 HasOnlyRoles(element, name == "sSub" ? ["e", "sub"] : name == "sSup" ? ["e", "sup"] : ["e", "sub", "sup"]))
             {
                 node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"));
+            }
+            else if (name == "rad" && Role(element, "e") is { } radicand && Role(element, "deg") is { } degree &&
+                HasOnlyRoles(element, "deg", "e"))
+            {
+                XElement[] properties = element.Elements().Where(IsProperty).ToArray();
+                XElement[] visibility = element.Element(MathNamespace + "radPr")?.Elements(MathNamespace + "degHide").ToArray() ?? [];
+                string? value = (string?)visibility.FirstOrDefault()?.Attribute(MathNamespace + "val");
+                bool valid = properties.Length <= 1 && properties.All(p => p.Name == MathNamespace + "radPr" &&
+                    p.Attributes().All(a => a.IsNamespaceDeclaration) &&
+                    string.IsNullOrWhiteSpace(string.Concat(p.Nodes().OfType<XText>().Select(t => t.Value))) &&
+                    p.Elements().All(child => child.Name == MathNamespace + "degHide")) &&
+                    visibility.Length <= 1 && visibility.All(v => !v.HasElements && string.IsNullOrWhiteSpace(v.Value) &&
+                        v.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == MathNamespace + "val")) &&
+                    (value is null || Lokad.OoxPdf.Ooxml.OoxBoolean.IsTrue(value) || Lokad.OoxPdf.Ooxml.OoxBoolean.IsOff(value));
+                node = new DocxMathRadical(radicand, degree, visibility.Length == 0 ? null :
+                    Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(visibility[0], false, valueAttributeName: MathNamespace + "val"))
+                    { HasUnsupportedProperties = !valid };
             }
             else
             {
@@ -78,8 +95,8 @@ internal static class DocxMathParser
         }
     }
 
-    private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den";
-    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup";
+    private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den" or "deg";
+    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)

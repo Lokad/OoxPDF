@@ -40,6 +40,10 @@ internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denom
     public bool HasUnsupportedProperties { get; init; }
 }
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
+internal sealed record DocxMathRadical(DocxMathRow Radicand, DocxMathRow Degree, bool? DegreeHidden) : DocxMathNode
+{
+    public bool HasUnsupportedProperties { get; init; }
+}
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
 internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,
     IReadOnlyList<DocxMathChild> Children) : DocxMathNode;
