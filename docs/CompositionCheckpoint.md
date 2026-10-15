@@ -525,3 +525,24 @@ Raw whitespace differences remain explicit: review output loses an authored spac
 after a comment reference in all four documents. This confirmed composition defect
 is the next bounded correction; normalized matching does not establish exact text
 or visible ink fidelity.
+
+Authored whitespace now survives comment composition. The old review-only filter
+suppressed every whitespace-only emission part in any commented paragraph; it
+retained positioned gaps but damaged PDF text extraction. No generated comment
+placeholder exists in this path. Removing the filter and its plumbing preserves
+single/multiple/nonbreaking separators, same-run references, a following footnote
+and an explicit break. Font cmap aliases may extract NBSP as ordinary space.
+
+Twenty-two selected methods pass once in one invocation, and two affected portable
+methods pass on Ubuntu. Six portfolio PDFs retain bytes; all seven pages of the
+four changed review outcomes retain raster bytes at 144dpi. The two independent
+Office source controls retain their visual metrics. All ten content screens pass;
+eight DOCX numerical gates still fail and both decks pass. Seventeen assets/four
+exact smoke PDFs transfer without root build or suite replay.
+
+Freezing now rejects differing library copies in the library, tests and CLI output
+directories. A test-only rebuild exposed a stale CLI copy; the coherent snapshot
+retains the already-passed library/test hashes, so qualification is reused. Its
+small portfolio outputs were rechecked once and all twelve comparisons reused by
+PDF/reference/threshold identity. This extra check resolves the concrete coherence
+failure rather than adding routine qualification work.
