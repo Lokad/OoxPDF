@@ -11,5 +11,18 @@
     "DocxStaticFrameMapping",
     "DocxNativeAlignedStaticFrames",
     "DocxNativeScaledStaticFrames"
+  ],
+  "docx-inline-annotations": [
+    "DocxReaderPreservesBookmarkAnchors",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxInlineComposition",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeInlineMath",
+    "DocxNativeTableInlineMath",
+    "DocxNativeStaticMathRetainsStoryFlow",
+    "DocxNativeMathSettingsAndExplicitRunFaces"
   ]
 }
