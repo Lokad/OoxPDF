@@ -251,3 +251,26 @@ so their independent comparisons reuse verified identities. Seventeen assets and
 four integration PDFs transfer without a root rebuild or suite replay. A new
 metadata test initially omitted the separate static-story source enumerator; its
 correction changes no production code. C1 remains open.
+
+
+Fitting math-only rows with multiple adjacent formulas now share display-style
+measurement and center the complete group in body, cell and static containers.
+The same alignment helper consumes the measured group width in all three paths;
+source equations remain immutable. Mixed prose, pictures and authored hard-break
+rows retain their existing inline path in this component. Navigation retains
+container context at line start and uses the placed position of a later formula.
+
+Independent controls place two, three and two formulas in left-, center- and
+right-aligned paragraphs. Word centers each math-only group. Final foreground
+recall improves from 0.276 to 0.755; review recall improves from 0.988 to 0.994.
+Other numerical visual gates still fail. In the compound navigation control,
+maximum horizontal destination difference falls from 218.5pt to 0.54pt; remaining
+vertical differences reach about 8pt. The isolated formula after an image/break
+still uses inline typography and left alignment; its shared row ownership is the
+next rendering problem, without fitting a paragraph-specific correction.
+
+Qualification passes 71 selected methods in one invocation and seven portable
+rendering/inspection checks on Ubuntu. All ten portfolio PDFs remain exact, with
+14 independent comparisons reused by source/reference/PDF/threshold identity.
+Four smoke PDFs match after transferring 17 assets without root rebuild or suite
+replay. C1 remains incomplete and all eight DOCX portfolio gates remain failed.
