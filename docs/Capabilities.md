@@ -81,7 +81,11 @@ vertical merges, nested cell content, fit text, vertical text and revisions keep
 fallback. One fitting inline equation in plain cell prose reuses the body source-
 boundary wrapper and complete box; following prose can wrap. Six Word controls
 improve, with 22/22 matching outlines and residuals below 0.064 pt X / 0.352 pt Y.
-Unfit boxes and multiple cell equations retain the whole fallback.
+Unfit boxes and multiple cell equations retain the whole fallback. A sole inline
+equation in its own plain body/cell paragraph follows Word's centered display
+layout and full-size fraction children while retaining its source inline flag.
+Eight Word controls improve with 30/30 matching outlines, within 0.155 pt X /
+0.340 pt Y; existing visual thresholds remain explicit.
 Math-bearing rows remain atomic; oversized-row and wider pagination are unqualified.
 
 Mathematical runs select the minus glyph for an authored ASCII hyphen across

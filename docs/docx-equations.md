@@ -11,8 +11,10 @@ within 0.05 pt horizontally and 0.18 pt vertically. Small exact rows use the
 existing cell clip. Zero exact height uses natural content height, fixing plain
 cells as well. The visual thresholds remain unchanged and unmet. Unknown,
 negative or unresolved heights, vertical merges, nested/nonparagraph cell
-content, fit/vertical text, revisions and inline cell equations retain fallback;
-math-bearing rows are atomic, with oversized-row pagination still unqualified.
+content, fit/vertical text and revisions retain fallback. Fitting inline cell
+equations with plain prose share body wrapping; unfit/multiple equations keep
+fallback. Painted math-bearing rows are atomic, with wider fragmentation still
+unqualified.
 The earlier body qualifications below retain their scope and residuals.
 
 Native OMML rendering is in progress. A first native slice paints standalone
@@ -972,3 +974,20 @@ review. Twenty-three focused methods, 23 exact neighboring/fallback PDFs and fou
 exact transfer PDFs qualify one strict Release artifact. All three added test
 methods appear explicitly in the selected-method audit. No root rebuild, repeated
 suite or Office/raster replay is needed to transfer the artifact.
+
+A single inline equation that is the paragraph's sole visible content follows
+Word's standalone display behavior in the body and supported table cells. Its
+layout uses centered display geometry and display-style children even when the
+paragraph has left/right alignment; the authored inline flag and equation object
+remain intact. The temporary style selection participates in the same font/glyph
+preparation and composed box measurement. Mixed prose keeps inline ownership;
+unfit, multiple and unsupported source owners keep explicit fallback.
+
+Eight independent Word controls cover literal/fraction/script/root content, three
+body paragraph alignments and two cell alignments. All improve and all 30 math
+outlines match, within 0.155 pt X / 0.340 pt Y. Twenty-nine affected methods, 22 exact
+neighbor PDFs and four transfer PDFs qualify one Release artifact. Three cases
+retain unchanged visual thresholds and explicit residuals. The prior inline-cell
+artifact also passes nine portable methods on its exact DLLs; eight additional
+cell alignment/indent/prose-owner contrasts match 32/32 outlines without another
+renderer guard.
