@@ -12,6 +12,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTablesLayoutTests
 {
+    public static void DocxTablePageContentTracksRowsAfterMovingToAFreshFrame()
+    {
+        foreach ((double rowHeight, int pages) in new[] { (48d, 2), (50d, 3) })
+        {
+            DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 20d);
+            DocxParagraph cellText = DocxTests.CreateDocxLayoutParagraph("Cell", 10d, 12d);
+            DocxParagraph following = DocxTests.CreateDocxLayoutParagraph("After", 10d, 12d);
+            var cell = new DocxTableCell("Cell", [cellText], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var row = new DocxTableRow([cell], rowHeight) { HeightRuleValue = "exact", CantSplit = true };
+            var table = new DocxTable(null, [100d], [row]) { PreferredWidthPoints = 100d };
+            DocxDocument document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(filler), new DocxTableElement(table), new DocxParagraphElement(following)], [table])
+                with { PageHeightPoints = 80d };
+            DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            TestAssert.Equal(pages, layout.Pages.Count);
+            TestAssert.True(layout.Pages[1].Items.OfType<DocxTableRowLayout>().Any(), "The row must move from the occupied first frame.");
+            TestAssert.True(layout.Pages[^1].Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "After"),
+                "Following prose must respect the fresh frame's occupied row rather than the previous page's item count.");
+        }
+    }
+
     public static void DocxTableLayoutStageKeepsParagraphWithFollowingTableFirstRow()
     {
         DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler", 10d, 60d);

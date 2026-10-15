@@ -7,6 +7,24 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeTableFramesRetainPageCountsAndFollowingProse()
+    {
+        RequireMathFont();
+        foreach ((string suffix, int count) in new[] { ("row-fit", 1), ("row-overflow", 2),
+            ("align-top", 1), ("align-center", 1), ("align-bottom", 1),
+            ("frame-large120", 3), ("frame-oversize160", 3), ("plain-row-fit275", 2), ("plain-row-overflow280", 3) })
+        {
+            var pages = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-frame-" + suffix), null, CancellationToken.None).ToArray();
+            TestAssert.Equal(count, pages.Length);
+            string first = DocxPageFootnoteNumberingTests.DecodeText(pages[0]);
+            string last = DocxPageFootnoteNumberingTests.DecodeText(pages[^1]);
+            TestAssert.Contains("Before public math table.", first);
+            TestAssert.Contains("After public math table.", last);
+            TestAssert.True(pages.Take(pages.Length - 1).All(page => !DocxPageFootnoteNumberingTests.DecodeText(page).Contains("After public math table.", StringComparison.Ordinal)),
+                "Following prose must appear once on its final frame, including when the table alone occupies a fresh page.");
+        }
+    }
+
     public static void DocxNativeTableDisplayMathRetainsCellsProseAndFixedRowFallback()
     {
         RequireMathFont();

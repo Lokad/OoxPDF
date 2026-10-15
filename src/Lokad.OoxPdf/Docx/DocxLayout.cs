@@ -1221,6 +1221,7 @@ internal sealed partial class DocxLayoutEngine
                 void MarkTableBoundaryContent()
                 {
                     tableActiveFrameHasContent = true;
+                    activeColumnHasContent = true;
                 }
 
                 Action advanceTableBoundaryCore = page.ColumnFrames.Count > 1
@@ -1282,11 +1283,6 @@ internal sealed partial class DocxLayoutEngine
                         textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
                         allowPageBoundaryFragments: reviewPaginationScale < 1d);
                 }
-                if (currentItems.Count > itemCountBeforeTable)
-                {
-                    activeColumnHasContent = true;
-                }
-
                 continue;
             }
 
