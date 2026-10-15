@@ -606,8 +606,8 @@ a repeated-layout cost or a speedup. Superseded compiled snapshots were archived
 and hash-verified, retiring another 133.8MB while preserving inputs and evidence.
 
 Isolated cell equations now scale the transition from the nominal cell baseline,
-sharing the ordinary text rule. Equation-only cells use the existing nominal
-paragraph fallback from their source size. Static stories with already physical
+sharing the ordinary text rule. Models without a recorded nominal cell anchor retain the source-size fallback;
+parsed empty runs normally carry the paragraph font metrics. Static stories with already physical
 tops retain their mapping. No font/size/document-shape qualification is added.
 
 Six new source controls cover literal/fraction/root content, alone in a cell or
@@ -634,3 +634,28 @@ remain the next bounded task. The baseline correction improves the equation and
 preserves frame geometry; it does not claim to resolve that overlap or establish
 complete clipping fidelity. Source-backed geometry, independent references and
 original numerical failures remain retained.
+
+Natural multi-paragraph cells now retain the same printed table origin as
+single-paragraph cells. The old one-paragraph guard disabled the shared geometry
+projection, making borders cross preceding descenders. Every paragraph must still
+use natural line spacing; fixed paragraph spacing and the existing richer-content,
+authored-row, alignment and fragment fallbacks remain. Page-admission eligibility
+is separate and unchanged. Empty resolved runs already carry equation-only font
+metrics; tracing rejected the earlier missing-owner hypothesis.
+
+Independent controls place the table after plain text, fitting mixed mathematics
+and an image, in both presets. Top-border error falls from about 2.6pt to at most
+0.223pt. A portable transformation proves that adding cell paragraphs increases
+occupied height without shifting the table top. Both it and the native Word gap
+check fail on the previous library. Fourteen selected methods pass in one
+invocation, plus three Ubuntu methods. Ten affected control outcomes retain their
+mathematical text; original visual failures remain explicit.
+
+The fixed portfolio contains only one-paragraph cells, where the predicate remains
+equivalent. Its prior complete qualification is retained, with no full-portfolio
+reconversion or new full-corpus claim. Letter and held-out memo review smoke PDFs
+retain bytes. Seventeen assets/four exact integration PDFs transfer without root
+build or suite replay. The generic measurement tool now calls custom-manifest
+results pinned document/mode outcomes, distinguishing them from full portfolio
+qualification. The remaining C1 task is the finite document severity and visible
+clipping/overlap review, retaining independent thresholds and unresolved evidence.
