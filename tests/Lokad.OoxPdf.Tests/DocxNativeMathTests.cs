@@ -7,6 +7,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeRootControlsRetainInheritedColorAndIndependentChildFaces()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string suffix,string meaning,string family) in new[]{("math-color","n+1","Cambria"),
+            ("normal-default","rate","Cambria"),("normal-calibri-color","rate","Calibri"),("normal-arial-color","rate","Arial")})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-owner-{placement}-{suffix}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("√"+meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(page.Fonts.Any(f=>f.ResourceName.StartsWith("Eq",StringComparison.Ordinal) &&
+                f.Font.Font.FamilyName.Contains(family,StringComparison.OrdinalIgnoreCase)),"The child retains its authored face.");
+            int rule=page.Content.IndexOf(" re f",StringComparison.Ordinal);TestAssert.True(rule>=0,"Expected the owned root rule.");
+            var colors=System.Text.RegularExpressions.Regex.Matches(page.Content[..rule],@"([-\d.]+) ([-\d.]+) ([-\d.]+) rg");
+            TestAssert.True(colors.Count==0 || Enumerable.Range(1,3).All(i=>double.Parse(colors[^1].Groups[i].Value,
+                System.Globalization.CultureInfo.InvariantCulture)==0d),"Root control color must remain inherited black independently of colored children.");
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Independently owned normal-text children must retain actual native root painting.");
+        }
+    }
+
     public static void DocxNativeRadicalsPaintReadableRootsOwnedBarsAndChildSizes()
     {
         RequireMathFont();

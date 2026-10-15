@@ -9,6 +9,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontRadicalNormalChildrenKeepIndependentParentGlyphsAndControlColor()
+    {
+        var parent=RadicalResource();
+        var text=new PdfFontResource("Text",PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),"B+C".Select(c=>(int)c),CancellationToken.None));
+        var child=new DocxMathRun(new("B+C",20d,"FF0000",false,false,false,null,"TestFont"),null,null) { NormalTextValue=true };
+        var radical=new DocxMathRadical(new([child]),new([]),true)
+            { ControlText=new("",12d,"000000",false,false,false,null,"TestFont") };
+        var source=new DocxEquation(new([radical]),0,0,true,null,null,null) { ParentFontSize=12d };
+        TestAssert.True(!DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out _,out _,parent.Font.Font),
+            "Metrics alone cannot encode a parent root glyph in a child text-face resource.");
+        TestAssert.True(DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out var box,out var reason,parent.Font.Font,parent),
+            reason??"A glyph-bearing parent owns the root independently of the normal-text face.");
+        DocxMathBox measured=TestAssert.NotNull(box);
+        TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs.Skip(1).All(g=>g.Font==text),
+            "Root and radicand retain their independently prepared physical font resources.");
+        TestAssert.True(measured.Glyphs[0].Color==default && measured.Rules[0].Color==default &&
+            measured.Glyphs.Skip(1).All(g=>g.Color.Red==255 && g.Color.Green==0 && g.Color.Blue==0),
+            "Inherited black control color cannot adopt the child's authored red text.");
+        var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
+        using var output=new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])],CancellationToken.None);
+        TestAssert.True(output.Length>0,"Both ownership lanes retain valid glyph encodings and resources.");
+    }
+
     public static void MathFontRadicalBoxesKeepParentMetricsSelectedGlyphsAndOwnedRules()
     {
         var resource=RadicalResource();

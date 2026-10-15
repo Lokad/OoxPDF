@@ -13,17 +13,17 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureRadical(DocxEquation equation, DocxMathRadical radical,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
-        out DocxMathBox? box, out string? fallback)
+        out DocxMathBox? box, out string? fallback, PdfFontResource? parentGlyphFont)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
         { fallback = "UnsupportedMathRadicalSource"; return false; }
-        PdfFontResource? resource = resolveFont(sources[0].Run);
+        PdfFontResource? resource = parentGlyphFont ?? resolveFont(sources[0].Run);
         if (resource is null || !resource.Font.Font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathRadicalConstants"; return false; }
         OpenTypeFont font = resource.Font.Font;
         double size = equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
-        if (!double.IsFinite(size) || size <= 0d || sources.Any(s => !ReferenceEquals(resolveFont(s.Run)?.Font.Font, font)))
+        if (!double.IsFinite(size) || size <= 0d || sources.Any(s => !s.Run.NormalText && !ReferenceEquals(resolveFont(s.Run)?.Font.Font, font)))
         { fallback = "MixedMathRadicalMetrics"; return false; }
         if (!DocxMathRowLayout.TryMeasure(radical.Radicand, resolveFont, token, out var child, out fallback,
             exportFontSize: true, operatorSpacingFontSize: size) || child is null || child.Glyphs.Count == 0)
@@ -49,6 +49,8 @@ internal static partial class DocxMathLayout
         { fallback = "InvalidMathRadicalExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(child.Glyphs.Count + 1);
         var color = child.Glyphs[0].Color;
+        if (radical.ControlText is { } control)
+        { color = default; Lokad.OoxPdf.Pptx.RgbColor.TryParse(control.ColorHex, out color); }
         OoxConversionBudget.Current?.ChargeSceneNodes(2);
         glyphs.Add(new(0x221A, 0x221A, resource, cid.ToString("X4", CultureInfo.InvariantCulture), size, 0d, baseline,
             childX, color) { OriginalGlyph = selected.Glyph });

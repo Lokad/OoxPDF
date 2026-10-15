@@ -20,6 +20,8 @@ internal static class DocxMathTests
                 "The authored square root keeps an explicit empty, hidden degree role.");
             var run=(DocxMathRun)radical.Radicand.Children[0];
             TestAssert.Equal(text,run.Text.Text);TestAssert.Equal((double)size,run.Text.FontSize);
+            TestAssert.True(radical.ControlText is { Text.Length:0,FontSize:12d },
+                "Inherited control properties retain the parent12pt context independently of8/12/20pt child sizes.");
             TestAssert.Equal(placement=="display",equation.Display);
         }
     }

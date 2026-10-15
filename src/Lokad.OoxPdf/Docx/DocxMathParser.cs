@@ -73,7 +73,7 @@ internal static class DocxMathParser
                     (value is null || Lokad.OoxPdf.Ooxml.OoxBoolean.IsTrue(value) || Lokad.OoxPdf.Ooxml.OoxBoolean.IsOff(value));
                 node = new DocxMathRadical(radicand, degree, visibility.Length == 0 ? null :
                     Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(visibility[0], false, valueAttributeName: MathNamespace + "val"))
-                    { HasUnsupportedProperties = !valid };
+                    { HasUnsupportedProperties = !valid, ControlText = readRun(element, string.Empty) };
             }
             else
             {
