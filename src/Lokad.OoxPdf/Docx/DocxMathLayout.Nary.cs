@@ -12,8 +12,7 @@ internal static partial class DocxMathLayout
     // Integral sizing retains its independently measured fallback.
     private static DocxMathNary? GetNary(DocxEquation equation, CancellationToken token) =>
         GetSingleSupportedChild(equation) is DocxMathNary
-        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F" or "\u222B", LimitLocationValue: null or "undOvr" or "subSup",
-            GrowValue: not false } nary &&
+        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F" or "\u222B", LimitLocationValue: null or "undOvr" or "subSup" } nary &&
         (!equation.Display || nary.CharacterValue != "\u222B") &&
         NaryLimitLocation(equation, nary) is "undOvr" or "subSup" &&
         (nary.SubscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Subscript, token)) &&
@@ -62,10 +61,16 @@ internal static partial class DocxMathLayout
         { fallback ??= "UnsupportedMathNaryLimit"; return false; }
         int point = char.ConvertToUtf32(nary.CharacterValue!, 0);
         ushort canonical = font.MapCodePoint(point);
-        if (!font.TryGetMathVerticalVariant(canonical, equation.Display ? constants.DisplayOperatorMinHeight : 0d, token, out var variant) ||
+        double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), scale = glyphSize / font.UnitsPerEm;
+        double target = equation.Display ? constants.DisplayOperatorMinHeight : 0d;
+        // Unlike delimiters, an omitted n-ary grow property defaults to off.
+        // Explicit growth fits the body's occupied height, without imposing
+        // a delimiter's symmetric extension around the math axis.
+        if (nary.GrowValue == true) { target = Math.Max(target, (body.AboveBaseline + body.BelowBaseline) / scale); }
+        if (!double.IsFinite(target) || target < 0d ||
+            !font.TryGetMathVerticalVariant(canonical, target, token, out var variant) ||
             !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(variant.Glyph, out ushort cid))
         { fallback = "UnsupportedMathNaryVariant"; return false; }
-        double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), scale = glyphSize / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * size / font.UnitsPerEm;
         double baseline = Value(OpenTypeMathConstant.AxisHeight) - (bounds.YMax + bounds.YMin) / 2d * scale;
         double operatorAdvance = font.GetAdvanceWidth(variant.Glyph) * scale;

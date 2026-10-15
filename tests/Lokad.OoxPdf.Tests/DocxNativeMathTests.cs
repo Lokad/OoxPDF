@@ -7,6 +7,25 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNaryGrowthPreservesOffAndFitsExplicitTallBodies()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string character, string body, string limits) in new[] {
+            ("display-sum-off", "\u2211", "x", "ni=1"), ("display-product-off", "\u220F", "x", "ni=1"),
+            ("inline-sum-off", "\u2211", "x", "ni=1"), ("inline-product-off", "\u220F", "x", "ni=1"), ("inline-integral-off", "\u222B", "x", "10"),
+            ("display-sum-tall-off", "\u2211", "g+y", "ni=1"), ("display-sum-tall-on", "\u2211", "g+y", "ni=1"),
+            ("display-sum-body24-on", "\u2211", "g+y", "ni=1"), ("display-sum-body48-on", "\u2211", "g+y", "ni=1"),
+            ("display-product-body24-on", "\u220F", "g+y", "ni=1"), ("display-product-body48-on", "\u220F", "g+y", "ni=1"),
+            ("inline-sum-body36-on", "\u2211", "g+y", "ni=1"), ("inline-integral-body36-on", "\u222B", "g+y", "10") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-nary-growth-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(character + body + limits, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Known growth-off/default and explicit body-fit roles retain native operator, body and limits.");
+        }
+    }
+
     public static void DocxNativeMixedDelimiterRowsKeepLiteralMeaningAndMultipleControls()
     {
         RequireMathFont();

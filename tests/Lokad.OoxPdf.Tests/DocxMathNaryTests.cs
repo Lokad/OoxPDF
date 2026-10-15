@@ -99,7 +99,6 @@ internal static class DocxMathNaryTests
     {
         var nary = Nary("\u2211");
         foreach (var invalid in new[] { nary with { CharacterValue = "\u222B" }, nary with { LimitLocationValue = "unknown" },
-            nary with { GrowValue = false },
             nary with { SubscriptHiddenValue = true }, nary with { SuperscriptHiddenValue = true },
             nary with { Body = new([nary]) }, nary with { HasUnsupportedProperties = true } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _),
@@ -145,6 +144,32 @@ internal static class DocxMathNaryTests
     }
 
     private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    public static void MathFontNaryExplicitGrowthFitsBodyHeightAndRetainsBoundedVariantFallback()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211, growthVariants: true));
+        var mappings = new[] { ((ushort)130, 0x2211), ((ushort)128, 0x2211), ((ushort)127, 0x2211),
+            (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') };
+        var resource = new PdfFontResource("Growth", PdfEmbeddedFont.CreateForGlyphMappings(font, mappings, CancellationToken.None));
+        DocxMathRow Body(double size) => new([new DocxMathRun(new("B", size, null, false, false, false, null, "TestFont"), "p", null)]);
+        DocxMathBox? fixedBox = null;
+        foreach (bool? grow in new bool?[] { null, false, true })
+        {
+            var nary = Nary("\u2211") with { Body = Body(40d), GrowValue = grow };
+            TestAssert.True(DocxMathLayout.TryMeasure(Equation(nary), _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected qualified source growth.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.Equal((ushort)(grow == true ? 127 : 128), measured.Glyphs[0].OriginalGlyph);
+            if (grow is null) fixedBox = measured;
+            else if (grow == false) TestAssert.True(TestAssert.NotNull(fixedBox).Glyphs.SequenceEqual(measured.Glyphs),
+                "Omitted n-ary growth and explicit off retain the same minimum display variant, unlike omitted delimiter growth.");
+        }
+        var tooTall = Nary("\u2211") with { Body = Body(100d), GrowValue = true };
+        TestAssert.True(!DocxMathLayout.TryMeasure(Equation(tooTall), _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
+            "A growth request beyond ready-made variants retains assembly fallback rather than truncating the occupied body height.");
+        var missing = new PdfFontResource("MissingGrowth", PdfEmbeddedFont.CreateForGlyphMappings(font, mappings.Where(m => m.Item1 != 127), CancellationToken.None));
+        TestAssert.True(!DocxMathLayout.TryMeasure(Equation(Nary("\u2211") with { Body = Body(40d), GrowValue = true }), _ => missing,
+            CancellationToken.None, out absent, out _) && absent is null, "A missing taller selected CID cannot publish a minimum-size substitute or partial equation.");
+    }
+
     public static void MathFontInlineIntegralUsesExtendedShapeItalicCorrectionAndIndependentDefaults()
     {
         var font = OpenTypeFont.Load(FontBytes(0x222B, extendedOperator: true));
@@ -235,7 +260,7 @@ internal static class DocxMathNaryTests
         { CharacterValue = character, LimitLocationValue = "undOvr", ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
     private static DocxMathRow Row(string value) => new([new DocxMathRun(new(value, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
 
-    private static byte[] FontBytes(int point, bool invalidScriptConstants = false, bool withFractions = false, bool extendedOperator = false)
+    private static byte[] FontBytes(int point, bool invalidScriptConstants = false, bool withFractions = false, bool extendedOperator = false, bool growthVariants = false)
     {
         byte[] math = new byte[254];
         void Put(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at), value);
@@ -257,11 +282,12 @@ internal static class DocxMathNaryTests
         }
         Put(8, 224); Put(226, 12); Put(230, 1); Put(234, 18); Put(236, 1); Put(238, 1); Put(240, 130);
         Put(244, 2); Put(246, 130); Put(248, 1000); Put(250, 128); Put(252, 2000);
+        if (growthVariants) { Array.Resize(ref math, 258); Put(244, 3); Put(254, 127); Put(256, 4000); }
         if (extendedOperator)
         {
-            Array.Resize(ref math, 282); Put(6, 254);
-            Put(254, 14); Put(258, 8); Put(262, 1); Put(264, 1); Put(266, 130);
-            Put(268, 8); Put(270, 1); Put(272, 200); Put(276, 1); Put(278, 1); Put(280, 130);
+            int info = math.Length; Array.Resize(ref math, info + 28); Put(6, (ushort)info);
+            Put(info, 14); Put(info + 4, 8); Put(info + 8, 1); Put(info + 10, 1); Put(info + 12, 130);
+            Put(info + 14, 8); Put(info + 16, 1); Put(info + 18, 200); Put(info + 22, 1); Put(info + 24, 1); Put(info + 26, 130);
         }
         byte[] cmap = new byte[52];
         void U16(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(cmap.AsSpan(at), value);
