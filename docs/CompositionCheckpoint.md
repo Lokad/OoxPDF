@@ -579,3 +579,28 @@ Current accepted-build checks also supersede older broken-literal story residual
 Final cell/header/footer prose baselines differ from Word by at most 0.364pt after
 the reader correction. These findings do not establish complete ink/clipping or
 reading-order fidelity.
+
+Fitting inline math/text rows now use the ordinary text frame when their
+mathematical bounds fit above and below its physical baseline. They no longer
+retain a second unscaled font frame. Taller/display math and image-containing
+rows preserve their qualified occupied extents; no font/size/document-shape
+qualification is added. The row retains its chosen text baseline separately from
+object bounds and label leading.
+
+The independent Word regression fails on the prior accepted library by 2.219pt.
+Across twenty mode controls, the largest following-paragraph gap error is now
+0.199pt (previous literal cases reached 2.297pt). All preserve their mathematical
+text. Literal review MAE improves about 0.258–0.261; SSIM failures remain. The native
+assertion now checks both the mathematical baseline and following advance. A
+pinned-font ordinary-text substitution exercises the same line-box contract on
+Windows/Ubuntu; it already passed with the prior library, so it is integration
+coverage rather than a claimed reproduction of the native-font defect.
+
+Twenty-eight selected methods pass once in one invocation, plus three Ubuntu
+methods. All ten portfolio PDFs retain bytes and independent comparisons; global
+and page-local content screens pass. All eight portfolio DOCX numerical gates
+still fail and both decks pass. Seventeen assets/four exact smoke PDFs transfer
+without root build or suite replay. The compound-document allocation baseline
+was separately refreshed at the preceding 0fa503ac artifact; it does not establish
+a repeated-layout cost or a speedup. Superseded compiled snapshots were archived
+and hash-verified, retiring another 133.8MB while preserving inputs and evidence.
