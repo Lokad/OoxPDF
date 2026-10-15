@@ -420,3 +420,16 @@ Word/source. Thirty-nine focused methods, 30 exact neighboring PDFs and four
 matching transfer smoke PDFs qualify one artifact. Three public cases retain
 the existing visual thresholds. Fraction/shape/separator/recursive profiles remain
 staged, and font-cache memory corruption remains unverified.
+
+Delimiter argument lists now compose independent literal rows in source order.
+Outer characters and supported separators share the largest argument frame and
+the authored growth flag; explicitly empty separators emit no synthetic glyph
+or advance. Child sizes/colors remain independent, and a missing separator CID
+keeps complete fallback. Six two-argument Word controls improve across default/
+empty separators and mixed sizes. Position differences stay below 0.65 pt
+horizontally and 0.06 pt vertically; all 52 visible glyph outlines match
+Word/source. Word's invisible space for an empty separator is recorded separately
+in geometry evidence. Forty-one focused methods, 36 unchanged neighbor PDFs and
+four matching transfer smoke PDFs qualify one artifact. Three public cases retain
+the existing thresholds. Fractions, other shapes/separator glyph profiles and
+arbitrary recursive arguments remain staged.
