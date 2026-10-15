@@ -293,7 +293,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     internal DocxLayout Create(DocxDocument document, IDocxTextMeasurer? textMeasurer, CancellationToken cancellationToken, IDocxTextMeasurer? unscaledTextMeasurer = null, IReadOnlyDictionary<int, double>? headerOverflowDisplacementByPage = null, IReadOnlyDictionary<int, double>? footerFrameBottomDisplacementByPage = null,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var pages = new List<DocxLayoutPage>();
@@ -1264,7 +1264,7 @@ internal sealed partial class DocxLayoutEngine
                         adjustAlignedMinimumMargins: true,
                         alignedMinimumAvailableHeight: cursorY - CurrentFrameBottom(),
                         allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
-                        mathParagraphs: mathParagraphs);
+                        mathEquations: mathEquations);
                     // An admitted complete three-row table fits at its original
                     // origin. Later rows must not recheck its full height against
                     // the remaining space after preceding rows have advanced.
@@ -1370,7 +1370,7 @@ internal sealed partial class DocxLayoutEngine
                     width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
                     scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
                     availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
-                    cancellationToken, mathParagraphs);
+                    cancellationToken, mathEquations);
                 if (cursorY - keepEstimate.Height <= keepBottom)
                 {
                     AdvanceColumnOrPage();
@@ -1378,7 +1378,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            if (mathParagraphs is not null && mathParagraphs.TryGetValue(paragraph, out DocxPreparedMathParagraph? math) &&
+            if (TryGetSinglePreparedMath(paragraph, mathEquations, out DocxPreparedMathParagraph? math) &&
                 DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null &&
                 FitsMathDisplayWidth(paragraph, math, width, paragraphSpacingScale) &&
                 math.LineHeight * paragraphSpacingScale <= page.Height - page.MarginTop - page.MarginBottom)
@@ -1403,6 +1403,51 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
+            if (textMeasurer is not null && DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph))
+            {
+                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
+                double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
+                double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
+                double baseInset = ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
+                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, paragraphFontSize,
+                    Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
+                    baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var measured) &&
+                    measured.All(line => line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
+                {
+                    for (int index = 0; index < measured.Count; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var line = measured[index];
+                        if (cursorY - line.OccupiedHeight < ParagraphFrameBottom() &&
+                            (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
+                            AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
+                        double inset = index == 0 ? firstInset : nextInset;
+                        double available = Math.Max(1d, width - inset - rightInset);
+                        double align = effective.Alignment switch
+                        { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
+                            DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
+                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, cursorY,
+                            paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
+                        currentItems.Add(placed.Line with
+                        {
+                            AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
+                            SingleLineHeight = lineHeightProfile.SingleLineHeight,
+                            EffectiveLineSpacingFactor = lineHeightProfile.EffectiveLineSpacingFactor,
+                            LineHeightSource = lineHeightProfile.Source,
+                            FirstLineInsetPoints = index == 0 ? line.BaselineInset : null,
+                            BodyLineBoxBaselineInsetPoints = line.BaselineInset,
+                            BodyLineBoxHeightPoints = line.OccupiedHeight
+                        });
+                        currentItems.AddRange(placed.Images);
+                        cursorY -= line.OccupiedHeight;
+                        activeColumnHasContent = true;
+                    }
+                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                    previousParagraph = paragraph;
+                    continue;
+                }
+            }
+
             IReadOnlyList<DocxTextSpan> textSpans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pages.Count + 1, null);
             DocxMidLinePlan? midLinePlan = null;
             if (textMeasurer is not null && textSpans.Count > 0)
@@ -1416,7 +1461,7 @@ internal sealed partial class DocxLayoutEngine
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
-                DocxMidLineMath? inlineMath = mathParagraphs is not null && mathParagraphs.TryGetValue(paragraph, out var preparedMath) &&
+                DocxMidLineMath? inlineMath = TryGetSinglePreparedMath(paragraph, mathEquations, out var preparedMath) &&
                     !preparedMath.Equation.Display
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
@@ -1880,7 +1925,7 @@ internal sealed partial class DocxLayoutEngine
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
-                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathParagraphs: mathParagraphs);
+                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations);
                 continuationHeaderByPage[headerKey] = headerLayout;
             }
 
@@ -1944,7 +1989,7 @@ internal sealed partial class DocxLayoutEngine
             if (!continuationFooterTopByPage.TryGetValue(key, out double top))
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
-                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathParagraphs: mathParagraphs);
+                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathEquations: mathEquations);
                 top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
                     (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider));
                 continuationFooterTopByPage[key] = top;
@@ -1952,7 +1997,7 @@ internal sealed partial class DocxLayoutEngine
             return Math.Max(templatePage.MarginBottom, top);
         }
         DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut).ToArray();
-        var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathParagraphs);
+        var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;
         return new DocxLayout(

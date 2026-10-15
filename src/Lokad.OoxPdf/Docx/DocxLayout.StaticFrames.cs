@@ -7,7 +7,7 @@ internal sealed partial class DocxLayoutEngine
         bool isHeader, int pageNumber, int pageCount, IDocxTextMeasurer textMeasurer,
         IDocxStaticTextMetricsProvider staticMetrics, double defaultTabStopPoints, double scale,
         IDocxLineMetricsProvider? unscaledLineMetrics, CancellationToken token,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
         IDocxTextMeasurer? unscaledTextMeasurer)
     {
         bool canMap = scale is > 0d and < 1d && double.IsFinite(width / scale) &&
@@ -16,21 +16,21 @@ internal sealed partial class DocxLayoutEngine
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
             page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
-            IsNaturalStaticStory(story, width / scale, mathParagraphs, token) &&
+            IsNaturalStaticStory(story, width / scale, mathEquations, token) &&
             IsNaturalStaticStory(SelectStaticHeaderFooter(
                 isHeader ? page.PageSettings.FooterBodyElementsByType : page.PageSettings.HeaderBodyElementsByType,
                 isHeader ? page.PageSettings.FooterParagraphsByType : page.PageSettings.HeaderParagraphsByType,
-                page.PageSettings, pageNumber), width / scale, mathParagraphs, token);
+                page.PageSettings, pageNumber), width / scale, mathEquations, token);
         if (!canMap)
             return CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
-                textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathParagraphs);
+                textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations);
 
         // Lay out one source block using the existing natural metrics. Mapping
         // its complete frame keeps the first inset, pitches and footer anchor
         // in the same coordinate system, including prepared mathematical boxes.
         var source = CreateStaticStoryLayout(story, x, width / scale, startY, isHeader, pageNumber, pageCount,
             unscaledTextMeasurer!, (IDocxStaticTextMetricsProvider)unscaledTextMeasurer!,
-            defaultTabStopPoints, 1d, unscaledLineMetrics, token, mathParagraphs);
+            defaultTabStopPoints, 1d, unscaledLineMetrics, token, mathEquations);
         if (!HasVisibleStaticContent(source)) { return source; }
         double center = page.Height / 2d;
         double frameAnchor = isHeader ? page.Height - page.MarginTop : page.MarginBottom;
@@ -54,12 +54,28 @@ internal sealed partial class DocxLayoutEngine
                 ParagraphBeforeSpacing = line.ParagraphBeforeSpacing * scale,
                 ParagraphAfterSpacing = line.ParagraphAfterSpacing * scale,
                 MathScale = line.MathScale * scale,
+                InlineMath = line.InlineMath.Select(placement =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return placement with { OffsetX = placement.OffsetX * scale };
+                }).ToArray(),
+                InlineFrame = line.InlineFrame is { } frame ? new(frame.BaselineInset * scale, frame.Height * scale) : null,
+                InlineObjectEndOffsetX = line.InlineObjectEndOffsetX * scale,
                 StaticStoryUsesPhysicalY = true
             });
         }
         return source with
         {
             TextLines = lines,
+            InlineImages = source.InlineImages.Select(image =>
+            {
+                token.ThrowIfCancellationRequested();
+                return image with
+                {
+                    X = x + (image.X - x) * scale, Y = center + (image.Y - center) * scale,
+                    Width = image.Width * scale, Height = image.Height * scale, StaticStoryUsesPhysicalY = true
+                };
+            }).ToArray(),
             EndCursorY = frameAnchor + (source.EndCursorY - frameAnchor) * scale,
             EndPendingAfterSpacing = source.EndPendingAfterSpacing * scale,
             MappedFooterContentTop = isHeader ? null : frameAnchor +
@@ -68,7 +84,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool IsNaturalStaticStory(DocxSelectedStaticStory story, double width,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs, CancellationToken token)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         foreach (var element in story.BodyElements)
         {
@@ -76,7 +92,11 @@ internal sealed partial class DocxLayoutEngine
             if (element is not DocxParagraphElement { Revisions.Count: 0, Paragraph: var paragraph }) { return false; }
             if (paragraph.Equations.Count != 0)
             {
-                if (!TryGetStandaloneMath(paragraph, width, 1d, mathParagraphs, out _)) { return false; }
+                if (!TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) &&
+                    (mathEquations is null || paragraph.InlineContent is null ||
+                    DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count != paragraph.Equations.Count ||
+                    paragraph.Equations.Any(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth > width) ||
+                    paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
             }
             else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
                 !HasNaturalStaticParagraphContent(paragraph)) { return false; }

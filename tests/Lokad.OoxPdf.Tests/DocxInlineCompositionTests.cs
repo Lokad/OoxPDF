@@ -8,6 +8,174 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns()
+    {
+        var document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false, (source, w, m) =>
+        {
+            var equations = source.Descendants(m + "oMath").Take(2).Select(e => new XElement(e)).ToArray();
+            var drawing = new XElement(source.Descendants(w + "drawing").Single().Parent!);
+            XElement Tracked(string value) => new(w + "r", new XElement(w + "rPr", new XElement(w + "spacing", new XAttribute(w + "val", "20"))), new XElement(w + "t", value));
+            source.Root!.Element(w + "body")!.ReplaceNodes(new XElement(w + "p", Tracked("AB CD"),
+                new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(w + "t", "Hidden")),
+                drawing, Tracked("EF GH"), equations));
+        });
+        var paragraph = document.Paragraphs.Single();
+        var math = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
+        foreach (var equation in paragraph.Equations)
+            math.Add(equation, new(equation, new DocxMathBox(18d, 10d, 4d, []), 11d, 16d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
+            11d, 200d, 200d, 9d, 12d, 1d, default, out var measured), "The supported mixed paragraph must measure.");
+        var line = TestAssert.NotNull(measured).Single();
+        TestAssert.Equal(126d, line.Advance); // Two 27pt text runs (including pair kerning), a 36pt image and two 18pt equations.
+        TestAssert.Equal("AB CDEF GH", string.Concat(line.Fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text)));
+        foreach (var fragment in line.Fragments.Where(fragment => fragment.Source is DocxInlineText))
+        {
+            var text = (DocxInlineText)fragment.Source;
+            var span = fragment.Text.Single();
+            TestAssert.Equal(text.Run.SourceRunIndex, span.SourceTextRunIndex);
+            TestAssert.Equal(text.Run.SourceTextOffsetInRun + text.Start, span.SourceTextOffsetInRun);
+        }
+    }
+
+    public static void DocxInlineCompositionKeepNextReservesTheMeasuredMixedFrame()
+    {
+        var source = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "body");
+        var paragraph = source.Paragraphs.Single() with { KeepRules = source.Paragraphs.Single().KeepRules with { KeepNext = true } };
+        var before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d) with { SpacingAfterPoints = 24d };
+        var after = DocxTests.CreateDocxLayoutParagraph("Following", 10d, 10d);
+        var document = DocxTests.CreateLayoutTestDocument([
+            new DocxParagraphElement(before), new DocxParagraphElement(paragraph), new DocxParagraphElement(after)], [])
+            with { PageHeightPoints = 100d };
+        var math = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
+        foreach (var equation in paragraph.Equations)
+            math.Add(equation, new(equation, new DocxMathBox(18d, 30d, 10d, []), 30d, 40d));
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations: math);
+        int mathPage = Enumerable.Range(0, layout.Pages.Count).Single(index =>
+            layout.Pages[index].Items.OfType<DocxTextLineLayout>().Any(line => line.InlineMath.Count != 0));
+        int followingPage = Enumerable.Range(0, layout.Pages.Count).Single(index =>
+            layout.Pages[index].Items.OfType<DocxTextLineLayout>().Any(line => line.SourceBlockIndex == 2));
+        TestAssert.True(mathPage == followingPage && mathPage == 1,
+            "Keep-next reserves the complete mixed frame and the following line, rather than only the picture or prose.");
+    }
+
+    public static void DocxInlineCompositionUnsupportedEquationRetainsAccuratePartialPartDiagnostics()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for this rendering control.");
+        var document = ReadMutation("docx-omml-static-guard-partial", OoxPdfDocxMarkupMode.Final, false, false,
+            (source, w, m) => source.Root!.Add(new XElement(w + "p", new XElement(m + "oMath", new XElement(m + "future")))),
+            "word/header1.xml");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var output = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+        TestAssert.True(output.Length != 0 && diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION" && d.PartName == "/word/header1.xml") == 1 &&
+            diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == "/word/header1.xml") == 1,
+            "A genuinely unsupported third equation retains the part warning while supported neighbors still paint.");
+    }
+
+    public static void DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits()
+    {
+        string word = string.Concat(Enumerable.Repeat("abcdefghij", 12));
+        int? expectedLines = null;
+        foreach (bool split in new[] { false, true })
+        {
+            var document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false, (source, w, m) =>
+            {
+                var equations = source.Descendants(m + "oMath").Take(2).Select(e => new XElement(e)).ToArray();
+                var paragraph = new XElement(w + "p");
+                foreach (string part in split ? new[] { word[..37], word[37..81], word[81..] } : new[] { word })
+                    paragraph.Add(new XElement(w + "r", new XElement(w + "t", part)));
+                paragraph.Add(equations);
+                source.Root!.Element(w + "body")!.ReplaceNodes(paragraph);
+            });
+            var paragraph = document.Paragraphs.Single();
+            var math = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
+            foreach (var equation in paragraph.Equations)
+                math.Add(equation, new(equation, new DocxMathBox(18d, 10d, 4d, []), 11d, 16d));
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math,
+                new DocxTests.FamilyWidthTextMeasurer(), 11d, 50d, 50d, 9d, 12d, 1d, default, out var measured),
+                "Supported character-level wrapping must remain available beside multiple equations.");
+            var lines = TestAssert.NotNull(measured);
+            TestAssert.Equal(word, string.Concat(lines.SelectMany(line => line.Fragments).SelectMany(fragment => fragment.Text).Select(span => span.Text)));
+            TestAssert.Equal(2, lines.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
+            if (expectedLines is { } count) TestAssert.Equal(count, lines.Count);
+            expectedLines = lines.Count;
+        }
+    }
+
+    public static void DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for this rendering control.");
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string placement in new[] { "body", "cell", "header", "footer", "body-review", "cell-review", "header-review", "footer-review" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(ReadPlacedComposition(mode, placement), diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.True(text.Contains("x+2y", StringComparison.Ordinal) && text.Contains("a+b=c", StringComparison.Ordinal),
+                "Both supported mathematical source objects reach the PDF in " + placement + "/" + mode);
+            TestAssert.Equal(1, pages.Sum(page => page.Images.Count));
+            TestAssert.Equal(1, pages.Sum(page => page.Images.Sum(image =>
+                System.Text.RegularExpressions.Regex.Matches(page.Content,
+                    "/" + System.Text.RegularExpressions.Regex.Escape(image.ResourceName) + @"\s+Do(?:\s|$)").Count)));
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Moving supported content into a container cannot silently drop an equation: " + placement + "/" + mode);
+        }
+    }
+
+    public static void DocxInlineCompositionReportPreservesEverySupportedEquationAndInlinePicture()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for this rendering control.");
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("Composition/report", mode, false, false);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.True(text.Split("x+2y", StringSplitOptions.None).Length - 1 == 3,
+                "All three source fractions must reach the PDF in " + mode);
+            TestAssert.True(text.Split("a+b=c", StringSplitOptions.None).Length - 1 >= 3,
+                "Both body literal equations and the repeated header equation must remain visible.");
+            TestAssert.True(pages.Sum(page => page.Images.Count) == 1 &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "The inline picture and all six source equations survive ordinary feature composition.");
+            TestAssert.True(pages.SelectMany(page => page.Fonts).Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+                "Mathematical content reaches PDF resources and painting.");
+        }
+    }
+
+    public static void DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder()
+    {
+        var document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false);
+        foreach (var paragraph in document.Paragraphs.Where(p => p.Equations.Count > 1 || p.Images.Count != 0))
+        {
+            var math = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
+            foreach (var equation in paragraph.Equations)
+                math.Add(equation, new(equation, new DocxMathBox(18d, 10d, 4d, []), 11d, 16d));
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math,
+                new DocxTests.FamilyWidthTextMeasurer(), 11d, 160d, 160d, 9d, 12d, 1d, default, out var lines),
+                "Fitting source objects share one measured paragraph rather than competing for a single math slot.");
+            var measured = TestAssert.NotNull(lines);
+            var fragments = measured.SelectMany(line => line.Fragments).ToArray();
+            TestAssert.True(fragments.Where(fragment => fragment.Math is not null).Select(fragment => fragment.Math!.Equation)
+                .SequenceEqual(paragraph.Equations), "All mathematical source identities survive wrapping in order.");
+            TestAssert.Equal(paragraph.Images.Count, fragments.Count(fragment => fragment.Source is DocxInlinePicture));
+            TestAssert.True(measured.All(line => line.Advance <= 160d && line.OccupiedHeight >= 12d &&
+                line.BaselineInset >= 9d), "Each line owns finite fitting advance and its complete occupied frame.");
+            using var cancelled = new CancellationTokenSource();
+            cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math,
+                new DocxTests.FamilyWidthTextMeasurer(), 11d, 160d, 160d, 9d, 12d, 1d, cancelled.Token, out _));
+        }
+    }
+
     public static void DocxInlineCompositionSourceViewOrdersEquationsPicturesTabsAndBreaks()
     {
         DocxDocument document = ReadMutation("Composition/report", OoxPdfDocxMarkupMode.Final, false, false,
@@ -114,8 +282,20 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    private static DocxDocument ReadPlacedComposition(OoxPdfDocxMarkupMode mode, string placement) =>
+        DocxTests.ReadDocx(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "CompositionProbes", placement + ".docx")), mode);
+
+    private sealed class TrackingMeasurer : IDocxTextMeasurer
+    {
+        public double MeasureText(DocxTextRun? run, string text, double fontSize) =>
+            DocxTextSpacing.AddCharacterSpacing(text.Length * 5d, run, text) -
+            (text.Contains("B ", StringComparison.Ordinal) ? 2d : 0d) -
+            (text.Contains("F ", StringComparison.Ordinal) ? 2d : 0d);
+    }
+
     private static DocxDocument ReadMutation(string fixture, OoxPdfDocxMarkupMode mode, bool bookmark, bool split,
-        Action<XDocument, XNamespace, XNamespace>? change = null)
+        Action<XDocument, XNamespace, XNamespace>? change = null, string? partOverride = null)
     {
         string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".docx");
@@ -124,16 +304,17 @@ internal static class DocxInlineCompositionTests
         {
             using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
             {
-                string part = fixture.Contains("static-header", StringComparison.Ordinal) ? "word/header1.xml" :
-                    fixture.Contains("static-footer", StringComparison.Ordinal) ? "word/footer1.xml" : "word/document.xml";
+                string part = partOverride ?? (fixture.Contains("static-header", StringComparison.Ordinal) ? "word/header1.xml" :
+                    fixture.Contains("static-footer", StringComparison.Ordinal) ? "word/footer1.xml" : "word/document.xml");
                 var entry = zip.GetEntry(part)!;
                 XDocument document;
                 using (var stream = entry.Open()) document = XDocument.Load(stream);
                 XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
                 XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
-                var equation = document.Descendants(m + "oMath").First();
+                var equation = document.Descendants(m + "oMath").FirstOrDefault();
                 if (bookmark)
                 {
+                    if (equation is null) throw new InvalidOperationException("The bookmark mutation requires an existing equation.");
                     var container = equation.Parent!.Name == m + "oMathPara" ? equation.Parent : equation;
                     container.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "41"), new XAttribute(w + "name", "PublicCalculation")));
                     container.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "41")));
@@ -154,8 +335,7 @@ internal static class DocxInlineCompositionTests
                 }
                 change?.Invoke(document, w, m);
                 entry.Delete();
-                using var output = zip.CreateEntry(part).Open();
-                document.Save(output);
+                using (var output = zip.CreateEntry(part).Open()) document.Save(output);
             }
             return DocxTests.ReadDocx(path, mode);
         }

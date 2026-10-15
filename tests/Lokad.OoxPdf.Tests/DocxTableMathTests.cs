@@ -53,8 +53,8 @@ internal static class DocxTableMathTests
             var cell = new DocxTableCell(string.Empty, [source], null, null, null, null, [], DocxTableCellMargins.Empty);
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(TableDocument(new DocxTableRow([cell], null)), new DocxTests.FamilyWidthTextMeasurer(), default,
-                    mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-                    { [source] = prepared with { Equation = equation } });
+                    mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                    { [source.Equations.Single()] = prepared with { Equation = equation } });
             var row = layout.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
             var line = row.Cells.Single().TextLines.Single();
             TestAssert.True(line.Math is { } math && ReferenceEquals(math.Equation, equation) && !math.Equation.Display &&
@@ -100,9 +100,9 @@ internal static class DocxTableMathTests
         DocxDocument document = TableDocument(new DocxTableRow([cell], null));
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, measurer, CancellationToken.None, mathParagraphs:
-                new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-                { [paragraph] = math with { LineHeight = height } });
+            .Create(document, measurer, CancellationToken.None, mathEquations:
+                new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                { [paragraph.Equations.Single()] = math with { LineHeight = height } });
         DocxLayout first = Layout(20d), expanded = Layout(30d);
         var a = first.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
         var b = expanded.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
@@ -137,8 +137,8 @@ internal static class DocxTableMathTests
         {
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None,
-                    mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-                    { [paragraph] = math with { LineHeight = height } });
+                    mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                    { [paragraph.Equations.Single()] = math with { LineHeight = height } });
             TestAssert.Equal(pages, layout.Pages.Count);
             var tablePage = layout.Pages.Single(page => page.Items.OfType<DocxTableRowLayout>().Any());
             TestAssert.True(tablePage.Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Keep"),
@@ -159,9 +159,9 @@ internal static class DocxTableMathTests
         TestAssert.True(ReferenceEquals(paragraph, DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
             .Single(source => source.Equations.Count != 0)), "Inline cells share the body semantic owner policy.");
         DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathParagraphs:
-                new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-                { [paragraph] = math with { LineHeight = height } });
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations:
+                new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                { [paragraph.Equations.Single()] = math with { LineHeight = height } });
         DocxLayout initial = Layout(24d), expanded = Layout(34d);
         var a = initial.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
         var b = expanded.Pages.Single().Items.OfType<DocxTableRowLayout>().Single();
@@ -181,7 +181,7 @@ internal static class DocxTableMathTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), cancelled.Token,
-                mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph> { [paragraph] = math }));
+                mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph> { [paragraph.Equations.Single()] = math }));
     }
 
     public static void DocxTableMathInlineUnfitBoxesPreserveOrdinaryRowSplitting()
@@ -195,9 +195,9 @@ internal static class DocxTableMathTests
         var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         DocxLayout plain = engine.Create(source, measurer, default);
-        DocxLayout fallback = engine.Create(source, measurer, default, mathParagraphs:
-            new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-            { [paragraph] = prepared with { Equation = equation, Box = prepared.Box with { Width = 1000d } } });
+        DocxLayout fallback = engine.Create(source, measurer, default, mathEquations:
+            new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+            { [paragraph.Equations.Single()] = prepared with { Equation = equation, Box = prepared.Box with { Width = 1000d } } });
         TestAssert.Equal(plain.Pages.Count, fallback.Pages.Count);
         var ordinaryRows = plain.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
         var fallbackRows = fallback.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
@@ -228,8 +228,8 @@ internal static class DocxTableMathTests
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
             DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathParagraphs:
-                    new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph] = math with { LineHeight = height } });
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations:
+                    new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph.Equations.Single()] = math with { LineHeight = height } });
             DocxLayout initial = Layout(20d), expanded = Layout(30d);
             var a = initial.Pages.Single().StaticTextLines; var z = expanded.Pages.Single().StaticTextLines;
             TestAssert.Equal(2, a.Count); TestAssert.Equal(2, z.Count);
@@ -266,8 +266,8 @@ internal static class DocxTableMathTests
                 [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with { PageSettings = settings };
             DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, scale)
                 .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, scale, scale), default, measurer,
-                    mathParagraphs: new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-                    { [paragraph] = prepared with { LineHeight = height } });
+                    mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                    { [paragraph.Equations.Single()] = prepared with { LineHeight = height } });
             DocxLayout a = Layout(20d), z = Layout(30d);
             var first = a.Pages.Single().StaticTextLines; var expanded = z.Pages.Single().StaticTextLines;
             TestAssert.True(first.Count == 2 && first.All(line => line.StaticStoryUsesPhysicalY) &&
@@ -305,8 +305,8 @@ internal static class DocxTableMathTests
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
                 .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, .75d, .75d), default,
                     guard == "missing-metrics" ? null : measurer,
-                    mathParagraphs: guard == "unprepared-math" ? null :
-                        new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph] = prepared });
+                    mathEquations: guard == "unprepared-math" ? null :
+                        new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph.Equations.Single()] = prepared });
             TestAssert.True(layout.Pages.SelectMany(page => page.StaticTextLines).All(line => !line.StaticStoryUsesPhysicalY),
                 "Fields, declared frames, table-first bodies and unresolved metrics/math keep their existing coordinate owner.");
         }

@@ -9,7 +9,7 @@ internal sealed partial class DocxLayoutEngine
         DocxTableCellLayoutContext context)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
-        return context.MathParagraphs is { } prepared && prepared.TryGetValue(paragraph, out var math) && !math.Equation.Display
+        return TryGetSinglePreparedMath(paragraph, context.MathEquations, out var math) && !math.Equation.Display
             ? WrapInlineMath(paragraph, math, spans, ref lines, firstWidth, continuationWidth, fontSize,
                 context.TextMeasurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints,
                 context.PageNumber ?? 1, context.CancellationToken) : null;
@@ -27,12 +27,22 @@ internal sealed partial class DocxLayoutEngine
             IsExactLineSpacing(paragraph.EffectiveProperties), baselineInset: inset);
     }
 
-    private static bool TryGetStandaloneMath(DocxParagraph paragraph, double width, double scale,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? prepared,
+    private static bool TryGetSinglePreparedMath(DocxParagraph paragraph,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared,
         [NotNullWhen(true)] out DocxPreparedMathParagraph? math)
     {
         math = null;
-        if (prepared is null || !prepared.TryGetValue(paragraph, out var candidate) ||
+        return paragraph.Equations.Count == 1 && prepared is not null &&
+            (DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null || DocxMathParagraphPolicy.GetInlineRow(paragraph) is not null) &&
+            prepared.TryGetValue(paragraph.Equations[0], out math);
+    }
+
+    private static bool TryGetStandaloneMath(DocxParagraph paragraph, double width, double scale,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared,
+        [NotNullWhen(true)] out DocxPreparedMathParagraph? math)
+    {
+        math = null;
+        if (!TryGetSinglePreparedMath(paragraph, prepared, out var candidate) ||
             DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is null || !FitsMathDisplayWidth(paragraph, candidate, width, scale)) { return false; }
         math = candidate; return true;
     }

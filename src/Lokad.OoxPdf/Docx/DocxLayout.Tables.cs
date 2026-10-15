@@ -189,7 +189,7 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathParagraphs, out double splitPitch))
+                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathEquations, out double splitPitch))
             {
                 // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments keep
                 // whole lines that fit (floor capacity); the boundary is floored to whole
@@ -246,7 +246,7 @@ internal sealed partial class DocxLayoutEngine
 
 
         bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight,
-            IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? math, out double splitPitch)
+            IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math, out double splitPitch)
         {
             splitPitch = 0d;
             if (textMeasurer is null)
@@ -266,10 +266,10 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, mathParagraphs: math, cancellationToken: cancellationToken).Lines;
+                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, mathEquations: math, cancellationToken: cancellationToken).Lines;
                 // Keep only painted math boxes atomic until math-bearing row
                 // fragments have their own placement qualification.
-                if (textLines.Any(line => line.Math is not null)) { return false; }
+                if (textLines.Any(line => line.Math is not null || line.InlineMath.Count != 0)) { return false; }
                 if (reviewPaginationScale < 1d)
                 {
                     double correction = ResolveTableCellFirstBaselineInset(
@@ -399,7 +399,7 @@ internal sealed partial class DocxLayoutEngine
         bool adjustAlignedMinimumMargins = false,
         double? alignedMinimumAvailableHeight = null,
         bool allowAutomaticMinimumGridPlacement = false,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels);
         var tableContext = new DocxTableLayoutContext(
@@ -418,7 +418,7 @@ internal sealed partial class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue,
-            table.Revisions) { MathParagraphs = mathParagraphs, CancellationToken = cancellationToken };
+            table.Revisions) { MathEquations = mathEquations, CancellationToken = cancellationToken };
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
         bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
@@ -433,7 +433,7 @@ internal sealed partial class DocxLayoutEngine
                 : row.Cells
                     .Select((cell, columnIndex) =>
                     {
-                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale, mathParagraphs, cancellationToken);
+                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale, mathEquations, cancellationToken);
                         if (!(measured.MinimumPictureOverlap > 0d)) return measured.FullHeight;
                         return measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
                             IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
@@ -1634,7 +1634,7 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
             (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages, double cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d)
-                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathParagraphs, tableContext.CancellationToken);
+                : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathEquations, tableContext.CancellationToken);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 (cellTextLines, cellPlacedImages) = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, cellPlacedImages, textMeasurer,
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
@@ -1653,7 +1653,8 @@ internal sealed partial class DocxLayoutEngine
                     .ToArray();
             (IReadOnlyList<DocxInlineImageLayout> cellInlineImages, IReadOnlyList<DocxInlineTextBoxLayout> cellInlineTextBoxes) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>())
-                : LayoutTableCellInlineImages(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale);
+                : LayoutTableCellInlineImages(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale,
+                    GetOrderedInlineParagraphFrames(cellTextLines, tableContext.CancellationToken));
             IReadOnlyList<DocxInlineImageLayout> inlineImages = cellInlineImages
                     .Concat(cellPlacedImages)
                     .Where(image => IsInlineImageOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, image, FragmentIndex, FragmentCount))

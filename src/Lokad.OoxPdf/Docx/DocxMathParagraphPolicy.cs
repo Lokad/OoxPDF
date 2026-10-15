@@ -26,7 +26,7 @@ internal static class DocxMathParagraphPolicy
                         foreach (DocxParagraph source in cell.Paragraphs)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (GetStandaloneRow(source) is not null || GetInlineRow(source) is not null) { yield return source; }
+                            if (GetPreparationEquations(source).Count != 0) { yield return source; }
                         }
                     }
                 }
@@ -44,7 +44,7 @@ internal static class DocxMathParagraphPolicy
             foreach (DocxParagraphElement element in part.BodyElements.OfType<DocxParagraphElement>())
             {
                 token.ThrowIfCancellationRequested();
-                if (GetStandaloneRow(element.Paragraph) is not null && seen.Add(element.Paragraph))
+                if (GetPreparationEquations(element.Paragraph).Count != 0 && seen.Add(element.Paragraph))
                     yield return element.Paragraph;
             }
         }
@@ -87,12 +87,30 @@ internal static class DocxMathParagraphPolicy
     private static bool HasVisibleProse(DocxParagraph paragraph) => paragraph.InlineContent is { } items
         ? DocxInlineContent.HasVisibleText(items) : paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text));
 
+    public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph) =>
+        paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 || paragraph.Hyperlinks.Count != 0;
+
+    public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph)
+    {
+        if (GetStandaloneRow(paragraph) is { } standalone) return [standalone];
+        if (GetInlineRow(paragraph) is { } inline) return [inline];
+        return NeedsOrderedInlineLayout(paragraph) && HasSupportedSourceOwner(paragraph) && paragraph.InlineContent is not null &&
+            paragraph.Equations.All(equation => !equation.Display) &&
+            paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right &&
+            paragraph.Spacing.LineRuleValue is null or "auto" && paragraph.LineSpacingPoints is null
+            ? paragraph.Equations : [];
+    }
+
     private static bool HasSupportedOwner(DocxParagraph paragraph) =>
-        paragraph.Equations.Count == 1 && paragraph.Equations[0].Revision is null && paragraph.Revisions.Count == 0 &&
-        paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
+        HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count == 1 &&
+        paragraph.Images.Count == 0 && paragraph.Hyperlinks.Count == 0;
+
+    private static bool HasSupportedSourceOwner(DocxParagraph paragraph) =>
+        paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) && paragraph.Revisions.Count == 0 &&
+        paragraph.InlineTextBoxes.Count == 0 &&
         paragraph.InlineReferences.Count == 0 && paragraph.CommentRanges.Count == 0 &&
         // Bookmarks are source metadata with no measured or painted extent.
         // Their presence cannot change ownership of an otherwise supported box.
-        paragraph.FieldReferences.Count == 0 && paragraph.Hyperlinks.Count == 0 &&
+        paragraph.FieldReferences.Count == 0 &&
         paragraph.RevisionRanges.Count == 0 && paragraph.ListLabel is null;
 }

@@ -1,0 +1,74 @@
+[
+  {
+    "Id": "body",
+    "Sha256": "2A0E309229B0F48E93867E7504FC4E6B560300185D197E3F30FAEBAB06612DF0",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false,
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/body.docx"
+  },
+  {
+    "Id": "cell",
+    "Sha256": "F4F575BC7DA6FEB26D95FF504A08E80CF12882C6A48EBB7F7E358B392C4BA6B4",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false,
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell.docx"
+  },
+  {
+    "Id": "header",
+    "Sha256": "3CC45E09A5964C7AA151F76D41CE031ADA03BC046A8962363D4B8DF15C3D8D57",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false,
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/header.docx"
+  },
+  {
+    "Id": "footer",
+    "Sha256": "6497F05214B8518FD29643FB296906BAC3C57C48230C26D7C0978F65431784FD",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false,
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footer.docx"
+  },
+  {
+    "Id": "header-review",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/header-review.docx",
+    "Sha256": "FDD53D09276E3715D10F2134DF14A87E1266B217DC6006C440A11376EEE792D8",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false
+  },
+  {
+    "Id": "footer-review",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footer-review.docx",
+    "Sha256": "F1B84E8F885BC664408ED8A64484554EE76231F56BC9471DA9D211BE5AF12DC8",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false
+  },
+  {
+    "Id": "body-review",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/body-review.docx",
+    "Sha256": "DBAAEAB7F00DF98E76DBB5BD8EC948EA912511332DC83BA599BE6A7FCA38A26B",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false
+  },
+  {
+    "Id": "cell-review",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-review.docx",
+    "Sha256": "C6E89D63B653390B9580D537B93AAB0FF285A1C05A027D858136CBDB868CDD18",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "MixedParagraphEquations": 2,
+    "MixedParagraphImages": 1,
+    "SurroundingProse": false
+  }
+]

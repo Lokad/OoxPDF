@@ -34,10 +34,16 @@ internal sealed record DocxLayoutPage(
 // renderer draws it. Implementors (text line, inline image, table row fragment)
 // carry page-space coordinates plus source/story provenance; layout owns
 // fragmentation (wrapped lines, row fragments), never the renderer.
-internal abstract record DocxLayoutItem;
+internal abstract record DocxLayoutItem
+{
+    // One shared vertical-frame owner for all items in a mapped static story.
+    public bool StaticStoryUsesPhysicalY { get; init; }
+}
 
 internal sealed record DocxEquationLayout(DocxPreparedMathParagraph Math, double X, double BaselineY,
     double Scale, int SourceBlockIndex, DocxParagraph SourceParagraph) : DocxLayoutItem;
+internal sealed record DocxInlineMathPlacement(DocxPreparedMathParagraph Math, double OffsetX);
+internal readonly record struct DocxInlineLineFrame(double BaselineInset, double Height);
 
 internal sealed record DocxTextLineLayout(
     string Text,
@@ -83,7 +89,8 @@ internal sealed record DocxTextLineLayout(
     public double MathScale { get; init; } = 1d;
     public bool IsInlineMath { get; init; }
     public double InlineMathOffsetX { get; init; }
-    public bool StaticStoryUsesPhysicalY { get; init; }
+    public IReadOnlyList<DocxInlineMathPlacement> InlineMath { get; init; } = [];
+    public DocxInlineLineFrame? InlineFrame { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(
@@ -225,7 +232,7 @@ internal sealed record DocxTableLayoutContext(
     string? LayoutValue,
     IReadOnlyList<DocxRevisionInfo>? Revisions)
 {
-    public IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? MathParagraphs { get; init; }
+    public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
     public bool AutomaticMinimumRowPlacement { get; init; }
@@ -283,8 +290,8 @@ internal sealed record DocxFontResources(
     IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> FallbackFaces,
     IReadOnlyList<PdfFallbackFontResource> FallbackFontResources)
 {
-    public IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph> MathParagraphs { get; init; } =
-        new Dictionary<DocxParagraph, DocxPreparedMathParagraph>();
+    public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> MathEquations { get; init; } =
+        new Dictionary<DocxEquation, DocxPreparedMathParagraph>();
 }
 
 internal sealed record DocxTextEmissionSegment(

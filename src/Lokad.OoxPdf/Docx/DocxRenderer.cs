@@ -509,7 +509,7 @@ internal sealed partial class DocxRenderer
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels,
             useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
-        DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, mathParagraphs: fontResources.MathParagraphs);
+        DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, mathEquations: fontResources.MathEquations);
         // Maps stay dense: explicitly unconstrained pages record zero so the
         // beyond-map last-entry fallback in Create only fires past the first layout's
         // page count, never for a recorded storyless page (w53 even-pages probe:
@@ -534,7 +534,7 @@ internal sealed partial class DocxRenderer
 
         return headerDisplacementByPage.Values.All(value => value == 0d) && footerDisplacementByPage.Values.All(value => value == 0d)
             ? first
-            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage, fontResources.MathParagraphs);
+            : engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, headerDisplacementByPage, footerDisplacementByPage, fontResources.MathEquations);
     }
 
     private DocxMarkupContext ResolveEffectiveMarkupContext(DocxDocument document, CancellationToken cancellationToken = default)
@@ -1600,7 +1600,7 @@ internal sealed partial class DocxRenderer
                 break;
             case DocxInlineImageLayout image:
                 double imageXOffset = ResolveTextEmissionXOffset(markupContext);
-                double imageYOffset = ResolveTextEmissionBaselineOffset(markupContext);
+                double imageYOffset = image.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(markupContext);
                 RenderInlineImage(imageXOffset == 0d && imageYOffset == 0d ? image : image.Translate(imageXOffset, -imageYOffset), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex);
                 break;
             case DocxTableRowLayout row:

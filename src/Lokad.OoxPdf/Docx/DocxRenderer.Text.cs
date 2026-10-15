@@ -759,6 +759,12 @@ internal sealed partial class DocxRenderer
         if (line.IsInlineMath && line.Math is { } inlineMath)
             PaintMath(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale,
                 graphics, markupContext, cancellationToken);
+        foreach (var placement in line.InlineMath)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            PaintMath(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale,
+                graphics, markupContext, cancellationToken);
+        }
     }
 
     private static void RenderMarkupIndicators(

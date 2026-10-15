@@ -24,7 +24,7 @@ internal sealed partial class DocxLayoutEngine
         int? PageNumber,
         int? PageCount,
         DocxTableCellTextLinesMemo? CellMemo,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? MathParagraphs = null,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations = null,
         CancellationToken CancellationToken = default);
 
     // Word hangs the full top-border width above cell content (border probes 2026-09-06: top-term deltas 0.96/1.08/0.58 vs widths 1.0/1.0/0.5); horizontal edges keep the half-width content inset.
@@ -85,7 +85,7 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double paragraphSpacingScale,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
         CancellationToken cancellationToken = default)
     {
         var measureContext = new DocxTableCellLayoutContext(
@@ -95,9 +95,10 @@ internal sealed partial class DocxLayoutEngine
             PageNumber: pageNumber,
             PageCount: pageCount,
             CellMemo: null,
-            MathParagraphs: mathParagraphs,
+            MathEquations: mathEquations,
             CancellationToken: cancellationToken);
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         if (bodyElements.Count == 0)
         {
             return default;
@@ -162,7 +163,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            if (TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathParagraphs, out var math))
+            if (TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathEquations, out var math))
             {
                 contentHeight += math.LineHeight * paragraphSpacingScale;
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -174,6 +175,17 @@ internal sealed partial class DocxLayoutEngine
             double fontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
             double lineHeight = lineHeightProfile.LineHeight;
+            if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, measureContext, textWidth, fontSize, lineHeight,
+                out var orderedLines))
+            {
+                contentHeight += orderedLines.Sum(line => line.OccupiedHeight);
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = true;
+                previousParagraphHasTextLines = true;
+                previousTextLineHeight = orderedLines[^1].OccupiedHeight;
+                continue;
+            }
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             DocxMidLinePlan? estimatePlan = null;
             if (textSpans.Count != 0)
@@ -292,7 +304,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
         int pageIndex = 0,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
         CancellationToken cancellationToken = default)
     {
         if (textMeasurer is null)
@@ -307,7 +319,7 @@ internal sealed partial class DocxLayoutEngine
             PageNumber: pageNumber,
             PageCount: pageCount,
             CellMemo: cellMemo,
-            MathParagraphs: mathParagraphs,
+            MathEquations: mathEquations,
             CancellationToken: cancellationToken);
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
@@ -366,6 +378,7 @@ internal sealed partial class DocxLayoutEngine
             return (new List<DocxTextLineLayout>(DocxTableCellTextLinesMemo.ShiftLines(cachedRelative, originX, originY)), cachedUsedHeight, new List<DocxInlineImageLayout>(ShiftInlineImages(cachedPlaced, originY, originX)));
         }
 
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
         double cursorY = startBaselineY;
         var lines = new List<DocxTextLineLayout>();
         var placedImages = new List<DocxInlineImageLayout>();
@@ -473,7 +486,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, context.ParagraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            if (TryGetStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathParagraphs, out var math))
+            if (TryGetStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathEquations, out var math))
             {
                 lines.Add(CreateStandaloneMathLine(paragraph, math, cellX + paddingLeft, textWidth,
                     cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile));
@@ -486,6 +499,33 @@ internal sealed partial class DocxLayoutEngine
             double fontSize = GetParagraphFontSize(paragraph);
             DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, measurer);
             double lineHeight = lineHeightProfile.LineHeight;
+            if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, context, textWidth, fontSize, lineHeight,
+                out var orderedLines))
+            {
+                for (int index = 0; index < orderedLines.Count; index++)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+                    var line = orderedLines[index];
+                    double inset = index == 0
+                        ? GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale)
+                        : GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale);
+                    double available = Math.Max(1d, textWidth - inset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
+                    double align = paragraph.Alignment switch
+                    { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
+                        DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
+                    var placed = PlaceOrderedInlineLine(paragraph, line, cellX + paddingLeft + inset + align,
+                        cursorY + cellFirstBaselineInset, fontSize, context.ParagraphSpacingScale, pageIndex,
+                        null, paragraphIndex, index, DocxStoryId.TableCell());
+                    lines.Add(placed.Line with { SingleLineHeight = lineHeightProfile.SingleLineHeight,
+                        AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
+                    placedImages.AddRange(placed.Images);
+                    cursorY -= line.OccupiedHeight;
+                }
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                paragraphIndex++;
+                continue;
+            }
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, context.PageNumber, context.PageCount);
             if (textSpans.Count == 0)
             {
@@ -792,7 +832,8 @@ internal sealed partial class DocxLayoutEngine
         int pageIndex,
         int? pageNumber,
         int? pageCount,
-        double paragraphSpacingScale)
+        double paragraphSpacingScale,
+        IReadOnlyDictionary<DocxParagraph, DocxInlineParagraphFrame>? orderedParagraphFrames = null)
     {
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(bodyElements);
@@ -871,6 +912,18 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            if (orderedParagraphFrames is not null && orderedParagraphFrames.TryGetValue(paragraph, out var orderedFrame))
+            {
+                cursorY -= orderedFrame.OccupiedHeight;
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text));
+                previousTextBaselineY = orderedFrame.LastLine.BaselineY;
+                previousTextFontSize = orderedFrame.LastLine.FontSize;
+                previousTextLineHeight = orderedFrame.LastLine.LineHeight ?? 0d;
+                paragraphIndex++;
+                continue;
+            }
             bool currentHasVisibleText = false;
             DocxMidLinePlan? midLinePlan = null;
             if (textMeasurer is not null)

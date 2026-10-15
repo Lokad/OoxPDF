@@ -67,7 +67,7 @@ internal static class DocxNativeMathTests
         TestAssert.True(document.EquationDiagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == part.PartName),
             "A later renderer retains the source warning even when reading had no diagnostic sink and no body equation.");
         DocxDocument mixed = NamedFixture("docx-omml-static-guard-mixed-fallback");
-        TestAssert.Equal(0, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(mixed, default).Count());
+        TestAssert.Equal(1, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(mixed, default).Count());
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, cancelled.Token).ToArray());
     }
@@ -89,15 +89,18 @@ internal static class DocxNativeMathTests
                 diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Complete story math diagnoses its own part rather than the main document.");
         }
         foreach ((string kind, int approximated, int ignored, int pages) in new[]
-            { ("partial", 1, 1, 1), ("mixed-fallback", 0, 1, 1), ("shared-variants", 1, 0, 2), ("body-and-header", 2, 0, 1) })
+            { ("partial", 1, 0, 1), ("mixed-fallback", 1, 0, 1), ("shared-variants", 1, 0, 2), ("body-and-header", 2, 0, 1) })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             var output = Renderer().RenderBlankPages(NamedFixture("docx-omml-static-guard-" + kind), diagnostics.Add, default).ToArray();
             TestAssert.Equal(pages, output.Length);
-            TestAssert.Equal(approximated, diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION"));
-            TestAssert.Equal(ignored, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"));
-            if (kind == "mixed-fallback") TestAssert.True(output.All(page => !page.Fonts.Any(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
-                "An unsupported static owner cannot publish unused mathematical fonts.");
+            TestAssert.True(approximated == diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                ignored == diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                $"Part diagnostics for {kind}: expected {approximated} approximate/{ignored} ignored; got " +
+                $"{diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION")} approximate/{diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION")} ignored.");
+            if (kind == "mixed-fallback") TestAssert.True(output.All(page =>
+                DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC).Contains("x+2y", StringComparison.Ordinal)),
+                "The shared ordered path retains a supported fraction beside static prose.");
             if (kind == "shared-variants") TestAssert.True(output.All(page => DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC).Contains("x+2y", StringComparison.Ordinal)),
                 "The shared original equation paints on both selected pages while part diagnostics are deduplicated.");
         }
@@ -148,10 +151,19 @@ internal static class DocxNativeMathTests
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).Single();
+            if (suffix == "multiple-fallback")
+            {
+                string content = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+                TestAssert.True(content.Split("x+2y", StringSplitOptions.None).Length - 1 == 2 &&
+                    diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                    diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "Both fitting inline fractions share the ordered cell path without content loss.");
+                continue;
+            }
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
                 diagnostics.All(d => d.Id != "DOCX_APPROXIMATED_EQUATION") &&
                 !page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
-                "Unfit and multiple inline cell equations keep the whole fallback without publishing unused fonts.");
+                "Unfit inline cell equations keep the whole fallback without publishing unused fonts.");
         }
     }
 

@@ -27,7 +27,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? unscaledTextMeasurer,
         CancellationToken cancellationToken,
         bool header,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -55,7 +55,7 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints,
             paragraphSpacingScale,
             unscaledLineMetrics,
-            cancellationToken, mathParagraphs, unscaledTextMeasurer);
+            cancellationToken, mathEquations, unscaledTextMeasurer);
         if (!HasVisibleStaticContent(layout))
         {
             return null;
@@ -80,7 +80,9 @@ internal sealed partial class DocxLayoutEngine
         DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
         if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
         {
-            if (firstFooterLine.Math is { } math)
+            if (firstFooterLine.InlineFrame is { } frame)
+                footerContentTop = firstFooterLine.BaselineY + frame.BaselineInset;
+            else if (firstFooterLine.Math is { } math)
             {
                 footerContentTop = firstFooterLine.BaselineY + math.BaselineInset * firstFooterLine.MathScale;
             }
@@ -127,7 +129,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         IDocxTextMeasurer? unscaledTextMeasurer,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -169,7 +171,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathParagraphs, unscaledTextMeasurer);
+                    cancellationToken, mathEquations, unscaledTextMeasurer);
             DocxStaticStoryLayoutResult footerLayout = CreatePageStaticStoryLayout(
                     page, selectedFooter,
                     page.MarginLeft,
@@ -183,7 +185,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathParagraphs, unscaledTextMeasurer);
+                    cancellationToken, mathEquations, unscaledTextMeasurer);
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is
@@ -235,7 +237,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         IDocxLineMetricsProvider? unscaledLineMetrics,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
@@ -315,7 +317,7 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            if (TryGetStandaloneMath(paragraph, width, paragraphSpacingScale, mathParagraphs, out var math))
+            if (TryGetStandaloneMath(paragraph, width, paragraphSpacingScale, mathEquations, out var math))
             {
                 lines.Add(CreateStandaloneMathLine(paragraph, math, x, width, cursorY,
                     paragraphSpacingScale, paragraphIndex, spacingProfile) with
@@ -328,6 +330,46 @@ internal sealed partial class DocxLayoutEngine
                 previousParagraph = paragraph;
                 paragraphIndex++;
                 continue;
+            }
+            if (paragraph.Equations.Count != 0)
+            {
+                double size = GetParagraphFontSize(paragraph);
+                var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
+                double sourceHeight = unscaledLineMetrics?.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), size)
+                    ?? profile.SingleLineHeight ?? profile.LineHeight;
+                double factor = ResolveAutoLineSpacingFactor(paragraph, out _);
+                double sourceInset = DocxLineMetrics.ResolveBodyBaselineOffset(size, sourceHeight * factor, false,
+                    DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, size, unscaledLineMetrics));
+                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale);
+                double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
+                double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
+                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
+                    Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
+                    sourceInset * paragraphSpacingScale, sourceHeight * factor * paragraphSpacingScale,
+                    paragraphSpacingScale, cancellationToken, out var measured))
+                {
+                    for (int index = 0; index < measured.Count; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var line = measured[index];
+                        double inset = index == 0 ? firstInset : nextInset;
+                        double available = Math.Max(1d, width - inset - rightInset);
+                        double align = paragraph.Alignment switch
+                        { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
+                            DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
+                        var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, cursorY,
+                            size, paragraphSpacingScale, pageNumber, null, paragraphIndex, index,
+                            DocxStoryId.HeaderOrFooter(isHeader, story.VariantType));
+                        lines.Add(placed.Line with { SingleLineHeight = sourceHeight,
+                            AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
+                        images.AddRange(placed.Images);
+                        cursorY -= line.OccupiedHeight;
+                    }
+                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                    previousParagraph = paragraph;
+                    paragraphIndex++;
+                    continue;
+                }
             }
             DocxTextSpan[] spans = CreateStaticTextSpans(paragraph.Runs);
             int sourceLineIndex = 0;

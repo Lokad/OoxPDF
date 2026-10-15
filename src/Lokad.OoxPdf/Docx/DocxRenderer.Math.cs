@@ -52,7 +52,11 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (item is DocxEquationLayout equation) { yield return equation.Math.Equation; }
-            else if (item is DocxTextLineLayout { Math: { } math }) { yield return math.Equation; }
+            else if (item is DocxTextLineLayout line)
+            {
+                if (line.Math is { } math) yield return math.Equation;
+                foreach (var placement in line.InlineMath) { token.ThrowIfCancellationRequested(); yield return placement.Math.Equation; }
+            }
             else if (item is DocxTableRowLayout row) { rows.Push(row); }
         }
         while (rows.TryPop(out var row))
@@ -64,6 +68,7 @@ internal sealed partial class DocxRenderer
                 {
                     token.ThrowIfCancellationRequested();
                     if (line.Math is { } math) { yield return math.Equation; }
+                    foreach (var placement in line.InlineMath) { token.ThrowIfCancellationRequested(); yield return placement.Math.Equation; }
                 }
                 foreach (DocxTableRowLayout nested in cell.NestedRows) { token.ThrowIfCancellationRequested(); rows.Push(nested); }
             }
@@ -81,7 +86,7 @@ internal sealed partial class DocxRenderer
         graphics.RestoreState();
     }
 
-    private static IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph> PrepareMathParagraphs(
+    private static IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> PrepareMathEquations(
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
     {
@@ -96,105 +101,106 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             DocxEquation? standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph);
-            DocxEquation? sourceEquation = standalone ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
-            if (sourceEquation is null) { continue; }
-            DocxEquation equation = standalone is { Display: false } isolated
-                ? isolated with { Display = true } : sourceEquation;
-            if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
-            OpenTypeFont? parentMetrics = null;
-            List<OpenTypeFont>? controlOwners = null;
-            if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
+            foreach (DocxEquation sourceEquation in DocxMathParagraphPolicy.GetPreparationEquations(paragraph))
             {
-                FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
-                parentMetrics = LoadFont(parent, fontCache, token);
-                if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
-            }
-            bool valid = true;
-            foreach (DocxMathRunSource source in mathRuns)
-            {
-                token.ThrowIfCancellationRequested();
-                foreach (IDocxMathControl control in source.ControlOwners)
+                DocxEquation equation = standalone is { Display: false } isolated
+                    ? isolated with { Display = true } : sourceEquation;
+                if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
+                OpenTypeFont? parentMetrics = null;
+                List<OpenTypeFont>? controlOwners = null;
+                if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
+                {
+                    FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
+                    parentMetrics = LoadFont(parent, fontCache, token);
+                    if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
+                }
+                bool valid = true;
+                foreach (DocxMathRunSource source in mathRuns)
                 {
                     token.ThrowIfCancellationRequested();
-                    IReadOnlyList<int> controlPoints = DocxMathLayout.GetControlCodePoints(control);
-                    if (!controlKeys.TryGetValue(control, out var controlKey))
+                    foreach (IDocxMathControl control in source.ControlOwners)
                     {
-                        FontFaceResolution controlFace = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
-                        OpenTypeFont? controlFont = LoadFont(controlFace, fontCache, token);
-                        if (controlFont is null || (controlPoints.Count != 0 && !controlFont.HasTrueTypeOutlines) || !controlFont.TryGetMathConstants(out _))
-                        { valid = false; break; }
-                        controlKey = (controlFace.Source.StableId, controlFace.FontFaceIndex);
-                        // Metric-only controls retain the conversion-owned font
-                        // without preparing an unused PDF subset or glyph map.
-                        if (controlPoints.Count != 0)
+                        token.ThrowIfCancellationRequested();
+                        IReadOnlyList<int> controlPoints = DocxMathLayout.GetControlCodePoints(control);
+                        if (!controlKeys.TryGetValue(control, out var controlKey))
                         {
-                            if (!groups.TryGetValue(controlKey, out var controlGroup))
-                            { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
-                            if (!controlFaces.TryGetValue(controlFont, out var face))
+                            FontFaceResolution controlFace = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
+                            OpenTypeFont? controlFont = LoadFont(controlFace, fontCache, token);
+                            if (controlFont is null || (controlPoints.Count != 0 && !controlFont.HasTrueTypeOutlines) || !controlFont.TryGetMathConstants(out _))
+                            { valid = false; break; }
+                            controlKey = (controlFace.Source.StableId, controlFace.FontFaceIndex);
+                            // Metric-only controls retain the conversion-owned font
+                            // without preparing an unused PDF subset or glyph map.
+                            if (controlPoints.Count != 0)
                             {
-                                face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new HashSet<int>());
-                                controlFaces.Add(controlFont, face);
-                            }
-                            foreach (int point in controlPoints)
-                            {
-                                if (control is DocxMathDelimiter { GrowValue: false })
+                                if (!groups.TryGetValue(controlKey, out var controlGroup))
+                                { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
+                                if (!controlFaces.TryGetValue(controlFont, out var face))
                                 {
-                                    ushort canonical = controlFont.MapCodePoint(point);
-                                    if (canonical == 0) { valid = false; break; }
-                                    if (!TryRegisterOperatorGlyph(face.Operators, canonical, point))
-                                        unavailableControlFaces.Add(controlFont);
-                                    // This registers only the authored base glyph;
-                                    // a later growing control still prepares variants.
-                                    continue;
+                                    face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new HashSet<int>());
+                                    controlFaces.Add(controlFont, face);
                                 }
-                                if (face.Characters.Contains(point)) { continue; }
-                                ushort glyph = controlFont.MapCodePoint(point);
-                                double height = 0d;
-                                bool found = false;
-                                while (controlFont.TryGetMathVerticalVariant(glyph, height, token, out var variant))
+                                foreach (int point in controlPoints)
                                 {
-                                    found = true;
-                                    if (!TryRegisterOperatorGlyph(face.Operators, variant.Glyph, point))
-                                        unavailableControlFaces.Add(controlFont);
-                                    height = variant.Advance + 1d;
+                                    if (control is DocxMathDelimiter { GrowValue: false })
+                                    {
+                                        ushort canonical = controlFont.MapCodePoint(point);
+                                        if (canonical == 0) { valid = false; break; }
+                                        if (!TryRegisterOperatorGlyph(face.Operators, canonical, point))
+                                            unavailableControlFaces.Add(controlFont);
+                                        // This registers only the authored base glyph;
+                                        // a later growing control still prepares variants.
+                                        continue;
+                                    }
+                                    if (face.Characters.Contains(point)) { continue; }
+                                    ushort glyph = controlFont.MapCodePoint(point);
+                                    double height = 0d;
+                                    bool found = false;
+                                    while (controlFont.TryGetMathVerticalVariant(glyph, height, token, out var variant))
+                                    {
+                                        found = true;
+                                        if (!TryRegisterOperatorGlyph(face.Operators, variant.Glyph, point))
+                                            unavailableControlFaces.Add(controlFont);
+                                        height = variant.Advance + 1d;
+                                    }
+                                    if (!found) { valid = false; break; }
+                                    face.Characters.Add(point);
                                 }
-                                if (!found) { valid = false; break; }
-                                face.Characters.Add(point);
+                                if (!valid) { break; }
                             }
-                            if (!valid) { break; }
+                            controlKeys.Add(control, controlKey);
                         }
-                        controlKeys.Add(control, controlKey);
+                        if (controlPoints.Count != 0) { (controlOwners ??= []).Add(groups[controlKey].Font); }
                     }
-                    if (controlPoints.Count != 0) { (controlOwners ??= []).Add(groups[controlKey].Font); }
+                    if (!valid) { break; }
+                    DocxMathRun run = source.Run;
+                    string family = run.NormalText
+                        ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
+                        : (run.NormalTextValue is false ? null : run.ExplicitFontFamily) ?? document.Settings.MathFontFamily ?? "Cambria Math";
+                    FontRequest request = run.NormalText ? new(family, run.Text.Bold, run.Text.Italic) : new(family);
+                    FontFaceResolution resolution = resolver.Resolve(request);
+                    // A normal-text face owns its authored weight/slant. Missing
+                    // styles need separate synthetic-emission qualification.
+                    if (run.NormalText && !resolution.HasMathTable &&
+                        (request.Bold != resolution.Bold || request.Italic != resolution.Italic))
+                        { valid = false; break; }
+                    OpenTypeFont? font = LoadFont(resolution, fontCache, token);
+                    if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }
+                    var key = (resolution.Source.StableId, resolution.FontFaceIndex);
+                    if (!groups.TryGetValue(key, out var group)) { group = (font, new Dictionary<ushort, int>()); groups.Add(key, group); }
+                    DocxMathRowLayout.TryGetRenderCodePoints(new DocxMathRow([run]), token, out IReadOnlyList<int> points, out _);
+                    foreach (int point in points)
+                    {
+                        ushort glyph = font.MapCodePoint(point);
+                        if (glyph == 0 || source.ScriptLevel != 0 && !run.NormalText && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
+                        { valid = false; break; }
+                        if (!group.Glyphs.TryGetValue(glyph, out int existing) || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
+                    }
+                    if (!valid) { break; }
+                    runKeys[run] = key;
                 }
-                if (!valid) { break; }
-                DocxMathRun run = source.Run;
-                string family = run.NormalText
-                    ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
-                    : (run.NormalTextValue is false ? null : run.ExplicitFontFamily) ?? document.Settings.MathFontFamily ?? "Cambria Math";
-                FontRequest request = run.NormalText ? new(family, run.Text.Bold, run.Text.Italic) : new(family);
-                FontFaceResolution resolution = resolver.Resolve(request);
-                // A normal-text face owns its authored weight/slant. Missing
-                // styles need separate synthetic-emission qualification.
-                if (run.NormalText && !resolution.HasMathTable &&
-                    (request.Bold != resolution.Bold || request.Italic != resolution.Italic))
-                    { valid = false; break; }
-                OpenTypeFont? font = LoadFont(resolution, fontCache, token);
-                if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }
-                var key = (resolution.Source.StableId, resolution.FontFaceIndex);
-                if (!groups.TryGetValue(key, out var group)) { group = (font, new Dictionary<ushort, int>()); groups.Add(key, group); }
-                DocxMathRowLayout.TryGetRenderCodePoints(new DocxMathRow([run]), token, out IReadOnlyList<int> points, out _);
-                foreach (int point in points)
-                {
-                    ushort glyph = font.MapCodePoint(point);
-                    if (glyph == 0 || source.ScriptLevel != 0 && !run.NormalText && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
-                    { valid = false; break; }
-                    if (!group.Glyphs.TryGetValue(glyph, out int existing) || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
-                }
-                if (!valid) { break; }
-                runKeys[run] = key;
+                if (valid) { candidates.Add((paragraph, equation, sourceEquation, parentMetrics, controlOwners ?? [])); }
             }
-            if (valid) { candidates.Add((paragraph, equation, sourceEquation, parentMetrics, controlOwners ?? [])); }
         }
         foreach (var face in controlFaces)
         {
@@ -216,7 +222,7 @@ internal sealed partial class DocxRenderer
             fonts.Add(group.Key, resource);
             resources.Add(resource);
         }
-        var layouts = new Dictionary<DocxParagraph, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
+        var layouts = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var candidate in candidates)
         {
             token.ThrowIfCancellationRequested();
@@ -230,7 +236,7 @@ internal sealed partial class DocxRenderer
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
                 { continue; }
             if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight, lineSpacingFactor)) { continue; }
-            layouts.Add(candidate.Paragraph, new(candidate.SourceEquation, box, above, lineHeight));
+            layouts.Add(candidate.SourceEquation, new(candidate.SourceEquation, box, above, lineHeight));
         }
         return layouts;
     }

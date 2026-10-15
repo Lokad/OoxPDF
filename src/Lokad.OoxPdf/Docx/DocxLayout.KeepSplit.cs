@@ -441,7 +441,7 @@ internal sealed partial class DocxLayoutEngine
         double availableHeight,
         bool allowAutomaticMinimumGridPlacement,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxParagraph, DocxPreparedMathParagraph>? mathParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -485,8 +485,21 @@ internal sealed partial class DocxLayoutEngine
 
         double ParagraphHeight(DocxParagraph value)
         {
+            if (DocxMathParagraphPolicy.NeedsOrderedInlineLayout(value))
+            {
+                double inlineSize = GetParagraphFontSize(value);
+                double inlineHeight = ResolveLineHeightProfile(value, inlineSize, textMeasurer).LineHeight;
+                double inlineInset = ResolveOrderedBodyBaselineInset(value, inlineSize, inlineHeight, textMeasurer);
+                double right = GetParagraphRightInset(value, paragraphSpacingScale);
+                double first = Math.Max(1d, availableWidth - right -
+                    GetParagraphFirstLineTextStartOffset(value, inlineSize, textMeasurer, paragraphSpacingScale));
+                double next = Math.Max(1d, availableWidth - right - GetParagraphTextStartOffset(value, paragraphSpacingScale));
+                if (TryMeasureOrderedInlineContent(value, mathEquations, textMeasurer, inlineSize, first, next,
+                    inlineInset, inlineHeight, paragraphSpacingScale, cancellationToken, out var measured))
+                    return measured.Sum(line => line.OccupiedHeight);
+            }
             double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
-            if (mathParagraphs is null || !mathParagraphs.TryGetValue(value, out DocxPreparedMathParagraph? math)) { return regular; }
+            if (!TryGetSinglePreparedMath(value, mathEquations, out DocxPreparedMathParagraph? math)) { return regular; }
             if (DocxMathParagraphPolicy.GetStandaloneRow(value) is not null)
                 return FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale) ? math.LineHeight * paragraphSpacingScale : regular;
             double size = GetParagraphFontSize(value);
@@ -520,7 +533,7 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken, pageNumber, pageCount: null, paragraphSpacingScale,
                 adjustAlignedMinimumMargins: true, alignedMinimumAvailableHeight: Math.Max(0d, remainingHeight),
                 allowAutomaticMinimumGridPlacement: allowAutomaticMinimumGridPlacement,
-                mathParagraphs: mathParagraphs);
+                mathEquations: mathEquations);
             return frame.RowHeights[0];
         }
     }

@@ -70,7 +70,7 @@ internal sealed partial class DocxRenderer
 
         return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources)
         {
-            MathParagraphs = PrepareMathParagraphs(document, fontResolver, fontCache, resources, cancellationToken)
+            MathEquations = PrepareMathEquations(document, fontResolver, fontCache, resources, cancellationToken)
         };
     }
 
