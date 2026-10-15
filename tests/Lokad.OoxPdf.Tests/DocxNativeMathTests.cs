@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeSideNaryOperatorsKeepExplicitAndInlineLimitPlacement()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string character) in new[] { ("display-sum-subSup", "\u2211"), ("inline-sum-subSup", "\u2211"),
+            ("inline-sum-undOvr", "\u2211"), ("inline-product-undOvr", "\u220F"),
+            ("display-sum-subSup-control20", "\u2211"), ("inline-product-undOvr-body16", "\u220F") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-nary-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(character + "xni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Qualified side limits retain native operator, body and both script arguments.");
+        }
+    }
+
     public static void DocxNativeStackedNaryOperatorsKeepBodyAndLimitMeaning()
     {
         RequireMathFont();

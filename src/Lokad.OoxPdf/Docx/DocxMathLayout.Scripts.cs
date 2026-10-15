@@ -23,14 +23,8 @@ internal static partial class DocxMathLayout
         if (ownerResource is null || !ownerResource.Font.Font.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathScriptConstants"; return false; }
         OpenTypeFont font = ownerResource.Font.Font;
-        ReadOnlySpan<OpenTypeMathConstant> required = [OpenTypeMathConstant.SubscriptShiftDown, OpenTypeMathConstant.SubscriptTopMax,
-            OpenTypeMathConstant.SubscriptBaselineDropMin,
-            equation.Cramped ? OpenTypeMathConstant.SuperscriptShiftUpCramped : OpenTypeMathConstant.SuperscriptShiftUp,
-            OpenTypeMathConstant.SuperscriptBottomMin,
-            OpenTypeMathConstant.SuperscriptBaselineDropMax, OpenTypeMathConstant.SubSuperscriptGapMin,
-            OpenTypeMathConstant.SuperscriptBottomMaxWithSubscript, OpenTypeMathConstant.SpaceAfterScript];
-        foreach (OpenTypeMathConstant field in required)
-            if (constants.GetValue(field) < 0) { fallback = "InvalidMathScriptConstants"; return false; }
+        if (!HasValidScriptConstants(constants, equation.Cramped))
+        { fallback = "InvalidMathScriptConstants"; return false; }
         double size = owner.Text.FontSize;
         foreach (DocxMathRunSource source in sources)
         {
@@ -50,13 +44,9 @@ internal static partial class DocxMathLayout
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))
             { fallback = "MixedMathScriptBaseMetrics"; return false; }
         DocxMathBox? subscript = null, superscript = null;
-        if (scripts.Subscript is { } sub && (!DocxMathArgumentMetrics.TryGetScriptLevel(sub, out int subLevel) ||
-            !DocxMathRowLayout.TryMeasure(sub, resolveFont, token, out subscript, out fallback, scriptLevel: subLevel, exportFontSize: true,
-                allowArgumentSize: true, scriptMetricsFont: font) ||
+        if (scripts.Subscript is { } sub && (!TryMeasureScriptArgument(sub, resolveFont, font, token, out subscript, out fallback) ||
             subscript is null || subscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSubscript"; return false; }
-        if (scripts.Superscript is { } sup && (!DocxMathArgumentMetrics.TryGetScriptLevel(sup, out int supLevel) ||
-            !DocxMathRowLayout.TryMeasure(sup, resolveFont, token, out superscript, out fallback, scriptLevel: supLevel, exportFontSize: true,
-                allowArgumentSize: true, scriptMetricsFont: font) ||
+        if (scripts.Superscript is { } sup && (!TryMeasureScriptArgument(sup, resolveFont, font, token, out superscript, out fallback) ||
             superscript is null || superscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
@@ -67,24 +57,8 @@ internal static partial class DocxMathLayout
             if (!font.TryIsMathExtendedShape(glyph, out boxBase))
             { fallback = "InvalidMathExtendedShapeCoverage"; return false; }
         }
-        double up = 0d, down = 0d;
-        if (superscript is not null)
-            up = Math.Max(Value(equation.Cramped ? OpenTypeMathConstant.SuperscriptShiftUpCramped : OpenTypeMathConstant.SuperscriptShiftUp), Math.Max(
-                boxBase ? basis.AboveBaseline - Value(OpenTypeMathConstant.SuperscriptBaselineDropMax) : 0d,
-                superscript.BelowBaseline + Value(OpenTypeMathConstant.SuperscriptBottomMin)));
-        if (subscript is not null)
-            down = Math.Max(Value(OpenTypeMathConstant.SubscriptShiftDown), Math.Max(
-                subscript.AboveBaseline - Value(OpenTypeMathConstant.SubscriptTopMax),
-                boxBase ? basis.BelowBaseline + Value(OpenTypeMathConstant.SubscriptBaselineDropMin) : 0d));
-        if (subscript is not null && superscript is not null)
-        {
-            double missing = Math.Max(0d, Value(OpenTypeMathConstant.SubSuperscriptGapMin) -
-                (up + down - superscript.BelowBaseline - subscript.AboveBaseline));
-            double raise = Math.Min(missing, Math.Max(0d,
-                Value(OpenTypeMathConstant.SuperscriptBottomMaxWithSubscript) - (up - superscript.BelowBaseline)));
-            up += raise;
-            down += missing - raise;
-        }
+        GetScriptShifts(constants, size / font.UnitsPerEm, basis, subscript, superscript,
+            boxBase, equation.Cramped, out double up, out double down);
         DocxMathGlyphPlacement last = basis.Glyphs[^1];
         ushort lastGlyph = last.OriginalGlyph;
         short correction = 0;
@@ -154,6 +128,52 @@ internal static partial class DocxMathLayout
                 token.ThrowIfCancellationRequested();
                 rules.Add(rule with { X = rule.X + x, Y = rule.Y + baseline });
             }
+        }
+    }
+
+    private static bool TryMeasureScriptArgument(DocxMathRow argument, Func<DocxMathRun, PdfFontResource?> resolveFont,
+        OpenTypeFont metricFont, CancellationToken token, out DocxMathBox? child, out string? fallback)
+    {
+        child = null; fallback = "UnsupportedMathScriptArgument";
+        return DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level) &&
+            DocxMathRowLayout.TryMeasure(argument, resolveFont, token, out child, out fallback, scriptLevel: level,
+                exportFontSize: true, allowArgumentSize: true, scriptMetricsFont: metricFont);
+    }
+
+    private static bool HasValidScriptConstants(OpenTypeMathConstants constants, bool cramped)
+    {
+        ReadOnlySpan<OpenTypeMathConstant> required = [OpenTypeMathConstant.SubscriptShiftDown, OpenTypeMathConstant.SubscriptTopMax,
+            OpenTypeMathConstant.SubscriptBaselineDropMin,
+            cramped ? OpenTypeMathConstant.SuperscriptShiftUpCramped : OpenTypeMathConstant.SuperscriptShiftUp,
+            OpenTypeMathConstant.SuperscriptBottomMin,
+            OpenTypeMathConstant.SuperscriptBaselineDropMax, OpenTypeMathConstant.SubSuperscriptGapMin,
+            OpenTypeMathConstant.SuperscriptBottomMaxWithSubscript, OpenTypeMathConstant.SpaceAfterScript];
+        foreach (OpenTypeMathConstant field in required)
+            if (constants.GetValue(field) < 0) { return false; }
+        return true;
+    }
+
+    private static void GetScriptShifts(OpenTypeMathConstants constants, double scale, DocxMathBox basis,
+        DocxMathBox? subscript, DocxMathBox? superscript, bool boxBase, bool cramped, out double up, out double down)
+    {
+        double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
+        up = down = 0d;
+        if (superscript is not null)
+            up = Math.Max(Value(cramped ? OpenTypeMathConstant.SuperscriptShiftUpCramped : OpenTypeMathConstant.SuperscriptShiftUp), Math.Max(
+                boxBase ? basis.AboveBaseline - Value(OpenTypeMathConstant.SuperscriptBaselineDropMax) : 0d,
+                superscript.BelowBaseline + Value(OpenTypeMathConstant.SuperscriptBottomMin)));
+        if (subscript is not null)
+            down = Math.Max(Value(OpenTypeMathConstant.SubscriptShiftDown), Math.Max(
+                subscript.AboveBaseline - Value(OpenTypeMathConstant.SubscriptTopMax),
+                boxBase ? basis.BelowBaseline + Value(OpenTypeMathConstant.SubscriptBaselineDropMin) : 0d));
+        if (subscript is not null && superscript is not null)
+        {
+            double missing = Math.Max(0d, Value(OpenTypeMathConstant.SubSuperscriptGapMin) -
+                (up + down - superscript.BelowBaseline - subscript.AboveBaseline));
+            double raise = Math.Min(missing, Math.Max(0d,
+                Value(OpenTypeMathConstant.SuperscriptBottomMaxWithSubscript) - (up - superscript.BelowBaseline)));
+            up += raise;
+            down += missing - raise;
         }
     }
 

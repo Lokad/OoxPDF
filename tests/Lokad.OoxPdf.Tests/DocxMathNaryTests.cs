@@ -45,13 +45,11 @@ internal static class DocxMathNaryTests
     {
         var nary = Nary("\u2211");
         foreach (var invalid in new[] { nary with { CharacterValue = "\u222B" }, nary with { LimitLocationValue = null },
-            nary with { LimitLocationValue = "subSup" }, nary with { GrowValue = false },
+            nary with { GrowValue = false },
             nary with { SubscriptHiddenValue = true }, nary with { SuperscriptHiddenValue = true },
             nary with { Body = new([nary]) }, nary with { HasUnsupportedProperties = true } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _),
                 "Unqualified defaults, roles and sizing retain complete source fallback.");
-        TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(nary) with { Display = false }, CancellationToken.None, out _),
-            "Inline side limits await their own independent geometry qualification.");
         var font = OpenTypeFont.Load(FontBytes(0x2211));
         var resource = new PdfFontResource("Bounded", PdfEmbeddedFont.CreateForGlyphMappings(font,
             new[] { ((ushort)128, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
@@ -62,12 +60,42 @@ internal static class DocxMathNaryTests
         TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(nary), _ => resource, CancellationToken.None, out _, out _));
     }
 
+    public static void MathFontNarySideLimitsShareScriptArgumentsAndInlinePlacement()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211));
+        var resource = new PdfFontResource("Side", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), ((ushort)130, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        DocxMathBox? firstInline = null;
+        foreach (bool display in new[] { true, false })
+        foreach (string location in new[] { "subSup", "undOvr" })
+        {
+            var equation = Equation(Nary("\u2211") with { LimitLocationValue = location }) with { Display = display };
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected qualified limit placement.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.True(measured.Glyphs[0].OriginalGlyph == (display ? 128 : 130), "Display minimum and inline base selection retain separate roles.");
+            if (!display || location == "subSup")
+                TestAssert.True(measured.Glyphs[2].X >= measured.Glyphs[0].Advance && measured.Glyphs[3].X == measured.Glyphs[2].X &&
+                    measured.Glyphs[1].X >= measured.Glyphs[3].X + measured.Glyphs[3].Advance,
+                    "Both side limits occupy the operator's right edge before the literal body.");
+            if (!display)
+            {
+                if (firstInline is null) firstInline = measured;
+                else TestAssert.True(firstInline.Glyphs.SequenceEqual(measured.Glyphs), "Inline undOvr and subSup share Office's side-limit placement.");
+            }
+        }
+        var invalidFont = OpenTypeFont.Load(FontBytes(0x2211, invalidScriptConstants: true));
+        var invalid = new PdfFontResource("Invalid", PdfEmbeddedFont.CreateForGlyphMappings(invalidFont,
+            new[] { ((ushort)128, 0x2211), (invalidFont.MapCodePoint('B'), (int)'B'), (invalidFont.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        TestAssert.True(!DocxMathLayout.TryMeasure(Equation(Nary("\u2211") with { LimitLocationValue = "subSup" }), _ => invalid,
+            CancellationToken.None, out var absent, out _) && absent is null, "Malformed script constants retain complete fallback for n-ary side limits.");
+    }
+
     private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
     private static DocxMathNary Nary(string character) => new(Row("B"), Row("B"), Row("C"))
         { CharacterValue = character, LimitLocationValue = "undOvr", ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
     private static DocxMathRow Row(string value) => new([new DocxMathRun(new(value, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
 
-    private static byte[] FontBytes(int point)
+    private static byte[] FontBytes(int point, bool invalidScriptConstants = false)
     {
         byte[] math = new byte[254];
         void Put(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at), value);
@@ -75,6 +103,7 @@ internal static class DocxMathNaryTests
         foreach (var field in new[] { OpenTypeMathConstant.AxisHeight, OpenTypeMathConstant.UpperLimitGapMin,
             OpenTypeMathConstant.UpperLimitBaselineRiseMin, OpenTypeMathConstant.LowerLimitGapMin, OpenTypeMathConstant.LowerLimitBaselineDropMin })
             Put(18 + (int)field * 4, 250);
+        if (invalidScriptConstants) BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18 + (int)OpenTypeMathConstant.SuperscriptShiftUp * 4), -1);
         Put(8, 224); Put(226, 12); Put(230, 1); Put(234, 18); Put(236, 1); Put(238, 1); Put(240, 130);
         Put(244, 2); Put(246, 130); Put(248, 1000); Put(250, 128); Put(252, 2000);
         byte[] cmap = new byte[52];
