@@ -1276,9 +1276,11 @@ internal sealed partial class DocxRenderer
                             // line, including a line with no prose segments.
                             var placement = line.InlineMath.FirstOrDefault(value =>
                                 ReferenceEquals(value.Math.Equation, sourceEquation.Equation));
+                            // Word keeps line-start viewport context at the container
+                            // origin; a later formula targets its actual placed position.
                             if (placement is not null && line.FrameOriginOffsetX is { } inlineOrigin)
                                 destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
-                                    line.X + inlineOrigin + placement.OffsetX + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                    line.X + (placement.OffsetX == 0d ? inlineOrigin : placement.OffsetX) + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
                                     line.BaselineY + inlineFrame.BaselineInset - textEmissionBaselineOffset, Zoom: null));
                             continue;
                         }

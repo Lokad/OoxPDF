@@ -41,6 +41,29 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingMathOnlyGroupsPreserveDisplayMeasurementAndAlignment()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var single = renderer.InspectLayout(DocxTests.ReadDocx(Case("PortableFonts/math-navigation-normal.docx"), mode));
+            double width = single.Pages.Single().Items.Single(item => item.Kind == "Equation").Width;
+            var grouped = renderer.InspectLayout(DocxTests.ReadDocx(Case("PortableFonts/inline-math-navigation-normal.docx"), mode));
+            var page = grouped.Pages.Single();
+            var staticGroups = page.StaticItems.Where(item => item.Kind.EndsWith("TextLine", StringComparison.Ordinal) && item.TextLength == 0).ToArray();
+            TestAssert.Equal(2, staticGroups.Length);
+            foreach (var group in staticGroups)
+            {
+                TestAssert.True(Math.Abs(group.Width - 2d * width) < 0.000001d,
+                    "Duplicating a formula in a math-only row must preserve its display measurement.");
+                double center = (page.MarginLeft + page.Width - page.MarginRight) / 2d;
+                TestAssert.True(Math.Abs(group.X + group.Width / 2d - center) < 0.000001d,
+                    "Math-only rows must center the complete measured group in their container.");
+            }
+        }
+    }
+
     public static void PortableRenderingMathBookmarksPreserveFourStoryDestinations() =>
         CheckMathNavigation("PortableFonts/math-navigation-normal.docx", 4);
 

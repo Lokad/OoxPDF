@@ -510,9 +510,7 @@ internal sealed partial class DocxLayoutEngine
                         ? GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale)
                         : GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale);
                     double available = Math.Max(1d, textWidth - inset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
-                    double align = paragraph.Alignment switch
-                    { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
-                        DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
+                    double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
                     var placed = PlaceOrderedInlineLine(paragraph, line, cellX + paddingLeft + inset + align, cellX + paddingLeft,
                         cursorY + cellFirstBaselineInset, fontSize, context.ParagraphSpacingScale, pageIndex,
                         null, paragraphIndex, index, DocxStoryId.TableCell());

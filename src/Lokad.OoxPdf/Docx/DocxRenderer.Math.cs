@@ -100,11 +100,12 @@ internal sealed partial class DocxRenderer
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)))
         {
             token.ThrowIfCancellationRequested();
-            DocxEquation? standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph);
+            bool display = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null ||
+                DocxMathParagraphPolicy.IsMathOnlyDisplayGroup(paragraph);
             foreach (DocxEquation sourceEquation in DocxMathParagraphPolicy.GetPreparationEquations(paragraph))
             {
-                DocxEquation equation = standalone is { Display: false } isolated
-                    ? isolated with { Display = true } : sourceEquation;
+                DocxEquation equation = display && !sourceEquation.Display
+                    ? sourceEquation with { Display = true } : sourceEquation;
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
                 OpenTypeFont? parentMetrics = null;
                 List<OpenTypeFont>? controlOwners = null;

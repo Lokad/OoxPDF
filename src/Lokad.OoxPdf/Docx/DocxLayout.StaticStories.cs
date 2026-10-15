@@ -354,9 +354,7 @@ internal sealed partial class DocxLayoutEngine
                         var line = measured[index];
                         double inset = index == 0 ? firstInset : nextInset;
                         double available = Math.Max(1d, width - inset - rightInset);
-                        double align = paragraph.Alignment switch
-                        { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
-                            DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
+                        double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
                         var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY,
                             size, paragraphSpacingScale, pageNumber, null, paragraphIndex, index,
                             DocxStoryId.HeaderOrFooter(isHeader, story.VariantType));

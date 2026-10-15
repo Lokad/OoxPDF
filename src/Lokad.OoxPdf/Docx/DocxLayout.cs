@@ -1404,9 +1404,7 @@ internal sealed partial class DocxLayoutEngine
                             AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
                         double inset = index == 0 ? firstInset : nextInset;
                         double available = Math.Max(1d, width - inset - rightInset);
-                        double align = effective.Alignment switch
-                        { DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
-                            DocxTextAlignment.Right => Math.Max(0d, available - line.Advance), _ => 0d };
+                        double align = ResolveOrderedInlineAlignment(line, effective.Alignment, available);
                         var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY,
                             paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
                         currentItems.Add(placed.Line with

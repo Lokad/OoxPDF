@@ -12,11 +12,23 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
     public IReadOnlyList<DocxTextSegmentLayout> TextSegments { get; init; } = [];
 }
 internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFragment> Fragments,
-    double Advance, double BaselineInset, double OccupiedHeight);
+    double Advance, double BaselineInset, double OccupiedHeight)
+{
+    public bool IsDisplayGroup { get; init; }
+}
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
 internal sealed partial class DocxLayoutEngine
 {
+    private static double ResolveOrderedInlineAlignment(DocxMeasuredInlineLine line,
+        DocxTextAlignment alignment, double available) =>
+        (line.IsDisplayGroup ? DocxTextAlignment.Center : alignment) switch
+        {
+            DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
+            DocxTextAlignment.Right => Math.Max(0d, available - line.Advance),
+            _ => 0d
+        };
+
     private static double ResolveOrderedBodyBaselineInset(DocxParagraph paragraph, double size,
         double lineHeight, IDocxTextMeasurer measurer) =>
         DocxLineMetrics.ResolveBodyBaselineOffset(size, lineHeight, false,
@@ -180,6 +192,7 @@ internal sealed partial class DocxLayoutEngine
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;
 
+        bool displayGroup = DocxMathParagraphPolicy.IsMathOnlyDisplayGroup(paragraph);
         var output = new List<DocxMeasuredInlineLine>();
         var current = new List<DocxMeasuredInlineFragment>();
         double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
@@ -278,7 +291,7 @@ internal sealed partial class DocxLayoutEngine
                 var removed = current[^1];
                 advance -= removed.Advance + removed.LeadingAdvance; current.RemoveAt(current.Count - 1);
             }
-            output.Add(new(current.ToArray(), advance, above, above + below));
+            output.Add(new(current.ToArray(), advance, above, above + below) { IsDisplayGroup = displayGroup });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }
     }

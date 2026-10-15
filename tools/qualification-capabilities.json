@@ -218,5 +218,31 @@
     "PortableRendering",
     "DocxInlineComposition",
     "DocxLayoutSnapshot"
+  ],
+  "docx-math-display-groups": [
+    "DocxReaderPreservesBookmarkAnchors",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxInlineCompositionEquationOnlyBookmark",
+    "DocxInlineCompositionCompoundMathBookmarks",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxScaledTypographicBookmarkViewport",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
+    "DocxRendererEmitsTableCellInternalHyperlinkDestinations",
+    "DocxRendererEmitsPlacedFootnoteInternalHyperlinkDestinations",
+    "DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeStaticMathRetainsStoryFlow",
+    "DocxStaticFrameMapping",
+    "DocxNativeAlignedStaticFrames",
+    "DocxNativeScaledStaticFrames",
+    "DocxTableMath",
+    "PortableRendering",
+    "DocxInlineComposition",
+    "DocxLayoutSnapshot",
+    "DocxNativeDisplayFraction",
+    "DocxNativeInlineMath"
   ]
 }

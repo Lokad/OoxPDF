@@ -1,0 +1,19 @@
+[
+  {
+    "Id": "math-display-groups",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-groups.docx",
+    "Sha256": "7B6EBA3C6D363A45F4D6AA5A21BBAC51FD0AEFB0FCF2C7251E6E8CBB0DE8A4A0",
+    "SourceSha256": "34F2CE8E3FC2612244DD4F114277318B1EB337A7835738D1CB813D10D2F13ACC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 11,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Display group controls",
+      "Left paragraph group",
+      "Center paragraph group",
+      "Right paragraph group",
+      "Inline before",
+      "after inline."
+    ]
+  }
+]

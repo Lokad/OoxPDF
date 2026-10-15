@@ -8,6 +8,37 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the display-group control.");
+        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases"));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double singleWidth = renderer.InspectLayout(DocxTests.ReadDocx(Path.Combine(root,
+                "CompositionProbes/math-navigation.docx"), mode)).Pages.Single().Items.Single(item => item.Kind == "Equation").Width;
+            var document = DocxTests.ReadDocx(Path.Combine(root, "CompositionProbes/math-display-groups.docx"), mode);
+            var page = renderer.InspectLayout(document).Pages.Single();
+            var groups = page.Items.Where(item => item.Kind == "TextLine" && item.TextLength == 0).ToArray();
+            TestAssert.Equal(3, groups.Length);
+            var column = page.ColumnFrames.Single();
+            for (int index = 0; index < groups.Length; index++)
+            {
+                TestAssert.True(Math.Abs(groups[index].Width - singleWidth * (index == 1 ? 3d : 2d)) < 0.000001d,
+                    "Adding adjacent formulas must preserve each display box's measurement.");
+                TestAssert.True(Math.Abs(groups[index].X + groups[index].Width / 2d - column.X - column.Width / 2d) < 0.000001d,
+                    "Word's math-only groups center independently of surrounding paragraph alignment.");
+            }
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(11, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "All fitting group and mixed-row formulas must survive.");
+        }
+    }
+
     public static void DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets()
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
