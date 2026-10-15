@@ -28,6 +28,15 @@ are below 0.15 pt horizontally and 0.14 pt vertically; inline differences reach
 0.65 pt vertically. Sixteen direct neighbor PDFs remain byte-identical. This
 first nesting grammar retains deeper structures on explicit fallback and keeps
 the existing visual thresholds unchanged.
+One bar fraction or no-bar stack can also sit alongside literal mathematical
+prefix/suffix atoms, such as `y = fraction + z`. The literal formatter's shared
+atom rules receive neighboring box context, so binary operators keep their
+spacing at fragment boundaries. Measured glyphs and rules move together, and
+logical advance remains separate from occupied ink. Eight independent Word
+controls improve across display/inline placement and both fraction types, with
+position differences below 0.14 pt horizontally and 0.07 pt vertically.
+Twenty-one direct neighbor PDFs remain byte-identical; visual thresholds remain
+unchanged. Multiple structured children and deeper compound rows retain fallback.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
