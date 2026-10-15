@@ -329,5 +329,30 @@
     "DocxTableLayoutStageScalesGridToPreferredWidth",
     "DocxTableLayoutStageScalesGridToPercentagePreferredWidth",
     "DocxTableMath"
+  ],
+  "docx-math-row-boundary": [
+    "PortableRendering",
+    "DocxInlineCompositionMathTableTailAdmissionMatchesWordBoundaryControls",
+    "DocxTableMath",
+    "DocxReviewTablePagination",
+    "DocxTableAutomaticGridRetainsComplexAndFragmentFallbacks",
+    "DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault",
+    "DocxTableLayoutStageHonorsCantSplitRowsAtPageBoundary",
+    "DocxTableLayoutStageKeepsCellKeepLinesParagraphWholeAtPageBoundary",
+    "DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary",
+    "DocxTableLayoutStageKeepsCellWidowControlledParagraphWholeAtPageBoundary",
+    "DocxTableLayoutStageHonorsExactRowHeightRule",
+    "DocxTableLayoutStageExpandsAtLeastRowsByAuthoredTopCellMargin",
+    "DocxTableExactTallRowSplitsNineAndOneLikeOffice",
+    "DocxTableExactRowSplitsWhenBoundaryClearsLastBaseline",
+    "DocxTableCellPageBreaksFlowWithSingleSpillRow",
+    "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
+    "DocxTableLayoutStageKeepsManualPageBreakBoundary",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxTableAnchoredFootnoteSharesBodyPages",
+    "DocxLayoutReservesPageFootnoteStoryArea",
+    "DocxTableLayoutStageKeepsFollowingParagraphAdjacent",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
   ]
 }

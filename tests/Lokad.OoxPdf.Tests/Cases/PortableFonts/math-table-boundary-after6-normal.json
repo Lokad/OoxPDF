@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-table-boundary-after6-normal",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-table-boundary-after6-normal.docx",
+    "Sha256": "B04DAD4F83C558DEABE870D2F3980971EF57C34E9948AFE70EBBBE32F62EC4F0",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Following boundary table."
+    ]
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-table-boundary-after6-cant-split",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-table-boundary-after6-cant-split.docx",
+    "Sha256": "49EE8A0CCFBEF9ECB6484564B0A4EB3F6C2BB80B263673BAA42D7FD5EF5FF31A",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Following boundary table."
+    ]
+  }
+]

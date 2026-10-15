@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-table-boundary-after24-cant-split-normal",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-table-boundary-after24-cant-split-normal.docx",
+    "Sha256": "EA6D219DAA9170F36CA85D6AC69330CE9EF8F2E557E6F93460C6E70ACB79B28A",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Following boundary table."
+    ]
+  }
+]

@@ -70,6 +70,8 @@ internal sealed partial class DocxLayoutEngine
 
     private readonly record struct DocxTableCellContentHeight(double FullHeight, double MinimumPictureOverlap)
     {
+        public double TrailingAfterSpacing { get; init; }
+        public bool ContainsMath { get; init; }
         public double Resolve(bool minimumPicturesOwned) => minimumPicturesOwned &&
             double.IsFinite(FullHeight) && double.IsFinite(MinimumPictureOverlap) &&
             MinimumPictureOverlap > 0d && MinimumPictureOverlap <= FullHeight
@@ -111,6 +113,7 @@ internal sealed partial class DocxLayoutEngine
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double contentHeight = paddingTop + paddingBottom;
         double minimumPictureOverlap = 0d;
+        bool containsMath = false;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         bool previousParagraphHasText = false;
@@ -166,6 +169,7 @@ internal sealed partial class DocxLayoutEngine
             if (TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathEquations, out var math))
             {
                 contentHeight += math.LineHeight * paragraphSpacingScale;
+                containsMath = true;
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
                 previousParagraph = paragraph;
                 previousParagraphHasText = false;
@@ -179,6 +183,7 @@ internal sealed partial class DocxLayoutEngine
                 out var orderedLines))
             {
                 contentHeight += orderedLines.Sum(line => line.OccupiedHeight);
+                containsMath |= orderedLines.Any(line => line.Fragments.Any(fragment => fragment.Math is not null));
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
                 previousParagraph = paragraph;
                 previousParagraphHasText = true;
@@ -196,6 +201,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxWrappedTextLine[] estimateLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
                 DocxMidLineMath? inlineMath = WrapTableInlineMath(paragraph, textSpans, ref estimateLines,
                     firstParagraphWidth, continuationParagraphWidth, fontSize, measureContext);
+                containsMath |= inlineMath is not null;
                 int lineCount = estimateLines.Length;
                 lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
                 estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), GetParagraphsFromBodyElements(bodyElements), paragraph, textMeasurer), lineHeight);
@@ -266,7 +272,8 @@ internal sealed partial class DocxLayoutEngine
         }
 
         contentHeight += pendingSpacingAfter;
-        return new(contentHeight, minimumPictureOverlap);
+        return new(contentHeight, minimumPictureOverlap)
+        { TrailingAfterSpacing = Math.Max(0d, pendingSpacingAfter), ContainsMath = containsMath };
     }
 
     private static double MeasureNestedTableHeight(

@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-table-boundary-after24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-table-boundary-after24.docx",
+    "Sha256": "79C2029464BB98E40B2F90ACDAE3457153300AA0A82E45C5D99483F0B3D50682",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Following boundary table."
+    ]
+  }
+]

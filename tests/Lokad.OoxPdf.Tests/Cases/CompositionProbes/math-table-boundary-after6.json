@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-table-boundary-after6",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-table-boundary-after6.docx",
+    "Sha256": "7D4E2A70BB9C125216B85FC08E0D0CC050316E3CA602C91E1049A3C6FFADABAD",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Following boundary table."
+    ]
+  }
+]

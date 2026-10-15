@@ -261,7 +261,10 @@ internal sealed partial class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> RowHeights,
         double PageContentHeight,
-        double TableX);
+        double TableX)
+    {
+        public IReadOnlyList<double> BoundaryMinimumRowHeights { get; init; } = [];
+    }
 
     private sealed record DocxResolvedTableGrid(
         double TableX,

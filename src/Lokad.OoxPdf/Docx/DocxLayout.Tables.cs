@@ -189,6 +189,20 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
 
+            if (rowIndex == table.Rows.Count - 1 && rowHeight > remainingPageHeight && hasPageContent() &&
+                frame.BoundaryMinimumRowHeights.Count == table.Rows.Count &&
+                frame.BoundaryMinimumRowHeights[rowIndex] < rowHeight &&
+                frame.BoundaryMinimumRowHeights[rowIndex] <= remainingPageHeight)
+            {
+                // All measured content fits atomically; only the last paragraph's
+                // unpainted after-spacing crosses the boundary. Do not split math.
+                AddTableRowLayout(table, frame.Context, row, rowIndex, rowHeights, frame.EffectiveColumns,
+                    frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems,
+                    ref cursorY, frame.TableX, paragraphSpacingScale, cellMemo, admittedHeight: remainingPageHeight);
+                markBoundaryContent();
+                continue;
+            }
+
             if (!row.CantSplit &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
@@ -408,6 +422,7 @@ internal sealed partial class DocxLayoutEngine
             table.Revisions) { MathEquations = mathEquations, CancellationToken = cancellationToken };
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
+        var boundaryMinimumRowHeights = new double[table.Rows.Count];
         bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
             IsEligibleDeclaredTopContentTable(table, textMeasurer, paragraphSpacingScale);
         bool[] declaredTopContentClips = allowDeclaredTopMargins ? new bool[table.Rows.Count] : [];
@@ -415,15 +430,21 @@ internal sealed partial class DocxLayoutEngine
         {
             double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
+            bool canDiscardAfter = CanDiscardTableRowAfterSpacing(row);
+            bool containsMath = false;
+            double minimumContentHeight = 0d;
             double contentHeight = textMeasurer is null
                 ? 0d
                 : row.Cells
                     .Select((cell, columnIndex) =>
                     {
                         DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale, mathEquations, cancellationToken);
-                        if (!(measured.MinimumPictureOverlap > 0d)) return measured.FullHeight;
-                        return measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
+                        double full = measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
                             IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
+                        minimumContentHeight = Math.Max(minimumContentHeight,
+                            Math.Max(0d, full - (canDiscardAfter ? measured.TrailingAfterSpacing : 0d)));
+                        containsMath |= measured.ContainsMath;
+                        return full;
                     })
                     .DefaultIfEmpty(0d)
                     .Max();
@@ -436,7 +457,11 @@ internal sealed partial class DocxLayoutEngine
                 ? ResolveAlignedMinimumRowBottomMargin(table, row, textMeasurer, paragraphSpacingScale, contentHeight,
                     allowTopRow: eligibleTopRow) : 0d;
             rowBottomMargins[rowIndex] = bottomMargin;
-            return ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
+            double fullHeight = ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
+            boundaryMinimumRowHeights[rowIndex] = canDiscardAfter && containsMath
+                ? ResolveTableRowHeight(row, minimumContentHeight, paragraphSpacingScale, isLastRow, bottomMargin)
+                : fullHeight;
+            return fullHeight;
         }
 
         for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
@@ -467,7 +492,8 @@ internal sealed partial class DocxLayoutEngine
             DeclaredTopRowContentClips = completeBodyFrame ? declaredTopContentClips : []
         };
 
-        return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX);
+        return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX)
+        { BoundaryMinimumRowHeights = boundaryMinimumRowHeights };
     }
 
     private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, CancellationToken cancellationToken = default)
@@ -1082,6 +1108,29 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(1d, height);
     }
 
+    // Boundary tail admission is a natural-flow contract. Authored row heights,
+    // keeps, merges, positioned content and shifted glyphs retain their fallback.
+    private static bool CanDiscardTableRowAfterSpacing(DocxTableRow row)
+    {
+        if (row.IsHeader || row.CantSplit || row.HeightPoints is not null || row.HeightRuleValue is not null)
+            return false;
+        foreach (var cell in row.Cells)
+        {
+            if (cell.HasVerticalMerge || cell.FitText || cell.GridSpan > 1 ||
+                cell.TextDirectionValue is not (null or "lrTb") ||
+                cell.VerticalAlignmentValue is not (null or "top")) return false;
+            var elements = GetTableCellLayoutBodyElements(cell);
+            if (elements.Count != 1 || elements[0] is not DocxParagraphElement element) return false;
+            var paragraph = element.Paragraph;
+            if (paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
+                paragraph.InlineReferences.Count != 0 || paragraph.FieldReferences.Count != 0 ||
+                paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true ||
+                paragraph.Spacing.LineRuleValue is not (null or "auto") ||
+                paragraph.Runs.Any(run => run.VerticalAlignment != DocxRunVerticalAlignment.Baseline)) return false;
+        }
+        return true;
+    }
+
     private static void AddTableRowLayout(
         DocxTable table,
         DocxTableLayoutContext tableContext,
@@ -1097,9 +1146,10 @@ internal sealed partial class DocxLayoutEngine
         ref double cursorY,
         double x,
         double paragraphSpacingScale,
-        DocxTableCellTextLinesMemo? cellMemo = null)
+        DocxTableCellTextLinesMemo? cellMemo = null,
+        double? admittedHeight = null)
     {
-        double rowHeight = rowHeights[rowIndex];
+        double rowHeight = admittedHeight ?? rowHeights[rowIndex];
         currentItems.Add(CreateTableRowLayout(
             table,
             tableContext,

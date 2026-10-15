@@ -170,6 +170,13 @@ def main():
         office, office_ops_hash = inspect_reference(reference, inspector, args.cache.resolve())
         candidate_words = words(" ".join(item.get("DecodedText") or "" for item in operations))
         office_words = words(" ".join(item.get("DecodedText") or "" for item in office))
+        page_deficits = []
+        for page in sorted({item["PageNumber"] for item in office + operations if item["PageNumber"] is not None}):
+            expected_page = words(" ".join(item.get("DecodedText") or "" for item in office if item["PageNumber"] == page))
+            observed_page = words(" ".join(item.get("DecodedText") or "" for item in operations if item["PageNumber"] == page))
+            missing = deficits(expected_page, observed_page)
+            if missing:
+                page_deficits.append({"Page": page, "Tokens": missing})
         pages = max(item["PageNumber"] for item in office if item["PageNumber"] is not None)
         prose, expressions, parts, unresolved = source_content(source, mode, pages)
         math_stream = re.sub(r"\s+", "", normalize("".join(item.get("DecodedText") or "" for item in operations
@@ -183,6 +190,7 @@ def main():
                      "SourceTokensMissingOffice": deficits(prose, office_words),
                      "SourceTokensMissingCandidate": deficits(prose, candidate_words),
                      "OfficeTokensMissingCandidate": deficits(office_words, candidate_words),
+                     "OfficeTokensMissingCandidateByPage": page_deficits,
                      "ExpectedSimpleMath": dict(expressions), "ObservedSimpleMath": dict(observed_math),
                      "MissingSimpleMath": deficits(expressions, observed_math),
                      "IgnoredEquationDiagnostics": outcome["IgnoredEquationDiagnostics"],
@@ -198,7 +206,7 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
     failed = sum(bool(row["SourceTokensMissingOffice"] or row["SourceTokensMissingCandidate"] or
-                      row["OfficeTokensMissingCandidate"] or row["MissingSimpleMath"] or row["UnresolvedSourceFeatures"] or
+                      row["OfficeTokensMissingCandidate"] or row["OfficeTokensMissingCandidateByPage"] or row["MissingSimpleMath"] or row["UnresolvedSourceFeatures"] or
                       row["IgnoredEquationDiagnostics"] or row["ReferencePages"] != row["CandidatePages"]) for row in rows)
     print(f"{len(rows)} mode outcomes; {failed} deficit/unresolved screens. No conversions or library builds.")
     return 1 if failed else 0

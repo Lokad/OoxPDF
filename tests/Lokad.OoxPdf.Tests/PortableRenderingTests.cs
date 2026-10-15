@@ -41,6 +41,25 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail()
+    {
+        foreach (string suffix in new[] { "0", "6", "24", "24-cant-split", "24-tight" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("PortableFonts/math-table-boundary-after" + suffix + "-normal.docx"), mode);
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
+            string text = DocxPageFootnoteNumberingTests.DecodeText(pages[expectedPage]).Normalize(NormalizationForm.FormKC);
+            TestAssert.Contains("x+2y", text);
+            TestAssert.Contains("Observed series", text);
+            TestAssert.Equal(1, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("x+2y", StringSplitOptions.None).Length - 1);
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingAutofitKeepsMathematicalCellContent()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

@@ -8,6 +8,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionMathTableTailAdmissionMatchesWordBoundaryControls()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the page-boundary control.");
+        foreach (string suffix in new[] { "0", "6", "24", "6-cant-split", "24-tight" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-table-boundary-after" + suffix, mode, false, false);
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
+            TestAssert.Contains("x+2y", DocxPageFootnoteNumberingTests.DecodeText(pages[expectedPage]).Normalize(NormalizationForm.FormKC));
+            var snapshot = renderer.InspectLayout(document);
+            var row = snapshot.Pages[expectedPage].TableRows.Single(row => row.RowIndex == 1);
+            TestAssert.Equal(1, row.FragmentCount);
+            TestAssert.True(row.Cells.All(cell => cell.Y >= snapshot.Pages[expectedPage].MarginBottom),
+                "Discarding unpainted spacing cannot admit the row below its body frame.");
+        }
+    }
+
     public static void DocxInlineCompositionAutofitMathRespectsAdditionalInlineContent()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
