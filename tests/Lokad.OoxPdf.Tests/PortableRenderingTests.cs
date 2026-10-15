@@ -41,6 +41,27 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingSingleMathAnnotationsPreserveFrames()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var linked = DocxTests.ReadDocx(Case("PortableFonts/letter-normal-math.docx"), mode);
+            var source = linked.BodyElements.OfType<DocxParagraphElement>().First(element =>
+                element.Paragraph.Equations.Count == 1 && element.Paragraph.Hyperlinks.Count > 0);
+            var plain = linked with { BodyElements = linked.BodyElements.Select(element => ReferenceEquals(element, source)
+                ? new DocxParagraphElement(source.Paragraph with { Hyperlinks = [] }) : element).ToArray() };
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var before = renderer.InspectLayout(plain).Pages.SelectMany(page => page.Items).ToArray();
+            var after = renderer.InspectLayout(linked).Pages.SelectMany(page => page.Items).ToArray();
+            TestAssert.Equal(before.Length, after.Length);
+            for (int index = 0; index < before.Length; index++)
+                TestAssert.True(before[index].X == after[index].X && before[index].Y == after[index].Y &&
+                    before[index].Width == after[index].Width && before[index].Height == after[index].Height,
+                    "Hyperlink metadata cannot select different paragraph measurement or placement.");
+        }
+    }
+
     public static void PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories()
     {
         string[] stories = ["body", "cell", "header", "footer"];

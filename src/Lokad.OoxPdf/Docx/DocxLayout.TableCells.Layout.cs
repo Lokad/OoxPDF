@@ -668,7 +668,8 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph, EmitsTerminalParagraphMark: false)
-                    { Math = mathWidth > 0d ? inlineMath?.Math : null, IsInlineMath = mathWidth > 0d,
+                    { FrameOriginOffsetX = cellX + paddingLeft - lineShape.X,
+                        Math = mathWidth > 0d ? inlineMath?.Math : null, IsInlineMath = mathWidth > 0d,
                         InlineMathOffsetX = mathOffset, MathScale = context.ParagraphSpacingScale });
                     if (midLinePlan is not null)
                     {

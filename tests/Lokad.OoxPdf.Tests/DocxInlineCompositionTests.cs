@@ -8,6 +8,60 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionSingleMathLinksTargetMeasuredFormula()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the formula target control.");
+        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "CompositionProbes", "single-math-annotations.docx"));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(path, mode);
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var targets = pages.SelectMany(page => page.Annotations).Where(annotation => annotation.Destination is not null)
+                .Select(annotation => annotation.Destination!.Value).ToArray();
+            var prefixes = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments)
+                .Where(segment => !segment.IsTerminalLineSpace && segment.TextLength == "Before formula: ".Length).ToArray();
+            TestAssert.Equal(2, prefixes.Length);
+            TestAssert.Equal(2, targets.Length);
+            for (int index = 0; index < targets.Length; index++)
+                TestAssert.True(Math.Abs(targets[index].Left!.Value - prefixes[index].X - prefixes[index].Width + 3d) < 0.01d,
+                    "The bookmark must target the formula after its measured prefix, rather than following prose.");
+            TestAssert.Equal(2, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("a+bc", StringSplitOptions.None).Length - 1);
+        }
+    }
+
+    public static void DocxInlineCompositionHyperlinkPreservesSingleMathFrame()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the annotation composition control.");
+        foreach (string fixture in new[] { "docx-omml-inline-middle12", "docx-omml-inline-fraction-middle12", "docx-omml-inline-script-middle12" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadMutation(fixture, mode, true, false);
+            var linked = ReadMutation(fixture, mode, true, false, (document, w, m) =>
+            {
+                var run = document.Descendants(w + "p").First(paragraph => paragraph.Elements(m + "oMath").Any())
+                    .Elements(w + "r").First(run => run.Element(w + "t") is not null);
+                run.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(run)));
+            });
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var before = renderer.InspectLayout(source).Pages.SelectMany(page => page.Items).Where(item => item.Kind == "TextLine").ToArray();
+            var after = renderer.InspectLayout(linked).Pages.SelectMany(page => page.Items).Where(item => item.Kind == "TextLine").ToArray();
+            TestAssert.Equal(before.Length, after.Length);
+            for (int index = 0; index < before.Length; index++)
+                TestAssert.True(Math.Abs(before[index].X - after[index].X) < 0.000001d &&
+                    Math.Abs(before[index].Y - after[index].Y) < 0.000001d &&
+                    Math.Abs(before[index].Width - after[index].Width) < 0.000001d &&
+                    before[index].LineHeightPoints == after[index].LineHeightPoints,
+                    "An unchanged-format hyperlink cannot switch a mathematical paragraph's measurement or placement.");
+        }
+    }
+
     public static void DocxInlineCompositionHiddenRunPreservesMathGeometry()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

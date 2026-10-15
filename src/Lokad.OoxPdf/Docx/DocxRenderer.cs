@@ -1241,6 +1241,8 @@ internal sealed partial class DocxRenderer
                 int pageNumber = pageIndex + 1;
                 DocxMarkupContext pageMarkupContext = WithPageTextEmissionXOffset(markupContext, page);
                 double pageTextEmissionXOffset = ResolveTextEmissionXOffset(pageMarkupContext);
+                var bodyMath = fontResources.MathEquations.Count == 0 ? null : page.Items.OfType<DocxEquationLayout>()
+                    .ToLookup(item => item.Math.Equation, ReferenceEqualityComparer.Instance);
                 foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, pageMarkupContext, page.Height))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1268,21 +1270,38 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
-                        if (line.InlineFrame is { } inlineFrame && paragraph.InlineContent is { } sourceItems &&
+                        if (paragraph.InlineContent is { } sourceItems &&
                             bookmark.InlineItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
                             sourceItems[itemIndex] is DocxInlineEquation sourceEquation)
                         {
-                            // A source-bound formula must wait for its own placed
-                            // line, including a line with no prose segments.
-                            var placement = line.InlineMath.FirstOrDefault(value =>
-                                ReferenceEquals(value.Math.Equation, sourceEquation.Equation));
-                            // Word keeps line-start viewport context at the container
-                            // origin; a later formula targets its actual placed position.
-                            if (placement is not null && line.FrameOriginOffsetX is { } inlineOrigin)
-                                destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
-                                    line.X + (placement.OffsetX == 0d ? inlineOrigin : placement.OffsetX) + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
-                                    line.BaselineY + inlineFrame.BaselineInset - textEmissionBaselineOffset, Zoom: null));
-                            continue;
+                            // Legacy body lines paint a separate item. Resolve its final
+                            // placed record, rather than recomputing its geometry from prose.
+                            var bodyEquation = bodyMath?[sourceEquation.Equation].FirstOrDefault(item =>
+                                item.SourceBlockIndex == line.SourceBlockIndex);
+                            if (line.InlineFrame is not null || line.IsInlineMath || bodyEquation is not null)
+                            {
+                                // A source-bound formula must wait for its own placed
+                                // line, including a line with no prose segments.
+                                var placement = line.InlineMath.FirstOrDefault(value =>
+                                    ReferenceEquals(value.Math.Equation, sourceEquation.Equation));
+                                // The qualified single-prose path retains its breaking
+                                // fallback but publishes the same measured math position.
+                                if (placement is null && line.IsInlineMath && line.Math is { } singleMath &&
+                                    ReferenceEquals(singleMath.Equation, sourceEquation.Equation))
+                                    placement = new(singleMath, line.InlineMathOffsetX);
+                                if (placement is null && bodyEquation is not null)
+                                    placement = new(bodyEquation.Math, bodyEquation.X - line.X);
+                                double mathTop = bodyEquation is not null
+                                    ? bodyEquation.BaselineY + bodyEquation.Math.BaselineInset * bodyEquation.Scale
+                                    : line.BaselineY + (line.InlineFrame?.BaselineInset ?? (placement?.Math.BaselineInset ?? 0d) * line.MathScale);
+                                // Word keeps line-start viewport context at the container
+                                // origin; a later formula targets its actual placed position.
+                                if (placement is not null && line.FrameOriginOffsetX is { } inlineOrigin)
+                                    destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
+                                        line.X + (placement.OffsetX == 0d ? inlineOrigin : placement.OffsetX) + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                        mathTop - textEmissionBaselineOffset, Zoom: null));
+                                continue;
+                            }
                         }
 
                         if (!TryResolveBookmarkDestinationSegment(segments, bookmark, out DocxTextEmissionSegment? target, out double targetX))

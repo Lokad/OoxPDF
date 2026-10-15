@@ -1,0 +1,15 @@
+[
+  {
+    "Id": "single-math-annotations",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/single-math-annotations.docx",
+    "Sha256": "550169261C125DDD633973ED33483EC8C328EB474B1DA4D7A60CE86910A013B7",
+    "SourceSha256": "142C73F88E81FE11BCB8FFCDB5E465ACD7D0214DA200E4517DCF713B0753F810",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula."
+    ]
+  }
+]

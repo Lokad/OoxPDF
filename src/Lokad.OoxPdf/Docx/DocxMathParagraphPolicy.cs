@@ -58,7 +58,7 @@ internal static class DocxMathParagraphPolicy
     // style only for measurement; mixed prose retains its inline ownership.
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
-        if (!HasSupportedOwner(paragraph) ||
+        if (!HasSupportedOwner(paragraph) || paragraph.Hyperlinks.Count != 0 ||
             HasVisibleProse(paragraph) ||
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
@@ -138,8 +138,11 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
+    // Retain qualified single-prose breaking until mathematical operator breaks
+    // migrate. An unchanged annotation cannot choose a different layout engine.
     public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph) =>
-        paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 || paragraph.Hyperlinks.Count != 0;
+        paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
+        paragraph.Equations.Count == 1 && GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null;
 
     public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph)
     {
@@ -154,7 +157,7 @@ internal static class DocxMathParagraphPolicy
 
     private static bool HasSupportedOwner(DocxParagraph paragraph) =>
         HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count == 1 &&
-        paragraph.Images.Count == 0 && paragraph.Hyperlinks.Count == 0;
+        paragraph.Images.Count == 0;
 
     private static bool HasSupportedSourceOwner(DocxParagraph paragraph) =>
         paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) && paragraph.Revisions.Count == 0 &&
